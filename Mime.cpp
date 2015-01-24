@@ -5,18 +5,18 @@
 
 // . returns false if could not get a valid mime
 // . we need the url in case there's a Location: mime that's base-relative
-void Mime::set ( char *mime , long mimeLen ) {
+void Mime::set ( char *mime , int32_t mimeLen ) {
 	m_mime    = mime;
 	m_mimeLen = mimeLen;
 	m_mimeEnd = mime + mimeLen;
 }
 
-char *Mime::getValue ( char *field , long *valueLen ) {
+char *Mime::getValue ( char *field , int32_t *valueLen ) {
 	// caller's field length
-	long fieldLen = gbstrlen ( field );
+	int32_t fieldLen = gbstrlen ( field );
 	// parms to getLine()
 	char *f    , *v;
-	long  flen ,  vlen;
+	int32_t  flen ,  vlen;
 	char *line = m_mime;
 	// keep getting lines from the mime
 	while ( ( line = getLine ( line , &f, &flen, &v , &vlen ) ) ) {
@@ -32,8 +32,8 @@ char *Mime::getValue ( char *field , long *valueLen ) {
 // . return ptr to next line to try
 // . return NULL if no lines left
 char *Mime::getLine ( char   *line  ,
-		      char  **field , long *fieldLen ,
-		      char  **value , long *valueLen ) {
+		      char  **field , int32_t *fieldLen ,
+		      char  **value , int32_t *valueLen ) {
 	// reset field and value lengths
 	*fieldLen = 0;
 	*valueLen = 0;

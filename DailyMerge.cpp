@@ -45,9 +45,9 @@ void DailyMerge::dailyMergeLoop ( ) {
 	// wait for clock to be synced with host #0
 	if ( ! isClockInSync() ) return;
 	// get local time
-	long long nowLocalMS = gettimeofdayInMillisecondsLocal();
+	int64_t nowLocalMS = gettimeofdayInMillisecondsLocal();
 	// get our hostid
-	long hid = g_hostdb.m_myHost->m_hostId;
+	int32_t hid = g_hostdb.m_myHost->m_hostId;
 	// if process only recently started (1 min ago or less)
 	// then do not immediately do this...
 	if (hid==0 && nowLocalMS - g_process.m_processStartTime < 1*60*1000)
@@ -59,7 +59,7 @@ void DailyMerge::dailyMergeLoop ( ) {
 	struct tm *tt ;
 	// how many MINUTES into the day are we? (in UTC)
 	tt = gmtime ( &nowSynced );
-	long elapsedMins = tt->tm_hour * 60 + tt->tm_min ;
+	int32_t elapsedMins = tt->tm_hour * 60 + tt->tm_min ;
 
 	// what collnum to merge?
 	collnum_t i ;
@@ -72,15 +72,15 @@ void DailyMerge::dailyMergeLoop ( ) {
 		// must have got a ping reply from him
 		if ( ! h->m_gotPingReply ) return;
 		// hostid #0 must NOT be in mode 0
-		if ( h->m_flags & PFLAG_MERGEMODE0 ) return;
+		if ( h->m_pingInfo.m_flags & PFLAG_MERGEMODE0 ) return;
 		// get the collnum that host #0 is currently daily merging
-		i = g_hostdb.m_hosts[0].m_dailyMergeCollnum;
+		i = g_hostdb.m_hosts[0].m_pingInfo.m_dailyMergeCollnum;
 		// this means host #0 is not daily merging a collnum now
 		if ( i < 0 ) return;
 		// if it is valid, the CollectionRec MUST be there
 		CollectionRec *cr = g_collectiondb.getRec ( i );
 		if ( ! cr ) { 
-			log("daily: host #0 bad collnum %li",(long)i);return;}
+			log("daily: host #0 bad collnum %"INT32"",(int32_t)i);return;}
 		// if valid, use it
 		m_cr = cr;
 		// we set m_cr, go to next mode
@@ -100,15 +100,15 @@ void DailyMerge::dailyMergeLoop ( ) {
 		if ( cr->m_dailyMergeTrigger < 0 ) continue;
 		// . skip if not time yet
 		// . !!!!!THIS IS IN MINUTES!!!!!!!!
-		if ( (long)elapsedMins < (long)cr->m_dailyMergeTrigger ) 
+		if ( (int32_t)elapsedMins < (int32_t)cr->m_dailyMergeTrigger ) 
 			continue;
 		// do not start more than 15 mins after the trigger time,
 		// if we miss that cuz we are down, then too bad
-		if ( (long)elapsedMins > (long)cr->m_dailyMergeTrigger + 15 )
+		if ( (int32_t)elapsedMins > (int32_t)cr->m_dailyMergeTrigger + 15 )
 			continue;
  		// . how long has it been (in seconds)
 		// . !!!!!THIS IS IN SECONDS!!!!!!!!
-		long diff = nowSynced - cr->m_dailyMergeStarted;
+		int32_t diff = nowSynced - cr->m_dailyMergeStarted;
 		// crazy?
 		if ( diff < 0 ) continue;
 		// if less than 24 hours ago, we already did it
@@ -123,13 +123,13 @@ void DailyMerge::dailyMergeLoop ( ) {
 		memset(dowCounts,0,8);
 		for ( ; *s ; s++ ) {
 			if ( ! is_digit(*s) ) continue;
-			long num = atoi(s);
+			int32_t num = atoi(s);
 			if ( num < 0 ) continue;
 			if ( num > 6 ) continue;
 			dowCounts[num]++;
 		}
 		// get our dow
-		long todayDOW = tt->tm_wday + 1;
+		int32_t todayDOW = tt->tm_wday + 1;
 		// make sure 1 to 7
 		if ( todayDOW < 0 ) { char *xx=NULL;*xx=0; }
 		if ( todayDOW > 6 ) { char *xx=NULL;*xx=0; }
@@ -147,12 +147,13 @@ void DailyMerge::dailyMergeLoop ( ) {
 		//   satisfied our "second time around" (so we must complete
 		//   one daily merge before checking this again). that is why
 		//   i added "m_didDaily". -- MDW
-		for ( long i = 0 ; m_didDaily && i<g_hostdb.m_numHosts ; i++){
+		for ( int32_t i = 0 ; m_didDaily && i<g_hostdb.m_numHosts ; i++){
 			// skip ourselves, obviously we are in merge mode 2
 			if ( &g_hostdb.m_hosts[i] == g_hostdb.m_myHost )
 				continue;
 			// that's good if he is in mode 0
-			if ( g_hostdb.m_hosts[i].m_flags & PFLAG_MERGEMODE0 )
+			if ( g_hostdb.m_hosts[i].m_pingInfo.m_flags & 
+			     PFLAG_MERGEMODE0 )
 				continue;
 			// oops, someone is not mode 0
 			return;
@@ -187,7 +188,7 @@ void DailyMerge::dailyMergeLoop ( ) {
 	// wait for everyone to make it to mode 1+ before going on
 	if ( m_mergeMode == 2 ) {
 		// check the ping packet flags
-		for ( long i = 0 ; i < g_hostdb.m_numHosts ; i++ ) {
+		for ( int32_t i = 0 ; i < g_hostdb.m_numHosts ; i++ ) {
 			// get the host
 			Host *h = &g_hostdb.m_hosts[i];
 			// skip ourselves, obviously we are in merge mode 2
@@ -197,7 +198,7 @@ void DailyMerge::dailyMergeLoop ( ) {
 			if ( g_hostdb.isDead(h) )
 				continue;
 			// return if a host still in merge mode 0. wait for it.
-			if ( h->m_flags & PFLAG_MERGEMODE0 )
+			if ( h->m_pingInfo.m_flags & PFLAG_MERGEMODE0 )
 				return;
 		}
 		// ok, everyone is out of mode 0 now
@@ -213,12 +214,13 @@ void DailyMerge::dailyMergeLoop ( ) {
 		if ( g_spiderLoop.m_numSpidersOut > 0 )
 			return;
 		// check the ping packet flags
-		for ( long i = 0 ; i < g_hostdb.m_numHosts ; i++ ) {
+		for ( int32_t i = 0 ; i < g_hostdb.m_numHosts ; i++ ) {
 			// skip ourselves, obviously we are in merge mode 2
 			if ( &g_hostdb.m_hosts[i] == g_hostdb.m_myHost )
 				continue;
 			// if host still has spiders out, we can't go to mode 4
-			if ( g_hostdb.m_hosts[i].m_flags & PFLAG_HASSPIDERS ) 
+			if ( g_hostdb.m_hosts[i].m_pingInfo.m_flags & 
+			     PFLAG_HASSPIDERS ) 
 				return;
 		}
 		// ok, nobody has spiders now
@@ -309,12 +311,13 @@ void DailyMerge::dailyMergeLoop ( ) {
 	// wait for all to finish before re-enabling spiders
 	if ( m_mergeMode == 6 ) {
 		// check the ping packet flags
-		for ( long i = 0 ; i < g_hostdb.m_numHosts ; i++ ) {
+		for ( int32_t i = 0 ; i < g_hostdb.m_numHosts ; i++ ) {
 			// skip ourselves, obviously we are ok
 			if ( &g_hostdb.m_hosts[i] == g_hostdb.m_myHost )
 				continue;
 			// if host in mode 6 or 0, that's good
-			if ( g_hostdb.m_hosts[i].m_flags & PFLAG_MERGEMODE0OR6)
+			if ( g_hostdb.m_hosts[i].m_pingInfo.m_flags & 
+			     PFLAG_MERGEMODE0OR6)
 				continue;
 			// otherwise, wait for it to be in 6 or 0
 			return;

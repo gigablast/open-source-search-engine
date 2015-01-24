@@ -9,7 +9,7 @@
 #include "Sections.h"
 #include "XmlNode.h" // getTagLen()
 
-//static long printstring ( char *s , long len ) ;
+//static int32_t printstring ( char *s , int32_t len ) ;
 
 Words::Words ( ) {
 	m_buf = NULL;
@@ -36,9 +36,9 @@ void Words::reset ( ) {
 	m_localBufSize2 = 0;
 }
 
-bool Words::set ( char *s, long slen, long version, 
+bool Words::set ( char *s, int32_t slen, int32_t version, 
 		  bool computeWordIds,
-		  long niceness) {
+		  int32_t niceness) {
 	// bail if nothing
 	if ( ! s || slen == 0 ) {
 		m_numWords = 0;
@@ -56,9 +56,9 @@ bool Words::set ( char *s, long slen, long version,
 // a quickie
 // this url gives a m_preCount that is too low. why?
 // http://go.tfol.com/163/speed.asp
-long countWords ( char *p , long plen , long niceness ) {
+int32_t countWords ( char *p , int32_t plen , int32_t niceness ) {
 	char *pend  = p + plen;
-	long  count = 1;
+	int32_t  count = 1;
  loop:
 
 	// sequence of punct
@@ -82,8 +82,8 @@ long countWords ( char *p , long plen , long niceness ) {
 	return count+10;
 }
 
-long countWords ( char *p , long niceness ) {
-	long  count = 1;
+int32_t countWords ( char *p , int32_t niceness ) {
+	int32_t  count = 1;
  loop:
 
 	// sequence of punct
@@ -111,9 +111,9 @@ static bool s_tested = false;
 
 bool Words::set ( Xml *xml, 
 		  bool computeWordIds , 
-		  long niceness ,
-		  long node1 ,
-		  long node2 ) {
+		  int32_t niceness ,
+		  int32_t node1 ,
+		  int32_t node2 ) {
 	// prevent setting with the same string
 	if ( m_xml == xml ) { char *xx=NULL;*xx=0; }
 	reset();
@@ -126,7 +126,7 @@ bool Words::set ( Xml *xml,
 		// only do once
 		s_tested = true;
 		// set c to a curling quote in unicode
-		long c = 0x201c; // 0x235e;
+		int32_t c = 0x201c; // 0x235e;
 		// encode it into utf8
 		char dst[5];
 		// point to it
@@ -134,11 +134,11 @@ bool Words::set ( Xml *xml,
 		// put space in there
 		*p++ = ' ';
 		// "numBytes" is how many bytes it stored into 'dst"
-		long numBytes = utf8Encode ( c , p );
+		int32_t numBytes = utf8Encode ( c , p );
 		// must be 2 bytes i guess
 		if ( numBytes != 3 ) { char *xx=NULL; *xx=0; }
 		// check it
-		long size = getUtf8CharSize(p);
+		int32_t size = getUtf8CharSize(p);
 		if ( size != 3 ) { char *xx=NULL; *xx=0; }
 		// is that punct
 		if ( ! is_punct_utf8 ( p ) ) { char *xx=NULL;*xx=0; }
@@ -151,7 +151,7 @@ bool Words::set ( Xml *xml,
 	// if xml is empty, bail
 	if   ( ! xml->getContent() ) return true;
 
-	long numNodes = xml->getNumNodes();
+	int32_t numNodes = xml->getNumNodes();
 	if ( numNodes <= 0 ) return true;
 
 	// . can be given a range, if node2 is -1 that means all!
@@ -161,7 +161,7 @@ bool Words::set ( Xml *xml,
 	if ( node1 > node2 ) { char *xx=NULL;*xx=0; }
 	char *start = xml->getNode(node1);
 	char *end   = xml->getNode(node2-1) + xml->getNodeLen(node2-1);
-	long  size  = end - start;
+	int32_t  size  = end - start;
 
 	m_preCount = countWords( start , size , niceness );
 
@@ -169,10 +169,10 @@ bool Words::set ( Xml *xml,
 	if ( ! allocateWordBuffers(m_preCount, true)) return false;
 	
 	// are we done?
-	for ( long k = node1 ; k < node2 && m_numWords < m_preCount ; k++ ){
+	for ( int32_t k = node1 ; k < node2 && m_numWords < m_preCount ; k++ ){
 		// get the kth node
 		char *node    = xml->getNode   (k);
-		long  nodeLen = xml->getNodeLen(k);
+		int32_t  nodeLen = xml->getNodeLen(k);
 		// is the kth node a tag?
 		if ( ! xml->isTag(k) ) {
 			char c = node[nodeLen];
@@ -192,7 +192,7 @@ bool Words::set ( Xml *xml,
 		if ( xml->isBackTag(k)) {
 			m_tagIds[m_numWords] |= BACKBIT;
 		}
-		//log(LOG_DEBUG, "Words: Word %ld: got tag %s%s (%d)", 
+		//log(LOG_DEBUG, "Words: Word %"INT32": got tag %s%s (%d)", 
 		//    m_numWords,
 		//    isBackTag(m_numWords)?"/":"",
 		//    g_nodes[getTagId(m_numWords)].m_nodeName,
@@ -206,7 +206,7 @@ bool Words::set ( Xml *xml,
 	return true;
 }
 
-bool Words::set11 ( char *s , char *send , long niceness ) {
+bool Words::set11 ( char *s , char *send , int32_t niceness ) {
 	reset();
 	m_version = TITLEREC_CURRENT_VERSION;
 	m_s = s;
@@ -231,7 +231,7 @@ bool Words::set11 ( char *s , char *send , long niceness ) {
 	return status;
 }
 
-bool Words::setxi ( char *s , char *buf, long bufSize, long niceness ) {
+bool Words::setxi ( char *s , char *buf, int32_t bufSize, int32_t niceness ) {
 	// prevent setting with the same string
 	if ( m_s == s ) { char *xx=NULL;*xx=0; }
 	reset();
@@ -256,9 +256,9 @@ bool Words::setxi ( char *s , char *buf, long bufSize, long niceness ) {
 // . doesn't do tags, only text nodes in "xml"
 // . our definition of a word is as close to English as we can get it
 // . BUT we also consider a string of punctuation characters to be a word
-bool Words::set ( char *s , long version, 
+bool Words::set ( char *s , int32_t version, 
 		  bool computeWordIds ,
-		  long niceness ) {
+		  int32_t niceness ) {
 
 	// prevent setting with the same string
 	if ( m_s == s ) { char *xx=NULL;*xx=0; }
@@ -279,14 +279,14 @@ bool Words::set ( char *s , long version,
 
 #include "XmlNode.h"
 
-bool Words::addWords(char *s,long nodeLen,bool computeWordIds, long niceness) {
-	long  i = 0;
-	long  j;
-	//long  k = 0;
-	long  wlen;
-	//unsigned long e;
-	//long  skip;
-	long badCount = 0;
+bool Words::addWords(char *s,int32_t nodeLen,bool computeWordIds, int32_t niceness) {
+	int32_t  i = 0;
+	int32_t  j;
+	//int32_t  k = 0;
+	int32_t  wlen;
+	//uint32_t e;
+	//int32_t  skip;
+	int32_t badCount = 0;
 
 	bool hadApostrophe = false;
 
@@ -319,7 +319,7 @@ bool Words::addWords(char *s,long nodeLen,bool computeWordIds, long niceness) {
 			m_words    [m_numWords] = s + i;
 			m_wordIds  [m_numWords] = 0LL;
 			// skip till end
-			long tagLen = getTagLen(s+i); // ,niceness);
+			int32_t tagLen = getTagLen(s+i); // ,niceness);
 			m_wordLens [m_numWords] = tagLen;
 			m_numWords++;
 			// advance
@@ -465,12 +465,12 @@ bool Words::addWords(char *s,long nodeLen,bool computeWordIds, long niceness) {
 	// . google agrees
 	// . but what about "re'sume"?
 	if ( computeWordIds ) {
-		long long h = hash64Lower_utf8(&s[j],wlen);
+		int64_t h = hash64Lower_utf8(&s[j],wlen);
 		m_wordIds [m_numWords] = h;
 		// until we get an accent removal algo, comment this
 		// out and possibly use the query synonym pipeline
 		// to search without accents. MDW
-		//long long h2 = hash64AsciiLowerE(&s[j],wlen);
+		//int64_t h2 = hash64AsciiLowerE(&s[j],wlen);
 		//if ( h2 != h ) m_stripWordIds [m_numWords] = h2;
 		//else           m_stripWordIds [m_numWords] = 0LL;
 		//m_stripWordIds[m_numWords] = 0;
@@ -513,19 +513,23 @@ bool Words::addWords(char *s,long nodeLen,bool computeWordIds, long niceness) {
 	else m_totalLen = m_words[m_numWords-1] - s + m_wordLens[m_numWords-1];
 
 	if ( badCount )
-		log("words: had %li bad utf8 chars",badCount);
+		log("words: had %"INT32" bad utf8 chars",badCount);
 
 	return true;
 }
 
 // common to Unicode and ISO-8859-1
-bool Words::allocateWordBuffers(long count, bool tagIds) {
+bool Words::allocateWordBuffers(int32_t count, bool tagIds) {
 	// alloc if we need to (added 4 more for m_nodes[])
-	long wordSize = 20;
+	int32_t wordSize = 0;
+	wordSize += sizeof(char *);
+	wordSize += sizeof(int32_t);
+	wordSize += sizeof(int64_t);
+	wordSize += sizeof(int32_t);
 	if ( tagIds ) wordSize += sizeof(nodeid_t);
 	m_bufSize = wordSize * count;
-	if(m_bufSize < 0) return log("build: word count overflow %li "
-				     "bytes wordSize=%li count=%li.",
+	if(m_bufSize < 0) return log("build: word count overflow %"INT32" "
+				     "bytes wordSize=%"INT32" count=%"INT32".",
 				     m_bufSize, wordSize, count);
 	if ( m_bufSize <= m_localBufSize2 && m_localBuf2 ) {
 		m_buf = m_localBuf2;
@@ -535,7 +539,7 @@ bool Words::allocateWordBuffers(long count, bool tagIds) {
 	}
 	else {
 		m_buf = (char *)mmalloc ( m_bufSize , "Words" );
-		if ( ! m_buf ) return log("build: Could not allocate %li "
+		if ( ! m_buf ) return log("build: Could not allocate %"INT32" "
 					  "bytes for parsing document.",
 					  m_bufSize);
 	}
@@ -544,43 +548,45 @@ bool Words::allocateWordBuffers(long count, bool tagIds) {
 	char *p = m_buf;
 	m_words    = (char     **)p ;
 	p += sizeof(char*) * count;
-	m_wordLens = (long      *)p ;
-	p += sizeof(long)* count;
-	m_wordIds  = (long long *)p ;
-	p += sizeof (long long) * count;
-	//m_stripWordIds  = (long long *)p ;
-	//p += sizeof (long long) * count;
-	m_nodes = (long *)p;
-	p += sizeof(long) * count;
+	m_wordLens = (int32_t      *)p ;
+	p += sizeof(int32_t)* count;
+	m_wordIds  = (int64_t *)p ;
+	p += sizeof (int64_t) * count;
+	//m_stripWordIds  = (int64_t *)p ;
+	//p += sizeof (int64_t) * count;
+	m_nodes = (int32_t *)p;
+	p += sizeof(int32_t) * count;
 
 	if (tagIds) {
 		m_tagIds = (nodeid_t*) p;
 		p += sizeof(nodeid_t) * count;
 	}
 
+	if ( p > m_buf + m_bufSize ) { char *xx=NULL;*xx=0; }
+
 	return true;
 }
 
 void Words::print( ) {
-	for (long i=0;i<m_numWords;i++) {
+	for (int32_t i=0;i<m_numWords;i++) {
 		printWord(i);
 		printf("\n");
 	}
 }
 
-void Words::printWord ( long i ) {
-	fprintf(stderr,"#%05li ",i);
-	fprintf(stderr,"%020llu ",m_wordIds[i]);
+void Words::printWord ( int32_t i ) {
+	fprintf(stderr,"#%05"INT32" ",i);
+	fprintf(stderr,"%020"UINT64" ",m_wordIds[i]);
 	// print the word
 	printstring(m_words[i],m_wordLens[i]);
 	//if (m_spam.m_spam[i]!=0)
 	//	printf("[%i]",m_spam.m_spam[i]);
 }
 
-long printstring ( char *s , long len ) {
+int32_t printstring ( char *s , int32_t len ) {
 	// filter out \n's and \r's
-	long olen = 0;
-	for ( long i = 0 ; i < len && olen < 17 ; i++ ) {
+	int32_t olen = 0;
+	for ( int32_t i = 0 ; i < len && olen < 17 ; i++ ) {
 		if ( s[i] == '\n' || s[i] =='\r' ) continue;
 		olen++;
 		fprintf(stderr,"%c",s[i]);
@@ -600,19 +606,19 @@ bool Words::hash ( TermTable      *table          ,
 		   Spam           *spam           ,
 		   //Scores       *scores         ,
 		   Weights        *weights        ,
-		   unsigned long   baseScore      ,
-		   unsigned long   maxScore       ,
-		   long long       startHash      ,
+		   uint32_t   baseScore      ,
+		   uint32_t   maxScore       ,
+		   int64_t       startHash      ,
 		   char           *prefix1        ,
-		   long            prefixLen1     ,
+		   int32_t            prefixLen1     ,
 		   char           *prefix2        ,
-		   long            prefixLen2     ,
+		   int32_t            prefixLen2     ,
 		   bool            useStems       , 
 		   bool            hashUniqueOnly ,
-		   long            version        , // titleRecVersion ,
+		   int32_t            version        , // titleRecVersion ,
 		   class Phrases  *phrases        ,
 		   bool            hashWordIffNotInPhrase ,
-		   long            niceness       ) {
+		   int32_t            niceness       ) {
 	//if (g_pbuf) g_pbufPtr+=sprintf(g_pbufPtr,"<b>Words::hash()</b><br>");
 	// don't hash if score is 0 or less.
 	if ( baseScore <= 0 ) return true;
@@ -622,11 +628,11 @@ bool Words::hash ( TermTable      *table          ,
 	SafeBuf *pbuf = table->getParserBuf();
 
 	// each word has a score (spam modified)
-	long score;
-	long score2;
+	int32_t score;
+	int32_t score2;
 	// the score from the Scores class
-	long *wscores = NULL;
-	long  norm    = DW; // NORM_WORD_SCORE;
+	int32_t *wscores = NULL;
+	int32_t  norm    = DW; // NORM_WORD_SCORE;
 	//if ( scores ) wscores = scores->m_scores;
 	// point to word weights over score if we got them
 	if ( weights ) {
@@ -635,9 +641,9 @@ bool Words::hash ( TermTable      *table          ,
 		norm    = DW;
 	}
 	// the hash of each word
-	long long h;
+	int64_t h;
 	// now hash each form of each word
-	for (long i = 0 ; i < m_numWords; i++ ) {
+	for (int32_t i = 0 ; i < m_numWords; i++ ) {
 		// don't hash punct words
 		//if (m_isUnicode || m_version >= 67){
 		//if (!ucIsWordChar(((UChar*)m_words[i])[0])) continue;
@@ -686,9 +692,9 @@ bool Words::hash ( TermTable      *table          ,
 		//if (m_isUnicode && 
 		//    (((UChar*)m_words[i])[0] == '1' ||
 		//     ((UChar*)m_words[i])[0] == 's')){
-		//		printf("Words::hash: starthash %lli prefix2 \"
+		//		printf("Words::hash: starthash %"INT64" prefix2 \"
 		//               %10s\" wordId "
-		//	       "(%lli) termId: (%lli) ", 
+		//	       "(%"INT64") termId: (%"INT64") ", 
 		//	       startHash, prefix2, m_wordIds[i], h);
 		//	ucDebug(m_words[i], m_wordLens[i]);
 		//}
@@ -706,10 +712,10 @@ bool Words::hash ( TermTable      *table          ,
 		//	score2 = score;
 		// debug, show the score for 'york'
 		//if ( h == 25718418790376LL ) {
-		//	long ww = -1;
+		//	int32_t ww = -1;
 		//	if ( wscores ) ww = wscores[i];
-		//	logf(LOG_DEBUG,"build: adding %li for sex, wscore=%li "
-		//	     "baseScore=%li",
+		//	logf(LOG_DEBUG,"build: adding %"INT32" for sex, wscore=%"INT32" "
+		//	     "baseScore=%"INT32"",
 		//	     score,ww,baseScore);
 		//}
 		
@@ -724,7 +730,7 @@ bool Words::hash ( TermTable      *table          ,
 
 		// . keep tabs on what we hash into the table if we need to
 		// . store the term into term table
-		long slen;
+		int32_t slen;
 		char *s = table->storeTerm ( m_words[i], 
 					     m_wordLens[i] ,
 					     prefix1   , prefixLen1    ,
@@ -740,8 +746,8 @@ bool Words::hash ( TermTable      *table          ,
 
 		// sanity check
 		//if ( h == 262515731587173LL ) {
-		//	long nn = table->getScoreFromTermId ( h );
-		//	logf(LOG_DEBUG,"build: score now %li",nn);
+		//	int32_t nn = table->getScoreFromTermId ( h );
+		//	logf(LOG_DEBUG,"build: score now %"INT32"",nn);
 		//}
 	}
 	// return now if we don't have to print out spam info to parser buf
@@ -752,12 +758,12 @@ bool Words::hash ( TermTable      *table          ,
 	// print page as normal
 	//char m_printTags = false;
 	// print out each word and it's spam value, if we have spammed words!
-	long i;
+	int32_t i;
 	for ( i = 0 ; i < m_numWords; i++ ) {
 		// get the score, default it to 100
-		long score  = 100;
+		int32_t score  = 100;
 		// phrase weight
-		long pscore = 100;
+		int32_t pscore = 100;
 		// NORM_WORD_SCORE is 128 last time i checked, this allows for
 		// us to do fast integer operations with the resolution of a 
 		// float
@@ -787,7 +793,7 @@ bool Words::hash ( TermTable      *table          ,
 				pbuf->safePrintf("<span class=\"gbtag\">");
 		}
 		
-		for ( long j = 0 ; j < m_wordLens[i] ; j++ ) {
+		for ( int32_t j = 0 ; j < m_wordLens[i] ; j++ ) {
 			UChar32 c = (unsigned char)m_words[i][j];
 			// print the tag au natural if we should
 			if ( pbuf->m_renderHtml ) { // ! m_printTags ) {
@@ -813,22 +819,22 @@ bool Words::hash ( TermTable      *table          ,
 
 		if ((m_tagIds && m_tagIds[i]) || ! m_wordIds[i] ) {
 			if ( pscore != 0 ) {
-				//long tt=((long)scores->getScore(i)*100)/
+				//int32_t tt=((int32_t)scores->getScore(i)*100)/
 				//NORM_WORD_SCORE;
-				//long tt = 0;
+				//int32_t tt = 0;
 				//if(scores) tt = scores->getScore(i);
 				//else tt = score;
 				//tt = score;
 				//if ( tt == 0 ) tt = 1;
 				//pbuf->safePrintf("<font size=-7 color=red>"
-				//		 "%li</font>",
+				//		 "%"INT32"</font>",
 				//		 pscore);
 				//if ( scores )
 				//	pbuf->safePrintf(
 				//		 "<font size=-7 color=green>"
-				//		 "%li</font>",
+				//		 "%"INT32"</font>",
 				//		 scores->m_scores[i]);
-				pbuf->safePrintf("<font size=-7>#%li</font>",i);
+				pbuf->safePrintf("<font size=-7>#%"INT32"</font>",i);
 			}
 			if ( ! pbuf->m_renderHtml ) // ! m_printTags )
 				pbuf->safePrintf("</span>\n");
@@ -836,28 +842,28 @@ bool Words::hash ( TermTable      *table          ,
 		//if (m_wordIds[i] && (!scores || scores->getScore(i) > 0) ){
 		if (m_wordIds[i] ) { // && score ) {
 			if ( m_wordIds[i] && spam->getSpam(i) ) {
-				pbuf->safePrintf("</strike>[%li]",
-					(long)spam->getSpam(i));
+				pbuf->safePrintf("</strike>[%"INT32"]",
+					(int32_t)spam->getSpam(i));
 			}
 			//if (m_wordIds[i] && (!scores || scores->getScore(i) 
 			// > 0) ){
 			//if(scores && scores->getScore(i) != NORM_WORD_SCORE){
 			//if ( score != 0 || pscore != 0 ) {
-			//long tt=((long)scores->getScore(i)*100)/
+			//int32_t tt=((int32_t)scores->getScore(i)*100)/
 			//NORM_WORD_SCORE;
-			long tt = 0;
+			int32_t tt = 0;
 			//if(scores) tt = scores->getScore(i);
 			//else tt = score;
 			tt = score;
 			if ( tt == 0 ) tt = 1;
 			pbuf->safePrintf("<font size=-7 color=red>"
-					 "%li/%li</font>",
+					 "%"INT32"/%"INT32"</font>",
 					 score,pscore);
 			//if ( scores )
 			//	pbuf->safePrintf("<font size=-7 color=green>"
-			//			 "%li</font>",
-			//			 (long)scores->m_scores[i]);
-			pbuf->safePrintf("<font size=-7>#%li</font>",i);
+			//			 "%"INT32"</font>",
+			//			 (int32_t)scores->m_scores[i]);
+			pbuf->safePrintf("<font size=-7>#%"INT32"</font>",i);
 			//}
 			if ( ! pbuf->m_renderHtml ) // ! m_printTags )
 				pbuf->safePrintf("</span>\n");
@@ -881,14 +887,14 @@ bool Words::hash ( TermTable      *table          ,
 
 bool Words::set2 ( Xml *xml, 
 		   bool computeWordIds ,
-		   long niceness) {
+		   int32_t niceness) {
 	reset();
 	m_xml = xml;
 	m_version = xml->getVersion();
 	m_version = xml->getVersion();
 	register char *p = (char *)xml->getContent();
 	if ( *p ) p++;
-	register long x = 0;
+	register int32_t x = 0;
  ploop:
 	//if ( is_alnum(*(p-1)) ^ is_alnum(*p) ) x++;
 	//if ( is_alnum(*p ) ) x++;
@@ -907,12 +913,12 @@ bool Words::set2 ( Xml *xml,
 
 	if (!allocateWordBuffers(m_preCount, true)) return false;
 	
-	long numNodes = xml->getNumNodes();
+	int32_t numNodes = xml->getNumNodes();
 	// are we done?
-	for ( long k = 0 ; k < numNodes && m_numWords < m_preCount ; k++ ) {
+	for ( int32_t k = 0 ; k < numNodes && m_numWords < m_preCount ; k++ ) {
 		// get the kth node
 		char *node    = xml->getNode   (k);
-		long  nodeLen = xml->getNodeLen(k);
+		int32_t  nodeLen = xml->getNodeLen(k);
 		// is the kth node a tag?
 		if ( xml->isTag(k) ) {
 			m_words         [m_numWords] = node;
@@ -926,7 +932,7 @@ bool Words::set2 ( Xml *xml,
 				m_tagIds[m_numWords] |= BACKBIT;
 			}
 
-			//log(LOG_DEBUG, "Words: Word %ld: got tag %s%s (%d)", 
+			//log(LOG_DEBUG, "Words: Word %"INT32": got tag %s%s (%d)", 
 			//    m_numWords,
 			//    isBackTag(m_numWords)?"/":"",
 			//    g_nodes[getTagId(m_numWords)].m_nodeName,
@@ -946,10 +952,10 @@ bool Words::set2 ( Xml *xml,
 	return true;
 }
 
-long Words::isFloat  ( long n, float& f) {
+int32_t Words::isFloat  ( int32_t n, float& f) {
 	char buf[128];
 	char *p = buf;
-	long offset = 0;
+	int32_t offset = 0;
 	while(isPunct(n+offset) && 
 	      !(m_words[n+offset][0] == '.' || 
 		m_words[n+offset][0] == '-')) offset++;
@@ -959,20 +965,20 @@ long Words::isFloat  ( long n, float& f) {
 		m_words[n+offset][0] == '-')) offset++;
 
 
-	memcpy(buf, getWord(n), getWordLen(n));
+	gbmemcpy(buf, getWord(n), getWordLen(n));
 	buf[getWordLen(n)] = '\0';
-	log(LOG_WARN, "trying to get %s %li", buf, offset);
+	log(LOG_WARN, "trying to get %s %"INT32"", buf, offset);
 	
 
 	if(isNum(n)) {
 		if(1 + n < m_numWords && 
 		   isPunct(n+1) && m_words[n+1][0] == '.') {
 			if(2 + n < m_numWords && isNum(n+2)) {
-				memcpy(p, m_words[n], m_wordLens[n]);
+				gbmemcpy(p, m_words[n], m_wordLens[n]);
 				p += m_wordLens[n];
-				memcpy(p, ".", 1);
+				gbmemcpy(p, ".", 1);
 				p++;
-				memcpy(p, m_words[n+2], m_wordLens[n+2]);
+				gbmemcpy(p, m_words[n+2], m_wordLens[n+2]);
 				f = atof(buf);
 				return 3 + offset;
 			}
@@ -996,9 +1002,9 @@ long Words::isFloat  ( long n, float& f) {
 	//does this have a period in front?
 	if(isPunct(n) && (m_words[n][0] == '.' || m_words[n][0] == '-')) {
 		if(1 + n < m_numWords && isNum(n+1)) {
-			memcpy(p, m_words[n], m_wordLens[n]);
+			gbmemcpy(p, m_words[n], m_wordLens[n]);
 			p += m_wordLens[n];
-			memcpy(p, m_words[n+1], m_wordLens[n+1]);
+			gbmemcpy(p, m_words[n+1], m_wordLens[n+1]);
 			f = atof(buf);
 			return 2 + offset;
 		}
@@ -1006,9 +1012,9 @@ long Words::isFloat  ( long n, float& f) {
 	return offset;
 }
 
-static uint8_t s_findMaxIndex(long long *array, int num, int *wantmax = NULL) {
+static uint8_t s_findMaxIndex(int64_t *array, int num, int *wantmax = NULL) {
 	if(!array || num < 2 || num > 255) return(0);
-	long long max, oldmax;
+	int64_t max, oldmax;
 	int idx = 0;
 	max = oldmax = INT_MIN;
 	for(int x = 0; x < num; x++) {
@@ -1026,7 +1032,7 @@ static uint8_t s_findMaxIndex(long long *array, int num, int *wantmax = NULL) {
 
 //static bool s_isWordCap ( char *word , int len ) {
 //	if ( ! is_upper_utf8 ( word ) ) return false;
-//	long cs = getUtf8CharSize ( word );
+//	int32_t cs = getUtf8CharSize ( word );
 //	if ( is_lower_utf8 ( &word[cs] ) ) return true;
 //	return false;
 //}
@@ -1072,10 +1078,10 @@ unsigned char getCharacterLanguage ( char *utf8Char ) {
 }
 
 // returns -1 and sets g_errno on error, because 0 means langUnknown
-long Words::getLanguage( Sections *sections ,
-			 long maxSamples,
-			 long niceness,
-			 long *langScore) {
+int32_t Words::getLanguage( Sections *sections ,
+			 int32_t maxSamples,
+			 int32_t niceness,
+			 int32_t *langScore) {
 	// calculate scores if not given
 	//Scores calcdScores;
 	//if ( ! scores ) {
@@ -1086,33 +1092,33 @@ long Words::getLanguage( Sections *sections ,
 
 	// . take a random sample of words and look them up in the
 	//   language dictionary
-	//HashTableT<long long, char> ht;
+	//HashTableT<int64_t, char> ht;
 	HashTableX ht;
-	long long langCount[MAX_LANGUAGES];
-	long long langWorkArea[MAX_LANGUAGES];
-	long numWords = m_numWords;
-	//long skip = numWords/maxSamples;
+	int64_t langCount[MAX_LANGUAGES];
+	int64_t langWorkArea[MAX_LANGUAGES];
+	int32_t numWords = m_numWords;
+	//int32_t skip = numWords/maxSamples;
 	//if ( skip == 0 ) skip = 1;
 	// reset the language count
-	memset(langCount, 0, sizeof(long long)*MAX_LANGUAGES);
+	memset(langCount, 0, sizeof(int64_t)*MAX_LANGUAGES);
 	// sample the words
-	//long wordBase  = 0;
-	long wordi     = 0;
+	//int32_t wordBase  = 0;
+	int32_t wordi     = 0;
 	//if ( ! ht.set(maxSamples*1.5) ) return -1;
-	if ( ! ht.set(8,1,(long)(maxSamples*8.0),NULL,0,false,
+	if ( ! ht.set(8,1,(int32_t)(maxSamples*8.0),NULL,0,false,
 		      niceness,"wordslang")) 
 		return -1;
  
 	// . avoid words in these bad sections
 	// . google seems to index SEC_MARQUEE so i took that out of badFlags
-	long badFlags = SEC_SCRIPT|SEC_STYLE|SEC_SELECT;
-	// shortcuts
-	long long *wids  = m_wordIds;
-	long      *wlens = m_wordLens;
+	int32_t badFlags = SEC_SCRIPT|SEC_STYLE|SEC_SELECT;
+	// int16_tcuts
+	int64_t *wids  = m_wordIds;
+	int32_t      *wlens = m_wordLens;
 	char     **wptrs = m_words;
 
-	//long langTotal = 0;
-// 	log ( LOG_WARN, "xmldoc: Picking language from %li words with %li skip",
+	//int32_t langTotal = 0;
+// 	log ( LOG_WARN, "xmldoc: Picking language from %"INT32" words with %"INT32" skip",
 // 			numWords, skip );
 	char numOne = 1;
 	Section **sp = NULL;
@@ -1120,7 +1126,7 @@ long Words::getLanguage( Sections *sections ,
 	// this means null too
 	if ( sections && sections->m_numSections == 0 ) sp = NULL;
 
-	long maxCount = 1000;
+	int32_t maxCount = 1000;
 
 	while ( wordi < numWords ) {
 		// breathe
@@ -1129,7 +1135,7 @@ long Words::getLanguage( Sections *sections ,
 		if ( ! wids [wordi]     ) { wordi++; continue; }
 		if (   wlens[wordi] < 2 ) { wordi++; continue; }
 		// skip if in a bad section
-		//long flags = sections->m_sectionPtrs[i]->m_flags;
+		//int32_t flags = sections->m_sectionPtrs[i]->m_flags;
 		// meaning script section ,etc
 		if ( sp && ( sp[wordi]->m_flags & badFlags ) ) {
 			wordi++; continue; }
@@ -1192,7 +1198,7 @@ long Words::getLanguage( Sections *sections ,
 			for(int y = 1; y < MAX_LANGUAGES; y++) {
 				if(langWorkArea[y] == 0) continue;
 				langCount[y]++;
-				long pop = langWorkArea[y];
+				int32_t pop = langWorkArea[y];
 				// negative means in an official dictionary
 				if ( pop < 0 ) {
 					pop *= -1;
@@ -1245,13 +1251,13 @@ long Words::getLanguage( Sections *sections ,
 }
 
 // get the word index at the given character position 
-long Words::getWordAt ( char *p ) { // long charPos ) {
+int32_t Words::getWordAt ( char *p ) { // int32_t charPos ) {
 	if ( ! p                  ) { char *xx=NULL;*xx=0; }
 	if ( p <  m_words[0]      ) { char *xx=NULL;*xx=0; }
 	if ( p >= getContentEnd() ) { char *xx=NULL;*xx=0; }
 	
-	long step = m_numWords / 2;
-	long i = m_numWords / 2 ;
+	int32_t step = m_numWords / 2;
+	int32_t i = m_numWords / 2 ;
 
  loop:
 
@@ -1273,15 +1279,15 @@ long Words::getWordAt ( char *p ) { // long charPos ) {
 // . return the value of the specified "field" within this html tag, "s"
 // . the case of "field" does not matter
 char *getFieldValue ( char *s , 
-		      long  slen ,
+		      int32_t  slen ,
 		      char *field , 
-		      long *valueLen ) {
+		      int32_t *valueLen ) {
 	// reset this to 0
 	*valueLen = 0;
 	// scan for the field name in our node
-	long flen = gbstrlen(field);
+	int32_t flen = gbstrlen(field);
 	char inQuotes = '\0';
-	long i;
+	int32_t i;
 
 	// make it sane
 	if ( slen > 2000 ) slen = 2000;

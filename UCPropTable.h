@@ -12,16 +12,16 @@ public:
 	virtual ~UCPropTable() ;
 	void reset();
 
-	//void *getValue(unsigned long c);
-	void *getValue(unsigned long c){
-		unsigned long prefix = c >> m_tableBits;
-		unsigned long key = c & m_tableMask;
+	//void *getValue(uint32_t c);
+	void *getValue(uint32_t c){
+		uint32_t prefix = c >> m_tableBits;
+		uint32_t key = c & m_tableMask;
 		if (prefix >= m_numTables) return NULL;
 		if (m_data[prefix] == NULL) return NULL;
 		return (void*) (m_data[prefix] + key*m_valueSize);
 	};
 
-	bool setValue(unsigned long c, void *value);
+	bool setValue(uint32_t c, void *value);
 	
 	size_t getSize() {return getStoredSize() + m_numTables*sizeof(char*);};
 	size_t getStoredSize() ;
@@ -33,8 +33,8 @@ private:
 
 	unsigned char m_valueSize;
 	unsigned char m_tableBits;
-	unsigned long m_tableSize;
-	unsigned long m_tableMask;
-	unsigned long m_numTables;
+	uint32_t m_tableSize;
+	uint32_t m_tableMask;
+	uint32_t m_numTables;
 };
 #endif

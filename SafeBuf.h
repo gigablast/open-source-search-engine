@@ -9,14 +9,14 @@ class SafeBuf {
 public:
 	//*TRUCTORS
 	SafeBuf();
-	SafeBuf(long initSize, char *label = NULL);
+	SafeBuf(int32_t initSize, char *label = NULL);
 
 	void constructor();
 
 	//be careful with passing in a stackBuf! it could go out
 	//of scope independently of the safebuf.
-	SafeBuf(char* stackBuf, long cap);
-	SafeBuf(char *heapBuf, long bufMax, long bytesInUse, bool ownData);
+	SafeBuf(char* stackBuf, int32_t cap);
+	SafeBuf(char *heapBuf, int32_t bufMax, int32_t bytesInUse, bool ownData);
 	~SafeBuf();
 
 	void setLabel ( char *label );
@@ -28,14 +28,14 @@ public:
 	// want SafeBuf to free the data for you. Keep in mind, all
 	// previous content in SafeBuf will be cleared when you pass it
 	// a new buffer.
-	bool setBuf(char *newBuf, long bufMax, long bytesInUse, bool ownData,
-		    short encoding );
+	bool setBuf(char *newBuf, int32_t bufMax, int32_t bytesInUse, bool ownData,
+		    int16_t encoding );
 	// yieldBuf() allows you to take over the buffer in SafeBuf. 
 	// You may only free the data if it was originally owned by
 	// the SafeBuf.
 	// Think twice before using this function.
-	bool yieldBuf(char **bufPtr, long *bufAlloc, long *bytesInUse,
-		      bool *ownData, short *encoding );
+	bool yieldBuf(char **bufPtr, int32_t *bufAlloc, int32_t *bytesInUse,
+		      bool *ownData, int16_t *encoding );
 
 	// set buffer from another safebuf, stealing it
 	bool stealBuf ( SafeBuf *sb );
@@ -44,44 +44,45 @@ public:
 	char *getBuf() { return m_buf + m_length; }
 	char *getBufStart() { return m_buf; }
 	char *getBufEnd() { return m_buf + m_capacity; }
-	long getCapacity() { return m_capacity; }
-	long getAvail() { return m_capacity - m_length; }
-	long length() { return m_length; }
-	long getLength() { return m_length; }
-	long getBufUsed() { return m_length; }
+	int32_t getCapacity() { return m_capacity; }
+	int32_t getAvail() { return m_capacity - m_length; }
+	int32_t length() { return m_length; }
+	int32_t getLength() { return m_length; }
+	int32_t getBufUsed() { return m_length; }
 	void print() { 
 	  if ( write(1,m_buf,m_length) != m_length) { char*xx=NULL;*xx=0;}; }
 
 	// . returns bytes written to file, 0 is acceptable if m_length == 0
 	// . returns -1 on error and sets g_errno
-	long saveToFile ( char *dir , char *filename ) ;
-	long dumpToFile(char *filename);
-	long save ( char *dir, char *fname){return saveToFile(dir,fname); };
-	long save ( char *fullFilename ) ;
+	int32_t saveToFile ( char *dir , char *filename ) ;
+	int32_t dumpToFile(char *filename);
+	int32_t save ( char *dir, char *fname){return saveToFile(dir,fname); };
+	int32_t save ( char *fullFilename ) ;
 	// saves to tmp file and if that succeeds then renames to orig filename
-	long safeSave (char *filename );
+	int32_t safeSave (char *filename );
 
-	long  fillFromFile(char *filename);
-	long  fillFromFile(char *dir,char *filename);
-	long  load(char *dir,char *fname) { return fillFromFile(dir,fname);};
-	long  load(char *fname) { return fillFromFile(fname);};
+	int32_t  fillFromFile(char *filename);
+	int32_t  fillFromFile(char *dir,char *filename);
+	int32_t  load(char *dir,char *fname) { return fillFromFile(dir,fname);};
+	int32_t  load(char *fname) { return fillFromFile(fname);};
 
 	void filterTags();
 	void filterQuotes();
-	bool truncateLongWords ( char *src, long srcLen , long minmax );
-	bool safeTruncateEllipsis ( char *src , long maxLen );
-	bool safeTruncateEllipsis ( char *src , long srcLen, long maxLen );
+	bool truncateLongWords ( char *src, int32_t srcLen , int32_t minmax );
+	bool safeTruncateEllipsis ( char *src , int32_t maxLen );
+	bool safeTruncateEllipsis ( char *src , int32_t srcLen, int32_t maxLen );
 
-	bool convertJSONtoXML ( long niceness , long startConvertPos );
+	bool convertJSONtoXML ( int32_t niceness , int32_t startConvertPos );
 
-	bool safeDecodeJSONToUtf8 ( char *json, long jsonLen, long niceness);
+	bool safeDecodeJSONToUtf8 ( char *json, int32_t jsonLen, 
+				    int32_t niceness);
 	//			    bool decodeAll = false );
 
-	bool decodeJSONToUtf8 ( long niceness );
-	bool decodeJSON ( long niceness );
-	bool linkify ( long niceness , long startPos );
+	bool decodeJSONToUtf8 ( int32_t niceness );
+	bool decodeJSON ( int32_t niceness );
+	bool linkify ( int32_t niceness , int32_t startPos );
 
-	void truncLen ( long newLen ) {
+	void truncLen ( int32_t newLen ) {
 		if ( m_length > newLen ) m_length = newLen; };
 
 	bool set ( char *str ) {
@@ -105,166 +106,166 @@ public:
 #else
 	bool  safePrintf(char *formatString, ...);
 #endif
-	bool  safeMemcpy(void *s, long len){return safeMemcpy((char *)s,len);};
-	bool  safeMemcpy(char *s, long len);
-	bool  safeMemcpy_nospaces(char *s, long len);
+	bool  safeMemcpy(void *s, int32_t len){return safeMemcpy((char *)s,len);};
+	bool  safeMemcpy(char *s, int32_t len);
+	bool  safeMemcpy_nospaces(char *s, int32_t len);
 	bool  safeMemcpy(SafeBuf *c){return safeMemcpy(c->m_buf,c->m_length);};
-	bool  safeMemcpy ( class Words *w , long a , long b ) ;
+	bool  safeMemcpy ( class Words *w , int32_t a , int32_t b ) ;
 	bool  safeStrcpy ( char *s ) ;
 	//bool  safeStrcpyPrettyJSON ( char *decodedJson ) ;
 	bool  safeUtf8ToJSON ( char *utf8 ) ;
 	bool jsonEncode ( char *utf8 ) { return safeUtf8ToJSON(utf8); };
-	bool jsonEncode ( char *utf8 , long utf8Len );
+	bool jsonEncode ( char *utf8 , int32_t utf8Len );
 
-	bool  csvEncode ( char *s , long len , long niceness = 0 );
+	bool  csvEncode ( char *s , int32_t len , int32_t niceness = 0 );
 
-	bool  base64Encode ( char *s , long len , long niceness = 0 );
-	bool  base64Decode ( char *src , long srcLen , long niceness = 0 ) ;
+	bool  base64Encode ( char *s , int32_t len , int32_t niceness = 0 );
+	bool  base64Decode ( char *src , int32_t srcLen , int32_t niceness = 0 ) ;
 
-	//bool  pushLong ( long val ) { return safeMemcpy((char *)&val,4); }
+	//bool  pushLong ( int32_t val ) { return safeMemcpy((char *)&val,4); }
 	bool  cat(SafeBuf& c);
 	// . only cat the sections/tag that start with "tagFilter"
-	// . used by Spider.cpp to dump <div class=shortdisplay> sections
-	//   to parse-shortdisplay.uh64.runid.txt for displaying the
+	// . used by Spider.cpp to dump <div class=int16_tdisplay> sections
+	//   to parse-int16_tdisplay.uh64.runid.txt for displaying the
 	//   validation checkboxes in qa.html
 	bool  cat2 ( SafeBuf& c,char *tagFilter1,char *tagFilter2);
 	void  reset() { m_length = 0; }
 	void  purge(); // Clear all data and free all allocated memory
-	bool  advance ( long i ) ;
+	bool  advance ( int32_t i ) ;
 
-	bool safePrintFilterTagsAndLines ( char *p , long plen ,
+	bool safePrintFilterTagsAndLines ( char *p , int32_t plen ,
 					   bool oneWordPerLine ) ;
 
 	// . if clearIt is true we init the new buffer space to zeroes
 	// . used by Collectiondb.cpp
-	bool  reserve(long i, char *label=NULL , bool clearIt = false );
-	bool  reserve2x(long i, char *label = NULL );
+	bool  reserve(int32_t i, char *label=NULL , bool clearIt = false );
+	bool  reserve2x(int32_t i, char *label = NULL );
 
-	char *makeSpace ( long size ) {
+	char *makeSpace ( int32_t size ) {
 		if ( ! reserve ( size ) ) return NULL;
 		return m_buf + m_length;
 	};
 
 	bool  inlineStyleTags();
-	void  incrementLength(long i) { 
+	void  incrementLength(int32_t i) { 
 		m_length += i; 
 		// watch out for negative i's
 		if ( m_length < 0 ) m_length = 0; 
 	};
-	void  setLength(long i) { m_length = i; };
+	void  setLength(int32_t i) { m_length = i; };
 	char *getNextLine ( char *p ) ;
-	long  catFile(char *filename) ;
-	//long  load(char *dir,char *filename) { 
+	int32_t  catFile(char *filename) ;
+	//int32_t  load(char *dir,char *filename) { 
 	//	return fillFromFile(dir,filename);};
-	bool  safeLatin1ToUtf8(char *s, long len);
-	bool  safeUtf8ToLatin1(char *s, long len);
+	bool  safeLatin1ToUtf8(char *s, int32_t len);
+	bool  safeUtf8ToLatin1(char *s, int32_t len);
 	void  detachBuf();
-	bool  insert ( class SafeBuf *c , long insertPos ) ;
-	bool  insert ( char *s , long insertPos ) ;
-	bool  insert2 ( char *s , long slen, long insertPos ) ;
+	bool  insert ( class SafeBuf *c , int32_t insertPos ) ;
+	bool  insert ( char *s , int32_t insertPos ) ;
+	bool  insert2 ( char *s , int32_t slen, int32_t insertPos ) ;
 	bool  replace ( char *src , char *dst ) ; // must be same lengths!
-	bool removeChunk1 ( char *p , long len ) ;
-	bool removeChunk2 ( long pos , long len ) ;
-	bool  safeReplace(char *s, long len, long pos, long replaceLen);
-	bool  safeReplace2 ( char *s, long slen, 
-			     char *t , long tlen ,
-			     long niceness ,
-			     long startOff = 0 );
-	bool  safeReplace3 ( char *s, char *t , long niceness = 0 ) ;
+	bool removeChunk1 ( char *p , int32_t len ) ;
+	bool removeChunk2 ( int32_t pos , int32_t len ) ;
+	bool  safeReplace(char *s, int32_t len, int32_t pos, int32_t replaceLen);
+	bool  safeReplace2 ( char *s, int32_t slen, 
+			     char *t , int32_t tlen ,
+			     int32_t niceness ,
+			     int32_t startOff = 0 );
+	bool  safeReplace3 ( char *s, char *t , int32_t niceness = 0 ) ;
 	void replaceChar ( char src , char dst );
 	bool  copyToken(char* s);;
 	//output encoding
-	bool  setEncoding(short cs);
-	short getEncoding() { return m_encoding; };
+	bool  setEncoding(int16_t cs);
+	int16_t getEncoding() { return m_encoding; };
 
 	void zeroOut() { memset ( m_buf , 0 , m_capacity ); }
 
-	bool brify2 ( char *s , long cols , char *sep = "<br>" ,
+	bool brify2 ( char *s , int32_t cols , char *sep = "<br>" ,
 		      bool isHtml = true ) ;
 
-	bool brify ( char *s , long slen , long niceness , long cols ,
+	bool brify ( char *s , int32_t slen , int32_t niceness , int32_t cols ,
 		     char *sep = "<br>" , bool isHtml = true );
 
 	bool fixIsolatedPeriods ( ) ;
 
 	bool hasDigits();
 
-	// treat safebuf as an array of signed longs and sort them
-	void sortLongs ( long niceness );
+	// treat safebuf as an array of signed int32_ts and sort them
+	void sortLongs ( int32_t niceness );
 
 	// . like "1 minute ago" "5 hours ago" "3 days ago" etc.
 	// . "ts" is the delta-t in seconds
-	bool printTimeAgo ( long ts , long now , bool shorthand = false ) ;
+	bool printTimeAgo ( int32_t ts , int32_t now , bool int16_thand = false ) ;
 
 	// . a function for adding Tags to buffer, like from Tagdb.cpp
 	// . if safebuf is a buffer of Tags from Tagdb.cpp
 	class Tag *addTag2 ( char *mysite , 
 			    char *tagname ,
-			    long  now ,
+			    int32_t  now ,
 			    char *user ,
-			    long  ip ,
-			    long  val ,
+			    int32_t  ip ,
+			    int32_t  val ,
 			    char  rdbId );
 	class Tag *addTag3 ( char *mysite , 
 			    char *tagname ,
-			    long  now ,
+			    int32_t  now ,
 			    char *user ,
-			    long  ip ,
+			    int32_t  ip ,
 			    char *data ,
 			    char  rdbId );
-	// makes the site "%llu.com" where %llu is userId
-	class Tag *addFaceookTag ( long long userId ,
+	// makes the site "%"UINT64".com" where %"UINT64" is userId
+	class Tag *addFaceookTag ( int64_t userId ,
 				   char *tagname ,
-				   long  now ,
-				   long  ip ,
+				   int32_t  now ,
+				   int32_t  ip ,
 				   char *data ,
-				   long  dsize ,
+				   int32_t  dsize ,
 				   char  rdbId ,
 				   bool  pushRdbId ) ;
 	class Tag *addTag ( char *mysite , 
 			    char *tagname ,
-			    long  now ,
+			    int32_t  now ,
 			    char *user ,
-			    long  ip ,
+			    int32_t  ip ,
 			    char *data ,
-			    long  dsize ,
+			    int32_t  dsize ,
 			    char  rdbId ,
 			    bool  pushRdbId );
 	bool addTag ( class Tag *tag );
 
 	//insert strings in their native encoding
-	bool  encode ( char *s , long len , long niceness=0) {
+	bool  encode ( char *s , int32_t len , int32_t niceness=0) {
 		return utf8Encode2(s,len,false,niceness); };
 	// htmlEncode default = false
-	bool  utf8Encode2(char *s, long len, bool htmlEncode=false, 
-			 long niceness=0);
-	bool  latin1Encode(char *s, long len, bool htmlEncode=false,
-			   long niceness=0);
-	//bool  utf16Encode(UChar *s, long len, bool htmlEncode=false);
-	//bool  utf16Encode(char *s, long len, bool htmlEncode=false) {
+	bool  utf8Encode2(char *s, int32_t len, bool htmlEncode=false, 
+			 int32_t niceness=0);
+	bool  latin1Encode(char *s, int32_t len, bool htmlEncode=false,
+			   int32_t niceness=0);
+	//bool  utf16Encode(UChar *s, int32_t len, bool htmlEncode=false);
+	//bool  utf16Encode(char *s, int32_t len, bool htmlEncode=false) {
 	//	return utf16Encode((UChar*)s, len>>1, htmlEncode); };
 	//bool  utf32Encode(UChar32 c);
-	bool  htmlEncode(char *s, long len,bool encodePoundSign,
-			 long niceness=0 , long truncateLen = -1 );
-	bool  javascriptEncode(char *s, long len );
+	bool  htmlEncode(char *s, int32_t len,bool encodePoundSign,
+			 int32_t niceness=0 , int32_t truncateLen = -1 );
+	bool  javascriptEncode(char *s, int32_t len );
 
 	bool  htmlEncode(char *s) ;
 
 	//bool convertUtf8CharsToEntity = false ) ;
 	// html-encode any of the last "len" bytes that need it
-	bool htmlEncode(long len,long niceness=0);
+	bool htmlEncode(int32_t len,int32_t niceness=0);
 
 	bool htmlDecode (char *s,
-			 long len,
+			 int32_t len,
 			 bool doSpecial = false,
-			 long niceness = 0 );
+			 int32_t niceness = 0 );
 
-	//bool  htmlEncode(long niceness );
-	bool  dequote ( char *t , long tlen );
-	bool  escapeJS ( char *s , long slen ) ;
+	//bool  htmlEncode(int32_t niceness );
+	bool  dequote ( char *t , int32_t tlen );
+	bool  escapeJS ( char *s , int32_t slen ) ;
 
 	bool  urlEncode (char *s , 
-			 long slen, 
+			 int32_t slen, 
 			 bool requestPath = false,
 			 bool encodeApostrophes = false );
 
@@ -277,27 +278,27 @@ public:
 		return urlEncode ( s,strlen(s),false,encodeApostrophes); };
 
 	bool  urlEncodeAllBuf ( bool spaceToPlus = true );
-	bool  latin1CdataEncode(char *s, long len);
-	bool  utf8CdataEncode(char *s, long len);
+	bool  latin1CdataEncode(char *s, int32_t len);
+	bool  utf8CdataEncode(char *s, int32_t len);
 
 	// . filter out parentheses and other query operators
 	// . used by SearchInput.cpp when it constructs the big UOR query
 	//   of facebook interests
-	bool queryFilter ( char *s , long len );
+	bool queryFilter ( char *s , int32_t len );
 
-	//bool  utf16CdataEncode(UChar *s, long len);
-	//bool  utf16CdataEncode(char *s, long len) {
+	//bool  utf16CdataEncode(UChar *s, int32_t len);
+	//bool  utf16CdataEncode(char *s, int32_t len) {
 	//	return utf16CdataEncode((UChar*)s, len>>1); };
 
-	bool  latin1HtmlEncode(char *s, long len, long niceness=0);
-	//bool  utf16HtmlEncode(UChar *s, long len);
-	//bool  utf16HtmlEncode(char *s, long len) {
+	bool  latin1HtmlEncode(char *s, int32_t len, int32_t niceness=0);
+	//bool  utf16HtmlEncode(UChar *s, int32_t len);
+	//bool  utf16HtmlEncode(char *s, int32_t len) {
 	//	return utf16HtmlEncode((UChar*)s, len>>1); };
 
-	bool htmlEncodeXmlTags ( char *s , long slen , long niceness ) ;
+	bool htmlEncodeXmlTags ( char *s , int32_t slen , int32_t niceness ) ;
 
 	bool  cdataEncode ( char *s ) ;
-	bool  cdataEncode ( char *s , long slen ) ;
+	bool  cdataEncode ( char *s , int32_t slen ) ;
 
 	// . append a \0 but do not inc m_length
 	// . for null terminating strings
@@ -309,7 +310,7 @@ public:
 	};
 
 
-	bool  safeCdataMemcpy(char *s, long len);
+	bool  safeCdataMemcpy(char *s, int32_t len);
 	bool  pushChar (char i) {
 		if(m_length >= m_capacity) 
 			if(!reserve(2*m_capacity + 1))
@@ -324,14 +325,18 @@ public:
 	};
 
 
-	bool  pushLong (long i);
-	bool  pushLongLong (long long i);
+	// hack off trailing 0's
+	bool printFloatPretty ( float f ) ;
+
+	bool  pushPtr  ( void *ptr );
+	bool  pushLong (int32_t i);
+	bool  pushLongLong (int64_t i);
 	bool  pushFloat (float i);
 	bool  pushDouble (double i);
-	long  popLong();
+	int32_t  popLong();
 	float popFloat();
 
-	long  pad(const char ch, const long len);
+	int32_t  pad(const char ch, const int32_t len);
 	bool  printKey(char* key, char ks);
 
 	// these use zlib
@@ -342,9 +347,9 @@ public:
 	//copy numbers into the buffer, *in binary*
 	//useful for making lists.
 	bool  operator += (uint64_t i);
-	bool  operator += (long long i);
-	bool  operator += (long i);
-	bool  operator += (unsigned long i);
+	bool  operator += (int64_t i);
+	//bool  operator += (int32_t i);
+	//bool  operator += (uint32_t i);
 	bool  operator += (float i);
 	bool  operator += (double i);
 	bool  operator += (char i);
@@ -360,17 +365,17 @@ public:
 	bool  operator += (int8_t   i) { return *this += (uint8_t)i;  };
 
 	//return a reference so we can use on lhs and rhs.
-	char& operator[](long i);
+	char& operator[](int32_t i);
 	
 public:
-	long  m_capacity;
-	long  m_length;
+	int32_t  m_capacity;
+	int32_t  m_length;
 protected:
 	char *m_buf;
 public:
 	char *m_label;
 	bool  m_usingStack;
-	short m_encoding; // output charset
+	int16_t m_encoding; // output charset
 
 	// . a special flag used by PageParser.cpp
 	// . if this is true it PageParser shows the page in its html form,

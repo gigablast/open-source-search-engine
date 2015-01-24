@@ -5,15 +5,15 @@
 
 
 #ifndef USE_ICU
-typedef unsigned long  UChar32;
-typedef unsigned short UChar;
+typedef uint32_t  UChar32;
+typedef uint16_t UChar;
 typedef unsigned char  UChar8;   // utf-8
 #endif
-typedef unsigned short UCProps;
+typedef uint16_t UCProps;
 typedef unsigned char  UCScript;
 
 
-bool loadUnicodeTable(UCPropTable *table, char *filename, bool useChecksum = false, unsigned long expectedChecksum = 0);
+bool loadUnicodeTable(UCPropTable *table, char *filename, bool useChecksum = false, uint32_t expectedChecksum = 0);
 bool saveUnicodeTable(UCPropTable *table, char *filename);
 // JAB: we now have Kompatible and Canonical decomposition tables
 bool saveKDecompTable(char *baseDir = NULL) ;
@@ -22,16 +22,16 @@ bool saveCDecompTable(char *baseDir = NULL) ;
 bool loadDecompTables(char *baseDir = NULL) ;
 void resetDecompTables() ;
 
-bool     setKDValue(UChar32 c, UChar32* decomp, long decompCount,
+bool     setKDValue(UChar32 c, UChar32* decomp, int32_t decompCount,
 		    bool fullComp = false);
-UChar32 *getKDValue(UChar32 c, long *decompCount, bool *fullComp = NULL);
-long     recursiveKDExpand(UChar32 c, UChar32 *buf, long bufSize);
+UChar32 *getKDValue(UChar32 c, int32_t *decompCount, bool *fullComp = NULL);
+int32_t     recursiveKDExpand(UChar32 c, UChar32 *buf, int32_t bufSize);
 		       
 // JAB: we now have Kompatible and Canonical decomposition tables
-bool     setCDValue(UChar32 c, UChar32* decomp, long decompCount,
+bool     setCDValue(UChar32 c, UChar32* decomp, int32_t decompCount,
 		    bool fullComp = false);
-UChar32 *getCDValue(UChar32 c, long *decompCount);
-long     recursiveCDExpand(UChar32 c, UChar32 *buf, long bufSize);
+UChar32 *getCDValue(UChar32 c, int32_t *decompCount);
+int32_t     recursiveCDExpand(UChar32 c, UChar32 *buf, int32_t bufSize);
 
 UCProps ucProperties(UChar32 c);
 bool    ucIsAlpha(UChar32 c);
@@ -41,7 +41,7 @@ bool    ucIsAlnum(UChar32 c);
 bool    ucIsUpper(UChar32 c);
 bool    ucIsLower(UChar32 c);
 
-long ucDigitValue(UChar32 c);
+int32_t ucDigitValue(UChar32 c);
 
 UChar32 ucToLower(UChar32 c);
 UChar32 ucToUpper(UChar32 c);
@@ -58,7 +58,7 @@ bool ucIsWordChar(UChar32 c);
 bool ucIsIgnorable(UChar32 c);
 bool ucIsExtend(UChar32 c);
 
-bool isNFKC(UChar *s, long len);
+bool isNFKC(UChar *s, int32_t len);
 UCScript ucGetScript(UChar32 c);
 
 
@@ -302,8 +302,8 @@ inline UCProps ucProperties(UChar32 c) {
 	return *(UCProps*)p;
 }
 
-inline long ucDigitValue(UChar32 c) {
-	if (c >= '0' && c <= '9') return (long)(c-'0');
+inline int32_t ucDigitValue(UChar32 c) {
+	if (c >= '0' && c <= '9') return (int32_t)(c-'0');
 	return 0;
 }
 

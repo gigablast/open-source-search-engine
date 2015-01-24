@@ -26,13 +26,13 @@ class MemPool {
 
 	// . allocates the memory pool
 	// . returns false and sets errno on error
-	bool init ( long maxMem );
+	bool init ( int32_t maxMem );
 
 	// all of these return NULL and set errno on error
-	void *gbmalloc  ( long  size );
-	void *gbcalloc  ( long  size );
-	void *dup     ( void *ptr  , long size );
-	void *gbrealloc ( void *ptr  , long newSize );
+	void *gbmalloc  ( int32_t  size );
+	void *gbcalloc  ( int32_t  size );
+	void *dup     ( void *ptr  , int32_t size );
+	void *gbrealloc ( void *ptr  , int32_t newSize );
 
 	// free a mem slot
 	bool gbfree ( void *data );
@@ -44,22 +44,22 @@ class MemPool {
 	bool isInitialized ( ) { if ( m_mem ) return true; return false; };
 
 	// by data and MemNode classes
-	unsigned long getUsedMem ( ) {
+	uint32_t getUsedMem ( ) {
 		return m_mem +m_memSize -m_tree.getFloor() +m_memUsedByData;};
 
-	unsigned long getAvailMem ( ) {	return m_memSize - getUsedMem(); };
+	uint32_t getAvailMem ( ) {	return m_memSize - getUsedMem(); };
 
 	// the whole pool allocated using ::malloc()
 	char *m_mem;
 	// size of pool
-	long  m_memSize;
+	int32_t  m_memSize;
 	// top of data usage
 	char *m_top;
 	// . some slots are "size" slots some are "offset" slots
 	// . if sorted by size then it's a size slot, otherwise offset slot
 	MemPoolTree m_tree;
 
-	unsigned long m_memUsedByData;
+	uint32_t m_memUsedByData;
 };
 
 #endif

@@ -30,53 +30,53 @@ public:
 	bool getFirstIps ( class TagRec **grv                   ,
 			   char        **urlPtrs                ,
 			   linkflags_t  *urlFlags               ,
-			   long          numUrls                ,
+			   int32_t          numUrls                ,
 			   // if urlFlags[i]&LF_OLDLINK is true, skip it
 			   bool          skipOldLinks           ,
 			   char         *coll                   ,
-			   long          niceness               ,
+			   int32_t          niceness               ,
 			   void         *state                  ,
 			   void        (*callback)(void *state) ,
-			   long          nowGlobal              ,
+			   int32_t          nowGlobal              ,
 			   bool          addTags                ,
 			   char         *testDir                );
 
-	bool launchRequests ( long starti ) ;
+	bool launchRequests ( int32_t starti ) ;
 
-	bool sendMsgC      ( long i , char *host , long hlen );
-	bool doneSending   ( long i );
-	bool addTag        ( long i );
-	bool doneAddingTag ( long i );
+	bool sendMsgC      ( int32_t i , char *host , int32_t hlen );
+	bool doneSending   ( int32_t i );
+	bool addTag        ( int32_t i );
+	bool doneAddingTag ( int32_t i );
 
 	char *m_coll      ;
-	long  m_niceness  ;
+	int32_t  m_niceness  ;
 
 	char **m_urlPtrs;
 	linkflags_t *m_urlFlags;
-	long   m_numUrls;
+	int32_t   m_numUrls;
 	bool   m_addTags;
 
 	char   m_skipOldLinks;
 
 	// buffer to hold all the data we accumulate for all the urls in urlBuf
 	char *m_buf;
-	long  m_bufSize;
+	int32_t  m_bufSize;
 
 	// sub-buffers of the great "m_buf", where we store the data for eacu
 	// url that we get in urlBuf
-	long        *m_ipBuf;
-	long        *m_ipErrors;
+	int32_t        *m_ipBuf;
+	int32_t        *m_ipErrors;
 
-	long  m_numRequests;
-	long  m_numReplies;
-	long  m_i;
-	long  m_n;
+	int32_t  m_numRequests;
+	int32_t  m_numReplies;
+	int32_t  m_i;
+	int32_t  m_n;
 
 	// point to next url in "urlBuf" to process
 	char *m_nextPtr;
 
 	//Url   m_urls        [ MAX_OUTSTANDING_MSGE1 ]; 
-	long    m_ns          [ MAX_OUTSTANDING_MSGE1 ]; 
+	int32_t    m_ns          [ MAX_OUTSTANDING_MSGE1 ]; 
 	char    m_used        [ MAX_OUTSTANDING_MSGE1 ]; 
 	MsgC    m_msgCs       [ MAX_OUTSTANDING_MSGE1 ]; // ips
 	//Msg9a   m_msg9as      [ MAX_OUTSTANDING_MSGE1 ]; // adding "firstip"
@@ -88,18 +88,18 @@ public:
 	void     *m_state;
 	void    (*m_callback)(void *state);
 
-	long m_nowGlobal;
+	int32_t m_nowGlobal;
 
 	char *m_testDir;
 
 	// for errors
-	long      m_errno;
+	int32_t      m_errno;
 };
 
 // utility functions
-extern bool getTestIp ( char *url , long *retIp , bool *found , long niceness,
+extern bool getTestIp ( char *url , int32_t *retIp , bool *found , int32_t niceness,
 			char *testDir );
-extern bool addTestIp ( char *host , long hostLen , long ip ) ;
+extern bool addTestIp ( char *host , int32_t hostLen , int32_t ip ) ;
 extern bool saveTestBuf ( char *testDir ) ;
 
 void resetTestIpTable ( ) ;

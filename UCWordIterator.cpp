@@ -9,7 +9,7 @@ UCWordIterator::UCWordIterator() {
 UCWordIterator::~UCWordIterator() {
 
 }
-bool UCWordIterator::setText(UChar* s, long slen, long version) {
+bool UCWordIterator::setText(UChar* s, int32_t slen, int32_t version) {
 	m_text = s;
 	m_textLen = slen;
 	m_last = s+slen;
@@ -25,17 +25,17 @@ UChar *UCWordIterator::getText() {
 UChar32 UCWordIterator::currentCodePoint() {
 	return m_currentCP;
 }
-long UCWordIterator::current() {
+int32_t UCWordIterator::current() {
 	return m_current-m_text;
 }
-long UCWordIterator::first() {
+int32_t UCWordIterator::first() {
 	m_current = m_text;
 	m_done = false;
 	m_currentCP = utf16EntityDecode(m_current, &m_next);
 	m_currentScript = ucGetScript(m_currentCP);
 	return 0;
 }
-long UCWordIterator::next(){
+int32_t UCWordIterator::next(){
 	if (m_current >= m_last) {m_done=true; return -1;}
 	m_current=m_next;
 	bool latin1Clean = true;
@@ -149,6 +149,6 @@ long UCWordIterator::next(){
 	return m_current - m_text;
 }
 
-long UCWordIterator::last() {
+int32_t UCWordIterator::last() {
 	return m_last - m_text;
 }

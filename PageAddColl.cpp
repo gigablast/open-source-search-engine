@@ -20,9 +20,9 @@ bool sendPageDelColl ( TcpSocket *s , HttpRequest *r ) {
 
 bool sendPageAddDelColl ( TcpSocket *s , HttpRequest *r , bool add ) {
 	// get collection name
-	//long  nclen;
+	//int32_t  nclen;
 	//char *nc   = r->getString ( "nc" , &nclen );
-	//long  cpclen;
+	//int32_t  cpclen;
 	//char *cpc  = r->getString ( "cpc" , &cpclen );
 
 	g_errno = 0;
@@ -59,7 +59,7 @@ bool sendPageAddDelColl ( TcpSocket *s , HttpRequest *r , bool add ) {
 
 	if ( format == FORMAT_XML || format == FORMAT_JSON ) {
 		// no addcoll given?
-		long  page = g_pages.getDynamicPageNumber ( r );
+		int32_t  page = g_pages.getDynamicPageNumber ( r );
 		char *addcoll = r->getString("addcoll",NULL);
 		char *delcoll = r->getString("delcoll",NULL);
 		if ( ! addcoll ) addcoll = r->getString("addColl",NULL);
@@ -81,6 +81,9 @@ bool sendPageAddDelColl ( TcpSocket *s , HttpRequest *r , bool add ) {
 	char *action = r->getString("action",NULL);
 	char *addColl = r->getString("addcoll",NULL);
 
+	// add our ip to the list
+	//char *ips = r->getString("collips",NULL);
+	//char *pwds = r->getString("collpwd",NULL);
 
 
 	char  buf [ 64*1024 ];
@@ -88,7 +91,7 @@ bool sendPageAddDelColl ( TcpSocket *s , HttpRequest *r , bool add ) {
 
 
 	//
-	// CLOUD SEARCH ENGIEN SUPPORT - GIGABOT ERRORS
+	// CLOUD SEARCH ENGINE SUPPORT - GIGABOT ERRORS
 	//
 
 	SafeBuf gtmp;
@@ -157,11 +160,11 @@ bool sendPageAddDelColl ( TcpSocket *s , HttpRequest *r , bool add ) {
 
 
 
-	//long  page     = g_pages.getDynamicPageNumber ( r );
+	//int32_t  page     = g_pages.getDynamicPageNumber ( r );
 	//char *coll     = r->getString    ( "c"    );
 	//char *pwd      = r->getString    ( "pwd" );
 	//char *username = g_users.getUsername( r );
-	//long  user = g_pages.getUserType ( s , r );
+	//int32_t  user = g_pages.getUserType ( s , r );
 	//if ( ! coll )  coll = "";
 
 	//if ( ! nc   )    nc = "";
@@ -239,6 +242,41 @@ bool sendPageAddDelColl ( TcpSocket *s , HttpRequest *r , bool add ) {
 				     "</tr>"
 				     , LIGHT_BLUE
 				     );
+
+		// collection pwds
+		p.safePrintf(
+			     "<tr bgcolor=#%s>"
+			     "<td><b>collection passwords"
+			     "</b>"
+			     "<br><font size=1>List of white space separated "
+			     "passwords allowed to adminster collection."
+			     "</font>"
+			     "</td>\n"
+			     "<td><input type=text name=collpwd "
+			     "size=60>"
+			     "</td>"
+			     "</tr>"
+			     , LIGHT_BLUE
+			     );
+
+		// ips box for security
+		p.safePrintf(
+			     "<tr bgcolor=#%s>"
+			     "<td><b>collection ips"
+			     "</b>"
+
+			     "<br><font size=1>List of white space separated "
+			     "IPs allowed to adminster collection."
+			     "</font>"
+
+			     "</td>\n"
+			     "<td><input type=text name=collips "
+			     "size=60>"
+			     "</td>"
+			     "</tr>"
+			     , LIGHT_BLUE
+			     );
+
 		// now list collections from which to copy the config
 		//p.safePrintf (
 		//	  "<tr><td><b>copy configuration from this "
@@ -250,7 +288,7 @@ bool sendPageAddDelColl ( TcpSocket *s , HttpRequest *r , bool add ) {
 
 		// wrap up the form started by printAdminTop
 		g_pages.printAdminBottom ( &p );
-		long bufLen = p.length();
+		int32_t bufLen = p.length();
 		return g_httpServer.sendDynamicPage (s,p.getBufStart(),bufLen);
 	}
 
@@ -280,7 +318,7 @@ bool sendPageAddDelColl ( TcpSocket *s , HttpRequest *r , bool add ) {
 		  DARK_BLUE
 		      );
 
-	for ( long i = 0 ; i < g_collectiondb.m_numRecs ; i++ ) {
+	for ( int32_t i = 0 ; i < g_collectiondb.m_numRecs ; i++ ) {
 		CollectionRec *cr = g_collectiondb.m_recs[i];
 		if ( ! cr ) continue;
 		p.safePrintf (
@@ -294,7 +332,7 @@ bool sendPageAddDelColl ( TcpSocket *s , HttpRequest *r , bool add ) {
 skip:
 	// wrap up the form started by printAdminTop
 	g_pages.printAdminBottom ( &p );
-	long bufLen = p.length();
+	int32_t bufLen = p.length();
 	return g_httpServer.sendDynamicPage (s,p.getBufStart(),bufLen);
 }
 
@@ -358,7 +396,7 @@ bool sendPageCloneColl ( TcpSocket *s , HttpRequest *r ) {
 	p.safePrintf ( "</table></center><br>\n");
 	// wrap up the form started by printAdminTop
 	g_pages.printAdminBottom ( &p );
-	long bufLen = p.length();
+	int32_t bufLen = p.length();
 	return g_httpServer.sendDynamicPage (s,p.getBufStart(),bufLen);
 
 }

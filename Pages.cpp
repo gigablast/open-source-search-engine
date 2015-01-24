@@ -23,7 +23,7 @@ class WebPage {
  public:
 	char  m_pageNum;  // see enum array below for this
 	char *m_filename;
-	long  m_flen;
+	int32_t  m_flen;
 	char *m_name;     // for printing the links to the pages in admin sect.
 	bool  m_cast;     // broadcast input to all hosts?
 	bool  m_usePost;  // use a POST request/reply instead of GET?
@@ -31,7 +31,7 @@ class WebPage {
 	//char  m_perm;     // permissions, see USER_* #define's below
 	char *m_desc; // page description
 	bool (* m_function)(TcpSocket *s , HttpRequest *r);
-	long  m_niceness;
+	int32_t  m_niceness;
 };
 */
 
@@ -39,19 +39,22 @@ class WebPage {
 //   functions that generate that page
 // . IMPORTANT: these must be in the same order as the PAGE_* enum in Pages.h
 //   otherwise you'll get a malformed error when running
-static long s_numPages = 0;
+static int32_t s_numPages = 0;
 static WebPage s_pages[] = {
+
+	/*
 	// dummy pages 
 	{ PAGE_NOHOSTLINKS	, "nohostlinks",   0, "host links", 0, 0, 
 	  "dummy page - if set in the users row then host links will not be "
 	  " shown",
-	  NULL, 0 ,NULL,NULL,PG_NOAPI},
+	  NULL, 0 ,NULL,NULL,
+	  PG_NOAPI},
+
 	{ PAGE_ADMIN           , "colladmin",   0, "master=0", 0, 0,
 	  "dummy page - if set in the users row then user will have master=0 and "
 	  " collection links will be highlighted in red",
-	  NULL, 0 ,NULL,NULL,PG_NOAPI},  
-
-
+	  NULL, 0 ,NULL,NULL,
+	  PG_NOAPI},  
 
 	//{ PAGE_QUALITY         , "quality",     0, "quality",  0, 0,
 	//  "dummy page - if set in the users row then  \"Quality Control\""
@@ -61,14 +64,19 @@ static WebPage s_pages[] = {
 	  "dummy page - if set in the users row then page function is"
 	  " called directly and not through g_parms.setFromRequest", 
 	  NULL, 0 ,NULL,NULL,PG_NOAPI},
- 	
+	*/
+
 	// publicly accessible pages
 	{ PAGE_ROOT      , "index.html"    , 0 , "root" , 0 , 0 ,
 	  "search page to query",
-	  sendPageRoot   , 0 ,NULL,NULL,PG_NOAPI},
+	  sendPageRoot   , 0 ,NULL,NULL,
+	  PG_NOAPI|PG_ACTIVE},
+
 	{ PAGE_RESULTS   , "search"        , 0 , "search" , 0 , 0 ,
 	  "search results page",
-	  sendPageResults, 0 ,NULL,NULL,0},
+	  sendPageResults, 0 ,NULL,NULL,
+	  PG_ACTIVE},
+
 	//{ PAGE_WIDGET   , "widget"        , 0 , "widget" , 0 , 0 ,
 	//  "widget page",
 	//  sendPageWidget, 0 ,NULL,NULL,PG_NOAPI},
@@ -77,25 +85,33 @@ static WebPage s_pages[] = {
 	// api use PAGE_ADDURL2 which is /admin/addurl. so we set PG_NOAPI here
 	{ PAGE_ADDURL    , "addurl"       , 0 , "add url" , 0 , 0 ,
 	  "Page where you can add url for spidering",
-	  sendPageAddUrl, 0 ,NULL,NULL,PG_NOAPI},
+	  sendPageAddUrl, 0 ,NULL,NULL,
+	  PG_NOAPI|PG_ACTIVE},
 
 	{ PAGE_GET       , "get"           , 0 , "get" ,  0 , 0 ,
 	  //USER_PUBLIC | USER_MASTER | USER_ADMIN | USER_CLIENT, 
 	  "gets cached web page",
-	  sendPageGet  , 0 ,NULL,NULL,0},
+	  sendPageGet  , 0 ,NULL,NULL,
+	  PG_ACTIVE},
+
 	{ PAGE_LOGIN     , "login"         , 0 , "login" ,  0 , 0 ,
 	  //USER_PUBLIC | USER_MASTER | USER_ADMIN | USER_SPAM | USER_CLIENT, 
 	 "login",
-	 sendPageLogin, 0 ,NULL,NULL,PG_NOAPI},
+	 sendPageLogin, 0 ,NULL,NULL,
+	  PG_NOAPI|PG_ACTIVE},
+
 	{ PAGE_DIRECTORY , "dir"           , 0 , "directory" , 0 , 0 ,
 	  //USER_PUBLIC | USER_MASTER | USER_ADMIN | USER_CLIENT, 
 	  "directory",
 	  // until api is ready, take this out of the menu
-	  sendPageDirectory , 0 ,NULL,NULL,PG_NOAPI},
+	  sendPageDirectory , 0 ,NULL,NULL,
+	  PG_NOAPI|PG_ACTIVE},
+
 	{ PAGE_REPORTSPAM , "reportspam"   , 0 , "report spam" , 0 , 0 ,
-	  //USER_PUBLIC | USER_MASTER | USER_ADMIN |  USER_PROXY | USER_CLIENT, 
+	  //USER_PUBLIC | USER_MASTER | USER_ADMIN |  USER_PROXY | USER_CLIENT 
 	  "report spam",
 	  sendPageReportSpam , 0 ,NULL,NULL,PG_NOAPI},
+
 	//{ PAGE_WORDVECTOR, "vec"           , 0 , "word vectors" , 0 , 1 ,
 	//  //USER_PUBLIC | USER_MASTER | USER_ADMIN , 
 	//  "word vectors",
@@ -103,115 +119,149 @@ static WebPage s_pages[] = {
 
 	// use post now for the "site list" which can be big
 	{ PAGE_BASIC_SETTINGS, "admin/settings", 0 , "settings",1, M_POST , 
-	  "basic settings", sendPageGeneric , 0 ,NULL,NULL,PG_NOAPI},
+	  "basic settings", sendPageGeneric , 0 ,NULL,NULL,
+	  PG_NOAPI|PG_COLLADMIN|PG_ACTIVE},
+
 	{ PAGE_BASIC_STATUS, "admin/status", 0 , "status",1, 0 , 
-	  "basic status", sendPageBasicStatus  , 0 ,NULL,NULL,PG_STATUS},
+	  "basic status", sendPageBasicStatus  , 0 ,NULL,NULL,
+	  PG_STATUS|PG_COLLADMIN|PG_ACTIVE},
+
 	//{ PAGE_BASIC_DIFFBOT, "admin/diffbot", 0 , "diffbot",1, 0 , 
-	//  "Basic diffbot page.",  sendPageBasicDiffbot  , 0 ,NULL,NULL,PG_NOAPI},
-	{ PAGE_BASIC_SECURITY, "admin/security", 0 , "security",1, 0 , 
-	  "basic security", sendPageGeneric  , 0 ,NULL,NULL,0},
+	//  "Basic diffbot page.",  sendPageBasicDiffbot  , 0 ,
+	//NULL,NULL,PG_NOAPI},
+
+	{ PAGE_COLLPASSWORDS,
+	  "admin/collectionpasswords", 0,"collection passwords",0,0,
+	  "passwords", sendPageGeneric  , 0 ,NULL,NULL,
+	  PG_COLLADMIN|PG_ACTIVE},
+
 	{ PAGE_BASIC_SEARCH, "", 0 , "search",1, 0 , 
-	  "basic search", sendPageRoot  , 0 ,NULL,NULL,PG_NOAPI},
-
-
+	  "basic search", sendPageRoot  , 0 ,NULL,NULL,
+	  PG_NOAPI|PG_ACTIVE},
 
 	{ PAGE_HOSTS     , "admin/hosts"   , 0 , "hosts" ,  0 , 0 ,
 	  //USER_MASTER | USER_PROXY,
-	  "hosts status",
-	  sendPageHosts    , 0 ,NULL,NULL,PG_STATUS},
+	  "hosts status", sendPageHosts    , 0 ,NULL,NULL,
+	  PG_STATUS|PG_MASTERADMIN|PG_ACTIVE},
 
 	{ PAGE_MASTER    , "admin/master"  , 0 , "master controls" ,  1 , 0 , 
 	  //USER_MASTER | USER_PROXY ,
-	  "master controls",
-	  sendPageGeneric  , 0 ,NULL,NULL,0},
+	  "master controls", sendPageGeneric  , 0 ,NULL,NULL,
+	  PG_MASTERADMIN|PG_ACTIVE},
+
 	// use POST for html head/tail and page root html. might be large.
 	{ PAGE_SEARCH    , "admin/search"   , 0 , "search controls" ,1,M_POST,
 	  //USER_ADMIN | USER_MASTER   , 
-	  "search controls",
-	  sendPageGeneric  , 0 ,NULL,NULL,0},
+	  "search controls", sendPageGeneric  , 0 ,NULL,NULL,
+	  PG_ACTIVE},
+
 	// use post now for the "site list" which can be big
 	{ PAGE_SPIDER    , "admin/spider"   , 0 , "spider controls" ,1,M_POST,
 	  //USER_ADMIN | USER_MASTER | USER_PROXY   ,
-	  "spider controls",
-	  sendPageGeneric  , 0 ,NULL,NULL,0},
+	  "spider controls", sendPageGeneric  , 0 ,NULL,NULL,
+	  PG_COLLADMIN|PG_ACTIVE},
 
 	{ PAGE_SPIDERPROXIES,"admin/proxies"   , 0 , "proxies" ,  1 , 0,
-	  "proxies", sendPageGeneric  , 0,NULL,NULL,0 } ,
+	  "proxies", sendPageGeneric  , 0,NULL,NULL,
+	  PG_MASTERADMIN|PG_ACTIVE } ,
 
 	{ PAGE_LOG       , "admin/log"     , 0 , "log controls"     ,  1 , 0 ,
 	  //USER_MASTER | USER_PROXY,
-	  "log controls",
-	  sendPageGeneric  , 0 ,NULL,NULL,0},
-	{ PAGE_SECURITY, "admin/security2", 0 , "security"     ,  1 , 0 ,
+	  "log controls", sendPageGeneric  , 0 ,NULL,NULL,
+	  PG_MASTERADMIN|PG_ACTIVE},
+
+	{ PAGE_COLLPASSWORDS2,//BASIC_SECURITY, 
+	  "admin/collectionpasswords2", 0,"collection passwords",0,0,
+	  "passwords", sendPageGeneric  , 0 ,NULL,NULL,
+	  PG_COLLADMIN|PG_NOAPI|PG_ACTIVE},
+
+
+	{ PAGE_MASTERPASSWORDS, "admin/masterpasswords", 
+	  0 , "master passwords" ,  1 , 0 ,
 	  //USER_MASTER | USER_PROXY ,
-	  "advanced security",
-	  sendPageGeneric , 0 ,NULL,NULL,PG_NOAPI},
+	  "master passwords", 
+	  sendPageGeneric , 0 ,NULL,NULL,
+	  PG_MASTERADMIN|PG_ACTIVE},
+
 	{ PAGE_ADDCOLL   , "admin/addcoll" , 0 , "add collection"  ,  1 , 0 ,
 	  //USER_MASTER , 
 	  "add a new collection",
-	  sendPageAddColl  , 0 ,NULL,NULL,0},
+	  sendPageAddColl  , 0 ,NULL,NULL,
+	  PG_MASTERADMIN|PG_ACTIVE},
+
 	{ PAGE_DELCOLL   , "admin/delcoll" , 0 , "delete collections" ,  1 ,0,
 	  //USER_MASTER , 
 	  "delete a collection",
-	  sendPageDelColl  , 0 ,NULL,NULL,0},
+	  sendPageDelColl  , 0 ,NULL,NULL,
+	  PG_COLLADMIN|PG_ACTIVE},
+
 	{ PAGE_CLONECOLL, "admin/clonecoll" , 0 , "clone collection" ,  1 ,0,
 	  //USER_MASTER , 
 	  "clone one collection's settings to another",
-	  sendPageCloneColl  , 0 ,NULL,NULL,0},
-	{ PAGE_REPAIR    , "admin/repair"   , 0 , "repair" ,  1 , 0 ,
+	  sendPageCloneColl  , 0 ,NULL,NULL,
+	  PG_MASTERADMIN|PG_ACTIVE},
+
+	// let's replace this with query reindex for the most part
+	{ PAGE_REPAIR    , "admin/rebuild"   , 0 , "rebuild" ,  1 , 0 ,
+	  "rebuild data",
 	  //USER_MASTER ,
-	  "repair data",
-	  sendPageGeneric   , 0 ,NULL,NULL,PG_NOAPI},
-	// { PAGE_SITES   , "admin/sites", 0 , "site list" ,  1 , 1,
-	//   "what sites can be spidered",
-	//   sendPageGeneric , 0 ,NULL,NULL,PG_NOAPI}, // sendPageBasicSettings
+	  sendPageGeneric , 0 ,NULL,NULL,
+	  PG_MASTERADMIN },//|PG_ACTIVE},
+
 	{ PAGE_FILTERS   , "admin/filters", 0 , "url filters" ,  1 ,M_POST,
-	  //USER_ADMIN | USER_MASTER   , 
 	  "prioritize urls for spidering",
-	  // until we get this working, set PG_NOAPI
-	  sendPageGeneric  , 0 ,NULL,NULL,PG_NOAPI},
+	  sendPageGeneric  , 0 ,NULL,NULL,
+	  PG_NOAPI|PG_COLLADMIN|PG_ACTIVE},
+
 	{ PAGE_INJECT    , "admin/inject"   , 0 , "inject url" , 0,M_MULTI ,
 	  //USER_ADMIN | USER_MASTER   ,
 	  "inject url in the index here",
-	  sendPageInject   , 2 } ,
+	  sendPageInject   , 2 ,NULL,NULL,
+	  PG_ACTIVE} ,
+
 	// this is the addurl page the the admin!
 	{ PAGE_ADDURL2   , "admin/addurl"   , 0 , "add urls" ,  0 , 0 ,
 	  "add url page for admin",
-	  sendPageAddUrl2   , 0 ,NULL,NULL,0},
+	  sendPageAddUrl2   , 0 ,NULL,NULL,
+	  PG_COLLADMIN|PG_ACTIVE},
+
 	{ PAGE_REINDEX   , "admin/reindex"  , 0 , "query reindex" ,  0 , 0 ,
 	  //USER_ADMIN | USER_MASTER, 
 	  "query delete/reindex",
-	  sendPageReindex  , 0 ,NULL,NULL,0},
-
-
-
-
+	  sendPageReindex  , 0 ,NULL,NULL,
+	  PG_COLLADMIN|PG_ACTIVE},
 
 	// master admin pages
 	{ PAGE_STATS     , "admin/stats"   , 0 , "stats" ,  0 , 0 ,
 	  //USER_MASTER | USER_PROXY , 
 	  "general statistics",
-	  sendPageStats    , 0 ,NULL,NULL,PG_STATUS},
+	  sendPageStats    , 0 ,NULL,NULL,
+	  PG_STATUS|PG_MASTERADMIN|PG_ACTIVE},
 
 	{ PAGE_GRAPH , "admin/graph"  , 0 , "graph"  ,  0 , 0 ,
 	  //USER_MASTER , 
 	  "query stats graph",
-	  sendPageGraph  , 2 /*niceness*/ ,NULL,NULL,PG_STATUS|PG_NOAPI},
+	  sendPageGraph  , 2  ,NULL,NULL,
+	  PG_STATUS|PG_NOAPI|PG_MASTERADMIN|PG_ACTIVE},
 
 	{ PAGE_PERF      , "admin/perf"    , 0 , "performance"     ,  0 , 0 ,
 	  //USER_MASTER | USER_PROXY ,
 	  "function performance graph",
-	  sendPagePerf     , 0 ,NULL,NULL,PG_STATUS|PG_NOAPI},
+	  sendPagePerf     , 0 ,NULL,NULL,
+	  PG_STATUS|PG_NOAPI|PG_MASTERADMIN|PG_ACTIVE},
 
 	{ PAGE_SOCKETS   , "admin/sockets" , 0 , "sockets" ,  0 , 0 ,
 	  //USER_MASTER | USER_PROXY,
 	  "sockets",
-	  sendPageSockets  , 0 ,NULL,NULL,PG_STATUS|PG_NOAPI},
+	  sendPageSockets  , 0 ,NULL,NULL,
+	  PG_STATUS|PG_NOAPI|PG_MASTERADMIN|PG_ACTIVE},
 
 	{ PAGE_LOGVIEW    , "admin/logview"   , 0 , "log view" ,  0 , 0 ,
 	  //USER_MASTER ,  
 	  "logview",
-	  sendPageLogView  , 0 ,NULL,NULL,PG_STATUS|PG_NOAPI},
+	  sendPageLogView  , 0 ,NULL,NULL,
+	  PG_STATUS|PG_NOAPI|PG_MASTERADMIN|PG_ACTIVE},
+
 //	{ PAGE_SYNC      , "master/sync"    , 0 , "sync"            ,  0 , 0 ,
 //	  //USER_MASTER , 
 //	  "sync",
@@ -220,19 +270,22 @@ static WebPage s_pages[] = {
 	{ PAGE_AUTOBAN    ,"admin/autoban" , 0 , "autoban" ,  1 , M_POST ,
 	  //USER_MASTER | USER_PROXY , 
 	  "autobanned ips",
-	  sendPageAutoban   , 0 ,NULL,NULL,PG_NOAPI},
-	  /*
-	{ PAGE_SPIDERLOCKS,"admin/spiderlocks" , 0 , "spider locks" ,  0 , 0 ,
-	  USER_MASTER , sendPageSpiderLocks , 0 ,NULL,NULL,PG_NOAPI},
-	  */
+	  sendPageAutoban   , 0 ,NULL,NULL,
+	  PG_NOAPI|PG_MASTERADMIN},
+
+	// deactivate until works on 64-bit... mdw 12/14/14
 	{ PAGE_PROFILER    , "admin/profiler"   , 0 , "profiler" ,  0 ,M_POST,
 	  //USER_MASTER , 
 	  "profiler",
-	  sendPageProfiler   , 0 ,NULL,NULL,PG_NOAPI},
+	  sendPageProfiler   , 0 ,NULL,NULL,
+	  PG_NOAPI|PG_MASTERADMIN},//|PG_ACTIVE},
+
 	{ PAGE_THREADS    , "admin/threads"   , 0 , "threads" ,  0 , 0 ,
 	  //USER_MASTER ,
 	  "threads",
-	  sendPageThreads  , 0 ,NULL,NULL,PG_STATUS|PG_NOAPI},
+	  sendPageThreads  , 0 ,NULL,NULL,
+	  PG_STATUS|PG_NOAPI|PG_MASTERADMIN|PG_ACTIVE},
+
 	//{ PAGE_THESAURUS, "admin/thesaurus",    0 , "thesaurus", 0 , 0 ,
         //  //USER_MASTER ,
 	//  "thesaurus",
@@ -246,38 +299,51 @@ static WebPage s_pages[] = {
 	//  sendPageOverview  , 0 ,NULL,NULL,PG_NOAPI},
 
 	{ PAGE_QA , "admin/qa"         , 0 , "qa" , 0 , 0 ,
-	  "quality assurance", sendPageQA , 0 ,NULL,NULL,PG_NOAPI},
+	  "quality assurance", 
+	  sendPageQA , 0 ,NULL,NULL,
+	  PG_NOAPI|PG_MASTERADMIN|PG_ACTIVE},
 
 	{ PAGE_IMPORT , "admin/import"         , 0 , "import" , 0 , 0 ,
 	  "import documents from another cluster", 
-	  sendPageGeneric , 0 ,NULL,NULL,PG_NOAPI},
+	  sendPageGeneric , 0 ,NULL,NULL,
+	  PG_NOAPI|PG_MASTERADMIN},
 
 	{ PAGE_API , "admin/api"         , 0 , "api" , 0 , 0 ,
 	  //USER_MASTER | USER_ADMIN , 
-	  "api",  sendPageAPI , 0 ,NULL,NULL,PG_NOAPI},
+	  "api",  
+	  sendPageAPI , 0 ,NULL,NULL,
+	  PG_NOAPI|PG_COLLADMIN|PG_ACTIVE},
 
 	{ PAGE_RULES  , "admin/siterules", 0 , "site rules", 1, M_POST,
 	  //USER_ADMIN | USER_MASTER   , 
 	  "site rules",
-	  sendPageGeneric , 0,NULL,NULL,PG_NOAPI},
-	{ PAGE_INDEXDB   , "admin/indexdb" , 0 , "indexdb"         ,  0 , 0,
-	  //USER_MASTER ,
-	  "indexdb",
-	  sendPageIndexdb  , 0 ,NULL,NULL,PG_NOAPI},
+	  sendPageGeneric , 0,NULL,NULL,
+	  PG_NOAPI},
+
+	// { PAGE_INDEXDB   , "admin/indexdb" , 0 , "indexdb"         ,  0 , 0,
+	//   //USER_MASTER ,
+	//   "indexdb",
+	//   sendPageIndexdb  , 0 ,NULL,NULL,
+	//   PG_NOAPI|PG_MASTERADMIN},
+
 	{ PAGE_TITLEDB   , "admin/titledb" , 0 , "titledb"         ,  0 , 0,
 	  //USER_MASTER , 
 	  "titledb",
-	  sendPageTitledb  , 2,NULL,NULL,PG_NOAPI},
+	  sendPageTitledb  , 2,NULL,NULL,
+	  PG_NOAPI|PG_MASTERADMIN},
 	// 1 = usePost
 
 	{ PAGE_CRAWLBOT    , "crawlbot"   , 0 , "crawlbot" ,  1 , 0,
 	  "simplified spider controls",
-	  sendPageCrawlbot , 0 ,NULL,NULL,PG_NOAPI},
+	  sendPageCrawlbot , 0 ,NULL,NULL,
+	  PG_NOAPI|PG_MASTERADMIN|PG_ACTIVE},
 
 	{ PAGE_SPIDERDB  , "admin/spiderdb" , 0 , "spider queue" ,  0 , 0 ,
 	  //USER_ADMIN | USER_MASTER   , 
 	  "spider queue",
-	  sendPageSpiderdb , 0 ,NULL,NULL,PG_STATUS|PG_NOAPI},
+	  sendPageSpiderdb , 0 ,NULL,NULL,
+	  PG_STATUS|PG_NOAPI|PG_MASTERADMIN|PG_ACTIVE},
+
 	//{ PAGE_PRIORITIES, "admin/priorities"  , 0 , "priority controls",1,1,
 	//  //USER_ADMIN | USER_MASTER   , 
 	//  "spider priorities",
@@ -290,33 +356,45 @@ static WebPage s_pages[] = {
 #ifndef CYGWIN
 	{ PAGE_SEO, "seo",0,"seo" ,  0 , 0 ,
 	  "SEO info",
-	  sendPageSEO   , 2 ,NULL,NULL,PG_NOAPI},
+	  sendPageSEO   , 2 ,NULL,NULL,
+	  PG_NOAPI|PG_MASTERADMIN},
 #else
 	{ PAGE_SEO, "seo",0,"seo" ,  0 , 0 ,
 	  "SEO info",
-	  sendPageResults  , 0 ,NULL,NULL,PG_NOAPI},
+	  sendPageResults  , 0 ,NULL,NULL,
+	  PG_NOAPI|PG_MASTERADMIN},
 #endif
 
 	{ PAGE_ACCESS    , "admin/access" , 0 , "access" ,  1 , M_POST,
 	  //USER_ADMIN | USER_MASTER   , 
 	  "access password, ip, admin ips etc. all goes in here",
-	  sendPageGeneric  , 0 ,NULL,NULL,PG_NOAPI},
+	  sendPageGeneric  , 0 ,NULL,NULL,
+	  PG_NOAPI|PG_MASTERADMIN},
+
 	{ PAGE_SEARCHBOX , "admin/searchbox", 0 , "search" ,  0 , 0 ,
 	  //USER_ADMIN | USER_MASTER   , 
 	  "search box",
-	  sendPageResults  , 0 ,NULL,NULL,PG_NOAPI},
+	  sendPageResults  , 0 ,NULL,NULL,
+	  PG_NOAPI},
+
 	{ PAGE_PARSER    , "admin/parser"  , 0 , "parser"          , 0,M_POST,
 	  //USER_MASTER ,
 	  "page parser",
-	  sendPageParser   , 2 ,NULL,NULL,PG_NOAPI},
+	  sendPageParser   , 2 ,NULL,NULL,
+	  PG_NOAPI|PG_COLLADMIN|PG_ACTIVE},
+
 	{ PAGE_SITEDB    , "admin/tagdb"  , 0 , "tagdb"  ,  0 , M_POST,
 	  //USER_MASTER | USER_ADMIN,
 	  "add/remove/get tags for sites/urls",
-	  sendPageTagdb ,  0 ,NULL,NULL,PG_NOAPI},	  
+	  sendPageTagdb ,  0 ,NULL,NULL,
+	  PG_NOAPI|PG_COLLADMIN|PG_ACTIVE},	  
+
 	{ PAGE_CATDB     , "admin/catdb"   , 0 , "catdb"           ,  0,M_POST,
 	  //USER_MASTER | USER_ADMIN,
 	  "catdb",
-	  sendPageCatdb    , 0 ,NULL,NULL,PG_NOAPI},
+	  sendPageCatdb    , 0 ,NULL,NULL,
+	  PG_NOAPI|PG_MASTERADMIN|PG_ACTIVE},
+
 	//{ PAGE_LOGIN2    , "admin/login"         , 0 , "login" ,  0 , 0,
 	//  //USER_PUBLIC | USER_MASTER | USER_ADMIN | USER_SPAM | USER_CLIENT, 
 	//"login link - also logoffs user",
@@ -348,15 +426,15 @@ static WebPage s_pages[] = {
         //  sendPageTurkHome, 0 }
 };
 
-WebPage *Pages::getPage ( long page ) {
+WebPage *Pages::getPage ( int32_t page ) {
 	return &s_pages[page];
 }
 
-char *Pages::getPath ( long page ) { 
+char *Pages::getPath ( int32_t page ) { 
 	return s_pages[page].m_filename; 
 }
 
-long Pages::getNumPages(){
+int32_t Pages::getNumPages(){
 	return s_numPages;
 }
 
@@ -364,7 +442,7 @@ void Pages::init ( ) {
 	// array of dynamic page descriptions
 	s_numPages = sizeof(s_pages) / sizeof(WebPage);
 	// sanity check, ensure PAGE_* corresponds to position
-	for ( long i = 0 ; i < s_numPages ; i++ ) 
+	for ( int32_t i = 0 ; i < s_numPages ; i++ ) 
 		if ( s_pages[i].m_pageNum != i ) {
 			log(LOG_LOGIC,"conf: Bad engineer. WebPage array is "
 			    "malformed. It must be 1-1 with the "
@@ -373,22 +451,22 @@ void Pages::init ( ) {
 			//exit ( -1 );
 		}
 	// set the m_flen member
-	for ( long i = 0 ; i < s_numPages ; i++ ) 
+	for ( int32_t i = 0 ; i < s_numPages ; i++ ) 
 		s_pages[i].m_flen = gbstrlen ( s_pages[i].m_filename );
 }
 
 // Used by Users.cpp to get PAGE_* from the given filename
-long Pages::getPageNumber ( char *filename ){
+int32_t Pages::getPageNumber ( char *filename ){
 	//
 	static bool s_init = false;
 	static char s_buff[8192];
 	static HashTableX s_ht;
 	if ( !s_init ){
 		s_ht.set(8,4,256,s_buff,8192,false,0,"pgnummap");
-		for ( long i=0; i < PAGE_NONE; i++ ){
+		for ( int32_t i=0; i < PAGE_NONE; i++ ){
 			if ( ! s_pages[i].m_filename  ) continue;
 			if (   s_pages[i].m_flen <= 0 ) continue;
-			long long pageHash = hash64( s_pages[i].m_filename,
+			int64_t pageHash = hash64( s_pages[i].m_filename,
 			                             s_pages[i].m_flen    );
 			if ( ! s_ht.addKey(&pageHash,&i) ){
 				char *xx = NULL; *xx = 0;
@@ -398,18 +476,18 @@ long Pages::getPageNumber ( char *filename ){
 		// make sure stay in s_buff
 		if ( s_ht.m_buf != s_buff ) { char *xx=NULL;*xx=0; }
 	}
-	long long pageHash = hash64(filename,gbstrlen(filename));
-	long slot = s_ht.getSlot(&pageHash);
+	int64_t pageHash = hash64(filename,gbstrlen(filename));
+	int32_t slot = s_ht.getSlot(&pageHash);
 	if ( slot== -1 )  return -1;
-	long value = *(long *)s_ht.getValueFromSlot(slot);
+	int32_t value = *(int32_t *)s_ht.getValueFromSlot(slot);
 	
 	return value;
 }
 
 // return the PAGE_* number thingy
-long Pages::getDynamicPageNumber ( HttpRequest *r ) {
+int32_t Pages::getDynamicPageNumber ( HttpRequest *r ) {
 	char *path    = r->getFilename();
-	long  pathLen = r->getFilenameLen();
+	int32_t  pathLen = r->getFilenameLen();
 	if ( pathLen > 0 && path[0]=='/' ) { path++; pathLen--; }
 	// historical backwards compatibility fix
 	if ( pathLen == 9 && strncmp ( path , "cgi/0.cgi" , 9 ) == 0 ) {
@@ -440,7 +518,7 @@ long Pages::getDynamicPageNumber ( HttpRequest *r ) {
 	// 	return PAGE_RESULTS;
 
 	// go down the list comparing the pathname to dynamic page names
-	for ( long i = 0 ; i < s_numPages ; i++ ) {
+	for ( int32_t i = 0 ; i < s_numPages ; i++ ) {
 		if ( pathLen != s_pages[i].m_flen ) continue;
 		if ( strncmp ( path , s_pages[i].m_filename , pathLen ) == 0 )
 			return i;
@@ -453,9 +531,9 @@ long Pages::getDynamicPageNumber ( HttpRequest *r ) {
 		pathLen = MAX_HTTP_FILENAME_LEN - 1;
 	// decode the path
 	char decodedPath[MAX_HTTP_FILENAME_LEN];
-	long decodedPathLen = urlDecode(decodedPath, path, pathLen);
+	int32_t decodedPathLen = urlDecode(decodedPath, path, pathLen);
 	// remove cgi
-	for (long i = 0; i < decodedPathLen; i++) {
+	for (int32_t i = 0; i < decodedPathLen; i++) {
 		if (decodedPath[i] == '?') {
 			decodedPathLen = i;
 			break;
@@ -495,7 +573,7 @@ void doneBroadcastingParms ( void *state ) {
 
 // . returns false if blocked, true otherwise
 // . send an error page on error
-bool Pages::sendDynamicReply ( TcpSocket *s , HttpRequest *r , long page ) {
+bool Pages::sendDynamicReply ( TcpSocket *s , HttpRequest *r , int32_t page ) {
 	// error out if page number out of range
 	if ( page < PAGE_ROOT || page >= s_numPages ) 
 		return g_httpServer.sendErrorReply ( s , 505 , "Bad Request");
@@ -525,7 +603,11 @@ bool Pages::sendDynamicReply ( TcpSocket *s , HttpRequest *r , long page ) {
 	//Host *h = g_hostdb.m_myHost;
 
 	// now use this...
-	bool isAdmin = g_conf.isRootAdmin ( s , r );
+	bool isMasterAdmin = g_conf.isMasterAdmin ( s , r );
+
+
+	CollectionRec *cr = g_collectiondb.getRec ( r , true );
+
 
 	////////////////////
 	////////////////////
@@ -534,10 +616,30 @@ bool Pages::sendDynamicReply ( TcpSocket *s , HttpRequest *r , long page ) {
 	//
 	////////////////////
 	////////////////////
-	if ( ! publicPage && ! isAdmin )
-		return sendPageLogin ( s , r );
 
-	if ( page == PAGE_CRAWLBOT && ! isAdmin )
+	// no longer, we let anyone snoop around to check out the gui
+	//char guest = r->getLong("guest",0);
+
+	//if ( ! publicPage && ! isMasterAdmin && ! guest )
+	//	return sendPageLogin ( s , r );
+
+	g_errno = 0;
+
+	WebPage *pg = &s_pages[page];
+
+	// for pages like autoban that no longer show in the menu,
+	// just return error right away to avoid having to deal with
+	// permissions issues/bugs
+	if ( ! publicPage && 
+	     ! isMasterAdmin && 
+	     ! (pg->m_pgflags & PG_ACTIVE) ) {
+		return g_httpServer.sendErrorReply ( s , 505 , 
+						     "Page not active");
+	}
+
+
+
+	if ( page == PAGE_CRAWLBOT && ! isMasterAdmin )
 		log("pages: accessing a crawlbot page without admin privs. "
 		    "no parms can be changed.");
 
@@ -547,7 +649,7 @@ bool Pages::sendDynamicReply ( TcpSocket *s , HttpRequest *r , long page ) {
 	bool isLoopback = false;
 	if ( iptop(s->m_ip) == iptop(h->m_ip       ) ) isLocal = true;
 	if ( iptop(s->m_ip) == iptop(h->m_ipShotgun) ) isLocal = true;
-        // shortcut
+        // int16_tcut
         uint8_t *p = (uint8_t *)&s->m_ip;
 	// 127.0.0.1
 	if ( s->m_ip == 16777343 ) { isLocal = true; isLoopback = true; }
@@ -621,9 +723,6 @@ bool Pages::sendDynamicReply ( TcpSocket *s , HttpRequest *r , long page ) {
 	//	return sendPageLogin ( s , r, "Access Denied. No permission.");
 	//}
 
-	g_errno = 0;
-
-	WebPage *pg = &s_pages[page];
 
 	// now we require a username for all "admin" type pages
 	/*bool  pub = pg->m_perm & USER_PUBLIC;
@@ -655,6 +754,39 @@ bool Pages::sendDynamicReply ( TcpSocket *s , HttpRequest *r , long page ) {
 	// 	}
 
 
+
+
+	//
+	// CLOUD SEARCH ENGINE SUPPORT
+	//
+	// if not the root admin only all user to change settings, etc.
+	// if the collection rec is a guest collection. i.e. in the cloud.
+	//
+	//bool isMasterAdmin = g_conf.isMasterAdmin(sock,hr);
+	bool isRootColl = false;
+	if ( cr && strcmp(cr->m_coll,"main")==0 ) isRootColl = true;
+	if ( cr && strcmp(cr->m_coll,"dmoz")==0 ) isRootColl = true;
+	if ( cr && strcmp(cr->m_coll,"demo")==0 ) isRootColl = true;
+	// the main,dmoz and demo collections are root admin only
+	// if ( ! isMasterAdmin && isRootColl ) {
+	// 	g_errno = ENOPERM;
+	// 	return log("parms: root admin can only change main/dmoz/demo"
+	// 		   " collections.");
+	// }
+	// just knowing the collection name is enough for a cloud user to
+	// modify the collection's parms. however, to modify the master 
+	// controls or stuff in g_conf, you have to be root admin.
+	// if ( ! g_conf.m_allowCloudUsers && ! isMasterAdmin ) {
+	// 	//g_errno = ENOPERM;
+	// 	//return log("parms: permission denied for user");
+	// 	return sendPageLogin ( s , r );
+	// }
+
+
+
+
+
+
 	// get safebuf stored in TcpSocket class
 	SafeBuf *parmList = &s->m_handyBuf;
 
@@ -668,13 +800,12 @@ bool Pages::sendDynamicReply ( TcpSocket *s , HttpRequest *r , long page ) {
 	////////
 	
 	// . convert http request to list of parmdb records
-	// . will only add parm recs we have permission to modify
+	// . will only add parm recs we have permission to modify!!!
 	// . if no collection supplied will just return true with no g_errno
-	if ( isAdmin &&
+	if ( //isMasterAdmin &&
 	     ! g_parms.convertHttpRequestToParmList ( r, parmList, page, s))
 		return g_httpServer.sendErrorReply(s,505,mstrerror(g_errno));
 		
-
 	// . add parmList using Parms::m_msg4 to all hosts!
 	// . returns true and sets g_errno on error
 	// . returns false if would block
@@ -682,7 +813,7 @@ bool Pages::sendDynamicReply ( TcpSocket *s , HttpRequest *r , long page ) {
 	// . so then doneBroadcastingParms() is called when all hosts
 	//   have received the updated parms, unless a host is dead,
 	//   in which case he should sync up when he comes back up
-	if ( isAdmin &&
+	if ( //isCollAdmin &&
 	     ! g_parms.broadcastParmList ( parmList , 
 					   s , // state is socket i guess
 					   doneBroadcastingParms ) )
@@ -713,7 +844,7 @@ bool Pages::sendDynamicReply ( TcpSocket *s , HttpRequest *r , long page ) {
 		// skip over http:// in the referer
 		if ( strncasecmp ( ref , "http://" , 7 ) == 0 ) ref += 7;
 		// save ip in case "s" gets destroyed
-		long ip = s->m_ip;
+		int32_t ip = s->m_ip;
 		logf (LOG_INFO,"http: %s %s %s %s %s",
 		      buf,iptoa(ip),r->getRequest(),ref,
 		      r->getUserAgent());
@@ -726,7 +857,7 @@ bool Pages::sendDynamicReply ( TcpSocket *s , HttpRequest *r , long page ) {
 
 	// broadcast request to ALL hosts if we should
 	// should this request be broadcasted?
-	long cast = r->getLong("cast",-1) ;
+	int32_t cast = r->getLong("cast",-1) ;
 
 	// 0 is the default
 	// UNLESS we are the crawlbot page, john does not send a &cast=1
@@ -819,7 +950,7 @@ bool Pages::sendDynamicReply ( TcpSocket *s , HttpRequest *r , long page ) {
 		// skip over http:// in the referer
 		if ( strncasecmp ( ref , "http://" , 7 ) == 0 ) ref += 7;
 		// save ip in case "s" gets destroyed
-		long ip = s->m_ip;
+		int32_t ip = s->m_ip;
 		logf (LOG_INFO,"http: %s %s %s %s %s",
 		      buf,iptoa(ip),r->getRequest(),ref,
 		      r->getUserAgent());
@@ -871,14 +1002,14 @@ static Msg28        s_msg28;
 static TcpSocket   *s_s;
 static HttpRequest  s_r;
 static bool         s_locked = false;
-static long         s_page;
+static int32_t         s_page;
 
 static void doneWrapper ( void *state ) ;
 
 // . all dynamic page requests should call this
 // . returns false if blocked, true otherwise,
 // . sets g_errno on error
-bool Pages::broadcastRequest ( TcpSocket *s , HttpRequest *r , long page ) {
+bool Pages::broadcastRequest ( TcpSocket *s , HttpRequest *r , int32_t page ) {
 	// otherwise we may block
 	if ( g_hostdb.m_hostId != 0 ) {
 		log("admin: You can only make config changes from host #0.");
@@ -922,11 +1053,11 @@ void doneWrapper ( void *state ) {
 // because they are menus of configurable parameters for either g_conf
 // or for a particular CollectionRec record for a collection.
 bool sendPageGeneric ( TcpSocket *s , HttpRequest *r ) {
-	//long page = g_pages.getDynamicPageNumber ( r );
+	//int32_t page = g_pages.getDynamicPageNumber ( r );
 	return g_parms.sendPageGeneric ( s , r );//, page );
 }
 
-bool Pages::getNiceness ( long page ) {
+bool Pages::getNiceness ( int32_t page ) {
 	// error out if page number out of range
 	if ( page < 0 || page >= s_numPages ) 
 		return 0;
@@ -960,6 +1091,10 @@ bool printTopNavButton ( char *text,
 			       "border-style:solid;"
 			       //"margin-bottom:-3px;"
 			       "border-color:blue;"
+			       // fix for msie. no this is bad for firefox
+			       //"padding-bottom:7px;"
+			       // fix msie this way:
+			       "border-bottom-width:4px;"
 			       "border-bottom-color:white;"
 			       //"overflow-y:hidden;"
 			       //"overflow-x:hidden;"
@@ -1095,8 +1230,8 @@ bool Pages::printAdminTop (SafeBuf     *sb   ,
 			   HttpRequest *r    ,
 			   char        *qs   ,
 			   char* bodyJavascript) {
-	long  page   = getDynamicPageNumber ( r );
-	//long  user   = getUserType          ( s , r );
+	int32_t  page   = getDynamicPageNumber ( r );
+	//int32_t  user   = getUserType          ( s , r );
 	//char *username   = g_users.getUsername ( r );
 	char *username = NULL;
 	//char *coll   = r->getString ( "c"   );
@@ -1159,8 +1294,8 @@ bool Pages::printAdminTop (SafeBuf     *sb   ,
 	//	sb->safePrintf("<input type=hidden name=master value=0>\n");
 	//}
 	// should any changes be broadcasted to all hosts?
-	//sb->safePrintf ("<input type=hidden name=cast value=\"%li\">\n",
-	//		(long)s_pages[page].m_cast);
+	//sb->safePrintf ("<input type=hidden name=cast value=\"%"INT32"\">\n",
+	//		(int32_t)s_pages[page].m_cast);
 
 
 	// center all
@@ -1213,7 +1348,8 @@ bool Pages::printAdminTop (SafeBuf     *sb   ,
 		      "height:100px;"
 		      "\">"
 		      "<br style=line-height:10px;>"
-		      "<img width=54 height=79 alt=HOME src=/rocket.jpg>"
+		      "<img width=54 height=79 alt=HOME border=0 "
+		       "src=/rocket.jpg>"
 		      "</div>"
 		      "</a>"
 		      "</center>"
@@ -1257,7 +1393,7 @@ bool Pages::printAdminTop (SafeBuf     *sb   ,
 	if ( page == PAGE_BASIC_STATUS ) isBasic = true;
 	//if ( page == PAGE_BASIC_DIFFBOT ) isBasic = true;
 	//if ( page == PAGE_BASIC_SEARCH  ) isBasic = true;
-	if ( page == PAGE_BASIC_SECURITY ) isBasic = true;
+	if ( page == PAGE_COLLPASSWORDS ) isBasic = true;
 	if ( page == PAGE_BASIC_SEARCH ) isBasic = true;
 
 
@@ -1303,6 +1439,27 @@ bool Pages::printAdminTop (SafeBuf     *sb   ,
 	// collection navbar
 	status&=printCollectionNavBar ( sb, page , username, coll,pwd, qs,s,r);
 
+	// count the statuses
+	int32_t emptyCount = 0;
+	int32_t doneCount = 0;
+	int32_t activeCount = 0;
+	int32_t pauseCount = 0;
+	for (int32_t i = 0 ; i < g_collectiondb.m_numRecs ; i++ ) {
+		CollectionRec *cc = g_collectiondb.m_recs[i];
+		if ( ! cc ) continue;
+		CrawlInfo *ci = &cc->m_globalCrawlInfo;
+		if (   cc->m_spideringEnabled && 
+		     ! ci->m_hasUrlsReadyToSpider &&
+		       ci->m_urlsHarvested )
+			emptyCount++;
+		else if ( ! ci->m_hasUrlsReadyToSpider )
+			doneCount++;
+		else if (cc->m_spideringEnabled && ci->m_hasUrlsReadyToSpider )
+			activeCount++;
+		else if (!cc->m_spideringEnabled && ci->m_hasUrlsReadyToSpider)
+			pauseCount++;
+	}
+
 
 	sb->safePrintf("</div>");
 
@@ -1314,21 +1471,27 @@ bool Pages::printAdminTop (SafeBuf     *sb   ,
 		       );
 	sb->safePrintf(
 		       "<font color=black>"
-		       "&#x25cf;</font> spider is done"
+		       "&#x25cf;</font> spider is done (%"INT32")"
 		       "<br>"
 
 		       "<font color=orange>"
-		       "&#x25cf;</font> spider is paused"
+		       "&#x25cf;</font> spider is paused (%"INT32")"
 		       "<br>"
 
 		       "<font color=green>"
-		       "&#x25cf;</font> spider is active"
+		       "&#x25cf;</font> spider is active (%"INT32")"
 		       "<br>"
 
 		       "<font color=gray>"
-		       "&#x25cf;</font> spider queue is empty"
+		       "&#x25cf;</font> spider queue empty (%"INT32")"
 		       "<br>"
 		       "</div>"
+
+		       ,doneCount
+		       ,pauseCount
+		       ,activeCount
+		       ,emptyCount
+
 		       );
 
 
@@ -1340,14 +1503,31 @@ bool Pages::printAdminTop (SafeBuf     *sb   ,
 	//
 
 	// the controls will go here
-	sb->safePrintf("<TD valign=top >"
+	sb->safePrintf("<TD valign=top>"
+
+		       // MDW 9/27/2014: tried to fix that blue border
+		       // in MSIE but could not easily make it go away.
+		       // seems like the table cell truncates the div's
+		       // left border below even if i put a z-index:1000;
+		       // on there.
+
+		       // "style="
+		       // "border-color:green;"
+		       // "border-left-width:3px;"
+		       // "border-style:solid;"
+		       // "margin-left:-30px;"
+		       // ">"
+
 		       "<div style=\"padding-left:20px;"
 
 		       "margin-left:-3px;"
 
 		       "border-color:#%s;"//f3c714;"
 		       "border-width:3px;"
-		       "border-left-width:3px;"
+		       // make this from 3px to 4px for msie
+		       "border-left-width:4px;"
+		       // another msie fix:
+		       //"position:absolute;"
 		       "border-top-width:0px;"
 		       "border-right-width:0px;"
 		       "border-bottom-color:blue;"
@@ -1396,7 +1576,7 @@ bool Pages::printAdminTop (SafeBuf     *sb   ,
 	//sb->safePrintf ("</td></tr></table><br/>\n");//<br/>\n");
 
 	SafeBuf mb;
-	bool added = printRedBox ( &mb );
+	bool added = printRedBox ( &mb , s , r );
 
 	// print emergency msg box
 	if ( added )
@@ -1477,7 +1657,7 @@ bool Pages::printAdminTop (SafeBuf     *sb   ,
 }
 
 bool printGigabotAdvice ( SafeBuf *sb , 
-			  long page , 
+			  int32_t page , 
 			  HttpRequest *hr ,
 			  char *errMsg ) {
 
@@ -1605,28 +1785,28 @@ bool Pages::printAdminTop2 (SafeBuf     *sb   ,
 			   //char        *qs   ) {
 			   char        *qs   ,
 			   char	       *scripts    ,
-			   long		scriptsLen ) {
-	long  page   = getDynamicPageNumber ( r );
-	//long  user   = getUserType          ( s , r );
+			   int32_t		scriptsLen ) {
+	int32_t  page   = getDynamicPageNumber ( r );
+	//int32_t  user   = getUserType          ( s , r );
 	char *username =g_users.getUsername(r);
 	char *coll   = r->getString ( "c"   );
 	//char *pwd    = r->getString ( "pwd" );
-	long  fromIp = s->m_ip;
+	int32_t  fromIp = s->m_ip;
 	return printAdminTop2 ( sb, page, username, coll, NULL, fromIp , qs ,
 			       scripts, scriptsLen );
 }
 
 bool Pages::printAdminTop2 ( SafeBuf *sb    ,
-			    long    page   ,
-			    //long    user   ,
+			    int32_t    page   ,
+			    //int32_t    user   ,
 			    char   *username,
 			    char   *coll   ,
 			    char   *pwd    ,
-			    long    fromIp ,
+			    int32_t    fromIp ,
 			    //char   *qs     ) {
 			    char   *qs     ,
 			    char   *scripts,
-			    long    scriptsLen ) {
+			    int32_t    scriptsLen ) {
 	bool status = true;
 
 	sb->safePrintf(
@@ -1672,11 +1852,11 @@ bool Pages::printAdminTop2 ( SafeBuf *sb    ,
 	//			"Quality Control</b></font>" );
 	//}
 //#ifdef SPLIT_INDEXDB
-//	long split = INDEXDB_SPLIT;
+//	int32_t split = INDEXDB_SPLIT;
 //#else
-//	long split = 1;
+//	int32_t split = 1;
 //#endif
-	//long split = g_hostdb.m_indexSplits;
+	//int32_t split = g_hostdb.m_indexSplits;
 	// the version info
 	//sb->safePrintf ("<br/><b>%s</b>", GBVersion );
 			
@@ -1707,7 +1887,7 @@ bool Pages::printAdminTop2 ( SafeBuf *sb    ,
 */
 
 void Pages::printFormTop( SafeBuf *sb, HttpRequest *r ) {
-	long  page   = getDynamicPageNumber ( r );
+	int32_t  page   = getDynamicPageNumber ( r );
 	// . the form
 	// . we cannot use the GET method if there is more than a few k of
 	//   parameters, like in the case of the Search Controls page. The
@@ -1724,8 +1904,8 @@ void Pages::printFormTop( SafeBuf *sb, HttpRequest *r ) {
 
 void Pages::printFormData( SafeBuf *sb, TcpSocket *s, HttpRequest *r ) {
 
-	long  page   = getDynamicPageNumber ( r );
-	//long  user   = getUserType          ( s , r );
+	int32_t  page   = getDynamicPageNumber ( r );
+	//int32_t  user   = getUserType          ( s , r );
 	//char *username =g_users.getUsername(r);
 	//char *pwd    = r->getString ( "pwd" );
 	char *coll   = r->getString ( "c"   );
@@ -1744,9 +1924,9 @@ void Pages::printFormData( SafeBuf *sb, TcpSocket *s, HttpRequest *r ) {
 	//}
 
 	// should any changes be broadcasted to all hosts?
-	sb->safePrintf ("<input type=\"hidden\" name=\"cast\" value=\"%li\" "
+	sb->safePrintf ("<input type=\"hidden\" name=\"cast\" value=\"%"INT32"\" "
 			"/>\n",
-			(long)s_pages[page].m_cast);
+			(int32_t)s_pages[page].m_cast);
 
 }
 
@@ -2051,12 +2231,12 @@ char *Pages::printLogo ( char *p , char *pend , char *coll ) {
 */
 
 bool Pages::printHostLinks ( SafeBuf* sb     ,
-			     long     page   ,
+			     int32_t     page   ,
 			     char    *username ,
 			     char    *password ,
 			     char    *coll   ,
 			     char    *pwd    ,
-			     long     fromIp ,
+			     int32_t     fromIp ,
 			     char    *qs     ) {
 	bool status = true;
 
@@ -2069,7 +2249,7 @@ bool Pages::printHostLinks ( SafeBuf* sb     ,
 	}
 	if ( ! password ) password = "";
 
-	long total = 0;
+	int32_t total = 0;
 	// add in hosts
 	total += g_hostdb.m_numHosts;
 	// and proxies
@@ -2086,11 +2266,11 @@ bool Pages::printHostLinks ( SafeBuf* sb     ,
 	if ( ! coll ) coll = "";
 
 	// print the 64 hosts before and after us
-	long radius = 512;//64;
-	long hid = g_hostdb.m_hostId;
-	long a = hid - radius;
-	long b = hid + radius;
-	long diff ;
+	int32_t radius = 512;//64;
+	int32_t hid = g_hostdb.m_hostId;
+	int32_t a = hid - radius;
+	int32_t b = hid + radius;
+	int32_t diff ;
 	if ( a < 0 ) { 
 		diff = -1 * a; 
 		a += diff; 
@@ -2100,15 +2280,15 @@ bool Pages::printHostLinks ( SafeBuf* sb     ,
 		diff = b - g_hostdb.m_numHosts;
 		a -= diff; if ( a < 0 ) a = 0;
 	}
-	for ( long i = a ; i < b ; i++ ) {
+	for ( int32_t i = a ; i < b ; i++ ) {
 		// skip if negative
 		if ( i < 0 ) continue;
 		if ( i >= g_hostdb.m_numHosts ) continue;
 		// get it
 		Host *h = g_hostdb.getHost ( i );
-		unsigned short port = h->m_httpPort;
+		uint16_t port = h->m_httpPort;
 		// use the ip that is not dead, prefer eth0
-		unsigned long ip = g_hostdb.getBestIp ( h , fromIp );
+		uint32_t ip = g_hostdb.getBestIp ( h , fromIp );
 		// convert our current page number to a path
 		char *path = s_pages[page].m_filename;
 		// highlight itself
@@ -2122,14 +2302,14 @@ bool Pages::printHostLinks ( SafeBuf* sb     ,
 		sb->safePrintf("%s<a href=\"http://%s:%hu/%s?"
 			       //"username=%s&pwd=%s&"
 			       "c=%s%s\">"
-			       "%li</a>%s ",
+			       "%"INT32"</a>%s ",
 			       ft,iptoa(ip),port,path,
 			       //username,password,
 			       coll,qs,i,bt);
 	}		
 
 	// print the proxies
-	for ( long i = 0; i < g_hostdb.m_numProxyHosts; i++ ) {
+	for ( int32_t i = 0; i < g_hostdb.m_numProxyHosts; i++ ) {
 		char *ft = "";
 		char *bt = "";
 		if ( i == hid && g_proxy.isProxy() ) {
@@ -2137,14 +2317,14 @@ bool Pages::printHostLinks ( SafeBuf* sb     ,
 			bt = "</font></b>";
 		}
 		Host *h = g_hostdb.getProxy( i );
-		unsigned short port = h->m_httpPort;
+		uint16_t port = h->m_httpPort;
 		// use the ip that is not dead, prefer eth0
-		unsigned long ip = g_hostdb.getBestIp ( h , fromIp );
+		uint32_t ip = g_hostdb.getBestIp ( h , fromIp );
 		char *path = s_pages[page].m_filename;
 		sb->safePrintf("%s<a href=\"http://%s:%hu/%s?"
 			       //"username=%s&pwd=%s&"
 			       "c=%s%s\">"
-			       "proxy%li</a>%s ",
+			       "proxy%"INT32"</a>%s ",
 			       ft,iptoa(ip),port,path,
 			       //username,password,
 			       coll,qs,i,bt);
@@ -2157,7 +2337,7 @@ bool Pages::printHostLinks ( SafeBuf* sb     ,
 // . print the master     admin links if "user" is USER_MASTER 
 // . print the collection admin links if "user" is USER_ADMIN
 bool  Pages::printAdminLinks ( SafeBuf *sb,
-			       long  page ,
+			       int32_t  page ,
 			       char *coll ,
 			       bool  isBasic ) {
 
@@ -2195,9 +2375,13 @@ bool  Pages::printAdminLinks ( SafeBuf *sb,
 	// visible window... so just try 1000px max
 	sb->safePrintf("<div style=max-width:800px;>");
 
-	//long matt1 = atoip ( MATTIP1 , gbstrlen(MATTIP1) );
-	//long matt2 = atoip ( MATTIP2 , gbstrlen(MATTIP2) );
-	for ( long i = PAGE_BASIC_SETTINGS ; i < s_numPages ; i++ ) {
+	// int arch = 32;
+	// if ( __WORDSIZE == 64 ) arch = 64;
+	// if ( __WORDSIZE == 128 ) arch = 128;
+
+	//int32_t matt1 = atoip ( MATTIP1 , gbstrlen(MATTIP1) );
+	//int32_t matt2 = atoip ( MATTIP2 , gbstrlen(MATTIP2) );
+	for ( int32_t i = PAGE_BASIC_SETTINGS ; i < s_numPages ; i++ ) {
 		// do not print link if no permission for that page
 		//if ( (s_pages[i].m_perm & user) == 0 ) continue;
 		//if ( ! g_users.hasPermission(username,i) ) continue;
@@ -2215,6 +2399,10 @@ bool  Pages::printAdminLinks ( SafeBuf *sb,
 		if ( ! g_conf.m_isMattWells && i == PAGE_AUTOBAN )
 			continue;
 
+		// profiler.cpp only works for 32-bit elf headers right now
+		//if ( i == PAGE_PROFILER && arch != 32 )
+		//	continue;
+
 		// is this page basic?
 		bool pageBasic = false;
 		if ( i >= PAGE_BASIC_SETTINGS &&
@@ -2225,18 +2413,26 @@ bool  Pages::printAdminLinks ( SafeBuf *sb,
 		// under the advanced menu...
 		if ( isBasic != pageBasic ) continue;
 
+
 		// ignore these for now
 		//if ( i == PAGE_SECURITY ) continue;
 		if ( i == PAGE_ACCESS ) continue;
-		if ( i == PAGE_INDEXDB ) continue;
+		//if ( i == PAGE_INDEXDB ) continue;
 		if ( i == PAGE_RULES ) continue;
 		if ( i == PAGE_API ) continue;
 		if ( i == PAGE_SEARCHBOX ) continue;
 		if ( i == PAGE_TITLEDB ) continue;
+		if ( i == PAGE_IMPORT ) continue;
 		// move these links to the coll nav bar on the left
 		if ( i == PAGE_ADDCOLL ) continue;
 		if ( i == PAGE_DELCOLL ) continue;
 		if ( i == PAGE_CLONECOLL ) continue;
+
+		// ignore collection passwords if 
+		// g_conf.m_useCollectionPasswords is false
+		if ( ! g_conf.m_useCollectionPasswords &&
+		     (i == PAGE_COLLPASSWORDS||i == PAGE_COLLPASSWORDS2) )
+			continue;
 
 		// put this back in
 		//if ( i == PAGE_HOSTS ) continue;
@@ -2358,8 +2554,8 @@ bool  Pages::printAdminLinks ( SafeBuf *sb,
 
 
 bool Pages::printCollectionNavBar ( SafeBuf *sb     ,
-				    long  page     ,
-				    //long  user     ,
+				    int32_t  page     ,
+				    //int32_t  user     ,
 				    char *username,
 				    char *coll     ,
 				    char *pwd      ,
@@ -2393,22 +2589,23 @@ bool Pages::printCollectionNavBar ( SafeBuf *sb     ,
 		highlight = false; collnum=g_collectiondb.getFirstCollnum(); }
 	if ( collnum < (collnum_t)0) return status;
 	
-	long a = collnum;
-	long counta = 1;
+	int32_t a = collnum;
+	int32_t counta = 1;
 	while ( a > 0 && counta < 15 ) 
 		if ( g_collectiondb.m_recs[--a] ) counta++;
-	long b = collnum + 1;
-	long countb = 0;
+	int32_t b = collnum + 1;
+	int32_t countb = 0;
 	while ( b < g_collectiondb.m_numRecs && countb < 16 )
 		if ( g_collectiondb.m_recs[b++] ) countb++;
 
 	char *s = "s";
 	if ( g_collectiondb.m_numRecsUsed == 1 ) s = "";
 
-	bool isRootAdmin = g_conf.isRootAdmin ( sock , hr );
+	bool isMasterAdmin = g_conf.isMasterAdmin ( sock , hr );
 
-	if ( isRootAdmin )
-		sb->safePrintf ( "<center><nobr><b>%li Collection%s</b></nobr>"
+
+	if ( isMasterAdmin )
+		sb->safePrintf ( "<center><nobr><b>%"INT32" Collection%s</b></nobr>"
 				 "</center>\n",
 				 g_collectiondb.m_numRecsUsed , s );
 	else
@@ -2439,10 +2636,10 @@ bool Pages::printCollectionNavBar ( SafeBuf *sb     ,
 		       ".e{background-color:#e0e0e0;}"
 		       "</style>\n");
 
-	long row = 0;
+	int32_t row = 0;
 
-	//for ( long i = a ; i < b ; i++ ) {
-	for ( long i = 0 ; i < g_collectiondb.m_numRecs ; i++ ) {
+	//for ( int32_t i = a ; i < b ; i++ ) {
+	for ( int32_t i = 0 ; i < g_collectiondb.m_numRecs ; i++ ) {
 		CollectionRec *cc = g_collectiondb.m_recs[i];
 		if ( ! cc ) continue;
 
@@ -2451,7 +2648,7 @@ bool Pages::printCollectionNavBar ( SafeBuf *sb     ,
 		//
 		// if not root admin and collrec's password does not match
 		// the one we are logged in with (in the cookie) then skip it
-		// if ( ! isRootAdmin &&
+		// if ( ! isMasterAdmin &&
 		//      cr->m_password &&
 		//      ! strcmp(cr->m_password,pwd) )
 		// 	continue;
@@ -2515,7 +2712,7 @@ bool Pages::printCollectionNavBar ( SafeBuf *sb     ,
 
 		// every other coll in a darker div
 		if ( (row % 2) == 0 )
-			sb->safePrintf("</div>");
+			sb->safePrintf("</div>\n");
 		else
 			sb->safePrintf("<br>\n");
 	}
@@ -2529,8 +2726,8 @@ bool Pages::printCollectionNavBar ( SafeBuf *sb     ,
 /*
 char *Pages::printCollectionNavBar ( char *p        ,
 				     char *pend     ,
-				     long  page     ,
-				     //long  user     ,
+				     int32_t  page     ,
+				     //int32_t  user     ,
 				     char *username ,
 				     char *coll     ,
 				     char *pwd      ,
@@ -2562,12 +2759,12 @@ char *Pages::printCollectionNavBar ( char *p        ,
 		highlight = false; collnum=g_collectiondb.getFirstCollnum(); }
 	if ( collnum < (collnum_t)0) return p;
 	
-	long a = collnum;
-	long counta = 1;
+	int32_t a = collnum;
+	int32_t counta = 1;
 	while ( a > 0 && counta < 15 ) 
 		if ( g_collectiondb.m_recs[--a] ) counta++;
-	long b = collnum + 1;
-	long countb = 0;
+	int32_t b = collnum + 1;
+	int32_t countb = 0;
 	while ( b < g_collectiondb.m_numRecs && countb < 16 )
 		if ( g_collectiondb.m_recs[b++] ) countb++;
 
@@ -2578,7 +2775,7 @@ char *Pages::printCollectionNavBar ( char *p        ,
 	if ( page >= PAGE_OVERVIEW ) color = "red";
 	else                         color = "black";
 
-	for ( long i = a ; i < b ; i++ ) {
+	for ( int32_t i = a ; i < b ; i++ ) {
 		CollectionRec *cc = g_collectiondb.m_recs[i];
 		if ( ! cc ) continue;
 		char *cname = cc->m_coll;
@@ -2607,10 +2804,10 @@ char *Pages::printCollectionNavBar ( char *p        ,
 // print the drop down menu of rulesets used by Sitedb and URL Filters page
 char *Pages::printRulesetDropDown ( char *p            , 
 				    char *pend         ,
-				    long  user         ,
+				    int32_t  user         ,
 				    char *cgi          ,
-				    long  selectedNum  ,
-				    long  subscript    ) {
+				    int32_t  selectedNum  ,
+				    int32_t  subscript    ) {
 	// . print pulldown menu of different site filenums
 	// . 0 - default site
 	// . 1 - banned  site
@@ -2619,7 +2816,7 @@ char *Pages::printRulesetDropDown ( char *p            ,
 	// . 4 - good    site
 	// . 5 - super   site
 	if ( subscript <= 0 ) sprintf(p,"<select name=%s>\n"   ,cgi);
-	else                  sprintf(p,"<select name=%s%li>\n",cgi,subscript);
+	else                  sprintf(p,"<select name=%s%"INT32">\n",cgi,subscript);
 	p += gbstrlen ( p );
 	// print NONE (PageReindex.cpp uses this one)
 
@@ -2628,7 +2825,7 @@ char *Pages::printRulesetDropDown ( char *p            ,
 	p += gbstrlen ( p );
 	//	}
 
-	long i = 0;
+	int32_t i = 0;
 	for ( ; i < 10000 ; i++ ) {
 		// . get the ruleset's xml
 		// . this did accept the coll/collLen but now i think we 
@@ -2645,7 +2842,7 @@ char *Pages::printRulesetDropDown ( char *p            ,
 		char *rr = "";
 		if ( retired ) rr = "retired - ";
 		// get the name of the record
-		long  slen;
+		int32_t  slen;
 		char *s = xml->getString ( "name" , &slen );
 		// set pp to "selected" if it matches "fileNum"
 		char *pp = "";
@@ -2654,18 +2851,18 @@ char *Pages::printRulesetDropDown ( char *p            ,
 		if ( s && slen > 0 ) {
 			char c = s[slen];
 			s[slen] = '\0';
-			sprintf ( p , "<option value=%li%s>%s%s "
-				  "[tagdb%li.xml]",i,pp,rr,s,i);
+			sprintf ( p , "<option value=%"INT32"%s>%s%s "
+				  "[tagdb%"INT32".xml]",i,pp,rr,s,i);
 			s[slen] = c;
 		}
 		// otherwise, print as number
 		else  
-			sprintf ( p , "<option value=%li%s>%stagdb%li.xml",
+			sprintf ( p , "<option value=%"INT32"%s>%stagdb%"INT32".xml",
 				  i,pp,rr,i);
 		p += gbstrlen ( p );
 	}
-	sprintf ( p , "<option value=%li>Always Use Default", 
-		  (long)USEDEFAULTSITEREC);
+	sprintf ( p , "<option value=%"INT32">Always Use Default", 
+		  (int32_t)USEDEFAULTSITEREC);
 	p += gbstrlen ( p );
 
 	sprintf ( p , "</select>\n" );
@@ -2675,10 +2872,10 @@ char *Pages::printRulesetDropDown ( char *p            ,
 
 
 bool Pages::printRulesetDropDown ( SafeBuf *sb        ,
-				   long  user         ,
+				   int32_t  user         ,
 				   char *cgi          ,
-				   long  selectedNum  ,
-				   long  subscript    ) {
+				   int32_t  selectedNum  ,
+				   int32_t  subscript    ) {
 	// . print pulldown menu of different site filenums
 	// . 0 - default site
 	// . 1 - banned  site
@@ -2687,7 +2884,7 @@ bool Pages::printRulesetDropDown ( SafeBuf *sb        ,
 	// . 4 - good    site
 	// . 5 - super   site
 	if ( subscript <= 0 ) sb->safePrintf("<select name=%s>\n"   ,cgi);
-	else                  sb->safePrintf("<select name=%s%li>\n",cgi,
+	else                  sb->safePrintf("<select name=%s%"INT32">\n",cgi,
 					     subscript);
 	// print NONE (PageReindex.cpp uses this one)
 
@@ -2695,7 +2892,7 @@ bool Pages::printRulesetDropDown ( SafeBuf *sb        ,
 	sb->safePrintf ("<option value=-1>NONE");
 	//	}
 
-	long i = 0;
+	int32_t i = 0;
 	for ( ; i < 10000 ; i++ ) {
 		// . get the ruleset's xml
 		// . this did accept the coll/collLen but now i think we 
@@ -2712,7 +2909,7 @@ bool Pages::printRulesetDropDown ( SafeBuf *sb        ,
 		char *rr = "";
 		if ( retired ) rr = "retired - ";
 		// get the name of the record
-		long  slen;
+		int32_t  slen;
 		char *s = xml->getString ( "name" , &slen );
 		// set pp to "selected" if it matches "fileNum"
 		char *pp = "";
@@ -2721,27 +2918,27 @@ bool Pages::printRulesetDropDown ( SafeBuf *sb        ,
 		if ( s && slen > 0 ) {
 			char c = s[slen];
 			s[slen] = '\0';
-			sb->safePrintf ( "<option value=%li%s>%s%s "
-					 "[tagdb%li.xml]",i,pp,rr,s,i);
+			sb->safePrintf ( "<option value=%"INT32"%s>%s%s "
+					 "[tagdb%"INT32".xml]",i,pp,rr,s,i);
 			s[slen] = c;
 		}
 		// otherwise, print as number
 		else  
-			sb->safePrintf ( "<option value=%li%s>%stagdb%li.xml",
+			sb->safePrintf ( "<option value=%"INT32"%s>%stagdb%"INT32".xml",
 					 i,pp,rr,i);
 	}
-	sb->safePrintf ( "<option value=%li>Always Use Default", 
-			 (long)USEDEFAULTSITEREC);
+	sb->safePrintf ( "<option value=%"INT32">Always Use Default", 
+			 (int32_t)USEDEFAULTSITEREC);
 
 	sb->safePrintf ( "</select>\n" );
 	return true;
 }
 
-char *Pages::printRulesetDescriptions ( char *p , char *pend , long user ) {
+char *Pages::printRulesetDescriptions ( char *p , char *pend , int32_t user ) {
 	sprintf ( p , "<table width=100%% cellpadding=2>" );
 	p += gbstrlen ( p );	
 	// print the descriptions of each one if we have them
-	for ( long i = 0 ; i < 10000 ; i++ ) {
+	for ( int32_t i = 0 ; i < 10000 ; i++ ) {
 		Xml *xml = g_tagdb.getSiteXml(i,g_conf.m_defaultColl, 
 					       gbstrlen(g_conf.m_defaultColl));
 		// if NULL, we're finished
@@ -2753,10 +2950,10 @@ char *Pages::printRulesetDescriptions ( char *p , char *pend , long user ) {
 		char *rr="";
 		if ( retired ) rr = " <i>(retired)</i>";
 		// skip if no description
-		long slen;
+		int32_t slen;
 		if ( ! xml->getString ( "description" , &slen ) ) continue;
 		// print number of ruleset
-		sprintf ( p , "<tr><td><b>tagdb%li.xml</b></td><td>",i );
+		sprintf ( p , "<tr><td><b>tagdb%"INT32".xml</b></td><td>",i );
 		p += gbstrlen(p);
 		// print the name of ruleset, if any
 		char *s = xml->getString ( "name" , &slen );
@@ -2788,11 +2985,11 @@ char *Pages::printRulesetDescriptions ( char *p , char *pend , long user ) {
 }
 
 // returns false if failed to print (out of mem, probably)
-bool Pages::printRulesetDescriptions ( SafeBuf *sb , long user ) {
+bool Pages::printRulesetDescriptions ( SafeBuf *sb , int32_t user ) {
 	if ( ! sb->safePrintf (  "<table width=100%% cellpadding=2>" ) )
 		return false;
 	// print the descriptions of each one if we have them
-	for ( long i = 0 ; i < 10000 ; i++ ) {
+	for ( int32_t i = 0 ; i < 10000 ; i++ ) {
 		Xml *xml = g_tagdb.getSiteXml(i,g_conf.m_defaultColl, 
 					       gbstrlen(g_conf.m_defaultColl));
 		// if NULL, we're finished
@@ -2804,10 +3001,10 @@ bool Pages::printRulesetDescriptions ( SafeBuf *sb , long user ) {
 		char *rr="";
 		if ( retired ) rr = " <i>(retired)</i>";
 		// skip if no description
-		long slen;
+		int32_t slen;
 		if ( ! xml->getString ( "description" , &slen ) ) continue;
 		// print number of ruleset
-		if ( ! sb->safePrintf( "<tr><td><b>tagdb%li.xml</b>"
+		if ( ! sb->safePrintf( "<tr><td><b>tagdb%"INT32".xml</b>"
 				       "</td><td>",i ))
 			return false;
 		// print the name of ruleset, if any
@@ -2840,7 +3037,7 @@ bool sendPageReportSpam ( TcpSocket *s , HttpRequest *r ) {
 
 	p.safePrintf("<html><head><title>Help Fight Search Engine Spam</title></head><body>");
 
-	long clen;
+	int32_t clen;
 	char* coll = r->getString("c", &clen, "");
 	p.safePrintf ("<a href=\"/?c=%s\">"
 		      "<img width=\"295\" height=\"64\" border=\"0\" "
@@ -2855,7 +3052,7 @@ bool sendPageReportSpam ( TcpSocket *s , HttpRequest *r ) {
 	p.safePrintf("</body></html>");
 
 	char* sbuf = p.getBufStart();
-	long sbufLen = p.length();
+	int32_t sbufLen = p.length();
 
 	bool retval = g_httpServer.sendDynamicPage(s,
 						   sbuf,
@@ -2944,7 +3141,7 @@ bool sendPageAPI ( TcpSocket *s , HttpRequest *r ) {
 		     "<ul>"
 		     );
 
-	for ( long i = 0 ; i < s_numPages ; i++ ) {
+	for ( int32_t i = 0 ; i < s_numPages ; i++ ) {
 		if ( s_pages[i].m_pgflags & PG_NOAPI ) continue;
 		char *pageStr = s_pages[i].m_filename;
 		// unknown?
@@ -2977,7 +3174,7 @@ bool sendPageAPI ( TcpSocket *s , HttpRequest *r ) {
 	p.safePrintf("<hr>\n");
 
 	bool printed = false;
-	for ( long i = 0 ; i < s_numPages ; i++ ) {
+	for ( int32_t i = 0 ; i < s_numPages ; i++ ) {
 		if ( i == PAGE_NONE ) continue;
 		if ( s_pages[i].m_pgflags & PG_NOAPI ) continue;
 		if ( printed )
@@ -3007,8 +3204,8 @@ bool sendPageAPI ( TcpSocket *s , HttpRequest *r ) {
 		       "</td></tr>\n",
 		       TABLE_STYLE );
 	// table of the query keywords
-	long n = getNumFieldCodes();
-	for ( long i = 0 ; i < n ; i++ ) {
+	int32_t n = getNumFieldCodes();
+	for ( int32_t i = 0 ; i < n ; i++ ) {
 		// get field #i
 		QueryField *f = &g_fields[i];
 		// print it out
@@ -3024,7 +3221,7 @@ bool sendPageAPI ( TcpSocket *s , HttpRequest *r ) {
 	p.safePrintf("</table></center></body></html>");
 
 	char* sbuf = p.getBufStart();
-	long sbufLen = p.length();
+	int32_t sbufLen = p.length();
 
 	bool retval = g_httpServer.sendDynamicPage(s,
 						   sbuf,
@@ -3034,7 +3231,7 @@ bool sendPageAPI ( TcpSocket *s , HttpRequest *r ) {
 }
 
 
-bool printApiForPage ( SafeBuf *sb , long PAGENUM , CollectionRec *cr ) {
+bool printApiForPage ( SafeBuf *sb , int32_t PAGENUM , CollectionRec *cr ) {
 
 	if ( PAGENUM == PAGE_NONE ) return true;
 
@@ -3152,7 +3349,7 @@ bool printApiForPage ( SafeBuf *sb , long PAGENUM , CollectionRec *cr ) {
 			, DARK_BLUE );
 	
 	const char *blues[] = {DARK_BLUE,LIGHT_BLUE};
-	long count = 1;
+	int32_t count = 1;
 
 	//
 	// every page supports the:
@@ -3169,12 +3366,13 @@ bool printApiForPage ( SafeBuf *sb , long PAGENUM , CollectionRec *cr ) {
 
 	// page display/output parms
 	sb->safePrintf("<tr bgcolor=%s>"
-		       "<td>%li</td>\n"
+		       "<td>%"INT32"</td>\n"
 		       "<td><b>format</b></td>"
 		       "<td>STRING</td>"
 		       "<td>output format</td>"
 		       "<td>html</td>"
-		       "<td>Display output in this format.</td>"
+		       "<td>Display output in this format. Can be "
+		       "<i>html</i>, <i>json</i> or <i>xml</i>.</td>"
 		       "</tr>"
 		       , blues[count%2]
 		       , count
@@ -3186,7 +3384,7 @@ bool printApiForPage ( SafeBuf *sb , long PAGENUM , CollectionRec *cr ) {
 	//      PAGENUM == PAGE_SEARCH ||
 	//      PAGENUM == PAGE_SPIDER ) {
 	sb->safePrintf("<tr bgcolor=%s>"
-		       "<td>%li</td>\n"
+		       "<td>%"INT32"</td>\n"
 		       "<td><b>showinput</b></td>"
 		       "<td>BOOL (0 or 1)</td>"
 		       "<td>show input and settings</td>"
@@ -3206,7 +3404,7 @@ bool printApiForPage ( SafeBuf *sb , long PAGENUM , CollectionRec *cr ) {
 	//   show for selected pages here
 	// if ( PAGENUM != PAGE_MASTER ) {
 	// 	sb->safePrintf("<tr bgcolor=%s>"
-	// 		       "<td>%li</td>\n"
+	// 		       "<td>%"INT32"</td>\n"
 	// 		       "<td><b>c</b></td>"
 	// 		       "<td>STRING</td>"
 	// 		       "<td>Collection</td>"
@@ -3224,7 +3422,7 @@ bool printApiForPage ( SafeBuf *sb , long PAGENUM , CollectionRec *cr ) {
 	//char *lastPage = NULL;
 	//Parm *lastParm = NULL;
 
-	for ( long i = 0; i < g_parms.m_numParms; i++ ) {
+	for ( int32_t i = 0; i < g_parms.m_numParms; i++ ) {
 		Parm *parm = &g_parms.m_parms[i];
 		// assume do not print
 		//parm->m_pstr = NULL;
@@ -3240,15 +3438,14 @@ bool printApiForPage ( SafeBuf *sb , long PAGENUM , CollectionRec *cr ) {
 		//if ( ! (parm->m_flags & PF_API) ) continue;
 		//if ( parm->m_page == PAGE_FILTERS ) continue;
 
-		long pageNum = parm->m_page;
+		int32_t pageNum = parm->m_page;
 
 		// these have PAGE_NONE for some reason
 		if ( parm->m_obj == OBJ_SI ) pageNum = PAGE_RESULTS;
 
 		// dup page fix. so we should 'masterpwd' and 'masterip'
 		// in the list now.
-		if ( pageNum == PAGE_SECURITY ) pageNum = PAGE_BASIC_SECURITY;
-
+		//if ( pageNum ==PAGE_SECURITY ) pageNum = PAGE_BASIC_SECURITY;
 
 		if ( pageNum != PAGENUM ) continue;
 
@@ -3277,7 +3474,7 @@ bool printApiForPage ( SafeBuf *sb , long PAGENUM , CollectionRec *cr ) {
 		else
 			sb->safePrintf ( "<tr bgcolor=#%s>",blues[count%2]);
 
-		sb->safePrintf("<td>%li</td>",count++);
+		sb->safePrintf("<td>%"INT32"</td>",count++);
 
 		// use m_cgi if no m_scgi
 		char *cgi = parm->m_cgi;
@@ -3525,7 +3722,7 @@ bool printApiForPage ( SafeBuf *sb , long PAGENUM , CollectionRec *cr ) {
 bool sendPageLogin ( TcpSocket *socket , HttpRequest *hr ) {
 
 	// get the collection
-	long  collLen = 0;
+	int32_t  collLen = 0;
 	char *coll    = hr->getString("c",&collLen);
 
 	// default to main collection. if you can login to main then you
@@ -3560,7 +3757,7 @@ bool sendPageLogin ( TcpSocket *socket , HttpRequest *hr ) {
 	bool hasPermission = false;
 
 	// this password applies to ALL collections. it's the root admin pwd
-	if ( cr && pwd && g_conf.isRootAdmin ( socket , hr ) ) 
+	if ( cr && pwd && g_conf.isMasterAdmin ( socket , hr ) ) 
 		hasPermission = true;
 
 	if ( emsg.length() == 0 && ! hasPermission && pwd )
@@ -3571,10 +3768,10 @@ bool sendPageLogin ( TcpSocket *socket , HttpRequest *hr ) {
 	if ( hasPermission && emsg.length() ) { char *xx=NULL;*xx=0; }
 
 	// what page are they originally trying to get to?
-	long page = g_pages.getDynamicPageNumber(hr);
+	int32_t page = g_pages.getDynamicPageNumber(hr);
 
 	// try to the get reference Page
-	long refPage = hr->getLong("ref",-1);
+	int32_t refPage = hr->getLong("ref",-1);
 	// if they cam to login page directly... to to basic page then
 	if ( refPage == PAGE_LOGIN ||
 	     refPage == PAGE_LOGIN2 ||
@@ -3613,7 +3810,7 @@ bool sendPageLogin ( TcpSocket *socket , HttpRequest *hr ) {
 		      , ff );
 
 	sb.safePrintf(
-		  "<input type=hidden name=ref value=\"%li\">"
+		  "<input type=hidden name=ref value=\"%"INT32"\">"
 		  "<center>"
 		  "<br><br>"
 		  "<font color=ff0000><b>%s</b></font>"
@@ -3633,7 +3830,9 @@ bool sendPageLogin ( TcpSocket *socket , HttpRequest *hr ) {
 		  "<input type=submit value=ok border=0 onclick=\""
 		  "document.cookie='pwd='+document.getElementById('ppp')"
 		  ".value+"
-		  "';expires=0';"
+		  // fix so cookies work for msie. expires= is wrong i guess.
+		  //"';expires=9999999';"
+		  "';max-age=9999999';"
 		  "\"></td>"
 		  "</tr></table>"
 		  "</center>"
@@ -3653,10 +3852,10 @@ bool sendPageLogin ( TcpSocket *socket , HttpRequest *hr ) {
 					      NULL);// cookie
 }
 
-bool printRedBox2 ( SafeBuf *sb , bool isRootWebPage ) {
+bool printRedBox2 ( SafeBuf *sb , TcpSocket *sock , HttpRequest *hr ) {
 	SafeBuf mb;
 	// return false if no red box
-	if ( ! printRedBox ( &mb , isRootWebPage ) ) return false;
+	if ( ! printRedBox ( &mb , sock , hr ) ) return false;
 	// otherwise, print it
 	sb->safeStrcpy ( mb.getBufStart() );
 	// return true since we printed one
@@ -3664,7 +3863,7 @@ bool printRedBox2 ( SafeBuf *sb , bool isRootWebPage ) {
 }
 
 // emergency message box
-bool printRedBox ( SafeBuf *mb , bool isRootWebPage ) {
+bool printRedBox ( SafeBuf *mb , TcpSocket *sock , HttpRequest *hr ) {
 
 	PingServer *ps = &g_pingServer;
 
@@ -3684,17 +3883,19 @@ bool printRedBox ( SafeBuf *mb , bool isRootWebPage ) {
 	char *boxEnd =
 		"</td></tr></table>";
 
-	long adds = 0;
+	int32_t adds = 0;
 
 
 	mb->safePrintf("<div style=max-width:500px;>");
 
+	int32_t page = g_pages.getDynamicPageNumber ( hr );
+
 	// are we just starting off? give them a little help.
-	CollectionRec *cr = g_collectiondb.getRec("main");
+	CollectionRec *crm = g_collectiondb.getRec("main");
 	if ( g_collectiondb.m_numRecs == 1 && 
-	     cr &&
-	     isRootWebPage &&
-	     cr->m_globalCrawlInfo.m_pageDownloadAttempts == 0 ) {
+	     crm &&
+	     page == PAGE_ROOT && // isRootWebPage &&
+	     crm->m_globalCrawlInfo.m_pageDownloadAttempts == 0 ) {
 		if ( adds ) mb->safePrintf("<br>");
 		adds++;
 		mb->safePrintf("%s",box);
@@ -3706,28 +3907,55 @@ bool printRedBox ( SafeBuf *mb , bool isRootWebPage ) {
 		mb->safePrintf("%s",boxEnd);
 	}
 
-	if ( isRootWebPage ) {
+	if ( page == PAGE_ROOT ) { // isRootWebPage ) {
 		mb->safePrintf("</div>");
 		return (bool)adds;
 	}
 
-	if ( g_conf.m_numConnectIps == 0 && g_conf.m_numMasterPwds == 0 ) {
+	bool printedMaster = false;
+	if ( g_conf.m_masterPwds.length() == 0 &&
+	     g_conf.m_connectIps.length() == 0 ) {
 		if ( adds ) mb->safePrintf("<br>");
 		adds++;
 		mb->safePrintf("%s",box);
-		mb->safePrintf("URGENT. Please specify a password "
+		mb->safePrintf("URGENT. Please specify a MASTER password "
 			       "or IP address in the "
-			       "<a href=/admin/security>security</a> "
+			       "<a href=/admin/masterpasswords>master "
+			       "password</a> "
 			       "table. Right now anybody might be able "
 			       "to access the Gigablast admin controls.");
+		mb->safePrintf("%s",boxEnd);
+		printedMaster = true;
+	}
+
+	CollectionRec *cr = g_collectiondb.getRec ( hr );
+
+	if ( cr &&
+	     ! printedMaster &&
+	     g_conf.m_useCollectionPasswords &&
+	     cr->m_collectionPasswords.length() == 0 && 
+	     cr->m_collectionIps.length() == 0 ) {
+		if ( adds ) mb->safePrintf("<br>");
+		adds++;
+		mb->safePrintf("%s",box);
+		mb->safePrintf("URGENT. Please specify a COLLECTION password "
+			       "or IP address in the "
+			       "<a href=/admin/collectionpasswords?c=%s>"
+			       "password</a> "
+			       "table. Right now anybody might be able "
+			       "to access the Gigablast admin controls "
+			       "for the <b>%s</b> collection."
+			       , cr->m_coll
+			       , cr->m_coll
+			       );
 		mb->safePrintf("%s",boxEnd);
 	}
 
 	// out of disk space?
-	long out = 0;
-	for ( long i = 0 ; i < g_hostdb.m_numHosts ; i++ ) {
+	int32_t out = 0;
+	for ( int32_t i = 0 ; i < g_hostdb.m_numHosts ; i++ ) {
 		Host *h = &g_hostdb.m_hosts[i];
-		if ( h->m_diskUsage < 98.0 ) continue;
+		if ( h->m_pingInfo.m_diskUsage < 98.0 ) continue;
 		out++;
 	}
 	if ( out > 0 ) {
@@ -3736,19 +3964,20 @@ bool printRedBox ( SafeBuf *mb , bool isRootWebPage ) {
 		char *s = "s are";
 		if ( out == 1 ) s = " is";
 		mb->safePrintf("%s",box);
-		mb->safePrintf("%li host%s over 98%% disk usage. "
-			       "See the <a href=/admin/hosts>"
-			       "hosts</a> table.",out,s);
+		mb->safePrintf("%"INT32" host%s over 98%% disk usage. "
+			       "See the <a href=/admin/hosts?c=%s>"
+			       "hosts</a> table.",out,s,cr->m_coll);
 		mb->safePrintf("%s",boxEnd);
 	}
 
 
 	bool sameVersions = true;
-	for ( long i = 1 ; i < g_hostdb.getNumHosts() ; i++ ) {
+	for ( int32_t i = 1 ; i < g_hostdb.getNumHosts() ; i++ ) {
 		// count if not dead
 		Host *h1 = &g_hostdb.m_hosts[i-1];
 		Host *h2 = &g_hostdb.m_hosts[i];
-		if (!strcmp(h1->m_gbVersionStrBuf,h2->m_gbVersionStrBuf))
+		if (!strcmp(h1->m_pingInfo.m_gbVersionStr,
+			    h2->m_pingInfo.m_gbVersionStr))
 			continue;
 		sameVersions = false;
 		break;
@@ -3758,10 +3987,33 @@ bool printRedBox ( SafeBuf *mb , bool isRootWebPage ) {
 		adds++;
 		mb->safePrintf("%s",box);
 		mb->safePrintf("One or more hosts have different gb versions. "
-			       "See the <a href=/admin/hosts>hosts</a> "
-			       "table.");
+			       "See the <a href=/admin/hosts?c=%s>hosts</a> "
+			       "table.",cr->m_coll);
 		mb->safePrintf("%s",boxEnd);
 	}
+
+	
+	int jammedHosts = 0;
+	for ( int32_t i = 1 ; i < g_hostdb.getNumHosts() ; i++ ) {
+		Host *h = &g_hostdb.m_hosts[i];
+		if ( g_hostdb.isDead( h ) ) continue;
+		if ( h->m_pingInfo.m_udpSlotsInUse >= 400 ) jammedHosts++;
+	}
+	if ( jammedHosts > 0 ) {
+		if ( adds ) mb->safePrintf("<br>");
+		adds++;
+		char *s = "s are";
+		if ( out == 1 ) s = " is";
+		mb->safePrintf("%s",box);
+		mb->safePrintf("%"INT32" host%s jammed with "
+			       "over %"INT32" outstanding "
+			       "udp transactions. "
+			       "See <a href=/admin/sockets?c=%s>sockets</a>"
+			       " table.",jammedHosts,s,400,cr->m_coll);
+		mb->safePrintf("%s",boxEnd);
+	}
+
+
 
 
 
@@ -3796,25 +4048,87 @@ bool printRedBox ( SafeBuf *mb , bool isRootWebPage ) {
 		mb->safePrintf("%s",boxEnd);
 	}
 
+	WebPage *wp = g_pages.getPage(page);
+
+	if ( wp && 
+	     (wp->m_pgflags & (PG_MASTERADMIN|PG_COLLADMIN)) &&
+	     ! g_conf.isMasterAdmin(sock,hr) &&
+	     ! g_conf.isCollAdmin(sock,hr) ) {
+		if ( adds ) mb->safePrintf("<br>");
+		adds++;
+		mb->safePrintf("%s",box);
+
+		char *ff = "admin/settings";
+		if ( wp ) ff = wp->m_filename;
+
+		mb->safePrintf("You have no write access to these "
+			       "controls. Please enter the collection or "
+			       "master password to get access: "
+
+			       "<form method=GET action=\"/%s\" name=xyz>"
+
+			       "<input type=password id=ppp name=xpwd size=20>"
+
+			       "<input type=submit value=ok "
+			       "border=0 onclick=\""
+			       "document.cookie='pwd='+"
+			       "document.getElementById('ppp')"
+			       ".value+"
+			       "';max-age=9999999';"
+			       "\">"
+
+			       "</form>"
+			       , ff );
+
+		mb->safePrintf("%s",boxEnd);
+	}
+
+
 	if ( ps->m_numHostsDead ) {
 		if ( adds ) mb->safePrintf("<br>");
 		adds++;
 		char *s = "hosts are";
 		if ( ps->m_numHostsDead == 1 ) s = "host is";
 		mb->safePrintf("%s",box);
-		mb->safePrintf("%li %s dead and not responding to "
+		mb->safePrintf("%"INT32" %s dead and not responding to "
 			      "pings. See the "
-			       "<a href=/admin/host>hosts table</a>.",
-			       ps->m_numHostsDead ,s );
+			       "<a href=/admin/host?c=%s>hosts table</a>.",
+			       ps->m_numHostsDead ,s ,cr->m_coll);
 		mb->safePrintf("%s",boxEnd);
 	}
 
-	if ( ! g_conf.m_useThreads || g_threads.m_disabled ) {
+	if ( ! g_conf.m_useThreads ) { // || g_threads.m_disabled ) {
 		if ( adds ) mb->safePrintf("<br>");
 		adds++;
 		mb->safePrintf("%s",box);
-		mb->safePrintf("Threads are disabled. Severely hurts "
-			      "performance.");
+		mb->safePrintf("All Threads are disabled. "
+			       "Might hurt performance for doing system "
+			       "calls which call 3rd party executables and "
+			       "can take a int32_t time to run, "
+			       "like pdf2html.");
+		mb->safePrintf("%s",boxEnd);
+	}
+
+
+	if ( g_conf.m_useThreadsForDisk ) { // || g_threads.m_disabled ) {
+		if ( adds ) mb->safePrintf("<br>");
+		adds++;
+		mb->safePrintf("%s",box);
+		mb->safePrintf("Threads are ENabled for disk. Severely hurts "
+			      "performance because pthreads suck.");
+		mb->safePrintf("%s",boxEnd);
+	}
+
+	if ( ! g_conf.m_useThreadsForSystemCalls ) {
+		if ( adds ) mb->safePrintf("<br>");
+		adds++;
+		mb->safePrintf("%s",box);
+		mb->safePrintf("Threads for system calls are disabled. "
+			       "Might hurt performance because these "
+			       "are calls to "
+			       "3rd party executables and "
+			       "can take a int32_t time to run, "
+			       "like pdf2html.");
 		mb->safePrintf("%s",boxEnd);
 	}
 

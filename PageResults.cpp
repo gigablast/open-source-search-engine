@@ -29,7 +29,7 @@
 #include "Proxy.h"
 
 static bool printSearchFiltersBar ( SafeBuf *sb , HttpRequest *hr ) ;
-static bool printMenu ( SafeBuf *sb , long menuNum , HttpRequest *hr ) ;
+static bool printMenu ( SafeBuf *sb , int32_t menuNum , HttpRequest *hr ) ;
 
 //static void gotSpellingWrapper ( void *state ) ;
 static void gotResultsWrapper  ( void *state ) ;
@@ -38,6 +38,9 @@ static void gotState           ( void *state ) ;
 static bool gotResults         ( void *state ) ;
 
 bool replaceParm ( char *cgi , SafeBuf *newUrl , HttpRequest *hr ) ;
+bool replaceParm2 ( char *cgi , SafeBuf *newUrl , 
+		    char *oldUrl , int32_t oldUrlLen ) ;
+
 
 bool printCSVHeaderRow ( SafeBuf *sb , State0 *st ) ;
 
@@ -48,11 +51,13 @@ bool printPairScore ( SafeBuf *sb , SearchInput *si , PairScore *ps ,
 
 bool printScoresHeader ( SafeBuf *sb ) ;
 
+bool printMetaContent ( Msg40 *msg40 , int32_t i ,State0 *st, SafeBuf *sb );
+
 bool printSingleScore ( SafeBuf *sb , SearchInput *si , SingleScore *ss ,
 			Msg20Reply *mr , Msg40 *msg40 ) ;
 
 bool printDmozEntry ( SafeBuf *sb ,
-		      long catId ,
+		      int32_t catId ,
 		      bool direct ,
 		      char *dmozTitle ,
 		      char *dmozSummary ,
@@ -61,7 +66,7 @@ bool printDmozEntry ( SafeBuf *sb ,
 
 bool sendReply ( State0 *st , char *reply ) {
 
-	long savedErr = g_errno;
+	int32_t savedErr = g_errno;
 
 	TcpSocket *s = st->m_socket;
 	if ( ! s ) { char *xx=NULL;*xx=0; }
@@ -85,16 +90,16 @@ bool sendReply ( State0 *st , char *reply ) {
 	}
 
 
-	long rlen = 0;
+	int32_t rlen = 0;
 	if ( reply ) rlen = gbstrlen(reply);
-	logf(LOG_DEBUG,"gb: sending back %li bytes",rlen);
+	logf(LOG_DEBUG,"gb: sending back %"INT32" bytes",rlen);
 
 	// . use light brown if coming directly from an end user
 	// . use darker brown if xml feed
-	long color = 0x00b58869;
+	int32_t color = 0x00b58869;
 	if ( si->m_format != FORMAT_HTML )color = 0x00753d30 ;
-	long long nowms = gettimeofdayInMilliseconds();
-	long long took  = nowms - st->m_startTime ;
+	int64_t nowms = gettimeofdayInMilliseconds();
+	int64_t took  = nowms - st->m_startTime ;
 	g_stats.addStat_r ( took            ,
 			    st->m_startTime , 
 			    nowms,
@@ -113,7 +118,7 @@ bool sendReply ( State0 *st , char *reply ) {
 	//   it failed to allocate its buf to hold terminating \0 in
 	//   SearchInput::setQueryBuffers()
 	if ( ! g_errno && st->m_took >= g_conf.m_logQueryTimeThreshold ) {
-		logf(LOG_TIMING,"query: Took %lli ms for %s. results=%li",
+		logf(LOG_TIMING,"query: Took %"INT64" ms for %s. results=%"INT32"",
 		     st->m_took,
 		     si->m_sbuf1.getBufStart(),
 		     st->m_msg40.getNumResults());
@@ -127,7 +132,7 @@ bool sendReply ( State0 *st , char *reply ) {
 		g_stats.m_numSuccess++;
 		// . one hour cache time... no 1000 hours, basically infinite
 		// . no because if we redo the query the results are cached
-		long cacheTime = 3600;//*1000;
+		int32_t cacheTime = 3600;//*1000;
 		// no... do not use cache
 		cacheTime = -1;
 		// the "Check it" link on add url uses &usecache=0 to tell
@@ -167,10 +172,10 @@ bool sendReply ( State0 *st , char *reply ) {
 		sb.safePrintf("<?xml version=\"1.0\" "
 			      "encoding=\"UTF-8\" ?>\n"
 			      "<response>\n"
-			      "\t<errno>%li</errno>\n"
+			      "\t<errno>%"INT32"</errno>\n"
 			      "\t<errmsg>%s</errmsg>\n"
 			      "</response>\n"
-			      ,(long)savedErr
+			      ,(int32_t)savedErr
 			      ,mstrerror(savedErr)
 			      );
 		// clear it for sending back
@@ -189,7 +194,7 @@ bool sendReply ( State0 *st , char *reply ) {
 	}
 	*/
 
-	long status = 500;
+	int32_t status = 500;
 	if (savedErr == ETOOMANYOPERANDS ||
 	    savedErr == EBADREQUEST ||
 	    savedErr == ENOPERM ||
@@ -254,14 +259,14 @@ bool sendPageResults ( TcpSocket *s , HttpRequest *hr ) {
 	// . need to pre-query the directory first to get the sites to search
 	//   this will likely have just been cached so it should be quick
 	// . then need to construct a site search query
-	//long rawFormat = hr->getLong("xml", 0); // was "raw"
-	//long xml = hr->getLong("xml",0);
+	//int32_t rawFormat = hr->getLong("xml", 0); // was "raw"
+	//int32_t xml = hr->getLong("xml",0);
 
 	// what format should search results be in? default is html
 	char format = hr->getReplyFormat();//getFormatFromRequest ( hr );
 
 	// get the dmoz catid if given
-	//long searchingDmoz = hr->getLong("dmoz",0);
+	//int32_t searchingDmoz = hr->getLong("dmoz",0);
 
 	//
 	// DO WE NEED TO ALTER cr->m_siteListBuf for a widget?
@@ -338,7 +343,7 @@ bool sendPageResults ( TcpSocket *s , HttpRequest *hr ) {
 			      //"var url='http://10.5.1.203:8000/search?q="
 			      "var url='/search?q="
 			      );
-		long  qlen;
+		int32_t  qlen;
 		char *qstr = hr->getString("q",&qlen,"",NULL);
 		// . crap! also gotta encode apostrophe since "var url='..."
 		// . true = encodeApostrophes?
@@ -347,12 +352,12 @@ bool sendPageResults ( TcpSocket *s , HttpRequest *hr ) {
 		char *qlang = hr->getString("qlang",NULL,NULL);
 		if ( qlang ) sb.safePrintf("&qlang=%s",qlang);
 		// propagate "admin" if set
-		long admin = hr->getLong("admin",-1);
-		if ( admin != -1 ) sb.safePrintf("&admin=%li",admin);
+		int32_t admin = hr->getLong("admin",-1);
+		if ( admin != -1 ) sb.safePrintf("&admin=%"INT32"",admin);
 		// propagate showing of banned results
 		if ( hr->getLong("sb",0) ) sb.safePrintf("&sb=1");
 		// propagate list of sites to restrict query to
-		long sitesLen;
+		int32_t sitesLen;
 		char *sites = hr->getString("sites",&sitesLen,NULL);
 		if ( sites ) {
 			sb.safePrintf("&sites=");
@@ -365,43 +370,43 @@ bool sendPageResults ( TcpSocket *s , HttpRequest *hr ) {
 			sb.urlEncode(prepend);
 		}
 		// propagate "debug" if set
-		long debug = hr->getLong("debug",0);
-		if ( debug ) sb.safePrintf("&debug=%li",debug);
+		int32_t debug = hr->getLong("debug",0);
+		if ( debug ) sb.safePrintf("&debug=%"INT32"",debug);
 		// propagate "s"
-		long ss = hr->getLong("s",-1);
-		if ( ss > 0 ) sb.safePrintf("&s=%li",ss);
+		int32_t ss = hr->getLong("s",-1);
+		if ( ss > 0 ) sb.safePrintf("&s=%"INT32"",ss);
 		// propagate "n"
-		long n = hr->getLong("n",-1);
-		if ( n >= 0 ) sb.safePrintf("&n=%li",n);
+		int32_t n = hr->getLong("n",-1);
+		if ( n >= 0 ) sb.safePrintf("&n=%"INT32"",n);
 		// Docs to Scan for Related Topics
-		long dsrt = hr->getLong("dsrt",-1);
-		if ( dsrt >= 0 ) sb.safePrintf("&dsrt=%li",dsrt);
+		int32_t dsrt = hr->getLong("dsrt",-1);
+		if ( dsrt >= 0 ) sb.safePrintf("&dsrt=%"INT32"",dsrt);
 		// debug gigabits?
-		long dg = hr->getLong("dg",-1);
-		if ( dg >= 0 ) sb.safePrintf("&dg=%li",dg);
+		int32_t dg = hr->getLong("dg",-1);
+		if ( dg >= 0 ) sb.safePrintf("&dg=%"INT32"",dg);
 		// show gigabits?
-		//long gb = hr->getLong("gigabits",1);
-		//if ( gb >= 1 ) sb.safePrintf("&gigabits=%li",gb);
+		//int32_t gb = hr->getLong("gigabits",1);
+		//if ( gb >= 1 ) sb.safePrintf("&gigabits=%"INT32"",gb);
 		// show banned results?
-		long showBanned = hr->getLong("sb",0);
+		int32_t showBanned = hr->getLong("sb",0);
 		if ( showBanned ) sb.safePrintf("&sb=1");
 		// propagate collection
-		long clen;
+		int32_t clen;
 		char *coll = hr->getString("c",&clen,"",NULL);
 		if ( coll ) sb.safePrintf("&c=%s",coll);
 		// forward the "ff" family filter as well
-		long ff = hr->getLong("ff",0);
-		if ( ff ) sb.safePrintf("&ff=%li",ff);
+		int32_t ff = hr->getLong("ff",0);
+		if ( ff ) sb.safePrintf("&ff=%"INT32"",ff);
 		// provide hash of the query so clients can't just pass in
 		// a bogus id to get search results from us
-		unsigned long h32 = hash32n(qstr);
+		uint32_t h32 = hash32n(qstr);
 		if ( h32 == 0 ) h32 = 1;
 		// add this timestamp so when we hit back button this
 		// parent page will be cached and so will this ajax url.
 		// but if they hit reload the parent page reloads with a
 		// different ajax url because "rand" is different
-		unsigned long long rand64 = gettimeofdayInMillisecondsLocal();
-		sb.safePrintf("&id=%lu&rand=%llu';\n"
+		uint64_t rand64 = gettimeofdayInMillisecondsLocal();
+		sb.safePrintf("&id=%"UINT32"&rand=%"UINT64"';\n"
 			      "client.open('GET', url );\n"
 			      "client.send();\n"
 			      "\">"
@@ -480,7 +485,7 @@ bool sendPageResults ( TcpSocket *s , HttpRequest *hr ) {
 			      "</html>\n"
 			      );
 		// one hour cache time... no 1000 hours, basically infinite
-		long cacheTime = 3600; // *1000;
+		int32_t cacheTime = 3600; // *1000;
 		//if ( hr->getLong("usecache",-1) == 0 ) cacheTime = 0;
 		//
 		// send back the parent stub containing the ajax
@@ -503,8 +508,8 @@ bool sendPageResults ( TcpSocket *s , HttpRequest *hr ) {
 	catch ( ... ) {
 		g_errno = ENOMEM;
 		log("query: Query failed. "
-		    "Could not allocate %li bytes for query. "
-		    "Returning HTTP status of 500.",(long)sizeof(State0));
+		    "Could not allocate %"INT32" bytes for query. "
+		    "Returning HTTP status of 500.",(int32_t)sizeof(State0));
 		g_stats.m_numFails++;
 		return g_httpServer.sendQueryErrorReply
 			(s,500,mstrerror(g_errno),
@@ -549,7 +554,7 @@ bool sendPageResults ( TcpSocket *s , HttpRequest *hr ) {
 		return sendReply ( st, NULL );
 	}
 
-	long  codeLen = 0;
+	int32_t  codeLen = 0;
 	char *code = hr->getString("code", &codeLen, NULL);
 	// allow up to 1000 results per query for paying clients
 	CollectionRec *cr = si->m_cr;
@@ -564,7 +569,7 @@ bool sendPageResults ( TcpSocket *s , HttpRequest *hr ) {
 
 	// take this out here as well!
 	// limit here
-	// long maxpp = cr->m_maxSearchResultsPerQuery ;
+	// int32_t maxpp = cr->m_maxSearchResultsPerQuery ;
 	// if ( si->m_docsWanted > maxpp &&
 	//      // disable serp max per page for custom crawls
 	//      ! cr->m_isCustomCrawl )
@@ -596,8 +601,8 @@ bool sendPageResults ( TcpSocket *s , HttpRequest *hr ) {
 	// reset
 	st->m_printedHeaderRow = false;
 
-	long ip = s->m_ip;
-	long uipLen;
+	int32_t ip = s->m_ip;
+	int32_t uipLen;
 	char *uip = hr->getString("uip", &uipLen, NULL);
 	char testBufSpace[2048];
 	SafeBuf testBuf(testBufSpace, 1024);
@@ -622,7 +627,7 @@ bool sendPageResults ( TcpSocket *s , HttpRequest *hr ) {
 	st->m_gotAds = true;
 	/*
 	if (si->m_adFeedEnabled && ! si->m_xml && si->m_docsWanted > 0) {
-                long pageNum = (si->m_firstResultNum/si->m_docsWanted) + 1;
+                int32_t pageNum = (si->m_firstResultNum/si->m_docsWanted) + 1;
 		st->m_gotAds = st->m_ads.
 			getAds(si->m_displayQuery    , //query
 			       si->m_displayQueryLen , //q len
@@ -664,7 +669,7 @@ bool sendPageResults ( TcpSocket *s , HttpRequest *hr ) {
 	// . use a niceness of 0 for all queries so they take precedence
 	//   over the indexing process
 	// . this will copy our passed "query" and "coll" to it's own buffer
-	// . we print out matching docIds to long if m_isDebug is true
+	// . we print out matching docIds to int32_t if m_isDebug is true
 	// . no longer forward this, since proxy will take care of evenly
 	//   distributing its msg 0xfd "forward" requests now
 	st->m_gotResults=st->m_msg40.getResults(si,false,st,gotResultsWrapper);
@@ -744,9 +749,9 @@ static bool printGigabitContainingSentences ( State0 *st,
 					      Gigabit *gi , 
 					      SearchInput *si ,
 					      Query *gigabitQuery ,
-					      long gigabitId ) {
+					      int32_t gigabitId ) {
 
-	//static long s_gigabitCount = 0;
+	//static int32_t s_gigabitCount = 0;
 	
 
 	char format = si->m_format;
@@ -754,9 +759,9 @@ static bool printGigabitContainingSentences ( State0 *st,
 	HttpRequest *hr = &st->m_hr;
 	CollectionRec *cr = si->m_cr;//g_collectiondb.getRec(collnum );
 
-	long numOff;
-	long revert;
-	long spaceOutOff;
+	int32_t numOff;
+	int32_t revert;
+	int32_t spaceOutOff;
 
 	if ( format == FORMAT_HTML ) {
 		sb->safePrintf("<nobr><b>");
@@ -777,8 +782,8 @@ static bool printGigabitContainingSentences ( State0 *st,
 		sb->safePrintf("      ");//,gi->m_numPages);
 		sb->safePrintf("</font>");
 		sb->safePrintf("</b>");
-		if ( si->m_isRootAdmin && 1 == 2 ) 
-			sb->safePrintf("[%.0f]{%li}",
+		if ( si->m_isMasterAdmin && 1 == 2 ) 
+			sb->safePrintf("[%.0f]{%"INT32"}",
 				       gi->m_gbscore,
 				       gi->m_minPop);
 
@@ -786,7 +791,7 @@ static bool printGigabitContainingSentences ( State0 *st,
 
 		sb->safePrintf("<font color=blue style=align:right;>"
 			       "<a style=cursor:hand;cursor:pointer; "
-			       "onclick=ccc(%li);>"
+			       "onclick=ccc(%"INT32");>"
 			       , gigabitId // s_gigabitCount 
 			       );
 		spaceOutOff = sb->length();
@@ -807,7 +812,7 @@ static bool printGigabitContainingSentences ( State0 *st,
 		sb->cdataEncode(gi->m_term,gi->m_termLen);
 		sb->safePrintf("]]></term>\n");
 		sb->safePrintf("\t\t\t<score>%f</score>\n",gi->m_gbscore);
-		sb->safePrintf("\t\t\t<minPop>%li</minPop>\n",gi->m_minPop);
+		sb->safePrintf("\t\t\t<minPop>%"INT32"</minPop>\n",gi->m_minPop);
 	}
 
 	if ( format == FORMAT_JSON ) {
@@ -816,26 +821,26 @@ static bool printGigabitContainingSentences ( State0 *st,
 		sb->jsonEncode(gi->m_term,gi->m_termLen);
 		sb->safePrintf("\",\n");
 		sb->safePrintf("\t\t\"score\":%f,\n",gi->m_gbscore);
-		sb->safePrintf("\t\t\"minPop\":%li,\n",gi->m_minPop);
+		sb->safePrintf("\t\t\"minPop\":%"INT32",\n",gi->m_minPop);
 	}
 
 	// get facts
-	long numNuggets = 0;
-	long numFacts = msg40->m_factBuf.length() / sizeof(Fact);
+	int32_t numNuggets = 0;
+	int32_t numFacts = msg40->m_factBuf.length() / sizeof(Fact);
 	Fact *facts = (Fact *)msg40->m_factBuf.getBufStart();
 	bool first = true;
 	bool second = false;
 	bool printedSecond = false;
-	//long long lastDocId = -1LL;
-	long saveOffset = 0;
-	for ( long i = 0 ; i < numFacts ; i++ ) {
+	//int64_t lastDocId = -1LL;
+	int32_t saveOffset = 0;
+	for ( int32_t i = 0 ; i < numFacts ; i++ ) {
 		Fact *fi = &facts[i];
 
 		// if printed for a higher scoring gigabit, skip
 		if ( fi->m_printed ) continue;
 
 		// check gigabit match
-		long k; for ( k = 0 ; k < fi->m_numGigabits ; k++ ) 
+		int32_t k; for ( k = 0 ; k < fi->m_numGigabits ; k++ ) 
 			if ( fi->m_gigabitPtrs[k] == gi ) break;
 		// skip this fact/sentence if does not contain gigabit
 		if ( k >= fi->m_numGigabits ) continue;
@@ -852,7 +857,7 @@ static bool printGigabitContainingSentences ( State0 *st,
 		if ( first && format == FORMAT_HTML ) {
 			sb->safePrintf("<div "
 				       //"style=\"border:1px lightgray solid;\"
-				      "id=fd%li>",gigabitId);//s_gigabitCount);
+				      "id=fd%"INT32">",gigabitId);//s_gigabitCount);
 		}
 
 		if ( second && format == FORMAT_HTML ) {
@@ -862,7 +867,7 @@ static bool printGigabitContainingSentences ( State0 *st,
 				      "overflow-y:auto;"//scroll;"
 				       //"border:1px lightgray solid; "
 				       "\" "
-				      "id=sd%li>",gigabitId);//s_gigabitCount);
+				      "id=sd%"INT32">",gigabitId);//s_gigabitCount);
 			printedSecond = true;
 		}
 
@@ -918,7 +923,7 @@ static bool printGigabitContainingSentences ( State0 *st,
 			0  ); // niceness
 		
 
-		long dlen; char *dom = getDomFast(reply->ptr_ubuf,&dlen);
+		int32_t dlen; char *dom = getDomFast(reply->ptr_ubuf,&dlen);
 
 		// print the sentence
 		if ( format == FORMAT_HTML )
@@ -959,7 +964,7 @@ static bool printGigabitContainingSentences ( State0 *st,
 		saveOffset = sb->length();
 		if ( format == FORMAT_HTML )
 			sb->safePrintf(" <a href=/get?c=%s&cnsp=0&"
-				       "strip=0&d=%lli>",
+				       "strip=0&d=%"INT64">",
 				       cr->m_coll,reply->m_docId);
 
 		if ( format == FORMAT_HTML )
@@ -1019,13 +1024,13 @@ static bool printGigabitContainingSentences ( State0 *st,
 	// store the # of nuggets in ()'s like (10 )
 	else {
 		char tmp[10];
-		sprintf(tmp,"(%li)",numNuggets);
+		sprintf(tmp,"(%"INT32")",numNuggets);
 		char *src = tmp;
 		// starting storing digits after "( "
 		char *dst = sb->getBufStart()+numOff;
-		long srcLen = gbstrlen(tmp);
+		int32_t srcLen = gbstrlen(tmp);
 		if ( srcLen > 5 ) srcLen = 5;
-		for ( long k = 0 ; k < srcLen ; k++ ) 
+		for ( int32_t k = 0 ; k < srcLen ; k++ ) 
 			dst[k] = src[k];
 	}
 
@@ -1046,7 +1051,7 @@ static bool printGigabit ( State0 *st,
 			   Gigabit *gi , 
 			   SearchInput *si ) {
 
-	//static long s_gigabitCount = 0;
+	//static int32_t s_gigabitCount = 0;
 
 	sb->safePrintf("<nobr><b>");
 	//"<img src=http://search.yippy.com/"
@@ -1064,13 +1069,13 @@ static bool printGigabit ( State0 *st,
 	sb->safeMemcpy(gi->m_term,gi->m_termLen);
 	sb->safePrintf("</a></b>");
 	sb->safePrintf(" <font color=gray size=-1>");
-	//long numOff = sb->m_length;
+	//int32_t numOff = sb->m_length;
 	// now the # of pages not nuggets
-	sb->safePrintf("(%li)",gi->m_numPages);
+	sb->safePrintf("(%"INT32")",gi->m_numPages);
 	sb->safePrintf("</font>");
 	sb->safePrintf("</b>");
-	if ( si->m_isRootAdmin ) 
-		sb->safePrintf("[%.0f]{%li}",
+	if ( si->m_isMasterAdmin ) 
+		sb->safePrintf("[%.0f]{%"INT32"}",
 			      gi->m_gbscore,
 			      gi->m_minPop);
 	// that's it for the gigabit
@@ -1101,9 +1106,9 @@ bool gotResults ( void *state ) {
 	// cast our State0 class from this
 	State0 *st = (State0 *) state;
 
-	long long nowMS = gettimeofdayInMilliseconds();
+	int64_t nowMS = gettimeofdayInMilliseconds();
 	// log the time
-	long long took = nowMS - st->m_startTime;
+	int64_t took = nowMS - st->m_startTime;
 	// record that
 	st->m_took = took;
 
@@ -1111,7 +1116,7 @@ bool gotResults ( void *state ) {
 	// grab the query
 	Msg40 *msg40 = &(st->m_msg40);
 	//char  *q    = msg40->getQuery();
-	//long   qlen = msg40->getQueryLen();
+	//int32_t   qlen = msg40->getQueryLen();
 
 	SearchInput *si = &st->m_si;
 
@@ -1132,15 +1137,28 @@ bool gotResults ( void *state ) {
 			log("res: socket still in streaming mode. wtf?");
 			st->m_socket->m_streamingMode = false;
 		}
-		log("msg40: done streaming. nuking state.");
+		log("msg40: done streaming. nuking state=%"PTRFMT" q=%s. "
+		    "msg20sin=%i msg20sout=%i sendsin=%i sendsout=%i "
+		    "numrequests=%i numreplies=%i "
+		    ,(PTRTYPE)st
+		    ,si->m_q.m_orig
+
+		    , msg40->m_numMsg20sIn
+		    , msg40->m_numMsg20sOut
+		    , msg40->m_sendsIn
+		    , msg40->m_sendsOut
+		    , msg40->m_numRequests
+		    , msg40->m_numReplies
+
+		    );
 		mdelete(st, sizeof(State0), "PageResults2");
 		delete st;
 		return true;
 	}
 
-	// shortcuts
+	// int16_tcuts
 	//char        *coll    = si->m_coll2;
-	//long         collLen = si->m_collLen2;
+	//int32_t         collLen = si->m_collLen2;
 
 	//collnum_t collnum = si->m_firstCollnum;
 
@@ -1167,7 +1185,7 @@ bool gotResults ( void *state ) {
 	////////////
 	// get the first result
 	Msg20 *m20first = msg40->m_msg20[0];
-	long mabr = st->m_hr.getLong("maxagebeforeredownload",-1);
+	int32_t mabr = st->m_hr.getLong("maxagebeforeredownload",-1);
 	if ( mabr >= 0 && 
 	     numResults > 0 &&
 	     // only do this once
@@ -1209,7 +1227,7 @@ bool gotResults ( void *state ) {
 		// get the doc we downloaded
 		XmlDoc *xd = st->m_xd;
 		// get it
-		long newHash32 = xd->getContentHash32();
+		int32_t newHash32 = xd->getContentHash32();
 		// log it
 		if ( newHash32 != st->m_oldContentHash32 ) 
 			// note it in logs for now
@@ -1294,33 +1312,33 @@ bool gotResults ( void *state ) {
 	//
 
 
- 	long numResults = msg40->getNumResults();
+ 	int32_t numResults = msg40->getNumResults();
 
 	// if user is doing ajax widget we need to know the current docid
 	// that is listed at the top of their widget display so we can
 	// hide the new docids above that and scroll them down slowly.
 	/*
-	//long topDocIdPos = -1;
+	//int32_t topDocIdPos = -1;
 	bool hasInvisibleResults = false;
-	//long numInvisible = 0;
-	long numAbove = 0;
+	//int32_t numInvisible = 0;
+	int32_t numAbove = 0;
 	HttpRequest *hr = &st->m_hr;
-	long long oldTop = 0LL;
-	long long lastDocId = 0LL;
+	int64_t oldTop = 0LL;
+	int64_t lastDocId = 0LL;
 	double lastSerpScore = 0.0;
 	if ( si->m_format == FORMAT_WIDGET_AJAX ) {
 		// sanity, no stream mode here, it won't work
 		if ( si->m_streamResults )
 			log("results: do not use stream=1 for widget");
 		// get current top docid
-		long long topDocId = hr->getLongLong("topdocid",0LL);
+		int64_t topDocId = hr->getLongLong("topdocid",0LL);
 
 		// DEBUG: force it on for now
 		//topDocId = 4961990748LL;
 
 		// scan results. this does not support &stream=1 streaming
 		// mode. it doesn't make sense that it needs to.
-		for ( long i = 0 ; i < numResults ; i++ ) {
+		for ( int32_t i = 0 ; i < numResults ; i++ ) {
 			// skip if already invisible
 			if ( msg40->m_msg3a.m_clusterLevels[i] != CR_OK ) 
 				continue;
@@ -1370,7 +1388,7 @@ bool gotResults ( void *state ) {
 			       "hd.style.height = hd +1;\n"
 			       // we are done if height is equal to 
 			       // X * resultdivheight which is 140px i think
-			       "if ( hd >= %li ) return;\n"
+			       "if ( hd >= %"INT32" ) return;\n"
 			       // call us again in 300ms
 			       "setTimeout('diffbot_scroll()',300);\n"
 			       "}"
@@ -1381,7 +1399,7 @@ bool gotResults ( void *state ) {
 			       "alert(\'poo\');\n"
 
 			       "</script>"
-			       , numInvisible * (long)RESULT_HEIGHT
+			       , numInvisible * (int32_t)RESULT_HEIGHT
 
 			       );
 	}
@@ -1394,14 +1412,14 @@ bool gotResults ( void *state ) {
 	// or so we know what docid was on top for scrolling purposes
 	//if ( si->m_format == FORMAT_WIDGET_AJAX )
 	//	sb->safePrintf("<input type=hidden "
-	//		       "id=topdocid name=topdocid value=%lli>\n",
+	//		       "id=topdocid name=topdocid value=%"INT64">\n",
 	//		       oldTop);
 
 	// report how many results we added above the topdocid provided, if any
 	// so widget can scroll down automatically
 	//if ( si->m_format == FORMAT_WIDGET_AJAX && numAbove )
 	//	sb->safePrintf("<input type=hidden "
-	//		       "id=topadd name=topadd value=%li>\n",numAbove);
+	//		       "id=topadd name=topadd value=%"INT32">\n",numAbove);
 	
 
 	// we often can add 100s of things to the widget's result set per 
@@ -1418,20 +1436,20 @@ bool gotResults ( void *state ) {
 	// 	// let's make this ascii encoded crap
 	// 	sb->safePrintf("<input type=hidden "
 	// 		       "id=maxserpdocid "
-	// 		       "value=%lli>\n",
+	// 		       "value=%"INT64">\n",
 	// 		       lastDocId);
 	// }
 
 
 	// then print each result
 	// don't display more than docsWanted results
-	long count = msg40->getDocsWanted();
+	int32_t count = msg40->getDocsWanted();
 	bool hadPrintError = false;
-	long numPrintedSoFar = 0;
-	//long widgetHeight = hr->getLong("widgetheight",400);
-	//long widgetwidth = hr->getLong("widgetwidth",250);
+	int32_t numPrintedSoFar = 0;
+	//int32_t widgetHeight = hr->getLong("widgetheight",400);
+	//int32_t widgetwidth = hr->getLong("widgetwidth",250);
 
-	for ( long i = 0 ; count > 0 && i < numResults ; i++ ) {
+	for ( int32_t i = 0 ; count > 0 && i < numResults ; i++ ) {
 
 		/*
 		if ( hasInvisibleResults ) {
@@ -1442,7 +1460,7 @@ bool gotResults ( void *state ) {
 			// and scroll them down in time so it looks cool.
 			if ( i == 0 )
 				sb->safePrintf("<div id=diffbot_invisible "
-					       "style=top:%lipx;"
+					       "style=top:%"INT32"px;"
 					       // relative to containing div
 					       // which is position:relative!
 					       "position:absolute;"
@@ -1510,9 +1528,9 @@ bool gotResults ( void *state ) {
 // defined in PageRoot.cpp
 bool expandHtml (  SafeBuf& sb,
 		   char *head , 
-		   long hlen ,
+		   int32_t hlen ,
 		   char *q    , 
-		   long qlen ,
+		   int32_t qlen ,
 		   HttpRequest *r ,
 		   SearchInput *si,
 		   char *method ,
@@ -1690,7 +1708,7 @@ bool printLeftNavColumn ( SafeBuf &sb, State0 *st ) {
 	//
 
 	SafeBuf *gbuf = &msg40->m_gigabitBuf;
-	long numGigabits = gbuf->length()/sizeof(Gigabit);
+	int32_t numGigabits = gbuf->length()/sizeof(Gigabit);
 
 	// MDW: support gigabits in xml/json format again
 	//if ( format != FORMAT_HTML ) numGigabits = 0;
@@ -1698,8 +1716,8 @@ bool printLeftNavColumn ( SafeBuf &sb, State0 *st ) {
 
 	// print gigabits
 	Gigabit *gigabits = (Gigabit *)gbuf->getBufStart();
-	//long numCols = 5;
-	//long perRow = numGigabits / numCols;
+	//int32_t numCols = 5;
+	//int32_t perRow = numGigabits / numCols;
 
 	if ( numGigabits && format == FORMAT_XML )
 		sb.safePrintf("\t<gigabits>\n");
@@ -1753,7 +1771,7 @@ bool printLeftNavColumn ( SafeBuf &sb, State0 *st ) {
 	Query gigabitQuery;
 	SafeBuf ttt;
 	// limit it to 40 gigabits for now
-	for ( long i = 0 ; i < numGigabits && i < 40 ; i++ ) {
+	for ( int32_t i = 0 ; i < numGigabits && i < 40 ; i++ ) {
 		Gigabit *gi = &gigabits[i];
 		ttt.pushChar('\"');
 		ttt.safeMemcpy(gi->m_term,gi->m_termLen);
@@ -1769,12 +1787,12 @@ bool printLeftNavColumn ( SafeBuf &sb, State0 *st ) {
 				    true , // queryexpansion?
 				    true );  // usestopwords?
 
-	// log("results: gigabitquery=%s landid=%li"
+	// log("results: gigabitquery=%s landid=%"INT32""
 	//     ,ttt.getBufStart()
 	//     ,si->m_queryLangId);
 
 
-	for ( long i = 0 ; i < numGigabits ; i++ ) {
+	for ( int32_t i = 0 ; i < numGigabits ; i++ ) {
 		//if ( i > 0 && format == FORMAT_HTML ) 
 		//	sb.safePrintf("<hr>");
 		//if ( perRow && (i % perRow == 0) )
@@ -2038,7 +2056,7 @@ bool printSearchResultsHeader ( State0 *st ) {
 	// grab the query
 	Msg40 *msg40 = &(st->m_msg40);
 	char  *q    = msg40->getQuery();
-	long   qlen = msg40->getQueryLen();
+	int32_t   qlen = msg40->getQueryLen();
 
   	//char  local[ 128000 ];
 	//SafeBuf sb(local, 128000);
@@ -2093,10 +2111,10 @@ bool printSearchResultsHeader ( State0 *st ) {
 	}
 
 	if ( si->m_format == FORMAT_WIDGET_IFRAME ) {
-		long refresh = hr->getLong("refresh",0);
+		int32_t refresh = hr->getLong("refresh",0);
 		if ( refresh )
 			sb->safePrintf("<meta http-equiv=\"refresh\" "
-				       "content=%li>",refresh);
+				       "content=%"INT32">",refresh);
 	}
 
 	// lead with user's widget header which usually has custom style tags
@@ -2119,15 +2137,15 @@ bool printSearchResultsHeader ( State0 *st ) {
 
 	// the calling function checked this so it should be non-null
 	char *coll = cr->m_coll;
-	long collLen = gbstrlen(coll);
+	int32_t collLen = gbstrlen(coll);
 
 	if ( si->m_format == FORMAT_WIDGET_IFRAME ||
 	     si->m_format == FORMAT_WIDGET_AJAX ) {
 		char *pos = "relative";
 		if ( si->m_format == FORMAT_WIDGET_IFRAME ) pos = "absolute";
-		long widgetwidth = hr->getLong("widgetwidth",150);
-		long widgetHeight = hr->getLong("widgetheight",400);
-		//long iconWidth = 25;
+		int32_t widgetwidth = hr->getLong("widgetwidth",150);
+		int32_t widgetHeight = hr->getLong("widgetheight",400);
+		//int32_t iconWidth = 25;
 
 		// put image in this div which will have top:0px JUST like
 		// the div holding the search results we print out below
@@ -2139,7 +2157,7 @@ bool printSearchResultsHeader ( State0 *st ) {
 			       "z-index:10;"
 			       "top:0px;\">");
 
-		//long refresh = hr->getLong("refresh",15);
+		//int32_t refresh = hr->getLong("refresh",15);
 		char *oq = hr->getString("q",NULL);
 		if ( ! oq ) oq = "";
 		char *prepend = hr->getString("prepend");
@@ -2171,7 +2189,7 @@ bool printSearchResultsHeader ( State0 *st ) {
 			       "margin-top:3px;"
 			       //"right:10px;"
 			       //"right:2px;"
-			       //"width:%lipx;"
+			       //"width:%"INT32"px;"
 			       // so we are to the right of the searchbox
 			       "float:right;"
 			       "\" "
@@ -2205,7 +2223,7 @@ bool printSearchResultsHeader ( State0 *st ) {
 			       "\">"
 			       // the box that holds the query
 			       "<input type=text id=qbox name=qbox "
-			       "size=%li " //name=prepend "
+			       "size=%"INT32" " //name=prepend "
 			       "value=\"%s\"  "
 			       "style=\"z-index:10;"
 			       "font-weight:bold;"
@@ -2232,8 +2250,8 @@ bool printSearchResultsHeader ( State0 *st ) {
 			       "top:0px;"
 			       "overflow-y:auto;"
 			       "overflow-x:hidden;"
-			       "width:%lipx;"
-			       "height:%lipx;\">"
+			       "width:%"INT32"px;"
+			       "height:%"INT32"px;\">"
 			       , widgetwidth
 			       , widgetHeight);
 	}
@@ -2244,26 +2262,26 @@ bool printSearchResultsHeader ( State0 *st ) {
 			      "encoding=\"UTF-8\" ?>\n"
 			      "<response>\n" );
 
-	long long nowMS = gettimeofdayInMillisecondsLocal();
+	int64_t nowMS = gettimeofdayInMillisecondsLocal();
 
 	// show current time
 	if ( si->m_format == FORMAT_XML ) {
-		long long globalNowMS = localToGlobalTimeMilliseconds(nowMS);
-		sb->safePrintf("\t<currentTimeUTC>%lu</currentTimeUTC>\n",
-			      (long)(globalNowMS/1000));
+		int64_t globalNowMS = localToGlobalTimeMilliseconds(nowMS);
+		sb->safePrintf("\t<currentTimeUTC>%"UINT32"</currentTimeUTC>\n",
+			      (uint32_t)(globalNowMS/1000));
 	} 
 	else if ( st->m_header && si->m_format == FORMAT_JSON ) {
-	    long long globalNowMS = localToGlobalTimeMilliseconds(nowMS);
-	    sb->safePrintf("\"currentTimeUTC\":%lu,\n", 
-			   (long)(globalNowMS/1000));
+	    int64_t globalNowMS = localToGlobalTimeMilliseconds(nowMS);
+	    sb->safePrintf("\"currentTimeUTC\":%"UINT32",\n", 
+			   (uint32_t)(globalNowMS/1000));
 	}
 
 	// show response time if not doing Quality Assurance
 	if ( si->m_format == FORMAT_XML )
-		sb->safePrintf("\t<responseTimeMS>%lli</responseTimeMS>\n",
+		sb->safePrintf("\t<responseTimeMS>%"INT64"</responseTimeMS>\n",
 			      st->m_took);
 	else if ( st->m_header && si->m_format == FORMAT_JSON )
-	    sb->safePrintf("\"responseTimeMS\":%lli,\n", st->m_took);
+	    sb->safePrintf("\"responseTimeMS\":%"INT64",\n", st->m_took);
 
 	// out of memory allocating msg20s?
 	if ( st->m_errno ) {
@@ -2273,6 +2291,18 @@ bool printSearchResultsHeader ( State0 *st ) {
 		//return sendReply(st,sb->getBufStart());
 		return false;
 	}
+
+
+	if ( si->m_format == FORMAT_XML )
+		sb->safePrintf("\t<numResultsOmitted>%"INT32""
+			       "</numResultsOmitted>\n",
+			       msg40->m_omitCount);
+
+	if ( st->m_header && si->m_format == FORMAT_JSON )
+		sb->safePrintf("\"numResultsOmitted\":%"INT32",\n",
+			       msg40->m_omitCount);
+
+
 
 
 	//bool xml = si->m_xml;
@@ -2308,7 +2338,7 @@ bool printSearchResultsHeader ( State0 *st ) {
 
 
 	// save how many docs are in this collection
-	long long docsInColl = -1;
+	int64_t docsInColl = -1;
 	//RdbBase *base = getRdbBase ( RDB_CHECKSUMDB , si->m_coll );
 	RdbBase *base = getRdbBase ( (uint8_t)RDB_CLUSTERDB , st->m_collnum );
 	//if ( base ) docsInColl = base->getNumGlobalRecs();
@@ -2321,35 +2351,35 @@ bool printSearchResultsHeader ( State0 *st ) {
 	// include number of docs in the collection corpus
 	if ( docsInColl >= 0LL ) {
 	    if ( si->m_format == FORMAT_XML)
-	        sb->safePrintf ( "\t<docsInCollection>%lli"
+	        sb->safePrintf ( "\t<docsInCollection>%"INT64""
 	                "</docsInCollection>\n", docsInColl );
 	    else if ( st->m_header && si->m_format == FORMAT_JSON)
-            sb->safePrintf("\"docsInCollection\":%lli,\n", docsInColl);
+            sb->safePrintf("\"docsInCollection\":%"INT64",\n", docsInColl);
 	}
 
- 	long numResults = msg40->getNumResults();
+ 	int32_t numResults = msg40->getNumResults();
 	bool moreFollow = msg40->moreResultsFollow();
 	// an estimate of the # of total hits
-	long long totalHits = msg40->getNumTotalHits();
+	int64_t totalHits = msg40->getNumTotalHits();
 	// only adjust upwards for first page now so it doesn't keep chaning
 	if ( totalHits < numResults ) totalHits = numResults;
 
 	if ( si->m_format == FORMAT_XML )
-		sb->safePrintf("\t<hits>%lli</hits>\n",(long long)totalHits);
+		sb->safePrintf("\t<hits>%"INT64"</hits>\n",(int64_t)totalHits);
 	else if ( st->m_header && si->m_format == FORMAT_JSON )
-		sb->safePrintf("\"hits\":%lli,\n", (long long)totalHits);
+		sb->safePrintf("\"hits\":%"INT64",\n", (int64_t)totalHits);
 
 	// if streaming results we just don't know if we will require
 	// a "Next 10" link or not! we can print that after we print out
 	// the results i guess...
 	if ( ! si->m_streamResults ) {
 		if ( si->m_format == FORMAT_XML )
-			sb->safePrintf("\t<moreResultsFollow>%li"
+			sb->safePrintf("\t<moreResultsFollow>%"INT32""
 				       "</moreResultsFollow>\n"
-				       ,(long)moreFollow);
+				       ,(int32_t)moreFollow);
 		else if ( st->m_header && si->m_format == FORMAT_JSON )
-			sb->safePrintf("\"moreResultsFollow\":%li,\n", 
-				       (long)moreFollow);
+			sb->safePrintf("\"moreResultsFollow\":%"INT32",\n", 
+				       (int32_t)moreFollow);
 	}
 
 	// . did he get a spelling recommendation?
@@ -2366,6 +2396,158 @@ bool printSearchResultsHeader ( State0 *st ) {
 		sb->jsonEncode(st->m_spell);
 		sb->safePrintf ("\"\n,");
 	}
+
+	// print individual query term info
+	if ( si->m_format == FORMAT_XML ) {
+		Query *q = &si->m_q;
+		sb->safePrintf("\t<queryInfo>\n");
+		sb->safePrintf("\t\t<fullQuery><![CDATA[");
+		sb->cdataEncode(q->m_orig);
+		sb->safePrintf("]]></fullQuery>\n");
+		sb->safePrintf("\t\t<queryLanguageAbbr>"
+			       "<![CDATA[%s]]>"
+			       "</queryLanguageAbbr>\n"
+			       , getLangAbbr(si->m_queryLangId) );
+		sb->safePrintf("\t\t<queryLanguage>"
+			       "<![CDATA[%s]]>"
+			       "</queryLanguage>\n"
+			       , getLanguageString(si->m_queryLangId) );
+		for ( int i = 0 ; i < q->m_numTerms ; i++ ) {
+			sb->safePrintf("\t\t<term>\n");
+			QueryTerm *qt = &q->m_qterms[i];
+			sb->safePrintf("\t\t\t<termNum>%i</termNum>\n",i);
+			char *term = qt->m_term;
+			char c = term[qt->m_termLen];
+			term[qt->m_termLen] = '\0';
+			sb->safePrintf("\t\t\t<termStr><![CDATA[");
+			char *printTerm = qt->m_term;
+			if ( is_wspace_a(term[0])) printTerm++;
+			sb->cdataEncode(printTerm);
+			sb->safePrintf("]]>"
+				       "</termStr>\n");
+			term[qt->m_termLen] = c;
+			// syn?
+			QueryTerm *sq = qt->m_synonymOf;
+			// what language did synonym come from?
+			if ( sq ) {
+				// language map from wiktionary
+				sb->safePrintf("\t\t\t<termLang>"
+					       "<![CDATA[");
+				bool first = true;
+				for ( int i = 0 ; i < langLast ; i++ ) {
+					uint64_t bit = (uint64_t)1 << i;
+					if ( ! (qt->m_langIdBits&bit))continue;
+					char *str = getLangAbbr(i);
+					if ( ! first ) sb->pushChar(',');
+					first = false;
+					sb->safeStrcpy ( str );
+				}
+				sb->safePrintf("]]></termLang>\n");
+			}
+
+			if ( sq ) {
+				char *term = sq->m_term;
+				char c = term[sq->m_termLen];
+				term[sq->m_termLen] = '\0';
+				char *printTerm = term;
+				if ( is_wspace_a(term[0])) printTerm++;
+				sb->safePrintf("\t\t\t<synonymOf>"
+					       "<![CDATA[%s]]>"
+					       "</synonymOf>\n"
+					       ,printTerm);
+				term[sq->m_termLen] = c;
+			}				
+			int64_t tf = msg40->m_msg3a.m_termFreqs[i];
+			sb->safePrintf("\t\t\t<termFreq>%"INT64"</termFreq>\n"
+				       ,tf);
+			sb->safePrintf("\t\t\t<termHash48>%"INT64"</termHash48>\n"
+				       ,qt->m_termId);
+			sb->safePrintf("\t\t\t<termHash64>%"UINT64"</termHash64>\n"
+				       ,qt->m_rawTermId);
+			QueryWord *qw = qt->m_qword;
+			sb->safePrintf("\t\t\t<prefixHash64>%"UINT64"</prefixHash64>\n"
+				       ,qw->m_prefixHash);
+			sb->safePrintf("\t\t</term>\n");
+		}
+		sb->safePrintf("\t</queryInfo>\n");
+	}			
+
+	// print individual query term info
+	if ( si->m_format == FORMAT_JSON && st->m_header ) {
+		Query *q = &si->m_q;
+		sb->safePrintf("\"queryInfo\":{\n");
+		sb->safePrintf("\t\"fullQuery\":\"");
+		sb->jsonEncode(q->m_orig);
+		sb->safePrintf("\",\n");
+		sb->safePrintf("\t\"queryLanguageAbbr\":\"");
+		sb->jsonEncode ( getLangAbbr(si->m_queryLangId) );
+		sb->safePrintf("\",\n");
+		sb->safePrintf("\t\"queryLanguage\":\"");
+		sb->jsonEncode ( getLanguageString(si->m_queryLangId) );
+		sb->safePrintf("\",\n");
+		sb->safePrintf("\t\"terms\":[\n");
+		for ( int i = 0 ; i < q->m_numTerms ; i++ ) {
+			sb->safePrintf("\t\t{\n");
+			QueryTerm *qt = &q->m_qterms[i];
+			sb->safePrintf("\t\t\"termNum\":%i,\n",i);
+			char *term = qt->m_term;
+			char c = term[qt->m_termLen];
+			term[qt->m_termLen] = '\0';
+			sb->safePrintf("\t\t\"termStr\":\"");
+			sb->jsonEncode (qt->m_term);
+			sb->safePrintf("\",\n");
+			term[qt->m_termLen] = c;
+			// syn?
+			QueryTerm *sq = qt->m_synonymOf;
+			// what language did synonym come from?
+			if ( sq ) {
+				// language map from wiktionary
+				sb->safePrintf("\t\t\"termLang\":\"");
+				bool first = true;
+				for ( int i = 0 ; i < langLast ; i++ ) {
+					uint64_t bit = (uint64_t)1 << i;
+					if ( ! (qt->m_langIdBits&bit))continue;
+					char *str = getLangAbbr(i);
+					if ( ! first ) sb->pushChar(',');
+					first = false;
+					sb->jsonEncode ( str );
+				}
+				sb->safePrintf("\",\n");
+			}
+
+			if ( sq ) {
+				char *term = sq->m_term;
+				char c = term[sq->m_termLen];
+				term[sq->m_termLen] = '\0';
+				sb->safePrintf("\t\t\"synonymOf\":\"");
+				sb->jsonEncode(sq->m_term);
+				sb->safePrintf("\",\n");
+				term[sq->m_termLen] = c;
+			}				
+			int64_t tf = msg40->m_msg3a.m_termFreqs[i];
+			sb->safePrintf("\t\t\"termFreq\":%"INT64",\n"
+				       ,tf);
+
+			sb->safePrintf("\t\t\"termHash48\":%"INT64",\n"
+				       ,qt->m_termId);
+			sb->safePrintf("\t\t\"termHash64\":%"UINT64",\n"
+				       ,qt->m_rawTermId);
+
+			// don't end last query term attr on a omma
+			QueryWord *qw = qt->m_qword;
+			sb->safePrintf("\t\t\"prefixHash64\":%"UINT64"\n"
+				       ,qw->m_prefixHash);
+
+			sb->safePrintf("\t}");
+			if ( i + 1 < q->m_numTerms )
+				sb->pushChar(',');
+			sb->pushChar('\n');
+		}
+		sb->safePrintf("\t]\n"); // end "terms":[]
+		sb->safePrintf("},\n");
+	}			
+
+
 
 
 	// when streaming results we lookup the facets last
@@ -2398,7 +2580,7 @@ bool printSearchResultsHeader ( State0 *st ) {
 
 	// debug
 	if ( si->m_debug )
-		logf(LOG_DEBUG,"query: Displaying up to %li results.",
+		logf(LOG_DEBUG,"query: Displaying up to %"INT32" results.",
 		     numResults);
 
 	// tell browser again
@@ -2407,9 +2589,9 @@ bool printSearchResultsHeader ( State0 *st ) {
 	//		      "content=\"text/html; charset=utf-8\">\n");
 
 	// get some result info from msg40
-	long firstNum   = msg40->getFirstResultNum() ;
+	int32_t firstNum   = msg40->getFirstResultNum() ;
 	// numResults may be more than we requested now!
-	long n = msg40->getDocsWanted();
+	int32_t n = msg40->getDocsWanted();
 	if ( n > numResults )  n = numResults;
 
 	// . make the query class here for highlighting
@@ -2428,7 +2610,7 @@ bool printSearchResultsHeader ( State0 *st ) {
 
 	if ( si->m_format == FORMAT_XML && dpx ) {
 		// # query terms used!
-		//long nr = dpx->m_numRequiredTerms;
+		//int32_t nr = dpx->m_numRequiredTerms;
 		float max = 0.0;
 		// max pairwise
 		float lw = getHashGroupWeight(HASHGROUP_INLINKTEXT);
@@ -2438,10 +2620,10 @@ bool printSearchResultsHeader ( State0 *st ) {
 		lw *= getLinkerWeight(MAXSITERANK);
 		// double loops
 		/*
-		for ( long i = 0 ; i< nr ; i++ ) {
+		for ( int32_t i = 0 ; i< nr ; i++ ) {
 			SingleScore *ssi = &dpx->m_singleScores[i];
 			float tfwi = getTermFreqWeight(ssi->m_listSize);
-			for ( long j = i+1; j< nr ; j++ ) {
+			for ( int32_t j = i+1; j< nr ; j++ ) {
 				SingleScore *ssj = &dpx->m_singleScores[j];
 				float tfwj =getTermFreqWeight(ssj->m_listSize);
 				max += (lw * tfwi * tfwj)/3.0;
@@ -2450,11 +2632,11 @@ bool printSearchResultsHeader ( State0 *st ) {
 		*/
 		// single weights
 		float maxtfw1 = 0.0;
-		long maxi1;
+		int32_t maxi1;
 		// now we can have multiple SingleScores for the same term!
 		// because we take the top MAX_TOP now and add them to
 		// get the term's final score.
-		for ( long i = 0 ; i< dpx->m_numSingles ; i++ ) {
+		for ( int32_t i = 0 ; i< dpx->m_numSingles ; i++ ) {
 			SingleScore *ssi = &dpx->m_singleScores[i];
 			float tfwi = ssi->m_tfWeight;
 			if ( tfwi <= maxtfw1 ) continue;
@@ -2462,8 +2644,8 @@ bool printSearchResultsHeader ( State0 *st ) {
 			maxi1 = i;
 		}
 		float maxtfw2 = 0.0;
-		long maxi2;
-		for ( long i = 0 ; i< dpx->m_numSingles ; i++ ) {
+		int32_t maxi2;
+		for ( int32_t i = 0 ; i< dpx->m_numSingles ; i++ ) {
 			if ( i == maxi1 ) continue;
 			SingleScore *ssi = &dpx->m_singleScores[i];
 			float tfwi = ssi->m_tfWeight;
@@ -2486,7 +2668,7 @@ bool printSearchResultsHeader ( State0 *st ) {
 
 	// debug msg
 	log ( LOG_TIMING ,
-	     "query: Got %li search results in %lli ms for q=%s",
+	     "query: Got %"INT32" search results in %"INT64" ms for q=%s",
 	      numResults,gettimeofdayInMilliseconds()-st->m_startTime,
 	      qq.getQuery());
 
@@ -2497,15 +2679,15 @@ bool printSearchResultsHeader ( State0 *st ) {
 	// encode query buf
 	//char qe[MAX_QUERY_LEN+1];
 	char *dq    = si->m_displayQuery;
-	//long  dqlen = si->m_displayQueryLen;
+	//int32_t  dqlen = si->m_displayQueryLen;
 	if ( dq ) urlEncode(st->m_qe,MAX_QUERY_LEN*2,dq,gbstrlen(dq));
 
 	// how many results were requested?
-	//long docsWanted = msg40->getDocsWanted();
+	//int32_t docsWanted = msg40->getDocsWanted();
 
 	// store html head into p, but stop at %q
 	//char *head = cr->m_htmlHead;
-	//long  hlen = cr->m_htmlHeadLen;
+	//int32_t  hlen = cr->m_htmlHeadLen;
 	//if ( ! si->m_xml ) sb->safeMemcpy ( head , hlen );
 
 
@@ -2531,7 +2713,8 @@ bool printSearchResultsHeader ( State0 *st ) {
         Query qq3;
 	Query *qq2;
 	bool firstIgnored;
-	bool isAdmin = si->m_isRootAdmin;
+	//bool isAdmin = si->m_isMasterAdmin;
+	bool isAdmin = (si->m_isMasterAdmin || si->m_isCollAdmin);
 	if ( si->m_format != FORMAT_HTML ) isAdmin = false;
 
 	// otherwise, we had no error
@@ -2549,7 +2732,7 @@ bool printSearchResultsHeader ( State0 *st ) {
 	else if ( moreFollow && si->m_format == FORMAT_HTML ) {
 		if ( isAdmin && si->m_docsToScanForReranking > 1 )
 			sb->safePrintf ( "PQR'd " );
-		sb->safePrintf ("Results <b>%li</b> to <b>%li</b> of "
+		sb->safePrintf ("Results <b>%"INT32"</b> to <b>%"INT32"</b> of "
 			       "exactly <b>%s</b> from an index "
 			       "of about %s pages" , 
 			       firstNum + 1          ,
@@ -2562,7 +2745,7 @@ bool printSearchResultsHeader ( State0 *st ) {
 	else if ( si->m_format == FORMAT_HTML ) {
 		if ( isAdmin && si->m_docsToScanForReranking > 1 )
 			sb->safePrintf ( "PQR'd " );
-		sb->safePrintf ("Results <b>%li</b> to <b>%li</b> of "
+		sb->safePrintf ("Results <b>%"INT32"</b> to <b>%"INT32"</b> of "
 			       "exactly <b>%s</b> from an index "
 			       "of about %s pages" , 
 			       firstNum + 1          ,
@@ -2571,6 +2754,10 @@ bool printSearchResultsHeader ( State0 *st ) {
 			       inbuf
 			       );
 	}
+
+	if ( si->m_format == FORMAT_HTML )
+		sb->safePrintf(" in %.02f seconds",((float)st->m_took)/1000.0);
+
 
 	//
 	// if query was a url print add url msg
@@ -2620,7 +2807,7 @@ bool printSearchResultsHeader ( State0 *st ) {
 	/*
 	if ( si->m_format == FORMAT_HTML )
 		sb->safePrintf(" &nbsp; <u><b><font color=blue><a onclick=\""
-			      "for (var i = 0; i < %li; i++) {"
+			      "for (var i = 0; i < %"INT32"; i++) {"
 			      "var nombre;"
 			      "nombre = 'r' + i;"
 			      "var e = document.getElementById(nombre);"
@@ -2707,8 +2894,8 @@ bool printSearchResultsHeader ( State0 *st ) {
 		char *ips = si->m_displayQuery + 3;
 		// copy to buf, append a ".0" if we need to
 		char buf [ 32 ];
-		long i ;
-		long np = 0;
+		int32_t i ;
+		int32_t np = 0;
 		for ( i = 0 ; i<29 && (is_digit(ips[i])||ips[i]=='.'); i++ ){
 			if ( ips[i] == '.' ) np++;
 			buf[i]=ips[i];
@@ -2718,16 +2905,16 @@ bool printSearchResultsHeader ( State0 *st ) {
 		if ( np == 2 ) { buf[i++]='.'; buf[i++]='0'; }
 		buf[i] = '\0';
 		// search ip back or forward
-		long ip = atoip(buf,i);
+		int32_t ip = atoip(buf,i);
 		sb->safePrintf ("&nbsp "
 			       "<a style=color:green; "
-				"href=\"/search?q=ip%%3A%s&c=%s&n=%li\">"
+				"href=\"/search?q=ip%%3A%s&c=%s&n=%"INT32"\">"
 			       "[prev %s]</a>" , 
 			       iptoa(ip-0x01000000),coll,docsWanted,
 			       iptoa(ip-0x01000000));
 		sb->safePrintf ("&nbsp "
 			       "<a style=color:green; "
-				"href=\"/search?q=ip%%3A%s&c=%s&n=%li\">"
+				"href=\"/search?q=ip%%3A%s&c=%s&n=%"INT32"\">"
 			       "[next %s]</a>" , 
 			       iptoa(ip+0x01000000),coll,docsWanted,
 			       iptoa(ip+0x01000000));
@@ -2760,7 +2947,7 @@ bool printSearchResultsHeader ( State0 *st ) {
 		sb->safePrintf (" &nbsp; "
 			       ""
 			       "<a style=color:green; href=\"/admin/tagdb?"
-			       //"tagid0=%li&"
+			       //"tagid0=%"INT32"&"
 			       "tagtype0=manualban&"
 			       "tagdata0=1&"
 			       "c=%s"
@@ -2790,7 +2977,7 @@ bool printSearchResultsHeader ( State0 *st ) {
 	qq2 = &si->m_q;
 	//qq2.set ( q , qlen , NULL , 0 , si->m_boolFlag , false );
 	firstIgnored = true;
-	for ( long i = 0 ; i < qq2->m_numWords ; i++ ) {
+	for ( int32_t i = 0 ; i < qq2->m_numWords ; i++ ) {
 		//if ( si->m_xml ) break;
 		QueryWord *qw = &qq2->m_qwords[i];
 		// only print out words ignored cuz they were stop words
@@ -2809,7 +2996,7 @@ bool printSearchResultsHeader ( State0 *st ) {
 		}
 		// print the word
 		char *t    = qw->m_word; 
-		long  tlen = qw->m_wordLen;
+		int32_t  tlen = qw->m_wordLen;
 		sb->utf8Encode2 ( t , tlen );
 		sb->safePrintf (" ");
 	}
@@ -2837,7 +3024,7 @@ bool printSearchResultsHeader ( State0 *st ) {
 	// did we get a spelling recommendation?
 	if ( si->m_format == FORMAT_HTML && st->m_spell[0] ) {
 		// encode the spelling recommendation
-		long len = gbstrlen ( st->m_spell );
+		int32_t len = gbstrlen ( st->m_spell );
 		char qe2[MAX_FRAG_SIZE];
 		urlEncode(qe2, MAX_FRAG_SIZE, st->m_spell, len);
 		sb->safePrintf ("<font size=+0 color=\"#c62939\">Did you mean:"
@@ -2859,9 +3046,10 @@ bool printSearchResultsHeader ( State0 *st ) {
 
 	// debug
 	if ( si->m_debug )
-		logf(LOG_DEBUG,"query: Printing up to %li results. "
-		     "bufStart=0x%lx", 
-		     numResults,(long)sb->getBuf());
+		logf(LOG_DEBUG,"query: Printing up to %"INT32" results. "
+		     "bufStart=0x%"PTRFMT"", 
+		     numResults,
+		     (PTRTYPE)sb->getBuf());
 
 
 	//
@@ -2955,12 +3143,12 @@ bool printSearchResultsTail ( State0 *st ) {
 
 	// grab the query
 	char  *q    = msg40->getQuery();
-	long   qlen = msg40->getQueryLen();
+	int32_t   qlen = msg40->getQueryLen();
 
 	HttpRequest *hr = &st->m_hr;
 
 	// get some result info from msg40
-	long firstNum   = msg40->getFirstResultNum() ;
+	int32_t firstNum   = msg40->getFirstResultNum() ;
 
 	// end the two-pane table
 	if ( si->m_format == FORMAT_HTML) sb->safePrintf("</td></tr></table>");
@@ -2970,7 +3158,7 @@ bool printSearchResultsTail ( State0 *st ) {
 	// with one click
 	SafeBuf banSites;
 
-	//long tailLen = 0;
+	//int32_t tailLen = 0;
 	//char *tail = NULL;
 
 
@@ -2981,7 +3169,7 @@ bool printSearchResultsTail ( State0 *st ) {
 	// center everything below here
 	if ( si->m_format == FORMAT_HTML ) sb->safePrintf ( "<br><center>" );
 
-	long remember = sb->length();
+	int32_t remember = sb->length();
 
 	// now print "Prev X Results" if we need to
 	if ( firstNum < 0 ) firstNum = 0;
@@ -2989,9 +3177,9 @@ bool printSearchResultsTail ( State0 *st ) {
 	char abuf[300];
 	SafeBuf args(abuf,300);
 	// show banned?
-	if ( si->m_showBanned && ! si->m_isRootAdmin )
+	if ( si->m_showBanned && ! si->m_isMasterAdmin )
 		args.safePrintf("&sb=1");
-	if ( ! si->m_showBanned && si->m_isRootAdmin )
+	if ( ! si->m_showBanned && si->m_isMasterAdmin )
 		args.safePrintf("&sb=0");
 
 	//HttpRequest *hr = &st->m_hr;
@@ -3002,8 +3190,8 @@ bool printSearchResultsTail ( State0 *st ) {
 	if ( si->m_format == FORMAT_WIDGET_IFRAME ||
 	     si->m_format == FORMAT_WIDGET_AJAX ) {
 		args.safePrintf("&format=widget");
-		long widgetwidth = hr->getLong("widgetwidth",250);
-		args.safePrintf("&widgetwidth=%li",widgetwidth);
+		int32_t widgetwidth = hr->getLong("widgetwidth",250);
+		args.safePrintf("&widgetwidth=%"INT32"",widgetwidth);
 	}
 
 	// carry over the sites we are restricting the search results to
@@ -3012,14 +3200,61 @@ bool printSearchResultsTail ( State0 *st ) {
 		args.safePrintf("&sites=%s",si->m_sites);
 
 
+	if ( si->m_format == FORMAT_HTML &&
+	     msg40->m_omitCount ) { // && firstNum == 0 ) { 
+		// . add our cgi to the original url
+		// . so if it has &qlang=de and they select &qlang=en
+		//   we have to replace it... etc.
+		SafeBuf newUrl;
+		// show banned results
+		replaceParm2 ("sb=1",
+			      &newUrl,
+			      hr->m_origUrlRequest,
+			      hr->m_origUrlRequestLen );
+		// no deduping by summary or content hash etc.
+		SafeBuf newUrl2;
+		replaceParm2("dr=0",&newUrl2,newUrl.getBufStart(),
+			     newUrl.length());
+		// and no site clustering
+		SafeBuf newUrl3;
+		replaceParm2 ( "sc=0", &newUrl3 , newUrl2.getBufStart(),
+			     newUrl2.length());
+		// start at results #0 again
+		SafeBuf newUrl4;
+		replaceParm2 ( "s=0", &newUrl4 , newUrl3.getBufStart(),
+			     newUrl3.length());
+		// show errors
+		SafeBuf newUrl5;
+		replaceParm2 ( "showerrors=1", 
+			       &newUrl5 , 
+			       newUrl4.getBufStart(),
+			       newUrl4.length());
+		
+		
+		sb->safePrintf("<center>"
+			       "<i>"
+			       "%"INT32" results were omitted because they "
+			       "were considered duplicates, banned, errors "
+			       "<br>"
+			       "or "
+			       "from the same site as other results. "
+			       "<a href=%s>Click here to show all results</a>."
+			       "</i>"
+			       "</center>"
+			       "<br><br>"
+			       , msg40->m_omitCount
+			       , newUrl5.getBufStart() );
+	}
+
+
 	if ( firstNum > 0 && 
 	     (si->m_format == FORMAT_HTML || 
 	      si->m_format == FORMAT_WIDGET_IFRAME //||
 	      //si->m_format == FORMAT_WIDGET_AJAX
 	      ) ) {
-		long ss = firstNum - msg40->getDocsWanted();
+		int32_t ss = firstNum - msg40->getDocsWanted();
 		
-		//sb->safePrintf("<a href=\"/search?s=%li&q=",ss);
+		//sb->safePrintf("<a href=\"/search?s=%"INT32"&q=",ss);
 		// our current query parameters
 		//sb->safeStrcpy ( st->m_qe );
 		// print other args if not zero
@@ -3027,7 +3262,7 @@ bool printSearchResultsTail ( State0 *st ) {
 
 		// make the cgi parm to add to the original url
 		char nsbuf[128];
-		sprintf(nsbuf,"s=%li",ss);
+		sprintf(nsbuf,"s=%"INT32"",ss);
 		// get the original url and add/replace in &s=xxx
 		SafeBuf newUrl;
 		replaceParm ( nsbuf , &newUrl , hr );
@@ -3035,7 +3270,7 @@ bool printSearchResultsTail ( State0 *st ) {
 
 		// close it up
 		sb->safePrintf ("<a href=\"%s\"><b>"
-			       "<font size=+0>Prev %li Results</font>"
+			       "<font size=+0>Prev %"INT32" Results</font>"
 			       "</b></a>"
 				, newUrl.getBufStart()
 				, msg40->getDocsWanted() );
@@ -3047,11 +3282,11 @@ bool printSearchResultsTail ( State0 *st ) {
 	      si->m_format == FORMAT_WIDGET_IFRAME 
 	      //si->m_format == FORMAT_WIDGET_AJAX 
 	      )) {
-		long ss = firstNum + msg40->getDocsWanted();
+		int32_t ss = firstNum + msg40->getDocsWanted();
 		// print a separator first if we had a prev results before us
 		if ( sb->length() > remember ) sb->safePrintf ( " &nbsp; " );
 		// add the query
-		//sb->safePrintf ("<a href=\"/search?s=%li&q=",ss);
+		//sb->safePrintf ("<a href=\"/search?s=%"INT32"&q=",ss);
 		// our current query parameters
 		//sb->safeStrcpy ( st->m_qe );
 		// print other args if not zero
@@ -3059,14 +3294,14 @@ bool printSearchResultsTail ( State0 *st ) {
 
 		// make the cgi parm to add to the original url
 		char nsbuf[128];
-		sprintf(nsbuf,"s=%li",ss);
+		sprintf(nsbuf,"s=%"INT32"",ss);
 		// get the original url and add/replace in &s=xxx
 		SafeBuf newUrl;
 		replaceParm ( nsbuf , &newUrl , hr );
 
 		// close it up
 		sb->safePrintf("<a href=\"%s\"><b>"
-			      "<font size=+0>Next %li Results</font>"
+			      "<font size=+0>Next %"INT32" Results</font>"
 			      "</b></a>"
 			       , newUrl.getBufStart()
 			       , msg40->getDocsWanted() );
@@ -3075,7 +3310,9 @@ bool printSearchResultsTail ( State0 *st ) {
 
 	// print try this search on...
 	// an additional <br> if we had a Next or Prev results link
-	if ( sb->length() > remember ) sb->safeMemcpy ("<br>" , 4 ); 
+	if ( sb->length() > remember &&
+	     si->m_format == FORMAT_HTML ) 
+		sb->safeMemcpy ("<br>" , 4 ); 
 
 	//
 	// END PRINT PREV 10 NEXT 10 links!
@@ -3107,13 +3344,13 @@ bool printSearchResultsTail ( State0 *st ) {
 		sb->safePrintf("<input name=c type=hidden value=\"%s\">",coll);
 	}
 
-	bool isAdmin = si->m_isRootAdmin;
+	bool isAdmin = (si->m_isMasterAdmin || si->m_isCollAdmin);
 	if ( si->m_format != FORMAT_HTML ) isAdmin = false;
 
 	if ( isAdmin && banSites.length() > 0 )
 		sb->safePrintf ("<br><br><div align=right><b>"
 			       "<a style=color:green; href=\"/admin/tagdb?"
-			       //"tagid0=%li&"
+			       //"tagid0=%"INT32"&"
 			       "tagtype0=manualban&"
 			       "tagdata0=1&"
 			       "c=%s&uenc=1&u=%s\">"
@@ -3129,10 +3366,10 @@ bool printSearchResultsTail ( State0 *st ) {
 			       "<b><center>");
 		sb->safePrintf ( " These results were cached " );
 		// this cached time is this local cpu's time
-		long diff = getTime() - msg40->getCachedTime();
-		if      ( diff < 60   ) sb->safePrintf ("%li seconds", diff );
+		int32_t diff = getTime() - msg40->getCachedTime();
+		if      ( diff < 60   ) sb->safePrintf ("%"INT32" seconds", diff );
 		else if ( diff < 2*60 ) sb->safePrintf ("1 minute");
-		else                    sb->safePrintf ("%li minutes",diff/60);
+		else                    sb->safePrintf ("%"INT32" minutes",diff/60);
 		sb->safePrintf ( " ago. [<a href=\"/pageCache.html\">"
 				"<font color=707070>Info</font></a>]");
 		sb->safePrintf ( "</center></font>");
@@ -3221,32 +3458,38 @@ bool printSearchResultsTail ( State0 *st ) {
 	return true;
 }
 
-bool printTimeAgo ( SafeBuf *sb , long ts , char *prefix , SearchInput *si ) {
+bool printTimeAgo ( SafeBuf *sb, time_t ts , char *prefix , SearchInput *si ) {
 	// Jul 23, 1971
 	sb->reserve2x(200);
-	long now = getTimeGlobal();
+	int32_t now = getTimeGlobal();
 	// for printing
-	long mins = 1000;
-	long hrs  = 1000;
-	long days ;
+	int32_t mins = 1000;
+	int32_t hrs  = 1000;
+	int32_t days ;
 	if ( ts > 0 ) {
-		mins = (long)((now - ts)/60);
-		hrs  = (long)((now - ts)/3600);
-		days = (long)((now - ts)/(3600*24));
+		mins = (int32_t)((now - ts)/60);
+		hrs  = (int32_t)((now - ts)/3600);
+		days = (int32_t)((now - ts)/(3600*24));
 		if ( mins < 0 ) mins = 0;
 		if ( hrs  < 0 ) hrs  = 0;
 		if ( days < 0 ) days = 0;
 	}
 	// print the time ago
-	if      ( mins ==1)sb->safePrintf(" - %s: %li minute ago",prefix,mins);
-	else if (mins<60)sb->safePrintf ( " - %s: %li minutes ago",prefix,mins);
-	else if ( hrs == 1 )sb->safePrintf ( " - %s: %li hour ago",prefix,hrs);
-	else if ( hrs < 24 )sb->safePrintf ( " - %s: %li hours ago",prefix,hrs);
-	else if ( days == 1 )sb->safePrintf ( " - %s: %li day ago",prefix,days);
-	else if (days< 7 )sb->safePrintf ( " - %s: %li days ago",prefix,days);
+	if      ( mins ==1)
+		sb->safePrintf(" - %s: %"INT32" minute ago",prefix,mins);
+	else if (mins<60)
+		sb->safePrintf ( " - %s: %"INT32" minutes ago",prefix,mins);
+	else if ( hrs == 1 )
+		sb->safePrintf ( " - %s: %"INT32" hour ago",prefix,hrs);
+	else if ( hrs < 24 )
+		sb->safePrintf ( " - %s: %"INT32" hours ago",prefix,hrs);
+	else if ( days == 1 )
+		sb->safePrintf ( " - %s: %"INT32" day ago",prefix,days);
+	else if (days< 7 )
+		sb->safePrintf ( " - %s: %"INT32" days ago",prefix,days);
 	// do not show if more than 1 wk old! we want to seem as
 	// fresh as possible
-	else if ( ts > 0 ) { // && si->m_isRootAdmin ) {
+	else if ( ts > 0 ) { // && si->m_isMasterAdmin ) {
 		struct tm *timeStruct = localtime ( &ts );
 		sb->safePrintf(" - %s: ",prefix);
 		char tmp[100];
@@ -3263,7 +3506,7 @@ int linkSiteRankCmp (const void *v1, const void *v2) {
 }
 
 bool printInlinkText ( SafeBuf *sb , Msg20Reply *mr , SearchInput *si ,
-		       long *numPrinted ) {
+		       int32_t *numPrinted ) {
 	*numPrinted = 0;
 	// . show the "LinkInfo"
 	// . Msg20.cpp will have "computed" the LinkInfo if we set
@@ -3274,7 +3517,7 @@ bool printInlinkText ( SafeBuf *sb , Msg20Reply *mr , SearchInput *si ,
 	//   and stale. Both are really only for BuzzLogic.
 	LinkInfo *info = (LinkInfo *)mr->ptr_linkInfo;//inlinks;
 	// sanity
-	if ( info && mr->size_linkInfo != info->m_size ){char *xx=NULL;*xx=0; }
+	if ( info && mr->size_linkInfo!=info->m_lisize ){char *xx=NULL;*xx=0; }
 	// NULLify if empty
 	if ( mr->size_linkInfo <= 0 ) info = NULL;
 	// do not both if none
@@ -3285,32 +3528,32 @@ bool printInlinkText ( SafeBuf *sb , Msg20Reply *mr , SearchInput *si ,
 	Inlink *k = info->getNextInlink(NULL);
 	// #define from Linkdb.h
 	Inlink *ptrs[MAX_LINKERS];
-	long numLinks = 0;
+	int32_t numLinks = 0;
 	for ( ; k ; k = info->getNextInlink(k) ) {
 		ptrs[numLinks++] = k;
 		if ( numLinks >= MAX_LINKERS ) break;
 	}
 	// sort them
-	gbsort ( ptrs , numLinks , 4 , linkSiteRankCmp );
+	gbsort ( ptrs , numLinks , sizeof(Inlink *) , linkSiteRankCmp );
 	// print xml starter
 	if ( si->m_format == FORMAT_XML ) sb->safePrintf("\t\t<inlinks>\n");
 	// loop through the inlinks
 	bool printedInlinkText = false;
 	bool firstTime = true;
-	long inlinkId = 0;
-	long long  starttime = gettimeofdayInMillisecondsLocal();
+	int32_t inlinkId = 0;
+	int64_t  starttime = gettimeofdayInMillisecondsLocal();
 
-	//long icount = 0;
-	//long ecount = 0;
-	//long absSum = 0;
-	for ( long i = 0 ; i < numLinks ; i++ ) {
+	//int32_t icount = 0;
+	//int32_t ecount = 0;
+	//int32_t absSum = 0;
+	for ( int32_t i = 0 ; i < numLinks ; i++ ) {
 		k = ptrs[i];
-		if ( ! k->ptr_linkText ) continue;
+		if ( ! k->getLinkText() ) continue;
 		if ( ! si->m_doQueryHighlighting && 
 		     si->m_format == FORMAT_HTML ) 
 			continue;
-		char *str   = k-> ptr_linkText;
-		long strLen = k->size_linkText;
+		char *str   = k->getLinkText();//ptr_linkText;
+		int32_t strLen = k->size_linkText;
 		//char tt[1024*3];
 		//char *ttend = tt + 1024*3;
 		char *frontTag = 
@@ -3327,7 +3570,7 @@ bool printInlinkText ( SafeBuf *sb , Msg20Reply *mr , SearchInput *si ,
 
 		Highlight hi;
 		SafeBuf hb;
-		long hlen = hi.set ( &hb,//tt , 
+		int32_t hlen = hi.set ( &hb,//tt , 
 				     //ttend - tt , 
 				str, 
 				strLen , 
@@ -3346,29 +3589,29 @@ bool printInlinkText ( SafeBuf *sb , Msg20Reply *mr , SearchInput *si ,
 
 		if ( si->m_format == FORMAT_XML ) {
 			sb->safePrintf("\t\t\t<inlink "
-				      "docId=\"%lli\" "
+				      "docId=\"%"INT64"\" "
 				      "url=\"",
 				      k->m_docId );
 			// encode it for xml
-			sb->htmlEncode ( k->ptr_urlBuf,
+			sb->htmlEncode ( k->getUrl(),//ptr_urlBuf,
 					k->size_urlBuf - 1 , false );
 			sb->safePrintf("\" "
-				      //"hostId=\"%lu\" "
-				      "firstindexed=\"%lu\" "
+				      //"hostId=\"%"UINT32"\" "
+				      "firstindexed=\"%"UINT32"\" "
 				      // not accurate!
-				      //"lastspidered=\"%lu\" "
-				      "wordposstart=\"%li\" "
-				      "id=\"%li\" "
-				      "siterank=\"%li\" "
+				      //"lastspidered=\"%"UINT32"\" "
+				      "wordposstart=\"%"INT32"\" "
+				      "id=\"%"INT32"\" "
+				      "siterank=\"%"INT32"\" "
 				      "text=\"",
 				      //hh ,
-				      //(long)k->m_datedbDate,
-				      (unsigned long)k->m_firstIndexedDate,
-				      //(unsigned long)k->m_lastSpidered,
-				      (long)k->m_wordPosStart,
+				      //(int32_t)k->m_datedbDate,
+				      (uint32_t)k->m_firstIndexedDate,
+				      //(uint32_t)k->m_lastSpidered,
+				      (int32_t)k->m_wordPosStart,
 				      inlinkId,
 				      //linkScore);
-				      (long)k->m_siteRank
+				      (int32_t)k->m_siteRank
 				      );
 			// HACK!!!
 			k->m_siteHash = inlinkId;
@@ -3401,28 +3644,28 @@ bool printInlinkText ( SafeBuf *sb , Msg20Reply *mr , SearchInput *si ,
 		}
 		firstTime = false;
 		sb->safePrintf("<tr><td>"
-			      "<a href=/get?c=%s&d=%lli&cnsp=0>"
+			      "<a href=/get?c=%s&d=%"INT64"&cnsp=0>"
 			      //"<a href=\"/print?"
 			      //"page=7&"
 			      //"c=%s&"
-			      //"d=%lli\">"
-			      //k->ptr_urlBuf);
+			      //"d=%"INT64"\">"
+			      //k->getUrl());
 			      ,si->m_cr->m_coll
 			      ,k->m_docId);
 		if ( ! sb->safeMemcpy(&hb) ) return false;
-		long hostLen = 0;
-		char *host = getHostFast(k->ptr_urlBuf,&hostLen,NULL);
+		int32_t hostLen = 0;
+		char *host = getHostFast(k->getUrl(),&hostLen,NULL);
 		sb->safePrintf("</td><td>");
 		if ( host ) sb->safeMemcpy(host,hostLen);
-		sb->safePrintf("</td><td>%li</td></tr>",(long)k->m_siteRank);
+		sb->safePrintf("</td><td>%"INT32"</td></tr>",(int32_t)k->m_siteRank);
 		//sb->safePrintf("<br>");
 		printedInlinkText = true;
 		*numPrinted = *numPrinted + 1;
 	}
 
-	long long took = gettimeofdayInMillisecondsLocal() - starttime;
+	int64_t took = gettimeofdayInMillisecondsLocal() - starttime;
         if ( took > 2 )
-                log("timing: took %lli ms to highlight %li links."
+                log("timing: took %"INT64" ms to highlight %"INT32" links."
                     ,took,numLinks);
 
 
@@ -3442,7 +3685,7 @@ bool printInlinkText ( SafeBuf *sb , Msg20Reply *mr , SearchInput *si ,
 //
 static bool printDMOZCategoryUnderResult ( SafeBuf *sb , 
 					   SearchInput *si, 
-					   long catid ,
+					   int32_t catid ,
 					   State0 *st ) {
 
 	char format = si->m_format;
@@ -3451,7 +3694,7 @@ static bool printDMOZCategoryUnderResult ( SafeBuf *sb ,
 
 	// if ( format == FORMAT_XML ) {
 	// 	sb->safePrintf("\t\t<dmozCat>\n"
-	// 		       "\t\t\t<dmozCatId>%li</dmozCatId>\n"
+	// 		       "\t\t\t<dmozCatId>%"INT32"</dmozCatId>\n"
 	// 		       "\t\t\t<dmozCatStr><![CDATA["
 	// 		       ,catid);
 	// 	// print the name of the dmoz category
@@ -3466,7 +3709,7 @@ static bool printDMOZCategoryUnderResult ( SafeBuf *sb ,
 
 	// if ( format == FORMAT_JSON ) {
 	// 	sb->safePrintf("\t\t\"dmozCat\":{\n"
-	// 		       "\t\t\t\"dmozCatId\":%li,\n"
+	// 		       "\t\t\t\"dmozCatId\":%"INT32",\n"
 	// 		       "\t\t\t\"dmozCatStr\":\""
 	// 		       ,catid);
 	// 	// print the name of the dmoz category
@@ -3505,7 +3748,7 @@ static bool printDMOZCategoryUnderResult ( SafeBuf *sb ,
 	// print a link to apply your query to this DMOZ category
 	//
 	//////
-	sb->safePrintf("<a href=\"/search?s=0&q=gbipcatid%%3A%li",catid);
+	sb->safePrintf("<a href=\"/search?s=0&q=gbipcatid%%3A%"INT32"",catid);
 	sb->urlEncode("|",1);
 	sb->urlEncode(si->m_sbuf1.getBufStart(),si->m_sbuf1.length());
 	sb->safePrintf("\">Search in Category</a>: ");
@@ -3528,7 +3771,7 @@ static bool printDMOZCategoryUnderResult ( SafeBuf *sb ,
 
 
 // use this for xml as well as html
-bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
+bool printResult ( State0 *st, int32_t ix , int32_t *numPrintedSoFar ) {
 
 	SafeBuf *sb = &st->m_sb;
 
@@ -3537,38 +3780,44 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 	CollectionRec *cr = NULL;
 	cr = g_collectiondb.getRec ( st->m_collnum );
 	if ( ! cr ) {
-		log("query: printResult: collnum %li gone",
-		    (long)st->m_collnum);
+		log("query: printResult: collnum %"INT32" gone",
+		    (int32_t)st->m_collnum);
 		return true;
 	}
 
 
-	// shortcuts
+	// int16_tcuts
 	SearchInput *si    = &st->m_si;
 	Msg40       *msg40 = &st->m_msg40;
 
 	// ensure not all cluster levels are invisible
 	if ( si->m_debug )
-		logf(LOG_DEBUG,"query: result #%li clusterlevel=%li",
-		     ix, (long)msg40->getClusterLevel(ix));
+		logf(LOG_DEBUG,"query: result #%"INT32" clusterlevel=%"INT32"",
+		     ix, (int32_t)msg40->getClusterLevel(ix));
 
-	long long d = msg40->getDocId(ix);
+	int64_t d = msg40->getDocId(ix);
 
+	// do not print if it is a summary dup or had some error
+	// int32_t level = (int32_t)msg40->getClusterLevel(ix);
+	// if ( level != CR_OK &&
+	//      level != CR_INDENT )
+	// 	return true;
+	
 
 
 	if ( si->m_docIdsOnly ) {
 		if ( si->m_format == FORMAT_XML )
 			sb->safePrintf("\t<result>\n"
-				       "\t\t<docId>%lli</docId>\n"
+				       "\t\t<docId>%"INT64"</docId>\n"
 				       "\t</result>\n", 
 				       d );
 		else if ( si->m_format == FORMAT_JSON )
 			sb->safePrintf("\t\{\n"
-				       "\t\t\"docId\":%lli\n"
+				       "\t\t\"docId\":%"INT64"\n"
 				       "\t},\n",
 				       d );
 		else
-			sb->safePrintf("%lli<br/>\n", 
+			sb->safePrintf("%"INT64"<br/>\n", 
 				      d );
 		// inc it
 		*numPrintedSoFar = *numPrintedSoFar + 1;
@@ -3589,7 +3838,12 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 	// . sometimes the msg20reply is NULL so prevent it coring
 	// . i think this happens if all hosts in a shard are down or timeout
 	//   or something
-	if ( ! mr ) return false;
+	if ( ! mr ) {
+		sb->safePrintf("<i>getting summary for docid %"INT64" had "
+			       "error: %s</i><br><br>"
+			       ,d,mstrerror(m20->m_errno));
+		return true;
+	}
 
 	// . if section voting info was request, display now, it's in json
 	// . so if in csv it will mess things up!!!
@@ -3618,7 +3872,9 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 	}
 
 	// just print cached web page?
-	if ( mr->ptr_content ) {
+	if ( mr->ptr_content && 
+	     si->m_format == FORMAT_JSON &&
+	     strstr(mr->ptr_ubuf,"-diffbotxyz") ) {
 
 		// for json items separate with \n,\n
 		if ( si->m_format != FORMAT_HTML && *numPrintedSoFar > 0 )
@@ -3627,8 +3883,11 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 		// a dud? just print empty {}'s
 		if ( mr->size_content == 1 ) 
 			sb->safePrintf("{}");
+		// if it's a diffbot object just print it out directly
+		// into the json. it is already json.
 		else
 			sb->safeStrcpy ( mr->ptr_content );
+			
 
 		// . let's hack the spidertime onto the end
 		// . so when we sort by that using gbsortby:spiderdate
@@ -3648,12 +3907,12 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 			sb->incrementLength(-distance);
 			// comma?
 			if ( mr->size_content>1 ) sb->pushChar(',');
-			sb->safePrintf("\"docId\":%lli", mr->m_docId);
+			sb->safePrintf("\"docId\":%"INT64"", mr->m_docId);
 			sb->safePrintf(",\"gburl\":\"");
 			sb->jsonEncode(mr->ptr_ubuf);
 			sb->safePrintf("\"");
 			// for deduping
-			//sb->safePrintf(",\"crc\":%lu",mr->m_contentHash32);
+			//sb->safePrintf(",\"crc\":%"UINT32"",mr->m_contentHash32);
 			// crap, we lose resolution storing as a float
 			// so fix that shit here...
 			//float f = mr->m_lastSpidered;
@@ -3662,11 +3921,11 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 			// leave in. we can easily see if a result 
 			// should be there for a query like 
 			// gbmin:gbspiderdate:12345678
-			sb->safePrintf(",\"lastCrawlTimeUTC\":%li",
+			sb->safePrintf(",\"lastCrawlTimeUTC\":%"INT32"",
 				       mr->m_lastSpidered);
 			// also include a timestamp field with an RFC 1123 formatted date
 			char timestamp[50];
-			struct tm *ptm = gmtime ( &mr->m_lastSpidered );
+			struct tm *ptm =gmtime((time_t *)&mr->m_lastSpidered );
 			strftime(timestamp, 50, "%a, %d %b %Y %X %Z", ptm);
 			sb->safePrintf(",\"timestamp\":\"%s\"}\n", timestamp);
 		}
@@ -3681,6 +3940,9 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 		return true;
 	}
 
+	int32_t cursor = -1;
+	if ( si->m_format == FORMAT_XML  ) cursor = sb->length();
+	if ( si->m_format == FORMAT_JSON ) cursor = sb->length();
 
 	if ( si->m_format == FORMAT_XML ) 
 		sb->safePrintf("\t<result>\n" );
@@ -3690,12 +3952,25 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 		sb->safePrintf("\t{\n" );
 	}
 
+
+	if ( mr->ptr_content && si->m_format == FORMAT_XML ) {
+		sb->safePrintf("\t\t<content><![CDATA[" );
+		sb->cdataEncode ( mr->ptr_content );
+		sb->safePrintf("]]></content>\n");
+	}
+		
+	if ( mr->ptr_content && si->m_format == FORMAT_JSON ) {
+		sb->safePrintf("\t\t\"content\":\"" );
+		sb->jsonEncode ( mr->ptr_content );
+		sb->safePrintf("\",\n");
+	}
+
 	Highlight hi;
 
 	// get the url
 	char *url    = mr->ptr_ubuf      ;
-	long  urlLen = mr->size_ubuf - 1 ;
-	long  err    = mr->m_errno       ;
+	int32_t  urlLen = mr->size_ubuf - 1 ;
+	int32_t  err    = mr->m_errno       ;
 
 	// . remove any session ids from the url
 	// . for speed reasons, only check if its a cgi url
@@ -3705,26 +3980,26 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 	urlLen = uu.getUrlLen();
 
 	// get my site hash
-	unsigned long long siteHash = 0;
+	uint64_t siteHash = 0;
 	if ( uu.getHostLen() > 0 ) 
 		siteHash = hash64(uu.getHost(),uu.getHostLen());
 	// indent it if level is 2
 	bool indent = false;
 
-	bool isAdmin = si->m_isRootAdmin;
+	bool isAdmin = (si->m_isMasterAdmin || si->m_isCollAdmin);
 	if ( si->m_format == FORMAT_XML ) isAdmin = false;
 
-	//unsigned long long lastSiteHash = siteHash;
+	//uint64_t lastSiteHash = siteHash;
 	if ( indent && si->m_format == FORMAT_HTML ) 
 		sb->safePrintf("<blockquote>"); 
 
 	// print the rank. it starts at 0 so add 1
 	if ( si->m_format == FORMAT_HTML && si->m_streamResults )
-		//sb->safePrintf("<table><tr><td valign=top>%li.</td><td>",
+		//sb->safePrintf("<table><tr><td valign=top>%"INT32".</td><td>",
 		//	       ix+1 );
 		sb->safePrintf("<table><tr><td>");
 	else if ( si->m_format == FORMAT_HTML )
-		//sb->safePrintf("<table><tr><td valign=top>%li.</td><td>",
+		//sb->safePrintf("<table><tr><td valign=top>%"INT32".</td><td>",
 		//	      ix+1 + si->m_firstResultNum );
 		sb->safePrintf("<table><tr><td>");
 
@@ -3735,41 +4010,44 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 
 	// if this msg20 had an error print "had error"
 	if ( err || urlLen <= 0 || ! url ) {
+		// revert back so we do not break the json/xml
+		if ( cursor >= 0 ) sb->m_length = cursor;
 		// it's unprofessional to display this in browser
 		// so just let admin see it
-		if ( isAdmin ) {
-			sb->safePrintf("<i>docId %lli had error: "
+		if ( isAdmin && si->m_format == FORMAT_HTML ) {
+			sb->safePrintf("<i>docId %"INT64" had error: "
 				      "%s</i><br><br>",
 				      mr->m_docId,//msg40->getDocId(i),
 				      mstrerror(err));
 		}
 		// log it too!
-		log("query: docId %lli had error: %s.",
+		log("query: docId %"INT64" had error: %s.",
 		    mr->m_docId,mstrerror(err));
 		// wrap it up if clustered
-		if ( indent ) sb->safeMemcpy("</blockquote>",13);
-		// inc it
-		*numPrintedSoFar = *numPrintedSoFar + 1;
+		if ( indent && si->m_format == FORMAT_HTML) 
+			sb->safeMemcpy("</blockquote>",13);
+		// DO NOT inc it otherwise puts a comma in there and
+		// screws up the json
+		//*numPrintedSoFar = *numPrintedSoFar + 1;
 		return true;
 	}
 	
-
 	// the score if admin
 	/*
 	if ( isAdmin ) {
-		long level = (long)msg40->getClusterLevel(ix);
+		int32_t level = (int32_t)msg40->getClusterLevel(ix);
 		// print out score
 		sb->safePrintf ( "s=%.03f "
-				"docid=%llu "
-				"sitenuminlinks=%li%% "
-				"hop=%li "
-				"cluster=%li "
+				"docid=%"UINT64" "
+				"sitenuminlinks=%"INT32"%% "
+				"hop=%"INT32" "
+				"cluster=%"INT32" "
 				"summaryLang=%s "
 				"(%s)<br>",
 				(float)msg40->getScore(ix) ,
 				mr->m_docId,
-				(long )mr->m_siteNumInlinks,
-				(long)mr->m_hopcount,
+				(int32_t )mr->m_siteNumInlinks,
+				(int32_t)mr->m_hopcount,
 				level ,
 				getLanguageString(mr->m_summaryLanguage),
 				g_crStrings[level]);
@@ -3807,14 +4085,14 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 					   " style=\"margin:10px;\" ",
 					   si->m_format );
 		if ( si->m_format == FORMAT_XML ) {
-			sb->safePrintf("\t\t<imageHeight>%li</imageHeight>\n",
+			sb->safePrintf("\t\t<imageHeight>%"INT32"</imageHeight>\n",
 				       ti->m_dy);
-			sb->safePrintf("\t\t<imageWidth>%li</imageWidth>\n",
+			sb->safePrintf("\t\t<imageWidth>%"INT32"</imageWidth>\n",
 				       ti->m_dx);
-			sb->safePrintf("\t\t<origImageHeight>%li"
+			sb->safePrintf("\t\t<origImageHeight>%"INT32""
 				       "</origImageHeight>\n",
 				       ti->m_origDY);
-			sb->safePrintf("\t\t<origImageWidth>%li"
+			sb->safePrintf("\t\t<origImageWidth>%"INT32""
 				       "</origImageWidth>\n",
 				       ti->m_origDX);
 			sb->safePrintf("\t\t<imageUrl><![CDATA[");
@@ -3822,13 +4100,13 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 			sb->safePrintf("]]></imageUrl>\n");
 		}
 		if ( si->m_format == FORMAT_JSON ) {
-			sb->safePrintf("\t\t\"imageHeight\":%li,\n",
+			sb->safePrintf("\t\t\"imageHeight\":%"INT32",\n",
 				       ti->m_dy);
-			sb->safePrintf("\t\t\"imageWidth\":%li,\n",
+			sb->safePrintf("\t\t\"imageWidth\":%"INT32",\n",
 				       ti->m_dx);
-			sb->safePrintf("\t\t\"origImageHeight\":%li,\n",
+			sb->safePrintf("\t\t\"origImageHeight\":%"INT32",\n",
 				       ti->m_origDY);
-			sb->safePrintf("\t\t\"origImageWidth\":%li,\n",
+			sb->safePrintf("\t\t\"origImageWidth\":%"INT32",\n",
 				       ti->m_origDX);
 			sb->safePrintf("\t\t\"imageUrl\":\"");
 			sb->jsonEncode(ti->getUrl());
@@ -3837,7 +4115,7 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 	}
 
 	bool isWide = false;
-	long newdx = 0;
+	int32_t newdx = 0;
 
 	// print image for widget
 	if ( //mr->ptr_imgUrl && 
@@ -3845,7 +4123,7 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 	       si->m_format == FORMAT_WIDGET_AJAX ||
 	       si->m_format == FORMAT_WIDGET_APPEND ) ) {
 
-		long widgetWidth = hr->getLong("widgetwidth",200);
+		int32_t widgetWidth = hr->getLong("widgetwidth",200);
 
 		// prevent coring
 		if ( widgetWidth < 1 ) widgetWidth = 1;
@@ -3862,14 +4140,14 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 			       // when we append new results to the end
 			       // of the widget for infinite scrolling
 			       // using the scripts in PageBasic.cpp
-			       "docid=%lli "
+			       "docid=%"INT64" "
 			       "score=%f " // double
 
 			       "style=\""
-			       "width:%lipx;"
-			       "min-height:%lipx;"//140px;"
-			       "height:%lipx;"//140px;"
-			       "padding:%lipx;"
+			       "width:%"INT32"px;"
+			       "min-height:%"INT32"px;"//140px;"
+			       "height:%"INT32"px;"//140px;"
+			       "padding:%"INT32"px;"
 			       //"padding-right:40px;"
 			       "position:relative;"
 			       // summary overflows w/o this!
@@ -3887,14 +4165,14 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 			       , msg40->m_msg3a.m_scores[ix]
 			       // subtract 8 for scrollbar on right
 			       , widgetWidth - 2*8 - 8 // padding is 8px
-			       , (long)RESULT_HEIGHT
-			       , (long)RESULT_HEIGHT
-			       , (long)PADDING
+			       , (int32_t)RESULT_HEIGHT
+			       , (int32_t)RESULT_HEIGHT
+			       , (int32_t)PADDING
 			       //, bgcolor
 			       );
 		// if ( mr->ptr_imgUrl )
 		// 	sb->safePrintf("background-repeat:no-repeat;"
-		// 		       "background-size:%lipx 140px;"
+		// 		       "background-size:%"INT32"px 140px;"
 		// 		       "background-image:url('%s');"
 		// 		       , widgetwidth - 2*8 // padding is 8px
 		// 		       , mr->ptr_imgUrl);
@@ -3902,8 +4180,8 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 			ThumbnailArray *ta = (ThumbnailArray *)mr->ptr_imgData;
 			ThumbnailInfo *ti = ta->getThumbnailInfo(0);
 			// account for scrollbar on the right
-			long maxWidth = widgetWidth - (long)SCROLLBAR_WIDTH;
-			long maxHeight = (long)RESULT_HEIGHT;
+			int32_t maxWidth = widgetWidth - (int32_t)SCROLLBAR_WIDTH;
+			int32_t maxHeight = (int32_t)RESULT_HEIGHT;
 			// false = do not print <a href> link on image
 			ti->printThumbnailInHtml ( sb , 
 						   maxWidth ,
@@ -3919,8 +4197,8 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 				 "target=_blank "
 				 "style=\"text-decoration:none;"
 				 // don't let scroll bar obscure text
-				 "margin-right:%lipx;"
-				 ,(long)SCROLLBAR_WIDTH
+				 "margin-right:%"INT32"px;"
+				 ,(int32_t)SCROLLBAR_WIDTH
 				 );
 
 		// if thumbnail is wide enough put text on top of it, otherwise
@@ -3928,10 +4206,10 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 		if ( newdx > .5 * widgetWidth ) {
 			isWide = true;
 			sb->safePrintf("position:absolute;"
-				       "bottom:%li;"
-				       "left:%li;"
-				       , (long) PADDING 
-				       , (long) PADDING 
+				       "bottom:%"INT32";"
+				       "left:%"INT32";"
+				       , (int32_t) PADDING 
+				       , (int32_t) PADDING 
 				       );
 		}
 		// to align the text verticall we gotta make a textbox div
@@ -3940,18 +4218,18 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 		//	sb->safePrintf("vertical-align:middle;");
 		else
 			sb->safePrintf("position:absolute;"
-				       "bottom:%li;"
-				       "left:%li;"
-				       , (long) PADDING
-				       , (long) PADDING + newdx + 10 );
+				       "bottom:%"INT32";"
+				       "left:%"INT32";"
+				       , (int32_t) PADDING
+				       , (int32_t) PADDING + newdx + 10 );
 
 		// close the style and begin the url
 		sb->safePrintf( "\" "
 				"href=\"" 
 				 );
 
-		// truncate off -diffbotxyz%li
-		long newLen = urlLen;
+		// truncate off -diffbotxyz%"INT32"
+		int32_t newLen = urlLen;
 		if ( diffbotSuffix ) newLen = diffbotSuffix - url;
 		// print the url in the href tag
 		sb->safeMemcpy ( url , newLen ); 
@@ -3996,8 +4274,8 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 		sb->safePrintf ( "<a style=text-decoration:none;"
 				 "color:white; "
 				 "href=" );
-		// truncate off -diffbotxyz%li
-		long newLen = urlLen;
+		// truncate off -diffbotxyz%"INT32"
+		int32_t newLen = urlLen;
 		if ( diffbotSuffix ) newLen = diffbotSuffix - url;
 		// print the url in the href tag
 		sb->safeMemcpy ( url , newLen ); 
@@ -4024,8 +4302,8 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 	// the a href tag
 	if ( si->m_format == FORMAT_HTML ) {
 		sb->safePrintf ( "<a href=" );
-		// truncate off -diffbotxyz%li
-		long newLen = urlLen;
+		// truncate off -diffbotxyz%"INT32"
+		int32_t newLen = urlLen;
 		if ( diffbotSuffix ) newLen = diffbotSuffix - url;
 		// print the url in the href tag
 		sb->safeMemcpy ( url , newLen ); 
@@ -4039,7 +4317,7 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 	// . highlight it first
 	// . the title itself should not have any tags in it!
 	char  *str  = mr->ptr_tbuf;//msg40->getTitle(i);
-	long strLen = mr->size_tbuf - 1;// msg40->getTitleLen(i);
+	int32_t strLen = mr->size_tbuf - 1;// msg40->getTitleLen(i);
 	if ( ! str || strLen < 0 ) strLen = 0;
 
 	/////
@@ -4060,10 +4338,10 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 		char *dmozTitle  = mr->ptr_dmozTitles;
 		dmozSummary2 = mr->ptr_dmozSumms;
 		char *dmozAnchor = mr->ptr_dmozAnchors;
-		long *catIds     = mr->ptr_catIds;
-		long numCats = mr->size_catIds / 4;
+		int32_t *catIds     = mr->ptr_catIds;
+		int32_t numCats = mr->size_catIds / 4;
 		// loop through looking for the right ID
-		for (long i = 0; i < numCats ; i++ ) {
+		for (int32_t i = 0; i < numCats ; i++ ) {
 			// assign shit if we match the dmoz cat we are showing
 			if ( catIds[i] ==  si->m_catId) break;
 			dmozTitle +=gbstrlen(dmozTitle)+1;
@@ -4076,7 +4354,7 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 	}
 	
 
-	long hlen;
+	int32_t hlen;
 	//copy all summary and title excerpts for this result into here
 	//char tt[1024*32];
 	//char *ttend = tt + 1024*32;
@@ -4092,7 +4370,7 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 	     si->m_format == FORMAT_WIDGET_AJAX ) {
 		frontTag = "<font style=\"background-color:yellow\">" ;
 	}
-	long cols = 80;
+	int32_t cols = 80;
 	cols = si->m_summaryMaxWidth;
 
 	SafeBuf hb;
@@ -4198,10 +4476,10 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 		char *dmozTitle   = mr->ptr_dmozTitles;
 		char *dmozSummary = mr->ptr_dmozSumms;
 		char *dmozAnchor  = mr->ptr_dmozAnchors;
-		long *catIds      = mr->ptr_catIds;
-		long  numCats     = mr->size_catIds / 4;
+		int32_t *catIds      = mr->ptr_catIds;
+		int32_t  numCats     = mr->size_catIds / 4;
 		// loop through looking for the right ID
-		for (long i = 0; i < numCats ; i++ ) {
+		for (int32_t i = 0; i < numCats ; i++ ) {
 			printDmozEntry ( sb,
 					 catIds[i],
 					 true,
@@ -4219,24 +4497,24 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 	     ( si->m_format == FORMAT_JSON ||
 	       si->m_format == FORMAT_XML ) ) {
 		// print INDIRECT dmoz entries as well
-		long nIndCatids = mr->size_indCatIds / 4;
-		 for ( long i = 0; i < nIndCatids; i++ ) {
-		 	long catId = ((long *)(mr->ptr_indCatIds))[i];
+		int32_t nIndCatids = mr->size_indCatIds / 4;
+		 for ( int32_t i = 0; i < nIndCatids; i++ ) {
+		 	int32_t catId = ((int32_t *)(mr->ptr_indCatIds))[i];
 			if ( si->m_format == FORMAT_XML )
 				sb->safePrintf("\t\t<indirectDmozCatId>"
-					       "%li</indirectDmozCatId>\n",
+					       "%"INT32"</indirectDmozCatId>\n",
 					       catId);
 			if ( si->m_format == FORMAT_JSON )
 				sb->safePrintf("\t\t\"indirectDmozCatId\":"
-					       "%li,\n",catId);
+					       "%"INT32",\n",catId);
 		 }
 		// print INDIRECT dmoz entries as well
-		// long nIndCatids = mr->size_indCatIds / 4;
+		// int32_t nIndCatids = mr->size_indCatIds / 4;
 		// dmozTitle   = mr->ptr_indDmozTitles;
 		// dmozSummary = mr->ptr_dmozSumms;
 		// dmozAnchor  = mr->ptr_dmozAnchors;
-		// for ( long i = 0; i < nIndCatids; i++ ) {
-		// 	long catId = ((long *)(mr->ptr_indCatIds))[i];
+		// for ( int32_t i = 0; i < nIndCatids; i++ ) {
+		// 	int32_t catId = ((int32_t *)(mr->ptr_indCatIds))[i];
 		// 	printDmozEntry ( sb ,
 		// 			 catId ,
 		// 			 false,
@@ -4297,7 +4575,7 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 	str    = mr->ptr_displaySum;
 	// sometimes the summary is longer than requested because for
 	// summary deduping purposes (see "pss" parm in Parms.cpp) we do not
-	// get it as short as request. so use mr->m_sumPrintSize here
+	// get it as int16_t as request. so use mr->m_sumPrintSize here
 	// not mr->size_sum
 	strLen = mr->size_displaySum - 1;//-1;
 
@@ -4314,7 +4592,7 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 	bool printSummary = true;
 	// do not print summaries for widgets by default unless overridden
 	// with &summary=1
-	long defSum = 0;
+	int32_t defSum = 0;
 	// if no image then default the summary to on
 	if ( ! mr->ptr_imgData ) defSum = 1;
 
@@ -4328,7 +4606,7 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 	     (si->m_format == FORMAT_WIDGET_IFRAME ||
 	      si->m_format == FORMAT_WIDGET_APPEND ||
 	      si->m_format == FORMAT_WIDGET_AJAX ) ) {
-		long sumLen = strLen;
+		int32_t sumLen = strLen;
 		if ( sumLen > 150 ) sumLen = 150;
 		if ( sumLen ) {
 			sb->safePrintf("<br>");
@@ -4352,9 +4630,20 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 	}
 
 
-	// new line if not xml
-	if ( si->m_format == FORMAT_HTML && strLen ) 
+	// new line if not xml. even summary is empty we need it too like
+	// when showing xml docs - MDW 9/28/2014
+	if ( si->m_format == FORMAT_HTML ) // && strLen ) 
 		sb->safePrintf("<br>\n");
+
+
+	/////////
+	// 
+	// meta tag values for &dt=keywords ...
+	//
+	/////////
+	if ( mr->ptr_dbuf && mr->size_dbuf>1 )
+		printMetaContent ( msg40 , ix,st,sb);
+
 
 	////////////
 	//
@@ -4363,21 +4652,21 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 	//
 	////////////
 	//Msg20Reply *mr = m20->getMsg20Reply();
-	long nCatIds = mr->getNumCatIds();
-	for (long i = 0; i < nCatIds; i++) {
-		long catid = ((long *)(mr->ptr_catIds))[i];
+	int32_t nCatIds = mr->getNumCatIds();
+	for (int32_t i = 0; i < nCatIds; i++) {
+		int32_t catid = ((int32_t *)(mr->ptr_catIds))[i];
 		printDMOZCategoryUnderResult(sb,si,catid,st);
 	}
 	// skipCatsPrint:
 	// print the indirect category Ids
-	long nIndCatids = mr->size_indCatIds / 4;
+	int32_t nIndCatids = mr->size_indCatIds / 4;
 	//if ( !cr->m_displayIndirectDmozCategories )
 	//	goto skipCatsPrint2;
-	for ( long i = 0; i < nIndCatids; i++ ) {
-		long catid = ((long *)(mr->ptr_indCatIds))[i];
+	for ( int32_t i = 0; i < nIndCatids; i++ ) {
+		int32_t catid = ((int32_t *)(mr->ptr_indCatIds))[i];
 		// skip it if it's a regular category
 		//bool skip = false;
-		long d; for ( d = 0; d < nCatIds; d++) {
+		int32_t d; for ( d = 0; d < nCatIds; d++) {
 			if (  catid == mr->ptr_catIds[i] ) break;
 		}
 		// skip if the indirect catid matched a directed catid
@@ -4457,7 +4746,7 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 	//   pastes it for link: search
 	if ( url [ urlLen - 1 ] == '/' ) {
 		// see if any other slash before us
-		long j;
+		int32_t j;
 		for ( j = urlLen - 2 ; j >= 0 ; j-- )
 			if ( url[j] == '/' ) break;
 		// if there wasn't, we must have been a root url
@@ -4486,9 +4775,9 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 					"top:10px;background-color:black;>" );
 		else if ( mr->ptr_imgData )
 			sb->safePrintf ("<br><font color=gray size=-1 "
-					"style=position:absolute;left:%lipx;"
+					"style=position:absolute;left:%"INT32"px;"
 					"top:10px;>"
-				       , (long) PADDING + newdx + 10 );
+				       , (int32_t) PADDING + newdx + 10 );
 		else
 			sb->safePrintf ("<br><font color=gray size=-1>");
 		// print the url now, truncated to 50 chars
@@ -4509,11 +4798,11 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 	}
 
 	if ( si->m_format == FORMAT_XML )
-		sb->safePrintf("\t\t<hopCount>%li</hopCount>\n",
-			       (long)mr->m_hopcount);
+		sb->safePrintf("\t\t<hopCount>%"INT32"</hopCount>\n",
+			       (int32_t)mr->m_hopcount);
 
 	if ( si->m_format == FORMAT_JSON )
-		sb->safePrintf("\t\t\"hopCount\":%li,\n",(long)mr->m_hopcount);
+		sb->safePrintf("\t\t\"hopCount\":%"INT32",\n",(int32_t)mr->m_hopcount);
 
 	// now the last spidered date of the document
 	time_t ts = mr->m_lastSpidered;
@@ -4532,17 +4821,17 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 		// doc size in Kilobytes
 		sb->safePrintf ( "\t\t<size><![CDATA[%4.0fk]]></size>\n",
 				(float)mr->m_contentLen/1024.0);
-		sb->safePrintf ( "\t\t<sizeInBytes>%li</sizeInBytes>\n",
+		sb->safePrintf ( "\t\t<sizeInBytes>%"INT32"</sizeInBytes>\n",
 				 mr->m_contentLen);
 		// . docId for possible cached link
 		// . might have merged a bunch together
-		sb->safePrintf("\t\t<docId>%lli</docId>\n",mr->m_docId );
+		sb->safePrintf("\t\t<docId>%"INT64"</docId>\n",mr->m_docId );
 		// . show the site root
 		// . for hompages.com/users/fred/mypage.html this will be
 		//   homepages.com/users/fred/
 		// . for www.xyz.edu/~foo/burp/ this will be
 		//   www.xyz.edu/~foo/ etc.
-		long  siteLen = 0;
+		int32_t  siteLen = 0;
 		char *site = NULL;
 		// seems like this isn't the way to do it, cuz Tagdb.cpp
 		// adds the "site" tag itself and we do not always have it
@@ -4553,43 +4842,43 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 		sb->safePrintf("\t\t<site><![CDATA[");
 		if ( site && siteLen > 0 ) sb->safeMemcpy ( site , siteLen );
 		sb->safePrintf("]]></site>\n");
-		//long sh = hash32 ( site , siteLen );
-		//sb->safePrintf ("\t\t<siteHash32>%lu</siteHash32>\n",sh);
-		//long dh = uu.getDomainHash32 ();
-		//sb->safePrintf ("\t\t<domainHash32>%lu</domainHash32>\n",dh);
+		//int32_t sh = hash32 ( site , siteLen );
+		//sb->safePrintf ("\t\t<siteHash32>%"UINT32"</siteHash32>\n",sh);
+		//int32_t dh = uu.getDomainHash32 ();
+		//sb->safePrintf ("\t\t<domainHash32>%"UINT32"</domainHash32>\n",dh);
 		// spider date
-		sb->safePrintf ( "\t\t<spidered>%lu</spidered>\n",
-				mr->m_lastSpidered);
+		sb->safePrintf ( "\t\t<spidered>%"UINT32"</spidered>\n",
+				 (uint32_t)mr->m_lastSpidered);
 		// backwards compatibility for buzz
-		sb->safePrintf ( "\t\t<firstIndexedDateUTC>%lu"
+		sb->safePrintf ( "\t\t<firstIndexedDateUTC>%"UINT32""
 				"</firstIndexedDateUTC>\n",
-				mr->m_firstIndexedDate);
-		sb->safePrintf( "\t\t<contentHash32>%lu"
+				 (uint32_t)mr->m_firstIndexedDate);
+		sb->safePrintf( "\t\t<contentHash32>%"UINT32""
 				"</contentHash32>\n",
-				mr->m_contentHash32);
+				(uint32_t)mr->m_contentHash32);
 		// pub date
-		long datedbDate = mr->m_datedbDate;
+		int32_t datedbDate = mr->m_datedbDate;
 		// show the datedb date as "<pubDate>" for now
 		if ( datedbDate != -1 )
-			sb->safePrintf ( "\t\t<pubdate>%lu</pubdate>\n",
-					datedbDate);
+			sb->safePrintf ( "\t\t<pubdate>%"UINT32"</pubdate>\n",
+					 (uint32_t)datedbDate);
 	}
 
 	if ( si->m_format == FORMAT_JSON ) {
 		// doc size in Kilobytes
 		sb->safePrintf ( "\t\t\"size\":\"%4.0fk\",\n",
 				(float)mr->m_contentLen/1024.0);
-		sb->safePrintf ( "\t\t\"sizeInBytes\":%li,\n",
+		sb->safePrintf ( "\t\t\"sizeInBytes\":%"INT32",\n",
 				 mr->m_contentLen);
 		// . docId for possible cached link
 		// . might have merged a bunch together
-		sb->safePrintf("\t\t\"docId\":%lli,\n",mr->m_docId );
+		sb->safePrintf("\t\t\"docId\":%"INT64",\n",mr->m_docId );
 		// . show the site root
 		// . for hompages.com/users/fred/mypage.html this will be
 		//   homepages.com/users/fred/
 		// . for www.xyz.edu/~foo/burp/ this will be
 		//   www.xyz.edu/~foo/ etc.
-		long  siteLen = 0;
+		int32_t  siteLen = 0;
 		char *site = NULL;
 		// seems like this isn't the way to do it, cuz Tagdb.cpp
 		// adds the "site" tag itself and we do not always have it
@@ -4600,24 +4889,24 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 		sb->safePrintf("\t\t\"site\":\"");
 		if ( site && siteLen > 0 ) sb->safeMemcpy ( site , siteLen );
 		sb->safePrintf("\",\n");
-		//long sh = hash32 ( site , siteLen );
-		//sb->safePrintf ("\t\t<siteHash32>%lu</siteHash32>\n",sh);
-		//long dh = uu.getDomainHash32 ();
-		//sb->safePrintf ("\t\t<domainHash32>%lu</domainHash32>\n",dh);
+		//int32_t sh = hash32 ( site , siteLen );
+		//sb->safePrintf ("\t\t<siteHash32>%"UINT32"</siteHash32>\n",sh);
+		//int32_t dh = uu.getDomainHash32 ();
+		//sb->safePrintf ("\t\t<domainHash32>%"UINT32"</domainHash32>\n",dh);
 		// spider date
-		sb->safePrintf ( "\t\t\"spidered\":%lu,\n",
-				mr->m_lastSpidered);
+		sb->safePrintf ( "\t\t\"spidered\":%"UINT32",\n",
+				 (uint32_t)mr->m_lastSpidered);
 		// backwards compatibility for buzz
-		sb->safePrintf ( "\t\t\"firstIndexedDateUTC\":%lu,\n"
-				 , mr->m_firstIndexedDate);
-		sb->safePrintf( "\t\t\"contentHash32\":%lu,\n"
-				, mr->m_contentHash32);
+		sb->safePrintf ( "\t\t\"firstIndexedDateUTC\":%"UINT32",\n"
+				 , (uint32_t) mr->m_firstIndexedDate);
+		sb->safePrintf( "\t\t\"contentHash32\":%"UINT32",\n"
+				, (uint32_t)mr->m_contentHash32);
 		// pub date
-		long datedbDate = mr->m_datedbDate;
+		int32_t datedbDate = mr->m_datedbDate;
 		// show the datedb date as "<pubDate>" for now
 		if ( datedbDate != -1 )
-			sb->safePrintf ( "\t\t\"pubdate\":%lu,\n",
-					datedbDate);
+			sb->safePrintf ( "\t\t\"pubdate\":%"UINT32",\n",
+					 (uint32_t)datedbDate);
 	}
 
 
@@ -4637,14 +4926,14 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 		(k =outlinks->getNextInlink(k))) 
 		// print it out
 		sb->safePrintf("\t\t<outlink "
-			      "docId=\"%lli\" "
-			      "hostId=\"%lu\" "
-			      "indexed=\"%li\" "
-			      "pubdate=\"%li\" ",
+			      "docId=\"%"INT64"\" "
+			      "hostId=\"%"UINT32"\" "
+			      "indexed=\"%"INT32"\" "
+			      "pubdate=\"%"INT32"\" ",
 			      k->m_docId ,
-			      k->m_ip, // hostHash, but use ip for now
-			      (long)k->m_firstIndexedDate ,
-			      (long)k->m_datedbDate );
+			       (uint32_t)k->m_ip,//hostHash, but use ip for now
+			      (int32_t)k->m_firstIndexedDate ,
+			      (int32_t)k->m_datedbDate );
 
 	if ( si->m_format == FORMAT_XML ) {
 		// result
@@ -4676,8 +4965,8 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 
 
 	
-	if ( isAdmin && si->m_format == FORMAT_HTML ) {
-		long lang = mr->m_language;
+	if ( si->m_format == FORMAT_HTML ) {
+		int32_t lang = mr->m_language;
 		if ( lang ) sb->safePrintf(" - %s",getLanguageString(lang));
 		uint16_t cc = mr->m_computedCountry;
 		if( cc ) sb->safePrintf(" - %s", g_countryCode.getName(cc));
@@ -4706,7 +4995,7 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 	if ( printCached && cr->m_clickNScrollEnabled ) 
 		sb->safePrintf ( " - <a href=/scroll.html?page="
 				"get?"
-				"q=%s&c=%s&d=%lli>"
+				"q=%s&c=%s&d=%"INT64">"
 				"cached</a>\n",
 				st->m_qe , coll ,
 				mr->m_docId );
@@ -4715,7 +5004,7 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 				"/get?"
 				"q=%s&"
 				"qlang=%s&"
-				"c=%s&d=%lli&cnsp=0\">"
+				"c=%s&d=%"INT64"&cnsp=0\">"
 				"cached</a>\n", 
 				st->m_qe , 
 				// "qlang" parm
@@ -4734,7 +5023,7 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 		else
 			sb->safePrintf(" - <a href=\"https://www.gigablast."
 				      "com/seo?");//c=%s&",coll);
-		//sb->safePrintf("d=%lli",mr->m_docId);
+		//sb->safePrintf("d=%"INT64"",mr->m_docId);
 		sb->safePrintf("u=");
 		sb->urlEncode ( url , gbstrlen(url) , false );
 		//sb->safePrintf("&page=1\">seo</a>" );
@@ -4763,15 +5052,15 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 	*/
 
 	// unhide the divs on click
-	long placeHolder = -1;
-	long placeHolderLen = 0;
+	int32_t placeHolder = -1;
+	int32_t placeHolderLen = 0;
 	if ( si->m_format == FORMAT_HTML && si->m_getDocIdScoringInfo ) {
 		// place holder for backlink table link
 		placeHolder = sb->length();
 		sb->safePrintf (" - <a onclick="
 
 			       "\""
-			       "var e = document.getElementById('bl%li');"
+			       "var e = document.getElementById('bl%"INT32"');"
 			       "if ( e.style.display == 'none' ){"
 			       "e.style.display = '';"
 			       "}"
@@ -4798,7 +5087,7 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 		sb->safePrintf (" - <a onclick="
 
 			       "\""
-			       "var e = document.getElementById('sc%li');"
+			       "var e = document.getElementById('sc%"INT32"');"
 			       "if ( e.style.display == 'none' ){"
 			       "e.style.display = '';"
 			       "}"
@@ -4823,8 +5112,8 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 		sb->safePrintf(" - <a style=color:blue; href=\"/addurl?"
 			       "urls=");
 		sb->urlEncode ( url , gbstrlen(url) , false );
-		unsigned long long rand64 = gettimeofdayInMillisecondsLocal();
-		sb->safePrintf("&c=%s&rand64=%llu\">respider</a>\n",
+		uint64_t rand64 = gettimeofdayInMillisecondsLocal();
+		sb->safePrintf("&c=%s&rand64=%"UINT64"\">respider</a>\n",
 			       coll,rand64);
 	}
 
@@ -4852,7 +5141,7 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 				 "q=%s&"
 				 "qlang=%s&"
 				 "c=%s&"
-				 "d=%lli&"
+				 "d=%"INT64"&"
 				 "cnsp=0\">"
 				 "sections</a>\n", 
 				 st->m_qe , 
@@ -4870,7 +5159,7 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 				 //"q=%s&"
 				 //"qlang=%s&"
 				 "c=%s&"
-				 "d=%lli&"
+				 "d=%"INT64"&"
 				 "cnsp=0\">"
 				 "page info</a>\n", 
 				 //st->m_qe , 
@@ -4883,7 +5172,7 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 	// this stuff is secret just for local guys! not any more
 	if ( si->m_format == FORMAT_HTML ) {
 		// now the ip of url
-		//long urlip = msg40->getIp(i);
+		//int32_t urlip = msg40->getIp(i);
 		// don't combine this with the sprintf above cuz
 		// iptoa uses a static local buffer like ctime()
 		sb->safePrintf(//"<br>"
@@ -4895,11 +5184,11 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 		unsigned char *us = (unsigned char *)&mr->m_ip;//urlip;
 		sb->safePrintf (" - <a style=color:blue; "
 				"href=\"/search?c=%s&sc=1&dr=0&n=100&"
-				"q=ip:%li.%li.%li&"
-				"usecache=0\">%li.%li.%li</a>\n",
+				"q=ip:%"INT32".%"INT32".%"INT32"&"
+				"usecache=0\">%"INT32".%"INT32".%"INT32"</a>\n",
 				coll,
-				(long)us[0],(long)us[1],(long)us[2],
-				(long)us[0],(long)us[1],(long)us[2]);
+				(int32_t)us[0],(int32_t)us[1],(int32_t)us[2],
+				(int32_t)us[0],(int32_t)us[1],(int32_t)us[2]);
 
 		/*
 		// . now the info link
@@ -4907,15 +5196,15 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 		//   there cuz it will mess up Global Spec's machine
 		//if ( h->m_groupId == g_hostdb.m_groupId ) 
 		sb.safePrintf(" - <a href=\"/admin/titledb?c=%s&"
-			      "d=%lli",coll,mr->m_docId);
+			      "d=%"INT64"",coll,mr->m_docId);
 		// then the [info] link to show the TitleRec
 		sb->safePrintf ( "\">[info]</a>" );
 		
 		// now the analyze link
 		sb.safePrintf (" - <a href=\"/admin/parser?c=%s&"
-			       "old=1&hc=%li&u=", 
+			       "old=1&hc=%"INT32"&u=", 
 			       coll,
-			       (long)mr->m_hopcount);
+			       (int32_t)mr->m_hopcount);
 		// encode the url now
 		sb->urlEncode ( url , urlLen );
 		// then the [analyze] link
@@ -4931,14 +5220,14 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 	}
 
 	char dbuf [ MAX_URL_LEN ];
-	long dlen = uu.getDomainLen();
+	int32_t dlen = uu.getDomainLen();
 	if ( si->m_format == FORMAT_HTML ) {
-		memcpy ( dbuf , uu.getDomain() , dlen );
+		gbmemcpy ( dbuf , uu.getDomain() , dlen );
 		dbuf [ dlen ] = '\0';
 		// newspaperarchive urls have no domain
 		if ( dlen == 0 ) {
 			dlen = uu.getHostLen();
-			memcpy ( dbuf , uu.getHost() , dlen );
+			gbmemcpy ( dbuf , uu.getHost() , dlen );
 			dbuf [ dlen ] = '\0';
 		}
 	}
@@ -4954,18 +5243,21 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 				coll );//, dbuf );
 	}
 
+
 	if ( si->m_format == FORMAT_HTML && ( isAdmin || cr->m_isCustomCrawl)){
 		char *un = "";
-		long  banVal = 1;
+		int32_t  banVal = 1;
 		if ( mr->m_isBanned ) {
 			un = "UN";
 			banVal = 0;
 		}
-		sb->safePrintf("<br>"
+		// don't put on a separate line because then it is too
+		// easy to mis-click on it
+		sb->safePrintf(//"<br>"
 			      " <a style=color:green; href=\"/admin/tagdb?"
 			      "user=admin&"
 			      "tagtype0=manualban&"
-			      "tagdata0=%li&"
+			      "tagdata0=%"INT32"&"
 			      "u=%s&c=%s\">"
 			      "<nobr>%sBAN %s"
 			      "</nobr></a>\n"
@@ -4976,13 +5268,13 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 			      , dbuf );
 		//banSites->safePrintf("%s+", dbuf);
 		dlen = uu.getHostLen();
-		memcpy ( dbuf , uu.getHost() , dlen );
+		gbmemcpy ( dbuf , uu.getHost() , dlen );
 		dbuf [ dlen ] = '\0';
 		sb->safePrintf(" - "
 			      " <a style=color:green; href=\"/admin/tagdb?"
 			      "user=admin&"
 			      "tagtype0=manualban&"
-			      "tagdata0=%li&"
+			      "tagdata0=%"INT32"&"
 			      "u=%s&c=%s\">"
 			      "<nobr>%sBAN %s</nobr></a>\n"
 			      , banVal
@@ -4996,18 +5288,18 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 		sb->safePrintf (" - [similar -"
 			       " <a href=\"/search?"
 			       "q="
-			       "gbtagvector%%3A%lu"
+			       "gbtagvector%%3A%"UINT32""
 			       "&sc=1&dr=0&c=%s&n=100"
 			       "&rcache=0\">"
 			       "tag</a> " ,
-			       (long)mr->m_tagVectorHash,  coll);
+			       (int32_t)mr->m_tagVectorHash,  coll);
 		sb->safePrintf ("<a href=\"/search?"
 			       "q="
-			       "gbgigabitvector%%3A%lu"
+			       "gbgigabitvector%%3A%"UINT32""
 			       "&sc=1&dr=0&c=%s&n=100"
 			       "&rcache=0\">"
 			       "topic</a> " ,
-			       (long)mr->m_gigabitVectorHash, coll);
+			       (int32_t)mr->m_gigabitVectorHash, coll);
 		*/
 		if ( mr->size_gbAdIds > 0 ) 
 			sb->safePrintf ("<a href=\"/search?"
@@ -5020,11 +5312,11 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 		
 		/*
 		  put this on 'page info'
-		long urlFilterNum = (long)mr->m_urlFilterNum;
+		int32_t urlFilterNum = (int32_t)mr->m_urlFilterNum;
 		if(urlFilterNum != -1) {
 			sb->safePrintf (" - <a style=color:green; "
 					"href=/admin/filters?c=%s>"
-				       "UrlFilter:%li</a>", 
+				       "UrlFilter:%"INT32"</a>", 
 				       coll ,
 				       urlFilterNum);
 		}					
@@ -5043,7 +5335,7 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 			"border:1px black solid;"
 			"background-color:yellow;"
 			"\">"
-			"SCORE = (%li - |pos1-pos2|) * "
+			"SCORE = (%"INT32" - |pos1-pos2|) * "
 			"locationWeight * "
 			"densityWeight * "
 			"synWeight1 * "
@@ -5055,7 +5347,7 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 			"</span>"
 			"<br>"
 			"<br>"
-			, (long)MAXWORDPOS+1
+			, (int32_t)MAXWORDPOS+1
 			);
 	help.safePrintf("<table>"
 			"<tr><td>pos1</td><td>The word position of "
@@ -5074,7 +5366,7 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 			"<tr><td>term location</td>"
 			"<td>locationWeight</td></tr>"
 			);
-	for ( long i = 0 ; i < HASHGROUP_END ; i++ ) {
+	for ( int32_t i = 0 ; i < HASHGROUP_END ; i++ ) {
 		char *hs = getHashGroupString(i);
 		float hw = s_hashGroupWeights[i];
 		help.safePrintf("<tr><td>%s</td><td>%.0f</td></tr>"
@@ -5089,10 +5381,10 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 			"<td>densityWeight</td>"
 			"</tr>"
 			);
-	for ( long i = 0 ; i < MAXDENSITYRANK ; i++ ) {
+	for ( int32_t i = 0 ; i < MAXDENSITYRANK ; i++ ) {
 		help.safePrintf("<tr>"
-				"<td>%li</td>"
-				"<td>%li</td>"
+				"<td>%"INT32"</td>"
+				"<td>%"INT32"</td>"
 				"<td>%.0f</td>"
 				"</tr>"
 				,maxw,i,dweight );
@@ -5116,8 +5408,8 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 	if ( si->m_format == FORMAT_WIDGET_IFRAME ||
 	     si->m_format == FORMAT_WIDGET_APPEND ||
 	     si->m_format == FORMAT_WIDGET_AJAX   )
-		sb->safePrintf("<div style=line-height:%lipx;><br></div>",
-			       (long)SERP_SPACER);
+		sb->safePrintf("<div style=line-height:%"INT32"px;><br></div>",
+			       (int32_t)SERP_SPACER);
 
 
 	// inc it
@@ -5148,38 +5440,38 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 	// scoring info tables
 	//
 
-	long nr = dp->m_numRequiredTerms;
+	int32_t nr = dp->m_numRequiredTerms;
 	if ( nr == 1 ) nr = 0;
 	// print breakout tables here for distance matrix
 	//SafeBuf bt;
 	// final score calc
 	SafeBuf ft;
-	// shortcut
+	// int16_tcut
 	//Query *q = si->m_q;
 
 	// put in a hidden div so you can unhide it
 	if ( si->m_format == FORMAT_HTML )
-		sb->safePrintf("<div id=bl%li style=display:none;>\n", ix );
+		sb->safePrintf("<div id=bl%"INT32" style=display:none;>\n", ix );
 
 	// print xml and html inlinks
-	long numInlinks = 0;
+	int32_t numInlinks = 0;
 	printInlinkText ( sb , mr , si , &numInlinks );
 
 
 	if ( si->m_format == FORMAT_HTML ) {
 		sb->safePrintf("</div>");
-		sb->safePrintf("<div id=sc%li style=display:none;>\n", ix );
+		sb->safePrintf("<div id=sc%"INT32" style=display:none;>\n", ix );
 	}
 
 
 	// if pair changes then display the sum
-	long lastTermNum1 = -1;
-	long lastTermNum2 = -1;
+	int32_t lastTermNum1 = -1;
+	int32_t lastTermNum2 = -1;
 
 	float minScore = -1;
 
 	// display all the PairScores
-	for ( long i = 0 ; i < dp->m_numPairs ; i++ ) {
+	for ( int32_t i = 0 ; i < dp->m_numPairs ; i++ ) {
 		float totalPairScore = 0.0;
 		// print all the top winners for this pair
 		PairScore *fps = &dp->m_pairScores[i];
@@ -5192,7 +5484,7 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 		bool firstTime = true;
 		bool first = true;
 		// print all pairs for this combo
-		for ( long j = i ; j < dp->m_numPairs ; j++ ) {
+		for ( int32_t j = i ; j < dp->m_numPairs ; j++ ) {
 			// get it
 			PairScore *ps = &dp->m_pairScores[j];
 			// stop if different pair now
@@ -5223,8 +5515,8 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 		if ( si->m_format != FORMAT_HTML ) continue;
 		//sb->safePrintf("<table border=1><tr><td><center><b>");
 		// print pair text
-		//long qtn1 = fps->m_qtermNum1;
-		//long qtn2 = fps->m_qtermNum2;
+		//int32_t qtn1 = fps->m_qtermNum1;
+		//int32_t qtn2 = fps->m_qtermNum2;
 		//if ( q->m_qterms[qtn1].m_isPhrase )
 		//	sb->pushChar('\"');
 		//sb->safeMemcpy ( q->m_qterms[qtn1].m_term ,
@@ -5260,15 +5552,15 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 
 	// the singles --- TODO: make it ALL query terms
 	//nr = dp->m_numRequiredTerms;
-	//for ( long i = 0 ; i < nr && nr == 1 ; i++ ) {
+	//for ( int32_t i = 0 ; i < nr && nr == 1 ; i++ ) {
 
-	long lastTermNum = -1;
+	int32_t lastTermNum = -1;
 
-	long numSingles = dp->m_numSingles;
+	int32_t numSingles = dp->m_numSingles;
 	// do not print this if we got pairs
 	if ( dp->m_numPairs ) numSingles = 0;
 
-	for ( long i = 0 ; i < numSingles ; i++ ) {
+	for ( int32_t i = 0 ; i < numSingles ; i++ ) {
 		float totalSingleScore = 0.0;
 		// print all the top winners for this single
 		SingleScore *fss = &dp->m_singleScores[i];
@@ -5278,7 +5570,7 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 		lastTermNum = fss->m_qtermNum;
 		bool firstTime = true;
 		// print all singles for this combo
-		for ( long j = i ; j < dp->m_numSingles ; j++ ) {
+		for ( int32_t j = i ; j < dp->m_numSingles ; j++ ) {
 			// get it
 			SingleScore *ss = &dp->m_singleScores[j];
 			// stop if different single now
@@ -5306,7 +5598,7 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 		if ( si->m_format != FORMAT_HTML ) continue;
 		//sb->safePrintf("<table border=1><tr><td><center><b>");
 		// print pair text
-		//long qtn = fss->m_qtermNum;
+		//int32_t qtn = fss->m_qtermNum;
 		//sb->safeMemcpy(q->m_qterms[qtn].m_term ,
 		//	      q->m_qterms[qtn].m_termLen );
 		//sb->safePrintf("</b></center></td></tr>");
@@ -5327,56 +5619,57 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 	//sb->safePrintf("<br>");
 	// final score!!!
 	if ( si->m_format == FORMAT_XML ) {
-		sb->safePrintf ("\t\t<siteRank>%li</siteRank>\n",
-			       (long)dp->m_siteRank );
+		sb->safePrintf ("\t\t<siteRank>%"INT32"</siteRank>\n",
+			       (int32_t)dp->m_siteRank );
 
-		sb->safePrintf ("\t\t<numGoodSiteInlinks>%li"
+		sb->safePrintf ("\t\t<numGoodSiteInlinks>%"INT32""
 			       "</numGoodSiteInlinks>\n",
-			       (long)mr->m_siteNumInlinks );
+			       (int32_t)mr->m_siteNumInlinks );
 
-		sb->safePrintf ("\t\t<numTotalSiteInlinks>%li"
+		sb->safePrintf ("\t\t<numTotalSiteInlinks>%"INT32""
 			       "</numTotalSiteInlinks>\n",
-			       (long)mr->m_siteNumInlinksTotal );
-		sb->safePrintf ("\t\t<numUniqueIpsLinkingToSite>%li"
+			       (int32_t)mr->m_siteNumInlinksTotal );
+		sb->safePrintf ("\t\t<numUniqueIpsLinkingToSite>%"INT32""
 			       "</numUniqueIpsLinkingToSite>\n",
-			       (long)mr->m_siteNumUniqueIps );
-		sb->safePrintf ("\t\t<numUniqueCBlocksLinkingToSite>%li"
+			       (int32_t)mr->m_siteNumUniqueIps );
+		sb->safePrintf ("\t\t<numUniqueCBlocksLinkingToSite>%"INT32""
 			       "</numUniqueCBlocksLinkingToSite>\n",
-			       (long)mr->m_siteNumUniqueCBlocks );
+			       (int32_t)mr->m_siteNumUniqueCBlocks );
 
 
-		struct tm *timeStruct3 = gmtime(&mr->m_pageInlinksLastUpdated);
+		struct tm *timeStruct3;
+		timeStruct3 = gmtime((time_t *)&mr->m_pageInlinksLastUpdated);
 		char tmp3[64];
 		strftime ( tmp3 , 64 , "%b-%d-%Y(%H:%M:%S)" , timeStruct3 );
 		// -1 means unknown
 		if ( mr->m_pageNumInlinks >= 0 )
 			// how many inlinks, external and internal, we have
 			// to this page not filtered in any way!!!
-			sb->safePrintf("\t\t<numTotalPageInlinks>%li"
+			sb->safePrintf("\t\t<numTotalPageInlinks>%"INT32""
 				      "</numTotalPageInlinks>\n"
 				      ,mr->m_pageNumInlinks
 				      );
 		// how many inlinking ips we got, including our own if
 		// we link to ourself
-		sb->safePrintf("\t\t<numUniqueIpsLinkingToPage>%li"
+		sb->safePrintf("\t\t<numUniqueIpsLinkingToPage>%"INT32""
 			      "</numUniqueIpsLinkingToPage>\n"
 			      ,mr->m_pageNumUniqueIps
 			      );
 		// how many inlinking cblocks we got, including our own if
 		// we link to ourself
-		sb->safePrintf("\t\t<numUniqueCBlocksLinkingToPage>%li"
+		sb->safePrintf("\t\t<numUniqueCBlocksLinkingToPage>%"INT32""
 			      "</numUniqueCBlocksLinkingToPage>\n"
 			      ,mr->m_pageNumUniqueCBlocks
 			      );
 		
 		// how many "good" inlinks. i.e. inlinks whose linktext we
 		// count and index.
-		sb->safePrintf("\t\t<numGoodPageInlinks>%li"
+		sb->safePrintf("\t\t<numGoodPageInlinks>%"INT32""
 			      "</numGoodPageInlinks>\n"
-			      "\t\t<pageInlinksLastComputedUTC>%lu"
+			      "\t\t<pageInlinksLastComputedUTC>%"UINT32""
 			      "</pageInlinksLastComputedUTC>\n"
 			      ,mr->m_pageNumGoodInlinks
-			      ,mr->m_pageInlinksLastUpdated
+			       ,(uint32_t)mr->m_pageInlinksLastUpdated
 			      );
 
 
@@ -5395,9 +5688,9 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 			       );
 		sb->safePrintf ("\t\t<finalScoreEquation>"
 			       "<![CDATA["
-			       "<b>%.03f</b> = (%li/%.01f+1) " // * %s("
+			       "<b>%.03f</b> = (%"INT32"/%.01f+1) " // * %s("
 			       , dp->m_finalScore
-			       , (long)dp->m_siteRank
+			       , (int32_t)dp->m_siteRank
 			       , SITERANKDIVISOR
 			       //, ff
 			       );
@@ -5431,7 +5724,7 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 
 		      "<tr>"
 		      "<td>docId</td>"
-		      "<td>%lli</td>"
+		      "<td>%"INT64"</td>"
 		      "</tr>"
 
 		      "<tr>"
@@ -5441,7 +5734,7 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 
 		      "<tr>"
 		      "<td>hopcount</td>"
-		      "<td>%li</td>"
+		      "<td>%"INT32"</td>"
 		      "</tr>"
 
 		      "<tr>"
@@ -5456,24 +5749,24 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 
 		      "<tr>"
 		      "<td>siteRank</td>"
-		      "<td><font color=blue>%li</font></td>"
+		      "<td><font color=blue>%"INT32"</font></td>"
 		      "</tr>"
 
 		      "<tr><td colspan=100>"
 		      , dp->m_docId
 		      , mr->ptr_site
-		      , (long)mr->m_hopcount
+		      , (int32_t)mr->m_hopcount
 		      //, getLanguageString(mr->m_summaryLanguage)
 		      , getLanguageString(mr->m_language) // use page language
 		      , cc
-		      , (long)dp->m_siteRank
+		      , (int32_t)dp->m_siteRank
 		      );
 
 	// list all final scores starting with pairs
 	sb->safePrintf("<b>%f</b> = "
-		      "(<font color=blue>%li</font>/%.01f+1)"
+		      "(<font color=blue>%"INT32"</font>/%.01f+1)"
 		      , dp->m_finalScore
-		      , (long)dp->m_siteRank
+		      , (int32_t)dp->m_siteRank
 		      , SITERANKDIVISOR
 		      );
 
@@ -5511,8 +5804,8 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 	}
 	else if ( si->m_format == FORMAT_HTML && si->m_doSiteClustering ) {
 		char hbuf [ MAX_URL_LEN ];
-		long hlen = uu.getHostLen();
-		memcpy ( hbuf , uu.getHost() , hlen );
+		int32_t hlen = uu.getHostLen();
+		gbmemcpy ( hbuf , uu.getHost() , hlen );
 		hbuf [ hlen ] = '\0';
 		sb->safePrintf (" - <nobr><a href=\"/search?"
 			       "q=%%2Bsite%%3A%s+%s&sc=0&c=%s\">"
@@ -5526,14 +5819,14 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 
 	// space out 0000 backlinks
 	char *p = sb->getBufStart() + placeHolder;
-	long plen = placeHolderLen;
+	int32_t plen = placeHolderLen;
 	if ( numInlinks == 0 ) 
 		memset ( p , ' ' , plen );
 	if ( numInlinks > 0 && numInlinks < 99999 ) {
 		char *ss = strstr ( p, "00000" );
 		if ( ss ) {
 			char c = ss[5];
-			sprintf(ss,"%5li",numInlinks);
+			sprintf(ss,"%5"INT32"",numInlinks);
 			ss[5] = c;
 		}
 	}
@@ -5552,7 +5845,7 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 bool printPairScore ( SafeBuf *sb , SearchInput *si , PairScore *ps ,
 		      Msg20Reply *mr , Msg40 *msg40 , bool first ) {
 
-	// shortcut
+	// int16_tcut
 	Query *q = &si->m_q;
 
 	//SafeBuf ft;
@@ -5561,8 +5854,8 @@ bool printPairScore ( SafeBuf *sb , SearchInput *si , PairScore *ps ,
 	//if ( ft.length() ) ft.safePrintf(" + ");
 	//ft.safePrintf("%f",ps->m_finalScore);
 	
-	long qtn1 = ps->m_qtermNum1;
-	long qtn2 = ps->m_qtermNum2;
+	int32_t qtn1 = ps->m_qtermNum1;
+	int32_t qtn2 = ps->m_qtermNum2;
 	
 	/*
 	  unsigned char drl1 = ps->m_diversityRankLeft1;
@@ -5581,15 +5874,15 @@ bool printPairScore ( SafeBuf *sb , SearchInput *si , PairScore *ps ,
 	float dnw1 = getDensityWeight(de1);
 	float dnw2 = getDensityWeight(de2);
 	
-	long hg1 = ps->m_hashGroup1;
-	long hg2 = ps->m_hashGroup2;
+	int32_t hg1 = ps->m_hashGroup1;
+	int32_t hg2 = ps->m_hashGroup2;
 	
 	
 	float hgw1 = getHashGroupWeight(hg1);
 	float hgw2 = getHashGroupWeight(hg2);
 	
-	long wp1 = ps->m_wordPos1;
-	long wp2 = ps->m_wordPos2;
+	int32_t wp1 = ps->m_wordPos1;
+	int32_t wp2 = ps->m_wordPos2;
 	
 	unsigned char wr1 = ps->m_wordSpamRank1;
 	float wsw1 = getWordSpamWeight(wr1);
@@ -5629,12 +5922,12 @@ bool printPairScore ( SafeBuf *sb , SearchInput *si , PairScore *ps ,
 	if ( ps->m_isHalfStopWikiBigram1 ) wbw1 = WIKI_BIGRAM_WEIGHT;
 	if ( ps->m_isHalfStopWikiBigram2 ) wbw2 = WIKI_BIGRAM_WEIGHT;
 	
-	//long long sz1 = ps->m_listSize1;
-	//long long sz2 = ps->m_listSize2;
-	//long long tf1 = ps->m_termFreq1;//sz1 / 10;
-	//long long tf2 = ps->m_termFreq2;//sz2 / 10;
-	long long tf1 = msg40->m_msg3a.m_termFreqs[qtn1];
-	long long tf2 = msg40->m_msg3a.m_termFreqs[qtn2];
+	//int64_t sz1 = ps->m_listSize1;
+	//int64_t sz2 = ps->m_listSize2;
+	//int64_t tf1 = ps->m_termFreq1;//sz1 / 10;
+	//int64_t tf2 = ps->m_termFreq2;//sz2 / 10;
+	int64_t tf1 = msg40->m_msg3a.m_termFreqs[qtn1];
+	int64_t tf2 = msg40->m_msg3a.m_termFreqs[qtn2];
 	float tfw1 = ps->m_tfWeight1;
 	float tfw2 = ps->m_tfWeight2;
 	
@@ -5644,8 +5937,8 @@ bool printPairScore ( SafeBuf *sb , SearchInput *si , PairScore *ps ,
 		wp = "yes";
 		wiw = WIKI_WEIGHT; // 0.50;
 	}
-	long a = ps->m_wordPos2;
-	long b = ps->m_wordPos1;
+	int32_t a = ps->m_wordPos2;
+	int32_t b = ps->m_wordPos1;
 	char *es = "";
 	char *bes = "";
 	if ( a < b ) {
@@ -5661,12 +5954,12 @@ bool printPairScore ( SafeBuf *sb , SearchInput *si , PairScore *ps ,
 		
 		
 		/*
-		  sb->safePrintf("\t\t\t<diversityRankLeft1>%li"
+		  sb->safePrintf("\t\t\t<diversityRankLeft1>%"INT32""
 		  "</diversityRankLeft1>\n",
-		  (long)drl1);
-		  sb->safePrintf("\t\t\t<diversityRankRight1>%li"
+		  (int32_t)drl1);
+		  sb->safePrintf("\t\t\t<diversityRankRight1>%"INT32""
 		  "</diversityRankRight1>\n",
-		  (long)drr1);
+		  (int32_t)drr1);
 		  sb->safePrintf("\t\t\t<diversityWeightLeft1>%f"
 		  "</diversityWeightLeft1>\n",
 		  dvwl1);
@@ -5675,12 +5968,12 @@ bool printPairScore ( SafeBuf *sb , SearchInput *si , PairScore *ps ,
 		  dvwr1);
 		  
 		  
-		  sb->safePrintf("\t\t\t<diversityRankLeft2>%li"
+		  sb->safePrintf("\t\t\t<diversityRankLeft2>%"INT32""
 		  "</diversityRankLeft2>\n",
-		  (long)drl2);
-		  sb->safePrintf("\t\t\t<diversityRankRight2>%li"
+		  (int32_t)drl2);
+		  sb->safePrintf("\t\t\t<diversityRankRight2>%"INT32""
 		  "</diversityRankRight2>\n",
-		  (long)drr2);
+		  (int32_t)drr2);
 		  sb->safePrintf("\t\t\t<diversityWeightLeft2>%f"
 		  "</diversityWeightLeft2>\n",
 		  dvwl2);
@@ -5689,12 +5982,12 @@ bool printPairScore ( SafeBuf *sb , SearchInput *si , PairScore *ps ,
 		  dvwr2);
 		*/
 		
-		sb->safePrintf("\t\t\t<densityRank1>%li"
+		sb->safePrintf("\t\t\t<densityRank1>%"INT32""
 			      "</densityRank1>\n",
-			      (long)de1);
-		sb->safePrintf("\t\t\t<densityRank2>%li"
+			      (int32_t)de1);
+		sb->safePrintf("\t\t\t<densityRank2>%"INT32""
 			      "</densityRank2>\n",
-			      (long)de2);
+			      (int32_t)de2);
 		sb->safePrintf("\t\t\t<densityWeight1>%f"
 			      "</densityWeight1>\n",
 			      dnw1);
@@ -5724,13 +6017,13 @@ bool printPairScore ( SafeBuf *sb , SearchInput *si , PairScore *ps ,
 			      "</locationWeight2>\n",
 			      hgw2 );
 		
-		sb->safePrintf("\t\t\t<wordPos1>%li"
+		sb->safePrintf("\t\t\t<wordPos1>%"INT32""
 			      "</wordPos1>\n", wp1 );
-		sb->safePrintf("\t\t\t<wordPos2>%li"
+		sb->safePrintf("\t\t\t<wordPos2>%"INT32""
 			      "</wordPos2>\n", wp2 );
-		//long wordDist = wp2 - wp1;
+		//int32_t wordDist = wp2 - wp1;
 		//if ( wordDist < 0 ) wordDist *= -1;
-		//sb->safePrintf("\t\t\t<wordDist>%li"
+		//sb->safePrintf("\t\t\t<wordDist>%"INT32""
 		//	      "</wordDist>\n",wdist);
 		
 		sb->safePrintf("\t\t\t<isSynonym1>"
@@ -5761,10 +6054,10 @@ bool printPairScore ( SafeBuf *sb , SearchInput *si , PairScore *ps ,
 			r2 = "inlinkSiteRank2";
 			t2 = "inlinkTextWeight2";
 		}
-		sb->safePrintf("\t\t\t<%s>%li</%s>\n",
-			      r1,(long)wr1,r1);
-		sb->safePrintf("\t\t\t<%s>%li</%s>\n",
-			      r2,(long)wr2,r2);
+		sb->safePrintf("\t\t\t<%s>%"INT32"</%s>\n",
+			      r1,(int32_t)wr1,r1);
+		sb->safePrintf("\t\t\t<%s>%"INT32"</%s>\n",
+			      r2,(int32_t)wr2,r2);
 		sb->safePrintf("\t\t\t<%s>%.02f</%s>\n",
 			      t1,wsw1,t1);
 		sb->safePrintf("\t\t\t<%s>%.02f</%s>\n",
@@ -5776,24 +6069,24 @@ bool printPairScore ( SafeBuf *sb , SearchInput *si , PairScore *ps ,
 		LinkInfo *info = (LinkInfo *)mr->ptr_linkInfo;//inlinks;
 		Inlink *k = info->getNextInlink(NULL);
 		for (;k&&hg1==HASHGROUP_INLINKTEXT ; k=info->getNextInlink(k)){
-			if ( ! k->ptr_linkText ) continue;
+			if ( ! k->getLinkText() ) continue;
 			if ( k->m_wordPosStart > wp1 ) continue;
 			if ( k->m_wordPosStart + 50 < wp1 ) continue;
 			// got it. we HACKED this to put the id
 			// in k->m_siteHash
-			sb->safePrintf("\t\t\t<inlinkId1>%li"
+			sb->safePrintf("\t\t\t<inlinkId1>%"INT32""
 				      "</inlinkId1>\n",
 				      k->m_siteHash);
 		}
 
 		k = info->getNextInlink(NULL);
 		for (;k&&hg2==HASHGROUP_INLINKTEXT ; k=info->getNextInlink(k)){
-			if ( ! k->ptr_linkText ) continue;
+			if ( ! k->getLinkText() ) continue;
 			if ( k->m_wordPosStart > wp2 ) continue;
 			if ( k->m_wordPosStart + 50 < wp2 ) continue;
 			// got it. we HACKED this to put the id
 			// in k->m_siteHash
-			sb->safePrintf("\t\t\t<inlinkId2>%li"
+			sb->safePrintf("\t\t\t<inlinkId2>%"INT32""
 				      "</inlinkId2>\n",
 				      k->m_siteHash);
 		}
@@ -5802,9 +6095,9 @@ bool printPairScore ( SafeBuf *sb , SearchInput *si , PairScore *ps ,
 
 
 		// term freq
-		sb->safePrintf("\t\t\t<termFreq1>%lli"
+		sb->safePrintf("\t\t\t<termFreq1>%"INT64""
 			      "</termFreq1>\n",tf1);
-		sb->safePrintf("\t\t\t<termFreq2>%lli"
+		sb->safePrintf("\t\t\t<termFreq2>%"INT64""
 			      "</termFreq2>\n",tf2);
 		sb->safePrintf("\t\t\t<termFreqWeight1>%f"
 			      "</termFreqWeight1>\n",tfw1);
@@ -5812,11 +6105,11 @@ bool printPairScore ( SafeBuf *sb , SearchInput *si , PairScore *ps ,
 			      "</termFreqWeight2>\n",tfw2);
 		
 		sb->safePrintf("\t\t\t<isWikiBigram1>"
-			      "%li</isWikiBigram1>\n",
-			      (long)(ps->m_isHalfStopWikiBigram1));
+			      "%"INT32"</isWikiBigram1>\n",
+			      (int32_t)(ps->m_isHalfStopWikiBigram1));
 		sb->safePrintf("\t\t\t<isWikiBigram2>"
-			      "%li</isWikiBigram2>\n",
-			      (long)(ps->m_isHalfStopWikiBigram2));
+			      "%"INT32"</isWikiBigram2>\n",
+			      (int32_t)(ps->m_isHalfStopWikiBigram2));
 		
 		sb->safePrintf("\t\t\t<wikiBigramWeight1>%.01f"
 			      "</wikiBigramWeight1>\n",
@@ -5831,7 +6124,7 @@ bool printPairScore ( SafeBuf *sb , SearchInput *si , PairScore *ps ,
 			      wp);
 		
 		sb->safePrintf("\t\t\t<queryDist>"
-			      "%li"
+			      "%"INT32""
 			      "</queryDist>\n",
 			      ps->m_qdist );
 		
@@ -5931,14 +6224,14 @@ bool printPairScore ( SafeBuf *sb , SearchInput *si , PairScore *ps ,
 		
 		if ( ps->m_fixedDistance )
 			sb->safePrintf(
-				      "/<b>%li</b> "
-				      , (long)FIXED_DISTANCE );
+				      "/<b>%"INT32"</b> "
+				      , (int32_t)FIXED_DISTANCE );
 		else
 			sb->safePrintf(
 				      "/"
-				      "(((<font color=darkgreen>%li</font>"
-				      "-<font color=darkgreen>%li</font>"
-				      ")-<font color=lime>%li</font>)+1.0%s)"
+				      "(((<font color=darkgreen>%"INT32"</font>"
+				      "-<font color=darkgreen>%"INT32"</font>"
+				      ")-<font color=lime>%"INT32"</font>)+1.0%s)"
 				      ,
 				      a,b,ps->m_qdist,bes);
 		// wikipedia weight
@@ -6026,17 +6319,17 @@ bool printPairScore ( SafeBuf *sb , SearchInput *si , PairScore *ps ,
 	else
 		sb->safePrintf("<a href=\"/get?d=");
 
-	sb->safePrintf("%lli"
+	sb->safePrintf("%"INT64""
 		       "&page=4"
 		       //"&page=sections&"
-		       "&hipos=%li"
+		       "&hipos=%"INT32""
 		       "&c=%s#hipos\">"
-		       "%li</a></td>"
+		       "%"INT32"</a></td>"
 		       "</a></td>"
 		       ,mr->m_docId
-		       ,(long)ps->m_wordPos1
+		       ,(int32_t)ps->m_wordPos1
 		       ,si->m_cr->m_coll
-		       ,(long)ps->m_wordPos1);
+		       ,(int32_t)ps->m_wordPos1);
 	// is synonym?
 	//if ( sw1 != 1.00 )
 		sb->safePrintf("<td>%s <font color=blue>%.02f"
@@ -6055,23 +6348,23 @@ bool printPairScore ( SafeBuf *sb , SearchInput *si , PairScore *ps ,
 	
 	// diversity -
 	// not needed for term pair algo
-	//sb->safePrintf("<td>%li/<font color=green>"
+	//sb->safePrintf("<td>%"INT32"/<font color=green>"
 	//	      "%f</font></td>",
-	//	      (long)dr1,dvw1);
+	//	      (int32_t)dr1,dvw1);
 	
 	// density
-	sb->safePrintf("<td>%li <font color=purple>"
+	sb->safePrintf("<td>%"INT32" <font color=purple>"
 		      "%.02f</font></td>",
-		      (long)de1,dnw1);
+		      (int32_t)de1,dnw1);
 	// word spam
 	if ( hg1 == HASHGROUP_INLINKTEXT ) {
 		sb->safePrintf("<td>&nbsp;</td>");
-		sb->safePrintf("<td>%li <font color=red>"
+		sb->safePrintf("<td>%"INT32" <font color=red>"
 			      "%.02f</font></td>",
-			      (long)wr1,wsw1);
+			      (int32_t)wr1,wsw1);
 	}
 	else {
-		sb->safePrintf("<td>%li", (long)wr1);
+		sb->safePrintf("<td>%"INT32"", (int32_t)wr1);
 		//if ( wsw1 != 1.0 )
 			sb->safePrintf( " <font color=red>"
 				       "%.02f</font>",  wsw1);
@@ -6080,12 +6373,12 @@ bool printPairScore ( SafeBuf *sb , SearchInput *si , PairScore *ps ,
 	}
 	
 	// term freq
-	sb->safePrintf("<td id=tf>%lli <font color=magenta>"
+	sb->safePrintf("<td id=tf>%"INT64" <font color=magenta>"
 		      "%.02f</font></td>",
 		      tf1,tfw1);
-	// insamewikiphrase?
-	sb->safePrintf("<td>%s %li/%.01f</td>",
-		      wp,ps->m_qdist,wiw);
+	// inSamePhraseId distInQuery phraseWeight
+	sb->safePrintf("<td>%s</td><td>%"INT32"</td><td>%.01f</td>"
+		       ,wp,ps->m_qdist,wiw);
 	// end the row
 	sb->safePrintf("</tr>");
 	//
@@ -6103,7 +6396,7 @@ bool printPairScore ( SafeBuf *sb , SearchInput *si , PairScore *ps ,
 	// the word position
 	sb->safePrintf("<td>");
 		      //"<a href=\"/print?d="
-		      //"%lli"
+		      //"%"INT64""
 		      //"&page=4&recycle=1&"
 
 	if ( g_conf.m_isMattWells )
@@ -6111,15 +6404,15 @@ bool printPairScore ( SafeBuf *sb , SearchInput *si , PairScore *ps ,
 	else
 		sb->safePrintf("<a href=\"/get?d=");
 
-	sb->safePrintf("%lli"
+	sb->safePrintf("%"INT64""
 		      "&page=4&"
-		      "hipos=%li&c=%s#hipos\">"
-		      "%li</a></td>"
+		      "hipos=%"INT32"&c=%s#hipos\">"
+		      "%"INT32"</a></td>"
 		      "</a></td>"
 		      ,mr->m_docId
-		      ,(long)ps->m_wordPos2
+		      ,(int32_t)ps->m_wordPos2
 		      ,si->m_cr->m_coll
-		      ,(long)ps->m_wordPos2);
+		      ,(int32_t)ps->m_wordPos2);
 	
 	// is synonym?
 	//if ( sw2 != 1.00 )
@@ -6137,23 +6430,23 @@ bool printPairScore ( SafeBuf *sb , SearchInput *si , PairScore *ps ,
 
 	
 	// diversity
-	//sb->safePrintf("<td>%li/<font color=green>"
+	//sb->safePrintf("<td>%"INT32"/<font color=green>"
 	//	      "%f</font></td>",
-	//	      (long)dr2,dvw2);
+	//	      (int32_t)dr2,dvw2);
 	
 	// density
-	sb->safePrintf("<td>%li <font color=purple>"
+	sb->safePrintf("<td>%"INT32" <font color=purple>"
 		      "%.02f</font></td>",
-		      (long)de2,dnw2);
+		      (int32_t)de2,dnw2);
 	// word spam
 	if ( hg2 == HASHGROUP_INLINKTEXT ) {
 		sb->safePrintf("<td>&nbsp;</td>");
-		sb->safePrintf("<td>%li <font color=red>"
+		sb->safePrintf("<td>%"INT32" <font color=red>"
 			      "%.02f</font></td>",
-			      (long)wr2,wsw2);
+			      (int32_t)wr2,wsw2);
 	}
 	else {
-		sb->safePrintf("<td>%li", (long)wr2);
+		sb->safePrintf("<td>%"INT32"", (int32_t)wr2);
 		//if ( wsw2 != 1.0 )
 			sb->safePrintf( " <font color=red>"
 				       "%.02f</font>",  wsw2);
@@ -6161,21 +6454,21 @@ bool printPairScore ( SafeBuf *sb , SearchInput *si , PairScore *ps ,
 		sb->safePrintf("<td>&nbsp;</td>");
 	}
 	// term freq
-	sb->safePrintf("<td id=tf>%lli <font color=magenta>"
+	sb->safePrintf("<td id=tf>%"INT64" <font color=magenta>"
 		      "%.02f</font></td>",
 		      tf2,tfw2);
-	// insamewikiphrase?
-	sb->safePrintf("<td>%s/%li %.01f</td>",
-		      wp,ps->m_qdist,wiw);
+	// inSamePhraseId distInQuery phraseWeight
+	sb->safePrintf("<td>%s</td><td>%"INT32"</td><td>%.01f</td>"
+		       ,wp,ps->m_qdist,wiw);
 	// end the row
 	sb->safePrintf("</tr>");
 	sb->safePrintf("<tr><td ");
 	// last row is the computation of score
 	//static bool s_first = true;
 	if ( first ) {
-		//static long s_count = 0;
+		//static int32_t s_count = 0;
 		//s_first = false;
-		//sb->safePrintf("id=poo%li ",s_count);
+		//sb->safePrintf("id=poo%"INT32" ",s_count);
 	}
 	sb->safePrintf("colspan=50>" //  style=\"display:none\">"
 		      "%.03f "
@@ -6188,12 +6481,12 @@ bool printPairScore ( SafeBuf *sb , SearchInput *si , PairScore *ps ,
 		      "<font color=orange>%.1f"
 		      "</font>"
 		      "*"
-		      //"(%li - "
+		      //"(%"INT32" - "
 		      , ps->m_finalScore
 		      //, idstr
 		      , hgw1
 		      , hgw2
-		      //, (long)MAXWORDPOS+1
+		      //, (int32_t)MAXWORDPOS+1
 		      );
 	sb->safePrintf("<font color=blue>%.1f</font>"
 		      "*"
@@ -6230,14 +6523,14 @@ bool printPairScore ( SafeBuf *sb , SearchInput *si , PairScore *ps ,
 		      );
 	if ( ps->m_fixedDistance )
 		sb->safePrintf(
-			      "/<b>%li</b> "
-			      , (long)FIXED_DISTANCE );
+			      "/<b>%"INT32"</b> "
+			      , (int32_t)FIXED_DISTANCE );
 	else
 		sb->safePrintf(
 			      "/"
-			      "(((<font color=darkgreen>%li</font>"
-			      "-<font color=darkgreen>%li</font>)-"
-			      "<font color=lime>%li</font>) + 1.0%s)"
+			      "(((<font color=darkgreen>%"INT32"</font>"
+			      "-<font color=darkgreen>%"INT32"</font>)-"
+			      "<font color=lime>%"INT32"</font>) + 1.0%s)"
 			      ,
 			      a,b,ps->m_qdist,bes);
 	// wikipedia weight
@@ -6253,7 +6546,7 @@ bool printPairScore ( SafeBuf *sb , SearchInput *si , PairScore *ps ,
 
 bool printSingleTerm ( SafeBuf *sb , Query *q , SingleScore *ss ) {
 
-	long qtn = ss->m_qtermNum;
+	int32_t qtn = ss->m_qtermNum;
 
 	sb->safePrintf("<table border=1 cellpadding=3>");
 	sb->safePrintf("<tr><td colspan=50><center><b>");
@@ -6274,8 +6567,8 @@ bool printSingleTerm ( SafeBuf *sb , Query *q , SingleScore *ss ) {
 
 bool printTermPairs ( SafeBuf *sb , Query *q , PairScore *ps ) {
 	// print pair text
-	long qtn1 = ps->m_qtermNum1;
-	long qtn2 = ps->m_qtermNum2;
+	int32_t qtn1 = ps->m_qtermNum1;
+	int32_t qtn2 = ps->m_qtermNum2;
 	sb->safePrintf("<table cellpadding=3 border=1>"
 		      "<tr><td colspan=20><center><b>");
 	if ( q->m_qterms[qtn1].m_isPhrase )
@@ -6305,9 +6598,12 @@ bool printScoresHeader ( SafeBuf *sb ) {
 		      //"<td>diversityRank</td>"
 		      "<td>density</td>"
 		      "<td>spam</td>"
-		      "<td>inlnkPR</td>" // nlinkSiteRank</td>"
+		      "<td>inlinkPR</td>" // nlinkSiteRank</td>"
 		      "<td>termFreq</td>"
-		      "</tr>" 
+		       "<td>inSamePhrase</td>"
+		       "<td>distInQuery</td>"
+		       "<td>phraseWeight</td>"
+		      "</tr>\n" 
 		      );
 	return true;
 }
@@ -6317,7 +6613,7 @@ bool printSingleScore ( SafeBuf *sb ,
 			SingleScore *ss ,
 			Msg20Reply *mr , Msg40 *msg40 ) {
 
-	// shortcut
+	// int16_tcut
 	Query *q = &si->m_q;
 
 	//SafeBuf ft;
@@ -6345,26 +6641,26 @@ bool printSingleScore ( SafeBuf *sb ,
 	if ( ss->m_hashGroup == HASHGROUP_INLINKTEXT )
 		wsw = getLinkerWeight(ss->m_wordSpamRank);
 	
-	//long long tf = ss->m_termFreq;//ss->m_listSize;
-	long qtn = ss->m_qtermNum;
-	long long tf = msg40->m_msg3a.m_termFreqs[qtn];
+	//int64_t tf = ss->m_termFreq;//ss->m_listSize;
+	int32_t qtn = ss->m_qtermNum;
+	int64_t tf = msg40->m_msg3a.m_termFreqs[qtn];
 	float tfw = ss->m_tfWeight;
 	
 	if ( si->m_format == FORMAT_XML ) {
 		sb->safePrintf("\t\t<termInfo>\n");
 		
 		/*
-		  sb->safePrintf("\t\t\t<diversityRank>%li"
+		  sb->safePrintf("\t\t\t<diversityRank>%"INT32""
 		  "</diversityRank>\n",
-		  (long)ss->m_diversityRank);
+		  (int32_t)ss->m_diversityRank);
 		  sb->safePrintf("\t\t\t<diversityWeight>%f"
 		  "</diversityWeight>\n",
 		  dvw);
 		*/
 		
-		sb->safePrintf("\t\t\t<densityRank>%li"
+		sb->safePrintf("\t\t\t<densityRank>%"INT32""
 			      "</densityRank>\n",
-			      (long)ss->m_densityRank);
+			      (int32_t)ss->m_densityRank);
 		sb->safePrintf("\t\t\t<densityWeight>%f"
 			      "</densityWeight>\n",
 			      dnw);
@@ -6379,8 +6675,8 @@ bool printSingleScore ( SafeBuf *sb ,
 		sb->safePrintf("\t\t\t<locationWeight>%.01f"
 			      "</locationWeight>\n",
 			      hgw );
-		sb->safePrintf("\t\t\t<wordPos>%li"
-			      "</wordPos>\n", (long)ss->m_wordPos );
+		sb->safePrintf("\t\t\t<wordPos>%"INT32""
+			      "</wordPos>\n", (int32_t)ss->m_wordPos );
 		sb->safePrintf("\t\t\t<isSynonym>"
 			      "<![CDATA[%s]]>"
 			      "</isSynonym>\n",
@@ -6388,25 +6684,25 @@ bool printSingleScore ( SafeBuf *sb ,
 		sb->safePrintf("\t\t\t<synonymWeight>%.01f"
 			      "</synonymWeight>\n",
 			      sw);
-		sb->safePrintf("\t\t\t<isWikiBigram>%li"
+		sb->safePrintf("\t\t\t<isWikiBigram>%"INT32""
 			      "</isWikiBigram>\n",
-			      (long)(ss->m_isHalfStopWikiBigram) );
+			      (int32_t)(ss->m_isHalfStopWikiBigram) );
 		sb->safePrintf("\t\t\t<wikiBigramWeight>%.01f"
 			      "</wikiBigramWeight>\n",
 			      (float)WIKI_BIGRAM_WEIGHT);
 		// word spam
 		if ( ss->m_hashGroup == HASHGROUP_INLINKTEXT ) {
-			sb->safePrintf("\t\t\t<inlinkSiteRank>%li"
+			sb->safePrintf("\t\t\t<inlinkSiteRank>%"INT32""
 				      "</inlinkSiteRank>\n",
-				      (long)ss->m_wordSpamRank);
+				      (int32_t)ss->m_wordSpamRank);
 			sb->safePrintf("\t\t\t<inlinkTextWeight>%.02f"
 				      "</inlinkTextWeight>\n",
 				      wsw);
 		}
 		else {
-			sb->safePrintf("\t\t\t<wordSpamRank>%li"
+			sb->safePrintf("\t\t\t<wordSpamRank>%"INT32""
 				      "</wordSpamRank>\n",
-				      (long)ss->m_wordSpamRank);
+				      (int32_t)ss->m_wordSpamRank);
 			sb->safePrintf("\t\t\t<wordSpamWeight>%.02f"
 				      "</wordSpamWeight>\n",
 				      wsw);
@@ -6419,18 +6715,18 @@ bool printSingleScore ( SafeBuf *sb ,
 		Inlink *k = info->getNextInlink(NULL);
 		for ( ; k && ss->m_hashGroup==HASHGROUP_INLINKTEXT ; 
 		      k=info->getNextInlink(k)){
-			if ( ! k->ptr_linkText ) continue;
+			if ( ! k->getLinkText() ) continue;
 			if ( k->m_wordPosStart > ss->m_wordPos ) continue;
 			if ( k->m_wordPosStart + 50 < ss->m_wordPos ) continue;
 			// got it. we HACKED this to put the id
 			// in k->m_siteHash
-			sb->safePrintf("\t\t\t<inlinkId>%li"
+			sb->safePrintf("\t\t\t<inlinkId>%"INT32""
 				      "</inlinkId>\n",
 				      k->m_siteHash);
 		}
 
 		// term freq
-		sb->safePrintf("\t\t\t<termFreq>%lli"
+		sb->safePrintf("\t\t\t<termFreq>%"INT64""
 			      "</termFreq>\n",tf);
 		sb->safePrintf("\t\t\t<termFreqWeight>%f"
 			      "</termFreqWeight>\n",tfw);
@@ -6531,9 +6827,9 @@ bool printSingleScore ( SafeBuf *sb ,
 
 
 	sb->safePrintf("<tr>"
-		      "<td rowspan=2>%.03f</td>"
+		      "<td rowspan=2>%.03f</td>\n"
 		      "<td>%s <font color=orange>%.1f"
-		      "</font></td>"
+		      "</font></td\n>"
 		      // wordpos
 		      "<td>"
 		      "<a href=\"/get?d=" 
@@ -6542,53 +6838,53 @@ bool printSingleScore ( SafeBuf *sb ,
 		      , hgw
 		      );
 	//sb->urlEncode( mr->ptr_ubuf );
-	sb->safePrintf("%lli",mr->m_docId );
+	sb->safePrintf("%"INT64"",mr->m_docId );
 	sb->safePrintf("&page=4&"
-		      "hipos=%li&c=%s#hipos\">"
-		      ,(long)ss->m_wordPos
+		      "hipos=%"INT32"&c=%s#hipos\">"
+		      ,(int32_t)ss->m_wordPos
 		      ,si->m_cr->m_coll);
-	sb->safePrintf("%li</a></td>"
+	sb->safePrintf("%"INT32"</a></td>\n"
 		      "<td>%s <font color=blue>%.1f"
-		      "</font></td>" // syn
+		      "</font></td>\n" // syn
 		      
 		      // wikibigram?/weight
-		      "<td>%s <font color=green>%.02f</font></td>"
+		      "<td>%s <font color=green>%.02f</font></td>\n"
 		      
-		      //"<td>%li/<font color=green>%f"
+		      //"<td>%"INT32"/<font color=green>%f"
 		      //"</font></td>" // diversity
-		      "<td>%li <font color=purple>"
-		      "%.02f</font></td>" // density
-		      , (long)ss->m_wordPos
+		      "<td>%"INT32" <font color=purple>"
+		      "%.02f</font></td>\n" // density
+		      , (int32_t)ss->m_wordPos
 		      , syn
 		      , sw // synonym weight
 		      , bs
 		      , wbw
-		      //, (long)ss->m_diversityRank
+		      //, (int32_t)ss->m_diversityRank
 		      //, dvw
-		      , (long)ss->m_densityRank
+		      , (int32_t)ss->m_densityRank
 		      , dnw
 		      );
 	if ( ss->m_hashGroup == HASHGROUP_INLINKTEXT ) {
 		sb->safePrintf("<td>&nbsp;</td>"
-			      "<td>%li <font color=red>%.02f"
-			      "</font></td>" // wordspam
-			      , (long)ss->m_wordSpamRank
+			      "<td>%"INT32" <font color=red>%.02f"
+			      "</font></td>\n" // wordspam
+			      , (int32_t)ss->m_wordSpamRank
 			      , wsw
 			      );
 	}
 	else {
-		sb->safePrintf("<td>%li <font color=red>%.02f"
+		sb->safePrintf("<td>%"INT32" <font color=red>%.02f"
 			      "</font></td>" // wordspam
-			      "<td>&nbsp;</td>"
-			      , (long)ss->m_wordSpamRank
+			      "<td>&nbsp;</td>\n"
+			      , (int32_t)ss->m_wordSpamRank
 			      , wsw
 			      );
 		
 	}
 	
-	sb->safePrintf("<td id=tf>%lli <font color=magenta>"
-		      "%.02f</font></td>" // termfreq
-		      "</tr>"
+	sb->safePrintf("<td id=tf>%"INT64" <font color=magenta>"
+		      "%.02f</font></td>\n" // termfreq
+		      "</tr>\n"
 		      , tf
 		      , tfw
 		      );
@@ -6596,7 +6892,7 @@ bool printSingleScore ( SafeBuf *sb ,
 	sb->safePrintf("<tr><td colspan=50>"
 		      "%.03f "
 		      " = "
-		      //" %li * "
+		      //" %"INT32" * "
 		      "100 * "
 		      " <font color=orange>%.1f</font>"
 		      " * "
@@ -6623,9 +6919,9 @@ bool printSingleScore ( SafeBuf *sb ,
 		      "<font color=magenta>%.02f</font>"
 		      //" / ( 3.0 )"
 		      // end formula
-		      "</td></tr>"
+		      "</td></tr>\n"
 		      , ss->m_finalScore
-		      //, (long)MAXWORDPOS+1
+		      //, (int32_t)MAXWORDPOS+1
 		      , hgw
 		      , hgw
 		      , sw
@@ -6653,20 +6949,20 @@ bool printSingleScore ( SafeBuf *sb ,
 // . just a list of all the topics/categories
 //
 ////////
-bool printDMOZSubTopics ( SafeBuf *sb, long catId, bool inXml ) {
+bool printDMOZSubTopics ( SafeBuf *sb, int32_t catId, bool inXml ) {
 
 	if ( catId <= 0 ) return true;
 
-	long currType;
+	int32_t currType;
 	bool first;
 	bool nextColumn;
-	long maxPerColumn;
-	long currInColumn;
-	long currIndex;
+	int32_t maxPerColumn;
+	int32_t currInColumn;
+	int32_t currIndex;
 	char *prefixp;
-	long prefixLen;
+	int32_t prefixLen;
 	char *catName;
-	long catNameLen;
+	int32_t catNameLen;
 	char encodedName[2048];
 
 	//SearchInput *si = &st->m_si;
@@ -6675,11 +6971,11 @@ bool printDMOZSubTopics ( SafeBuf *sb, long catId, bool inXml ) {
 
 	SafeBuf subCatBuf;
 	// stores a list of SubCategories into "subCatBuf"
-	long numSubCats = g_categories->generateSubCats ( catId , &subCatBuf );
+	int32_t numSubCats = g_categories->generateSubCats ( catId , &subCatBuf );
 
 	// . get the subcategories for a given categoriy
 	// . msg2b::gernerateDirectory() was launched in Msg40.cpp
-	//long numSubCats      = st->m_msg40.m_msg2b.m_numSubCats;
+	//int32_t numSubCats      = st->m_msg40.m_msg2b.m_numSubCats;
 	//SubCategory *subCats = st->m_msg40.m_msg2b.m_subCats;
 	//char *catBuffer      = st->m_msg40.m_msg2b.m_catBuffer;
 	//bool showAdultOnTop  = st->m_si.m_cr->m_showAdultCategoryOnTop;
@@ -6688,21 +6984,21 @@ bool printDMOZSubTopics ( SafeBuf *sb, long catId, bool inXml ) {
 	// just print <hr> if no sub categories
 	if (inXml) {
 		sb->safePrintf ( "\t<directory>\n"
-				"\t\t<dirId>%li</dirId>\n"
+				"\t\t<dirId>%"INT32"</dirId>\n"
 				"\t\t<dirName><![CDATA[",
 				catId);//si.m_cat_dirId );
 		g_categories->printPathFromId ( sb, 
 						catId, // st->m_si.m_cat_dirId,
 						true );
 		sb->safePrintf ( "]]></dirName>\n");
-		sb->safePrintf ( "\t\t<dirIsRTL>%li</dirIsRTL>\n",
-				(long)isRTL);
+		sb->safePrintf ( "\t\t<dirIsRTL>%"INT32"</dirIsRTL>\n",
+				(int32_t)isRTL);
 	}
 
 	char *p    = subCatBuf.getBufStart();
 	char *pend = subCatBuf.getBuf();
 	SubCategory *ptrs[MAX_SUB_CATS];
-	long count = 0;
+	int32_t count = 0;
 
 	if (numSubCats <= 0)
 		goto dirEnd;
@@ -6719,7 +7015,7 @@ bool printDMOZSubTopics ( SafeBuf *sb, long catId, bool inXml ) {
 	}
 
 
-	for (long i = 0; i < count ; i++ ) {
+	for (int32_t i = 0; i < count ; i++ ) {
 		SubCategory *cat = ptrs[i];
 		first = false;
 		catName = cat->getName();//&catBuffer[subCats[i].m_nameOffset];
@@ -6753,7 +7049,7 @@ bool printDMOZSubTopics ( SafeBuf *sb, long catId, bool inXml ) {
 			case SUBCAT_LETTERBAR:
 				sb->safePrintf ( "\t\t<letterbar><![CDATA[" );
 				sb->safePrintf ( "]]>" );
-				sb->safePrintf ( "<urlcount>%li</urlcount>",
+				sb->safePrintf ( "<urlcount>%"INT32"</urlcount>",
 					g_categories->getNumUrlsFromIndex(
 						currIndex) );
 				sb->safePrintf ( "</letterbar>\n" );
@@ -6762,7 +7058,7 @@ bool printDMOZSubTopics ( SafeBuf *sb, long catId, bool inXml ) {
 				sb->safePrintf ( "\t\t<narrow2><![CDATA[" );
 				sb->utf8Encode2 ( catName, catNameLen );
 				sb->safePrintf ( "]]>");
-				sb->safePrintf ( "<urlcount>%li</urlcount>",
+				sb->safePrintf ( "<urlcount>%"INT32"</urlcount>",
 					g_categories->getNumUrlsFromIndex(
 						currIndex) );
 				sb->safePrintf ( "</narrow2>\n" );
@@ -6771,7 +7067,7 @@ bool printDMOZSubTopics ( SafeBuf *sb, long catId, bool inXml ) {
 				sb->safePrintf ( "\t\t<narrow1><![CDATA[" );
 				sb->utf8Encode2 ( catName, catNameLen );
 				sb->safePrintf ( "]]>" );
-				sb->safePrintf ( "<urlcount>%li</urlcount>",
+				sb->safePrintf ( "<urlcount>%"INT32"</urlcount>",
 					g_categories->getNumUrlsFromIndex(
 						currIndex) );
 				sb->safePrintf ( "</narrow1>\n" );
@@ -6780,7 +7076,7 @@ bool printDMOZSubTopics ( SafeBuf *sb, long catId, bool inXml ) {
 				sb->safePrintf ( "\t\t<narrow><![CDATA[" );
 				sb->utf8Encode2 ( catName, catNameLen );
 				sb->safePrintf ( "]]>" );
-				sb->safePrintf ( "<urlcount>%li</urlcount>",
+				sb->safePrintf ( "<urlcount>%"INT32"</urlcount>",
 					g_categories->getNumUrlsFromIndex(
 						currIndex) );
 				sb->safePrintf ( "</narrow>\n" );
@@ -6791,7 +7087,7 @@ bool printDMOZSubTopics ( SafeBuf *sb, long catId, bool inXml ) {
 				sb->safePrintf ( ":" );
 				sb->utf8Encode2 ( catName, catNameLen );
 				sb->safePrintf ( "]]>" );
-				sb->safePrintf ( "<urlcount>%li</urlcount>",
+				sb->safePrintf ( "<urlcount>%"INT32"</urlcount>",
 					g_categories->getNumUrlsFromIndex(
 						currIndex) );
 				sb->safePrintf ( "</symbolic2>\n" );
@@ -6802,7 +7098,7 @@ bool printDMOZSubTopics ( SafeBuf *sb, long catId, bool inXml ) {
 				sb->safePrintf ( ":" );
 				sb->utf8Encode2 ( catName, catNameLen );
 				sb->safePrintf ( "]]>" );
-				sb->safePrintf ( "<urlcount>%li</urlcount>",
+				sb->safePrintf ( "<urlcount>%"INT32"</urlcount>",
 					g_categories->getNumUrlsFromIndex(
 						currIndex) );
 				sb->safePrintf ( "</symbolic1>\n" );
@@ -6813,7 +7109,7 @@ bool printDMOZSubTopics ( SafeBuf *sb, long catId, bool inXml ) {
 				sb->safePrintf ( ":" );
 				sb->utf8Encode2 ( catName, catNameLen );
 				sb->safePrintf ( "]]>" );
-				sb->safePrintf ( "<urlcount>%li</urlcount>",
+				sb->safePrintf ( "<urlcount>%"INT32"</urlcount>",
 					g_categories->getNumUrlsFromIndex(
 						currIndex) );
 				sb->safePrintf ( "</symbolic>\n" );
@@ -6822,7 +7118,7 @@ bool printDMOZSubTopics ( SafeBuf *sb, long catId, bool inXml ) {
 				sb->safePrintf ( "\t\t<related><![CDATA[" );
 				sb->utf8Encode2 ( catName, catNameLen );
 				sb->safePrintf ( "]]>" );
-				sb->safePrintf ( "<urlcount>%li</urlcount>",
+				sb->safePrintf ( "<urlcount>%"INT32"</urlcount>",
 					g_categories->getNumUrlsFromIndex(
 						currIndex) );
 				sb->safePrintf ( "</related>\n" );
@@ -6833,7 +7129,7 @@ bool printDMOZSubTopics ( SafeBuf *sb, long catId, bool inXml ) {
 				sb->safePrintf ( ":" );
 				sb->utf8Encode2 ( catName, catNameLen );
 				sb->safePrintf ( "]]>" );
-				sb->safePrintf ( "<urlcount>%li</urlcount>",
+				sb->safePrintf ( "<urlcount>%"INT32"</urlcount>",
 					g_categories->getNumUrlsFromIndex(
 						currIndex) );
 				sb->safePrintf ( "</altlang>\n");
@@ -6900,14 +7196,14 @@ bool printDMOZSubTopics ( SafeBuf *sb, long catId, bool inXml ) {
 			else {
 				// . check how many columns we'll use for this
 				//   type
-				long numInType = 1;
-				for (long j = i+1; j < numSubCats; j++) {
+				int32_t numInType = 1;
+				for (int32_t j = i+1; j < numSubCats; j++) {
 					if ( ptrs[j]->m_type - currType >= 10)
 						break;
 					numInType++;
 				}
 				// column for every 5, up to 3 columns
-				long numColumns = numInType/5;
+				int32_t numColumns = numInType/5;
 				if ( numInType%5 > 0 ) numColumns++;
 				if ( currType == SUBCAT_ALTLANG &&
 				     numColumns > 4)
@@ -6992,7 +7288,7 @@ bool printDMOZSubTopics ( SafeBuf *sb, long catId, bool inXml ) {
 			//if ( p + prefixLen + 512 > pend ) {
 			//	goto diroverflow;
 			//}
-			for (long c = 0; c < prefixLen; c++) {
+			for (int32_t c = 0; c < prefixLen; c++) {
 				if (*prefixp == '_')
 					//*p = ' ';
 					sb->safePrintf(" ");
@@ -7017,12 +7313,12 @@ bool printDMOZSubTopics ( SafeBuf *sb, long catId, bool inXml ) {
 		if ( cat->m_type != SUBCAT_LETTERBAR) { 
 			sb->safePrintf("&nbsp&nbsp<i>");
 			if (isRTL)
-				sb->safePrintf ( "<span dir=ltr>(%li)"
+				sb->safePrintf ( "<span dir=ltr>(%"INT32")"
 						"</span></i>",
 					g_categories->getNumUrlsFromIndex(
 						currIndex) );
 			else
-				sb->safePrintf ( "(%li)</i>",
+				sb->safePrintf ( "(%"INT32")</i>",
 					g_categories->getNumUrlsFromIndex(
 						currIndex) );
 		}
@@ -7059,19 +7355,19 @@ dirEnd:
 	return true;
 }
 
-bool printDMOZCrumb ( SafeBuf *sb , long catId , bool xml ) {
+bool printDMOZCrumb ( SafeBuf *sb , int32_t catId , bool xml ) {
 
 	// catid -1 means error
 	if ( catId <= 0 ) return true;
 
-	long dirIndex = g_categories->getIndexFromId(catId);
+	int32_t dirIndex = g_categories->getIndexFromId(catId);
 	//  dirIndex = g_categories->getIndexFromId(si->m_cat_sdir);
 	if (dirIndex < 0) dirIndex = 0;
 	//   display the directory bread crumb
-	//if( (si->m_cat_dirId > 0 && si->m_isRootAdmin && !si->m_isFriend)
+	//if( (si->m_cat_dirId > 0 && si->m_isMasterAdmin && !si->m_isFriend)
 	//     || (si->m_cat_sdir > 0 && si->m_cat_sdirt != 0) )
 	//	sb->safePrintf("<br><br>");
-	// shortcut. rtl=Right To Left language format.
+	// int16_tcut. rtl=Right To Left language format.
 	bool rtl = g_categories->isIdRTL ( catId ) ;
 	//st->m_isRTL = rtl;
 	if ( ! xml ) {
@@ -7089,27 +7385,27 @@ bool printDMOZCrumb ( SafeBuf *sb , long catId , bool xml ) {
 		sb->safePrintf("]]></breadcrumb>\n" );
 	
 	// how many urls/entries in this topic?
-	long nu =g_categories->getNumUrlsFromIndex(dirIndex);
+	int32_t nu =g_categories->getNumUrlsFromIndex(dirIndex);
 
 	// print the num
 	if ( ! xml ) {
 		sb->safePrintf("</b>&nbsp&nbsp<i>");
 		if ( rtl )
-			sb->safePrintf("<span dir=ltr>(%li)</span>",nu);
+			sb->safePrintf("<span dir=ltr>(%"INT32")</span>",nu);
 		else
-			sb->safePrintf("(%li)", nu);
+			sb->safePrintf("(%"INT32")", nu);
 		sb->safePrintf("</i></font><br><br>\n");
 	}
 	return true;
 }
 
-bool printDmozRadioButtons ( SafeBuf *sb , long catId ) ;
+bool printDmozRadioButtons ( SafeBuf *sb , int32_t catId ) ;
 
 bool printFrontPageShell ( SafeBuf *sb , char *tabName , CollectionRec *cr,
 			   bool printGigablast ) ;
 
 // if catId >= 1 then print the dmoz radio button
-bool printLogoAndSearchBox ( SafeBuf *sb , HttpRequest *hr , long catId ,
+bool printLogoAndSearchBox ( SafeBuf *sb , HttpRequest *hr , int32_t catId ,
 			     SearchInput *si ) {
 
 	char *root = "";
@@ -7277,7 +7573,7 @@ bool printLogoAndSearchBox ( SafeBuf *sb , HttpRequest *hr , long catId ,
 			"<input size=40 type=text name=q "
 
 			"style=\""
-			//"width:%lipx;"
+			//"width:%"INT32"px;"
 			"height:26px;"
 			"padding:0px;"
 			"font-weight:bold;"
@@ -7294,9 +7590,14 @@ bool printLogoAndSearchBox ( SafeBuf *sb , HttpRequest *hr , long catId ,
 			);
 
 	// contents of search box
-	long  qlen;
+	int32_t  qlen;
 	char *qstr = hr->getString("q",&qlen,"",NULL);
 	sb->htmlEncode ( qstr , qlen , false );
+
+	// if it was an advanced search, this can be empty
+	if ( qlen == 0 && si && si->m_displayQuery )
+		sb->htmlEncode ( si->m_displayQuery );
+
 	sb->safePrintf ("\">"
 			//"<input type=submit value=\"Search\" border=0>"
 
@@ -7368,12 +7669,12 @@ bool printLogoAndSearchBox ( SafeBuf *sb , HttpRequest *hr , long catId ,
 	return true;
 }
 
-bool printDmozRadioButtons ( SafeBuf *sb , long catId ) {
+bool printDmozRadioButtons ( SafeBuf *sb , int32_t catId ) {
 	sb->safePrintf("Search "
 		      "<input type=radio name=prepend "
-		      "value=gbipcatid:%li checked> sites "
+		      "value=gbipcatid:%"INT32" checked> sites "
 		      "<input type=radio name=prepend "
-		      "value=gbpcatid:%li> pages "
+		      "value=gbpcatid:%"INT32"> pages "
 		      "in this topic or below"
 		      , catId
 		      , catId
@@ -7383,7 +7684,7 @@ bool printDmozRadioButtons ( SafeBuf *sb , long catId ) {
 
 /*
 // print the search options under a dmoz search box
-bool printDirectorySearchType ( SafeBuf& sb, long sdirt ) {
+bool printDirectorySearchType ( SafeBuf& sb, int32_t sdirt ) {
 	// default to entire directory
 	if (sdirt < 1 || sdirt > 4)
 		sdirt = 3;
@@ -7445,7 +7746,7 @@ int csvPtrCmp ( const void *a, const void *b ) {
 bool printCSVHeaderRow ( SafeBuf *sb , State0 *st ) {
 
 	Msg40 *msg40 = &st->m_msg40;
- 	long numResults = msg40->getNumResults();
+ 	int32_t numResults = msg40->getNumResults();
 
 	char tmp1[1024];
 	SafeBuf tmpBuf (tmp1 , 1024);
@@ -7458,21 +7759,21 @@ bool printCSVHeaderRow ( SafeBuf *sb , State0 *st ) {
 	if ( ! nameTable.set ( 8,4,2048,nbuf,27000,false,0,"ntbuf") )
 		return false;
 
-	long niceness = 0;
+	int32_t niceness = 0;
 
 	// . scan every fucking json item in the search results.
 	// . we still need to deal with the case when there are so many
 	//   search results we have to dump each msg20 reply to disk in
 	//   order. then we'll have to update this code to scan that file.
 
-	for ( long i = 0 ; i < numResults ; i++ ) {
+	for ( int32_t i = 0 ; i < numResults ; i++ ) {
 
 		// get the msg20 reply for search result #i
 		Msg20      *m20 = msg40->m_msg20[i];
 		Msg20Reply *mr  = m20->m_r;
 
 		if ( ! mr ) {
-			log("results: missing msg20 reply for result #%li",i);
+			log("results: missing msg20 reply for result #%"INT32"",i);
 			continue;
 		}
 
@@ -7519,11 +7820,11 @@ bool printCSVHeaderRow ( SafeBuf *sb , State0 *st ) {
 				return false;
 
 			// is it new?
-			long long h64 = hash64n ( tmpBuf.getBufStart() );
+			int64_t h64 = hash64n ( tmpBuf.getBufStart() );
 			if ( nameTable.isInTable ( &h64 ) ) continue;
 
 			// record offset of the name for our hash table
-			long nameBufOffset = nameBuf.length();
+			int32_t nameBufOffset = nameBuf.length();
 			
 			// store the name in our name buffer
 			if ( ! nameBuf.safeStrcpy ( tmpBuf.getBufStart() ) )
@@ -7540,17 +7841,17 @@ bool printCSVHeaderRow ( SafeBuf *sb , State0 *st ) {
 	// . make array of ptrs to the names so we can sort them
 	// . try to always put title first regardless
 	char *ptrs [ 1024 ];
-	long numPtrs = 0;
-	for ( long i = 0 ; i < nameTable.m_numSlots ; i++ ) {
+	int32_t numPtrs = 0;
+	for ( int32_t i = 0 ; i < nameTable.m_numSlots ; i++ ) {
 		if ( ! nameTable.m_flags[i] ) continue;
-		long off = *(long *)nameTable.getValueFromSlot(i);
+		int32_t off = *(int32_t *)nameTable.getValueFromSlot(i);
 		char *p = nameBuf.getBufStart() + off;
 		ptrs[numPtrs++] = p;
 		if ( numPtrs >= 1024 ) break;
 	}
 
 	// sort them
-	qsort ( ptrs , numPtrs , 4 , csvPtrCmp );
+	qsort ( ptrs , numPtrs , sizeof(char *) , csvPtrCmp );
 
 	// set up table to map field name to column for printing the json items
 	HashTableX *columnTable = &st->m_columnTable;
@@ -7558,12 +7859,12 @@ bool printCSVHeaderRow ( SafeBuf *sb , State0 *st ) {
 		return false;
 
 	// now print them out as the header row
-	for ( long i = 0 ; i < numPtrs ; i++ ) {
+	for ( int32_t i = 0 ; i < numPtrs ; i++ ) {
 		if ( i > 0 && ! sb->pushChar(',') ) return false;
 		if ( ! sb->safeStrcpy ( ptrs[i] ) ) return false;
 		// record the hash of each one for printing out further json
 		// objects in the same order so columns are aligned!
-		long long h64 = hash64n ( ptrs[i] );
+		int64_t h64 = hash64n ( ptrs[i] );
 		if ( ! columnTable->addKey ( &h64 , &i ) ) 
 			return false;
 	}
@@ -7581,20 +7882,20 @@ bool printCSVHeaderRow ( SafeBuf *sb , State0 *st ) {
 // returns false and sets g_errno on error
 bool printJsonItemInCSV ( char *json , SafeBuf *sb , State0 *st ) {
 
-	long niceness = 0;
+	int32_t niceness = 0;
 
 	// parse the json
 	Json jp;
 	jp.parseJsonStringIntoJsonItems ( json , niceness );
 
 	HashTableX *columnTable = &st->m_columnTable;
-	long numCSVColumns = st->m_numCSVColumns;
+	int32_t numCSVColumns = st->m_numCSVColumns;
 
 	
 	// make buffer space that we need
 	char ttt[1024];
 	SafeBuf ptrBuf(ttt,1024);
-	long need = numCSVColumns * sizeof(JsonItem *);
+	int32_t need = numCSVColumns * sizeof(JsonItem *);
 	if ( ! ptrBuf.reserve ( need ) ) return false;
 	JsonItem **ptrs = (JsonItem **)ptrBuf.getBufStart();
 
@@ -7634,14 +7935,19 @@ bool printJsonItemInCSV ( char *json , SafeBuf *sb , State0 *st ) {
 			continue;
 
 		// is it new?
-		long long h64 = hash64n ( tmpBuf.getBufStart() );
+		int64_t h64 = hash64n ( tmpBuf.getBufStart() );
 
-		long slot = columnTable->getSlot ( &h64 ) ;
+		int32_t slot = columnTable->getSlot ( &h64 ) ;
 		// MUST be in there
-		if ( slot < 0 ) { char *xx=NULL;*xx=0;}
+		if ( slot < 0 ) { 
+			// do not core on this anymore...
+			log("serps: json column not in table : %s",ji->m_name);
+			continue;
+			//char *xx=NULL;*xx=0;}
+		}
 
 		// get col #
-		long column = *(long *)columnTable->getValueFromSlot ( slot );
+		int32_t column = *(int32_t *)columnTable->getValueFromSlot ( slot );
 
 		// sanity
 		if ( column >= numCSVColumns ) { char *xx=NULL;*xx=0; }
@@ -7652,7 +7958,7 @@ bool printJsonItemInCSV ( char *json , SafeBuf *sb , State0 *st ) {
 	}
 
 	// now print out what we got
-	for ( long i = 0 ; i < numCSVColumns ; i++ ) {
+	for ( int32_t i = 0 ; i < numCSVColumns ; i++ ) {
 
 		// get it
 		ji = ptrs[i];
@@ -7679,7 +7985,7 @@ bool printJsonItemInCSV ( char *json , SafeBuf *sb , State0 *st ) {
 			// print numbers without double quotes
 			if ( ji->m_valueDouble *10000000.0 == 
 			     (double)ji->m_valueLong * 10000000.0 )
-				sb->safePrintf("%li",ji->m_valueLong);
+				sb->safePrintf("%"INT32"",ji->m_valueLong);
 			else
 				sb->safePrintf("%f",ji->m_valueDouble);
 			continue;
@@ -7688,7 +7994,7 @@ bool printJsonItemInCSV ( char *json , SafeBuf *sb , State0 *st ) {
 		// print the value
 		sb->pushChar('\"');
 		// get the json item to print out
-		long  vlen = ji->getValueLen();
+		int32_t  vlen = ji->getValueLen();
 		// truncate
 		char *truncStr = NULL;
 		if ( vlen > 32000 ) {
@@ -7732,7 +8038,7 @@ bool printWidgetPage ( SafeBuf *sb , HttpRequest *hr , char *coll ) {
 
 	// if admin clicks "edit" in the live widget itself put up
 	// some simpler content editing boxes. token required!
-	long edit = hr->getLong("inlineedit",0);
+	int32_t edit = hr->getLong("inlineedit",0);
 	if ( edit ) {
 		// get widget sites
 		char *sites = cr->m_siteListBuf.getBufStart();
@@ -7772,7 +8078,7 @@ bool printWidgetPage ( SafeBuf *sb , HttpRequest *hr , char *coll ) {
 		      //"alert(document.myform.elements[i].value)\n"
 		      "continue;\n"
 		      "}\n"
-		      // until we had def=%li to each input parm assume
+		      // until we had def=%"INT32" to each input parm assume
 		      // default is 0. i guess if it has no def= attribute
 		      // assume default is 0
 		      //"if ( elm.value == '0' ) {\n"
@@ -7802,17 +8108,17 @@ bool printWidgetPage ( SafeBuf *sb , HttpRequest *hr , char *coll ) {
 	char *c1 = "";
 	char *c2 = "";
 	char *c3 = "";
-	long x1 = hr->getLong("dates"    ,0);
-	long x2 = hr->getLong("summaries",0);
-	long x3 = hr->getLong("border"   ,0);
+	int32_t x1 = hr->getLong("dates"    ,0);
+	int32_t x2 = hr->getLong("summaries",0);
+	int32_t x3 = hr->getLong("border"   ,0);
 	if ( x1 ) c1 = " checked";
 	if ( x2 ) c2 = " checked";
 	if ( x3 ) c3 = " checked";
-	long width  = hr->getLong("width",250);
-	long height = hr->getLong("height",400);
-	long refresh = hr->getLong("refresh",15);
+	int32_t width  = hr->getLong("width",250);
+	int32_t height = hr->getLong("height",400);
+	int32_t refresh = hr->getLong("refresh",15);
 	char *def = "<style>html {font-size:12px;font-family:arial;background-color:transparent;color:black;}span.title { font-size:16px;font-weight:bold;}span.summary { font-size:12px;} span.date { font-size:12px;}span.prevnext { font-size:12px;font-weight:bold;}</style>";//<h2>News</h2>";
-	long len1,len2,len3,len4;
+	int32_t len1,len2,len3,len4;
 	char *header = hr->getString("header",&len1,def);
 	char *sites = hr->getString("sites",&len2,"");
 	char *token = hr->getString("token",&len3,"");
@@ -7912,17 +8218,17 @@ bool printWidgetPage ( SafeBuf *sb , HttpRequest *hr , char *coll ) {
 		      "<br>"
 
 		      "Width "
-		      "<input size=4 type=text value=%li "
+		      "<input size=4 type=text value=%"INT32" "
 		      "name=width>"
 		      "<br>"
 
 		      "Height "
-		      "<input size=4 type=text value=%li "
+		      "<input size=4 type=text value=%"INT32" "
 		      "name=height>"
 		      "<br>"
 
 		      "<nobr>Refresh in seconds "
-		      "<input size=4 type=text value=%li "
+		      "<input size=4 type=text value=%"INT32" "
 		      "name=refresh></nobr>"
 		      "<br>"
 
@@ -7963,7 +8269,7 @@ bool printWidgetPage ( SafeBuf *sb , HttpRequest *hr , char *coll ) {
 
 	sb->safePrintf ( "<td>"
 			 "<div style=\""
-			 "width:30px;"//%lipx;"
+			 "width:30px;"//%"INT32"px;"
 			 //"position:absolute;"
 			 //"top:300px;"
 			 //"right:0;"
@@ -8023,7 +8329,7 @@ bool printWidgetPage ( SafeBuf *sb , HttpRequest *hr , char *coll ) {
 		      );
 
 
-	long start = sb->length();
+	int32_t start = sb->length();
 
 	char *border = "frameborder=no ";
 	if ( x3 ) border = "";
@@ -8033,8 +8339,8 @@ bool printWidgetPage ( SafeBuf *sb , HttpRequest *hr , char *coll ) {
 		       // "<div "
 		       // "id=scrollerxyz "
 		       // "style=\""
-		       //"width:%lipx;" // 200;"
-		       //"height:%lipx;" // 400;"
+		       //"width:%"INT32"px;" // 200;"
+		       //"height:%"INT32"px;" // 400;"
 		       //"overflow:hidden;"
 		       // "padding:0px;"
 		       // "margin:0px;"
@@ -8047,7 +8353,7 @@ bool printWidgetPage ( SafeBuf *sb , HttpRequest *hr , char *coll ) {
 		       //"overflow-scrolling:touch;"
 		       "\">"
 
-			"<iframe width=\"%lipx\" height=\"%lipx\" "
+			"<iframe width=\"%"INT32"px\" height=\"%"INT32"px\" "
 			//"scrolling=yes "
 
 			//"style=\"background-color:white;"
@@ -8062,11 +8368,11 @@ bool printWidgetPage ( SafeBuf *sb , HttpRequest *hr , char *coll ) {
 
 			"src=\""
 			//"http://127.0.0.1:8000/search?"
-			"http://%s:%li/search?"
+			"http://%s:%"INT32"/search?"
 			"format=widget&"
-			"widgetwidth=%li&widgetheight=%li&"
+			"widgetwidth=%"INT32"&widgetheight=%"INT32"&"
 			"c=%s&"
-			"refresh=%li"
+			"refresh=%"INT32""
 			// show articles sorted by newest pubdate first
 
 			, width
@@ -8074,7 +8380,7 @@ bool printWidgetPage ( SafeBuf *sb , HttpRequest *hr , char *coll ) {
 			, border
 
 			, iptoa(g_hostdb.m_myHost->m_ip)
-			, (long)g_hostdb.m_myHost->m_httpPort
+			, (int32_t)g_hostdb.m_myHost->m_httpPort
 
 			, width
 			, height
@@ -8082,8 +8388,8 @@ bool printWidgetPage ( SafeBuf *sb , HttpRequest *hr , char *coll ) {
 			, refresh
 			);
 
-	sb->safePrintf("&dates=%li",x1);
-	sb->safePrintf("&summaries=%li",x2);
+	sb->safePrintf("&dates=%"INT32"",x1);
+	sb->safePrintf("&summaries=%"INT32"",x2);
 
 	sb->safePrintf("&q=");
 	sb->urlEncode ( query );
@@ -8107,12 +8413,12 @@ bool printWidgetPage ( SafeBuf *sb , HttpRequest *hr , char *coll ) {
 			//, wp 
 			);
 
-	long end = sb->length();
+	int32_t end = sb->length();
 
 	sb->reserve ( end - start + 1000 );
 
 	char *wdir = "on the left";
-	long cols = 32;
+	int32_t cols = 32;
 
 	//if ( width <= 240 ) 
 		sb->safePrintf("</td><td>&nbsp;&nbsp;</td><td valign=top>");
@@ -8137,7 +8443,7 @@ bool printWidgetPage ( SafeBuf *sb , HttpRequest *hr , char *coll ) {
 	
 	char *p = sb->getBufStart() + start;
 
-	sb->safePrintf("<textarea rows=30 cols=%li "
+	sb->safePrintf("<textarea rows=30 cols=%"INT32" "
 		      "style=\"border:2px solid black;\">", cols);
 	sb->htmlEncode ( p           ,
 			end - start ,
@@ -8167,7 +8473,7 @@ bool sendPageWidget ( TcpSocket *s , HttpRequest *hr ) {
 	char *token = hr->getString("token",NULL);
 	if ( token && ! token[0] ) token = NULL;
 
-	long edit = hr->getLong("inlineedit",0);
+	int32_t edit = hr->getLong("inlineedit",0);
 
 	if ( ! token && ! edit ) {
 		g_errno = ENOTOKEN;
@@ -8175,7 +8481,7 @@ bool sendPageWidget ( TcpSocket *s , HttpRequest *hr ) {
 		return g_httpServer.sendErrorReply(s,g_errno,msg);
 	}
 
-	long tlen = 0;
+	int32_t tlen = 0;
 	if ( token ) tlen = gbstrlen(token);
 	if ( tlen > 64 ) { 
 		g_errno = ENOCOLLREC;
@@ -8215,9 +8521,9 @@ bool sendPageWidget ( TcpSocket *s , HttpRequest *hr ) {
 	if ( cn >= 0 && token ) {
 		// use special url filters profile that spiders sites
 		// shallowly and frequently to pick up new news stories
-		// "1" = (long)UFP_NEWS
+		// "1" = (int32_t)UFP_NEWS
 		char ttt[12];
-		sprintf(ttt,"%li",(long)UFP_NEWS);
+		sprintf(ttt,"%"INT32"",(int32_t)UFP_NEWS);
 		// urlfiltersprofile
 		g_parms.addNewParmToList1 ( &parmList,cn,ttt,0,"ufp");
 		// use diffbot analyze
@@ -8263,7 +8569,7 @@ bool sendPageWidget ( TcpSocket *s , HttpRequest *hr ) {
 
 
 bool printDmozEntry ( SafeBuf *sb ,
-		      long catId ,
+		      int32_t catId ,
 		      bool direct ,
 		      char *dmozTitle ,
 		      char *dmozSummary ,
@@ -8274,10 +8580,10 @@ bool printDmozEntry ( SafeBuf *sb ,
 	//if ( catIds[i] ==  si->m_catId) break;
 	if ( si->m_format == FORMAT_XML ) {
 		sb->safePrintf("\t\t<dmozEntry>\n");
-		sb->safePrintf("\t\t\t<dmozCatId>%li"
+		sb->safePrintf("\t\t\t<dmozCatId>%"INT32""
 			       "</dmozCatId>\n",catId);
-		sb->safePrintf("\t\t\t<directCatId>%li</directCatId>\n",
-			       (long)direct);
+		sb->safePrintf("\t\t\t<directCatId>%"INT32"</directCatId>\n",
+			       (int32_t)direct);
 		// print the name of the dmoz category
 		sb->safePrintf("\t\t\t<dmozCatStr><![CDATA[");
 		char xbuf[256];
@@ -8302,9 +8608,9 @@ bool printDmozEntry ( SafeBuf *sb ,
 	}
 	if ( si->m_format == FORMAT_JSON ) {
 		sb->safePrintf("\t\t\"dmozEntry\":{\n");
-		sb->safePrintf("\t\t\t\"dmozCatId\":%li,\n",
+		sb->safePrintf("\t\t\t\"dmozCatId\":%"INT32",\n",
 			       catId);
-		sb->safePrintf("\t\t\t\"directCatId\":%li,\n",(long)direct);
+		sb->safePrintf("\t\t\t\"directCatId\":%"INT32",\n",(int32_t)direct);
 		// print the name of the dmoz category
 		sb->safePrintf("\t\t\t\"dmozCatStr\":\"");
 		char xbuf[256];
@@ -8332,7 +8638,7 @@ bool printDmozEntry ( SafeBuf *sb ,
 
 class MenuItem {
 public:
-	long  m_menuNum;
+	int32_t  m_menuNum;
 	char *m_title;
 	// we append this to the url
 	char *m_cgi;
@@ -8343,7 +8649,7 @@ public:
 };
 
 static MenuItem s_mi[200];
-static long s_num = 0;
+static int32_t s_num = 0;
 
 bool printSearchFiltersBar ( SafeBuf *sb , HttpRequest *hr ) {
 
@@ -8441,7 +8747,7 @@ bool printSearchFiltersBar ( SafeBuf *sb , HttpRequest *hr ) {
 
 	if ( ! s_init ) {
 
-		long n = 0;
+		int32_t n = 0;
 
 		s_mi[n].m_menuNum  = 0;
 		s_mi[n].m_title    = "Any time";
@@ -8493,6 +8799,13 @@ bool printSearchFiltersBar ( SafeBuf *sb , HttpRequest *hr ) {
 		s_mi[n].m_icon     = NULL;
 		n++;
 
+		s_mi[n].m_menuNum  = 1;
+		s_mi[n].m_title    = "Sorted by site inlinks";
+		s_mi[n].m_cgi      = "sortby=3";
+		s_mi[n].m_icon     = NULL;
+		n++;
+
+
 		// languages
 
 		s_mi[n].m_menuNum  = 2;
@@ -8501,7 +8814,7 @@ bool printSearchFiltersBar ( SafeBuf *sb , HttpRequest *hr ) {
 		s_mi[n].m_icon     = NULL;
 		n++;
 
-		for ( long i = 0 ; i < langLast ; i++ ) {
+		for ( int32_t i = 0 ; i < langLast ; i++ ) {
 			s_mi[n].m_menuNum  = 2;
 			s_mi[n].m_title    = getLanguageString(i);
 			char *abbr = getLangAbbr(i);
@@ -8676,40 +8989,66 @@ bool printSearchFiltersBar ( SafeBuf *sb , HttpRequest *hr ) {
 		n++;
 
 
+		// family filter
+		s_mi[n].m_menuNum  = 8;
+		s_mi[n].m_title    = "Family Filter Off";
+		s_mi[n].m_cgi      = "ff=0";
+		s_mi[n].m_icon     = NULL;
+		n++;
+
+		s_mi[n].m_menuNum  = 8;
+		s_mi[n].m_title    = "Family Filter On";
+		s_mi[n].m_cgi      = "ff=1";
+		s_mi[n].m_icon     = NULL;
+		n++;
+
+		// META TAGS
+		s_mi[n].m_menuNum  = 9;
+		s_mi[n].m_title    = "No Meta Tags";
+		s_mi[n].m_cgi      = "dt=";
+		s_mi[n].m_icon     = NULL;
+		n++;
+
+		s_mi[n].m_menuNum  = 9;
+		s_mi[n].m_title    = "Show Meta Tags";
+		s_mi[n].m_cgi      = "dt=keywords+description";
+		s_mi[n].m_icon     = NULL;
+		n++;
+
 
 		// ADMIN
 
-		s_mi[n].m_menuNum  = 8;
+		s_mi[n].m_menuNum  = 10;
 		s_mi[n].m_title    = "Show Admin View";
 		s_mi[n].m_cgi      = "admin=1";
 		s_mi[n].m_icon     = NULL;
 		n++;
 
-		s_mi[n].m_menuNum  = 8;
+		s_mi[n].m_menuNum  = 10;
 		s_mi[n].m_title    = "Show User View";
 		s_mi[n].m_cgi      = "admin=0";
 		s_mi[n].m_icon     = NULL;
 		n++;
 
-		s_mi[n].m_menuNum  = 9;
+		s_mi[n].m_menuNum  = 11;
 		s_mi[n].m_title    = "Action";
 		s_mi[n].m_cgi      = "";
 		s_mi[n].m_icon     = NULL;
 		n++;
 
-		s_mi[n].m_menuNum  = 9;
+		s_mi[n].m_menuNum  = 11;
 		s_mi[n].m_title    = "Respider all results";
 		s_mi[n].m_cgi      = "/admin/reindex";
 		s_mi[n].m_icon     = NULL;
 		n++;
 
-		s_mi[n].m_menuNum  = 9;
+		s_mi[n].m_menuNum  = 11;
 		s_mi[n].m_title    = "Delete all results";
 		s_mi[n].m_cgi      = "/admin/reindex";
 		s_mi[n].m_icon     = NULL;
 		n++;
 
-		s_mi[n].m_menuNum  = 9;
+		s_mi[n].m_menuNum  = 11;
 		s_mi[n].m_title    = "Scrape from google/bing";
 		s_mi[n].m_cgi      = "/admin/inject";
 		s_mi[n].m_icon     = NULL;
@@ -8725,25 +9064,27 @@ bool printSearchFiltersBar ( SafeBuf *sb , HttpRequest *hr ) {
 	// bar of drop down menus
 	sb->safePrintf("<div style=color:gray;>");
 
-	for ( long i = 0 ; i <= s_mi[s_num-1].m_menuNum ; i++ ) {
+	for ( int32_t i = 0 ; i <= s_mi[s_num-1].m_menuNum ; i++ ) {
 		// after 4 make a new line
 		if ( i == 5 ) sb->safePrintf("<br><br>");
+		if ( i == 9 ) sb->safePrintf("<br><br>");
 		printMenu ( sb , i , hr );
 	}
 
 	sb->safePrintf("</div>\n");
+	sb->safePrintf("<br>\n");
 
 	return true;
 }
 
-bool printMenu ( SafeBuf *sb , long menuNum , HttpRequest *hr ) {
+bool printMenu ( SafeBuf *sb , int32_t menuNum , HttpRequest *hr ) {
 
 	bool firstOne = true;
 
 	MenuItem *first = NULL;
 
 	char *src    = hr->m_origUrlRequest;
-	long  srcLen = hr->m_origUrlRequestLen;
+	int32_t  srcLen = hr->m_origUrlRequestLen;
 
 	char *frontTag = "";
 	char *backTag = "";
@@ -8751,8 +9092,8 @@ bool printMenu ( SafeBuf *sb , long menuNum , HttpRequest *hr ) {
 	bool isDefaultHeader = true;
 
 	// try to set first based on what's in the url
-	for ( long i = 0 ; i < s_num ; i++ ) {
-		// shortcut
+	for ( int32_t i = 0 ; i < s_num ; i++ ) {
+		// int16_tcut
 		MenuItem *mi = &s_mi[i];
 		// skip if not our item
 		if ( mi->m_menuNum != menuNum ) continue;
@@ -8778,7 +9119,7 @@ bool printMenu ( SafeBuf *sb , long menuNum , HttpRequest *hr ) {
 		if ( match > src && match[-1] != '?' && match[-1] != '&' )
 			continue;
 		// and \0 or & follows
-		long milen = gbstrlen(mi->m_cgi);
+		int32_t milen = gbstrlen(mi->m_cgi);
 		if ( match+milen > src+srcLen ) continue;
 		if ( ! is_wspace_a(match[milen]) && match[milen] != '&' ) 
 			continue;
@@ -8792,9 +9133,9 @@ bool printMenu ( SafeBuf *sb , long menuNum , HttpRequest *hr ) {
 	}
 	
 
-	for ( long i = 0 ; i < s_num ; i++ ) {
+	for ( int32_t i = 0 ; i < s_num ; i++ ) {
 
-		// shortcut
+		// int16_tcut
 		MenuItem *mi = &s_mi[i];
 
 		// skip if not our item
@@ -8811,7 +9152,7 @@ bool printMenu ( SafeBuf *sb , long menuNum , HttpRequest *hr ) {
 
 		// print hidden drop down menu
 		sb->safePrintf(
-			       "<span id=menu%li style=\"display:none;"
+			       "<span id=menu%"INT32" style=\"display:none;"
 			       "position:absolute;"
 			       //"margin-left:-20px;"
 			       "margin-top:15px;"
@@ -8906,13 +9247,13 @@ bool printMenu ( SafeBuf *sb , long menuNum , HttpRequest *hr ) {
 		       "var saved=openmenu;"
 		       "openmenu='';"
 		       // don't reopen our same menu below!
-		       "if ( saved=='menu%li') return;"
+		       "if ( saved=='menu%"INT32"') return;"
 		       "}"
 
 		       // show our menu
-		       "show('menu%li'); "
+		       "show('menu%"INT32"'); "
 		       // we are now open
-		       "openmenu='menu%li'; "
+		       "openmenu='menu%"INT32"'; "
 
 		       "\""
 		       ">"
@@ -8925,6 +9266,7 @@ bool printMenu ( SafeBuf *sb , long menuNum , HttpRequest *hr ) {
 		       , frontTag
 		       , first->m_title
 		       , backTag
+		       // print triangle
 		       ,0xe2
 		       ,0x96
 		       ,0xbc
@@ -8938,12 +9280,21 @@ bool replaceParm ( char *cgi , SafeBuf *newUrl , HttpRequest *hr ) {
 
 	// get original request url. this is not \0 terminated
 	char *src    = hr->m_origUrlRequest;
-	long  srcLen = hr->m_origUrlRequestLen;
+	int32_t  srcLen = hr->m_origUrlRequestLen;
+	return replaceParm2 ( cgi ,newUrl, src, srcLen );
+}
+
+bool replaceParm2 ( char *cgi , SafeBuf *newUrl , 
+		    char *oldUrl , int32_t oldUrlLen ) {
+
+	char *src    = oldUrl;
+	int32_t  srcLen = oldUrlLen;
+
 	char *srcEnd = src + srcLen;
 
 	char *equal = strstr(cgi,"=");
 	if ( ! equal ) return log("results: %s has no equal sign",cgi);
-	long cgiLen = equal - cgi;
+	int32_t cgiLen = equal - cgi;
 
 	char *found = NULL;
 
@@ -8960,6 +9311,13 @@ bool replaceParm ( char *cgi , SafeBuf *newUrl , HttpRequest *hr ) {
 		goto tryagain;
 	}
 		
+	// fix &s= replaceing &sb=
+	if ( found && found[cgiLen] != '=' ) {
+		// try again
+		p = found + 1;
+		goto tryagain;
+	}
+
 
 	// if no collision, just append it
 	if ( ! found ) {
@@ -8985,5 +9343,92 @@ bool replaceParm ( char *cgi , SafeBuf *newUrl , HttpRequest *hr ) {
 	// copy over what came after
 	if ( ! newUrl->safeMemcpy ( foundEnd, srcEnd-foundEnd ) ) return false;
 	if ( ! newUrl->nullTerm() ) return false;
+	return true;
+}
+
+bool printMetaContent ( Msg40 *msg40 , int32_t i , State0 *st, SafeBuf *sb ) {
+	// store the user-requested meta tags content
+	SearchInput *si = &st->m_si;
+	char *pp      =      si->m_displayMetas;
+	char *ppend   = pp + gbstrlen(si->m_displayMetas);
+	Msg20 *m = msg40->m_msg20[i];//getMsg20(i);
+	Msg20Reply *mr = m->m_r;
+	char *dbuf    = mr->ptr_dbuf;//msg40->getDisplayBuf(i);
+	int32_t  dbufLen = mr->size_dbuf-1;//msg40->getDisplayBufLen(i);
+	char *dbufEnd = dbuf + (dbufLen-1);
+	char *dptr    = dbuf;
+	//bool  printedSomething = false;
+	// loop over the names of the requested meta tags
+	while ( pp < ppend && dptr < dbufEnd ) {
+		// . assure last byte of dbuf is \0
+		//   provided dbufLen > 0
+		// . this insures sprintf and gbstrlen won't
+		//   crash on dbuf/dptr
+		if ( dbuf [ dbufLen ] != '\0' ) {
+			log(LOG_LOGIC,"query: Meta tag buffer has no \\0.");
+			break;
+		}
+		// skip initial spaces
+		while ( pp < ppend && is_wspace_a(*pp) ) pp++;
+		// break if done
+		if ( ! *pp ) break;
+		// that's the start of the meta tag name
+		char *ss = pp;
+		// . find end of that meta tag name
+		// . can end in :<integer> -- specifies max len
+		while ( pp < ppend && ! is_wspace_a(*pp) && 
+			*pp != ':' ) pp++;
+		// save current char
+		char  c  = *pp;
+		char *cp = pp;
+		// NULL terminate the name
+		*pp++ = '\0';
+		// if ':' was specified, skip the rest
+		if ( c == ':' ) while ( pp < ppend && ! is_wspace_a(*pp)) pp++;
+		// print the name
+		//int32_t sslen = gbstrlen ( ss   );
+		//int32_t ddlen = gbstrlen ( dptr );
+		int32_t ddlen = dbufLen;
+		//if ( p + sslen + ddlen + 100 > pend ) continue;
+		// newspaperarchive wants tags printed even if no value
+		// make sure the meta tag isn't fucked up
+		for ( int32_t ti = 0; ti < ddlen; ti++ ) {
+			if ( dptr[ti] == '"' ||
+			     dptr[ti] == '>' ||
+			     dptr[ti] == '<' ||
+			     dptr[ti] == '\r' ||
+			     dptr[ti] == '\n' ||
+			     dptr[ti] == '\0' ) {
+				ddlen = ti;
+				break;
+			}
+		}
+
+		if ( ddlen > 0 ) {
+			// ship it out
+			if ( si->m_format == FORMAT_XML ) {
+				sb->safePrintf ( "\t\t<display name=\"%s\">"
+					  	"<![CDATA[", ss );
+				sb->cdataEncode ( dptr, ddlen );
+				sb->safePrintf ( "]]></display>\n" );
+			}
+			else if ( si->m_format == FORMAT_JSON ) {
+				sb->safePrintf ( "\t\t\"display.%s\":\"",ss);
+				sb->jsonEncode ( dptr, ddlen );
+				sb->safePrintf ( "\",\n");
+			}
+			// otherwise, print in light gray
+			else {
+				sb->safePrintf("<font color=#c62939>"
+					      "<b>%s</b>: ", ss );
+				sb->safeMemcpy ( dptr, ddlen );
+				sb->safePrintf ( "</font><br>" );
+			}
+		}
+		// restore tag name buffer
+		*cp = c;
+		// point to next content of tag to display
+		dptr += ddlen + 1;
+	}
 	return true;
 }

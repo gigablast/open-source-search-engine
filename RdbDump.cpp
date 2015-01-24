@@ -11,10 +11,10 @@
 #include "Statsdb.h"
 #include "Accessdb.h"
 
-extern void dumpDatedb   ( char *coll,long sfn,long numFiles,bool includeTree, 
-			   long long termId , bool justVerify ) ;
-extern void dumpPosdb    ( char *coll,long sfn,long numFiles,bool includeTree, 
-			   long long termId , bool justVerify ) ;
+extern void dumpDatedb   ( char *coll,int32_t sfn,int32_t numFiles,bool includeTree, 
+			   int64_t termId , bool justVerify ) ;
+extern void dumpPosdb    ( char *coll,int32_t sfn,int32_t numFiles,bool includeTree, 
+			   int64_t termId , bool justVerify ) ;
 
 void doneReadingForVerifyWrapper ( void *state ) ;
 //void gotTfndbListWrapper ( void *state , RdbList *list, Msg5 *msg5 ) ;
@@ -24,25 +24,25 @@ void doneReadingForVerifyWrapper ( void *state ) ;
 bool RdbDump::set ( //char     *coll          ,
 		   collnum_t collnum ,
 		    BigFile  *file          ,
-		    long      id2           , // in Rdb::m_files[] array
+		    int32_t      id2           , // in Rdb::m_files[] array
 		    bool      isTitledb     ,
 		    RdbBuckets *buckets     , // optional buckets to dump
 		    RdbTree  *tree          , // optional tree to dump
 		    RdbMap   *map           ,
 		    RdbCache *cache         ,
-		    long      maxBufSize    ,
+		    int32_t      maxBufSize    ,
 		    bool      orderedDump   , // dump in order of keys?
 		    bool      dedup         , // 4 RdbCache::incorporateList()
-		    long      niceness      ,
+		    int32_t      niceness      ,
 		    void     *state         ,
 		    void      (* callback) ( void *state ) ,
 		    bool      useHalfKeys   ,
-		    long long startOffset   ,
+		    int64_t startOffset   ,
 		    //key_t     prevLastKey   ,
 		    char     *prevLastKey   ,
 		    char      keySize       ,
 		    class DiskPageCache *pc     ,
-		    long long maxFileSize   ,
+		    int64_t maxFileSize   ,
 		    Rdb      *rdb           ) {
 
 	if ( ! orderedDump ) {
@@ -136,7 +136,7 @@ bool RdbDump::set ( //char     *coll          ,
 	//   nodes/records as we dump them 
 	// . ensure this sets g_errno for us
 	// . TODO: open might not block! fix that!
-	long flags = O_RDWR | O_CREAT ;
+	int32_t flags = O_RDWR | O_CREAT ;
 	// a niceness bigger than 0 means to do non-blocking dumps
 	if ( niceness > 0 ) flags |=  O_ASYNC | O_NONBLOCK ;
 	if ( ! m_file->open ( flags , pc , maxFileSize ) ) return true;
@@ -150,15 +150,15 @@ bool RdbDump::set ( //char     *coll          ,
 	}
 	// debug test
 	//char buf1[10*1024];
-	//long n1 = m_file->write ( buf1 , 10*1024 , 0 );
-	//log("bytes written=%li\n",n1);
+	//int32_t n1 = m_file->write ( buf1 , 10*1024 , 0 );
+	//log("bytes written=%"INT32"\n",n1);
 	// we're now considered to be in dumping state
 	m_isDumping = true;
 	// . if no tree was provided to dump it must be RdbMerge calling us
 	// . he'll want to call dumpList() on his own
 	if ( ! m_tree && !m_buckets ) return true;
 	// how many recs in tree?
-	long nr;
+	int32_t nr;
 	char *structureName;
 	if(m_tree) {
 		nr = m_tree->getNumUsedNodes();
@@ -169,7 +169,7 @@ bool RdbDump::set ( //char     *coll          ,
 		structureName = "buckets";
 	}
 	// debug msg
-	log(LOG_INFO,"db: Dumping %li recs from %s to files.",
+	log(LOG_INFO,"db: Dumping %"INT32" recs from %s to files.",
 	    nr, structureName);
 	//    nr , m_file->getFilename() );
 	// keep a total count for reporting when done
@@ -202,12 +202,13 @@ void RdbDump::reset ( ) {
 
 void RdbDump::doneDumping ( ) {
 
-	long saved = g_errno;
+	int32_t saved = g_errno;
 
 	m_isDumping = false;
 	// print stats
 	log(LOG_INFO,
-	    "db: Dumped %li positive and %li negative recs. Total = %li.",
+	    "db: Dumped %"INT32" positive and %"INT32" negative recs. "
+	    "Total = %"INT32".",
 	     m_totalPosDumped , m_totalNegDumped ,
 	     m_totalPosDumped + m_totalNegDumped );
 
@@ -215,7 +216,7 @@ void RdbDump::doneDumping ( ) {
 	// . if continueDumping called us with no collectionrec, it got
 	//   deleted so RdbBase::m_map is nuked too i guess
 	if ( saved != ENOCOLLREC )
-		log("db: map # pos=%lli neg=%lli",
+		log("db: map # pos=%"INT64" neg=%"INT64"",
 		    m_map->getNumPositiveRecs(),
 		    m_map->getNumNegativeRecs()
 		    );
@@ -230,7 +231,7 @@ void RdbDump::doneDumping ( ) {
 
 	// save the map to disk
 	m_map->writeMap();
-#ifdef _SANITYCHECK_
+#ifdef GBSANITYCHECK
 	// sanity check
 	log("DOING SANITY CHECK FOR MAP -- REMOVE ME");
 	if ( ! m_map->verifyMap ( m_file ) ) {
@@ -239,8 +240,8 @@ void RdbDump::doneDumping ( ) {
 	if ( m_ks == 18 ) { // map->m_rdbId == RDB_POSDB ) {
 		collnum_t collnum = g_collectiondb.getCollnum ( m_coll );
 		class RdbBase *base = m_rdb->m_bases[collnum];
-		long startFileNum = base->getNumFiles()-1;
-		log("sanity: startfilenum=%li",startFileNum);
+		int32_t startFileNum = base->getNumFiles()-1;
+		log("sanity: startfilenum=%"INT32"",startFileNum);
 		dumpPosdb(m_coll,
 			  startFileNum, // startFileNum
 			   1                    , // numFiles
@@ -282,7 +283,7 @@ void        tryAgainWrapper2 ( int fd , void *state ) {
 // . called again by writeBuf() when it's done writing the whole list
 bool RdbDump::dumpTree ( bool recall ) {
 	// set up some vars
-	//long  nextNode;
+	//int32_t  nextNode;
 	//key_t maxEndKey;
 	//maxEndKey.setMax();
 	char maxEndKey[MAX_KEY_BYTES];
@@ -293,7 +294,7 @@ bool RdbDump::dumpTree ( bool recall ) {
 	// needs to add a partial stat to the last 10 stats for those 10 secs.
 	// we use Global time at this juncture
 	if ( m_rdb->m_rdbId == RDB_STATSDB ) {
-		long nowSecs = getTimeGlobal();
+		int32_t nowSecs = getTimeGlobal();
 		StatKey *sk = (StatKey *)maxEndKey;
 		sk->m_zero      = 0x01;
 		sk->m_labelHash = 0xffffffff;
@@ -315,7 +316,7 @@ bool RdbDump::dumpTree ( bool recall ) {
 	//	collnum = 0;
 	//}
 	// getMemOccupiedForList2() can take some time, so breathe
-	long niceness = 1;
+	int32_t niceness = 1;
  loop:
 	// if the lastKey was the max end key last time then we're done
 	if ( m_rolledOver     ) return true;
@@ -335,7 +336,14 @@ bool RdbDump::dumpTree ( bool recall ) {
 	// "lastKey" is set to the last key in the list
 	//else {
 	{
+
+		// can we remove neg recs?
+		// class RdbBase *base = m_rdb->getBase(m_collnum);
+		// bool removeNegRecs = false;
+		// if ( base->m_numFiles <= 0 ) removeNegRecs = true;
+
 		if ( recall ) goto skip;
+
 		// debug msg
 		//log("RdbDump:: getting list");
 		m_t1 = gettimeofdayInMilliseconds();
@@ -360,6 +368,11 @@ bool RdbDump::dumpTree ( bool recall ) {
 					   m_useHalfKeys );
 
 
+		// don't dump out any neg recs if it is our first time dumping
+		// to a file for this rdb/coll. TODO: implement this later.
+		//if ( removeNegRecs )
+		//	m_list.removeNegRecs();
+
 // 		if(!m_list->checkList_r ( false , // removeNegRecs?
 // 					 false , // sleep on problem?
 // 					 m_rdb->m_rdbId )) {
@@ -369,22 +382,22 @@ bool RdbDump::dumpTree ( bool recall ) {
 
 
 	skip:
-		long long t2;
+		int64_t t2;
 		//key_t lastKey;
 		char *lastKey;
 		// if error getting list (out of memory?)
 		if ( ! status ) goto hadError;
 		// debug msg
 		t2 = gettimeofdayInMilliseconds();
-		log(LOG_INFO,"db: Get list took %lli ms. "
-		    "%li positive. %li negative.",
+		log(LOG_INFO,"db: Get list took %"INT64" ms. "
+		    "%"INT32" positive. %"INT32" negative.",
 		    t2 - m_t1 , m_numPosRecs , m_numNegRecs );
 		// keep a total count for reporting when done
 		m_totalPosDumped += m_numPosRecs;
 		m_totalNegDumped += m_numNegRecs;
 		// . check the list we got from the tree for problems
 		// . ensures keys are ordered from lowest to highest as well
-#ifdef _SANITYCHECK_
+#ifdef GBSANITYCHECK
 		log("dump: verifying list before dumping");
 		m_list->checkList_r ( false , // removeNegRecs?
 				      false , // sleep on problem?
@@ -401,14 +414,14 @@ bool RdbDump::dumpTree ( bool recall ) {
 		lastKey = m_list->getLastKey();
 		// advance m_nextKey
 		//m_nextKey  = lastKey ;
-		//m_nextKey += (unsigned long)1;
+		//m_nextKey += (uint32_t)1;
 		//if ( m_nextKey < lastKey ) m_rolledOver = true;
 		KEYSET(m_nextKey,lastKey,m_ks);
 		KEYADD(m_nextKey,1,m_ks);
 		if (KEYCMP(m_nextKey,lastKey,m_ks)<0) m_rolledOver = true;
 	      // debug msg
-	      //log(0,"RdbDump:lastKey.n1=%lu,n0=%llu",lastKey.n1,lastKey.n0);
-	      //log(0,"RdbDump:next.n1=%lu,n0=%llu",m_nextKey.n1,m_nextKey.n0);
+	      //log(0,"RdbDump:lastKey.n1=%"UINT32",n0=%"UINT64"",lastKey.n1,lastKey.n0);
+	      //log(0,"RdbDump:next.n1=%"UINT32",n0=%"UINT64"",m_nextKey.n1,m_nextKey.n0);
 	}
 	// . return true on error, g_errno should have been set
 	// . this is probably out of memory error
@@ -452,7 +465,7 @@ static void doneWritingWrapper ( void *state ) ;
 // . return false if blocked, true otherwise
 // . sets g_errno on error
 // . this one is also called by RdbMerge to dump lists
-bool RdbDump::dumpList ( RdbList *list , long niceness , bool recall ) {
+bool RdbDump::dumpList ( RdbList *list , int32_t niceness , bool recall ) {
 
 	// if we had a write error and are being recalled...
 	if ( recall ) { m_offset -= m_bytesToWrite; goto recallskip; }
@@ -465,7 +478,7 @@ bool RdbDump::dumpList ( RdbList *list , long niceness , bool recall ) {
 	if ( m_list->isEmpty() ) return true;
 	// we're now in dump mode again 
 	m_isDumping = true;
-#ifdef _SANITYCHECK_
+#ifdef GBSANITYCHECK
 	// don't check list if we're dumping an unordered list from tree!
 	if ( m_orderedDump ) {
 		m_list->checkList_r ( false /*removedNegRecs?*/ );
@@ -493,7 +506,7 @@ bool RdbDump::dumpList ( RdbList *list , long niceness , bool recall ) {
 		//if ( k <= lastKey ) {
 		if ( KEYCMP(k,lastKey,m_ks)<=0 ) {
 			log(LOG_LOGIC,"db: Dumping list key out of order. "
-			    //"lastKey.n1=%lx n0=%llx k.n1=%lx n0=%llx",
+			    //"lastKey.n1=%"XINT32" n0=%"XINT64" k.n1=%"XINT32" n0=%"XINT64"",
 			    //lastKey.n1,lastKey.n0,k.n1,k.n0);
 			    "lastKey=%s k=%s",
 			    KEYSTR(lastKey,m_ks),
@@ -521,9 +534,9 @@ bool RdbDump::dumpList ( RdbList *list , long niceness , bool recall ) {
 			char tmp[MAX_KEY_BYTES];
 			char *p = m_list->getList();
 			// swap high 12 bytes with low 6 bytes for first key
-			memcpy ( tmp   , p            , m_ks-12 );
-			memcpy ( p     , p + (m_ks-12) ,      12 );
-			memcpy ( p + 12, tmp          , m_ks-12 );
+			gbmemcpy ( tmp   , p            , m_ks-12 );
+			gbmemcpy ( p     , p + (m_ks-12) ,      12 );
+			gbmemcpy ( p + 12, tmp          , m_ks-12 );
 			// big hack here
 			m_list->m_list         = p + 12;
 			m_list->m_listPtr      = p + 12;
@@ -560,12 +573,12 @@ bool RdbDump::dumpList ( RdbList *list , long niceness , bool recall ) {
 			//char tmp[6];
 			char tmp[MAX_KEY_BYTES];
 			char *p = m_list->getList();
-			//memcpy ( tmp   , p     , 6 );
-			//memcpy ( p     , p + 6 , 6 );
-			//memcpy ( p + 6 , tmp   , 6 );
-			memcpy ( tmp   , p            , m_ks-6 );
-			memcpy ( p     , p + (m_ks-6) ,      6 );
-			memcpy ( p + 6 , tmp          , m_ks-6 );
+			//gbmemcpy ( tmp   , p     , 6 );
+			//gbmemcpy ( p     , p + 6 , 6 );
+			//gbmemcpy ( p + 6 , tmp   , 6 );
+			gbmemcpy ( tmp   , p            , m_ks-6 );
+			gbmemcpy ( p     , p + (m_ks-6) ,      6 );
+			gbmemcpy ( p + 6 , tmp          , m_ks-6 );
 			// big hack here
 			m_list->m_list       = p + 6;
 			m_list->m_listPtr    = p + 6;
@@ -585,7 +598,7 @@ bool RdbDump::dumpList ( RdbList *list , long niceness , bool recall ) {
 	// now write it to disk
 	m_buf          = m_list->getList    ();
 	m_bytesToWrite = m_list->getListSize();
-	//#ifdef _SANITYCHECK_
+	//#ifdef GBSANITYCHECK
 	//if (m_list->getListSize()!=m_list->getListEnd() - m_list->getList()){
 	//	log("RdbDump::dumpList: major problem here!");
 	//	sleep(50000);
@@ -603,7 +616,7 @@ bool RdbDump::dumpList ( RdbList *list , long niceness , bool recall ) {
 		return true;
 	}
 	// tab to the old offset
-	long long offset = m_offset;
+	int64_t offset = m_offset;
 	// might as well update the offset now, even before write is done
 	m_offset += m_bytesToWrite ;
 	// write thread is out
@@ -611,7 +624,7 @@ bool RdbDump::dumpList ( RdbList *list , long niceness , bool recall ) {
 	//m_bytesWritten = 0;
 
 	// sanity check
-	//log("dump: writing %li bytes at offset %lli",m_bytesToWrite,offset);
+	//log("dump: writing %"INT32" bytes at offset %"INT64"",m_bytesToWrite,offset);
 
 	// . if we're called by RdbMerge directly use m_callback/m_state
 	// . otherwise, use doneWritingWrapper() which will call dumpTree()
@@ -625,7 +638,7 @@ bool RdbDump::dumpList ( RdbList *list , long niceness , bool recall ) {
 				      doneWritingWrapper ,
 				      niceness         );
 	// debug msg
-	//log("RdbDump dumped %li bytes, done=%li\n",
+	//log("RdbDump dumped %"INT32" bytes, done=%"INT32"\n",
 	//	m_bytesToWrite,isDone); 
 	// return false if it blocked
 	if ( ! isDone ) return false;
@@ -665,7 +678,7 @@ bool RdbDump::doneDumpingList ( bool addToMap ) {
 			// note it
 			log(LOG_LOGIC,"db: setting fd for vfd to -1.");
 			// mark our fd as not there...
-			long i = (m_offset - m_bytesToWrite) / MAX_PART_SIZE;
+			int32_t i = (m_offset - m_bytesToWrite) / MAX_PART_SIZE;
 			// sets s_fds[vfd] to -1
 			if ( m_file->m_files[i] )
 				releaseVfd ( m_file->m_files[i]->m_vfd );
@@ -692,7 +705,7 @@ bool RdbDump::doneDumpingList ( bool addToMap ) {
 	// corruption from those pesky Western Digitals and Maxtors?
 	if ( g_conf.m_verifyWrites ) {
 		// a debug message, if log disk debug messages is enabled
-		log(LOG_DEBUG,"disk: Verifying %li bytes written.",
+		log(LOG_DEBUG,"disk: Verifying %"INT32" bytes written.",
 		    m_bytesToWrite);
 		// make a read buf
 		if ( m_verifyBuf && m_verifyBufSize < m_bytesToWrite ) {
@@ -716,7 +729,7 @@ bool RdbDump::doneDumpingList ( bool addToMap ) {
 					     doneReadingForVerifyWrapper ,
 					     m_niceness      );
 		// debug msg
-		//log("RdbDump dumped %li bytes, done=%li\n",
+		//log("RdbDump dumped %"INT32" bytes, done=%"INT32"\n",
 		//	m_bytesToWrite,isDone); 
 		// return false if it blocked
 		if ( ! isDone ) return false;
@@ -738,8 +751,8 @@ bool RdbDump::doneReadingForVerify ( ) {
 	// see if what we wrote is the same as what we read back
 	if ( m_verifyBuf && memcmp(m_verifyBuf,m_buf,m_bytesToWrite) != 0 &&
 	     ! g_errno ) {
-		log("disk: Write verification of %li bytes to file %s "
-		    "failed at offset=%lli. Retrying.",
+		log("disk: Write verification of %"INT32" bytes to file %s "
+		    "failed at offset=%"INT64". Retrying.",
 		    m_bytesToWrite,
 		    m_file->getFilename(),
 		    m_offset - m_bytesToWrite);
@@ -747,7 +760,7 @@ bool RdbDump::doneReadingForVerify ( ) {
 		return dumpList ( m_list , m_niceness , true );
 	}
 	// time dump to disk (and tfndb bins)
-	long long t ;
+	int64_t t ;
 	// start timing on first call only
 	if ( m_addToMap ) t = gettimeofdayInMilliseconds();
 	// sanity check
@@ -771,8 +784,8 @@ bool RdbDump::doneReadingForVerify ( ) {
 	}
 
 	// debug msg
-	long long now = gettimeofdayInMilliseconds();
-	log(LOG_TIMING,"db: adding to map took %llu ms" , now - t );
+	int64_t now = gettimeofdayInMilliseconds();
+	log(LOG_TIMING,"db: adding to map took %"UINT64" ms" , now - t );
 
 	// . Msg5.cpp and RdbList::merge_r() should remove titleRecs
 	//   that are not supported by tfndb, so we only need to add tfndb
@@ -793,12 +806,12 @@ bool RdbDump::doneReadingForVerify ( ) {
 		//char tmp[6];
 		char tmp[MAX_KEY_BYTES];
 		char *p = m_list->getList() - 6 ;
-		//memcpy ( tmp   , p     , 6 );
-		//memcpy ( p     , p + 6 , 6 );
-		//memcpy ( p + 6 , tmp   , 6 );
-		memcpy ( tmp          , p     , 6 );
-		memcpy ( p            , p + 6 , m_ks-6 );
-		memcpy ( p + (m_ks-6) , tmp   , 6 );
+		//gbmemcpy ( tmp   , p     , 6 );
+		//gbmemcpy ( p     , p + 6 , 6 );
+		//gbmemcpy ( p + 6 , tmp   , 6 );
+		gbmemcpy ( tmp          , p     , 6 );
+		gbmemcpy ( p            , p + 6 , m_ks-6 );
+		gbmemcpy ( p + (m_ks-6) , tmp   , 6 );
 		// undo the big hack
 		m_list->m_list       = p ;
 		m_list->m_listPtr    = p ;
@@ -816,9 +829,9 @@ bool RdbDump::doneReadingForVerify ( ) {
 		char tmp[MAX_KEY_BYTES];
 		char *p = m_list->getList() - 12 ;
 		// swap high 12 bytes with low 6 bytes for first key
-		memcpy ( tmp   , p            , 12 );
-		memcpy ( p     , p + 12 ,      6 );
-		memcpy ( p + 6, tmp          , 12 );
+		gbmemcpy ( tmp   , p            , 12 );
+		gbmemcpy ( p     , p + 12 ,      6 );
+		gbmemcpy ( p + 6, tmp          , 12 );
 		// big hack here
 		m_list->m_list         = p ;
 		m_list->m_listPtr      = p ;
@@ -858,7 +871,7 @@ bool RdbDump::doneReadingForVerify ( ) {
 	// . balancing will be restored once we're done deleting this list
 	// debug msg
 	//log("RdbDump:: deleting list");
-	long long t1 = gettimeofdayInMilliseconds();
+	int64_t t1 = gettimeofdayInMilliseconds();
 	// convert to number, this is -1 if no longer exists
 	//collnum_t collnum = g_collectiondb.getCollnum ( m_coll );
 	//if ( collnum < 0 && m_rdb->m_isCollectionLess ) {
@@ -881,8 +894,8 @@ bool RdbDump::doneReadingForVerify ( ) {
 		    "Fixing. Your memory had an error. Consider replacing it.",
 		    m_file->getFilename());
 		log("db: was collection restarted/reset/deleted before we "
-		    "could delete list from tree? collnum=%li",
-		    (long)m_collnum);
+		    "could delete list from tree? collnum=%"INT32"",
+		    (int32_t)m_collnum);
 		// reset error in that case
 		g_errno = 0;
 		// if ( m_rdb && m_rdb->m_rdbId != RDB_DOLEDB ) {
@@ -894,8 +907,8 @@ bool RdbDump::doneReadingForVerify ( ) {
 	// tell rdb he needs saving now
 	//if ( m_rdb ) m_rdb->m_needsSave = true;
 	// debug msg
-	long long t2 = gettimeofdayInMilliseconds();
-	log(LOG_TIMING,"db: dump: deleteList: took %lli",t2-t1);
+	int64_t t2 = gettimeofdayInMilliseconds();
+	log(LOG_TIMING,"db: dump: deleteList: took %"INT64"",t2-t1);
 	return true;
 }
 /*
@@ -934,7 +947,7 @@ bool RdbDump::updateTfndbLoop () {
 	char k[MAX_KEY_BYTES];
 	m_list->getCurrentKey(k);
 	//char *rec     = m_list->getCurrentRec();
-	//long  recSize = m_list->getCurrentRecSize();
+	//int32_t  recSize = m_list->getCurrentRecSize();
 	// advance for next call
 	m_list->skipCurrentRecord();
 	// skip if a delete
@@ -945,17 +958,17 @@ bool RdbDump::updateTfndbLoop () {
 	//   takes a "tfndbList" as input just to weed out titleRecs that
 	//   are not supported by a tfndb record
 	// . make the tfndb key
-	long long d = g_titledb.getDocIdFromKey ((key_t *) k );
-	//long e = g_titledb.getHostHash ( (key_t *)k );
-	long long uh48 = g_titledb.getUrlHash48 ( (key_t *)k );
-	long tfn = m_id2;
+	int64_t d = g_titledb.getDocIdFromKey ((key_t *) k );
+	//int32_t e = g_titledb.getHostHash ( (key_t *)k );
+	int64_t uh48 = g_titledb.getUrlHash48 ( (key_t *)k );
+	int32_t tfn = m_id2;
 	// delete=false
 	key_t tk = g_tfndb.makeKey ( d, uh48, tfn, false );
 	KEYSET(m_tkey,(char *)&tk,sizeof(key_t));
 	// debug msg
-	//logf(LOG_DEBUG,"db: rdbdump: updateTfndbLoop: tbadd docId=%lli "
-	//    "tfn=%03li", g_tfndb.getDocId((key_t *)m_tkey ),
-	//    (long)g_tfndb.getTitleFileNum((key_t *)m_tkey));
+	//logf(LOG_DEBUG,"db: rdbdump: updateTfndbLoop: tbadd docId=%"INT64" "
+	//    "tfn=%03"INT32"", g_tfndb.getDocId((key_t *)m_tkey ),
+	//    (int32_t)g_tfndb.getTitleFileNum((key_t *)m_tkey));
 	// . add it, returns false and sets g_errno on error
 	// . this will override any existing tfndb record for this docid
 	//   because RdbList.cpp uses a special key compare function (cmp2)
@@ -1073,7 +1086,7 @@ void RdbDump::continueDumping() {
 //   to load the tree. Also, I we may not have enough mem to load the tree
 //   because it loads it all in at once!!!!!
 /*
-bool RdbDump::load ( Rdb *rdb ,  long fixedDataSize, BigFile *file ,
+bool RdbDump::load ( Rdb *rdb ,  int32_t fixedDataSize, BigFile *file ,
 		     class DiskPageCache *pc ) {
         //m_tree          = tree;
 	// return true if the file does not exist
@@ -1086,14 +1099,14 @@ bool RdbDump::load ( Rdb *rdb ,  long fixedDataSize, BigFile *file ,
 	log(LOG_INFO,"db: Loading data from %s",file->getFilename());
 	// read in all data at once since this should only be run at
 	// startup when we still have plenty of memory
-	long bufSize = file->getFileSize();
+	int32_t bufSize = file->getFileSize();
 	// return true if filesize is 0
 	if ( bufSize == 0 ) return true;
 	// otherwise, alloc space to read the WHOLE file
 	char *buf  = (char *) mmalloc( bufSize ,"RdbDump");
-	if ( ! buf ) return log("db: Could not allocate %li bytes to load "
+	if ( ! buf ) return log("db: Could not allocate %"INT32" bytes to load "
 				"%s" , bufSize , file->getFilename());
-	//long n = file->read ( buf , bufSize , m_offset );
+	//int32_t n = file->read ( buf , bufSize , m_offset );
 	file->read ( buf , bufSize , m_offset );
 	if ( g_errno ) {
 		mfree ( buf , bufSize , "RdbDump");
@@ -1109,10 +1122,10 @@ bool RdbDump::load ( Rdb *rdb ,  long fixedDataSize, BigFile *file ,
 		// advance the buf ptr
 		p += sizeof(key_t);
 		// get dataSize
-		long dataSize = fixedDataSize;
+		int32_t dataSize = fixedDataSize;
 		// we may have a datasize
 		if ( fixedDataSize == -1 ) {
-			dataSize = *(long *)p;
+			dataSize = *(int32_t *)p;
 			p += 4;
 		}
 		// point to data if any

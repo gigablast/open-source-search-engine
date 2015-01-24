@@ -23,12 +23,12 @@ SearchInput::~SearchInput() {
 void SearchInput::reset ( ) {
 }
 
-//void SearchInput::setToDefaults ( CollectionRec *cr , long niceness ) {
-void SearchInput::clear ( long niceness ) {
+//void SearchInput::setToDefaults ( CollectionRec *cr , int32_t niceness ) {
+void SearchInput::clear ( int32_t niceness ) {
 	// reset it first
 	reset();
 	// set all to 0 just to avoid any inconsistencies
-	long size = (char *)&m_END_TEST - (char *)&m_START;
+	int32_t size = (char *)&m_END_TEST - (char *)&m_START;
 	memset ( this , 0x00 , size );
 	m_sbuf1.reset();
 	m_sbuf2.reset();
@@ -49,15 +49,15 @@ void SearchInput::clear ( long niceness ) {
 // . do not use all vars, like the m_*ToDisplay should not be included
 key_t SearchInput::makeKey ( ) {
 	// hash the query
-	long       n       = m_q.getNumTerms  ();
-	long long *termIds = m_q.getTermIds   ();
+	int32_t       n       = m_q.getNumTerms  ();
+	int64_t *termIds = m_q.getTermIds   ();
 	char      *signs   = m_q.getTermSigns ();
 	key_t k;
 	k.n1 = 0;
-	k.n0 = hash64 ( (char *)termIds , n * sizeof(long long) );
+	k.n0 = hash64 ( (char *)termIds , n * sizeof(int64_t) );
 	k.n0 = hash64 ( (char *)signs   , n , k.n0 );
 	// user defined weights, for weighting each query term separately
-	for ( long i = 0 ; i < n ; i++ ) {
+	for ( int32_t i = 0 ; i < n ; i++ ) {
 		k.n0 = hash64 ((char *)&m_q.m_qterms[i].m_userWeight,4, k.n0);
 		k.n0 = hash64 ((char *)&m_q.m_qterms[i].m_userType  ,1, k.n0);
 	}
@@ -90,11 +90,11 @@ key_t SearchInput::makeKey ( ) {
 	// . nnot incuding m_docsToScanForTopics since since we got TopicGroups
 	char *a = ((char *)&m_START) + 4 ; // msg40->m_dpf;
 	char *b =  (char *)&m_END_HASH   ; // msg40->m_topicGroups;
-	long size = b - a; 
+	int32_t size = b - a; 
 	// push and flush some parms that should not contribute
-	//long save1 = m_refs_numToDisplay;
-	//long save2 = m_rp_numToDisplay;
-	//long save3 = m_numTopicsToDisplay;
+	//int32_t save1 = m_refs_numToDisplay;
+	//int32_t save2 = m_rp_numToDisplay;
+	//int32_t save3 = m_numTopicsToDisplay;
 	//m_refs_numToDisplay  = 0;
 	//m_rp_numToDisplay    = 0;
 	//m_numTopicsToDisplay = 0;
@@ -105,7 +105,7 @@ key_t SearchInput::makeKey ( ) {
 	//m_rp_numToDisplay    = save2;
 	//m_numTopicsToDisplay = save3;
 	// hash each topic group
-	for ( long i = 0 ; i < m_numTopicGroups ; i++ ) {
+	for ( int32_t i = 0 ; i < m_numTopicGroups ; i++ ) {
 		TopicGroup *t = &m_topicGroups[i];
 		//k.n0 = hash64 ( t->m_numTopics           , k.n0 );
 		k.n0 = hash64 ( t->m_maxTopics           , k.n0 );
@@ -122,7 +122,7 @@ key_t SearchInput::makeKey ( ) {
 	// . so just hash the whole damn query
 	if ( m_q.m_isBoolean ) {
 		char *q    = m_q.getQuery();
-		long  qlen = m_q.getQueryLen();
+		int32_t  qlen = m_q.getQueryLen();
 		k.n0 = hash64 ( q , qlen , k.n0 );
 	}
 
@@ -131,11 +131,11 @@ key_t SearchInput::makeKey ( ) {
 	//k.n0 = hash64(m_defaultSortCountry , m_defaultSortCountryLen , k.n0);
 
 	// debug
-	//logf(LOG_DEBUG,"query: q=%s k.n0=%llu",m_q.getQuery(),k.n0);
+	//logf(LOG_DEBUG,"query: q=%s k.n0=%"UINT64"",m_q.getQuery(),k.n0);
 
 	//Msg1aParms* m1p = msg40->getReferenceParms();
 	//if( m1p ) {
-	//	k.n0=hash64(((char*)m1p)+sizeof(long), 
+	//	k.n0=hash64(((char*)m1p)+sizeof(int32_t), 
 	//		    sizeof(Msg1aParms)-8,k.n0);
 	//}
 	return k;
@@ -145,24 +145,24 @@ void SearchInput::test ( ) {
 	// set all to 0 just to avoid any inconsistencies
 	char *a = ((char *)&m_START) + 4 ; // msg40->m_dpf;
 	char *b =  (char *)&m_END_TEST;
-	long size = b - a;
+	int32_t size = b - a;
 	memset ( a , 0x00 , size );
 	// loop through all possible cgi parms to set SearchInput
-	for ( long i = 0 ; i < g_parms.m_numSearchParms ; i++ ) {
+	for ( int32_t i = 0 ; i < g_parms.m_numSearchParms ; i++ ) {
 		Parm *m = g_parms.m_searchParms[i];
 		char *x = (char *)this + m->m_off;
-		if ( m->m_type != TYPE_BOOL ) *(long *)x = 0xffffffff;
+		if ( m->m_type != TYPE_BOOL ) *(int32_t *)x = 0xffffffff;
 		else                          *(char *)x = 0xff;
 	}
 	// ensure we're all zeros now!
-	long fix = a - (char *)this;
+	int32_t fix = a - (char *)this;
 	unsigned char *p = (unsigned char *)a;
-	for ( long i = 0 ; i < size ; i++ ) {
+	for ( int32_t i = 0 ; i < size ; i++ ) {
 		if ( p[i] == 0xff ) continue;
 		// find it
-		long off = i + fix;
+		int32_t off = i + fix;
 		char *name = NULL; // "unknown";
-		for ( long k = 0 ; k < g_parms.m_numSearchParms ; k++ ) {
+		for ( int32_t k = 0 ; k < g_parms.m_numSearchParms ; k++ ) {
 			Parm *m = g_parms.m_searchParms[k];
 			if ( m->m_off != off ) continue;
 			name = m->m_title;
@@ -170,12 +170,12 @@ void SearchInput::test ( ) {
 		}
 		if ( ! name ) continue;
 		log("query: Got uncovered SearchInput parm at offset "
-		    "%li in SearchInput. name=%s.",off,name);
+		    "%"INT32" in SearchInput. name=%s.",off,name);
 	}
 }
 
 void SearchInput::copy ( class SearchInput *si ) {
-	memcpy ( (char *)this , (char *)si , sizeof(SearchInput) );
+	gbmemcpy ( (char *)this , (char *)si , sizeof(SearchInput) );
 }
 
 class SearchInput *g_si = NULL;
@@ -213,7 +213,7 @@ bool SearchInput::set ( TcpSocket *sock , HttpRequest *r ) { //, Query *q ) {
 	// use those to make collections. hack for diffbot.
 	char *token = r->getString("token",NULL);
 	// find all collections under this token
-	for ( long i = 0 ; i < g_collectiondb.m_numRecs ; i++ ) {
+	for ( int32_t i = 0 ; i < g_collectiondb.m_numRecs ; i++ ) {
 		// must not have a "&c="
 		if ( p ) break;
 		// must have a "&token="
@@ -296,8 +296,9 @@ bool SearchInput::set ( TcpSocket *sock , HttpRequest *r ) { //, Query *q ) {
 	// must have had one
 	if ( ! cr ) {
 		log("si: si. collection does not exist");
-		//g_errno = ENOCOLLREC;
-		//return false;
+		// if we comment the below out then it cores in setToDefault!
+		g_errno = ENOCOLLREC;
+		return false;
 	}
 
 	// and set from the http request. will set m_coll, etc.
@@ -357,9 +358,11 @@ bool SearchInput::set ( TcpSocket *sock , HttpRequest *r ) { //, Query *q ) {
 	//
 	//////
 
-	// set m_isRootAdmin to zero if no correct ip or password
-	if ( ! g_conf.isRootAdmin ( sock , &m_hr ) ) m_isRootAdmin = 0;
+	// set m_isMasterAdmin to zero if no correct ip or password
+	if ( ! g_conf.isMasterAdmin ( sock , &m_hr ) ) m_isMasterAdmin = 0;
 
+	// collection admin?
+	m_isCollAdmin = g_conf.isCollAdmin ( sock , &m_hr );
 
 	//////////////////////////////////////
 	//
@@ -368,7 +371,7 @@ bool SearchInput::set ( TcpSocket *sock , HttpRequest *r ) { //, Query *q ) {
 	//////////////////////////////////////
 
 	// allow for "qlang" if still don't have it
-	//long gglen2;
+	//int32_t gglen2;
 	//char *gg2 = r->getString ( "qlang" , &gglen2 , NULL );
 	//if ( m_gblang == 0 && gg2 && gglen2 > 1 )
 	//	m_gblang = getLanguageFromAbbr(gg2);
@@ -422,7 +425,7 @@ bool SearchInput::set ( TcpSocket *sock , HttpRequest *r ) { //, Query *q ) {
 	//char *qs1 = m_defaultSortLanguage;
 
 	// this overrides though
-	//long qlen2;
+	//int32_t qlen2;
 	//char *qs2 = r->getString ("qlang",&qlen2,NULL);
 	//if ( qs2 ) qs1 = qs2;
 	
@@ -432,18 +435,35 @@ bool SearchInput::set ( TcpSocket *sock , HttpRequest *r ) { //, Query *q ) {
 
 	//char *qs1 = getLangAbbr(m_queryLang);
 
-	log("query: using default lang of %s",m_defaultSortLang);
+	// this parm is in Parms.cpp and should be set
+	char *langAbbr = m_defaultSortLang;
+
+	// Parms.cpp sets it to an empty string, so make that null
+	// if Parms.cpp set it to NULL it seems it comes out as "(null)"
+	// i guess because we sprintf it or something.
+	if ( langAbbr && langAbbr[0] == '\0' )
+		langAbbr = NULL;
+
+	// if &qlang was not given explicitly fall back to coll rec
+	if ( cr && ! langAbbr )
+		langAbbr = cr->m_defaultSortLanguage2;
+
+	// if no coll rec use language unknown
+	if ( ! langAbbr )
+		langAbbr = "xx";
+
+	log(LOG_INFO,"query: using default lang of %s", langAbbr );
 
 	// get code
-	m_queryLangId = getLangIdFromAbbr ( m_defaultSortLang );
+	m_queryLangId = getLangIdFromAbbr ( langAbbr );
 
 	// allow for 'xx', which means langUnknown
-	if ( m_defaultSortLang && 
-	     m_defaultSortLang[0] && 
-	     m_defaultSortLang[0]!='x' && 
-	     m_queryLangId == langUnknown )
-		log("query: qlang of \"%s\" is NOT SUPPORTED",
-		    m_defaultSortLang);
+	if ( m_queryLangId == langUnknown &&
+	     langAbbr &&
+	     langAbbr[0] &&
+	     langAbbr[0]!='x' )
+		log("query: qlang of \"%s\" is NOT SUPPORTED. using "
+		    "langUnknown, \"xx\".",langAbbr);
 
 	// . the query to use for highlighting... can be overriden with "hq"
 	// . we need the language id for doing synonyms
@@ -455,7 +475,10 @@ bool SearchInput::set ( TcpSocket *sock , HttpRequest *r ) { //, Query *q ) {
 		m_hqq.set2 ( m_query , m_queryLangId , true );
 
 	// log it here
-	log("query: got query %s",m_sbuf1.getBufStart());
+	log(LOG_INFO,
+	    "query: got query %s (len=%i)"
+	    ,m_sbuf1.getBufStart()
+	    ,m_sbuf1.length());
 
 	// . now set from m_qbuf1, the advanced/composite query buffer
 	// . returns false and sets g_errno on error (ETOOMANYOPERANDS)
@@ -465,6 +488,8 @@ bool SearchInput::set ( TcpSocket *sock , HttpRequest *r ) { //, Query *q ) {
 		g_msg = " (error: query has too many operands)";
 		return false;
 	}
+
+	m_q.m_containingParent = (void *)this;
 
 	if ( m_q.m_truncated && m_q.m_isBoolean ) {
 		g_errno = EQUERYTOOBIG;
@@ -580,10 +605,10 @@ bool SearchInput::setQueryBuffers ( HttpRequest *hr ) {
 	m_sbuf2.reset();
 	m_sbuf3.reset();
 
-	short qcs = csUTF8;
+	int16_t qcs = csUTF8;
 	if (m_queryCharset && m_queryCharset[0]){
 		// we need to convert the query string to utf-8
-		long qclen = gbstrlen(m_queryCharset);
+		int32_t qclen = gbstrlen(m_queryCharset);
 		qcs = get_iana_charset(m_queryCharset, qclen );
 		if (qcs == csUnknown) {
 			//g_errno = EBADCHARSET;
@@ -593,7 +618,7 @@ bool SearchInput::setQueryBuffers ( HttpRequest *hr ) {
 		}
 	}
 	// prepend sites terms
-	long numSites = 0;
+	int32_t numSites = 0;
 	char *csStr = NULL;
 	numSites = 0;
 	csStr = get_charset_str(qcs);
@@ -602,7 +627,7 @@ bool SearchInput::setQueryBuffers ( HttpRequest *hr ) {
 	if ( m_sites && m_sites[0] ) {
 		char *s = m_sites;
 		char *t;
-		long  len;
+		int32_t  len;
 		m_sbuf1.pushChar('(');// *p++ = '(';
 	loop:
 		// skip white space
@@ -619,7 +644,7 @@ bool SearchInput::setQueryBuffers ( HttpRequest *hr ) {
 		m_sbuf1.safeStrcpy ( "site:" );
 		//p += ucToUtf8(p, pend-p,s, len, csStr, 0,0);
 		m_sbuf1.safeMemcpy ( s , len );
-		//memcpy ( p , s , len     ); p += len;
+		//gbmemcpy ( p , s , len     ); p += len;
 		// *p++ = ' ';
 		m_sbuf1.pushChar(' ');
 		s = t;
@@ -637,27 +662,68 @@ bool SearchInput::setQueryBuffers ( HttpRequest *hr ) {
 	if( qp && qp[0] ) {
 		//if( p > pstart ) *p++ =  ' ';
 		if ( m_sbuf1.length() ) m_sbuf1.pushChar(' ');
-		//p += sprintf( p, "+gblang:%li |", m_gblang );
+		//p += sprintf( p, "+gblang:%"INT32" |", m_gblang );
 		m_sbuf1.safePrintf( "%s", qp );
 	}
 
+	// boolean OR terms
+	bool boolq = false;
+	char *any = hr->getString("any",NULL);
+	bool first = true;
+	if ( any ) {
+		char *s = any;
+		char *send = any + gbstrlen(any);
+	 	if ( m_sbuf1.length() ) m_sbuf1.pushChar(' ');
+	 	if ( m_sbuf2.length() ) m_sbuf2.pushChar(' ');
+		while (s < send) {
+			while (isspace(*s) && s < send) s++;
+			char *s2 = s+1;
+			if (*s == '\"') {
+				// if there's no closing quote just treat
+				// the end of the line as such
+				while (*s2 != '\"' && s2 < send) s2++;
+				if (s2 < send) s2++;
+			} else {
+				while (!isspace(*s2) && s2 < send) s2++;
+			}
+			if ( first ) m_sbuf1.safeStrcpy("(");
+			if ( first ) m_sbuf2.safeStrcpy("(");
+			if ( ! first ) m_sbuf1.safeStrcpy(" OR ");
+			if ( ! first ) m_sbuf2.safeStrcpy(" OR ");
+			first = false;
+			m_sbuf1.safeMemcpy ( s , s2 - s );
+			m_sbuf2.safeMemcpy ( s , s2 - s );
+			s = s2 + 1;
+		}
+	}
+	if ( ! first ) m_sbuf1.safeStrcpy(") AND ");
+	if ( ! first ) m_sbuf2.safeStrcpy(") AND ");
+	if ( ! first ) boolq = true;
+
+
+
 	// and this
 	if ( m_secsBack > 0 ) {
-		long timestamp = getTimeGlobalNoCore();
+		int32_t timestamp = getTimeGlobalNoCore();
 		timestamp -= m_secsBack;
 		if ( timestamp <= 0 ) timestamp = 0;
 		if ( m_sbuf1.length() ) m_sbuf1.pushChar(' ');
-		m_sbuf1.safePrintf("gbminint:gbspiderdate:%lu",timestamp);
+		m_sbuf1.safePrintf("gbminint:gbspiderdate:%"UINT32"",timestamp);
 	}
 
 	if ( m_sortBy == 1 ) {
 		if ( m_sbuf1.length() ) m_sbuf1.pushChar(' ');
-		m_sbuf1.safePrintf("gbsortby:gbspiderdate");
+		m_sbuf1.safePrintf("gbsortbyint:gbspiderdate");
 	}
 
 	if ( m_sortBy == 2 ) {
 		if ( m_sbuf1.length() ) m_sbuf1.pushChar(' ');
-		m_sbuf1.safePrintf("gbrevsortby:gbspiderdate");
+		m_sbuf1.safePrintf("gbrevsortbyint:gbspiderdate");
+	}
+
+	if ( m_sortBy == 3 ) {
+		if ( m_sbuf1.length() ) m_sbuf1.pushChar(' ');
+		m_sbuf1.safePrintf("gbsortbyint:gbsitenuminlinks");
 	}
 
 	char *ft = m_filetype;
@@ -669,9 +735,9 @@ bool SearchInput::setQueryBuffers ( HttpRequest *hr ) {
 	}
 
 	// facet prepend en masse
-	// for ( long i = 1 ; i <= 6 ; i++ ) {
+	// for ( int32_t i = 1 ; i <= 6 ; i++ ) {
 	// 	char tmp[12];
-	// 	sprintf(tmp,"facet%li",i);
+	// 	sprintf(tmp,"facet%"INT32"",i);
 	// 	char *ff = hr->getString(tmp,NULL);
 	// 	if ( ! ff ) continue;
 	// 	if ( m_sbuf1.length() ) m_sbuf1.pushChar(' ');
@@ -694,36 +760,65 @@ bool SearchInput::setQueryBuffers ( HttpRequest *hr ) {
 	// }
 
 	if ( m_familyFilter ) {
-		if ( m_sbuf1.length() ) m_sbuf1.pushChar(' ');
-		m_sbuf1.safePrintf("gbisadult:0 | ");
+	 	if ( m_sbuf1.length() ) m_sbuf1.pushChar(' ');
+	 	//if ( m_sbuf2.length() ) m_sbuf2.pushChar(' ');
+	 	m_sbuf1.safePrintf( "+gbisadult:0");
+	 	//m_sbuf2.safePrintf( "+gbisadult:0");
+		if ( ! boolq ) {
+			m_sbuf1.safeStrcpy(" |");
+			//m_sbuf2.safeStrcpy(" |");
+		}
+		else {
+			m_sbuf1.safeStrcpy(" AND ");
+			//m_sbuf2.safeStrcpy(" AND ");
+		}
+
 	}
 
-	// append gblang: term
-	// if( m_gblang > 0 ) {
-	// 	//if( p > pstart ) *p++ =  ' ';
-	// 	if ( m_sbuf1.length() ) m_sbuf1.pushChar(' ');
-	// 	//p += sprintf( p, "+gblang:%li |", m_gblang );
-	// 	m_sbuf1.safePrintf( "+gblang:%li |", m_gblang );
-	// }
-	// bookmark here so we can copy into st->m_displayQuery below
-	//long displayQueryOffset = m_sbuf1.length();
-	// append url: term
-	if ( m_url && m_url[0] ) {
-		//if ( p > pstart ) *p++ = ' ';
-		if ( m_sbuf1.length() ) m_sbuf1.pushChar(' ');
-		//memcpy ( p , "+url:" , 5 ); p += 5;
-		m_sbuf1.safeStrcpy ( "+url:");
-		//memcpy ( p , m_url , m_urlLen ); p += m_urlLen;
-		m_sbuf1.safeStrcpy ( m_url );
+	// PRE-pend gblang: term
+	int32_t gblang = hr->getLong("gblang",-1);
+	if( gblang >= 0 ) {
+	 	if ( m_sbuf1.length() ) m_sbuf1.pushChar(' ');
+	 	if ( m_sbuf2.length() ) m_sbuf2.pushChar(' ');
+	 	m_sbuf1.safePrintf( "+gblang:%"INT32"", gblang );
+	 	m_sbuf2.safePrintf( "+gblang:%"INT32"", gblang );
+		if ( ! boolq ) {
+			m_sbuf1.safeStrcpy(" |");
+			m_sbuf2.safeStrcpy(" |");
+		}
+		else {
+			m_sbuf1.safeStrcpy(" AND ");
+			m_sbuf2.safeStrcpy(" AND ");
+		}
 	}
+
+	// bookmark here so we can copy into st->m_displayQuery below
+	//int32_t displayQueryOffset = m_sbuf1.length();
+	// append url: term
+	// if ( m_url && m_url[0] ) {
+	// 	//if ( p > pstart ) *p++ = ' ';
+	// 	if ( m_sbuf1.length() ) m_sbuf1.pushChar(' ');
+	// 	//gbmemcpy ( p , "+url:" , 5 ); p += 5;
+	// 	m_sbuf1.safeStrcpy ( "+url:");
+	// 	//gbmemcpy ( p , m_url , m_urlLen ); p += m_urlLen;
+	// 	m_sbuf1.safeStrcpy ( m_url );
+	// }
 	// append url: term
 	if ( m_link && m_link[0] ) {
-		//if ( p > pstart ) *p++ = ' ';
-		if ( m_sbuf1.length() ) m_sbuf1.pushChar(' ');
-		//memcpy ( p , "+link:" , 6 ); p += 6;
+	 	if ( m_sbuf1.length() ) m_sbuf1.pushChar(' ');
+	 	if ( m_sbuf2.length() ) m_sbuf2.pushChar(' ');
 		m_sbuf1.safeStrcpy ( "+link:");
-		//memcpy ( p , m_link , m_linkLen ); p += m_linkLen;
+		m_sbuf2.safeStrcpy ( "+link:");
 		m_sbuf1.safeStrcpy ( m_link );
+		m_sbuf2.safeStrcpy ( m_link );
+		if ( ! boolq ) {
+			m_sbuf1.safeStrcpy(" |");
+			m_sbuf2.safeStrcpy(" |");
+		}
+		else {
+			m_sbuf1.safeStrcpy(" AND ");
+			m_sbuf2.safeStrcpy(" AND ");
+		}
 	}
 	// append the natural query
 	if ( m_query && m_query[0] ) {
@@ -731,13 +826,13 @@ bool SearchInput::setQueryBuffers ( HttpRequest *hr ) {
 		if ( m_sbuf1.length() ) m_sbuf1.pushChar(' ');
 		//p += ucToUtf8(p, pend-p, m_query, m_queryLen, csStr, 0,0);
 		m_sbuf1.safeStrcpy ( m_query );
-		//memcpy ( p  , m_query , m_queryLen ); p  += m_queryLen;
+		//gbmemcpy ( p  , m_query , m_queryLen ); p  += m_queryLen;
 		// add to spell checked buf, too		
 		//if ( p2 > pstart2 ) *p2++ = ' ';
 		if ( m_sbuf2.length() ) m_sbuf2.pushChar(' ');
 		//p2 +=ucToUtf8(p2, pend2-p2, m_query, m_queryLen, csStr, 0,0);
 		m_sbuf2.safeStrcpy ( m_query );
-		//memcpy ( p2 , m_query , m_queryLen ); p2 += m_queryLen;
+		//gbmemcpy ( p2 , m_query , m_queryLen ); p2 += m_queryLen;
 	}
 	// if ( m_query2 && m_query2[0] ) {
 	// 	//if ( p3 > pstart3 ) *p3++ = ' ';
@@ -757,10 +852,17 @@ bool SearchInput::setQueryBuffers ( HttpRequest *hr ) {
 		if ( m_sbuf1.length() ) m_sbuf1.pushChar(' ');
 		//*p++ = '+';
 		//*p++ = '\"';
-		m_sbuf1.safeStrcpy("+\"");
+		if ( ! boolq ) {
+			m_sbuf1.safeStrcpy(" +\"");
+			m_sbuf2.safeStrcpy(" +\"");
+		}
+		else {
+			m_sbuf1.safeStrcpy(" AND \"");
+			m_sbuf2.safeStrcpy(" AND \"");
+		}
 		//p += ucToUtf8(p, pend-p, m_quote1, m_quoteLen1, csStr, 0,0);
 		m_sbuf1.safeStrcpy ( m_quote1 );
-		//memcpy ( p , m_quote1 , m_quoteLen1 ); p += m_quoteLen1 ;
+		//gbmemcpy ( p , m_quote1 , m_quoteLen1 ); p += m_quoteLen1 ;
 		//*p++ = '\"';
 		m_sbuf1.safeStrcpy("\"");
 		// add to spell checked buf, too
@@ -768,10 +870,9 @@ bool SearchInput::setQueryBuffers ( HttpRequest *hr ) {
 		if ( m_sbuf2.length() ) m_sbuf2.pushChar(' ');
 		//*p2++ = '+';
 		//*p2++ = '\"';
-		m_sbuf2.safeStrcpy("+\"");
 		//p2+=ucToUtf8(p2, pend2-p2, m_quote1, m_quoteLen1, csStr,0,0);
 		m_sbuf2.safeStrcpy ( m_quote1 );
-		//memcpy ( p2 , m_quote1 , m_quoteLen1 ); p2 += m_quoteLen1 ;
+		//gbmemcpy ( p2 , m_quote1 , m_quoteLen1 ); p2 += m_quoteLen1 ;
 		//*p2++ = '\"';
 		m_sbuf2.safeStrcpy("\"");
 	}
@@ -785,10 +886,20 @@ bool SearchInput::setQueryBuffers ( HttpRequest *hr ) {
 		if ( m_sbuf1.length() ) m_sbuf1.pushChar(' ');
 		//*p++ = '+';
 		//*p++ = '\"';
-		m_sbuf1.safeStrcpy("+\"");
+
+		if ( ! boolq ) {
+			m_sbuf1.safeStrcpy(" +\"");
+			m_sbuf2.safeStrcpy(" +\"");
+		}
+		else {
+			m_sbuf1.safeStrcpy(" AND \"");
+			m_sbuf2.safeStrcpy(" AND \"");
+		}
+
+		//m_sbuf1.safeStrcpy("+\"");
 		//p += ucToUtf8(p, pend-p, m_quote2, m_quoteLen2, csStr, 0,0);
 		m_sbuf1.safeStrcpy ( m_quote2 );
-		//memcpy ( p , m_quote2 , m_quoteLen2 ); p += m_quoteLen2 ;
+		//gbmemcpy ( p , m_quote2 , m_quoteLen2 ); p += m_quoteLen2 ;
 		//*p++ = '\"';
 		m_sbuf1.safeStrcpy("\"");
 		// add to spell checked buf, too
@@ -796,10 +907,10 @@ bool SearchInput::setQueryBuffers ( HttpRequest *hr ) {
 		if ( m_sbuf2.length() ) m_sbuf2.pushChar(' ');
 		//*p2++ = '+';
 		//*p2++ = '\"';
-		m_sbuf2.safeStrcpy("+\"");
+		//m_sbuf2.safeStrcpy("+\"");
 		//p2+=ucToUtf8(p2, pend2-p2, m_quote2, m_quoteLen2, csStr,0,0);
 		m_sbuf2.safeStrcpy ( m_quote2 );
-		//memcpy ( p2 , m_quote2 , m_quoteLen2 ); p2 += m_quoteLen2 ;
+		//gbmemcpy ( p2 , m_quote2 , m_quoteLen2 ); p2 += m_quoteLen2 ;
 		//*p2++ = '\"';
 		m_sbuf2.safeStrcpy("\"");
 	}
@@ -828,11 +939,20 @@ bool SearchInput::setQueryBuffers ( HttpRequest *hr ) {
 			} else {
 				while (!isspace(*s2) && s2 < send) s2++;
 			}
-			if (s2 < send) break;
+			//if (s2 < send) break;
 			//if (p < pend) *p++ = '+';
 			//if (p2 < pend2) *p2++ = '+';
-			m_sbuf1.pushChar('+');
-			m_sbuf2.pushChar('+');
+			//m_sbuf1.pushChar('+');
+			//m_sbuf2.pushChar('+');
+			if ( ! boolq ) {
+				m_sbuf1.safeStrcpy("+");
+				m_sbuf2.safeStrcpy("+");
+			}
+			else {
+				m_sbuf1.safeStrcpy(" AND ");
+				m_sbuf2.safeStrcpy(" AND ");
+			}
+
 			//p += ucToUtf8(p, pend-p, s, s2-s, csStr, 0,0);
 			//p2 += ucToUtf8(p2, pend2-p2, s, s2-s, csStr, 0,0);
 			m_sbuf1.safeMemcpy ( s , s2 - s );
@@ -882,8 +1002,18 @@ bool SearchInput::setQueryBuffers ( HttpRequest *hr ) {
 			if (s2 < send) break;
 			//if (p < pend) *p++ = '-';
 			//if (p2 < pend2) *p2++ = '-';
-			m_sbuf1.pushChar('-');
-			m_sbuf2.pushChar('-');
+			// m_sbuf1.pushChar('-');
+			// m_sbuf2.pushChar('-');
+
+			if ( ! boolq ) {
+				m_sbuf1.safeStrcpy("-");
+				m_sbuf2.safeStrcpy("-");
+			}
+			else {
+				m_sbuf1.safeStrcpy(" AND NOT ");
+				m_sbuf2.safeStrcpy(" AND NOT ");
+			}
+
 			//p += ucToUtf8(p, pend-p, s, s2-s, csStr, 0,0);
 			//p2 += ucToUtf8(p2, pend2-p2, s, s2-s, csStr, 0,0);
 			m_sbuf1.safeMemcpy ( s , s2 - s );
@@ -911,21 +1041,21 @@ bool SearchInput::setQueryBuffers ( HttpRequest *hr ) {
 		}
 	}
 	// append gbkeyword:numinlinks if they have &mininlinks=X, X>0
-	long minInlinks = m_hr.getLong("mininlinks",0);
+	int32_t minInlinks = m_hr.getLong("mininlinks",0);
 	if ( minInlinks > 0 ) {
 		//if ( p > pstart ) *p++ = ' ';
 		if ( m_sbuf1.length() ) m_sbuf1.pushChar(' ');
 		//char *str = "gbkeyword:numinlinks";
-		//long  len = gbstrlen(str);
-		//memcpy ( p , str , len );
+		//int32_t  len = gbstrlen(str);
+		//gbmemcpy ( p , str , len );
 		//p += len;
 		m_sbuf1.safePrintf ( "gbkeyword:numinlinks");
 	}
 
 	// null terms
-	if ( ! m_sbuf1.pushChar('\0') ) return false;
-	if ( ! m_sbuf2.pushChar('\0') ) return false;
-	if ( ! m_sbuf3.pushChar('\0') ) return false;
+	if ( ! m_sbuf1.nullTerm() ) return false;
+	if ( ! m_sbuf2.nullTerm() ) return false;
+	if ( ! m_sbuf3.nullTerm() ) return false;
 
 	// the natural query
 	m_displayQuery = m_sbuf2.getBufStart();// + displayQueryOffset;
@@ -958,15 +1088,15 @@ bool SearchInput::setQueryBuffers ( HttpRequest *hr ) {
 	// "gbcatid:<catid>"    (DMOZ urls in that topic, c=dmoz3)
 	//
 	//////////
-	long pcatId = -1;
-	long dcatId  = -1;
+	int32_t pcatId = -1;
+	int32_t dcatId  = -1;
 	// get the final query
 	char *q =m_sbuf1.getBufStart();
 
-	if ( q ) sscanf(q,"gbpcatid:%li",&pcatId);
-	if ( q ) sscanf(q,"gbcatid:%li",&dcatId);
+	if ( q ) sscanf(q,"gbpcatid:%"INT32"",&pcatId);
+	if ( q ) sscanf(q,"gbcatid:%"INT32"",&dcatId);
 	// pick the one that is valid
-	long catId = -1;
+	int32_t catId = -1;
 	if ( pcatId >= 0 ) catId = pcatId;
 	if ( dcatId >= 0 ) catId = dcatId;
 	

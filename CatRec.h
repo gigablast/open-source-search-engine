@@ -37,7 +37,7 @@ class CatRec {
 	// . extract the filenum of the file that holds the xml we want
 	// . returns false and sets errno on error setting
 	// . if rec is NULL we use the default rec for this collection
-	bool set ( Url *url, char *data,long dataSize,
+	bool set ( Url *url, char *data,int32_t dataSize,
 		   bool gotByIp ); // , char rdbId = RDB_TAGDB );
 
 	// we're empty if m_xml is NULL
@@ -47,10 +47,10 @@ class CatRec {
 	// . serializes filenum/site into our m_data/m_dataSize
 	// . returns false and sets errno on error
 	/*
-	bool set ( Url *site , char *coll , long collLen , long filenum ,
-		   char  version , char rdbId = RDB_TAGDB , long timeStamp = 0,
+	bool set ( Url *site , char *coll , int32_t collLen , int32_t filenum ,
+		   char  version , char rdbId = RDB_TAGDB , int32_t timeStamp = 0,
 		   char *comment = NULL, char *username = NULL,
-		   long *catids = NULL, unsigned char numCatids = 0, 
+		   int32_t *catids = NULL, unsigned char numCatids = 0, 
 		   unsigned char spamBits = 0, char siteQuality = 0, 
 		   char adultLevel = 0, 
 		   SiteType *siteTypes = NULL, 
@@ -58,22 +58,22 @@ class CatRec {
  		   SiteType *langs = NULL, 
  		   uint8_t numLangs = 0); 
 	*/
-	bool set ( Url *site , long filenum ,
-		   long *catids = NULL, unsigned char numCatids = 0 );
+	bool set ( Url *site , int32_t filenum ,
+		   int32_t *catids = NULL, unsigned char numCatids = 0 );
 
 	//Xml *getXml() { return m_xml; };
 
-	//bool set ( long filenum ) ;
+	//bool set ( int32_t filenum ) ;
 
 	//  . this method just sets the filenum, version, url and url-len from
 	//  data-pointer "data"
 	//  . this method is written as an alternative to the above set methods
 	//  Useful if the caller is interested just in the url and url len
 	//  saves time
-	bool set (char *data, long dataSize);//, char rdbId );
+	bool set (char *data, int32_t dataSize);//, char rdbId );
 
 	// set the indirect catids
-	void setIndirectCatids ( long *indCatids, long numIndCatids );
+	void setIndirectCatids ( int32_t *indCatids, int32_t numIndCatids );
 
 	// . did this url have an entry in tagdb?
 	// . we need this to know because if it didn't it will have default rec
@@ -89,11 +89,11 @@ class CatRec {
 
 	// get the record itself (just templateNum/site/coll)
 	char *getData     ( ) { return m_data; };
-	long  getDataSize ( ) { return m_dataSize; };
+	int32_t  getDataSize ( ) { return m_dataSize; };
 
 	// along with coll/collLen identifies a unique xml file
-	//long  getFilenum ( ) { return m_filenum; };
-	//long  getRuleset ( ) { return m_filenum; };
+	//int32_t  getFilenum ( ) { return m_filenum; };
+	//int32_t  getRuleset ( ) { return m_filenum; };
 	
 
 	// . these should both be NULL terminated
@@ -101,7 +101,7 @@ class CatRec {
 	//   or m_buf if the list doesn't have a site record for us
 	Url  *getSite          ( ) { return &m_site; };
 	//char *getCollection    ( ) { return  m_coll; };
-	//long  getCollectionLen ( ) { return  m_collLen; };
+	//int32_t  getCollectionLen ( ) { return  m_collLen; };
 
 	/*
 	char* printFormattedRec(char* p);
@@ -125,12 +125,12 @@ class CatRec {
 
 	char *getPubDateFmtStr();
 
-	long          getTimeStamp()   { return m_timeStamp; }
+	int32_t          getTimeStamp()   { return m_timeStamp; }
 	char         *getComment()     { return m_comment; }
 	char         *getUsername()    { return m_username; }
 	char          getSiteQuality() { return m_siteQuality; }
-	long          getNumSiteTypes  () { return m_numTypes; }
-	long          getNumSiteLangs  () { return m_numLangs; }
+	int32_t          getNumSiteTypes  () { return m_numTypes; }
+	int32_t          getNumSiteLangs  () { return m_numLangs; }
 	SiteType     *getSiteTypes  () { return m_siteTypes; }
 	SiteType     *getSiteLangs  () { return m_siteLangs; }
 	uint32_t      getScoreForType(uint8_t type);
@@ -138,63 +138,63 @@ class CatRec {
 	// . mod functions
 	// . pain in the butt cuz we gotta change m_data/m_dataSize buffer too
 	void          addSiteType    (uint8_t type, uint32_t score ) ;
-	void          setFilenum     (long newFilenum );
+	void          setFilenum     (int32_t newFilenum );
 
 	// . [n0,n1] constitute an xml node range in "xml"
 	// . "len" is the length of another node's data in another xml doc
 	// . gets the scoreWeight from docQuality and a node's dataLen
 	// . 2nd one gets the maxScore from docQuality
-	long getScoreWeightFromQuality ( long n0, long n1, long quality );
-	long getScoreWeightFromQuality2( long quality );
-	long getMaxScoreFromQuality    ( long n0, long n1, long quality );
-	long getMaxLenFromQuality      ( long n0, long n1, long quality );
+	int32_t getScoreWeightFromQuality ( int32_t n0, int32_t n1, int32_t quality );
+	int32_t getScoreWeightFromQuality2( int32_t quality );
+	int32_t getMaxScoreFromQuality    ( int32_t n0, int32_t n1, int32_t quality );
+	int32_t getMaxLenFromQuality      ( int32_t n0, int32_t n1, int32_t quality );
 
-	//bool hasMaxCountFromQualityTag ( long n0, long n1 ) ;
-	//long getMaxCountFromQuality    ( long n0, long n1, long quality ) ;
+	//bool hasMaxCountFromQualityTag ( int32_t n0, int32_t n1 ) ;
+	//int32_t getMaxCountFromQuality    ( int32_t n0, int32_t n1, int32_t quality ) ;
 
-	long getScoreWeightFromLen     ( long n0, long n1, long len );
-	long getScoreWeightFromLen2    ( long len );
-	long getScoreWeightFromNumWords( long n0, long n1, long len );
-	long getMaxScoreFromLen        ( long n0, long n1, long quality );
-	long getMaxScoreFromNumWords   ( long n0, long n1, long quality );
+	int32_t getScoreWeightFromLen     ( int32_t n0, int32_t n1, int32_t len );
+	int32_t getScoreWeightFromLen2    ( int32_t len );
+	int32_t getScoreWeightFromNumWords( int32_t n0, int32_t n1, int32_t len );
+	int32_t getMaxScoreFromLen        ( int32_t n0, int32_t n1, int32_t quality );
+	int32_t getMaxScoreFromNumWords   ( int32_t n0, int32_t n1, int32_t quality );
 
 	// 2 new maps for boosting base quality from link statistics
-	long getQualityBoostFromNumLinks       ( long numLinks );
-	long getQualityBoostFromLinkQualitySum ( long linkBaseQualitySum );
+	int32_t getQualityBoostFromNumLinks       ( int32_t numLinks );
+	int32_t getQualityBoostFromLinkQualitySum ( int32_t linkBaseQualitySum );
 
 	// 2 new maps for maxScore/scoreWeight of outgoing linkText
-	long getLinkTextScoreWeightFromLinkerQuality ( long quality );
-	long getLinkTextScoreWeightFromLinkeeQuality ( long quality );
-	long getLinkTextMaxScoreFromQuality    ( long quality );
-	long getLinkTextScoreWeightFromNumWords( long numWords );
+	int32_t getLinkTextScoreWeightFromLinkerQuality ( int32_t quality );
+	int32_t getLinkTextScoreWeightFromLinkeeQuality ( int32_t quality );
+	int32_t getLinkTextMaxScoreFromQuality    ( int32_t quality );
+	int32_t getLinkTextScoreWeightFromNumWords( int32_t numWords );
 
 
 	// . another new map for boosting quality from the link-adjusted 
 	//   quality of our root page
 	// . root page is just our site url (i.e. http://about.com/)
 	// . "rootQuality" is link-adjusted
-	long getQualityBoostFromRootQuality ( long rootQuality ) ;
+	int32_t getQualityBoostFromRootQuality ( int32_t rootQuality ) ;
 
-	long getQuotaBoostFromRootQuality ( long rootQuality ) ;
-	long getQuotaBoostFromQuality     ( long quality     ) ;
+	int32_t getQuotaBoostFromRootQuality ( int32_t rootQuality ) ;
+	int32_t getQuotaBoostFromQuality     ( int32_t quality     ) ;
 
 	// if X% of the words are spammed, consider ALL the words to be spammed
-	long getMaxPercentForSpamFromQuality ( long quality ) ;
+	int32_t getMaxPercentForSpamFromQuality ( int32_t quality ) ;
 
 //private:
 
 	// . parses and accesses a map/graph in the xml for us
 	// . returns default "def" if map not present or x's in map unordered
-	long getY (long n0,long n1,long X,char *strx,char *stry,long def) ;
+	int32_t getY (int32_t n0,int32_t n1,int32_t X,char *strx,char *stry,int32_t def) ;
 	*/
 
 	// these reference into m_data???
 	Url     m_site;
 	//char    m_coll[64];
-	//long    m_collLen;
+	//int32_t    m_collLen;
 
 	// filenum determines the xml uniquely
-	long    m_filenum;
+	int32_t    m_filenum;
 
 	// did this rec have it's own entry in tagdb?
 	bool    m_hadRec;
@@ -209,13 +209,13 @@ class CatRec {
 
 	// a buffer for holding the little site record itself
 	char    m_data[CATREC_BUF_SIZE];
-	long    m_dataSize;
+	int32_t    m_dataSize;
 
 	// category ID info for catdb
 	unsigned char  m_numCatids;
-	long          *m_catids;
-	long           m_numIndCatids;
-	long           m_indCatids[MAX_IND_CATIDS];
+	int32_t          *m_catids;
+	int32_t           m_numIndCatids;
+	int32_t           m_indCatids[MAX_IND_CATIDS];
 
 	// version
 	unsigned char m_version;
@@ -234,16 +234,16 @@ class CatRec {
 
 	// url pointer
 	char   *m_url;
-	long    m_urlLen;
+	int32_t    m_urlLen;
 
 	/*
 	// time stamp, comment, username
-	long    m_timeStamp;
+	int32_t    m_timeStamp;
 	char   *m_comment;
 	char   *m_username;
 
 	// hack for addSiteType()
-	long   *m_incHere;
+	int32_t   *m_incHere;
 	char   *m_addHere ;
 	// hack for changeFilenum()
 	char   *m_filenumPtr;
@@ -261,7 +261,7 @@ class CatRec {
 // ## all indexed terms will be preceeded by "collection:" when indexed so you
 // ## can do a search within that collection.
 // <comment>                  %s  </> 
-// ## <addedDate>                %s  </> (stored as a long)
+// ## <addedDate>                %s  </> (stored as a int32_t)
 // <allowMimeType>            %s  </> (text, html?) 
 // <allowExtension>           %s  </> (used iff allowAllExtensions is false)
 
@@ -291,8 +291,8 @@ class CatRec {
 // <minSpiderFrequency>       %i  </> (default 60*60*24*30=1month, in seconds)
 // <maxSpiderFrequency>       %i  </> (default 60*60*24*30=1month, in seconds)
 // <spiderLinks>              %b  </> (default true)
-// <spiderLinkPriority>       %li </> (0-7, default -1) -1 means prntPriorty-1
-// <spiderMaxPriority>        %li </> (0-7, default 7) 
+// <spiderLinkPriority>       %"INT32" </> (0-7, default -1) -1 means prntPriorty-1
+// <spiderMaxPriority>        %"INT32" </> (0-7, default 7) 
 
 
 // ## these are fairly self-explanatory

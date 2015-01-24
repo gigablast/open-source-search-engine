@@ -2,7 +2,7 @@
 
 #include "Strings.h"
 
-char *getString ( long i ) {
+char *getString ( int32_t i ) {
 
 	static char *s_nextp = NULL;
 	static char *s_nexti = -1;
@@ -27,7 +27,7 @@ char *getString ( long i ) {
 
 	// scan from beginning
 	char *p     = m_s;
-	long  count = 0;
+	int32_t  count = 0;
 	while ( p < m_end ) {
 		// break on match
 		if ( count == i ) break;

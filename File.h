@@ -31,15 +31,17 @@
 #include "Mem.h"             // for g_mem
 #include "Loop.h"            // for g_loop.setNonBlocking(int fd)
 
+int64_t getFileSize ( char *filename ) ;
+
 // for avoiding unlink/opens that mess up our threaded read
-long getCloseCount_r ( int fd );
+int32_t getCloseCount_r ( int fd );
 
 // prevent fd from being closed on us when we are writing
-void enterWriteMode ( long vfd ) ;
-void exitWriteMode  ( long vfd ) ;
+void enterWriteMode ( int32_t vfd ) ;
+void exitWriteMode  ( int32_t vfd ) ;
 // error correction routine used by BigFile.cpp
-void releaseVfd     ( long vfd ) ;
-int  getfdFromVfd   ( long vfd ) ;
+void releaseVfd     ( int32_t vfd ) ;
+int  getfdFromVfd   ( int32_t vfd ) ;
 
 class File {
 
@@ -73,7 +75,7 @@ class File {
 	char *getExtension ( ) ;
 	
 	// uses lseek to get file's current position
-	long getCurrentPos ( ) ;
+	int32_t getCurrentPos ( ) ;
 
 	// . open() returns true on success, false on failure, errno is set.
 	// . opens for reading/writing only
@@ -87,7 +89,7 @@ class File {
 	// . returns 0 on EOF
 	// . returns numBytesRead if not error
 	// . a negative offset means current read offset
-	int  read    ( void *buf , long size , long offset );
+	int  read    ( void *buf , int32_t size , int32_t offset );
 
 	// . use an offset of -1 to use current file seek position
 	// . returns what ::write returns
@@ -95,7 +97,7 @@ class File {
 	// . returns numBytesWritten if not error
 	// . this is non-blocking so may return < "numBytesToWrite"
 	// . a negative offset means current write offset
-	int  write   ( void *buf , long size , long offset );
+	int  write   ( void *buf , int32_t size , int32_t offset );
 
 	// . this will really close this file
 	bool close   ( );  
@@ -111,7 +113,7 @@ class File {
 	// . returns -1 on error
 	// . otherwise returns file size in bytes
 	// . returns 0 if does not exist
-	long getFileSize ( );
+	int64_t getFileSize ( );
 
 	// . when was it last touched?
 	time_t getLastModifiedTime ( );
@@ -120,7 +122,7 @@ class File {
 	// . returns  0 if does not exist
 	// . returns  1 if it exists
 	// . a simple stat check
-	long doesExist ( );
+	int32_t doesExist ( );
 
 	// . static so you don't need an instant of this class to call it
 	// . returns false and sets errno on error
@@ -129,7 +131,7 @@ class File {
 	// . file position seeking -- just a wrapper for lseek
 	// . returns -1 on error
 	// . used by reserve/write/read/getFileSize()
-	long lseek ( long offset , int whence = SEEK_SET );
+	int32_t lseek ( int32_t offset , int whence = SEEK_SET );
 
 	// . interface so BigFile and others can access the static member info
 	//char *getName        ( ) ;
@@ -158,9 +160,9 @@ class File {
 	// BigFile uses these when passing us to a thread for unlink/rename
 	// so it can store its THIS ptr and the i in BigFile::m_files[i]
 	void *m_this;
-	long  m_i;
+	int32_t  m_i;
 
-	long m_closeCount;
+	int32_t m_closeCount;
 
 	// private: 
 
@@ -178,7 +180,7 @@ class File {
 	int m_permissions;
 
 	time_t m_st_mtime;  // file last mod date
-	long   m_st_size;   // file size
+	int32_t   m_st_size;   // file size
 	time_t getLastModifiedDate ( ) ;
 };
 

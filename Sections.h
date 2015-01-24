@@ -205,7 +205,7 @@
 
 
 // flags for an Event/Sentence pair!!
-typedef long esflags_t;
+typedef int32_t esflags_t;
 #define EVSENT_DONOTPRINT          0x00000001
 #define EVSENT_GENERIC_PLUS_PLACE  0x00000002
 #define EVSENT_GENERIC_WORDS       0x00000004
@@ -226,28 +226,28 @@ typedef long esflags_t;
 #define NOINDEXFLAGS (SEC_SCRIPT|SEC_STYLE|SEC_SELECT)
 
 // the section type (bit flag vector for SEC_*) is currently 32 bits
-typedef long long sec_t;
-//typedef long long titleflags_t;
-typedef long long sentflags_t;
+typedef int64_t sec_t;
+//typedef int64_t titleflags_t;
+typedef int64_t sentflags_t;
 typedef uint32_t turkbits_t;
 
-bool  isPlaceIndicator ( long long *widp ) ;
+bool  isPlaceIndicator ( int64_t *widp ) ;
 char *getSentBitLabel ( sentflags_t sf ) ;
 char *getEventSentBitLabel ( esflags_t esflags ) ;
 char *getTurkBitLabel ( turkbits_t tb ) ;
 sentflags_t getMixedCaseFlags ( class Words *words , 
 				wbit_t *bits ,
-				long senta , 
-				long sentb , 
-				long niceness ) ;
-long hasTitleWords ( sentflags_t sflags ,
-		     long senta,
-		     long sentb,
-		     long alnumCount,
+				int32_t senta , 
+				int32_t sentb , 
+				int32_t niceness ) ;
+int32_t hasTitleWords ( sentflags_t sflags ,
+		     int32_t senta,
+		     int32_t sentb,
+		     int32_t alnumCount,
 		     class Bits *bits ,
 		     class Words *words ,
 		     bool useAsterisk ,
-		     long niceness );
+		     int32_t niceness );
 
 
 class Sectiondb {
@@ -265,20 +265,20 @@ class Sectiondb {
 	bool init ();
 
 	// init secondary/rebuild sectiondb
-	bool init2 ( long treeMem ) ;
+	bool init2 ( int32_t treeMem ) ;
 
 	Rdb *getRdb() { return &m_rdb; }
 
 	uint64_t getSiteHash ( void *k ) {
-		return ((*(unsigned long long *)(((char *)k)+8))) >> 16;};
+		return ((*(uint64_t *)(((char *)k)+8))) >> 16;};
 
 
 	uint32_t getSectionHash ( void *k ) {
-		return (*(unsigned long *)(((char *)k)+6)); }
+		return (*(uint32_t *)(((char *)k)+6)); }
 
 
-	long long getDocId ( void *k ) {
-		return ((*(unsigned long long *)k) >> 2) & DOCID_MASK; }
+	int64_t getDocId ( void *k ) {
+		return ((*(uint64_t *)k) >> 2) & DOCID_MASK; }
 
 
 	uint8_t getSectionType ( void *k ) {
@@ -318,12 +318,12 @@ class SectionStats {
 		m_totalDocIds   = 0;
 	};
 	// # of times xpath innerhtml matched ours. 1 count per docid max.
-	long long m_totalMatches;
+	int64_t m_totalMatches;
 	// # of times this xpath occurred. doc can have multiple times.
-	long long m_totalEntries;
+	int64_t m_totalEntries;
 	// # of unique vals this xpath had. doc can have multiple counts.
-	long long m_numUniqueVals;
-	long long m_totalDocIds;
+	int64_t m_numUniqueVals;
+	int64_t m_totalDocIds;
 };
 
 
@@ -379,10 +379,10 @@ public:
 	// contained in just this section. but you have to subtract one
 	// from m_firstPlaceNum to get the proper index into that array because
 	// we add one to it since 0 is the initial value.
-	long m_firstPlaceNum;
+	int32_t m_firstPlaceNum;
 
-	long m_votesForDup;
-	long m_votesForNotDup;
+	int32_t m_votesForDup;
+	int32_t m_votesForNotDup;
 	float getSectiondbVoteFactor ( ) {
 		// now punish if repeated on many page on the site
 		float a = (float)m_votesForNotDup;
@@ -397,44 +397,44 @@ public:
 
 	// position of the first and last alnum word contained directly OR
 	// indirectly in this section. use -1 if no text contained...
-	long m_firstWordPos;
-	long m_lastWordPos;
+	int32_t m_firstWordPos;
+	int32_t m_lastWordPos;
 
 	// alnum positions for words contained directly OR indirectly as well
-	long m_alnumPosA;
-	long m_alnumPosB;
+	int32_t m_alnumPosA;
+	int32_t m_alnumPosB;
 
 	// . for sentences that span multiple sections UNEVENLY
 	// . see aliconference.com and abqtango.com for this crazy things
 	// . for like 99% of all sections these guys equal m_firstWordPos and
 	//   m_lastWordPos respectively
-	long m_senta;
-	long m_sentb;
+	int32_t m_senta;
+	int32_t m_sentb;
 
 	// each sentence is numbered
-	//long m_sentNum;
+	//int32_t m_sentNum;
 
 	class Section *m_prevSent;
 	class Section *m_nextSent;
 
-	long m_phoneXor;
-	long m_emailXor;
-	long m_priceXor;
+	int32_t m_phoneXor;
+	int32_t m_emailXor;
+	int32_t m_priceXor;
 	// make this match Date::m_dateHash size
-	long m_todXor;
-	long m_dayXor;
-	long m_addrXor;
-	long m_monthXor;
-	long m_dowXor;
+	int32_t m_todXor;
+	int32_t m_dayXor;
+	int32_t m_addrXor;
+	int32_t m_monthXor;
+	int32_t m_dowXor;
 
 	// for Address.cpp setting place names
-	//long m_numStreets;
+	//int32_t m_numStreets;
 
 	// . if we are in a table, what position are we
 	// . starts at 1 and goes upwards
 	// . we start it at 1 so that way we know that 0 is invalid!
-	long m_rowNum;
-	long m_colNum;
+	int32_t m_rowNum;
+	int32_t m_colNum;
 	class Section *m_tableSec;
 
 	class Section *m_headColSection;
@@ -448,21 +448,21 @@ public:
 
 	// like above but for turk voting. includes hash of the class tag attr
 	// from m_turkBaseHash, whereas m_tagHash uses m_baseHash of parent.
-	unsigned long m_turkTagHash32;
+	uint32_t m_turkTagHash32;
 
 	// for debug output display of color coded nested sections
-	unsigned long m_colorHash;
+	uint32_t m_colorHash;
 
 	// like tag hash but only the tag ids, no hashed attributes or 
 	// virtual section base hashes
-	//long  m_formatHash;
+	//int32_t  m_formatHash;
 
 	// tagid of this section, 0 means none (like sentence section, etc.)
 	nodeid_t m_tagId;
 
 	/*
 	// used by addImpliedSections()
-	long getBaseHash2 ( ) { 
+	int32_t getBaseHash2 ( ) { 
 		// fix for funkefiredarts.com since one of the header tags
 		// has a different tag attribute, but it says "Monday". so
 		// treat all these special headers the same since it is
@@ -474,7 +474,7 @@ public:
 	};
 	*/
 
-	//long getBaseHash3 ();
+	//int32_t getBaseHash3 ();
 
 
 	// usually just the m_tagId, but hashes in the class attributes of
@@ -489,27 +489,27 @@ public:
 	uint32_t  m_xmlNameHash;
 
 	// these deal with enumertated tags and are used by Events.cpp
-	long  m_occNum;
-	long  m_numOccurences;
+	int32_t  m_occNum;
+	int32_t  m_numOccurences;
 	// section with same m_tagHash and before you
 	//class Section *m_prevSibling;
 
 	// used by XmlDoc.cpp to set a topological distance
-	long m_topDist;
-	//long m_sortedIndex;
+	int32_t m_topDist;
+	//int32_t m_sortedIndex;
 
 	// all the parent tags are enumerated, but the kid (youngest tag)
 	// is not enumerated
-	//long  m_enumTagHash;
+	//int32_t  m_enumTagHash;
 
 	// . tag hash which disregards non-breaking or tags with no back tags
 	// . used by Events.cpp
-	//long  m_hardTagHash;
+	//int32_t  m_hardTagHash;
 
 	// hash of all the alnum words DIRECTLY in this section
 	uint64_t  m_contentHash64;
 	// if section contains words indirectly, then store xor'ed wids in here
-	//long  m_contentHash2;
+	//int32_t  m_contentHash2;
 
 	uint64_t  m_sentenceContentHash64;
 
@@ -535,8 +535,8 @@ public:
 	//   so m_b-1 is the word # of the ending tag, BUT split sections
 	//   do not include ending tags!!! (i.e. <hr>, <br>, &bull, etc.)
 	//   that were made with a call to splitSection()
-	long  m_a;//wordStart;
-	long  m_b;//wordEnd;
+	int32_t  m_a;//wordStart;
+	int32_t  m_b;//wordEnd;
 
 	// for event titles and descriptions
 	//float m_titleScore;
@@ -548,42 +548,42 @@ public:
 	//turkbits_t m_turkBits;
 
 	// alnum count for us and all sections we contain
-	//long  m_alnumCount;
+	//int32_t  m_alnumCount;
 
 	// . # alnum words only in this and only this section
 	// . if we have none, we are SEC_NOTEXT
-	long  m_exclusive;
+	int32_t  m_exclusive;
 
 	// like above, but word must also NOT be in a hyperlink
-	//long  m_plain;
+	//int32_t  m_plain;
 
 	// Address.cpp uses this
 	//char     m_numBackToBackSubsections;
 	//nodeid_t m_lastTid;
 
 	// # of times this section appears in this doc
-	//long  m_totalOccurences; 
+	//int32_t  m_totalOccurences; 
 
 	// our depth. # of tags in the hash
-	long  m_depth;
+	int32_t  m_depth;
 
 	// container for the #define'd SEC_* values above
 	sec_t m_flags;
 
 	// used to mark it in Dates.cpp like a breadcrumb trail
-	long m_mark;
+	int32_t m_mark;
 
 	// Events.cpp assigns a date to each section
-	//long m_fullDate;
+	//int32_t m_fullDate;
 	//class Date *m_datePtr;
-	long m_firstDate;
+	int32_t m_firstDate;
 
 	//datetype_t m_hasType;
 	datetype_t m_dateBits;
 
 	char m_used;
 
-	//long m_numTods;
+	//int32_t m_numTods;
 
 	// the event section we contain. used by Events.cpp
 	//class Section *m_eventSec;
@@ -591,22 +591,22 @@ public:
 	// used by Events.cpp for determining what range of events a section
 	// contains. we store that range in Events::hash() when we index each
 	// word into datedb for events.
-	//long m_minEventId;
-	//long m_maxEventId;
+	//int32_t m_minEventId;
+	//int32_t m_maxEventId;
 
 	// used in Sections::splitSections() function
-	long m_processedHash;
+	int32_t m_processedHash;
 
-	long m_gbFrameNum;
+	int32_t m_gbFrameNum;
 
 	// . support event ids from 0 to 255
 	// . this increases the sizeof this class from 160 to 192 bytes
 	//char m_evIdBits[32];
 	// how many bits in the above array are set?
-	//short m_numEventIdBits;
+	//int16_t m_numEventIdBits;
 
 	/*
-	bool hasEventId ( long evId ) {
+	bool hasEventId ( int32_t evId ) {
 		// this is an overflow condition...
 		if ( evId > 255 ) return false;
 		// -1 or 0 means not associated with any event id since
@@ -618,7 +618,7 @@ public:
 		return m_evIdBits[evId/8] & bitMask;
 	};
 
-	void addEventId ( long eid ) {
+	void addEventId ( int32_t eid ) {
 		if ( eid >= 256 ) return;
 		unsigned char bitMask = 1 << (eid % 8);
 		unsigned char byteOff = eid / 8;
@@ -644,7 +644,7 @@ public:
 	};
 
 	// does this section contain the word #a?
-	bool contains2 ( long a ) { return ( m_a <= a && m_b > a ); };
+	bool contains2 ( int32_t a ) { return ( m_a <= a && m_b > a ); };
 
 	bool isVirtualSection ( ) ;
 };
@@ -672,10 +672,10 @@ class Sections {
 		   class Phrases  *phrases     ,
 		   class Bits     *bits        ,
 		   class Url      *url         ,
-		   long long       docId       ,
-		   long long       siteHash64  ,
+		   int64_t       docId       ,
+		   int64_t       siteHash64  ,
 		   char           *coll        ,
-		   long            niceness    ,
+		   int32_t            niceness    ,
 		   void           *state       ,
 		   void          (*callback)(void *state) ,
 		   uint8_t         contentType ,
@@ -685,7 +685,7 @@ class Sections {
 		   char           *sectionsData2,
 		   //uint64_t        tagPairHash ,
 		   char           *buf         ,
-		   long            bufSize     ) ;
+		   int32_t            bufSize     ) ;
 
 
 	bool addVotes(class SectionVotingTable *nsvt, uint32_t tagPairHash );
@@ -694,20 +694,20 @@ class Sections {
 
 	// . the start and end word # of the article range
 	// . all article content is in [start,end)
-	//void getArticleRange ( long *start , long *end );
+	//void getArticleRange ( int32_t *start , int32_t *end );
 
 	// add docid-based forced spider recs into the metalist
 	//char *respiderLineWaiters ( char *metaList    ,
 	//			    char *metaListEnd );
 				    // these are from the parent
 				    //Url  *url         ,
-				    //long  ip          ,
-				    //long  priority    ) ;
+				    //int32_t  ip          ,
+				    //int32_t  priority    ) ;
 
-	long getStoredSize ( ) ;
-	static long getStoredSize ( char *p ) ;
-	long serialize     ( char *p ) ;
-	//long getMemUsed ( ) { return m_sectionsBufSize; };
+	int32_t getStoredSize ( ) ;
+	static int32_t getStoredSize ( char *p ) ;
+	int32_t serialize     ( char *p ) ;
+	//int32_t getMemUsed ( ) { return m_sectionsBufSize; };
 
 	bool growSections ( );
 
@@ -732,13 +732,13 @@ class Sections {
 			  bool justEvents ) ;
 
 	bool swoggleTables ( ) ;
-	bool swoggleTable ( long dn , class Section *ts ) ;
+	bool swoggleTable ( int32_t dn , class Section *ts ) ;
 	
 	bool printVotingInfoInJSON ( SafeBuf *sb ) ;
 
 	bool print2 ( SafeBuf *sbuf ,
-		      long hiPos,
-		      long *wposVec,
+		      int32_t hiPos,
+		      int32_t *wposVec,
 		      char *densityVec,
 		      char *diversityVec,
 		      char *wordSpamVec,
@@ -755,8 +755,8 @@ class Sections {
 	//class HashTableX *m_at;
 	//class HashTableX *m_priceTable;
 
-	char *getSectionsReply ( long *size );
-	char *getSectionsVotes ( long *size );
+	char *getSectionsReply ( int32_t *size );
+	char *getSectionsVotes ( int32_t *size );
 
 	bool isHardSection ( class Section *sn );
 
@@ -770,7 +770,7 @@ class Sections {
 	bool setTableDateHeaders ( class Section *ts ) ;
 	bool setTableScanPtrs ( class Section *ts ) ;
 
-	void setHeader ( long r , class Section *first , sec_t flag ) ;
+	void setHeader ( int32_t r , class Section *first , sec_t flag ) ;
 
 	bool setHeadingBit ( ) ;
 
@@ -788,17 +788,17 @@ class Sections {
 	class Bits  *m_bits     ;
 	class Url   *m_url      ;
 	class Dates *m_dates    ;
-	long long    m_docId    ;
-	long long    m_siteHash64 ;
-	//long long    m_tagPairHash;
+	int64_t    m_docId    ;
+	int64_t    m_siteHash64 ;
+	//int64_t    m_tagPairHash;
 	char        *m_coll     ;
 	void        *m_state    ;
 	void       (*m_callback) ( void *state );
-	long         m_niceness ;
-	long         m_cpuNiceness ;	
+	int32_t         m_niceness ;
+	int32_t         m_cpuNiceness ;	
 	uint8_t      m_contentType;
 
-	long *m_wposVec;
+	int32_t *m_wposVec;
 	char *m_densityVec;
 	char *m_diversityVec;
 	char *m_wordSpamVec;
@@ -814,34 +814,34 @@ class Sections {
 
 	Msg0  m_msg0;
 	key128_t m_startKey;
-	long  m_recall;
+	int32_t  m_recall;
 	IndexList m_list;
-	long long m_termId;
+	int64_t m_termId;
 
-	long m_numLineWaiters;
+	int32_t m_numLineWaiters;
 	bool m_waitInLine;
-	long m_articleStartWord;
-	long m_articleEndWord;
-	//long m_totalSimilarLayouts;
+	int32_t m_articleStartWord;
+	int32_t m_articleEndWord;
+	//int32_t m_totalSimilarLayouts;
 	bool m_hadArticle;
-	long m_numInvalids;
-	long m_totalSiteVoters;
+	int32_t m_numInvalids;
+	int32_t m_totalSiteVoters;
 
-	long m_numAlnumWordsInArticle;
+	int32_t m_numAlnumWordsInArticle;
 
 	// word #'s (-1 means invalid)
-	long m_titleStart;
-	long m_titleEnd;
-	long m_titleStartAlnumPos;
+	int32_t m_titleStart;
+	int32_t m_titleEnd;
+	int32_t m_titleStartAlnumPos;
 
-	long m_numVotes;
+	int32_t m_numVotes;
 
 	// these are 1-1 with the Words::m_words[] array
 	class Section **m_sectionPtrs;
 	class Section **m_sectionPtrsEnd;
 
 	// save this too
-	long m_nw ;
+	int32_t m_nw ;
 
 	// new stuff
 	HashTableX m_ot;
@@ -852,18 +852,18 @@ class Sections {
 
 	// buf for serializing m_osvt into
 	char *m_buf;
-	long  m_bufSize;
+	int32_t  m_bufSize;
 
 
 	// buf for serializing m_nsvt into
 	char *m_buf2;
-	long  m_bufSize2;
+	int32_t  m_bufSize2;
 
 	// allocate m_sections[] buffer
 	class Section  *m_sections;
-	//long            m_sectionsBufSize;
-	long            m_numSections;
-	long            m_maxNumSections;
+	//int32_t            m_sectionsBufSize;
+	int32_t            m_numSections;
+	int32_t            m_maxNumSections;
 
 	// this holds the Sections instances in a growable array
 	SafeBuf m_sectionBuf;
@@ -872,7 +872,7 @@ class Sections {
 	// see what section a word is in.
 	SafeBuf m_sectionPtrBuf;
 
-	long m_numSentenceSections;
+	int32_t m_numSentenceSections;
 
 	bool m_firstDateValid;
 
@@ -892,17 +892,17 @@ class Sections {
 	// set a flag
 	bool  m_badHtml;
 
-	long long  *m_wids;
-	long long  *m_pids;
-	long       *m_wlens;
+	int64_t  *m_wids;
+	int64_t  *m_pids;
+	int32_t       *m_wlens;
 	char      **m_wptrs;
 	nodeid_t   *m_tids;
 
-	//long addImpliedSections  ( bool needHR );
-	//long addHeaderImpliedSections ( );
+	//int32_t addImpliedSections  ( bool needHR );
+	//int32_t addHeaderImpliedSections ( );
 
-	//long addImpliedSectionsOld ( );
-	//long getHeadingScore ( class Section *sk , long baseHash );
+	//int32_t addImpliedSectionsOld ( );
+	//int32_t getHeadingScore ( class Section *sk , int32_t baseHash );
 
 	// the new way
 	bool addImpliedSections ( class Addresses *aa );//, HashTableX *svt );
@@ -911,33 +911,33 @@ class Sections {
 	bool setSentFlagsPart1 ( );
 	bool setSentFlagsPart2 ( );
 	sentflags_t getSentEventEndingOrBeginningFlags ( sentflags_t sflags ,
-							 long senta ,
-							 long sentb ,
-							 long alnumCount) ;
+							 int32_t senta ,
+							 int32_t sentb ,
+							 int32_t alnumCount) ;
 	void setSentPrettyFlag ( class Section *si ) ;
 	Addresses *m_aa;
-	long       m_hiPos;
+	int32_t       m_hiPos;
 	bool       m_sentFlagsAreSet;
 	bool       m_addedImpliedSections;
 
 	void setAddrXors ( class Addresses *aa ) ;
 
-	long addImpliedSections3 ();
-	long getDelimScore ( class Section *bro,
+	int32_t addImpliedSections3 ();
+	int32_t getDelimScore ( class Section *bro,
 			     char method,
 			     class Section *delim ,
 			     class Partition *part );
-	long getDelimHash ( char method , class Section *bro ,
+	int32_t getDelimHash ( char method , class Section *bro ,
 			    class Section *head ) ;
-	//long m_totalHdrCount;
+	//int32_t m_totalHdrCount;
 	//bool m_called;
 
 	bool addImpliedLists ( ) ;
-	long getDelimScore2 ( class Section *bro,
+	int32_t getDelimScore2 ( class Section *bro,
 			      char method,
 			      class Section *delim ,
-			      long *a ,
-			      long *b );
+			      int32_t *a ,
+			      int32_t *b );
 
 	bool hashSentBits ( class Section    *sx        ,
 			    class HashTableX *vht       ,
@@ -955,12 +955,12 @@ class Sections {
 	bool addSentenceSections ( ) ;
 
 	class Section *insertSubSection ( class Section *parent , 
-					  long a , 
-					  long b ,
-					  long newBaseHash ) ;
+					  int32_t a , 
+					  int32_t b ,
+					  int32_t newBaseHash ) ;
 
-	long splitSectionsByTag ( nodeid_t tagid ) ;
-	bool splitSections ( char *delimeter , long dh );
+	int32_t splitSectionsByTag ( nodeid_t tagid ) ;
+	bool splitSections ( char *delimeter , int32_t dh );
 
 	class Section *m_rootSection; // the first section, aka m_firstSection
 	class Section *m_lastSection;
@@ -976,7 +976,7 @@ class Sections {
 
 	bool isTagDelimeter ( class Section *si , nodeid_t tagId ) ;
 	
-	bool isDelimeter ( long i , char *delimeter , long *delimEnd ) {
+	bool isDelimeter ( int32_t i , char *delimeter , int32_t *delimEnd ) {
 
 		// . HACK: special case when delimeter is 0x01 
 		// . that means we are back-to-back br tags
@@ -984,7 +984,7 @@ class Sections {
 			// must be a br tag
 			if ( m_tids[i] != TAG_BR ) return false;
 			// assume that
-			long k = i + 1;
+			int32_t k = i + 1;
 			// bad if end
 			if ( k >= m_nw ) return false;
 			// bad if a wid
@@ -1028,7 +1028,7 @@ class Sections {
 };
 
 // convert sectionType to a string
-char *getSectionTypeAsStr ( long sectionType );
+char *getSectionTypeAsStr ( int32_t sectionType );
 
 // hash of the last 3 parent tagids
 //uint32_t getSectionContentTagHash3 ( class Section *sn ) ;
@@ -1069,57 +1069,57 @@ class SectionVotingTable {
 	bool addListOfVotes ( RdbList *list, 
 			      key128_t **lastKey ,
 			      uint32_t tagPairHash ,
-			      long long docId ,
-			      long niceness ) ;
+			      int64_t docId ,
+			      int32_t niceness ) ;
 
 	// index our sections as flag|tagHash pairs using a termId which
 	// is basically our sitehash. this allows us to "vote" on what
 	// sections are static, dynamic, "texty" by indexing our votes into
 	// datedb.
-	bool hash ( long long docId , 
+	bool hash ( int64_t docId , 
 		    class HashTableX *dt , 
 		    uint64_t siteHash64 ,
-		    long niceness ) ;
+		    int32_t niceness ) ;
 
 
-	bool addVote1 ( Section *sn , long sectionType , float score ) {
+	bool addVote1 ( Section *sn , int32_t sectionType , float score ) {
 		if ( ! sn ) return true;
 		return addVote3 ( sn->m_tagHash,sectionType,score,1);};
 
-	bool addVote2 ( long tagHash, long sectionType , float score ) {
+	bool addVote2 ( int32_t tagHash, int32_t sectionType , float score ) {
 		return addVote3 ( tagHash,sectionType,score,1);};
 
 	bool addVote3 ( //class HashTableX *ttt         ,
-		       long              tagHash     ,
-		       long              sectionType ,
+		       int32_t              tagHash     ,
+		       int32_t              sectionType ,
 		       float             score       ,
 		       float             numSampled  ,
 		       bool              hackFix = false ) ;
 
 	// return -1.0 if no voters!
-	float getScore      ( Section *sn , long sectionType ) {
+	float getScore      ( Section *sn , int32_t sectionType ) {
 		if ( ! sn ) return -1.0;
 		return getScore ( sn->m_tagHash , sectionType ); };
 
-	float getScore      ( long tagHash , long sectionType ) ;
+	float getScore      ( int32_t tagHash , int32_t sectionType ) ;
 
 
-	float getNumSampled ( Section *sn , long sectionType ) {
+	float getNumSampled ( Section *sn , int32_t sectionType ) {
 		if ( ! sn ) return 0.0;
 		return getNumSampled ( sn->m_tagHash , sectionType ); };
 
-	float getNumSampled ( long tagHash , long sectionType ) ;
+	float getNumSampled ( int32_t tagHash , int32_t sectionType ) ;
 
-	long getNumVotes ( ) { return m_svt.getNumSlotsUsed(); };
+	int32_t getNumVotes ( ) { return m_svt.getNumSlotsUsed(); };
 
-	bool init ( long numSlots , char *name , long niceness ) {
+	bool init ( int32_t numSlots , char *name , int32_t niceness ) {
 		return m_svt.set(8,sizeof(SectionVote),numSlots,
 				 NULL,0,false,niceness,name); };
 
 	HashTableX m_svt;
 
-	long m_totalSiteVoters;
-	//long m_totalSimilarLayouts;
+	int32_t m_totalSiteVoters;
+	//int32_t m_totalSimilarLayouts;
 };
 
 

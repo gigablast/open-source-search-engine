@@ -10,29 +10,29 @@ Clusterdb g_clusterdb2;
 
 /*
 // for making the cluster cache key
-static key_t makeClusterCacheKey ( unsigned long vfd,
-				   unsigned long pageNum ) {
+static key_t makeClusterCacheKey ( uint32_t vfd,
+				   uint32_t pageNum ) {
 	key_t key;
 	key.n1 = vfd + 1;
-	key.n0 = (unsigned long long)pageNum + 1;
+	key.n0 = (uint64_t)pageNum + 1;
 	return key;
 }
 
 // DiskPageCache override functions
 static void clusterGetPages ( DiskPageCache *pc,
-			      long vfd,
+			      int32_t vfd,
 			      char *buf,
-			      long numBytes,
-			      long long offset,
-			      long *newNumBytes,
-			      long long *newOffset ) {
+			      int32_t numBytes,
+			      int64_t offset,
+			      int32_t *newNumBytes,
+			      int64_t *newOffset ) {
 	bool cacheMiss = false;
 	// return new disk offset, assume unchanged
 	*newOffset   = offset;
 	*newNumBytes = numBytes;
 	// what is the page range?
-	long long sp = offset / GB_PAGE_SIZE ;
-	long long ep = (offset + (numBytes-1)) / GB_PAGE_SIZE ;
+	int64_t sp = offset / GB_PAGE_SIZE ;
+	int64_t ep = (offset + (numBytes-1)) / GB_PAGE_SIZE ;
 	// setup the cache list
 	RdbList cacheList;
 	key_t startKey;
@@ -56,19 +56,19 @@ static void clusterGetPages ( DiskPageCache *pc,
 							3600*24*265,
 							true );
 		//cacheList.checkList_r ( false, true );
-		//log ( LOG_INFO, "cache: got list [%li, %lli] [%li]",
+		//log ( LOG_INFO, "cache: got list [%"INT32", %"INT64"] [%"INT32"]",
 		//		vfd, sp, cacheList.m_listSize );
-		long size = cacheList.m_listSize;
+		int32_t size = cacheList.m_listSize;
 		if ( size == 0 ) {
 			cacheMiss = true;
 			goto getPagesEnd;
 		}
-		//log ( LOG_INFO, "cache: got list [%li, %li] [%li]",
+		//log ( LOG_INFO, "cache: got list [%"INT32", %"INT32"] [%"INT32"]",
 		//		vfd, sp, size );
 		if ( bufPtr + size >= bufEnd )
 			size = bufEnd - bufPtr;
 		// copy the list into the buffer
-		memcpy ( bufPtr, cacheList.m_list, size );
+		gbmemcpy ( bufPtr, cacheList.m_list, size );
 		// advance to the next page
 		bufPtr += size;
 		*newOffset += size;
@@ -85,10 +85,10 @@ getPagesEnd:
 }
 
 static void clusterAddPages ( DiskPageCache *pc,
-			      long vfd,
+			      int32_t vfd,
 			      char *buf,
-			      long numBytes,
-			      long long offset ) {
+			      int32_t numBytes,
+			      int64_t offset ) {
 	// make sure we have a clean vfd
 	if ( vfd < 0 || vfd >= MAX_NUM_VFDS2 )
 		return;
@@ -96,25 +96,25 @@ static void clusterAddPages ( DiskPageCache *pc,
 	if ( ! pc->m_memOff[vfd] )
 		return;
 	// get the number of twins, used for filtering
-	long numTwins  = g_hostdb.getNumHostsPerShard();
-	long thisTwin  = g_hostdb.m_hostId/g_hostdb.m_numShards;
+	int32_t numTwins  = g_hostdb.getNumHostsPerShard();
+	int32_t thisTwin  = g_hostdb.m_hostId/g_hostdb.m_numShards;
 	// get the bias range for this twin
-	long long biasStart = ((0x0000003fffffffffLL)/(long long)numTwins) *
-		(long long)thisTwin;
-	long long biasEnd;
+	int64_t biasStart = ((0x0000003fffffffffLL)/(int64_t)numTwins) *
+		(int64_t)thisTwin;
+	int64_t biasEnd;
 	if ( thisTwin == numTwins - 1 )
 		biasEnd = 0x0000003fffffffffLL + 1LL;
 	else
-		biasEnd = ((0x0000003fffffffffLL)/(long long)numTwins) *
-			(long long)(thisTwin+1);
+		biasEnd = ((0x0000003fffffffffLL)/(int64_t)numTwins) *
+			(int64_t)(thisTwin+1);
 	// get the page range
-	long long sp = offset / GB_PAGE_SIZE;
+	int64_t sp = offset / GB_PAGE_SIZE;
 	// point to it
 	char *bufPtr = buf;
 	char *bufEnd = buf + numBytes;
 	// how much did we exceed the boundary by?
-	long skip = (long)(offset - sp * GB_PAGE_SIZE);
-	long size = GB_PAGE_SIZE - skip;
+	int32_t skip = (int32_t)(offset - sp * GB_PAGE_SIZE);
+	int32_t size = GB_PAGE_SIZE - skip;
 	// setup the cache lists, may need to merge with an old list
 	RdbList  cacheList1;
 	cacheList1.set ( NULL,
@@ -148,7 +148,7 @@ static void clusterAddPages ( DiskPageCache *pc,
 	dataList.resetListPtr();
 	// add pages to the cache
 	while ( bufPtr < bufEnd ) {
-		long filled  = 0;
+		int32_t filled  = 0;
 		// ensure "size" is not too big
 		if ( bufPtr + size > bufEnd )
 			size = bufEnd - bufPtr;
@@ -156,10 +156,10 @@ static void clusterAddPages ( DiskPageCache *pc,
 		cacheList1.reset();
 		// check the first key, if it's too large, we're all done here
 		key_t key = dataList.getCurrentKey();
-		long long docId = g_clusterdb.getDocId ( key );
+		int64_t docId = g_clusterdb.getDocId ( key );
 		//if ( docId >= biasEnd ) {
-		//	log ( "clusterdb: DocId after bias end, key.n1=%lx key.n0=%llx", key.n1, key.n0 );
-		//	log ( "clusterdb: DocId after bias end, %llx >= %llx", docId, biasEnd );
+		//	log ( "clusterdb: DocId after bias end, key.n1=%"XINT32" key.n0=%"XINT64"", key.n1, key.n0 );
+		//	log ( "clusterdb: DocId after bias end, %"XINT64" >= %"XINT64"", docId, biasEnd );
 		//	return;
 		//}
 		// make the cache key using vfd and page number
@@ -168,8 +168,8 @@ static void clusterAddPages ( DiskPageCache *pc,
 		while ( filled < size && !dataList.isExhausted() ) {
 			key = dataList.getCurrentKey();
 			// check the key for filtering
-			//long long docId = g_clusterdb.getDocId ( key );
-			//long twin = hashLong((long)docId) % numTwins;
+			//int64_t docId = g_clusterdb.getDocId ( key );
+			//int32_t twin = hashLong((int32_t)docId) % numTwins;
 			//if ( twin == thisTwin ) {
 				// add the key to the rdb list
 				cacheList1.addRecord(key, 0, NULL);
@@ -186,9 +186,9 @@ static void clusterAddPages ( DiskPageCache *pc,
 							cacheKey,
 							&cacheList1 );
 		//else
-		//	log ( "clusterdb: DocId before bias start, %lli >= %lli", docId, biasStart );
+		//	log ( "clusterdb: DocId before bias start, %"INT64" >= %"INT64"", docId, biasStart );
 		//cacheList1.checkList_r ( false, true );
-		//log ( LOG_INFO, "cache: add list [%li, %lli] [%li]",
+		//log ( LOG_INFO, "cache: add list [%"INT32", %"INT64"] [%"INT32"]",
 		//		vfd, sp, cacheList1.m_listSize );
 		// advance
 		bufPtr += filled;
@@ -198,11 +198,11 @@ static void clusterAddPages ( DiskPageCache *pc,
 	}
 }
 
-static long clusterGetVfd ( DiskPageCache *pc,
-			    long long maxFileSize ) {
+static int32_t clusterGetVfd ( DiskPageCache *pc,
+			    int64_t maxFileSize ) {
 	// pick a vfd for this file, will be used in the cache key
-	long i;
-	long count = MAX_NUM_VFDS2;
+	int32_t i;
+	int32_t count = MAX_NUM_VFDS2;
 	for ( i = pc->m_nexti; count-- > 0; i++ ) {
 		if ( i >= MAX_NUM_VFDS2 ) i = 0;
 		if ( ! pc->m_memOff[i] ) break;
@@ -217,13 +217,13 @@ static long clusterGetVfd ( DiskPageCache *pc,
 	// start looking here next time
 	pc->m_nexti = i + 1;
 	// set m_memOff[i] to something to hold the vfd
-	pc->m_memOff[i] = (long*)0x7fffffff;
+	pc->m_memOff[i] = (int32_t*)0x7fffffff;
 	// return the vfd
 	return i;
 }
 
 static void clusterRmVfd ( DiskPageCache *pc,
-			   long vfd ) {
+			   int32_t vfd ) {
 	// make sure it's a clean vfd
 	if ( vfd < 0 || vfd >= MAX_NUM_VFDS2 )
 		return;
@@ -254,29 +254,29 @@ void Clusterdb::reset() { m_rdb.reset(); }
 //   and we still don't need to uncompress the titleRec to get the info
 bool Clusterdb::init ( ) {
 	// this should be about 200/4 = 50 megs per host on my current setup
-	long maxTreeMem = g_conf.m_clusterdbMaxTreeMem;
+	int32_t maxTreeMem = g_conf.m_clusterdbMaxTreeMem;
 	// . what's max # of tree nodes?
 	// . key+4+left+right+parents+dataPtr = 12+4 +4+4+4+4 = 32
 	// . 28 bytes per record when in the tree
-	long maxTreeNodes  = maxTreeMem / ( 16 + CLUSTER_REC_SIZE );
+	int32_t maxTreeNodes  = maxTreeMem / ( 16 + CLUSTER_REC_SIZE );
 	// . each cahched list is just one key in the tree...
 	// . 28(tree space) + 24(cacheoverhead) = 52
-	//long maxCacheMem   = g_conf.m_clusterdbMaxCacheMem ;
+	//int32_t maxCacheMem   = g_conf.m_clusterdbMaxCacheMem ;
 	// do not use any page cache if doing tmp cluster in order to
 	// prevent swapping
-	//long pcmem = g_conf.m_clusterdbMaxDiskPageCacheMem;
-	long pcmem = 0;
+	//int32_t pcmem = g_conf.m_clusterdbMaxDiskPageCacheMem;
+	int32_t pcmem = 0;
 	if ( g_hostdb.m_useTmpCluster ) pcmem = 0;
 	// we need that 100MB for termlists! they are >90MB now!!
 	pcmem = 10000000; // 10MB
 	// temp hack for rebuild
 	//pcmem = 0;
 	// RdbCache has a 4 byte ptr to each rec in the cache
-	//long maxCacheNodes = maxCacheMem / ( 4 + CLUSTER_REC_SIZE );
-	//long nodeSize      = sizeof(key_t) + sizeof(collnum_t);
-	long pageSize      = GB_TFNDB_PAGE_SIZE;
-	//long nodeSize      = (pageSize + 12) + sizeof(collnum_t) + 20;
-	//long maxCacheNodes = maxCacheMem / nodeSize ;
+	//int32_t maxCacheNodes = maxCacheMem / ( 4 + CLUSTER_REC_SIZE );
+	//int32_t nodeSize      = sizeof(key_t) + sizeof(collnum_t);
+	int32_t pageSize      = GB_TFNDB_PAGE_SIZE;
+	//int32_t nodeSize      = (pageSize + 12) + sizeof(collnum_t) + 20;
+	//int32_t maxCacheNodes = maxCacheMem / nodeSize ;
 	// init the page cache
 	if ( ! m_pc.init ( "clusterdb",
 			   RDB_CLUSTERDB,
@@ -313,11 +313,11 @@ bool Clusterdb::init ( ) {
 }
 
 // init the rebuild/secondary rdb, used by PageRepair.cpp
-bool Clusterdb::init2 ( long treeMem ) {
+bool Clusterdb::init2 ( int32_t treeMem ) {
 	// . what's max # of tree nodes?
 	// . key+4+left+right+parents+dataPtr = 12+4 +4+4+4+4 = 32
 	// . 28 bytes per record when in the tree
-	long maxTreeNodes  = treeMem / ( 16 + CLUSTER_REC_SIZE );
+	int32_t maxTreeNodes  = treeMem / ( 16 + CLUSTER_REC_SIZE );
 	// initialize our own internal rdb
 	return m_rdb.init ( g_hostdb.m_dir     ,
 			    "clusterdbRebuild" ,
@@ -361,7 +361,7 @@ bool Clusterdb::verify ( char *coll ) {
 	key_t endKey;
 	startKey.setMin();
 	endKey.setMax();
-	//long minRecSizes = 64000;
+	//int32_t minRecSizes = 64000;
 	CollectionRec *cr = g_collectiondb.getRec(coll);
 	
 	if ( ! msg5.getList ( RDB_CLUSTERDB ,
@@ -390,24 +390,24 @@ bool Clusterdb::verify ( char *coll ) {
 		return log("db: HEY! it did not block");
 	}
 
-	long count = 0;
-	long got   = 0;
+	int32_t count = 0;
+	int32_t got   = 0;
 	for ( list.resetListPtr() ; ! list.isExhausted() ;
 	      list.skipCurrentRecord() ) {
 		key_t k = list.getCurrentKey();
 		// skip negative keys
 		if ( (k.n0 & 0x01) == 0x00 ) continue;
 		count++;
-		//unsigned long groupId = getGroupId ( RDB_CLUSTERDB , &k );
+		//uint32_t groupId = getGroupId ( RDB_CLUSTERDB , &k );
 		//if ( groupId == g_hostdb.m_groupId ) got++;
-		unsigned long shardNum = getShardNum( RDB_CLUSTERDB , &k );
+		uint32_t shardNum = getShardNum( RDB_CLUSTERDB , &k );
 		if ( shardNum == getMyShardNum() ) got++;
 	}
 	if ( got != count ) {
 		// tally it up
 		g_rebalance.m_numForeignRecs += count - got;
-		log ("db: Out of first %li records in clusterdb, "
-		     "only %li belong to our group.",count,got);
+		log ("db: Out of first %"INT32" records in clusterdb, "
+		     "only %"INT32" belong to our group.",count,got);
 		// exit if NONE, we probably got the wrong data
 		if ( got == 0 ) log("db: Are you sure you have the "
 					   "right "
@@ -418,7 +418,7 @@ bool Clusterdb::verify ( char *coll ) {
 		return g_conf.m_bypassValidation;
 	}
 	log ( LOG_DEBUG, "db: Clusterdb passed verification successfully for "
-			"%li recs.", count );
+			"%"INT32" recs.", count );
 	// DONE
 	g_threads.enableThreads();
 	return true;
@@ -435,9 +435,9 @@ bool Clusterdb::verify ( char *coll ) {
 void Clusterdb::getSampleVector ( char *vec , 
 				  class Doc *doc, 
 				  char *coll ,
-				  long  collLen ,
-				  long niceness) {
-	long long startTime = gettimeofdayInMilliseconds();
+				  int32_t  collLen ,
+				  int32_t niceness) {
+	int64_t startTime = gettimeofdayInMilliseconds();
 	TitleRec *tr = doc->getTitleRec();
 	SiteRec  *sr = doc->getSiteRec();
 	//sr->set ( tr->getSite() , tr->getColl() , tr->getCollLen() ,
@@ -451,13 +451,13 @@ void Clusterdb::getSampleVector ( char *vec ,
 	// this just sets the vector
 	doc->getIndexList(NULL,true,true,false,NULL,NULL,NULL, niceness);
 	// log the time
-	long long took =gettimeofdayInMilliseconds()-startTime;
+	int64_t took =gettimeofdayInMilliseconds()-startTime;
 	if ( took > 3 )
-		log(LOG_INFO,"query: Took %lli ms to make indexlist.",took);
+		log(LOG_INFO,"query: Took %"INT64" ms to make indexlist.",took);
 	// so get it
 	char *p = doc->getSampleVector ( );
-	// and store it. short vectors are padded with 0's.
-	memcpy ( vec , p , SAMPLE_VECTOR_SIZE );
+	// and store it. int16_t vectors are padded with 0's.
+	gbmemcpy ( vec , p , SAMPLE_VECTOR_SIZE );
 }
 */
 
@@ -520,15 +520,15 @@ bool Clusterdb::getGigabitVector ( char *vec , Xml *xml ) {
 /*
 void Clusterdb::getSampleVector ( char *vec , TermTable *table ) {
 	// no compression is used in this list so each docId/termId is 12 bytes
-	long numTerms = table->getNumTermsUsed();
+	int32_t numTerms = table->getNumTermsUsed();
 	// . how many can we hold? we'll just use 4 bytes per vector component
 	// . let's get 2x as many termids as required, then we will combine
 	//   every 2 termids into one via hashing... this makes falsely high
 	//   similarities less likely, but makes truly high similarities less
 	//   likely to be detected as well.
-	long maxTerms = (1 * SAMPLE_VECTOR_LEN)  - 1;
+	int32_t maxTerms = (1 * SAMPLE_VECTOR_LEN)  - 1;
 	// what portion of them do we want to mask out from the rest?
-	long ratio = numTerms / maxTerms ;
+	int32_t ratio = numTerms / maxTerms ;
 	unsigned char mask = 0x00;
 	while ( ratio >= 2 ) {
 		// shift the mask down, ensure hi bit is set
@@ -536,19 +536,19 @@ void Clusterdb::getSampleVector ( char *vec , TermTable *table ) {
 		mask |= 0x80;
 		ratio >>= 1; // /2
 	}
-	unsigned long d [ 3000 ];
+	uint32_t d [ 3000 ];
 	// if we don't have enough, make them 0's
 	memset ( d   , 0 , SAMPLE_VECTOR_SIZE );
 	memset ( vec , 0 , SAMPLE_VECTOR_SIZE );
  again:
 	// a buffer to hold the top termIds
-	long nd = 0;
+	int32_t nd = 0;
 	// . buffer should have at least "maxTerms" in it
 	// . these should all be 12 byte keys
-	long i = 0 ;
-	long n = table->getNumTerms();
-	long long     *termIds = table->getTermIds();
-	unsigned long *scores  = table->getScores ();
+	int32_t i = 0 ;
+	int32_t n = table->getNumTerms();
+	int64_t     *termIds = table->getTermIds();
+	uint32_t *scores  = table->getScores ();
 	for ( ; i < n ; i++ ) {
 		// skip if empty bucket
 		if ( ! scores[i] ) continue;
@@ -562,8 +562,8 @@ void Clusterdb::getSampleVector ( char *vec , TermTable *table ) {
 		//if ( (p[11] & mask) != 0 ) continue;
 		if ( ((termIds[i]>>(NUMTERMIDBITS-8)) & mask) != 0 ) continue;
 		// add it
-		//d[nd++] = *(long *)(p+12-5); // last byte has del bit, etc.
-		d[nd] = (unsigned long)(termIds[i] >> (NUMTERMIDBITS-32));
+		//d[nd++] = *(int32_t *)(p+12-5); // last byte has del bit, etc.
+		d[nd] = (uint32_t)(termIds[i] >> (NUMTERMIDBITS-32));
 		// 0 has special meaning, it terminates the vector
 		if ( d[nd] == 0 ) d[nd] = 1;
 		if ( ++nd < 3000 ) continue;
@@ -592,9 +592,9 @@ void Clusterdb::getSampleVector ( char *vec , TermTable *table ) {
 	bool flag = true;
 	while ( flag ) {
 		flag = false;
-		for ( long i = 1 ; i < nd ; i++ ) {
+		for ( int32_t i = 1 ; i < nd ; i++ ) {
 			if ( d[i-1] <= d[i] ) continue;
-			unsigned long tmp = d[i-1];
+			uint32_t tmp = d[i-1];
 			d[i-1] = d[i];
 			d[i]   = tmp;
 			flag   = true;
@@ -604,31 +604,31 @@ void Clusterdb::getSampleVector ( char *vec , TermTable *table ) {
 	if ( nd > SAMPLE_VECTOR_LEN - 1 ) nd = SAMPLE_VECTOR_LEN - 1;
 	// make sure last component is a 0
 	d [ nd ] = 0;
-	memcpy ( vec , (char *)d , (nd+1) * 4 );
+	gbmemcpy ( vec , (char *)d , (nd+1) * 4 );
 }
 */
 
 // return the percent similar
-char Clusterdb::getSampleSimilarity ( char *vec0 , char *vec1, long size ) {
+char Clusterdb::getSampleSimilarity ( char *vec0 , char *vec1, int32_t size ) {
 	// . the termIds are sorted
 	// . point each recs sample vector of termIds
-	//long *t0 = (long *)(vec0 + sizeof(key_t) + 3*4);
-	//long *t1 = (long *)(vec1 + sizeof(key_t) + 3*4);
-	// . we sorted them above as unsigned longs, so we must make sure
-	//   we use unsigned longs here, too
-	unsigned long *t0 = (unsigned long *)vec0;
-	unsigned long *t1 = (unsigned long *)vec1;
+	//int32_t *t0 = (int32_t *)(vec0 + sizeof(key_t) + 3*4);
+	//int32_t *t1 = (int32_t *)(vec1 + sizeof(key_t) + 3*4);
+	// . we sorted them above as uint32_ts, so we must make sure
+	//   we use uint32_ts here, too
+	uint32_t *t0 = (uint32_t *)vec0;
+	uint32_t *t1 = (uint32_t *)vec1;
 	// if either is empty, return 0 to be on the safe side
 	if ( *t0 == 0 ) return 0;
 	if ( *t1 == 0 ) return 0;
-	//long size0 = *(long *)(rec + sizeof(key_t));
-	//long *end0 = (long *)(vec0 + *(long *)(vec0+12));
-	//long *end1 = (long *)(vec1 + *(long *)(vec1+12));
+	//int32_t size0 = *(int32_t *)(rec + sizeof(key_t));
+	//int32_t *end0 = (int32_t *)(vec0 + *(int32_t *)(vec0+12));
+	//int32_t *end1 = (int32_t *)(vec1 + *(int32_t *)(vec1+12));
 	// how many total termIds?
-	//long total = (end0 - t0 + end1 - t1) / 2;
+	//int32_t total = (end0 - t0 + end1 - t1) / 2;
 	//if ( total <= 0 ) return 0;
 	// count matches between the sample vectors
-	long count = 0;
+	int32_t count = 0;
  loop:
 	if( ((char*)t0 - vec0) > size ) {
 		log( LOG_INFO, "query: sample vector 0 is malformed. "
@@ -673,15 +673,15 @@ char Clusterdb::getSampleSimilarity ( char *vec0 , char *vec1, long size ) {
 			return 0;
 		}
 	}
-	long total = 0;
-	total += t0 - ((unsigned long *)vec0);
-	total += t1 - ((unsigned long *)vec1);
+	int32_t total = 0;
+	total += t0 - ((uint32_t *)vec0);
+	total += t1 - ((uint32_t *)vec1);
 	// how similar are they?
 	// if both are empty, assume not similar at all. this happens if we
 	// do not have a content vector for either, or if both are small docs
 	// with no words or links in them (framesets?)
 	if ( total == 0 ) return 0;
-	long sim = (count * 2 * 100) / total;
+	int32_t sim = (count * 2 * 100) / total;
 	if ( sim > 100 ) sim = 100;
 	return (char)sim;
 }
@@ -689,17 +689,17 @@ char Clusterdb::getSampleSimilarity ( char *vec0 , char *vec1, long size ) {
 /*
 // return the percent similar
 char Clusterdb::getGigabitSimilarity ( char *vec0 , char *vec1 ,
-				       long *qtable , long numSlots ) {
+				       int32_t *qtable , int32_t numSlots ) {
 	// . the termIds are sorted
 	// . point each recs sample vector of termIds
-	//long *t0 = (long *)(vec0 + sizeof(key_t) + 3*4);
-	//long *t1 = (long *)(vec1 + sizeof(key_t) + 3*4);
-	unsigned long *t0  = (unsigned long *)vec0;
-	unsigned long *t1  = (unsigned long *)vec1;
-	short *s0 = (short *)(vec0 + 4*GIGABITS_IN_VECTOR);
-	short *s1 = (short *)(vec1 + 4*GIGABITS_IN_VECTOR);
-	long i0 = 0;
-	long i1 = 0;
+	//int32_t *t0 = (int32_t *)(vec0 + sizeof(key_t) + 3*4);
+	//int32_t *t1 = (int32_t *)(vec1 + sizeof(key_t) + 3*4);
+	uint32_t *t0  = (uint32_t *)vec0;
+	uint32_t *t1  = (uint32_t *)vec1;
+	int16_t *s0 = (int16_t *)(vec0 + 4*GIGABITS_IN_VECTOR);
+	int16_t *s1 = (int16_t *)(vec1 + 4*GIGABITS_IN_VECTOR);
+	int32_t i0 = 0;
+	int32_t i1 = 0;
 	// if both empty, cluster together... assume same topic
 	//if ( *t0 == 0 && *t1 == 0 ) return 100;
 	if ( *t0 == 0 && *t1 == 0 ) return 0;
@@ -707,27 +707,27 @@ char Clusterdb::getGigabitSimilarity ( char *vec0 , char *vec1 ,
 	if ( *t0 == 0 ) return 0;
 	if ( *t1 == 0 ) return 0;
 	if ( numSlots == 0 ) return 0;
-	//long size0 = *(long *)(rec + sizeof(key_t));
-	//long *end0 = (long *)(vec0 + *(long *)(vec0+12));
-	//long *end1 = (long *)(vec1 + *(long *)(vec1+12));
+	//int32_t size0 = *(int32_t *)(rec + sizeof(key_t));
+	//int32_t *end0 = (int32_t *)(vec0 + *(int32_t *)(vec0+12));
+	//int32_t *end1 = (int32_t *)(vec1 + *(int32_t *)(vec1+12));
 	// how many total termIds?
-	//long total = (end0 - t0 + end1 - t1) / 2;
+	//int32_t total = (end0 - t0 + end1 - t1) / 2;
 	//if ( total <= 0 ) return 0;
 	// count matches between the sample vectors
-	long count = 0;
-	long n;
-	unsigned long mask = numSlots - 1;
+	int32_t count = 0;
+	int32_t n;
+	uint32_t mask = numSlots - 1;
  loop:
 	// skip if t0[i0] matches a query term
 	n = t0[i0] & mask;
-	while ( qtable[n] && qtable[n] != (long)t0[i0] )
+	while ( qtable[n] && qtable[n] != (int32_t)t0[i0] )
 		if ( ++n >= numSlots ) n = 0;
 	if ( qtable[n] ) {
 		s0[i0] = 0; // remove score for tallying up total
 		i0++; if (t0[i0] == 0 || i0>=GIGABITS_IN_VECTOR) goto done; }
 	// skip if t1[i1] matches a query term
 	n = t1[i1] & mask;
-	while ( qtable[n] && qtable[n] != (long)t1[i1] )
+	while ( qtable[n] && qtable[n] != (int32_t)t1[i1] )
 		if ( ++n >= numSlots ) n = 0;
 	if ( qtable[n] ) {
 		s1[i1] = 0; // remove score for tallying up total
@@ -754,33 +754,33 @@ char Clusterdb::getGigabitSimilarity ( char *vec0 , char *vec1 ,
 	// count total components in each sample vector
 	while ( t0[i0] && i0 < GIGABITS_IN_VECTOR ) i0++;
 	while ( t1[i1] && i1 < GIGABITS_IN_VECTOR ) i1++;
-	long total = 0;
-	//total += t0 - ((long *)vec0);
-	//total += t1 - ((long *)vec1);
+	int32_t total = 0;
+	//total += t0 - ((int32_t *)vec0);
+	//total += t1 - ((int32_t *)vec1);
 	// get total score
-	for ( long i = 0 ; i < i0 ; i++ ) total += s0[i] ;
-	for ( long i = 0 ; i < i1 ; i++ ) total += s1[i] ;
+	for ( int32_t i = 0 ; i < i0 ; i++ ) total += s0[i] ;
+	for ( int32_t i = 0 ; i < i1 ; i++ ) total += s1[i] ;
 	// how similar are they?
 	// if both are empty, assume not similar at all. this happens if we
 	// do not have a content vector for either, or if both are small docs
 	// with no words or links in them (framesets?)
 	if ( total == 0 ) return 0;
-	//long sim = (count * 2 * 100) / total;
-	long sim = (count * 100) / total;
+	//int32_t sim = (count * 2 * 100) / total;
+	int32_t sim = (count * 100) / total;
 	if ( sim > 100 ) sim = 100;
 	return (char)sim;
 }
 */
 
-key_t Clusterdb::makeClusterRecKey ( long long     docId,
+key_t Clusterdb::makeClusterRecKey ( int64_t     docId,
 				     bool          familyFilter,
 				     uint8_t       languageBits,
-				     long          siteHash,
+				     int32_t          siteHash,
 				     bool          isDelKey,
 				     bool          isHalfKey ) {
 	key_t key;
 	// set the docId upper bits
-	key.n1 = (unsigned long)(docId >> 29);
+	key.n1 = (uint32_t)(docId >> 29);
 	key.n1 &= 0x000001ff;
 	// set the docId lower bits
 	key.n0 = docId;
@@ -789,9 +789,9 @@ key_t Clusterdb::makeClusterRecKey ( long long     docId,
 	if ( familyFilter ) key.n0 |= 0x0000000400000000ULL;
 	else                key.n0 &= 0xfffffffbffffffffULL;
 	// set the language bits
-	key.n0 |= ((unsigned long long)(languageBits & 0x3f)) << 28;
+	key.n0 |= ((uint64_t)(languageBits & 0x3f)) << 28;
 	// set the site hash
-	key.n0 |= (unsigned long long)(siteHash & 0x03ffffff) << 2;
+	key.n0 |= (uint64_t)(siteHash & 0x03ffffff) << 2;
 	// set the del bit
 	if ( isDelKey ) key.n0 &= 0xfffffffffffffffeULL;
 	else            key.n0 |= 0x0000000000000001ULL;
@@ -805,7 +805,7 @@ key_t Clusterdb::makeClusterRecKey ( long long     docId,
 /*
 key_t Clusterdb::convertTitleRecKey ( key_t titleKey ) {
 	// extract the docid
-	long long docId;
+	int64_t docId;
 	docId = titleKey.n1;
 	docId <<= 6;
 	docId |= titleKey.n0 >> 58;
@@ -817,8 +817,8 @@ key_t Clusterdb::convertTitleRecKey ( key_t titleKey ) {
 	else
 		familyFilter = false;
 	// extract the site hash
-	unsigned long siteHash;
-	siteHash = (unsigned long)((titleKey.n0 >> 30) & 0x0000000003ffffffULL);
+	uint32_t siteHash;
+	siteHash = (uint32_t)((titleKey.n0 >> 30) & 0x0000000003ffffffULL);
 	// make and return the key
 	return makeClusterRecKey ( docId, familyFilter, 0, siteHash, false );
 }
@@ -827,7 +827,7 @@ void Clusterdb::makeRecFromTitleRec ( char     *rec,
 				      TitleRec *titleRec,
 				      bool      isDelKey ) {
 	// get the docId
-	long long docId = titleRec->getDocId();
+	int64_t docId = titleRec->getDocId();
 	// get the family filter
 	bool familyFilter = titleRec->hasAdultContent();
 	// get the language byte
@@ -835,33 +835,33 @@ void Clusterdb::makeRecFromTitleRec ( char     *rec,
 	// . get the site hash
 	// . this is really the host hash because tfndb key most use
 	//   the host hash in case site changes in tagdb
-	unsigned long siteHash = titleRec->getHostHash();
+	uint32_t siteHash = titleRec->getHostHash();
 	// make the key and copy it to rec
 	key_t key = makeClusterRecKey ( docId,
 					familyFilter,
 					lang,
 					siteHash,
 					false );
-	memcpy(rec, &key, sizeof(key_t));
+	gbmemcpy(rec, &key, sizeof(key_t));
 }
 
 void Clusterdb::makeRecFromTitleRecKey ( char *rec,
 					 char *key,
 					 bool  isDelKey ) {
 	// get the docId
-	long long docId = g_titledb.getDocIdFromKey((key_t*)key);
+	int64_t docId = g_titledb.getDocIdFromKey((key_t*)key);
 	// get the family filter
 	bool familyFilter = g_titledb.hasAdultContent(*(key_t*)key);
 	// . get the site hash
 	// . this is really the host hash because tfndb key most use
 	//   the host hash in case site changes in tagdb
-	unsigned long siteHash = g_titledb.getHostHash((key_t*)key);
+	uint32_t siteHash = g_titledb.getHostHash((key_t*)key);
 	// make the key and copy it to rec
 	key_t ckey = makeClusterRecKey ( docId,
 					 familyFilter,
 					 0,
 					 siteHash,
 					 false );
-	memcpy(rec, &ckey, sizeof(key_t));
+	gbmemcpy(rec, &ckey, sizeof(key_t));
 }
 */

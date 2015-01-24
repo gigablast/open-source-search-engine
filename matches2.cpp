@@ -6,7 +6,7 @@
 #include "HashTableT.h"
 
 //make the key, it is just the needles ptr 
-//static HashTableT<unsigned long long , char*> s_quickTables;
+//static HashTableT<uint64_t , char*> s_quickTables;
 static HashTableX s_quickTables;
 
 /*
@@ -21,11 +21,11 @@ bool fast_highlight ( // highlight these query terms:
 
 	// make them into needles first
 	SafeBuf needles;
-	long need = q->m_numTerms * sizeof(Needle);
+	int32_t need = q->m_numTerms * sizeof(Needle);
 	if ( ! needles.reserve(need) ) return false;
 
 	char *p = needles.getBufStart();
-	for ( long i = 0 ; i < q->m_numTerms ; i++ ) {
+	for ( int32_t i = 0 ; i < q->m_numTerms ; i++ ) {
 		QueryTerm *qt = &q->m_qterms[i];
 		Needle *ne = (Needle *)p;
 		p += sizeof(Needle);
@@ -65,18 +65,18 @@ bool fast_highlight ( // highlight these query terms:
 // . a space (includes \r \n) in a needle will match a consecutive sequence
 //   of spaces in the haystack
 
-#define BITVEC unsigned long long
+#define BITVEC uint64_t
 
 char *getMatches2 ( Needle *needles          , 
-		    long    numNeedles       ,
+		    int32_t    numNeedles       ,
 		    char   *haystack         , 
-		    long    haystackSize     ,
+		    int32_t    haystackSize     ,
 		    char   *linkPos          ,
-		    long   *needleNum        ,
+		    int32_t   *needleNum        ,
 		    bool    stopAtFirstMatch ,
 		    bool   *hadPreMatch      ,
 		    bool    saveQuickTables  ,
-		    long    niceness         ) {
+		    int32_t    niceness         ) {
 
 	// assume not
 	if ( hadPreMatch ) *hadPreMatch = false;
@@ -91,12 +91,12 @@ char *getMatches2 ( Needle *needles          ,
 
 	// reset counts to 0
 	//if ( ! stopAtFirstMatch )
-	//	for ( long i=0 ; i < numNeedles ; i++ ) 
+	//	for ( int32_t i=0 ; i < numNeedles ; i++ ) 
 	//		needles[i].m_count = 0;
 
 	// are we responsible for init'ing string lengths? this is much
 	// faster than having to specify lengths manually.
-	for ( long i=0 ; i < numNeedles; i++ ) {
+	for ( int32_t i=0 ; i < numNeedles; i++ ) {
 		// breathe
 		QUICKPOLL(niceness);
 		// clear
@@ -111,7 +111,7 @@ char *getMatches2 ( Needle *needles          ,
 	// . utf16 is not as effective here because half the bytes are zeroes!
 	// . TODO: use a static cache of like 4 of these tables where the key
 	//         is the Needles ptr ... done
-	long numNeedlesToInit = numNeedles;
+	int32_t numNeedlesToInit = numNeedles;
 	char space[256 * 4 * sizeof(BITVEC)];
 	char *buf = NULL;
 
@@ -124,7 +124,7 @@ char *getMatches2 ( Needle *needles          ,
 	static bool s_quickTableInit = false;
 	static char s_qtbuf[128*(12+1)*2];
 
-	long slot = -1;
+	int32_t slot = -1;
 	if(saveQuickTables) {
 		if ( ! s_quickTableInit ) {
 			s_quickTableInit = true;
@@ -146,7 +146,7 @@ char *getMatches2 ( Needle *needles          ,
 
 	/*
 	if( useQuickTables && slot == -1 ) {
-		//buf = (char*)mcalloc(sizeof(unsigned long)*256*5,
+		//buf = (char*)mcalloc(sizeof(uint32_t)*256*5,
 		//		     "matches");
 		if(buf) s_quickTables.addKey(&key, &buf);
 		//sanity check, no reason why there needs to be a 
@@ -159,7 +159,7 @@ char *getMatches2 ( Needle *needles          ,
 	*/
 
 	// try 64 bit bit vectors now since we doubled # of needles
-	long offset = 0;
+	int32_t offset = 0;
 	s0 = (BITVEC *)(buf + offset);
 	offset += sizeof(BITVEC)*256;
 	s1 = (BITVEC *)(buf + offset);
@@ -172,7 +172,7 @@ char *getMatches2 ( Needle *needles          ,
 	BITVEC mask;
 
 	// set the letter tables, s0[] through sN[], for each needle
-	for ( long i = 0 ; i < numNeedlesToInit ; i++ ) {
+	for ( int32_t i = 0 ; i < numNeedlesToInit ; i++ ) {
 		// breathe
 		QUICKPOLL(niceness);
 		unsigned char *w    = (unsigned char *)needles[i].m_string;
@@ -185,7 +185,7 @@ char *getMatches2 ( Needle *needles          ,
 		s0[(unsigned char)to_upper_a(*w)] |= mask;
 		w += 1;//step;
 		if ( w >= wend ) {
-			for ( long j = 0 ; j < 256 ; j++ )  {
+			for ( int32_t j = 0 ; j < 256 ; j++ )  {
 				s1[j] |= mask;
 				s2[j] |= mask;
 				s3[j] |= mask;
@@ -197,7 +197,7 @@ char *getMatches2 ( Needle *needles          ,
 		s1[(unsigned char)to_upper_a(*w)] |= mask;
 		w += 1;//step;
 		if ( w >= wend ) {
-			for ( long j = 0 ; j < 256 ; j++ )  {
+			for ( int32_t j = 0 ; j < 256 ; j++ )  {
 				s2[j] |= mask;
 				s3[j] |= mask;
 			}
@@ -208,7 +208,7 @@ char *getMatches2 ( Needle *needles          ,
 		s2[(unsigned char)to_upper_a(*w)] |= mask;
 		w += 1;//step;
 		if ( w >= wend ) {
-			for ( long j = 0 ; j < 256 ; j++ )  {
+			for ( int32_t j = 0 ; j < 256 ; j++ )  {
 				s3[j] |= mask;
 			}
 			continue;
@@ -222,8 +222,8 @@ char *getMatches2 ( Needle *needles          ,
 	// return a ptr to the first match if we should, this is it
 	char *retVal = NULL;
 	// debug vars
-	//long debugCount = 0;
-	//long pp = 0;
+	//int32_t debugCount = 0;
+	//int32_t pp = 0;
 	// now find the first needle in the haystack
 	unsigned char *p    = (unsigned char *)haystack;
 	unsigned char *pend = (unsigned char *)haystack + haystackSize;
@@ -254,11 +254,11 @@ char *getMatches2 ( Needle *needles          ,
 		char oo[148];
 		char *xx ;
 		xx = oo;
-		//memcpy ( xx , p , 8 );
-		for ( long k = 0 ; k < 5 ; k++ ) {
+		//gbmemcpy ( xx , p , 8 );
+		for ( int32_t k = 0 ; k < 5 ; k++ ) {
 			*xx++ = p[k];
 		}
-		memcpy ( xx , "..." , 3 );
+		gbmemcpy ( xx , "..." , 3 );
 		xx += 3;
 		*/
 		//
@@ -274,7 +274,7 @@ char *getMatches2 ( Needle *needles          ,
 		// XXX: just hash the mask into a table to get candidate
 		//      matches in a chain? but there's 4B hashes!!
 		// we got a good candidate, loop through all the needles
-		for ( long j = 0 ; j < numNeedles ; j++ ) {
+		for ( int32_t j = 0 ; j < numNeedles ; j++ ) {
 			// skip if does not match mask, will save time
 			if ( ! ((1<<(j&0x3f)) & mask) ) continue;
 			if( needles[j].m_stringSize > 3) {
@@ -289,7 +289,7 @@ char *getMatches2 ( Needle *needles          ,
 					continue;
 			}
 			// get needle size
-			long msize = needles[j].m_stringSize;
+			int32_t msize = needles[j].m_stringSize;
 			// can p possibly be big enough?
 			if ( pend - p < msize ) continue;
 			// needle is "m" now
@@ -398,11 +398,11 @@ char *getMatches2 ( Needle *needles          ,
 		char oo[148];
 		char *xx ;
 		xx = oo;
-		//memcpy ( xx , p , 8 );
-		for ( long k = 0 ; k < 5 ; k++ ) {
+		//gbmemcpy ( xx , p , 8 );
+		for ( int32_t k = 0 ; k < 5 ; k++ ) {
 			*xx++ = p[k];
 		}
-		memcpy ( xx , "..." , 3 );
+		gbmemcpy ( xx , "..." , 3 );
 		xx += 3;
 		*/
 		//
@@ -418,7 +418,7 @@ char *getMatches2 ( Needle *needles          ,
 		// XXX: just hash the mask into a table to get candidate
 		//      matches in a chain? but there's 4B hashes!!
 		// we got a good candidate, loop through all the needles
-		for ( long j = 0 ; j < numNeedles ; j++ ) {
+		for ( int32_t j = 0 ; j < numNeedles ; j++ ) {
 			// skip if does not match mask, will save time
 			if ( ! ((1<<(j&0x3f)) & mask) ) continue;
 			if( needles[j].m_stringSize > 3) {
@@ -436,7 +436,7 @@ char *getMatches2 ( Needle *needles          ,
 					continue;
 			}
 			// get needle size
-			long msize = needles[j].m_stringSize;
+			int32_t msize = needles[j].m_stringSize;
 			// can p possibly be big enough?
 			if ( pend - p < msize ) continue;
 			// needle is "m" now
@@ -508,9 +508,9 @@ char *getMatches2 ( Needle *needles          ,
 
 
 	//if ( debugCount > 0 ) pp = haystackSize / debugCount;
-	//log("build: debug count = %li uc=%li hsize=%li "
-	//    "1 in %li chars matches.",
-	//    debugCount,(long)isHaystackUtf16,haystackSize,pp);
+	//log("build: debug count = %"INT32" uc=%"INT32" hsize=%"INT32" "
+	//    "1 in %"INT32" chars matches.",
+	//    debugCount,(int32_t)isHaystackUtf16,haystackSize,pp);
 
 	// before we exit, clean up
 	return retVal;

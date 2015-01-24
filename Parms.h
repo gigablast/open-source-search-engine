@@ -11,8 +11,8 @@
 
 //#include "CollectionRec.h"
 
-void handleRequest3e ( UdpSlot *slot , long niceness ) ;
-void handleRequest3f ( UdpSlot *slot , long niceness ) ;
+void handleRequest3e ( UdpSlot *slot , int32_t niceness ) ;
+void handleRequest3f ( UdpSlot *slot , int32_t niceness ) ;
 
 // "url filters profile" values. used to set default crawl rules
 // in Collectiondb.cpp's CollectionRec::setUrlFiltersToDefaults(). 
@@ -85,7 +85,7 @@ class TcpSocket;
 
 class Page {
  public:
-	long  m_page;     // from the PAGE_* enums above
+	int32_t  m_page;     // from the PAGE_* enums above
 	char *m_bgcolor;  // color of the cells in the table
 	char *m_topcolor; // color of the table's first row
 	char *m_title;    // browser title bar
@@ -138,8 +138,14 @@ class GigablastRequest {
 	char  m_doConsistencyTesting;
 	char  m_getSections;
 	char  m_gotSections;
-	long  m_charset;
-	long  m_hopCount;
+	int32_t  m_charset;
+	int32_t  m_hopCount; // hopcount
+	// older ones
+	uint32_t m_firstIndexed; // firstimdexed
+	uint32_t m_lastSpidered; // lastspidered;
+
+
+
 
 
 	///////////
@@ -148,7 +154,7 @@ class GigablastRequest {
 	//
 	///////////
 	char *m_importDir; // TYPE_CHARPTR
-	long  m_importInjects;
+	int32_t  m_importInjects;
 
 
 	///////////
@@ -156,9 +162,10 @@ class GigablastRequest {
 	// /get parms (for getting cached web pages)
 	//
 	///////////
-	long long m_docId;
-	long      m_strip;
+	int64_t m_docId;
+	int32_t      m_strip;
 	char      m_includeHeader;
+	char      m_highlightQuery;
 
 	///////////
 	//
@@ -177,11 +184,11 @@ class GigablastRequest {
 	//
 	////////////
 	char *m_query;
-	long  m_srn;
-	long  m_ern;
+	int32_t  m_srn;
+	int32_t  m_ern;
 	char *m_qlang;
         bool  m_forceDel;
-
+	char  m_recycleContent;
 	// useful bufs to copy data over
 	SafeBuf m_tmpBuf1;
 	SafeBuf m_tmpBuf2;
@@ -226,6 +233,7 @@ class GigablastRequest {
 
 #define PF_CLONE       0x20000
 #define PF_PRIVATE     0x40000 // for password to not show in api
+#define PF_SMALLTEXTAREA 0x80000
 
 class Parm {
  public:
@@ -236,10 +244,10 @@ class Parm {
 	char *m_cgi3;  // alias
 	char *m_cgi4;  // alias
 	char *m_xml;   // default to rendition of m_title if NULL
-	long  m_off;   // this variable's offset into the CollectionRec class
+	int32_t  m_off;   // this variable's offset into the CollectionRec class
 	char  m_colspan;
 	char  m_type;  // TYPE_BOOL, TYPE_LONG, ...
-	long  m_page;  // PAGE_MASTER, PAGE_SPIDER, ... see Pages.h
+	int32_t  m_page;  // PAGE_MASTER, PAGE_SPIDER, ... see Pages.h
 	char  m_obj;   // OBJ_CONF or OBJ_COLL
 	// the maximum number of elements supported in the array.
 	// this is 1 if NOT an array (i.e. array of only one parm).
@@ -247,15 +255,15 @@ class Parm {
 	// CollectionRec.h or Conf.h.
 	bool isArray() { return (m_max>1); };
 
-	long getNumInArray() ;
+	int32_t getNumInArray() ;
 
-	long  m_max;   // max elements in the array
+	int32_t  m_max;   // max elements in the array
 	// if array is fixed size, how many elements in it?
 	// this is 0 if not a FIXED size array.
-	long  m_fixed; 
-	long  m_size;  // max string size
+	int32_t  m_fixed; 
+	int32_t  m_size;  // max string size
 	char *m_def;   // default value of this variable if not in either conf
-	long  m_defOff; // if default value points to a collectionrec parm!
+	int32_t  m_defOff; // if default value points to a collectionrec parm!
 	char  m_cast;  // true if we should broadcast to all hosts (default)
 	char *m_units;
 	char  m_addin; // add "insert above" link to gui when displaying array
@@ -264,19 +272,19 @@ class Parm {
 	char  m_hdrs;  // print headers for row or print title/desc for single?
 	char  m_perms; // 0 means same as WebPages' m_perms
 	char  m_subMenu;
-	long  m_flags;
+	int32_t  m_flags;
 	char *m_class;
 	char *m_icon;
 	char *m_qterm;
 	char *m_pstr; // for sorting by in sendPageAPI()
-	long  m_parmNum; // slot # in the m_parms[] array that we are
+	int32_t  m_parmNum; // slot # in the m_parms[] array that we are
 	//bool (*m_func)(TcpSocket *s , HttpRequest *r,
 	//	       bool (*cb)(TcpSocket *s , HttpRequest *r));
 	bool (*m_func)(char *parmRec);
 	// some functions can block, like when deleting a coll because
 	// the tree might be saving, so they take a "we" ptr
 	bool (*m_func2)(char *parmRec,class WaitEntry *we);
-	long  m_plen;  // offset of length for TYPE_STRINGS (m_htmlHeadLen...)
+	int32_t  m_plen;  // offset of length for TYPE_STRINGS (m_htmlHeadLen...)
 	char  m_group; // start of a new group of controls?
 	// m_priv = 1 means gigablast's software license clients cannot see
 	//            or change.
@@ -287,31 +295,31 @@ class Parm {
 	//            from quigo so he can set "t2" to something bigger.
 	char  m_priv;  // true if gigablast's software clients cannot see
 	char  m_save;  // save to xml file? almost always true
-	long  m_min;
+	int32_t  m_min;
 	// these are used for search parms in PageResults.cpp
 	//char m_sparm;// is this a search parm? for passing to PageResults.cpp
 	//char *m_scgi;  // parm in the search url
 	char  m_spriv; // is it private? only admins can see/use private parms
 	//char *m_scmd;  // the url path for this m_scgi variable
-	//long  m_sdefo; // offset of default into CollectionRec (use m_off)
-	long  m_sminc ;// offset of min in CollectionRec (-1 for none)
-	long  m_smaxc ;// offset of max in CollectionRec (-1 for none)
-	long  m_smin;  // absolute min
-	long  m_smax;  // absolute max
-	//long  m_soff;  // offset into SearchInput to store value in
+	//int32_t  m_sdefo; // offset of default into CollectionRec (use m_off)
+	int32_t  m_sminc ;// offset of min in CollectionRec (-1 for none)
+	int32_t  m_smaxc ;// offset of max in CollectionRec (-1 for none)
+	int32_t  m_smin;  // absolute min
+	int32_t  m_smax;  // absolute max
+	//int32_t  m_soff;  // offset into SearchInput to store value in
 	char  m_sprpg; // propagate the cgi variable to other pages via GET?
 	char  m_sprpp; // propagate the cgi variable to other pages via POST?
 	bool  m_sync;  // this parm should be synced
-	long  m_hash;  // hash of "title"
-	long  m_cgiHash; // hash of m_cgi
+	int32_t  m_hash;  // hash of "title"
+	int32_t  m_cgiHash; // hash of m_cgi
 
 	bool   getValueAsBool   ( class SearchInput *si ) ;
-	long   getValueAsLong   ( class SearchInput *si ) ;
+	int32_t   getValueAsLong   ( class SearchInput *si ) ;
 	char * getValueAsString ( class SearchInput *si ) ;	
 
-	long getNumInArray ( collnum_t collnum ) ;
+	int32_t getNumInArray ( collnum_t collnum ) ;
 
-	bool printVal ( class SafeBuf *sb , collnum_t collnum , long occNum ) ;
+	bool printVal ( class SafeBuf *sb , collnum_t collnum , int32_t occNum ) ;
 };
 
 #define MAX_PARMS 940
@@ -339,63 +347,68 @@ class Parms {
 	bool printParms (SafeBuf* sb, TcpSocket *s , HttpRequest *r );
 
 	bool printParms2 (SafeBuf* sb, 
-			  long page,
+			  int32_t page,
 			  CollectionRec *cr,
-			  long nc , 
-			  long pd ,
+			  int32_t nc , 
+			  int32_t pd ,
 			  bool isCrawlbot ,
 			  char format, //bool isJSON,
-			  TcpSocket *sock
+			  TcpSocket *sock,
+			  bool isMasterAdmin,
+			  bool isCollAdmin
 			  );
 
 	/*
 	char *printParm ( char *p    , 
 			  char *pend ,
-			  //long  user ,
+			  //int32_t  user ,
 			  char *username,
 			  Parm *m    , 
-			  long  mm   , // m = &m_parms[mm]
-			  long  j    ,
-			  long  jend ,
+			  int32_t  mm   , // m = &m_parms[mm]
+			  int32_t  j    ,
+			  int32_t  jend ,
 			  char *THIS ,
 			  char *coll ,
 			  char *pwd  ,
 			  char *bg   ,
-			  long  nc   ,
-			  long  pd   ) ;
+			  int32_t  nc   ,
+			  int32_t  pd   ) ;
 	*/
 
 	bool printParm ( SafeBuf* sb,
-			 //long  user ,
+			 //int32_t  user ,
 			  char *username,
 			  Parm *m    , 
-			  long  mm   , // m = &m_parms[mm]
-			  long  j    ,
-			  long  jend ,
+			  int32_t  mm   , // m = &m_parms[mm]
+			  int32_t  j    ,
+			  int32_t  jend ,
 			  char *THIS ,
 			  char *coll ,
 			  char *pwd  ,
 			  char *bg   ,
-			  long  nc   ,
-			 long  pd   ,
+			  int32_t  nc   ,
+			 int32_t  pd   ,
 			 bool lastRow ,
-			 bool isCrawlbot = false,
-			 char format = FORMAT_HTML);//bool isJSON = false ) ;
+			 bool isCrawlbot ,//= false,
+			 char format , //= FORMAT_HTML,
+			 bool isMasterAdmin ,
+			 bool isCollAdmin ,
+			 class TcpSocket *sock );
 
-	char *getTHIS ( HttpRequest *r , long page );
+	char *getTHIS ( HttpRequest *r , int32_t page );
 
-	class Parm *getParmFromParmHash ( long parmHash );
+	class Parm *getParmFromParmHash ( int32_t parmHash );
 
-	bool setFromRequest ( HttpRequest *r , //long user,
+	bool setFromRequest ( HttpRequest *r , //int32_t user,
 			      TcpSocket* s,
 			      class CollectionRec *newcr ,
 			      char *THIS ,
-			      long objType );
+			      int32_t objType );
 	
-	bool insertParm ( long i , long an , char *THIS ) ;
-	bool removeParm ( long i , long an , char *THIS ) ;
+	bool insertParm ( int32_t i , int32_t an , char *THIS ) ;
+	bool removeParm ( int32_t i , int32_t an , char *THIS ) ;
 
-	void setParm ( char *THIS, Parm *m, long mm, long j, char *s,
+	void setParm ( char *THIS, Parm *m, int32_t mm, int32_t j, char *s,
 		       bool isHtmlEncoded , bool fromRequest ) ;
 	
 	void setToDefault ( char *THIS , char objType ,
@@ -408,7 +421,7 @@ class Parms {
 
 	bool setParmsFromXml ( Xml &xml , void *THIS, char objType ) ;
 
-	bool setXmlFromFile(Xml *xml, char *filename, char *buf, long bufSize);
+	bool setXmlFromFile(Xml *xml, char *filename, class SafeBuf *sb );
 
 	bool saveToXml ( char *THIS , char *f , char objType ) ;
 
@@ -429,13 +442,13 @@ class Parms {
 	void detachSafeBufs ( class CollectionRec *cr ) ;
 
 	// calc checksum of parms
-	unsigned long calcChecksum();
+	uint32_t calcChecksum();
 
 	// get size of serialized parms
-	//long getStoredSize();
+	//int32_t getStoredSize();
 	// . serialized to buf
 	// . if buf is NULL, just calcs size
-	//bool serialize( char *buf, long *bufSize );
+	//bool serialize( char *buf, int32_t *bufSize );
 	//void deserialize( char *buf );
 
 	void overlapTest ( char step ) ;
@@ -457,36 +470,36 @@ class Parms {
 	bool addNewParmToList1 ( SafeBuf *parmList ,
 				 collnum_t collnum ,
 				 char *parmValString ,
-				 long  occNum ,
+				 int32_t  occNum ,
 				 char *parmName ) ;
 	bool addNewParmToList2 ( SafeBuf *parmList ,
 				 collnum_t collnum , 
 				 char *parmValString ,
-				 long occNum ,
+				 int32_t occNum ,
 				 Parm *m ) ;
 	bool addCurrentParmToList1 ( SafeBuf *parmList ,
 				     CollectionRec *cr , 
 				     char *parmName ) ;
 	bool addCurrentParmToList2 ( SafeBuf *parmList ,
 				     collnum_t collnum , 
-				     long occNum ,
+				     int32_t occNum ,
 				     Parm *m ) ;
 	bool convertHttpRequestToParmList (HttpRequest *hr,SafeBuf *parmList,
-					   long page , TcpSocket *sock );
-	Parm *getParmFast2 ( long cgiHash32 ) ;
-	Parm *getParmFast1 ( char *cgi , long *occNum ) ;
+					   int32_t page , TcpSocket *sock );
+	Parm *getParmFast2 ( int32_t cgiHash32 ) ;
+	Parm *getParmFast1 ( char *cgi , int32_t *occNum ) ;
 	bool broadcastParmList ( SafeBuf *parmList ,
 				 void    *state ,
 				 void   (* callback)(void *) ,
 				 bool sendToGrunts  = true ,
 				 bool sendToProxies = false ,
 				 // send to this single hostid? -1 means all
-				 long hostId = -1 ,
-				 long hostId2 = -1 ); // hostid range?
+				 int32_t hostId = -1 ,
+				 int32_t hostId2 = -1 ); // hostid range?
 	bool doParmSendingLoop ( ) ;
 	bool syncParmsWithHost0 ( ) ;
 	bool makeSyncHashList ( SafeBuf *hashList ) ;
-	long getNumInArray ( collnum_t collnum ) ;
+	int32_t getNumInArray ( collnum_t collnum ) ;
 	bool addAllParmsToList ( SafeBuf *parmList, collnum_t collnum ) ;
 	bool updateParm ( char *rec , class WaitEntry *we ) ;
 
@@ -501,25 +514,25 @@ class Parms {
 	bool m_isDefaultLoaded;
 
 	Page m_pages [ 50 ];
-	long m_numPages;
+	int32_t m_numPages;
 	
 	Parm m_parms [ MAX_PARMS ];
-	long m_numParms;
+	int32_t m_numParms;
 
 	// just those Parms that have a m_sparm of 1
 	Parm *m_searchParms [ MAX_PARMS ];
-	long m_numSearchParms;
+	int32_t m_numSearchParms;
 
 	/*
  private:
 	// these return true if overflow
-	bool serializeConfParm( Parm *m, long i, char **p, char *end, 
-				long size, long cnt, 
-				bool sizeChk, long *bufSz );
+	bool serializeConfParm( Parm *m, int32_t i, char **p, char *end, 
+				int32_t size, int32_t cnt, 
+				bool sizeChk, int32_t *bufSz );
 	bool serializeCollParm( class CollectionRec *cr, 
-				Parm *m, long i, char **p, char *end,
-				long size, long cnt,
-				bool sizeChk, long *bufSz );
+				Parm *m, int32_t i, char **p, char *end,
+				int32_t size, int32_t cnt,
+				bool sizeChk, int32_t *bufSz );
 			
 
 	void deserializeConfParm( Parm *m, SerParm *sp, char **p,

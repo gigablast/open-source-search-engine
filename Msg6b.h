@@ -17,9 +17,9 @@ public:
 
 	bool getTitlerecSample(char* query,
 			       char* coll,
-			       long  collLen,
-			       long  numSamples,
-			       long  numToKeep,
+			       int32_t  collLen,
+			       int32_t  numSamples,
+			       int32_t  numToKeep,
 			       void  *state,
 			       bool  (*recordCallback) (void *state,
 							TitleRec* tr,
@@ -28,12 +28,12 @@ public:
 			       bool  doSiteClustering,
 			       bool  doIpClustering,
 			       bool  getTagRecs,
-			       long  niceness);
+			       int32_t  niceness);
 	bool gotDocIdList();
 	bool callbackIfDone();
-	bool getMsg22s(long sampleNum);
-	bool gotMsg22s(long sampleNum);
-	bool gotMsg8as(long sampleNum);
+	bool getMsg22s(int32_t sampleNum);
+	bool gotMsg22s(int32_t sampleNum);
+	bool gotMsg8as(int32_t sampleNum);
 
 
 
@@ -44,14 +44,14 @@ protected:
 	//SiteRec* m_siteRecs;
 	class TagRec   *m_tagRecs;
 
-	long   m_numMsg22s;
-	long   m_numGotten;
-	long   m_numToGet;
-	long   m_numToKeep;
-	long   m_lastSlotUsed;
+	int32_t   m_numMsg22s;
+	int32_t   m_numGotten;
+	int32_t   m_numToGet;
+	int32_t   m_numToKeep;
+	int32_t   m_lastSlotUsed;
 
-	long m_niceness;
-	long m_numOutstanding;
+	int32_t m_niceness;
+	int32_t m_numOutstanding;
 	//bool m_getSiteRecs;
 	bool m_getTagRecs;
 	
@@ -61,7 +61,7 @@ protected:
 	Query  m_query;
 	char   m_pwd [MAX_COLL_LEN];
 	char   m_coll[MAX_COLL_LEN];
-	long   m_collLen;
+	int32_t   m_collLen;
 
 	bool  (*m_recordCallback) (void *state, 
 				   TitleRec* tr,

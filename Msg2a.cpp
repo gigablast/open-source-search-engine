@@ -6,18 +6,18 @@
 #define CATID_BUFFER_SIZE (1024*1024)
 
 static void gotMsg9bReplyWrapper      ( void *state );
-static void handleRequest2a          ( UdpSlot *slot, long niceness );
+static void handleRequest2a          ( UdpSlot *slot, int32_t niceness );
 //static void gotMulticastReplyWrapper ( void *state, void *state2 );
 static void gotSendReplyWrapper ( void *state, UdpSlot *slot );
 
 // properly read from file
-long Msg2a::fileRead ( int fileid, void *buf, size_t count ) {
+int32_t Msg2a::fileRead ( int fileid, void *buf, size_t count ) {
 	char *p = (char*)buf;
-	long n = 0;
-	unsigned long sizeRead = 0;
+	int32_t n = 0;
+	uint32_t sizeRead = 0;
 	while ( sizeRead < count ) {
 		n = read ( fileid, p, count - sizeRead );
-		if ( n <= 0 || n > (long)count )
+		if ( n <= 0 || n > (int32_t)count )
 			return n;
 		sizeRead += n;
 		p += n;
@@ -45,7 +45,7 @@ Msg2a::~Msg2a() {
 }
 
 bool Msg2a::makeCatdb( char  *coll,
-		       long   collLen,
+		       int32_t   collLen,
 		       bool   updateFromNew,
 		       void  *state,
 		       void (*callback)(void *st) ) {
@@ -71,8 +71,8 @@ bool Msg2a::makeCatdb( char  *coll,
 	// read in the number of urls
 	m_numUrlsSent = 0;
 	m_numUrlsDone = 0;
-	//m_inStream.read((char*)&m_numUrls, sizeof(long));
-	if ( fileRead(m_inStream, &m_numUrls, sizeof(long) ) != sizeof(long)) {
+	//m_inStream.read((char*)&m_numUrls, sizeof(int32_t));
+	if ( fileRead(m_inStream, &m_numUrls, sizeof(int32_t) ) != sizeof(int32_t)) {
 		log("db: Error reading content file: %s", inFile);
 		return gotAllReplies();
 	}
@@ -82,17 +82,17 @@ bool Msg2a::makeCatdb( char  *coll,
 	m_urlsBufferSize = URL_BUFFER_SIZE;
 	m_urls = (char*)mmalloc(m_urlsBufferSize, "Msg2a");
 	if (!m_urls) {
-		log("db: Unable to allocate %li bytes for urls",
-		    sizeof(char)*m_urlsBufferSize);
+		log("db: Unable to allocate %"INT32" bytes for urls",
+		    (int32_t)sizeof(char)*m_urlsBufferSize);
 		g_errno = ENOMEM;
 		return gotAllReplies();
 	}
 	m_catids = NULL;
 	m_catidsBufferSize = CATID_BUFFER_SIZE;
-	m_catids = (long*)mmalloc(sizeof(long)*m_catidsBufferSize, "Msg2a");
+	m_catids = (int32_t*)mmalloc(sizeof(int32_t)*m_catidsBufferSize, "Msg2a");
 	if (!m_catids) {
-		log("db: Unable to allocate %li bytes for catids",
-		    sizeof(long)*m_catidsBufferSize);
+		log("db: Unable to allocate %"INT32" bytes for catids",
+		    (int32_t)sizeof(int32_t)*m_catidsBufferSize);
 		g_errno = ENOMEM;
 		return gotAllReplies();
 	}
@@ -102,7 +102,7 @@ bool Msg2a::makeCatdb( char  *coll,
 		m_numNumCatids = m_numUrls;
 		m_numCatids = (unsigned char*)mmalloc(m_numNumCatids, "Msg2a");
 		if (!m_numCatids) {
-			log("db: Unable to allocate %li bytes for numCatids",
+			log("db: Unable to allocate %"INT32" bytes for numCatids",
 			    m_numNumCatids);
 			g_errno = ENOMEM;
 			return gotAllReplies();
@@ -110,9 +110,9 @@ bool Msg2a::makeCatdb( char  *coll,
 	}
 
 	// if we're updating, load up the diff file
-	long urlp    = 0;
-	long catidp  = 0;
-	long currUrl = 0;
+	int32_t urlp    = 0;
+	int32_t catidp  = 0;
+	int32_t currUrl = 0;
 	m_numRemoveUrls = 0;
 	if ( m_updateFromNew ) {
 		// open the new diff file
@@ -129,24 +129,24 @@ bool Msg2a::makeCatdb( char  *coll,
 		}
 
 		// read in the number of urls to update/add
-		//diffInStream.read((char*)&m_numUpdateIndexes, sizeof(long));
+		//diffInStream.read((char*)&m_numUpdateIndexes, sizeof(int32_t));
 		if ( fileRead(diffInStream, &m_numUpdateIndexes,
-				sizeof(long)) != sizeof(long) ) {
+			      sizeof(int32_t)) != sizeof(int32_t) ) {
 			log("db: Error reading content file: %s", inFile);
 			return gotAllReplies();
 		}
 		// read in the number of urls to remove
-		//diffInStream.read((char*)&m_numRemoveUrls, sizeof(long));
-		if ( fileRead(diffInStream, &m_numRemoveUrls, sizeof(long)) !=
-				sizeof(long) ) {
+		//diffInStream.read((char*)&m_numRemoveUrls, sizeof(int32_t));
+		if ( fileRead(diffInStream, &m_numRemoveUrls, sizeof(int32_t)) !=
+				sizeof(int32_t) ) {
 			log("db: Error reading content file: %s", inFile);
 			return gotAllReplies();
 		}
 		// create the buffer for the update/add indexes
-		m_updateIndexes = (long*)mmalloc(
-				sizeof(long)*m_numUpdateIndexes, "Msg2a");
+		m_updateIndexes = (int32_t*)mmalloc(
+				sizeof(int32_t)*m_numUpdateIndexes, "Msg2a");
 		if ( !m_updateIndexes ) {
-			log("db: Unable to allocate %li bytes for "
+			log("db: Unable to allocate %"INT32" bytes for "
 			    "updateIndexes", m_numNumCatids);
 			g_errno = ENOMEM;
 			return gotAllReplies();
@@ -156,21 +156,21 @@ bool Msg2a::makeCatdb( char  *coll,
 		m_numNumCatids = m_numUpdateIndexes + m_numRemoveUrls;
 		m_numCatids = (unsigned char*)mmalloc(m_numNumCatids, "Msg2a");
 		if (!m_numCatids) {
-			log("db: Unable to allocate %li bytes for numCatids",
+			log("db: Unable to allocate %"INT32" bytes for numCatids",
 		    	    m_numNumCatids);
 			g_errno = ENOMEM;
 			return gotAllReplies();
 		}
 		// read in the update/add indexes
-		//for ( long i = 0; i < m_numUpdateIndexes &&
+		//for ( int32_t i = 0; i < m_numUpdateIndexes &&
 		//		  diffInStream.good(); i++ ) {
-		for ( long i = 0; i < m_numUpdateIndexes; i++ ) {
+		for ( int32_t i = 0; i < m_numUpdateIndexes; i++ ) {
 			//diffInStream.read((char*)&m_updateIndexes[i],
-			//		  sizeof(long));
-			long n = fileRead ( diffInStream,
+			//		  sizeof(int32_t));
+			int32_t n = fileRead ( diffInStream,
 					    &m_updateIndexes[i],
-					    sizeof(long) );
-			if ( n < 0 || n > (long)sizeof(long) ) {
+					    sizeof(int32_t) );
+			if ( n < 0 || n > (int32_t)sizeof(int32_t) ) {
 				log("db: Error reading content file: %s",
 				    inFile);
 				return gotAllReplies();
@@ -179,15 +179,15 @@ bool Msg2a::makeCatdb( char  *coll,
 				break;
 		}
 		// read in the urls to remove
-		//for ( long i = 0; i < m_numRemoveUrls &&
+		//for ( int32_t i = 0; i < m_numRemoveUrls &&
 		//		  diffInStream.good(); i++ ) {
-		for ( long i = 0; i < m_numRemoveUrls; i++ ) {
-			short urlLen;
-			//diffInStream.read((char*)&urlLen, sizeof(short));
-			long n = fileRead ( diffInStream,
+		for ( int32_t i = 0; i < m_numRemoveUrls; i++ ) {
+			int16_t urlLen;
+			//diffInStream.read((char*)&urlLen, sizeof(int16_t));
+			int32_t n = fileRead ( diffInStream,
 					    &urlLen,
-					    sizeof(short) );
-			if ( n < 0 || n > (long)sizeof(short) ) {
+					    sizeof(int16_t) );
+			if ( n < 0 || n > (int32_t)sizeof(int16_t) ) {
 				log("db: Error reading content file: %s",
 				    inFile);
 				return gotAllReplies();
@@ -196,7 +196,7 @@ bool Msg2a::makeCatdb( char  *coll,
 				break;
 			if ( urlLen <= 0 ) {
 				log(LOG_WARN, "db: FOUND %i LENGTH URL AT "
-					      "%li FOR REMOVE, EXITING.",
+					      "%"INT32" FOR REMOVE, EXITING.",
 					      urlLen, i );
 				return gotAllReplies();
 			}
@@ -208,9 +208,9 @@ bool Msg2a::makeCatdb( char  *coll,
 						       URL_BUFFER_SIZE),
 					       "Msg2a");
 				if (!re_urls) {
-					log("db: Unable to allocate %li"
+					log("db: Unable to allocate %"INT32""
 					    " bytes for urls",
-					    sizeof(char)*m_urlsBufferSize+
+					    (int32_t)sizeof(char)*m_urlsBufferSize+
 					    URL_BUFFER_SIZE);
 					g_errno = ENOMEM;
 					return gotAllReplies();
@@ -246,29 +246,29 @@ bool Msg2a::makeCatdb( char  *coll,
 		//diffInStream.close();
 		close(diffInStream);
 	}
-	log(LOG_INFO, "db: Read %li urls to remove (%li)\n",
+	log(LOG_INFO, "db: Read %"INT32" urls to remove (%"INT32")\n",
 		      currUrl, m_numRemoveUrls);
 
 	// fill the buffers
-	//long currUrl = 0;
+	//int32_t currUrl = 0;
 	currUrl = m_numRemoveUrls;
-	long currUpdateIndex = 0;
-	long currIndex = 0;
+	int32_t currUpdateIndex = 0;
+	int32_t currIndex = 0;
 	//float nextPercent = 0.05f;
 	log ( LOG_INFO, "db: Generating Catdb...");
 	//while ( m_inStream.good() && currUrl < m_numUrls ) {
-	for ( long i = 0; i < m_numUrls; i++ ) {
+	for ( int32_t i = 0; i < m_numUrls; i++ ) {
 		// for update, only read in the update/add urls, skip others
 		if ( m_updateFromNew ) {
 			if ( currUpdateIndex >= m_numUpdateIndexes ||
 			     currIndex < m_updateIndexes[currUpdateIndex] ) {
 				// skip the next url
-				short urlLen = 0;
+				int16_t urlLen = 0;
 				char  skipUrl[MAX_URL_LEN*2];
-				//m_inStream.read((char*)&urlLen, sizeof(short));
+				//m_inStream.read((char*)&urlLen, sizeof(int16_t));
 				if ( fileRead ( m_inStream,
 					    &urlLen,
-					    sizeof(short) ) != sizeof(short) ) {
+					    sizeof(int16_t) ) != sizeof(int16_t) ) {
 					log("db: Error reading content file:"
 					    " %s", inFile);
 					return gotAllReplies();
@@ -288,10 +288,10 @@ bool Msg2a::makeCatdb( char  *coll,
 			currUpdateIndex++;
 		}
 		// read the next url
-		short urlLen = 0;
-		//m_inStream.read((char*)&urlLen, sizeof(short));
-		if ( fileRead(m_inStream, &urlLen, sizeof(short)) !=
-				sizeof(short) ) {
+		int16_t urlLen = 0;
+		//m_inStream.read((char*)&urlLen, sizeof(int16_t));
+		if ( fileRead(m_inStream, &urlLen, sizeof(int16_t)) !=
+				sizeof(int16_t) ) {
 			log("db: Error reading content file: %s", inFile);
 			return gotAllReplies();
 		}
@@ -303,7 +303,7 @@ bool Msg2a::makeCatdb( char  *coll,
 						       URL_BUFFER_SIZE),
 					       "Msg2a");
 			if (!re_urls) {
-				log("db: Unable to allocate %li"
+				log("db: Unable to allocate %"INT32""
 				    " bytes for urls",
 				    m_urlsBufferSize+
 				    URL_BUFFER_SIZE);
@@ -335,21 +335,21 @@ bool Msg2a::makeCatdb( char  *coll,
 		//log("gencat: url=%s",sb.getBufStart());
 
 	}
-	log(LOG_INFO, "db: Wrote %li urls to update (%li)\n",
+	log(LOG_INFO, "db: Wrote %"INT32" urls to update (%"INT32")\n",
 		      currUrl - m_numRemoveUrls, m_numUpdateIndexes);
 	//currUrl = 0;
 	currUrl = m_numRemoveUrls;
 	currUpdateIndex = 0;
 	currIndex = 0;
 	//while ( m_inStream.good() && currUrl < m_numUrls ) {
-	for ( long i = 0; i < m_numUrls; i++ ) {
+	for ( int32_t i = 0; i < m_numUrls; i++ ) {
 		// for update, only read in the update/add ids, skip others
 		if ( m_updateFromNew ) {
 			if ( currUpdateIndex >= m_numUpdateIndexes ||
 			     currIndex < m_updateIndexes[currUpdateIndex] ) {
 				// skip the catids
 				unsigned char nSkipIds;
-				long          skipId;
+				int32_t          skipId;
 				//m_inStream.read((char*)&nSkipIds, 1);
 				if ( fileRead ( m_inStream,
 					    &nSkipIds,
@@ -358,13 +358,13 @@ bool Msg2a::makeCatdb( char  *coll,
 					    " %s", inFile);
 					return gotAllReplies();
 				}
-				for ( long si = 0; si < nSkipIds; si++ ) {
+				for ( int32_t si = 0; si < nSkipIds; si++ ) {
 					//m_inStream.read((char*)&skipId,
-					//		sizeof(long));
+					//		sizeof(int32_t));
 					if ( fileRead ( m_inStream,
 						    &skipId,
-						    sizeof(long) ) !=
-							sizeof(long) ) {
+						    sizeof(int32_t) ) !=
+							sizeof(int32_t) ) {
 						log("db: Error reading "
 						    "content file: %s", inFile);
 						return gotAllReplies();
@@ -385,16 +385,16 @@ bool Msg2a::makeCatdb( char  *coll,
 		}
 		// make sure there's room
 		if (catidp + m_numCatids[currUrl] + 1 >= m_catidsBufferSize) {
-			long *re_catids = (long*)mrealloc(
+			int32_t *re_catids = (int32_t*)mrealloc(
 					m_catids,
-					sizeof(long)*m_catidsBufferSize,
-					sizeof(long)*(m_catidsBufferSize+
+					sizeof(int32_t)*m_catidsBufferSize,
+					sizeof(int32_t)*(m_catidsBufferSize+
 						CATID_BUFFER_SIZE),
 					"Msg2a");
 			if (!re_catids) {
-				log("db: Unable to allocate %li"
+				log("db: Unable to allocate %"INT32""
 				    " bytes for catids",
-				    sizeof(long)*m_catidsBufferSize+
+				    (int32_t)sizeof(int32_t)*m_catidsBufferSize+
 				    	CATID_BUFFER_SIZE);
 				g_errno = ENOMEM;
 				return gotAllReplies();
@@ -402,9 +402,9 @@ bool Msg2a::makeCatdb( char  *coll,
 			m_catids = re_catids;
 			m_catidsBufferSize += CATID_BUFFER_SIZE;
 		}
-		long readSize = sizeof(long)*m_numCatids[currUrl];
+		int32_t readSize = sizeof(int32_t)*m_numCatids[currUrl];
 		//m_inStream.read((char*)&m_catids[catidp],
-		//		sizeof(long)*m_numCatids[currUrl]);
+		//		sizeof(int32_t)*m_numCatids[currUrl]);
 		if ( fileRead ( m_inStream, &m_catids[catidp], readSize ) !=
 				readSize ) { 
 			log("db: Error reading content file: %s", inFile);
@@ -414,7 +414,7 @@ bool Msg2a::makeCatdb( char  *coll,
 		catidp += m_numCatids[currUrl];
 		currUrl++;
 	}
-	log(LOG_INFO, "db: Num Urls: %li  Num Links: %li",
+	log(LOG_INFO, "db: Num Urls: %"INT32"  Num Links: %"INT32"",
 			currUrl, catidp);
 	// send the Msg9
 	if (!m_msg9b.addCatRecs ( m_urls,
@@ -452,7 +452,7 @@ bool Msg2a::gotAllReplies() {
 	// free the buffers
 	if (m_updateIndexes) {
 		mfree(m_updateIndexes,
-		      sizeof(long)*m_numUpdateIndexes, "Msg2a");
+		      sizeof(int32_t)*m_numUpdateIndexes, "Msg2a");
 		m_updateIndexes = NULL;
 	}
 	if (m_urls) {
@@ -460,7 +460,7 @@ bool Msg2a::gotAllReplies() {
 		m_urls = NULL;
 	}
 	if (m_catids) {
-		mfree(m_catids, sizeof(long)*m_catidsBufferSize, "Msg2a");
+		mfree(m_catids, sizeof(int32_t)*m_catidsBufferSize, "Msg2a");
 		m_catids = NULL;
 	}
 	if (m_numCatids) {
@@ -489,16 +489,16 @@ bool Msg2a::gotAllReplies() {
 	return true;
 }
 
-bool Msg2a::sendSwitchCatdbMsgs ( long num ) {
+bool Msg2a::sendSwitchCatdbMsgs ( int32_t num ) {
 	UdpServer *us = &g_udpServer;
 	// initialize the sending process
-	long n = num;
+	int32_t n = num;
 	if ( num == -1 ) {
 		//m_numMsgsToSend = g_hostdb.m_numShards;
 		m_numMsgsToSend = g_hostdb.m_numHosts;
 		m_msgsSent = 0;
 		m_msgsReplied = 0;
-		for ( long i = 0; i < NUM_MINIMSG2AS; i++ ) {
+		for ( int32_t i = 0; i < NUM_MINIMSG2AS; i++ ) {
 			m_miniMsg2as[i].m_index = i;
 			m_miniMsg2as[i].m_parent = this;
 		}
@@ -558,13 +558,13 @@ void gotSendReplyWrapper ( void *state, UdpSlot *slot ) {
 }
 
 // handle the request for switching to the updated catdb
-void handleRequest2a ( UdpSlot *slot, long netnice ) {
+void handleRequest2a ( UdpSlot *slot, int32_t netnice ) {
 	UdpServer *us = &g_udpServer;
 	//if ( netnice == 0 ) us = &g_udpServer2;
 
 	// get the mode from the data
 	char *request = slot->m_readBuf;
-	long  requestSize = slot->m_readBufSize;
+	int32_t  requestSize = slot->m_readBufSize;
 	if ( requestSize < 1 ) {
 		log("db: Got Invalid Request Size");
 		// send error reply

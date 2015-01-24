@@ -4,31 +4,31 @@
 
 class Flags {
 public:
-	static const long NoMin;
-	static const long NoMax;
+	static const int32_t NoMin;
+	static const int32_t NoMax;
 
 	Flags();
 	~Flags();
 	
 	void reset  ();
-	bool resize ( long size );
+	bool resize ( int32_t size );
 	
-	char getFlag ( long n           ) { return m_flags[n]; };
-	void setFlag ( long n, char set );
+	char getFlag ( int32_t n           ) { return m_flags[n]; };
+	void setFlag ( int32_t n, char set );
 
-	long getNumFlags () { return m_numFlags; };
-	long getNumSet   () { return m_numSet; };
-	long getHighestSet () { return m_highestSet; };
-	long getLowestSet  () { return m_lowestSet; };
+	int32_t getNumFlags () { return m_numFlags; };
+	int32_t getNumSet   () { return m_numSet; };
+	int32_t getHighestSet () { return m_highestSet; };
+	int32_t getLowestSet  () { return m_lowestSet; };
 	
 
 	void dumpFlags();
 
 private:
-	long  m_numFlags;   
-	long  m_numSet;     
-	long  m_highestSet; 
-	long  m_lowestSet;  
+	int32_t  m_numFlags;   
+	int32_t  m_numSet;     
+	int32_t  m_highestSet; 
+	int32_t  m_lowestSet;  
 
 	char *m_flags;
 };

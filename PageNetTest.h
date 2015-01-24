@@ -31,21 +31,21 @@ class PageNetTest {
 	bool stop();
 	void reset();
 	void destructor();
-	bool netTestStart_r( bool amThread, long num );
+	bool netTestStart_r( bool amThread, int32_t num );
 	void threadControl();
 	bool collectResults();
 	bool gotResults( TcpSocket *s );
 
-	long getSend1   ( long index ) {return m_hostRates[0][index]; };
-	long getReceive1( long index ) {return m_hostRates[1][index]; };
-	long getSend2   ( long index ) {return m_hostRates[2][index]; };
-	long getReceive2( long index ) {return m_hostRates[3][index]; };
+	int32_t getSend1   ( int32_t index ) {return m_hostRates[0][index]; };
+	int32_t getReceive1( int32_t index ) {return m_hostRates[1][index]; };
+	int32_t getSend2   ( int32_t index ) {return m_hostRates[2][index]; };
+	int32_t getReceive2( int32_t index ) {return m_hostRates[3][index]; };
 
 	// Socket Functions
-	int  openSock ( long num, long type, struct sockaddr_in *name, 
-			long port );
-	long readSock ( int sock );
-	long sendSock ( int sock );
+	int  openSock ( int32_t num, int32_t type, struct sockaddr_in *name, 
+			int32_t port );
+	int32_t readSock ( int sock );
+	int32_t sendSock ( int sock );
 	int  closeSock( int sock );
 
 	// Html Data/Stats Page Functions
@@ -56,8 +56,8 @@ class PageNetTest {
 	bool isRunning()  { return m_running;    };
 	bool runNetTest() { return m_runNetTest; };
 
-	long               m_threadNum;
-	long		   m_threadReturned;
+	int32_t               m_threadNum;
+	int32_t		   m_threadReturned;
 
  private:
 	//Member Variables
@@ -65,37 +65,37 @@ class PageNetTest {
 	bool               m_running;
 	bool               m_fullDuplex;
 	char               m_coll[16];
-	long		   m_numResultsSent;
-	long		   m_numResultsRecv;
+	int32_t		   m_numResultsSent;
+	int32_t		   m_numResultsRecv;
 
-	long               m_type      [MAX_TEST_THREADS];
+	int32_t               m_type      [MAX_TEST_THREADS];
 	int                m_sock      [MAX_TEST_THREADS];
-	long               m_port      [MAX_TEST_THREADS];
+	int32_t               m_port      [MAX_TEST_THREADS];
         struct sockaddr_in m_name      [MAX_TEST_THREADS]; 
-	long               m_testHostId[MAX_TEST_THREADS];
-	long		   m_testIp    [MAX_TEST_THREADS];
+	int32_t               m_testHostId[MAX_TEST_THREADS];
+	int32_t		   m_testIp    [MAX_TEST_THREADS];
 	char               m_rdgram    [NTDGRAM_SIZE    ];
 	char               m_sdgram    [NTDGRAM_SIZE    ];
 
-	unsigned long      m_calcTable [MAX_TEST_THREADS][AVG_TABLE_SIZE];
-	unsigned long      *m_hostRates[4];
+	uint32_t      m_calcTable [MAX_TEST_THREADS][AVG_TABLE_SIZE];
+	uint32_t      *m_hostRates[4];
 
 	struct sockaddr_in m_to;
 	struct sockaddr_in m_from;
 
 
-	long long          m_startTime;
-	long long          m_endTime;
-	long long          m_calcTime;
+	int64_t          m_startTime;
+	int64_t          m_endTime;
+	int64_t          m_calcTime;
 
-	long		   m_hostId;
-	long		   m_switchId;
-	long		   m_firstHostOnSwitch;
-	long		   m_lastHostOnSwitch;
-	long		   m_numHostsOnSwitch;
-	long		   m_numSwitches;
-	long		   m_testBytes;
-	long		   m_testDuration;
+	int32_t		   m_hostId;
+	int32_t		   m_switchId;
+	int32_t		   m_firstHostOnSwitch;
+	int32_t		   m_lastHostOnSwitch;
+	int32_t		   m_numHostsOnSwitch;
+	int32_t		   m_numSwitches;
+	int32_t		   m_testBytes;
+	int32_t		   m_testDuration;
 
 };
 

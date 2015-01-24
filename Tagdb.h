@@ -17,10 +17,10 @@
 // . we can use accountability, we can merge sources, etc.
 // . we can use time-based merging
 
-bool isTagTypeUnique    ( long tt ) ;
-bool isTagTypeIndexable ( long tt ) ;
-//bool isTagTypeString ( long tt ) ;
-long hexToBinary     ( char *src , char *srcEnd , char *dst , bool decrement );
+bool isTagTypeUnique    ( int32_t tt ) ;
+bool isTagTypeIndexable ( int32_t tt ) ;
+//bool isTagTypeString ( int32_t tt ) ;
+int32_t hexToBinary     ( char *src , char *srcEnd , char *dst , bool decrement );
 
 // . Tag::m_type is this if its a dup in the TagRec
 // . so if www.xyz.com has one tag and xyz.com has another, then
@@ -34,18 +34,18 @@ long hexToBinary     ( char *src , char *srcEnd , char *dst , bool decrement );
 class Tag {
  public:
 
-	long  getSize    ( ) { return sizeof(key128_t) + 4 + m_recDataSize; };
-	long  getRecSize ( ) { return sizeof(key128_t) + 4 + m_recDataSize; };
+	int32_t  getSize    ( ) { return sizeof(key128_t) + 4 + m_recDataSize; };
+	int32_t  getRecSize ( ) { return sizeof(key128_t) + 4 + m_recDataSize; };
 
 	void set ( char *site ,
 		   char *tagname ,
-		   long  timestamp ,
+		   int32_t  timestamp ,
 		   char *user ,
-		   long  ip ,
+		   int32_t  ip ,
 		   char *data ,
-		   long  dataSize );
+		   int32_t  dataSize );
 
-	long print ( ) ; 
+	int32_t print ( ) ; 
 	bool printToBuf             ( SafeBuf *sb );
 	bool printToBufAsAddRequest ( SafeBuf *sb );
 	bool printToBufAsXml        ( SafeBuf *sb );
@@ -59,38 +59,38 @@ class Tag {
 		return isTagTypeIndexable ( m_type ); }
 	//( m_dataSize == 1 || isType("meta") ); };
 	// for parsing output of printToBuf()
-	long setFromBuf            ( char *p , char *pend ) ;
-	long setDataFromBuf        ( char *p , char *pend ) ;
+	int32_t setFromBuf            ( char *p , char *pend ) ;
+	int32_t setDataFromBuf        ( char *p , char *pend ) ;
 
 	// skip of the username, whose size (including \0) is encoded
 	// as the first byte in the m_recData buffer
 	char *getTagData     ( ) {return m_buf + *m_buf + 1;};
-	long  getTagDataSize ( ) {return m_bufSize - *m_buf - 1; };
+	int32_t  getTagDataSize ( ) {return m_bufSize - *m_buf - 1; };
 	// what user added this tag?
 	char *getUser ( ) { return m_buf + 1;};
 	// remove the terminating \0 which is included as part of the size
-	long  getUserLen ( ) { return *m_buf - 1; };
+	int32_t  getUserLen ( ) { return *m_buf - 1; };
 
 	// used to determine if one Tag should overwrite the other! if they
 	// have the same dedup hash... then yes...
-	long getDedupHash ( );
+	int32_t getDedupHash ( );
 
 	// tagdb uses 128 bit keys now
 	key128_t  m_key;
-	long      m_recDataSize;
+	int32_t      m_recDataSize;
 
 	// when tag was added/updated
-	long     m_timestamp; 
+	int32_t     m_timestamp; 
 	// . ip address of user adding tag
 	// . prevent multiple turk voters from same ip!
-	long     m_ip;        
+	int32_t     m_ip;        
 
 	// each tag in a TagRec now has a unique id for ez deletion
-	//long     m_tagId;
+	//int32_t     m_tagId;
 
 	// the "type" of tag. see the TagDesc array in Tagdb.cpp for a list
 	// of all the tag types. m_type is a hash of the type name.
-	long     m_type;
+	int32_t     m_type;
 
 	// . m_user[] IS ACTUALLY a 6-byte KEY for another TagRec
 	// . this is also a user's name like "mwells"
@@ -98,16 +98,16 @@ class Tag {
 	// . m_user[7] is always \0
 	//char     m_user[8];
 
-	long     m_bufSize;
+	int32_t     m_bufSize;
 	char     m_buf[0];
 };
 
 // . convert "domain_squatter" to ST_DOMAIN_SQUATTER
 // . used by CollectionRec::getRegExpNum()
-long  getTagTypeFromStr( char *tagTypeName , long tagnameLen = -1 );
+int32_t  getTagTypeFromStr( char *tagTypeName , int32_t tagnameLen = -1 );
 
 // . convert ST_DOMAIN_SQUATTER to "domain_squatter"
-char *getTagStrFromType ( long tagType ) ;
+char *getTagStrFromType ( int32_t tagType ) ;
 
 // . max # of tags any one site or url can have
 // . even AFTER the "inheritance loop"
@@ -133,27 +133,27 @@ class TagRec {
 	// . an rdb record is a key, dataSize, then the data
 	// . the "data" is al the stuff after "m_dataSize"
 	//key_t    m_key;
-	//long     m_dataSize;
+	//int32_t     m_dataSize;
 	//uint16_t m_numTags;
 	//char     m_version;
 	//char     m_buf [ MAX_TAGREC_SIZE - 12 - 4 - 2 ];
 
 	//char *getKey      () { return (char *)&m_key; };
 	//char *getData     () { return (char *)this + 12 + 4; };
-	//long  getDataSize () { return m_dataSize; };
+	//int32_t  getDataSize () { return m_dataSize; };
 
 	//void  copy        (class TagRec *tp ) {
-	//	memcpy ( this , (void *)tp , tp->getSize() ); };
+	//	gbmemcpy ( this , (void *)tp , tp->getSize() ); };
 
 	// includes the 4 byte "header" which consists of the first 2 bytes
 	// being the size of the actual tag buffer and the second two bytes
 	// being the number of tags in the actual tag buffer
-	//long         getSize       ( ) { return 12+4+1+2+m_dataSize; };
-	//long           getSize       ( ) { return 12+4+m_dataSize;};
+	//int32_t         getSize       ( ) { return 12+4+1+2+m_dataSize; };
+	//int32_t           getSize       ( ) { return 12+4+m_dataSize;};
 
-	long           getNumTags    ( );
+	int32_t           getNumTags    ( );
 
-	long getSize ( ) { return sizeof(TagRec); };
+	int32_t getSize ( ) { return sizeof(TagRec); };
 
 	class Tag *getFirstTag   ( ) { 
 		if ( m_numListPtrs == 0 ) return NULL;
@@ -167,11 +167,11 @@ class TagRec {
 		// watch out
 		if ( ! tag ) return NULL;
 		// get rec size
-		long recSize = tag->getRecSize();
+		int32_t recSize = tag->getRecSize();
 		// point to current tag
 		char *current = (char *)tag;
 		// find what list we are in
-		long i;
+		int32_t i;
 		for ( i = 0 ; i < m_numListPtrs ; i++ ) {
 			if ( current <  m_listPtrs[i]->m_list    ) continue;
 			if ( current >= m_listPtrs[i]->m_listEnd ) continue;
@@ -194,19 +194,19 @@ class TagRec {
 	};
 
 	// return the number the tags having particular tag types
-	long           getNumTagTypes ( char *tagTypeStr );
+	int32_t           getNumTagTypes ( char *tagTypeStr );
 
 	// get a tag from the tagType
 	class Tag *getTag        ( char *tagTypeStr );
 
-	class Tag *getTag2       ( long tagType );
+	class Tag *getTag2       ( int32_t tagType );
 
 	//char *getRecEnd ( ) { return (char *)this + getSize(); };
-	//char *getMaxEnd ( ) { return (char *)this + (long)MAX_TAGREC_SIZE; };
+	//char *getMaxEnd ( ) { return (char *)this + (int32_t)MAX_TAGREC_SIZE; };
 
 	// . for showing under the summary of a search result in PageResults
 	// . also for Msg6a
-	long print ( ) ; 
+	int32_t print ( ) ; 
 	bool printToBuf             ( SafeBuf *sb );
 	bool printToBufAsAddRequest ( SafeBuf *sb );
 	bool printToBufAsXml        ( SafeBuf *sb );
@@ -216,53 +216,53 @@ class TagRec {
 	// . make sure not a dup of a pre-existing tag
 	// . used by the clock code to not at a clock if already in there
 	//   in Msg14.cpp
-	Tag *getTag ( char *tagTypeStr , char *dataPtr , long dataSize );
+	Tag *getTag ( char *tagTypeStr , char *dataPtr , int32_t dataSize );
 
-	long getTimestamp ( char *tagTypeStr , long defalt );
+	int32_t getTimestamp ( char *tagTypeStr , int32_t defalt );
 
 	// . functions to act on a site "tag buf", like that in Msg16::m_tagRec
 	// . first 2 bytes is size, 2nd to bytes is # of tags, then the tags
-	long getLong ( char        *tagTypeStr       ,
-		       long         defalt    , 
+	int32_t getLong ( char        *tagTypeStr       ,
+		       int32_t         defalt    , 
 		       Tag        **bookmark  = NULL ,
-		       long        *timeStamp = NULL ,
+		       int32_t        *timeStamp = NULL ,
 		       char       **user      = NULL );
-	long getLong ( long         tagId     ,
-		       long         defalt    , 
+	int32_t getLong ( int32_t         tagId     ,
+		       int32_t         defalt    , 
 		       Tag        **bookmark  = NULL ,
-		       long        *timeStamp = NULL ,
+		       int32_t        *timeStamp = NULL ,
 		       char       **user      = NULL );
 	
-	long long getLongLong ( char        *tagTypeStr,
-				long long    defalt    , 
+	int64_t getLongLong ( char        *tagTypeStr,
+				int64_t    defalt    , 
 				Tag        **bookmark  = NULL ,
-				long        *timeStamp = NULL ,
+				int32_t        *timeStamp = NULL ,
 				char       **user      = NULL );
 
 	char *getString ( char      *tagTypeStr       ,
 			  char      *defalt    = NULL ,
-			  long      *size      = NULL ,
+			  int32_t      *size      = NULL ,
 			  Tag      **bookmark  = NULL ,
-			  long      *timestamp = NULL ,
+			  int32_t      *timestamp = NULL ,
 			  char     **user      = NULL );
 
 	// we only store the first 6 chars of "user" into this TagRec, m_buf
 	/*
 	bool addTag ( char        *tagTypeStr,
-		      long         timestamp , 
+		      int32_t         timestamp , 
 		      char        *user      ,
-		      long         ip        ,
+		      int32_t         ip        ,
 		      char        *data      , 
-		      long         dataSize  );
+		      int32_t         dataSize  );
 	
 
-	// we convert the long to a string for you here...
+	// we convert the int32_t to a string for you here...
 	bool addTag ( char        *tagTypeStr ,
-		      long         timestamp  , 
+		      int32_t         timestamp  , 
 		      char        *user       ,
-		      long         ip         ,
-		      long         dataAsLong ) {
-		char buf[16]; sprintf(buf,"%li",dataAsLong);
+		      int32_t         ip         ,
+		      int32_t         dataAsLong ) {
+		char buf[16]; sprintf(buf,"%"INT32"",dataAsLong);
 		return addTag(tagTypeStr,timestamp,user,ip,buf,
 			      gbstrlen(buf)); };
 
@@ -276,8 +276,8 @@ class TagRec {
 
 	// now you can specify a unique tag id in the case of multiple tags
 	// that have the same tagType and user
-	bool removeTags ( char *tagTypeStr , char *user , long tagId = 0 ) ;
-	bool removeTags ( long  tagType    , char *user , long tagId = 0 ) ;
+	bool removeTags ( char *tagTypeStr , char *user , int32_t tagId = 0 ) ;
+	bool removeTags ( int32_t  tagType    , char *user , int32_t tagId = 0 ) ;
 	bool removeTag  ( class Tag *rmTag ) ;
 
 	// add/remove all the tags from "tagRec" to our list of tags
@@ -290,7 +290,7 @@ class TagRec {
 	bool replaceTags ( Tag *tags , char *tagEnd , char *bufEnd );
 	*/
 
-	bool setFromBuf ( char *buf , long bufSize );
+	bool setFromBuf ( char *buf , int32_t bufSize );
 	bool serialize ( SafeBuf &dst );
 
 	bool setFromHttpRequest ( HttpRequest *r , TcpSocket *s );
@@ -314,7 +314,7 @@ class TagRec {
 
 	// ptrs to lists in the m_lists[] array
 	RdbList *m_listPtrs[MAX_TAGDB_REQUESTS];
-	long     m_numListPtrs;
+	int32_t     m_numListPtrs;
 };
 
 class Tagdb  {
@@ -326,7 +326,7 @@ class Tagdb  {
 	// . TODO: specialized cache because to store pre-parsed tagdb recs
 	// . TODO: have m_useSeals parameter???
 	bool init  ( );
-	bool init2 ( long treeMem );
+	bool init2 ( int32_t treeMem );
 	
 	bool verify ( char *coll );
 
@@ -347,12 +347,12 @@ class Tagdb  {
 
 	// . get the serialized TagRec from an RdbList of TagRecs from tagdb
 	//   that is the best match for "url"
-	char *getRec ( RdbList *list , Url *url , long *recSize ,char* coll, 
-		       long collLen, RdbList *retList) ;
+	char *getRec ( RdbList *list , Url *url , int32_t *recSize ,char* coll, 
+		       int32_t collLen, RdbList *retList) ;
 
 	DiskPageCache *getDiskPageCache() { return &m_pc; };
 
-	//long getGroupId (key_t *key) {return key->n1 & g_hostdb.m_groupMask;}
+	//int32_t getGroupId (key_t *key) {return key->n1 & g_hostdb.m_groupMask;}
 
 	// . dump tagdb to stdout
 	// . dump as URL requests so we can re-add with blaster on each host
@@ -363,7 +363,7 @@ class Tagdb  {
 	// private:
 
 	// . returns 0 if url is not a suburl of "site"
-	long getMatchPoints ( Url *url , Url *site ) ;
+	int32_t getMatchPoints ( Url *url , Url *site ) ;
 
 	bool setHashTable ( ) ;
 
@@ -429,7 +429,7 @@ class Msg8a {
 			 collnum_t collnum,
 			 //bool      useCanonicalName ,
 			 bool skipDomainLookup ,
-			 long      niceness         ,
+			 int32_t      niceness         ,
 			 void     *state            ,
 			 void    (* callback)(void *state ),
 			 TagRec   *tagRec           ,
@@ -441,7 +441,7 @@ class Msg8a {
 
 	// some specified input
 	//char  *m_coll;
-	//long   m_collLen;
+	//int32_t   m_collLen;
 	Url   *m_url;
 	//bool   m_doFullUrl;
 	char   m_rdbId;
@@ -460,24 +460,24 @@ class Msg8a {
 	// hold possible tagdb records
 	//RdbList m_lists[MAX_TAGDB_REQUESTS];
 
-	long m_niceness;
+	int32_t m_niceness;
 
 	char *m_dom;
 	char *m_hostEnd;
 	char *m_p;
 
-	long  m_requests;
-	long  m_replies;
+	int32_t  m_requests;
+	int32_t  m_replies;
 	char  m_doneLaunching;
 
-	long  m_errno;
+	int32_t  m_errno;
 
 	// we set this for the caller
 	TagRec *m_tagRec;
 
 	// hacks for msg6b
 	void *m_parent;
-	long  m_slotNum;
+	int32_t  m_slotNum;
 
 	// hack for MsgE
 	void *m_state2;
@@ -487,7 +487,7 @@ class Msg8a {
 };
 
 /*
-void handleRequest9a ( UdpSlot *slot , long niceness ) ;
+void handleRequest9a ( UdpSlot *slot , int32_t niceness ) ;
 
 class Msg9a {
 
@@ -528,14 +528,14 @@ class Msg9a {
 	//   whichever is easiest for you...
 	bool addTags ( char    *sites                  ,
 		       char   **sitePtrs               ,
-		       long     numSitePtrs            ,
+		       int32_t     numSitePtrs            ,
 		       char    *coll                   , 
 		       void    *state                  ,
 		       void   (*callback)(void *state) ,
-		       long     niceness               ,
+		       int32_t     niceness               ,
 		       TagRec  *tagRec                 ,
 		       bool     nukeTagRecs            ,
-		       long    *ipVector               );//= NULL );
+		       int32_t    *ipVector               );//= NULL );
 
 	// like above, but we are adding the output of a
 	// './gb dump S main 0 -1 1' cmd
@@ -543,26 +543,26 @@ class Msg9a {
 		       char    *coll                   , 
 		       void    *state                  ,
 		       void   (*callback)(void *state) ,
-		       long     niceness               );
+		       int32_t     niceness               );
 
 	void    (*m_callback ) ( void *state );
 	void     *m_state;
 
-	long  m_errno;
-	long  m_requests;
-	long  m_replies;
+	int32_t  m_errno;
+	int32_t  m_requests;
+	int32_t  m_replies;
 
 	char *m_requestBuf;
-	long  m_requestBufSize;
+	int32_t  m_requestBufSize;
 
 	char *m_p;
 	char *m_pend;
 
-	long  m_niceness;
+	int32_t  m_niceness;
 };
 */
 
-long getY ( long long X , long long *x , long long *y , long n ) ;
+int32_t getY ( int64_t X , int64_t *x , int64_t *y , int32_t n ) ;
 
 #endif
 

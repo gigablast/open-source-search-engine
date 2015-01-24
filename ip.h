@@ -23,22 +23,22 @@
 //#define MATTIP3 "68.35.27.72"
 #define MATTIP3 "64.139.94.202"
 
-long  atoip ( char *s , long slen );
-long  atoip ( char *s );//, long slen );
-char *iptoa ( long ip );
+int32_t  atoip ( char *s , int32_t slen );
+int32_t  atoip ( char *s );//, int32_t slen );
+char *iptoa ( int32_t ip );
 // . get domain of ip address
 // . first byte is the host (little endian)
-long  ipdom ( long ip ) ;
+int32_t  ipdom ( int32_t ip ) ;
 // most significant 2 bytes of ip
-long  iptop ( long ip ) ;
+int32_t  iptop ( int32_t ip ) ;
 // . is least significant byte a zero?
 // . if it is then this ip is probably representing a whole ip domain
-bool  isIpDom ( long ip ) ;
+bool  isIpDom ( int32_t ip ) ;
 // are last 2 bytes 0's?
-long  isIpTop ( long ip ) ;
+int32_t  isIpTop ( int32_t ip ) ;
 
 // returns number of top bytes in comon
-long  ipCmp ( long ip1 , long ip2 ) ;
+int32_t  ipCmp ( int32_t ip1 , int32_t ip2 ) ;
 
 
 #endif

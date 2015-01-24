@@ -30,7 +30,7 @@ enum {
 	EBADREPLYSIZE    , // reply is wrong length
 	EBADREPLY        , // something is wrong w/ reply
 	EREPLYTOOSMALL   , // reply is too small  32778
-	EREQUESTTOOSHORT , // request length too short
+	EREQUESTTOOSHORT , // request length too int16_t
 	EBADREQUESTSIZE  , // request length not correct 32780
 	EBADREQUEST      , // a bad request
 	ENOTSUPPORTED    , // operation not yet supported
@@ -192,6 +192,7 @@ enum {
 	EDMOZNOTREADY,
 	EPROXYSSLCONNECTFAILED,
 	EINLINESECTIONS,
-	EREADONLYMODE
+	EREADONLYMODE,
+	ENOTITLEREC
 };
 #endif

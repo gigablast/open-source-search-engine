@@ -85,23 +85,23 @@ class ostream : virtual public ios
     ostream& operator<<(const void *p);
     ostream& operator<<(int n);
     ostream& operator<<(unsigned int n);
-    ostream& operator<<(long n);
-    ostream& operator<<(unsigned long n);
+    ostream& operator<<(int32_t n);
+    ostream& operator<<(uint32_t n);
 #if defined(__GNUC__)
-    __extension__ ostream& operator<<(long long n);
-    __extension__ ostream& operator<<(unsigned long long n);
+    __extension__ ostream& operator<<(int64_t n);
+    __extension__ ostream& operator<<(uint64_t n);
 #endif
-    ostream& operator<<(short n) {return operator<<((int)n);}
-    ostream& operator<<(unsigned short n) {return operator<<((unsigned int)n);}
+    ostream& operator<<(int16_t n) {return operator<<((int)n);}
+    ostream& operator<<(uint16_t n) {return operator<<((unsigned int)n);}
 #if _G_HAVE_BOOL
     ostream& operator<<(bool b) { return operator<<((int)b); }
 #endif
     ostream& operator<<(double n);
     ostream& operator<<(float n) { return operator<<((double)n); }
 #if _G_HAVE_LONG_DOUBLE_IO
-    ostream& operator<<(long double n);
+    ostream& operator<<(int32_t double n);
 #else
-    ostream& operator<<(long double n) { return operator<<((double)n); }
+    ostream& operator<<(int32_t double n) { return operator<<((double)n); }
 #endif
     ostream& operator<<(__omanip func) { return (*func)(*this); }
     ostream& operator<<(__manip func) {(*func)(*this); return *this;}
@@ -204,21 +204,21 @@ protected:
     istream& operator>>(unsigned char& c) {return operator>>((char&)c);}
     istream& operator>>(signed char& c) {return operator>>((char&)c);}
     istream& operator>>(int&);
-    istream& operator>>(long&);
+    istream& operator>>(int32_t&);
 #if defined(__GNUC__)
-    __extension__ istream& operator>>(long long&);
-    __extension__ istream& operator>>(unsigned long long&);
+    __extension__ istream& operator>>(int64_t&);
+    __extension__ istream& operator>>(uint64_t&);
 #endif
-    istream& operator>>(short&);
+    istream& operator>>(int16_t&);
     istream& operator>>(unsigned int&);
-    istream& operator>>(unsigned long&);
-    istream& operator>>(unsigned short&);
+    istream& operator>>(uint32_t&);
+    istream& operator>>(uint16_t&);
 #if _G_HAVE_BOOL
     istream& operator>>(bool&);
 #endif
     istream& operator>>(float&);
     istream& operator>>(double&);
-    istream& operator>>(long double&);
+    istream& operator>>(int32_t double&);
     istream& operator>>( __manip func) {(*func)(*this); return *this;}
     istream& operator>>(__imanip func) { return (*func)(*this); }
     istream& operator>>(streambuf*);

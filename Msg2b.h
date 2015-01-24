@@ -16,29 +16,29 @@ public:
 	~Msg2b();
 
 	// main call to generate directory
-	bool generateDirectory ( long   dirId,
+	bool generateDirectory ( int32_t   dirId,
 				 void  *state,
 				 void (*callback)(void *state) );
 
 	// serialize/deserialize
-	long getStoredSize ( );
-	long serialize     ( char *buf, long bufLen );
-	long deserialize   ( char *buf, long bufLen );
+	int32_t getStoredSize ( );
+	int32_t serialize     ( char *buf, int32_t bufLen );
+	int32_t deserialize   ( char *buf, int32_t bufLen );
 
 	// callback
 	void  *m_st;
 	void (*m_callback)(void *state);
 
 	// dir ID to get
-	long m_dirId;
+	int32_t m_dirId;
 
 	// buffers for directory
 	SubCategory *m_subCats;
-	long         m_subCatsSize;
-	long         m_numSubCats;
+	int32_t         m_subCatsSize;
+	int32_t         m_numSubCats;
 	char        *m_catBuffer;
-	long         m_catBufferSize;
-	long         m_catBufferLen;
+	int32_t         m_catBufferSize;
+	int32_t         m_catBufferLen;
 };
 
 #endif

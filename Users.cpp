@@ -19,13 +19,13 @@ User::User(){
 }
 
 // verify if user has permission from this ip
-bool User::verifyIp ( long ip ){
+bool User::verifyIp ( int32_t ip ){
 	//
 	if ( m_allIps ) return true;
 
 	// check the iplist
 	for (uint16_t i=0; i < m_numIps; i++ ){
-		long ipCheck = m_ip[i] & ( ip & m_ipMask[i] ); 
+		int32_t ipCheck = m_ip[i] & ( ip & m_ipMask[i] ); 
 		// check if they match
 		if ( ipCheck == m_ip[i] ) return true;
 	}
@@ -45,7 +45,7 @@ bool User::verifyPassword ( char *pass ){
 }
 
 // verify is has access to this coll
-bool User::verifyColl ( long collNum ){
+bool User::verifyColl ( int32_t collNum ){
 	
 	if ( m_allColls ) return true;
 	//
@@ -59,7 +59,7 @@ bool User::verifyColl ( long collNum ){
 }
 
 // verify if the user has the supplied tagId
-bool User::verifyTagId ( long tagId ){
+bool User::verifyTagId ( int32_t tagId ){
 
 	//if ( tagId == 0 || tagId >= ST_LAST_TAG ) return false;
 	if ( tagId == 0 ) return false;
@@ -80,8 +80,8 @@ bool User::verifyPageNum ( uint16_t pageNum ){
 	}
 	// check if pageNum is of dummy page
 	bool isDummy = true;
-	if ( pageNum >  PAGE_PUBLIC )
-		isDummy = false;
+	//if ( pageNum >  PAGE_PUBLIC )
+	isDummy = false;
 	//
 	if ( m_allPages && !isDummy )
 		return true;
@@ -90,11 +90,12 @@ bool User::verifyPageNum ( uint16_t pageNum ){
 }
 
 // get first page
-long User::firstPage ( ){
+int32_t User::firstPage ( ){
 	// return first allowed page
 	for ( uint16_t i = 0; i < m_numPages; i++ )
-		if ( ! (m_pages[i] & 0x8000) &&
-	              (m_pages[i]&0x7fff) > PAGE_PUBLIC ) return m_pages[i];
+		if ( ! (m_pages[i] & 0x8000) ) //&&
+		     //           (m_pages[i]&0x7fff) > PAGE_PUBLIC ) 
+			return m_pages[i];
 	
 	// if all pages is set then just return the root page 
 	if ( m_allPages ) return PAGE_ROOT;
@@ -127,9 +128,9 @@ bool Users::init(){
 
 	// initialize the testresults rdbtree 
 	//
-	long nodeSize = (sizeof(key_t)+12+1) + sizeof(collnum_t);
-	long maxNodes      = MAX_TEST_RESULTS;
-	long maxMem   = maxNodes * nodeSize;
+	int32_t nodeSize = (sizeof(key_t)+12+1) + sizeof(collnum_t);
+	int32_t maxNodes      = MAX_TEST_RESULTS;
+	int32_t maxMem   = maxNodes * nodeSize;
 	// only need to call this once
 	if ( ! g_testResultsTree.set ( 0         , // fixedDataSize
 			      maxNodes  ,
@@ -169,7 +170,7 @@ bool Users::loadTestResults ( ){
 	// 
 	if ( ! file.doesExist() ) return false; 
 		
-	long fileSize = file.getFileSize();
+	int32_t fileSize = file.getFileSize();
 	if (fileSize <= 0 ) return false;
 
 
@@ -181,11 +182,11 @@ bool Users::loadTestResults ( ){
 	}
 
 	char *buf     = NULL;
-	long bufSize  = 4096;
-	long offset   = 0;
-	long numNodes = 0;
+	int32_t bufSize  = 4096;
+	int32_t offset   = 0;
+	int32_t numNodes = 0;
 	// read the turk results file
-	for ( long i=0; i < fileSize; ){
+	for ( int32_t i=0; i < fileSize; ){
 		// bail out if no node left in tree
 		if ( numNodes >= MAX_TEST_RESULTS ) break;
 
@@ -195,7 +196,7 @@ bool Users::loadTestResults ( ){
 			             " file buf");
 			return false;
 		}
-		long numBytesRead = file.read(buf,bufSize,offset);
+		int32_t numBytesRead = file.read(buf,bufSize,offset);
 		if ( numBytesRead < 0 ){
 			log(LOG_DEBUG,"Users error reading test result file %s",
 					testFile );
@@ -207,9 +208,9 @@ bool Users::loadTestResults ( ){
 		for ( char *p = buf; p < bufEnd; p++ ){
 			char      temp[250];
 			char      *line = temp;
-			long       items = 0;
+			int32_t       items = 0;
 			char       username[10];
-			long       timestamp;
+			int32_t       timestamp;
 			uint16_t   result;
 			while ( *p != '\n' && p < bufEnd){
 				*line++ = *p++;
@@ -234,9 +235,9 @@ bool Users::loadTestResults ( ){
 			if ( items == 3){
 				key_t key;
 				key.n1    = hash32n(username);
-				key.n0    = ((long)timestamp << 8) 
+				key.n0    = ((int32_t)timestamp << 8) 
 				                        | (result & 0xff);
-				long node =
+				int32_t node =
 				     g_testResultsTree.addNode(0,(char*)&key);
 				if ( node < 0 ){
 					log(LOG_DEBUG,"Users error adding node"
@@ -253,8 +254,8 @@ bool Users::loadTestResults ( ){
 		}
 
 		// adjust the offset
-		offset = file.getCurrentPos() - (long)(bufEnd - newLineOffset); 
-		i += bufSize - (long)( bufEnd - newLineOffset );
+		offset = file.getCurrentPos() - (int32_t)(bufEnd - newLineOffset); 
+		i += bufSize - (int32_t)( bufEnd - newLineOffset );
 		mfree(buf,bufSize,"UsersTestResults");
 	}
 
@@ -262,21 +263,21 @@ bool Users::loadTestResults ( ){
 	return true;
 }
 
-long Users::getAccuracy ( char *username, time_t timestamp ){
+int32_t Users::getAccuracy ( char *username, time_t timestamp ){
 	//
 	// get key between 15 
 	key_t key;
 	key.n1       = hash32n(username);
-	key.n0       = ((long)timestamp << 8);
-	long refNode = g_testResultsTree.getPrevNode( 0 , (char *)&key);
+	key.n0       = ((int32_t)timestamp << 8);
+	int32_t refNode = g_testResultsTree.getPrevNode( 0 , (char *)&key);
 
 	if ( refNode == -1 ) 
 		refNode = g_testResultsTree.getNextNode ( 0 ,(char*)&key);
 	if ( refNode == -1 ) return -1;
 
 	// initialize the voting paramaters
-	long totalVotes   = 0;
-	long totalCorrect = 0;
+	int32_t totalVotes   = 0;
+	int32_t totalCorrect = 0;
 
 	// get the vote from the reference node 
 	key_t *refKey = (key_t*)g_testResultsTree.getKey(refNode);
@@ -286,11 +287,11 @@ long Users::getAccuracy ( char *username, time_t timestamp ){
 	}
 
 	// scan in the forward direction 
-	long currentNode = refNode;
+	int32_t currentNode = refNode;
 	//key_t currentKey = *refKey;
 	//currentKey.n0 += 2;
-	for ( long i=0; i < ACCURACY_FWD_RANGE; i++ ){
-		long nextNode = g_testResultsTree.getNextNode(currentNode);
+	for ( int32_t i=0; i < ACCURACY_FWD_RANGE; i++ ){
+		int32_t nextNode = g_testResultsTree.getNextNode(currentNode);
 		if ( nextNode == -1) break;
 		key_t *nextKey = (key_t *)g_testResultsTree.getKey(nextNode);
 		if ( refKey->n1 == nextKey->n1 ){
@@ -306,8 +307,8 @@ long Users::getAccuracy ( char *username, time_t timestamp ){
 	currentNode = refNode;
 	//currentKey = *refKey;
 	//currentKey.n0 -= 2;
-	for ( long i=0; i < ACCURACY_BWD_RANGE; i++ ){
-		long prevNode = g_testResultsTree.getPrevNode(currentNode);
+	for ( int32_t i=0; i < ACCURACY_BWD_RANGE; i++ ){
+		int32_t prevNode = g_testResultsTree.getPrevNode(currentNode);
 		if ( prevNode == -1) break;
 		key_t *prevKey = (key_t *)g_testResultsTree.getKey(prevNode);
 		if ( refKey->n1 == prevKey->n1 ){
@@ -323,7 +324,7 @@ long Users::getAccuracy ( char *username, time_t timestamp ){
 	if ( totalVotes < ACCURACY_MIN_TESTS ) return -1;
 	
 	// compute accuracy in percentage
-	long accuracy = ( totalCorrect * 100 ) / totalVotes;
+	int32_t accuracy = ( totalCorrect * 100 ) / totalVotes;
 	
 
 	return accuracy;
@@ -332,11 +333,11 @@ long Users::getAccuracy ( char *username, time_t timestamp ){
 // . parses individual row of g_users
 // . individual field are separated by :
 //   and , is used to mention many params in single field
-bool Users::parseRow (char *row, long rowLen, User *user ){	
+bool Users::parseRow (char *row, int32_t rowLen, User *user ){	
 	// parse individual user row
 	char *current = row;
 	char *end     = &row[rowLen];
-	long col      = 0;
+	int32_t col      = 0;
 	for ( ; col < 7 ;){
 		char temp[1024];
 		char *p      = &temp[0];
@@ -391,9 +392,9 @@ bool Users::parseRow (char *row, long rowLen, User *user ){
 }
 
 // set individual user field from the given column/field
-void Users::setDatum ( char *data, long column, User *user, bool hasStar){
+void Users::setDatum ( char *data, int32_t column, User *user, bool hasStar){
 	
-	long dataLen = gbstrlen (data);
+	int32_t dataLen = gbstrlen (data);
 
 	if ( dataLen <= 0 || user == NULL || column < 0 ) return;
 
@@ -453,8 +454,8 @@ void Users::setDatum ( char *data, long column, User *user, bool hasStar){
 		// if startMask means all ips are allowed
 		if ( starMask==0 ){ user->m_allIps = true; break;}
 
-		long iplen = gbstrlen ( data );
-		long ip    = atoip(data,iplen);
+		int32_t iplen = gbstrlen ( data );
+		int32_t ip    = atoip(data,iplen);
 		if ( ! ip ) break;
 			
 		user->m_ip[user->m_numIps]     = ip; 
@@ -480,7 +481,7 @@ void Users::setDatum ( char *data, long column, User *user, bool hasStar){
 			user->m_pages[user->m_numPages] = 0x8000;
 			p++;
 		}
-		long pageNum = g_pages.getPageNumber(p);
+		int32_t pageNum = g_pages.getPageNumber(p);
 		if ( pageNum < 0 || pageNum >= PAGE_NONE ){
 			log(LOG_DEBUG,"Users Invalid Page - %s for user %s", p,
 					user->m_username );
@@ -507,8 +508,8 @@ void Users::setDatum ( char *data, long column, User *user, bool hasStar){
 				user->m_permissions = USER_PUBLIC;
 		}else{ */
 			// save the tags
-		long     tagId  = 0;
-		long     strLen = gbstrlen(data);
+		int32_t     tagId  = 0;
+		int32_t     strLen = gbstrlen(data);
 		// backup over ^M
 		if ( strLen>1 && data[strLen-1]=='M' && data[strLen-2]=='^' )
 			strLen-=2;
@@ -548,7 +549,7 @@ bool Users::loadUserHashTable ( ) {
        
        // read user info from the file and add to cache
 	char         *buf     = &g_conf.m_users[0];
-	unsigned long bufSize = g_conf.m_usersLen;
+	uint32_t bufSize = g_conf.m_usersLen;
 	//time_t        now     = getTimeGlobal();
 
 	// no users?
@@ -569,11 +570,11 @@ bool Users::loadUserHashTable ( ) {
 
 	// read user data from the line and add it to the cache
 	char          *p = buf;
-	unsigned long  i = 0;
+	uint32_t  i = 0;
 	for ( ; i < bufSize; i++){
 		// read a line from buf
 		char *row   = p;
-		long rowLen = 0;
+		int32_t rowLen = 0;
 
 		while ( *p != '\r' && *p != '\n'  && i < bufSize ){
 			i++; p++; rowLen++;
@@ -594,7 +595,7 @@ bool Users::loadUserHashTable ( ) {
 		key_t uk = hash32n ( user.m_username );
 
 		// grab the slot
-		long slot = m_ht.getSlot ( &uk );
+		int32_t slot = m_ht.getSlot ( &uk );
 
 		// get existing User record, "eu" from hash table
 		User *eu = NULL;
@@ -624,7 +625,7 @@ User *Users::getUser (char *username ) { //,bool cacheLoad){
 // . check if user is logged
 // . returns NULL if session is timedout or user not logged
 // . returns the User record on success
-User *Users::isUserLogged ( char *username, long ip  ){
+User *Users::isUserLogged ( char *username, int32_t ip  ){
 	// bail out if init has failed
         if ( !m_init ) return (User *)NULL;
 
@@ -638,20 +639,20 @@ User *Users::isUserLogged ( char *username, long ip  ){
 
 	// make the key a combo of ip and username
 	uint64_t key;
-	key = ((long long)ip << 32 ) | (long long)hash32n(username);
+	key = ((int64_t)ip << 32 ) | (int64_t)hash32n(username);
 
-	long slotNum = m_loginTable.getSlot ( &key );
+	int32_t slotNum = m_loginTable.getSlot ( &key );
 	if ( slotNum < 0 ) return NULL;
 
 	// if this is true, user cannot time out
 	if ( user->m_reLogin ) return user;
 	
 	// return NULL if user sesssion has timed out
-	long now = getTime();
-	//long timestamp = m_loginTable.getValueFromSlot(slotNum);
+	int32_t now = getTime();
+	//int32_t timestamp = m_loginTable.getValueFromSlot(slotNum);
 
 	// let's make it a permanent login now!
-	//if ( (now-timestamp) > (long)USER_SESSION_TIMEOUT ){
+	//if ( (now-timestamp) > (int32_t)USER_SESSION_TIMEOUT ){
 	//	m_loginTable.removeKey(key);
 	//	return NULL;
 	//}
@@ -670,27 +671,27 @@ User *Users::isUserLogged ( char *username, long ip  ){
 // . adds the user to the login table
 // . the valud is the last access timestamp of user
 //   which is used for session timeout
-bool Users::loginUser ( char *username, long ip ) {
+bool Users::loginUser ( char *username, int32_t ip ) {
 	// bail out if init has failed
 	if ( ! m_init ) return false;
 
 	// add the user to the login table
 	//key_t cacheKey = makeUserKey ( username, &cacheKey );
 	uint64_t key;
-	key = ((long long)ip << 32 ) | (long long)hash32n(username);
+	key = ((int64_t)ip << 32 ) | (int64_t)hash32n(username);
 
 	m_needsSave = true;
 
 	// add entry to table
-	long now = getTime();
+	int32_t now = getTime();
 	if ( m_loginTable.addKey(&key,&now) ) return true;
 	return log("users: failed to login user %s : %s",
 		   username,mstrerror(g_errno));
 }
 
-bool Users::logoffUser( char *username, long ip ){
+bool Users::logoffUser( char *username, int32_t ip ){
 	uint64_t key;
-	key = ((long long)ip << 32 ) | (long long)hash32n(username);
+	key = ((int64_t)ip << 32 ) | (int64_t)hash32n(username);
 	m_loginTable.removeKey(&key);
 	return true;
 }
@@ -709,7 +710,7 @@ char *Users::getUsername ( HttpRequest *r ){
 }
 
 // check page permissions
-bool  Users::hasPermission ( HttpRequest *r, long page , TcpSocket *s ) {
+bool  Users::hasPermission ( HttpRequest *r, int32_t page , TcpSocket *s ) {
 
 	if ( r->isLocal() ) return true;
 
@@ -740,7 +741,7 @@ bool  Users::hasPermission ( HttpRequest *r, long page , TcpSocket *s ) {
 }
 
 // does user have permission to view and edit the parms on this page?
-bool Users::hasPermission ( char *username, long page ){
+bool Users::hasPermission ( char *username, int32_t page ){
 
 	//if ( !username ) return false;
 	if ( ! username ) username = "public";
@@ -754,14 +755,14 @@ bool Users::hasPermission ( char *username, long page ){
 }
 
 // get the highest user level for this client
-//long Pages::getUserType ( TcpSocket *s , HttpRequest *r ) {
+//int32_t Pages::getUserType ( TcpSocket *s , HttpRequest *r ) {
 bool  Users::verifyUser ( TcpSocket *s, HttpRequest *r ){
 //
 	//bool isIpInNetwork = true;//g_hostdb.isIpInNetwork ( s->m_ip );
 
 	if ( r->isLocal() ) return true;
 
-	long n = g_pages.getDynamicPageNumber ( r );	
+	int32_t n = g_pages.getDynamicPageNumber ( r );	
 
 	User *user;
 	char *username = getUsername( r);
@@ -774,7 +775,7 @@ bool  Users::verifyUser ( TcpSocket *s, HttpRequest *r ){
 	// public user need not be verified
 	if ( strcmp(username,"public") == 0 ) return true;
 
-	// user "msg28" is valid as long as he is on one of the machines
+	// user "msg28" is valid as int32_t as he is on one of the machines
 	// and not the proxy ip
 	if ( s && strcmp(username,"msg28")==0 ) {
 		Host *h = g_hostdb.getHostByIp(s->m_ip);
@@ -794,7 +795,7 @@ bool  Users::verifyUser ( TcpSocket *s, HttpRequest *r ){
 
 	/*
 	// the possible proxy ip
-	long ip = s->m_ip;
+	int32_t ip = s->m_ip;
 	// . if the request is from the proxy, grab the "uip",
 	//   the "user ip" who originated the query
 	// . now the porxy uses msg 0xfd to forward its requests so if we
@@ -860,7 +861,7 @@ bool  Users::verifyUser ( TcpSocket *s, HttpRequest *r ){
 	// verify collection
 	char *coll = r->getString ("c");
 	if( !coll) coll = g_conf.m_defaultColl;
-	long collNum    = g_collectiondb.getCollnum(coll);
+	int32_t collNum    = g_collectiondb.getCollnum(coll);
 	bool verifyColl = user->verifyColl (collNum);
 	if ( ! verifyColl ) return 0;
 	// add the user to the login cache
@@ -871,7 +872,7 @@ bool  Users::verifyUser ( TcpSocket *s, HttpRequest *r ){
 	// now if everything is valid
 	// get the user permission
 	// i.e USER_MASTER | USER_ADMIN etc.
-	//long userType = user->getPermissions ( );
+	//int32_t userType = user->getPermissions ( );
 
 	// . Commented by Gourav
 	// . Users class used

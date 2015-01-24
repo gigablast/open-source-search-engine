@@ -21,12 +21,12 @@ class CountryCode {
 		const char *getAbbr(int index);
 		const char *getName(int index);
 		int getIndexOfAbbr(const char *abbr);
-		unsigned short getCountryFromDMOZ(long catid);
-		uint8_t getLanguageFromDMOZ(long catid);
+		uint16_t getCountryFromDMOZ(int32_t catid);
+		uint8_t getLanguageFromDMOZ(int32_t catid);
 		int createHashTable(void);
 		bool loadHashTable(void);
 		void reset();
-		long getNumEntries(void);
+		int32_t getNumEntries(void);
 		void debugDumpNumbers(void);
          	uint64_t getLanguagesWritten(int index);
 	private:
@@ -34,8 +34,8 @@ class CountryCode {
 		void freeRegexTable(void);
 		int lookupCountryFromDMOZTopic(const char *catname, int len);
 		bool m_init;
-		HashTableT<unsigned short, int>m_abbrToIndex;
-		HashTableT<unsigned short, const char *>m_abbrToName;
+		HashTableT<uint16_t, int>m_abbrToIndex;
+		HashTableT<uint16_t, const char *>m_abbrToName;
 };
 
 extern CountryCode g_countryCode;

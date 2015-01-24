@@ -4,40 +4,40 @@
 
 class fslot {
 public:
-	long           m_score;
-	long long      m_docIdBits;
-	unsigned short m_termBits;
-	//unsigned short align;
+	int32_t           m_score;
+	int64_t      m_docIdBits;
+	uint16_t m_termBits;
+	//uint16_t align;
 };
 
-static long long gettimeofdayInMilliseconds() ;
+static int64_t gettimeofdayInMilliseconds() ;
 
-long long gettimeofdayInMilliseconds() {
+int64_t gettimeofdayInMilliseconds() {
 	struct timeval tv;
 	gettimeofday ( &tv , NULL );
-	long long now=(long long)(tv.tv_usec/1000)+((long long)tv.tv_sec)*1000;
+	int64_t now=(int64_t)(tv.tv_usec/1000)+((int64_t)tv.tv_sec)*1000;
 	return now;
 }
 
 
 main ( ) {
 	// fill our tbl
-	unsigned long g_hashtab[256];
+	uint32_t g_hashtab[256];
 	static bool s_initialized = false;
 	// bail if we already called this
 	if ( s_initialized ) return true;
 	// show RAND_MAX
-	//printf("RAND_MAX = %lu\n", RAND_MAX ); it's 0x7fffffff
+	//printf("RAND_MAX = %"UINT32"\n", RAND_MAX ); it's 0x7fffffff
 	// seed with same value so we get same rand sequence for all
 	srand ( 1945687 );
-	for ( long i = 0 ; i < 256 ; i++ )
-			g_hashtab [i]  = (unsigned long)rand();
+	for ( int32_t i = 0 ; i < 256 ; i++ )
+			g_hashtab [i]  = (uint32_t)rand();
 			/*
 			// the top bit never gets set, so fix
 			if ( rand() > (0x7fffffff / 2) ) 
 				g_hashtab[i][j] |= 0x80000000;
 			g_hashtab [i][j] <<= 32;
-			g_hashtab [i][j] |= (unsigned long long)rand();
+			g_hashtab [i][j] |= (uint64_t)rand();
 			// the top bit never gets set, so fix
 			if ( rand() > (0x7fffffff / 2) ) 
 				g_hashtab[i][j] |= 0x80000000;
@@ -46,18 +46,18 @@ main ( ) {
 
 
 	// # of docIds to hash
-	long nd = 300000;
+	int32_t nd = 300000;
 	// make a list of compressed (6 byte) docIds
         char *docIds = (char *) malloc ( 6 * nd );
 	// store radnom docIds in this list
 	unsigned char *p = (unsigned char *)docIds;
 	// print start time
 	fprintf (stderr,"hashtest:: randomizing begin."
-		 " %li 6-byte docIds.\n",nd);
+		 " %"INT32" 6-byte docIds.\n",nd);
 	// space em out 1 million to simulate suburl:com
-	long long count = 1000000;
+	int64_t count = 1000000;
 	// random docIds
-	for ( long i = 0 ; i < nd ; i++ ) {
+	for ( int32_t i = 0 ; i < nd ; i++ ) {
 		/*
 		p[0] = ((unsigned char *)&count)[0];
 		p[1] = ((unsigned char *)&count)[1];
@@ -69,58 +69,58 @@ main ( ) {
 		p += 6;
 		continue;
 		*/
-		// . the lower long
+		// . the lower int32_t
 		// . set lower bit so it's not a delete (delbit)
-		*(unsigned long  *)p = rand() | 0x01 ;
+		*(uint32_t  *)p = rand() | 0x01 ;
 		// skip 
 		p += 4;
 		// . the upper 2 bytes
 		// . top most byte is the 8-bit score
-		*(unsigned short *)p = rand() % 0xffff ;
+		*(uint16_t *)p = rand() % 0xffff ;
 		// skip
 		p += 2;
 	}
 	// make a hash table
-	long numSlots = 1048576 /2; // about 300,000 * 3 rounded up to 2power
+	int32_t numSlots = 1048576 /2; // about 300,000 * 3 rounded up to 2power
 	fslot *slots = (fslot *) calloc (sizeof(fslot), numSlots );
 	// set all scores to 0
-	//for ( long i = 0 ; i < numSlots ; i++ )
+	//for ( int32_t i = 0 ; i < numSlots ; i++ )
 	//	m_sc
 	// point to 6 byte docIds
 	unsigned char *end = p;
 	p   = (unsigned char *)docIds;
-	long score;
-	long score2;
-	long score3;
-	long score4;
-	long score5;
-	long score6;
-	long score7;
-	long score8;
-	long collisions = 0;
-	unsigned long n;
-	unsigned long n2;
-	unsigned long n3;
-	unsigned long n4;
-	unsigned long n5;
-	unsigned long n6;
-	unsigned long n7;
-	unsigned long n8;
-	long long docIdBits;
-	long long docIdBits2;
-	long long docIdBits3;
-	long long docIdBits4;
-	long long docIdBits5;
-	long long docIdBits6;
-	long long docIdBits7;
-	long long docIdBits8;
-	unsigned short termBitMask = 1;
-	unsigned long  mask = numSlots - 1;
-	long scoreWeight = 13;
+	int32_t score;
+	int32_t score2;
+	int32_t score3;
+	int32_t score4;
+	int32_t score5;
+	int32_t score6;
+	int32_t score7;
+	int32_t score8;
+	int32_t collisions = 0;
+	uint32_t n;
+	uint32_t n2;
+	uint32_t n3;
+	uint32_t n4;
+	uint32_t n5;
+	uint32_t n6;
+	uint32_t n7;
+	uint32_t n8;
+	int64_t docIdBits;
+	int64_t docIdBits2;
+	int64_t docIdBits3;
+	int64_t docIdBits4;
+	int64_t docIdBits5;
+	int64_t docIdBits6;
+	int64_t docIdBits7;
+	int64_t docIdBits8;
+	uint16_t termBitMask = 1;
+	uint32_t  mask = numSlots - 1;
+	int32_t scoreWeight = 13;
 	// debug msg
 	fprintf (stderr,"hashtest::starting loop\n");
 	// time stamp
-	long long t   = gettimeofdayInMilliseconds();
+	int64_t t   = gettimeofdayInMilliseconds();
 	// tell the memory cache to only bring in 16 bytes at a time
 	// since our fslot class is 16 bytes big
 
@@ -153,20 +153,20 @@ main ( ) {
 			continue;
 		}
 		//collisions++;
-		if ( ++n >= (unsigned long)numSlots ) n = 0;
+		if ( ++n >= (uint32_t)numSlots ) n = 0;
 		goto chain;
 	}
 
 
 	// completed
-	long long now = gettimeofdayInMilliseconds();
-	fprintf (stderr,"hashtest:: addList took %llu ms\n" , now - t );
+	int64_t now = gettimeofdayInMilliseconds();
+	fprintf (stderr,"hashtest:: addList took %"UINT64" ms\n" , now - t );
 	// stats
 	double d = (1000.0*(double)nd) / ((double)(now - t));
 	fprintf (stderr,"hashtest:: each add took %f cycles\n" ,
 		 400000000.0 / d );
-	fprintf (stderr,"hashtest:: we can do %li adds per second\n" ,(long)d);
-	fprintf (stderr,"hashtest:: collisions = %li\n", collisions);
+	fprintf (stderr,"hashtest:: we can do %"INT32" adds per second\n" ,(int32_t)d);
+	fprintf (stderr,"hashtest:: collisions = %"INT32"\n", collisions);
 	// exit gracefully
 	exit ( 0 );
 }

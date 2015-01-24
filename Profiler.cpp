@@ -5,7 +5,7 @@ Profiler::Profiler(){return;}
 Profiler::~Profiler(){return;}
 bool Profiler::reset(){return true;}
 bool Profiler::init(){return true;}
-char *Profiler::getFnName(unsigned long address,long *nameLen){return NULL;}
+char *Profiler::getFnName(PTRTYPE address,int32_t *nameLen){return NULL;}
 void Profiler::stopRealTimeProfiler(const bool keepData){return;}
 void Profiler::cleanup(){return;}
 bool Profiler:: readSymbolTable(){return true;}
@@ -26,14 +26,14 @@ Profiler g_profiler;
 
 static int decend_cmpUll ( const void *h1 , const void *h2 );
 static int decend_cmpF ( const void *h1 , const void *h2 );
-unsigned long *indexTable;
-unsigned long *keyTable;
-unsigned long long *valueTableUll;
+uint32_t *indexTable;
+uint32_t *keyTable;
+uint64_t *valueTableUll;
 float *valueTableF;
 //HashTableT<uint32_t, uint64_t> realTimeProfilerData;
 #include "HashTableX.h"
 HashTableX realTimeProfilerData;
-uint32_t lastQuickPollAddress = 0;
+PTRTYPE lastQuickPollAddress = 0;
 uint64_t lastQuickPollTime = 0;
 
 Profiler::Profiler() : 
@@ -48,6 +48,12 @@ Profiler::Profiler() :
 	m_frameTraces(NULL),
 	m_numUsedFrameTraces(0)
 {
+	// SafeBuf newf;
+	// newf.safePrintf("%strash/profile.txt",g_hostdb.m_dir);
+	// unlink ( newf.getBufStart() );
+	//newf.reset();
+	// newf.safePrintf("%strash/qp.txt",g_hostdb.m_dir);
+	// unlink ( newf.getBufStart() );
 }
 
 Profiler::~Profiler() {//reset();
@@ -57,7 +63,7 @@ Profiler::~Profiler() {//reset();
 bool Profiler::reset(){
 	m_fn.reset();
 	m_lastQPUsed = 0;
-	for (long i=0;i<11;i++)
+	for (int32_t i=0;i<11;i++)
 		m_fnTmp[i].reset();
 	if(hitEntries)
 		mfree(hitEntries, sizeof(HitEntry) * rtNumEntries,
@@ -69,21 +75,38 @@ bool Profiler::reset(){
 	m_addressMap = NULL;
 	m_activeFns.reset();
 	m_quickpolls.reset();
+
+	m_ipBuf.purge();
+
 	return true;
 }
 
 bool Profiler::init() {
 	m_lastQPUsed = 0;
-	realTimeProfilerData.set(4,8,0,NULL,0,false,0,"rtprof");
-        m_quickpolls.set(4,4,0,NULL,0,false,0,"qckpllcnt");
-	for (long i=0;i<11;i++)
-		//m_fnTmp[i].set(256);
-		if ( ! m_fnTmp[i].set(4,sizeof(FnInfo),256,NULL,0,false,0,
-				      "fntmp"))
-			return false;
-	if ( ! m_activeFns.set(4,4,256,NULL,0,false,0,"activefns") )
+	// realTimeProfilerData.set(4,8,0,NULL,0,false,0,"rtprof");
+        //m_quickpolls.set(4,4,0,NULL,0,false,0,"qckpllcnt");
+	// for (int32_t i=0;i<11;i++)
+	// 	//m_fnTmp[i].set(256);
+	// 	if ( ! m_fnTmp[i].set(4,sizeof(FnInfo),256,NULL,0,false,0,
+	// 			      "fntmp"))
+	// 		return false;
+	// if ( ! m_activeFns.set(4,4,256,NULL,0,false,0,"activefns") )
+	// 	return false;
+	// if ( ! m_fn.set(4,sizeof(FnInfo),65536,NULL,0,false,0,"fntbl") )
+	// 	return false;
+
+	// init Instruction Ptr address count table
+	// if ( ! m_ipCountTable.set(8,4,1024*1024,NULL,0,false,0,"proftbl") )
+	// 	return false;
+	// do not breach
+	// if ( ! m_quickpollMissBuf.reserve ( 20000 ) )
+	// 	return false;
+
+	if ( m_ipBuf.m_capacity <= 0 &&
+	     ! m_ipBuf.reserve ( 5000000 , "profbuf" ) )
 		return false;
-	return m_fn.set(4,sizeof(FnInfo),65536,NULL,0,false,0,"fntbl");
+
+	return true;
 }
 
 
@@ -92,7 +115,7 @@ bool Profiler::init() {
 // The gb executable file is in the ELF format, and the code here resembles 
 // readelf function in binutils from gnu.org. gb is 32-bits.
 bool Profiler:: readSymbolTable(){
-	long long start=gettimeofdayInMillisecondsLocal();
+	int64_t start=gettimeofdayInMillisecondsLocal();
 	struct stat  statbuf;
 	//unsigned int i;
 	char fileName[512];
@@ -130,8 +153,8 @@ bool Profiler:: readSymbolTable(){
 	
 	processSymbolTable (m_file);
 	
-	long long end=gettimeofdayInMillisecondsLocal();
-	log(LOG_INIT,"admin: Took %lli milliseconds to build symbol table",
+	int64_t end=gettimeofdayInMillisecondsLocal();
+	log(LOG_INIT,"admin: Took %"INT64" milliseconds to build symbol table",
 		end-start);
 	mfree(m_sectionHeaders,m_elfHeader.e_shnum * sizeof (Elf_Internal_Shdr),
 		"ProfilerD");
@@ -148,7 +171,7 @@ bool Profiler:: getFileHeader (FILE * file){
 	
 	/* Determine how to read the rest of the header.  */
 	//Found that gb is little_endian
-	//Found that bfd_vma type is unsigned long	
+	//Found that bfd_vma type is uint32_t	
 	//gb is supposed to be 32-bit
 	/* Read in the rest of the header.  */
 	Elf32_External_Ehdr ehdr32;
@@ -172,7 +195,7 @@ bool Profiler:: getFileHeader (FILE * file){
 	return 1;
 }
 
-unsigned long Profiler::getByte (unsigned char * field,int size){
+uint32_t Profiler::getByte (unsigned char * field,int size){
 	switch (size)
 	{
 	case 1:
@@ -188,10 +211,10 @@ unsigned long Profiler::getByte (unsigned char * field,int size){
 		   endian source we can juts use the 4 byte extraction code.  */
 		/* Fall through.  */
 	case 4:
-		return  ((unsigned long) (field [0]))
-			|    (((unsigned long) (field [1])) << 8)
-			|    (((unsigned long) (field [2])) << 16)
-			|    (((unsigned long) (field [3])) << 24);
+		return  ((uint32_t) (field [0]))
+			|    (((uint32_t) (field [1])) << 8)
+			|    (((uint32_t) (field [2])) << 16)
+			|    (((uint32_t) (field [3])) << 24);
 	default:
 		log(LOG_INIT,"admin: Unhandled data length: %d", size);
 		char *xx=NULL; xx=0;
@@ -230,7 +253,7 @@ bool Profiler::processSymbolTable (FILE * file){
 		for (si = 0, psym = symtab;
 		     si < section->sh_size / section->sh_entsize;
 		     si ++, psym ++)
-			if (((long)psym->st_size)>0)
+			if (((int32_t)psym->st_size)>0)
 				++m_addressMapSize;
 		mfree (symtab,
 		       (section->sh_size/section->sh_entsize)*sizeof(Elf32_External_Sym),
@@ -252,9 +275,9 @@ bool Profiler::processSymbolTable (FILE * file){
 		       && section->sh_type != SHT_DYNSYM)
 			continue;
 	  
-		log(LOG_INIT,"admin: Symbol table '%s' contains %lu entries",
+		log(LOG_INIT,"admin: Symbol table '%s' contains %"UINT32" entries",
 		    m_stringTable+section->sh_name,
-		    (unsigned long) (section->sh_size / section->sh_entsize));
+		    (uint32_t) (section->sh_size / section->sh_entsize));
 		//log(LOG_WARN,"Profiler:   Num\t   Value\t  Size\t    Name");
 		symtab = get32bitElfSymbols(file, section->sh_offset,
 					    section->sh_size / section->sh_entsize);
@@ -268,7 +291,7 @@ bool Profiler::processSymbolTable (FILE * file){
 
 			if (fseek (m_file,string_sec->sh_offset, SEEK_SET)){
 				log(LOG_INIT,"admin: Unable to seek to start "
-				    "of %s at %lx", "string table",
+				    "of %s at %"XINT32"", "string table",
 				    string_sec->sh_offset);
 				return 0;
 			}
@@ -276,12 +299,12 @@ bool Profiler::processSymbolTable (FILE * file){
 						   "ProfilerG");
 			if (strtab == NULL){
 				log(LOG_INIT,"admin: Out of memory allocating "
-				    "%ld bytes for %s", string_sec->sh_size,
+				    "%"INT32" bytes for %s", string_sec->sh_size,
 				    "string table");
 			}
 			if (fread ( strtab, string_sec->sh_size, 1, 
 				    m_file) != 1 ){
-				log(LOG_INIT,"admin: Unable to read in %ld "
+				log(LOG_INIT,"admin: Unable to read in %"INT32" "
 				    "bytes of %s", string_sec->sh_size,
 				    "string table");
 				mfree (strtab,string_sec->sh_size,"ProfilerG");
@@ -292,10 +315,10 @@ bool Profiler::processSymbolTable (FILE * file){
 		for (si = 0, psym = symtab;
 		     si < section->sh_size / section->sh_entsize;
 		     si ++, psym ++){
-			if (((long)psym->st_size)>0){
+			if (((int32_t)psym->st_size)>0){
 				//				FnInfo *fnInfo;
-				long key = psym->st_value;
-				long slot=m_fn.getSlot(&key);
+				int32_t key = psym->st_value;
+				int32_t slot=m_fn.getSlot(&key);
 				if (slot!=-1){
 					//fnInfo=m_fn.getValuePointerFromSlot(slot);
 					//This is happeninig because the 
@@ -306,8 +329,8 @@ bool Profiler::processSymbolTable (FILE * file){
 					// problem for the profiler
 					// log(LOG_WARN,"Profiler: Two "
 					// "functions pointing to "
-					// "same address space %li",
-					// (long)psym->st_value);
+					// "same address space %"INT32"",
+					// (int32_t)psym->st_value);
 				}
 				else{
 					FnInfo fnInfoTmp;
@@ -329,17 +352,17 @@ bool Profiler::processSymbolTable (FILE * file){
 					fnInfoTmp.m_maxBlockedTime = 0;
 					fnInfoTmp.m_lastQpoll = "";
 					fnInfoTmp.m_prevQpoll = "";
-					unsigned long address=(long)psym->st_value;
-					//log(LOG_WARN,"Profiler: Adding fninfo name=%s, key=%li",
+					uint32_t address=(int32_t)psym->st_value;
+					//log(LOG_WARN,"Profiler: Adding fninfo name=%s, key=%"INT32"",
 					// fnInfo->m_fnName,address);
-					long key = (long)address;
+					int32_t key = (int32_t)address;
 					m_fn.addKey(&key,&fnInfoTmp);
 					m_addressMap[m_lastAddressMapIndex++] = address;
 				}
 			}
 			/*log(LOG_WARN,"%6d\t %8.8lx\t   %5ld\t   %s", 
-			    si,(unsigned long)psym->st_value,
-			    (long)psym->st_size,strtab + psym->st_name);*/
+			    si,(uint32_t)psym->st_value,
+			    (int32_t)psym->st_size,strtab + psym->st_name);*/
 		}
 		mfree (symtab,
 		       (section->sh_size/section->sh_entsize)*sizeof(Elf32_External_Sym),
@@ -352,8 +375,8 @@ bool Profiler::processSymbolTable (FILE * file){
 }
 
 Elf_Internal_Sym *Profiler::get32bitElfSymbols(FILE * file,
-					       unsigned long offset,
-					       unsigned long number){	
+					       uint32_t offset,
+					       uint32_t number){	
 	Elf32_External_Sym* esyms;
 	Elf_Internal_Sym *isyms;
 	Elf_Internal_Sym *psym;
@@ -363,25 +386,25 @@ Elf_Internal_Sym *Profiler::get32bitElfSymbols(FILE * file,
 	//  esyms, Elf32_External_Sym *, "symbols");
 	
 	if (fseek(file, offset, SEEK_SET)){
-		log(LOG_INIT,"admin: Unable to seek to start of %s at %lx", "symbols", offset);
+		log(LOG_INIT,"admin: Unable to seek to start of %s at %"XINT32"", "symbols", offset);
 		return 0;
 	}
 	esyms = (Elf32_External_Sym *) 
 		mmalloc (number * sizeof (Elf32_External_Sym),"ProfilerE");
 	if (esyms==NULL){
-		log(LOG_INIT,"admin: Out of memory allocating %ld bytes for %s",
-		    number *sizeof (Elf32_External_Sym),"Symbols");
+		log(LOG_INIT,"admin: Out of memory allocating %"INT32" bytes for %s",
+		    number *(int32_t)sizeof (Elf32_External_Sym),"Symbols");
 		return 0;
 	}
 
 	if (fread (esyms,number * sizeof (Elf32_External_Sym), 1, file) != 1){ 
-		log(LOG_INIT,"admin: Unable to read in %ld bytes of %s", 
-		    number * sizeof (Elf32_External_Sym), "symbols");
+		log(LOG_INIT,"admin: Unable to read in %"INT32" bytes of %s", 
+		    number * (int32_t)sizeof (Elf32_External_Sym), "symbols");
 		mfree (esyms,number * sizeof (Elf32_External_Sym),"ProfilerE");
 		esyms = NULL;
 		return 0;
 	}
-	long need = number * sizeof (Elf_Internal_Sym);
+	int32_t need = number * sizeof (Elf_Internal_Sym);
 	isyms = (Elf_Internal_Sym *) mmalloc (need,"ProfilerF");
 	
 	if (isyms == NULL){
@@ -428,19 +451,19 @@ bool Profiler::processSectionHeaders (FILE * file){
 	{
 		if (fseek (m_file,section->sh_offset,SEEK_SET)){
 			log(LOG_INIT,"admin: Unable to seek to start of %s "
-			    "at %lx\n","string table",section->sh_offset);
+			    "at %"XINT32"\n","string table",section->sh_offset);
 			return 0;
 		}
 		m_stringTableSize=section->sh_size;
 		m_stringTable = (char *) mmalloc (m_stringTableSize,
 						  "ProfilerB");
 		if (m_stringTable == NULL){
-			log(LOG_INIT,"admin: Out of memory allocating %ld "
+			log(LOG_INIT,"admin: Out of memory allocating %"INT32" "
 			    "bytes for %s\n", section->sh_size,"string table");
 			return 0;
 		}
 		if (fread (m_stringTable, section->sh_size, 1, m_file) != 1){
-			log(LOG_INIT,"admin: Unable to read in %ld bytes of "
+			log(LOG_INIT,"admin: Unable to read in %"INT32" bytes of "
 			    "%s\n",section->sh_size,"section table");
 			mfree (m_stringTable,m_stringTableSize,"ProfilerB");
 			m_stringTable = NULL;
@@ -457,7 +480,7 @@ bool Profiler::get32bitSectionHeaders (FILE * file){
 	unsigned int          i;
 
 	if (fseek (m_file, m_elfHeader.e_shoff, SEEK_SET)){
-		log(LOG_INIT,"admin: Unable to seek to start of %s at %lx\n",
+		log(LOG_INIT,"admin: Unable to seek to start of %s at %"XINT32"\n",
 		    "section headers", m_elfHeader.e_shoff);
 		return 0;
 	}
@@ -510,11 +533,11 @@ bool Profiler::get32bitSectionHeaders (FILE * file){
 }
 
 
-bool Profiler::startTimer(long address, const char* caller) {
+bool Profiler::startTimer(int32_t address, const char* caller) {
 	// disable - we do interrupt based profiling now
 	return true;
 	if(g_inSigHandler) return 1;
-	long slot = m_fn.getSlot(&address);
+	int32_t slot = m_fn.getSlot(&address);
 	FnInfo *fnInfo;
 	if (slot == -1) return false;
 	fnInfo=(FnInfo *)m_fn.getValueFromSlot(slot);
@@ -533,18 +556,18 @@ inline uint64_t gettimeofdayInMicroseconds(void) {
 	gettimeofday(&tv, NULL);
 	return(((uint64_t)tv.tv_sec * 1000000LL) + (uint64_t)tv.tv_usec);
 }
-bool Profiler::pause(const char* caller, long lineno, long took) {
+bool Profiler::pause(const char* caller, int32_t lineno, int32_t took) {
 	lastQuickPollTime = gettimeofdayInMicroseconds(); 
-	unsigned long long nowLocal = lastQuickPollTime / 1000;
+	uint64_t nowLocal = lastQuickPollTime / 1000;
 	void *trace[3];
 	backtrace(trace, 3);
 	const void *stackPtr = trace[2];
-	lastQuickPollAddress = (uint32_t)stackPtr; 
-	for(long i = 0; i < m_activeFns.getNumSlots(); i++) {
+	lastQuickPollAddress = (PTRTYPE)stackPtr; 
+	for(int32_t i = 0; i < m_activeFns.getNumSlots(); i++) {
 		//if(m_activeFns.getKey(i) == 0) continue;
 		if ( m_activeFns.isEmpty(i) ) continue;
 		FnInfo* fnInfo = *(FnInfo **)m_activeFns.getValueFromSlot(i);
-		unsigned long long blockedTime = nowLocal - 
+		uint64_t blockedTime = nowLocal - 
 			fnInfo->m_lastPauseTime ;
 		if (blockedTime > fnInfo->m_maxBlockedTime) {
 			fnInfo->m_maxBlockedTime = blockedTime;
@@ -560,10 +583,10 @@ bool Profiler::pause(const char* caller, long lineno, long took) {
 	//break here in gdb and go up on the stack if you want to find a place
 	//to add a quickpoll!!!!1!!
 //   	if(took > 50)
-// 	   log(LOG_WARN, "admin qp %s--%li took %li",
+// 	   log(LOG_WARN, "admin qp %s--%"INT32" took %"INT32"",
 // 	       caller, lineno, took);
-	long qpkey = (long)caller + lineno;
-	long slot = m_quickpolls.getSlot(&qpkey);
+	PTRTYPE qpkey = (PTRTYPE)caller + lineno;
+	int32_t slot = m_quickpolls.getSlot(&qpkey);
 	if(slot < 0) {
 		if(m_lastQPUsed >= 512) {
 			log(LOG_WARN, "admin: profiler refusing to add to "
@@ -602,8 +625,8 @@ bool Profiler::pause(const char* caller, long lineno, long took) {
 }
 
 bool Profiler::unpause() {
-	unsigned long long nowLocal = gettimeofdayInMillisecondsLocal();
- 	for(long i = 0; i < m_activeFns.getNumSlots(); i++) {
+	uint64_t nowLocal = gettimeofdayInMillisecondsLocal();
+ 	for(int32_t i = 0; i < m_activeFns.getNumSlots(); i++) {
 		//if(m_activeFns.getKey(i) == 0) continue;
 		if ( m_activeFns.isEmpty(i) ) continue;
 		FnInfo* fnInfo = *(FnInfo **)m_activeFns.getValueFromSlot(i);
@@ -612,16 +635,16 @@ bool Profiler::unpause() {
 	return true;
 }
 
-bool Profiler::endTimer(long address,
+bool Profiler::endTimer(int32_t address,
 			const char *caller,
 			bool isThread ) {
 	// disable - we do interrupt based profiling now
 	if(g_inSigHandler) return 1;
 	FnInfo *fnInfo;
-	long slot = m_activeFns.getSlot(&address);
+	int32_t slot = m_activeFns.getSlot(&address);
 	if (slot < 0 ) {
 		//log(LOG_WARN,"Profiler: got a non added function at 
-		// address %li",address);
+		// address %"INT32"",address);
 		// This happens because at closing the profiler is still on
 		// after destructor has been called. Not displaying address
 		// because is is of no use
@@ -632,11 +655,11 @@ bool Profiler::endTimer(long address,
 	fnInfo=*(FnInfo **)m_activeFns.getValueFromSlot(slot);
 	if(--fnInfo->m_inFunction > 0) return true;
 
-	unsigned long long nowLocal = gettimeofdayInMillisecondsLocal();
-	//unsigned long long now = gettimeofdayInMilliseconds();
-	unsigned long long timeTaken = nowLocal - fnInfo->m_startTimeLocal;
+	uint64_t nowLocal = gettimeofdayInMillisecondsLocal();
+	//uint64_t now = gettimeofdayInMilliseconds();
+	uint64_t timeTaken = nowLocal - fnInfo->m_startTimeLocal;
 
-	unsigned long long blockedTime = nowLocal - fnInfo->m_lastPauseTime ;
+	uint64_t blockedTime = nowLocal - fnInfo->m_lastPauseTime ;
 	if (blockedTime > fnInfo->m_maxBlockedTime) {
 		fnInfo->m_maxBlockedTime = blockedTime;
 		fnInfo->m_prevQpoll = fnInfo->m_lastQpoll;
@@ -654,9 +677,9 @@ bool Profiler::endTimer(long address,
 	char* name = getFnName(address);
 
 
-	if (timeTaken > (unsigned long)g_conf.m_minProfThreshold) {
+	if (timeTaken > (uint32_t)g_conf.m_minProfThreshold) {
 		if(g_conf.m_sequentialProfiling)
-			log(LOG_TIMING, "admin: %lli ms in %s from %s", 
+			log(LOG_TIMING, "admin: %"INT64" ms in %s from %s", 
 			    timeTaken, 
 			    name,
 			    caller?caller:"");
@@ -675,15 +698,15 @@ bool Profiler::endTimer(long address,
 		*/
 	}
 
-	for (long i=0;i<11;i++){
+	for (int32_t i=0;i<11;i++){
 		//if we find a hashtable is less than 1 second old
-		unsigned long long diffTime=nowLocal-m_fnTime[i];
+		uint64_t diffTime=nowLocal-m_fnTime[i];
 		if((diffTime<1000)&&(m_fnTime[i]!=0)){
 			//Add this function. Don't add the function name,
 			//shall get that from m_fn
 			//log(LOG_WARN,"Profiler: adding funtion to existing "
-			//"hashtable i=%li,now=%lli,"
-			// "m_fnTime=%lli, diffTime=%lli",i,now,
+			//"hashtable i=%"INT32",now=%"INT64","
+			// "m_fnTime=%"INT64", diffTime=%"INT64"",i,now,
 			// m_fnTime[i],diffTime);
 			slot=m_fnTmp[i].getSlot(&address);
 			if (slot!=-1){
@@ -712,10 +735,10 @@ bool Profiler::endTimer(long address,
 	}
 	//if not, then find a hashtable that is more than 10 seconds old
 	//and replace it with the new hashtable
-	for (long i=0;i<11;i++){
-		unsigned long long diffTime=nowLocal-m_fnTime[i];
+	for (int32_t i=0;i<11;i++){
+		uint64_t diffTime=nowLocal-m_fnTime[i];
 		if((diffTime>=10000) || (m_fnTime[i]==0)){
-			/*log(LOG_WARN,"Profiler: m_fntime=%lli,i=%li,now=%lli,diffTime=%lli",
+			/*log(LOG_WARN,"Profiler: m_fntime=%"INT64",i=%"INT32",now=%"INT64",diffTime=%"INT64"",
 			  m_fnTime[i],i,now,diffTime);*/
 			//First clear the hashtable
 			m_fnTmp[i].clear();						
@@ -739,21 +762,21 @@ bool Profiler::endTimer(long address,
 	return true;
 }
 
-bool Profiler::printInfo(SafeBuf *sb,char *username, //long user, 
+bool Profiler::printInfo(SafeBuf *sb,char *username, //int32_t user, 
                          char *pwd, char *coll, 
 			 int sorts,int sort10, int qpreset,
 			 int profilerreset) {
 	// sort by max blocked time by default
 	if ( sorts == 0 ) sorts = 8;
 
-	long slot;
-	unsigned long key(0);
-	long numSlots = m_fn.getNumSlots();
-	long numSlotsUsed = m_fn.getNumSlotsUsed();
+	int32_t slot;
+	uint32_t key(0);
+	int32_t numSlots = m_fn.getNumSlots();
+	int32_t numSlotsUsed = m_fn.getNumSlotsUsed();
 	FnInfo *fnInfo;
 
 	if ( profilerreset ) {
-		for ( long i = 0; i < m_fn.getNumSlots(); i++ ){
+		for ( int32_t i = 0; i < m_fn.getNumSlots(); i++ ){
 			//key=m_fn.getKey(i);
 			//if (key!=0){
 			if ( ! m_fn.isEmpty(i) ) {
@@ -797,19 +820,19 @@ bool Profiler::printInfo(SafeBuf *sb,char *username, //long user,
 // 	sb->safePrintf("<td><b><a href=/admin/profiler?sorts=8&c=%s>"
 // 		       "Between Quick Polls</a></b></td></tr>",coll);
 
-	indexTable=(unsigned long*) 
-		mcalloc(numSlotsUsed*sizeof(unsigned long),"ProfilerW");
-	keyTable=(unsigned long*) mcalloc
-		(numSlotsUsed*sizeof(unsigned long),"ProfilerX");
+	indexTable=(uint32_t*) 
+		mcalloc(numSlotsUsed*sizeof(uint32_t),"ProfilerW");
+	keyTable=(uint32_t*) mcalloc
+		(numSlotsUsed*sizeof(uint32_t),"ProfilerX");
 	if(sorts==5 ||sort10==5)
 		valueTableF=(float*) 
 			mcalloc(numSlotsUsed*sizeof(float),"ProfilerY");
 	else
-		valueTableUll=(unsigned long long*) 
-			mcalloc(numSlotsUsed*sizeof(unsigned long long),
+		valueTableUll=(uint64_t*) 
+			mcalloc(numSlotsUsed*sizeof(uint64_t),
 				"ProfilerY");
-	long numFnsCalled=0;
-	for (long i=0;i<numSlots;i++){
+	int32_t numFnsCalled=0;
+	for (int32_t i=0;i<numSlots;i++){
 		//key=m_fn.getKey(i);
 		//if (key!=0){
 		if ( !m_fn.isEmpty(i) ) {
@@ -849,19 +872,19 @@ bool Profiler::printInfo(SafeBuf *sb,char *username, //long user,
 		}
 	}
 	if (sorts==5)
-		gbqsort(indexTable,numFnsCalled,sizeof(unsigned long),
+		gbqsort(indexTable,numFnsCalled,sizeof(uint32_t),
 		      decend_cmpF);
 	else
-		gbqsort(indexTable,numFnsCalled,sizeof(unsigned long),
+		gbqsort(indexTable,numFnsCalled,sizeof(uint32_t),
 		      decend_cmpUll);
 
 	//Now print the sorted values
-	for (long i=0;i<numFnsCalled;i++){
+	for (int32_t i=0;i<numFnsCalled;i++){
 		slot=m_fn.getSlot(&keyTable[indexTable[i]]);
 		fnInfo=(FnInfo *)m_fn.getValueFromSlot(slot);
 		//Don't print functions that have not been called
-		sb->safePrintf("<tr><td>%lx</td><td>%s</td><td>%li</td><td>%li</td>"
-			       "<td>%.4f</td><td>%li</td><td>%li</td><td>%li</td>"
+		sb->safePrintf("<tr><td>%"XINT32"</td><td>%s</td><td>%"INT32"</td><td>%"INT32"</td>"
+			       "<td>%.4f</td><td>%"INT32"</td><td>%"INT32"</td><td>%"INT32"</td>"
 			       "</tr>",
 			       keyTable[indexTable[i]],
 			       fnInfo->m_fnName,
@@ -900,15 +923,15 @@ bool Profiler::printInfo(SafeBuf *sb,char *username, //long user,
 	sb->safePrintf("<td><b><a href=/admin/profiler?sort10=7&c=%s&"
 		       ">"
 		       "Times From Thread</a></b></td></tr>",coll);
-	unsigned long long now=gettimeofdayInMillisecondsLocal();
-	long numFnsCalled10=0;;
-	for(long i=0;i<numFnsCalled;i++){
-		unsigned long long timesCalled=0;
-		unsigned long long totalTimeTaken=0;
-		unsigned long long maxTimeTaken=0;
-		unsigned long long numCalledFromThread=0;
+	uint64_t now=gettimeofdayInMillisecondsLocal();
+	int32_t numFnsCalled10=0;;
+	for(int32_t i=0;i<numFnsCalled;i++){
+		uint64_t timesCalled=0;
+		uint64_t totalTimeTaken=0;
+		uint64_t maxTimeTaken=0;
+		uint64_t numCalledFromThread=0;
 		//If hashtable is less than 10 secs old, use it
-		for(long j=0;j<11;j++){
+		for(int32_t j=0;j<11;j++){
 			if ((now-m_fnTime[i]) < 10000){
 				//From the keyTable, we know the keys of the
 				// functions that have been called
@@ -951,19 +974,19 @@ bool Profiler::printInfo(SafeBuf *sb,char *username, //long user,
 	}
 
 	if (sort10==5)
-		gbqsort(indexTable,numFnsCalled10,sizeof(unsigned long),
+		gbqsort(indexTable,numFnsCalled10,sizeof(uint32_t),
 		      decend_cmpF);
 	else
-		gbqsort(indexTable,numFnsCalled10,sizeof(unsigned long),
+		gbqsort(indexTable,numFnsCalled10,sizeof(uint32_t),
 		      decend_cmpUll);
 
-	for(long i=0;i<numFnsCalled10;i++){
-		unsigned long long timesCalled=0;		
-		unsigned long long totalTimeTaken=0;
-		unsigned long long maxTimeTaken=0;
-		unsigned long long numCalledFromThread=0;
+	for(int32_t i=0;i<numFnsCalled10;i++){
+		uint64_t timesCalled=0;		
+		uint64_t totalTimeTaken=0;
+		uint64_t maxTimeTaken=0;
+		uint64_t numCalledFromThread=0;
 		//If hashtable is less than 10 secs old, continue
-		for(long j=0;j<11;j++){
+		for(int32_t j=0;j<11;j++){
 			if ((now-m_fnTime[i])<10000){
 				// From the keyTable, we know the keys of the
 				// functions that have been called
@@ -989,9 +1012,9 @@ bool Profiler::printInfo(SafeBuf *sb,char *username, //long user,
 		slot=m_fn.getSlot(&keyTable[indexTable[i]]);
 		fnInfo=(FnInfo *)m_fn.getValueFromSlot(slot);
 		//Don't print functions that have not been called
-		sb->safePrintf("<tr><td>%lx</td><td>%s</td><td>%lli</td>"
-			       "<td>%lli</td>"
-			       "<td>%.4f</td><td>%lli</td><td>%lli</td></tr>",
+		sb->safePrintf("<tr><td>%"XINT32"</td><td>%s</td><td>%"INT64"</td>"
+			       "<td>%"INT64"</td>"
+			       "<td>%.4f</td><td>%"INT64"</td><td>%"INT64"</td></tr>",
 			       keyTable[indexTable[i]],
 			       fnInfo->m_fnName,
 			       timesCalled,
@@ -1004,15 +1027,15 @@ bool Profiler::printInfo(SafeBuf *sb,char *username, //long user,
 
 	
 	
-	mfree(indexTable,numSlotsUsed*sizeof(unsigned long),"ProfilerX");
-	mfree(keyTable,numSlotsUsed*sizeof(unsigned long),"ProfilerX");
+	mfree(indexTable,numSlotsUsed*sizeof(uint32_t),"ProfilerX");
+	mfree(keyTable,numSlotsUsed*sizeof(uint32_t),"ProfilerX");
 	if (sorts==5 || sort10==5)
 		mfree(valueTableF,
 		      numSlotsUsed*sizeof(float),
 		      "ProfilerY");
 	else
 		mfree(valueTableUll,
-		      numSlotsUsed*sizeof(unsigned long long),
+		      numSlotsUsed*sizeof(uint64_t),
 		      "ProfilerY");
 
 
@@ -1048,60 +1071,60 @@ bool Profiler::printInfo(SafeBuf *sb,char *username, //long user,
 		return true;
 	}
 
-	valueTableUll = (unsigned long long*)
-		mcalloc(numSlotsUsed * sizeof(unsigned long long),"ProfilerZ");
+	valueTableUll = (uint64_t*)
+		mcalloc(numSlotsUsed * sizeof(uint64_t),"ProfilerZ");
 	if(!valueTableUll) {
 		sb->safePrintf("</table>");
 		return true;
 	}
 
-	indexTable = (unsigned long*)mcalloc(numSlotsUsed * 
-					     sizeof(unsigned long),
+	indexTable = (uint32_t*)mcalloc(numSlotsUsed * 
+					     sizeof(uint32_t),
 					     "ProfilerZ");
 	if(!indexTable) {
 		mfree(indexTable,   
-		      numSlotsUsed*sizeof(unsigned long),
+		      numSlotsUsed*sizeof(uint32_t),
 		      "ProfilerZ");
 		sb->safePrintf("</table>");
 		return true;
 	}
 
-	keyTable = (unsigned long*)mcalloc(numSlotsUsed * 
-					   sizeof(unsigned long),
+	keyTable = (uint32_t*)mcalloc(numSlotsUsed * 
+					   sizeof(uint32_t),
 					   "ProfilerZ");
 	if(!keyTable) {
 		mfree(indexTable,   
-		      numSlotsUsed*sizeof(unsigned long),
+		      numSlotsUsed*sizeof(uint32_t),
 		      "ProfilerZ");
 		mfree(valueTableUll,
-		      numSlotsUsed*sizeof(unsigned long long),
+		      numSlotsUsed*sizeof(uint64_t),
 		      "ProfilerZ");
 		sb->safePrintf("</table>");
 		return true;
 	}
 
-	long j = 0;
-	for (long i = 0; i < numSlots; i++) {
+	int32_t j = 0;
+	for (int32_t i = 0; i < numSlots; i++) {
 		//if((key = m_quickpolls.getKey(i)) == 0) continue;
 		if ( m_quickpolls.isEmpty(i) ) continue;
 		QuickPollInfo* q = *(QuickPollInfo **)m_quickpolls.getValueFromSlot(i);
-		long took = q->m_maxTime;
+		int32_t took = q->m_maxTime;
 		valueTableUll[j] = took;
 		indexTable[j] = j; 
 		keyTable[j] = i; 
 		j++;
 	}
-	gbqsort(indexTable, j, sizeof(unsigned long), decend_cmpUll);
+	gbqsort(indexTable, j, sizeof(uint32_t), decend_cmpUll);
 	
-	for (long i = 0; i < numSlotsUsed; i++){
-		long slot = keyTable[indexTable[i]];
+	for (int32_t i = 0; i < numSlotsUsed; i++){
+		int32_t slot = keyTable[indexTable[i]];
 		//key = m_quickpolls.getKey(slot);
 		QuickPollInfo* q = *(QuickPollInfo **)m_quickpolls.getValueFromSlot(slot);
-		sb->safePrintf("<tr><td>%s:%li<br>%s:%li</td>"
-			       "<td>%li</td>"
+		sb->safePrintf("<tr><td>%s:%"INT32"<br>%s:%"INT32"</td>"
+			       "<td>%"INT32"</td>"
 			       "<td>%f</td>"
-			       "<td>%li</td>"
-			       "<td>%li</td>"
+			       "<td>%"INT32"</td>"
+			       "<td>%"INT32"</td>"
 			       "</tr>",
 			       q->m_caller,  q->m_lineno, q->m_last, 
 			       q->m_lastlineno,q->m_maxTime,
@@ -1111,17 +1134,17 @@ bool Profiler::printInfo(SafeBuf *sb,char *username, //long user,
 	}
 	sb->safePrintf("</table>");
 
-	mfree(valueTableUll,numSlotsUsed*sizeof(unsigned long long),"ProfilerZ");
-	mfree(indexTable,   numSlotsUsed*sizeof(unsigned long),"ProfilerZ");
-	mfree(keyTable,     numSlotsUsed*sizeof(unsigned long),"ProfilerZ");
+	mfree(valueTableUll,numSlotsUsed*sizeof(uint64_t),"ProfilerZ");
+	mfree(indexTable,   numSlotsUsed*sizeof(uint32_t),"ProfilerZ");
+	mfree(keyTable,     numSlotsUsed*sizeof(uint32_t),"ProfilerZ");
 	return true;
 }
 
 //backwards so we get highest scores first.
 static int decend_cmpUll ( const void *h1 , const void *h2 ) {
-        unsigned long tmp1, tmp2;
-        tmp1 = *(unsigned long *)h1;
-	tmp2 = *(unsigned long *)h2;
+        uint32_t tmp1, tmp2;
+        tmp1 = *(uint32_t *)h1;
+	tmp2 = *(uint32_t *)h2;
 	if (valueTableUll[tmp1]>valueTableUll[tmp2]) {
 		return -1;	
 	}
@@ -1133,9 +1156,9 @@ static int decend_cmpUll ( const void *h1 , const void *h2 ) {
 
 //backwards so we get highest scores first.
 static int decend_cmpF ( const void *h1 , const void *h2 ) {
-        unsigned long tmp1, tmp2;
-        tmp1 = *(unsigned long *)h1;
-	tmp2 = *(unsigned long *)h2;
+        uint32_t tmp1, tmp2;
+        tmp1 = *(uint32_t *)h1;
+	tmp2 = *(uint32_t *)h2;
 	if (valueTableF[tmp1]>valueTableF[tmp2]) {
 		return -1;	
 	}
@@ -1146,9 +1169,9 @@ static int decend_cmpF ( const void *h1 , const void *h2 ) {
 }
 
 
-char* Profiler::getFnName(unsigned long address,long *nameLen){
+char* Profiler::getFnName( PTRTYPE address,int32_t *nameLen){
 	FnInfo *fnInfo;
-	long slot=m_fn.getSlot(&address);
+	int32_t slot=m_fn.getSlot(&address);
 	if(slot!=-1)
 		fnInfo=(FnInfo *)m_fn.getValueFromSlot(slot);
 	else 
@@ -1165,12 +1188,12 @@ bool sendPageProfiler ( TcpSocket *s , HttpRequest *r ) {
 	
 
 	//read in all of the possible cgi parms off the bat:
-	//long  user     = g_pages.getUserType( s , r );
+	//int32_t  user     = g_pages.getUserType( s , r );
 	char *username = g_users.getUsername(r);
 	//char *pwd  = r->getString ("pwd");
 
 	char *coll = r->getString ("c");
-	long collLen;
+	int32_t collLen;
 	if ( ! coll || ! coll[0] ) {
 		//coll    = g_conf.m_defaultColl;
 		coll = g_conf.getDefaultColl( r->getHost(), r->getHostLen() );
@@ -1187,6 +1210,25 @@ bool sendPageProfiler ( TcpSocket *s , HttpRequest *r ) {
 	
 	g_pages.printAdminTop ( &sb , s , r );
 
+	// no permmission?
+	bool isMasterAdmin = g_conf.isMasterAdmin ( s , r );
+	bool isCollAdmin = g_conf.isCollAdmin ( s , r );
+	if ( ! isMasterAdmin &&
+	     ! isCollAdmin ) {
+		//g_errno = ENOPERM;
+		//g_httpServer.sendErrorReply(s,g_errno,mstrerror(g_errno));
+		//return true;
+		sorts = 0;
+		sort10 = 0;
+		qpreset = 0;
+		profilerreset = 0;
+		realTimeSortMode = 2;
+		realTimeShowAll = 0;
+		startRt = 0;
+		stopRt = 0;
+	}
+
+
 	
 	if (!g_conf.m_profilingEnabled)
 		sb.safePrintf("<font color=#ff0000><b><centeR>"
@@ -1194,7 +1236,10 @@ bool sendPageProfiler ( TcpSocket *s , HttpRequest *r ) {
 			      "Enable it in MasterControls.</center></b></font>");
 	else {
 		if(g_profiler.m_realTimeProfilerRunning) {
-			if(stopRt) g_profiler.stopRealTimeProfiler();
+			if(stopRt) {
+				g_profiler.stopRealTimeProfiler();
+				g_profiler.m_ipBuf.purge();
+			}
 		} else if(startRt)   g_profiler.startRealTimeProfiler();
 				
 		g_profiler.printRealTimeInfo(&sb,
@@ -1203,9 +1248,10 @@ bool sendPageProfiler ( TcpSocket *s , HttpRequest *r ) {
 					     coll,
 					     realTimeSortMode,
 					     realTimeShowAll);
-		g_profiler.printInfo(&sb,username,NULL,coll,sorts,sort10, qpreset,
-				     profilerreset);
+		// g_profiler.printInfo(&sb,username,NULL,coll,sorts,sort10, qpreset,
+		// 		     profilerreset);
 	}
+
 	return g_httpServer.sendDynamicPage ( s , (char*) sb.getBufStart() ,
 						sb.length() ,-1 , false);
 }
@@ -1319,9 +1365,13 @@ FrameTrace::getPrintLen(const uint32_t level) const {
 FrameTrace *
 Profiler::getFrameTrace(void **trace, const uint32_t numFrames) {
 	FrameTrace *frame = g_profiler.m_rootFrame;
+	if ( ! frame ) {
+		log("profiler: profiler frame was null");
+		return NULL;
+	}
 	for(uint32_t i = numFrames - 3; i > 1; --i) {
 		uint32_t base =
-			g_profiler.getFuncBaseAddr((uint32_t)trace[i]);
+			g_profiler.getFuncBaseAddr((PTRTYPE)trace[i]);
 		frame = frame->add(base);
 		if(!frame) return NULL;
 	}
@@ -1335,7 +1385,7 @@ Profiler::updateRealTimeData( 	void **trace,
 	// Find or create and set of stack frames which match this one.
 	FrameTrace *frame = getFrameTrace(trace, numFrames);
 	if(frame) ++frame->hits;
-	uint32_t stackPtr = (uint32_t)trace[2];
+	PTRTYPE stackPtr = (PTRTYPE)trace[2];
 	//*ptr = (uint32_t *)realTimeProfilerData.getValuePointer(stackPtr);
 	*ptr = (uint32_t *)realTimeProfilerData.getValue(&stackPtr);
 	uint64_t newHit = 1;
@@ -1389,13 +1439,127 @@ Profiler::checkMissedQuickPoll( FrameTrace *frame,
 	if(ptr) ++ptr[1];
 }
 
+// from gb-include.h
+extern int g_inMemcpy;
+
 void
 Profiler::getStackFrame(int sig) {
+
+	// need to interrupt every 1ms to set this to true
+	g_clockNeedsUpdate = true;
+
+	// profile once every 5ms, not every 1ms
+	static int32_t s_count = 0;
+
+	if ( ++s_count != 5 ) return;
+
+	s_count = 0;
+
+	// prevent cores.
+	// TODO: hack this to a function somehow...
+	// we set this to positive values when calling library functions like
+	// zlib's inflate/deflate that call memcpy() so we can't measure
+	// those in the profiler unfortunately unless we put a hack in here
+	// somewhere. but for now just ignore.
+	if ( g_inMemcpy ) return;
+
+	//void *trace[32];
+
+	// the innermost line number
+	// if ( g_profiler.m_ipLineBuf.m_length + 8 >= 
+	//      g_profiler.m_ipLineBuf.m_capacity )
+	// 	return;
+
+	// the lines calling functions
+	// if ( g_profiler.m_ipPathBuf.m_length + 8*32 >= 
+	//      g_profiler.m_ipPathBuf.m_capacity )
+	// 	return;
+
+	// the lines calling functions
+	if ( g_profiler.m_ipBuf.m_length + 8*32 >= 
+	     g_profiler.m_ipBuf.m_capacity )
+	 	return;
+
+	// support 64-bit
 	void *trace[32];
-	uint32_t numFrames = backtrace(trace, 32);
+	int32_t numFrames = backtrace((void **)trace, 32);
 	if(numFrames < 3) return;
+
+	// the individual line for profiling the worst individual functions.
+	// we'll have to remove line #'s from the output of addr2line
+	// using awk i guess.
+	//g_profiler.m_ipLineBuf.pushLongLong((uint64_t)trace[2]);
+
+	// . now just store the Instruction Ptrs into a count hashtable
+	// . skip ahead 2 to avoid the sigalrm function handler
+	for ( int32_t i = 2 ; i < numFrames  ; i++ ) {
+
+		// even if we are 32-bit, make this 64-bit for ease
+		uint64_t addr = (uint64_t)(PTRTYPE)trace[i];
+
+		//if ( addr > 0xf0000000 )
+		//log("profiler: %i) addr = %llx",i,(unsigned long long)addr);
+
+		// the call stack path for profiling the worst paths
+		g_profiler.m_ipBuf.pushLongLong(addr);
+		continue;
+		// just store lowest addr for now
+		//break;
+		/*
+		int32_t slot = g_profiler.m_ipCountTable.getSlot ( &addr );
+		if ( slot < 0 ) {
+			int32_t val = 1;
+			g_profiler.m_ipCountTable.addKey ( &addr , &val );
+			continue;
+		}
+		// update existing
+		uint32_t *val;
+		val=(uint32_t *)g_profiler.
+			m_ipCountTable.getValueFromSlot(slot);
+		*val = *val + 1;
+		*/
+	}
+
+	// a secret # to indicate missed quickpoll
+	if ( g_niceness != 0 &&
+	     g_loop.m_needsToQuickPoll &&
+	     ! g_loop.m_inQuickPoll )
+		g_profiler.m_ipBuf.pushLongLong(0x123456789LL);
+
+	// indicate end of call stack path
+	g_profiler.m_ipBuf.pushLongLong(0LL);//addr);
+
+
+	return;
+
+	/*
+	// if we are in need of a quickpoll store it here
+	if( g_niceness == 0 ) return;
+	// !g_loop.m_canQuickPoll || 
+	if ( ! g_loop.m_needsToQuickPoll ) return;
+	if ( g_loop.m_inQuickPoll ) return;
+
+	// do not breach
+	if ( g_profiler.m_quickpollMissBuf.m_length + 8*32 >= 
+	     g_profiler.m_quickpollMissBuf.m_capacity )
+		return;
+
+	// store address in need of quickpolls
+	//g_profiler.m_quickpollMissBuf.
+	//	pushLongLong((uint64_t)trace[2] );
+	for ( int32_t i = 2 ; i < numFrames && i <= 4 ; i++ ) {
+		// even if we are 32-bit, make this 64-bit for ease
+		uint64_t addr = (uint64_t)trace[i];
+		// the call stack path for profiling the worst paths
+		g_profiler.m_quickpollMissBuf.pushLongLong(addr);
+	}
+
+	// all done
+	return;
+	*/
+
 	const void *stackPtr = trace[2];
-	uint32_t baseAddress = g_profiler.getFuncBaseAddr((uint32_t)stackPtr);
+	uint32_t baseAddress = g_profiler.getFuncBaseAddr((PTRTYPE)stackPtr);
 	uint32_t *ptr;	
 	FrameTrace *frame = updateRealTimeData(trace, numFrames, &ptr);
 	if(baseAddress != g_profiler.m_lastDeltaAddress) {
@@ -1404,42 +1568,53 @@ Profiler::getStackFrame(int sig) {
 		g_profiler.m_lastDeltaAddress = baseAddress;
 	}
 	checkMissedQuickPoll( 	frame,
-				(uint32_t)stackPtr,
+				(PTRTYPE)stackPtr,
 				ptr);
 }
 
 void
 Profiler::startRealTimeProfiler() {
 	log(LOG_INIT, "admin: starting real time profiler");
-	if(!m_frameTraces) {
-		m_frameTraces = (FrameTrace *)mmalloc(
-			sizeof(FrameTrace) * MAX_FRAME_TRACES, "FrameTraces");
-		memset(m_frameTraces, 0, sizeof(FrameTrace) * MAX_FRAME_TRACES);
-		m_numUsedFrameTraces = 0;
-		m_rootFrame = &m_frameTraces[m_numUsedFrameTraces++];
-	}
+	// if(!m_frameTraces) {
+	// 	m_frameTraces = (FrameTrace *)mmalloc(
+	// 		sizeof(FrameTrace) * MAX_FRAME_TRACES, "FrameTraces");
+	// 	memset(m_frameTraces, 0, sizeof(FrameTrace) * MAX_FRAME_TRACES);
+	// 	m_numUsedFrameTraces = 0;
+	// 	m_rootFrame = &m_frameTraces[m_numUsedFrameTraces++];
+	// }
+	init();
+	m_realTimeProfilerRunning = true;
+	// now Loop.cpp will call g_profiler.getStackFrame()
+	return;
+
 	struct itimerval value, ovalue;
 	int which = ITIMER_REAL;
 	//signal(SIGVTALRM, Profiler::getStackFrame);
-	signal(SIGALRM, Profiler::getStackFrame);
+	//signal(SIGALRM, Profiler::getStackFrame);
 	value.it_interval.tv_sec = 0;
-	value.it_interval.tv_usec = 5000;
+	// 1000 microseconds is 1 millisecond
+	value.it_interval.tv_usec = 1000;
 	value.it_value.tv_sec = 0;
-	value.it_value.tv_usec = 5000;
+	value.it_value.tv_usec = 1000;
 	setitimer( which, &value, &ovalue );
-	m_realTimeProfilerRunning = true;
 }
 
 void
 Profiler::stopRealTimeProfiler(const bool keepData) {
 	log(LOG_INIT, "admin: stopping real time profiler");
+	m_realTimeProfilerRunning = false;
+
+	return;
+
+
 	struct itimerval value;
 	int which = ITIMER_REAL;
+	// call the handler in Loop.cpp again
+	//signal(SIGALRM,sigalrmHandler);
 	getitimer( which, &value );
 	value.it_value.tv_sec = 0;
 	value.it_value.tv_usec = 0;
 	setitimer( which, &value, NULL );
-	m_realTimeProfilerRunning = false;
 	if(!keepData && m_frameTraces) {
 		mfree( 	m_frameTraces,
 			sizeof(FrameTrace) * MAX_FRAME_TRACES,
@@ -1553,9 +1728,26 @@ Profiler::sortRealTimeData(const uint8_t type, const uint32_t num) {
 	}
 }
 
+
+class PathBucket {
+public:
+	char *m_pathStackPtr;
+	int32_t m_calledTimes;
+	int32_t m_missedQuickPolls;
+};
+       
+
+int cmpPathBucket (const void *A, const void *B) {
+	const PathBucket *a = *(const PathBucket **)A;
+	const PathBucket *b = *(const PathBucket **)B;
+	if      ( a->m_calledTimes < b->m_calledTimes ) return  1;
+	else if ( a->m_calledTimes > b->m_calledTimes ) return -1;
+	return 0;
+}
+
 bool
 Profiler::printRealTimeInfo(SafeBuf *sb,
-			    //long user,
+			    //int32_t user,
 			    char *username,
 			    char *pwd,
 			    char *coll,
@@ -1573,6 +1765,8 @@ Profiler::printRealTimeInfo(SafeBuf *sb,
 		return true;
 	}
 	stopRealTimeProfiler(true);
+
+	/*
 	if(hitEntries)
 		mfree(hitEntries, sizeof(HitEntry)*rtNumEntries, "hitEntries");
 	//rtNumEntries = 0;
@@ -1595,6 +1789,341 @@ Profiler::printRealTimeInfo(SafeBuf *sb,
 		startRealTimeProfiler();
 		return true;
 	}
+	*/
+
+
+	sb->safePrintf("<table %s>",TABLE_STYLE);
+	// char *showMessage;
+	// int rtall;
+	// if(realTimeShowAll) {
+	// 	showMessage = "(show only 10)";
+	// 	rtall = 0;
+	// } else {
+	// 	showMessage = "(show all)";
+	// 	rtall = 1;
+	// }
+	sb->safePrintf("<tr class=hdrow>"
+		       "<td colspan=7>"
+			 "<b>Top 100 Profiled Line Numbers "
+		       //"<a href=\"/admin/profiler?c=%s"
+		       // "&rtall=%i\">%s</a>"
+		       //,coll,
+		       // rtall, showMessage);
+		       );
+	sb->safePrintf("<a href=\"/admin/profiler?c=%s&rtstop=1\">"
+		       "(Stop)</a> [Click refresh to get latest profile "
+		       "stats]</b></td></tr>\n",
+		       coll);
+	/*
+	rtall = !rtall;
+
+	sb->safePrintf("<tr><td><b>"
+		       "Function</b></td>");
+
+	sb->safePrintf("<td><b><a href=/admin/profiler?rtsort=2&c=%s&"
+		       "&rtall=%i>"
+		       "Hits per Func</b></a></td>",coll,rtall);
+
+	sb->safePrintf("<td><b><a href=/admin/profiler?rtsort=0&c=%s&"
+		       "&rtall=%i>"
+		       "Missed QUICKPOLL calls<br>per Func</b></a></td>",
+		       coll,rtall);
+
+	sb->safePrintf("<td><b><a href=/admin/profiler?rtsort=1&c=%s&"
+		       "&rtall=%i>"
+		       "Base Address</b></a></td>",coll,rtall);
+
+	sb->safePrintf("<td><b>Hits per Line</b></td>"
+
+		       "<td><b>Line Address</b></td>"
+
+		       "<td><b>Missed QUICKPOLL calls<br>"
+		       "per Line</b></td></tr>");
+	*/
+
+	// system call to get the function names and line numbers
+	// just dump the buffer
+	char *ip = (char *)m_ipBuf.getBufStart();
+	char *ipEnd = (char *)m_ipBuf.getBuf();
+	SafeBuf ff;
+	ff.safePrintf("%strash/profile.txt",g_hostdb.m_dir);
+	char *filename = ff.getBufStart();
+	unlink ( filename );
+	int fd = open ( filename , O_RDWR | O_CREAT , S_IRWXU );
+	if ( fd < 0 ) {
+		sb->safePrintf("FAILED TO OPEN %s for writing: %s"
+			       ,ff.getBufStart(),strerror(errno));
+		return false;
+	}
+	for ( ; ip < ipEnd ; ip += sizeof(uint64_t) ) {
+		// 0 marks end of call stack
+		if ( *(long long *)ip == 0 ) continue;
+		char tmp[64];
+		int tlen = sprintf(tmp, "0x%llx\n", *(long long *)ip);
+		int nw = write ( fd , tmp , tlen );
+		if ( nw != tlen )
+			log("profiler: write failed");
+	}
+	::close(fd);
+	SafeBuf cmd;
+	SafeBuf newf;
+	newf.safePrintf("%strash/output.txt",g_hostdb.m_dir);
+	// print the addr again somehow so we know
+	cmd.safePrintf("addr2line  -a -s -p -C -f -e ./gb < %s | "
+		       "sort | uniq -c | sort -rn > %s"
+		       ,filename,newf.getBufStart());
+	gbsystem ( cmd.getBufStart() );
+
+	SafeBuf out;
+	out.load ( newf.getBufStart());
+
+	// restrict to top 100 lines
+	char *x = out.getBufStart();
+	int lineCount = 0;
+	for ( ; *x ; x++ ) {
+		if ( *x != '\n' ) continue;
+		if ( ++lineCount >= 100 ) break;
+	}
+	char c = *x;
+	*x = '\0';
+
+	sb->safePrintf("<tr><td colspan=10>"
+		       "<pre>"
+		       "%s"
+		       "</pre>"
+		       "</td>"
+		       "</tr>"
+		       "</table>"
+		       , out.getBufStart() 
+		       );
+
+	*x = c;
+
+	// now each function is in outbuf with the addr, so make a map
+	// and use that map to display the top paths below. we hash the addrs
+	// in each callstack together and the count those hashes to get
+	// the top winners. and then convert the top winners to the
+	// function names.
+	char *p = out.getBufStart();
+	HashTableX map;
+	map.set ( 8,8,1024,NULL,0,false,0,"pmtb");
+	for ( ; *p ; ) {
+		// get addr
+		uint64_t addr64;
+		sscanf ( p , "%*i %"XINT64" ", &addr64 );
+		// skip if 0
+		if ( addr64 ) {
+			// record it
+			int64_t off = p - out.getBufStart();
+			map.addKey ( &addr64 , &off );
+		}
+		// skip to next line
+		for ( ; *p && *p !='\n' ; p++ );
+		if ( *p ) p++;
+	}
+
+	// now scan m_ipBuf (Instruction Ptr Buf) and make the callstack hashes
+	ip = (char *)m_ipBuf.getBufStart();
+	ipEnd = (char *)m_ipBuf.getBuf();
+	char *firstOne = NULL;
+	bool missedQuickPoll = false;
+	uint64_t hhh = 0LL;
+	HashTableX pathTable;
+	pathTable.set ( 8,sizeof(PathBucket),1024,NULL,0,false,0,"pbproftb");
+	for ( ; ip < ipEnd ; ip += sizeof(uint64_t) ) {
+		if ( ! firstOne ) firstOne = ip;
+		uint64_t addr64 = *(uint64_t *)ip;
+		// this means a missed quickpoll
+		if ( addr64 == 0x123456789LL ) {
+			missedQuickPoll = true;
+			continue;
+		}
+		// end of a stack
+		if ( addr64 != 0LL ) { 
+			hhh ^= addr64;
+			continue;
+		}
+		// remove the last one though, because that is the line #
+		// of the innermost function and we don't want to include it
+		//hhh ^= lastAddr64;
+		// it's the end, so add it into table
+		PathBucket *pb = (PathBucket *)pathTable.getValue ( &hhh );
+		if ( pb ) {
+			pb->m_calledTimes++;
+			if ( missedQuickPoll )
+				pb->m_missedQuickPolls++;
+			firstOne = NULL;
+			hhh = 0LL;
+			missedQuickPoll = false;
+			continue;
+		}
+		// make a new one
+		PathBucket npb;
+		npb.m_pathStackPtr = firstOne;
+		npb.m_calledTimes  = 1;
+		if ( missedQuickPoll ) npb.m_missedQuickPolls = 1;
+		else 		       npb.m_missedQuickPolls = 0;
+		pathTable.addKey ( &hhh , &npb );
+		// start over for next path
+		firstOne = NULL;
+		hhh = 0LL;
+		missedQuickPoll = false;
+	}
+
+	// now make a buffer of pointers to the pathbuckets in the table
+	SafeBuf sortBuf;
+	for ( int32_t i = 0 ; i < pathTable.m_numSlots ; i++ ) {
+		// skip empty slots
+		if ( ! pathTable.m_flags[i] ) continue;
+		// get the bucket
+		PathBucket *pb = (PathBucket *)pathTable.getValueFromSlot(i);
+		// store the ptr
+		sortBuf.safeMemcpy ( &pb , sizeof(PathBucket *) );
+	}
+	// now sort it up
+	int32_t count = sortBuf.length() / sizeof(PathBucket *);
+	qsort(sortBuf.getBufStart(),count,sizeof(PathBucket *),cmpPathBucket);
+
+
+	// show profiled paths
+	sb->safePrintf("<br><br><table %s>",TABLE_STYLE);
+	sb->safePrintf("<tr class=hdrow>"
+		       "<td colspan=7>"
+		       "<b>Top 50 Profiled Paths</b>"
+		       "</td></tr>"
+		       "<tr><td colspan=10><pre>");
+
+	// now print the top 50 out
+	char *sp = sortBuf.getBufStart();
+	char *spend = sp + sortBuf.length();
+	int toPrint = 50;
+	for ( ; sp < spend && toPrint > 0 ; sp += sizeof(PathBucket *) ) {
+		toPrint--;
+		PathBucket *pb = *(PathBucket **)sp;
+		// get the callstack into m_ipBuf
+		uint64_t *cs = (uint64_t *)pb->m_pathStackPtr;
+		// scan those
+		for ( ; *cs ; cs++ ) {
+			// lookup this addr
+			long *outOffPtr = (long *)map.getValue ( cs );
+			if ( ! outOffPtr ) { 
+				sb->safePrintf("        [0x%"XINT64"]\n",*cs);
+				continue;
+			}
+			// print that line out until \n
+			char *a = out.getBufStart() + *outOffPtr;
+			for ( ; *a && *a != '\n' ; a++ )
+				sb->pushChar(*a);
+			sb->pushChar('\n');
+		}
+		// the count
+		sb->safePrintf("<b>%i</b>",(int)pb->m_calledTimes);
+
+		if ( pb->m_missedQuickPolls )
+			sb->safePrintf(" <b><font color=red>(missed "
+				       "%i quickpolls)</font></b>",
+				       (int)pb->m_missedQuickPolls);
+
+		sb->safePrintf("\n-----------------------------\n");
+	}
+	
+
+	sb->safePrintf("</pre></td></tr></table>");
+
+
+	/*
+	for ( int i = 0 ; i < m_ipCountTable.m_numSlots ; i++ ) {
+		if ( ! m_ipCountTable.m_flags[i] ) continue;
+		int32_t *count = (int32_t *)m_ipCountTable.getValueFromSlot(i);
+		uint64_t *addr = (uint64_t *)m_ipCountTable.getKeyFromSlot(i);
+		// show the row
+		sb->safePrintf("<tr>"
+			       "<td>0x%llx</td>" // func
+			       "<td>%i</td>" // hits
+			       "<td>%i</td>" // missed quickpolls
+			       "<td>%i</td>" // base addr
+			       "<td>%i</td>" // hits per line
+			       "<td>%i</td>" // line addr
+			       "<td>%i</td>" // missed quickpoll calls
+			       
+			       ,(long long)*addr
+			       ,*count
+			       , 0
+			       , 0
+			       , 0
+			       , 0
+			       , 0
+			       );
+	}
+	*/
+
+
+	/*
+	// do new missed quickpolls
+	sb->safePrintf("<br><br><table %s>",TABLE_STYLE);
+	sb->safePrintf("<tr class=hdrow>"
+		       "<td colspan=7>"
+		       "<b>Top 100 Missed QuickPolls "
+		       );
+	ip = (char *)m_quickpollMissBuf.getBufStart();
+	ipEnd = (char *)m_quickpollMissBuf.getBuf();
+	ff.reset();
+	ff.safePrintf("%strash/qp.txt",g_hostdb.m_dir);
+	filename = ff.getBufStart();
+	fd = open ( filename , O_RDWR | O_CREAT , S_IRWXU );
+	if ( fd < 0 ) {
+		sb->safePrintf("FAILED TO OPEN %s for writing: %s"
+			       ,ff.getBufStart(),strerror(errno));
+		return false;
+	}
+	for ( ; ip < ipEnd ; ip += sizeof(uint64_t) ) {
+		// 0 marks end of call stack
+		if ( *(long long *)ip == 0 ) continue;
+		char tmp[64];
+		int tlen = sprintf(tmp, "0x%llx\n", *(long long *)ip);
+		int nw = write ( fd , tmp , tlen );
+		if ( nw != tlen )
+			log("profiler: write failed");
+	}
+	::close(fd);
+	cmd.reset();
+	newf.reset();
+	newf.safePrintf("%strash/output.txt",g_hostdb.m_dir);
+	// print the addr again somehow so we know
+	cmd.safePrintf("addr2line  -a -s -p -C -f -e ./gb < %s | "
+		       "sort | uniq -c | sort -rn > %s"
+		       ,filename,newf.getBufStart());
+	gbsystem ( cmd.getBufStart() );
+	out.reset();
+	out.load ( newf.getBufStart());
+	x = out.getBufStart();
+	lineCount = 0;
+	for ( ; *x ; x++ ) {
+		if ( *x != '\n' ) continue;
+		if ( ++lineCount >= 100 ) break;
+	}
+	c = *x;
+	*x = '\0';
+	sb->safePrintf("<tr><td colspan=10>"
+		       "<pre>"
+		       "%s"
+		       "</pre>"
+		       "</td>"
+		       "</tr>"
+		       "</table>"
+		       , out.getBufStart() 
+		       );
+
+	*x = c;
+	*/
+
+
+
+	g_profiler.startRealTimeProfiler();	
+
+	return true;
+		/*
+
 	hitEntries = (HitEntry *)mmalloc(sizeof(HitEntry) * rtNumEntries,
 					"hiEntries");
 	memset(hitEntries, 0, sizeof(HitEntry) * rtNumEntries);
@@ -1752,6 +2281,7 @@ Profiler::printRealTimeInfo(SafeBuf *sb,
 	sb->safePrintf("</pre>");
 	g_profiler.startRealTimeProfiler();	
 	return true;
+		*/
 }
 
 void

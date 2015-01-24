@@ -18,34 +18,34 @@ public:
 
 	bool getTagRecs ( char        **urlPtrs      ,
 			  linkflags_t  *urlFlags     ,
-			  long          numUrls      ,
+			  int32_t          numUrls      ,
 			  bool          skipOldLinks ,
 			  class TagRec *baseTagRec ,
 			  collnum_t  collnum,
-			  long          niceness     ,
+			  int32_t          niceness     ,
 			  void         *state        ,
 			  void (*callback)(void *state) ) ;
 
-	TagRec *getTagRec   ( long i ) { return m_tagRecPtrs[i]; };
+	TagRec *getTagRec   ( int32_t i ) { return m_tagRecPtrs[i]; };
 
-	bool launchRequests ( long starti ) ;
-	bool sendMsg8a      ( long i );
-	bool doneSending    ( long i );
+	bool launchRequests ( int32_t starti ) ;
+	bool sendMsg8a      ( int32_t i );
+	bool doneSending    ( int32_t i );
 
 	collnum_t m_collnum;
-	long  m_niceness  ;
+	int32_t  m_niceness  ;
 
 	char **m_urlPtrs;
 	linkflags_t *m_urlFlags;
-	long   m_numUrls;
+	int32_t   m_numUrls;
 
 	char   m_skipOldLinks;
 
 	// buffer to hold all the data we accumulate for all the urls in urlBuf
 	char *m_buf;
-	long  m_bufSize;
+	int32_t  m_bufSize;
 
-	long   m_slabNum;
+	int32_t   m_slabNum;
 	char **m_slab;
 	char  *m_slabPtr;
 	char  *m_slabEnd;
@@ -54,20 +54,20 @@ public:
 
 	// sub-buffers of the great "m_buf", where we store the data for eacu
 	// url that we get in urlBuf
-	long        *m_tagRecErrors;
+	int32_t        *m_tagRecErrors;
 	TagRec     **m_tagRecPtrs;
-	long        *m_numTags;
+	int32_t        *m_numTags;
 
-	long  m_numRequests;
-	long  m_numReplies;
-	long  m_i;
-	long  m_n;
+	int32_t  m_numRequests;
+	int32_t  m_numReplies;
+	int32_t  m_i;
+	int32_t  m_n;
 
 	// point to next url in "urlBuf" to process
 	char *m_nextPtr;
 
 	Url     m_urls        [ MAX_OUTSTANDING_MSGE0 ]; 
-	long    m_ns          [ MAX_OUTSTANDING_MSGE0 ]; 
+	int32_t    m_ns          [ MAX_OUTSTANDING_MSGE0 ]; 
 	char    m_used        [ MAX_OUTSTANDING_MSGE0 ]; 
 	Msg8a   m_msg8as      [ MAX_OUTSTANDING_MSGE0 ]; //for getting tag bufs
 	//TagRec  m_tagRecs   [ MAX_OUTSTANDING_MSGE0 ];
@@ -76,7 +76,7 @@ public:
 	void    (*m_callback)(void *state);
 
 	// for errors
-	long      m_errno;
+	int32_t      m_errno;
 };
 
 #endif

@@ -12,8 +12,8 @@ static void gotListWrapper ( void *state , RdbList *list , Msg5 *msg5 ) ;
 static void gotListWrapper4 ( void *state ) ;
 static void addedListWrapper5 ( void *state , UdpSlot *slot ) ;
 
-static void handleRequest5d ( UdpSlot *slot , long netnice ) ;
-static void handleRequest55 ( UdpSlot *slot , long netnice ) ;
+static void handleRequest5d ( UdpSlot *slot , int32_t netnice ) ;
+static void handleRequest55 ( UdpSlot *slot , int32_t netnice ) ;
 
 static void gotReplyWrapper55 ( void *state , UdpSlot *slot ) ;
 static void syncDoneWrapper ( void *state , ThreadEntry *te ) ;
@@ -24,14 +24,14 @@ bool Syncdb::gotMetaListRequest ( UdpSlot *slot ) {
 
 	// get the request buffer
 	char *req     = slot->m_readBuf;
-	long  reqSize = slot->m_readBufSize;
+	int32_t  reqSize = slot->m_readBufSize;
 	// get sender hostid
 	uint32_t sid = slot->m_hostId;
 
 	return gotMetaListRequest ( req, reqSize , sid );
 }
 
-bool Syncdb::gotMetaListRequest ( char *req , long reqSize , uint32_t sid ) {
+bool Syncdb::gotMetaListRequest ( char *req , int32_t reqSize , uint32_t sid ) {
 	// use 0 for this
 	uint32_t tid = 0;
 	// point to it
@@ -53,15 +53,15 @@ bool Syncdb::gotMetaListRequest ( char *req , long reqSize , uint32_t sid ) {
 	/*
 	key128_t ak = makeKey (0,0,1,0,tid,sid,zid);
 	key128_t ek = makeKey (0,0,1,0,tid,sid,0xffffffffffffffff);
-	long nn = m_qt.getNextNode ( &ak );
+	int32_t nn = m_qt.getNextNode ( &ak );
 	// get key if any
 	if ( nn >= 0 ) {
 		key128_t ck  = *(key128_t *)m_qt.getKey ( nn );
 		// if in range, that is strange
 		if ( k <= ck ) {
 			log("sync: got msg4 meta list with expired key: "
-			    "k .n1=0x%llx k .n0=0x%llx "
-			    "ck.n1=0x%llx ck.n0=0x%llx " ,
+			    "k .n1=0x%"XINT64" k .n0=0x%"XINT64" "
+			    "ck.n1=0x%"XINT64" ck.n0=0x%"XINT64" " ,
 			    k.n1,k.n0,ck.n1,ck.n0 );
 			// pretend we added it
 			return true;
@@ -96,15 +96,15 @@ bool Syncdb::gotMetaListRequest ( char *req , long reqSize , uint32_t sid ) {
 	// . add the individiual checkoff keys
 	// . 1 key per hostid in our mirror group
 	// . we delete these keys using msg1 on successful transmissions
-	long  nh    = g_hostdb.getNumHostsPerShard();
+	int32_t  nh    = g_hostdb.getNumHostsPerShard();
 	Host *hosts = g_hostdb.getMyShard();
-	for ( long i = 0 ; i < nh ; i++ ) {
+	for ( int32_t i = 0 ; i < nh ; i++ ) {
 		// get it
 		Host *h = &hosts[i];
 		// skip if us
 		if ( h == g_hostdb.m_myHost ) continue;
 		// these actually have a twin id (tid)
-		long tid2 = h->m_hostId;
+		int32_t tid2 = h->m_hostId;
 		// set "a" to 1 to indicate we need to send a checkoff request
 		// set "b" to 1 to indicate we need to recv a checkoff request
 		key128_t k4 = makeKey ( 1,0,0,0,tid2,sid,zid,1 );
@@ -119,7 +119,7 @@ bool Syncdb::gotMetaListRequest ( char *req , long reqSize , uint32_t sid ) {
 
 		// . if we already did recv the check off request, delete it!
 		key128_t ck = makeKey ( 0,1,0,0,tid2,sid,zid,0 );
-		long     dn = m_qt.getNode ( 0, (char *)&ck ) ;
+		int32_t     dn = m_qt.getNode ( 0, (char *)&ck ) ;
 		// hey, we annihilated with the positive key. i guess our
 		// twin is ahead of us!
 		if ( dn >= 0 ) m_qt.deleteNode( dn , false );
@@ -129,7 +129,7 @@ bool Syncdb::gotMetaListRequest ( char *req , long reqSize , uint32_t sid ) {
 	}
 
 	logf(LOG_DEBUG,"syncdb: added a b c and d keys to quick tree "
-	     "tid=%lu sid=%lu zid=%llu",(long)tid,(long)sid,(long long)zid);
+	     "tid=%"UINT32" sid=%"UINT32" zid=%"UINT64"",(int32_t)tid,(int32_t)sid,(int64_t)zid);
 
 
 	// success
@@ -200,13 +200,13 @@ void Syncdb::loop1 ( ) {
 	// do not re-call this loop this round in bigLoop() function
 	m_calledLoop1 = true;
 	// how many hosts in our group are alive?
-	long alive = 0;
+	int32_t alive = 0;
 	// get group we are in
 	Host *group = g_hostdb.getMyShard();
 	// number hosts in group
-	long nh = g_hostdb.getNumHostsPerShard();
+	int32_t nh = g_hostdb.getNumHostsPerShard();
 	// count alive
-	for ( long i = 0 ; i < nh ; i++ )
+	for ( int32_t i = 0 ; i < nh ; i++ )
 		if ( ! g_hostdb.isDead ( &group[i] ) ) alive++;
 	// reset
 	m_na = 0;
@@ -219,12 +219,12 @@ void Syncdb::loop1 ( ) {
 
 	// . loop over the meta lists we need to add
 	// . use a "tid" of 0
-	long     tid = 0;
+	int32_t     tid = 0;
 	key128_t sk  = makeKey(0,0,1,0,tid,0,0,0);
 	key128_t ek  = makeKey(0,0,1,0,tid,0xffffffff,0xffffffffffffffffLL,1);
 
 	// get the first node in sequence, if any. 0 = collnum
-	long nn = m_qt.getNextNode ( 0 , (char *)&sk );
+	int32_t nn = m_qt.getNextNode ( 0 , (char *)&sk );
 	// do the loop
 	for ( ; nn >= 0 ; nn = m_qt.getNextNode ( nn ) ) {
 		// breathe
@@ -268,9 +268,9 @@ bool Syncdb::sentAllCheckoffRequests ( uint32_t sid , uint64_t zid ) {
 	// get group we are in
 	Host *group = g_hostdb.getMyShard();
 	// number hosts in group
-	long nh = g_hostdb.getNumHostsPerShard();
+	int32_t nh = g_hostdb.getNumHostsPerShard();
 	// loop over our twins
-	for ( long i = 0 ; i < nh ; i++ ) {
+	for ( int32_t i = 0 ; i < nh ; i++ ) {
 		// get host
 		Host *h = &group[i];
 		// skip if us
@@ -280,7 +280,7 @@ bool Syncdb::sentAllCheckoffRequests ( uint32_t sid , uint64_t zid ) {
 		// make the key
 		key128_t k = makeKey(1,0,0,0,h->m_hostId,sid,zid,1);
 		// get it
-		long nn = m_qt.getNode ( 0 , (char *)&k );
+		int32_t nn = m_qt.getNode ( 0 , (char *)&k );
 		// if it is there, that means we have yet to get a reply
 		// for this checkoff request! because once we get a successful
 		// reply for it, we delete it from quick tree
@@ -311,10 +311,10 @@ bool Syncdb::loop2 ( ) {
 	// get the key
 	key128_t k = m_addMe[m_ia];
 	// is it there?
-	long n = stree->getNode ( 0 , (char *)&k );
+	int32_t n = stree->getNode ( 0 , (char *)&k );
 	// yes! easy add...
 	if ( n >= 0 ) {
-		//long  reqSize = stree->getDataSize ( n );
+		//int32_t  reqSize = stree->getDataSize ( n );
 		char   *req     = stree->getData     ( n );
 		// get zid from key
 		uint64_t zid1 = getZid ( &k );
@@ -380,7 +380,7 @@ bool Syncdb::gotList ( ) {
 		log("sync: had error in msg5: %s",mstrerror(g_errno));
 		return false;
 	}
-	// shortcut
+	// int16_tcut
 	RdbList *m = &m_list;
 	// just in case
 	m->resetListPtr();
@@ -417,7 +417,7 @@ void Syncdb::loop3 ( ) {
 	key128_t sk = makeKey ( 0,0,0,1,0,0,0,0 );
 	key128_t ek = makeKey ( 0,0,0,1,0,0xffffffff,0xffffffffffffffffLL,1 );
 	// get the first node in sequence, if any
-	long nn = m_qt.getNextNode ( 0 , (char *)&sk );
+	int32_t nn = m_qt.getNextNode ( 0 , (char *)&sk );
 	// do the loop
 	for ( ; nn >= 0 ; nn = m_qt.getNextNode ( nn ) ) {
 		// breathe
@@ -455,7 +455,7 @@ void Syncdb::loop3 ( ) {
 				    MAX_NICENESS)) return;
 		// delete it from quick tree now that we added the negative
 		// key successfully to syncdb
-		long dn = m_qt.getNode ( 0, (char *)&k );
+		int32_t dn = m_qt.getNode ( 0, (char *)&k );
 		// must be there!
 		if ( ! dn ) { char *xx=NULL;*xx=0; }
 		// nuke it
@@ -471,7 +471,7 @@ bool Syncdb::canDeleteMetaList ( uint32_t sid , uint64_t zid ) {
 	// make the "c" key to see if we still need to add the meta list
 	key128_t k = makeKey(0,0,1,0,0,sid,zid,1);
 	// get it
-	long nn = m_qt.getNode ( 0 , (char *)&k );
+	int32_t nn = m_qt.getNode ( 0 , (char *)&k );
 	// if "c" key is there, that means we need to add to our rdb still
 	// so we can not delete it yet!
 	if ( nn >= 0 ) return false;
@@ -479,9 +479,9 @@ bool Syncdb::canDeleteMetaList ( uint32_t sid , uint64_t zid ) {
 	Host *group = g_hostdb.getMyShard();
 	// . if we need to send some requests still can not delete
 	// . number hosts in group
-	long nh = g_hostdb.getNumHostsPerShard();
+	int32_t nh = g_hostdb.getNumHostsPerShard();
 	// loop over our twins
-	for ( long i = 0 ; i < nh ; i++ ) {
+	for ( int32_t i = 0 ; i < nh ; i++ ) {
 		// get host
 		Host *h = &group[i];
 		// skip if us
@@ -518,11 +518,11 @@ bool Syncdb::loop4 ( ) {
 	key128_t ek;
 	ek = makeKey(0,1,0,0,0xffffffff,0xffffffff,0xffffffffffffffffLL,1);
 	// get next node
-	long nn = m_qt.getNode ( 0 , (char *)&k );
+	int32_t nn = m_qt.getNode ( 0 , (char *)&k );
 	// get group we are in
 	//Host *group = g_hostdb.getMyShard();
 	// use this for determining approximate age of meta lists
-	long long nowms = gettimeofdayInMilliseconds();
+	int64_t nowms = gettimeofdayInMilliseconds();
 	// do the loop
 	for ( ; nn >= 0 ; nn = m_qt.getNextNode ( nn ) ) {
 		// breathe
@@ -568,7 +568,7 @@ bool Syncdb::loop4 ( ) {
 		// get sid
 		uint32_t sid = getSid ( &k );
 		// get its approximate age
-		long long age = nowms - zid;
+		int64_t age = nowms - zid;
 		// go to next sid if not 60 seconds yet for this one
 		if ( age < 60000 ) {
 			// no use banging away at this sid any more since we
@@ -589,12 +589,12 @@ bool Syncdb::loop4 ( ) {
 		key128_t dk = makeKey(0,0,0,1,0,sid,zid,1);
 		if ( m_qt.getNode ( 0 , (char *)&dk ) >= 0 ) continue;
 		// note it
-		log("sync: requesting meta list sid=%lu zid=%llu age=%llu "
-		    "from twin hostid #%li",
-		    (unsigned long)sid,
-		    (unsigned long long)zid,
-		    (unsigned long long)age,
-		    (long)tid);
+		log("sync: requesting meta list sid=%"UINT32" zid=%"UINT64" age=%"UINT64" "
+		    "from twin hostid #%"INT32"",
+		    (uint32_t)sid,
+		    (uint64_t)zid,
+		    (uint64_t)age,
+		    (int32_t)tid);
 		// i guess we are out of sync
 		g_hostdb.m_myHost->m_inSync = false;
 		// do not let sleep ticker call bigLoop
@@ -651,7 +651,7 @@ bool Syncdb::gotList4 ( ) {
 	}
 	// get the reply, should be a msg4 request
 	char *req     = m_list.getCurrentData();
-	long  reqSize = m_list.getCurrentDataSize();
+	int32_t  reqSize = m_list.getCurrentDataSize();
 	// . return false if this had an error, g_errno should be set
 	// . this will be just like we got the request from msg4 directly!
 	if ( ! gotMetaListRequest ( req , reqSize , m_requestedSid ) ) 
@@ -692,7 +692,7 @@ void Syncdb::loop5 ( ) {
 	// reset
 	m_nk = 0;
 	// get it
-	long nn = m_qt.getNextNode ( 0 , (char *)&k );
+	int32_t nn = m_qt.getNextNode ( 0 , (char *)&k );
 	// do one tid at a time
 	uint32_t startTid = getTid ( &k );
 	// do the loop
@@ -731,9 +731,9 @@ void Syncdb::loop5 ( ) {
 		// get sid
 		uint32_t sid = getSid ( &k );
 		// note it
-		log("sync: storing key for meta request list sid=%lu zid=%llu "
-		    "from twin hostid #%li",(unsigned long)sid,
-		    (unsigned long long)zid,(long)tid);
+		log("sync: storing key for meta request list sid=%"UINT32" zid=%"UINT64" "
+		    "from twin hostid #%"INT32"",(uint32_t)sid,
+		    (uint64_t)zid,(int32_t)tid);
 		// make the key. make NEGATIVE "b" keys.
 		m_keys [ m_nk++ ] = makeKey ( 0,1,0,0,0,sid,zid,0 );
 		// stop if full
@@ -785,22 +785,22 @@ bool Syncdb::addedList5 ( ) {
 }
 // . did we receive a checkoff request from a fellow twin?
 // . request is a list of checkoff request keys ("a" keys)
-void handleRequest5d ( UdpSlot *slot , long netnice ) {
+void handleRequest5d ( UdpSlot *slot , int32_t netnice ) {
 	// get the sending hostid
-	long sid = slot->m_hostId;
+	int32_t sid = slot->m_hostId;
 	// sanity check
 	if ( sid < 0 ) { char *xx=NULL; *xx=0; }
 	// get the request buffer
 	//key128_t *keys = (key128_t *)slot->m_readBuf;
-	long      nk   = slot->m_readBufSize / 16;
-	// shortcut
+	int32_t      nk   = slot->m_readBufSize / 16;
+	// int16_tcut
 	UdpServer *us = &g_udpServer;
 	// if tree gets full, then return false forever
 	if ( ! g_syncdb.m_qt.hasRoomForKeys ( nk ) ) { 
 		us->sendErrorReply ( slot , ETRYAGAIN );
 		return; 
 	}
-	for ( long i = 0 ; i < nk ; i++ ) {
+	for ( int32_t i = 0 ; i < nk ; i++ ) {
 		// get the key
 		key128_t k = g_syncdb.m_keys[i];
 		// sanity check. must be a negative key.
@@ -811,7 +811,7 @@ void handleRequest5d ( UdpSlot *slot , long netnice ) {
 		// make it positive
 		pk.n0 |= 0x01;
 		// is it in there?
-		long nn = g_syncdb.m_qt.getNode ( 0 , (char *)&pk );
+		int32_t nn = g_syncdb.m_qt.getNode ( 0 , (char *)&pk );
 		// if yes, nuke it. they annihilate.
 		if ( nn >= 0 ) {
 			g_syncdb.m_qt.deleteNode ( nn , true );
@@ -912,7 +912,7 @@ bool Syncdb::init ( ) {
 	// done
 	f.close();
 	// assume permanently out of sync
-	long val = 2;
+	int32_t val = 2;
 	// load the insync.dat file
 	f.set ( g_hostdb.m_dir , "insync.dat" );
 	// fail on open failure
@@ -924,7 +924,7 @@ bool Syncdb::init ( ) {
 	else {
 		// get the value
 		char buf[20];
-		long n = f.read ( &buf , 10 , 0 ) ;
+		int32_t n = f.read ( &buf , 10 , 0 ) ;
 		if ( n <= 0 )
 			return log("sync: read insync.dat: %s",
 				   mstrerror(g_errno));
@@ -940,7 +940,7 @@ bool Syncdb::init ( ) {
 	}
 	// bad val?
 	if ( val < 0 || val > 2 ) 
-		return log("sync: insync.dat had bad value of %li",val);
+		return log("sync: insync.dat had bad value of %"INT32"",val);
 	// report if in sync or not
 	if ( val == 0 ) log("sync: insync.dat says out of sync");
 	if ( val == 1 ) log("sync: insync.dat says in sync");
@@ -953,11 +953,11 @@ bool Syncdb::init ( ) {
 	if ( ! g_loop.registerSleepCallback ( 1000 , NULL , sleepWrapper ) )
 		return false;
 	// 10 MB
-	long maxTreeMem = 10000000;
+	int32_t maxTreeMem = 10000000;
 	// . what's max # of tree nodes?
 	// . key+4+left+right+parents+dataPtr = 12+4 +4+4+4+4 = 32
 	// . 28 bytes per record when in the tree
-	long maxTreeNodes  = maxTreeMem / ( 16 + 1000 );
+	int32_t maxTreeNodes  = maxTreeMem / ( 16 + 1000 );
 	// . initialize our own internal rdb
 	// . records are actual msg4 requests received from Msg4
 	// . the key is formed calling Syncdb::makeKey() which is based on
@@ -1064,20 +1064,20 @@ bool Syncdb::verify ( char *coll ) {
 		return log("db: HEY! it did not block");
 	}
 
-	long count = 0;
-	long got   = 0;
+	int32_t count = 0;
+	int32_t got   = 0;
 	for ( list.resetListPtr() ; ! list.isExhausted() ;
 	      list.skipCurrentRecord() ) {
 		key_t k = list.getCurrentKey();
 		count++;
-		//unsigned long groupId = getGroupId ( RDB_SYNCDB , &k );
+		//uint32_t groupId = getGroupId ( RDB_SYNCDB , &k );
 		//if ( groupId == g_hostdb.m_groupId ) got++;
 		uint32_t shardNum = getShardNum ( RDB_SYNCDB , (char *)&k );
 		if ( shardNum == getMyShardNum() ) got++;
 	}
 	if ( got != count ) {
-		log ("db: Out of first %li records in syncdb, "
-		     "only %li belong to our group.",count,got);
+		log ("db: Out of first %"INT32" records in syncdb, "
+		     "only %"INT32" belong to our group.",count,got);
 		// exit if NONE, we probably got the wrong data
 		if ( got == 0 ) log("db: Are you sure you have the "
 					   "right "
@@ -1088,7 +1088,7 @@ bool Syncdb::verify ( char *coll ) {
 		return g_conf.m_bypassValidation;
 	}
 	log ( LOG_INFO, "db: Syncdb passed verification successfully for "
-			"%li recs.", count );
+			"%"INT32" recs.", count );
 	// DONE
 	g_threads.enableThreads();
 	return true;
@@ -1096,14 +1096,14 @@ bool Syncdb::verify ( char *coll ) {
 
 // . returns false on error
 // . called from PageHosts.cpp!!!
-bool Syncdb::syncHost ( long syncHostId ) {
+bool Syncdb::syncHost ( int32_t syncHostId ) {
 	Host *sh = g_hostdb.getHost ( syncHostId );
-	if ( ! sh ) return log("sync: bad host id %li",syncHostId);
+	if ( ! sh ) return log("sync: bad host id %"INT32"",syncHostId);
 	// get its group
 	//Host *hosts = g_hostdb.getGroup ( sh->m_groupId );
 	Host *hosts = g_hostdb.getShard ( sh->m_shardNum );
 	// get the best twin for it to sync from
-	for ( long i = 0 ; i < g_hostdb.getNumHostsPerShard() ; i++ ) {
+	for ( int32_t i = 0 ; i < g_hostdb.getNumHostsPerShard() ; i++ ) {
 		// get host
 		Host *h = &hosts[i];
 		// skip if dead
@@ -1113,10 +1113,10 @@ bool Syncdb::syncHost ( long syncHostId ) {
 		// not itself! it must be dead... wtf!?
 		if ( h == sh ) continue;
 		// save it
-		long tmp = syncHostId;
+		int32_t tmp = syncHostId;
 		// log it
-		log("sync: sending sync request to host id #%li",h->m_hostId);
-		// shortcut
+		log("sync: sending sync request to host id #%"INT32"",h->m_hostId);
+		// int16_tcut
 		UdpServer *us = &g_udpServer;
 		// use that guy
 		if ( us->sendRequest ( (char *)&tmp      ,
@@ -1137,7 +1137,7 @@ bool Syncdb::syncHost ( long syncHostId ) {
 			// success
 			return true;
 		// note it
-		log("sync: had error sending sync request to host id #%li: %s",
+		log("sync: had error sending sync request to host id #%"INT32": %s",
 		    h->m_hostId,mstrerror(g_errno));
 		// error!
 		return false;
@@ -1153,14 +1153,14 @@ void gotReplyWrapper55 ( void *state , UdpSlot *slot ) {
 		log("sync: got success reply from sync host");
 }
 // rcp our files to a new host (was a spare)
-void handleRequest55 ( UdpSlot *slot , long netnice ) {
+void handleRequest55 ( UdpSlot *slot , int32_t netnice ) {
 	// who should we copy to?
 	char *p    = slot->m_readBuf;
-	long  size = slot->m_readBufSize;
+	int32_t  size = slot->m_readBufSize;
 	UdpServer *us = &g_udpServer;
 	// get hostid
-	long hostId = -1;
-	if ( size == 4 ) hostId = *(long *)p;
+	int32_t hostId = -1;
+	if ( size == 4 ) hostId = *(int32_t *)p;
 	// panic?
 	if ( hostId < 0 || hostId >= g_hostdb.getNumHosts() ) {
 		us->sendErrorReply ( slot , EBADENGINEER );
@@ -1192,7 +1192,7 @@ void handleRequest55 ( UdpSlot *slot , long netnice ) {
 		return; 
 	}
 	// now check it for a clean directory
-	long ip = h->m_ip;
+	int32_t ip = h->m_ip;
 	// if that is dead use ip #2
 	if ( h->m_ping        >= g_conf.m_deadHostTimeout &&
 	     h->m_pingShotgun <  g_conf.m_deadHostTimeout   ) 
@@ -1203,22 +1203,22 @@ void handleRequest55 ( UdpSlot *slot , long netnice ) {
 		  ips, h->m_dir );
 	log ( LOG_INFO, "init: %s", cmd );
 	system(cmd);
-	long fd = open ( "./synccheck.txt", O_RDONLY );
+	int32_t fd = open ( "./synccheck.txt", O_RDONLY );
 	if ( fd < 0 ) {
 		log( "sync: Unable to open synccheck.txt. Aborting.");
 		us->sendErrorReply ( slot , EBADENGINEER );
 		return; 
 	}
 
-	long len = read ( fd, cmd, 1023 );
+	int32_t len = read ( fd, cmd, 1023 );
 	cmd[len] = '\0';
 	close(fd);
 	// delete the file to make sure we don't reuse it
 	system ( "rm ./synccheck.txt" );
 	// check the size
-	long checkSize = atol(cmd);
+	int32_t checkSize = atol(cmd);
 	if ( checkSize > 4096 || checkSize <= 0 ) {
-		log("sync: Detected %li bytes in directory to "
+		log("sync: Detected %"INT32" bytes in directory to "
 		    "sync.  Must be empty.  Is .antiword dir in "
 		    "there?", checkSize);
 		us->sendErrorReply ( slot , EBADENGINEER );
@@ -1246,7 +1246,7 @@ void Syncdb::rcpFiles ( ) {
 	}
 
 	// log the start
-	log ( LOG_INFO, "sync: Copying our data files to host %li.", 
+	log ( LOG_INFO, "sync: Copying our data files to host %"INT32".", 
 	      g_hostdb.m_syncHost->m_hostId );
 
 	// start the sync in a thread, complete when it's done
@@ -1277,7 +1277,7 @@ void *syncStartWrapper_r ( void *state , ThreadEntry *te ) {
 	return NULL;
 }
 
-//int my_system_r ( char *cmd , long timeout );
+//int my_system_r ( char *cmd , int32_t timeout );
 int startUp ( void *cmd );
 
 void Syncdb::syncStart_r ( bool amThread ) {
@@ -1295,10 +1295,10 @@ void Syncdb::syncStart_r ( bool amThread ) {
 	// ours
 	char *mydir = me->m_dir;
 	// generic
-	long err;
+	int32_t err;
 
 	// loop over every rdb and every data and map file in each rdb
-	for ( long i = 0 ; i < RDB_END ; i++ ) {
+	for ( int32_t i = 0 ; i < RDB_END ; i++ ) {
 
 	// skip SYNCDB
 	if  ( i == RDB_SYNCDB ) continue;
@@ -1308,7 +1308,7 @@ void Syncdb::syncStart_r ( bool amThread ) {
 	if ( ! rdb ) continue;
 
 	// get coll
-	for ( long j = 0 ; j < rdb->getNumBases() ; j++ ) {
+	for ( int32_t j = 0 ; j < rdb->getNumBases() ; j++ ) {
 
 		// get that base
 		RdbBase *base = rdb->getBase(j);//m_bases[j];
@@ -1317,9 +1317,9 @@ void Syncdb::syncStart_r ( bool amThread ) {
 	// get coll
 	char *coll = base->m_coll;
 	// and num
-	long collnum = base->m_collnum;
+	int32_t collnum = base->m_collnum;
 	// make the dir
-	sprintf ( cmd , "ssh %s 'mkdir %scoll.%s.%li'",
+	sprintf ( cmd , "ssh %s 'mkdir %scoll.%s.%"INT32"'",
 		  ips,dir,coll,collnum);
 	// excecute
 	log ( LOG_INFO, "sync: %s", cmd );
@@ -1327,7 +1327,7 @@ void Syncdb::syncStart_r ( bool amThread ) {
 	//if ( err != 0 ) goto hadError;
 
 	// copy the files
-	for ( long k = 0 ; k < base->m_numFiles ; k++ ) {
+	for ( int32_t k = 0 ; k < base->m_numFiles ; k++ ) {
 
 	// sleep while dumping. we are in a thread.
 	if ( base->isDumping() ) sleep ( 1 );
@@ -1336,7 +1336,7 @@ void Syncdb::syncStart_r ( bool amThread ) {
 	// get map
 	RdbMap *map = base->m_maps[k];
 	// copy the map file
-	sprintf ( cmd , "rcp %s %s:%scoll.%s.%li/'",
+	sprintf ( cmd , "rcp %s %s:%scoll.%s.%"INT32"/'",
 		  map->getFilename(),ips,dir,coll,collnum);
 	log ( LOG_INFO, "sync: %s", cmd );
 	// MDW: take out for now
@@ -1346,12 +1346,12 @@ void Syncdb::syncStart_r ( bool amThread ) {
 	BigFile *f = base->m_files[k];
 
 	// loop over each little part file
-	for ( long m = 0 ; m < f->m_numParts ; m++ ) {
+	for ( int32_t m = 0 ; m < f->m_numParts ; m++ ) {
 
 	// get part file
 	File *p = f->m_files[m];
 	// copy that
-	sprintf ( cmd , "rcp %s %s:%scoll.%s.%li/'",
+	sprintf ( cmd , "rcp %s %s:%scoll.%s.%"INT32"/'",
 		  p->m_filename,ips,dir,coll,collnum);
 	// excecute
 	log ( LOG_INFO, "sync: %s", cmd );
@@ -1383,7 +1383,7 @@ void Syncdb::syncStart_r ( bool amThread ) {
 
 
 	// loop over the files in Process.cpp
-	for ( long i = 0 ; i < 99999 ; i++ ) {
+	for ( int32_t i = 0 ; i < 99999 ; i++ ) {
 		// null means end
 		if ( ! g_files[i] ) break;
 		sprintf ( cmd , "rcp %s%s %s:%s",
@@ -1431,7 +1431,7 @@ void Syncdb::syncDone ( ) {
 	log ( LOG_INFO, "init: Sync copy done.  Starting host." );
 	g_hostdb.m_syncHost->m_doingSync = 0;
 	char cmd[1024];
-	sprintf(cmd, "./gb start %li", g_hostdb.m_syncHost->m_hostId);
+	sprintf(cmd, "./gb start %"INT32"", g_hostdb.m_syncHost->m_hostId);
 	log ( LOG_INFO, "init: %s", cmd );
 	system(cmd);
 	g_hostdb.m_syncHost = NULL;

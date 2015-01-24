@@ -7,7 +7,7 @@
 #include "iana_charset.h"
 #include "Titledb.h"
 
-static HashTable s_convTable;
+static HashTableX s_convTable;
 // JAB: warning abatement
 //static bool verifyIconvFiles();
 static bool openIconvDescriptors() ;
@@ -20,18 +20,20 @@ static bool openIconvDescriptors() ;
 
 iconv_t gbiconv_open( char *tocode, char *fromcode) {
 	// get hash for to/from
-	unsigned long hash1 = hash32Lower_a(tocode, gbstrlen(tocode), 0);
-	unsigned long hash2 = hash32Lower_a(fromcode, gbstrlen(fromcode),0);
-	unsigned long hash = hash32h(hash1, hash2);
+	uint32_t hash1 = hash32Lower_a(tocode, gbstrlen(tocode), 0);
+	uint32_t hash2 = hash32Lower_a(fromcode, gbstrlen(fromcode),0);
+	uint32_t hash = hash32h(hash1, hash2);
 
 	g_errno = 0;
-	iconv_t conv = (iconv_t)s_convTable.getValue(hash);
-	//log(LOG_DEBUG, "uni: convertor %s -> %s from hash 0x%lx: 0x%lx",
+	iconv_t *convp = (iconv_t *)s_convTable.getValue(&hash);
+	iconv_t conv = NULL;
+	if ( convp ) conv = *convp;
+	//log(LOG_DEBUG, "uni: convertor %s -> %s from hash 0x%"XINT32": 0x%"XINT32"",
 	//    fromcode, tocode,
 	//    hash, conv);
 	if (!conv){
 		//log(LOG_DEBUG, "uni: Allocating new convertor for "
-		//    "%s to %s (hash: 0x%lx)",
+		//    "%s to %s (hash: 0x%"XINT32")",
 		//    fromcode, tocode,hash);
 		conv = iconv_open(tocode, fromcode);
 		if (conv == (iconv_t) -1) {
@@ -49,8 +51,8 @@ iconv_t gbiconv_open( char *tocode, char *fromcode) {
 		// add mem to table to keep track
 		g_mem.addMem((void*)conv, 52, "iconv", 1);
 		// cache convertor
-		s_convTable.addKey(hash, (long)conv);
-		//log(LOG_DEBUG, "uni: Saved convertor 0x%ld under hash 0x%lx",
+		s_convTable.addKey(&hash, &conv);
+		//log(LOG_DEBUG, "uni: Saved convertor 0x%"INT32" under hash 0x%"XINT32"",
 		//    conv, hash);
 	}
 	else{
@@ -73,14 +75,16 @@ int gbiconv_close(iconv_t cd) {
 }
 
 void gbiconv_reset(){
-	for (long i=0;i<s_convTable.getNumSlots();i++){
-		long key = s_convTable.getKey(i);
-		if (!key) continue;
-		iconv_t conv = (iconv_t)s_convTable.getValueFromSlot(i);
-		if (!conv) continue;
+	for (int32_t i=0;i<s_convTable.getNumSlots();i++){
+		//int32_t key = *(int32_t *)s_convTable.getKey(i);
+		//if (!key) continue;
+		if ( ! s_convTable.m_flags[i] ) continue;
+		iconv_t *pconv = (iconv_t *)s_convTable.getValueFromSlot(i);
+		if (! pconv) continue;
+		iconv_t iconv = *pconv;
 		//logf(LOG_DEBUG, "iconv: freeing iconv: 0x%x", (int)iconv);
-		g_mem.rmMem((void*)conv, 52, "iconv");
-		libiconv_close(conv);
+		g_mem.rmMem((void*)iconv, 52, "iconv");
+		libiconv_close(iconv);
 	}
 	s_convTable.reset();
 }
@@ -158,7 +162,9 @@ bool ucInit(char *path, bool verifyFiles){
 	if (!loadDecompTables(path) ||
 	    !initCompositionTable())
 		goto failed;
-	s_convTable.set(1024);
+	//s_convTable.set(1024);
+	if ( ! s_convTable.set(4,sizeof(iconv_t),1024,NULL,0,false,0,"cnvtbl"))
+		goto failed;
 	
 	// dont use these files anymore
 	if (verifyFiles){
@@ -174,7 +180,7 @@ failed:
 		   "uni: unable to load all property tables");
 }
 
-char *ucDetectBOM(char *buf, long bufsize){
+char *ucDetectBOM(char *buf, int32_t bufsize){
 	if (bufsize < 4) return NULL;
 	// copied from ICU
 	if(buf[0] == '\xFE' && buf[1] == '\xFF') {
@@ -196,10 +202,10 @@ char *ucDetectBOM(char *buf, long bufsize){
 }
 
 /*
-long 	ucToUnicode(UChar *outbuf, long outbufsize, 
-		    char *inbuf, long inbuflen, 
-		    const char *charset, long ignoreBadChars,
-		    long titleRecVersion){
+int32_t 	ucToUnicode(UChar *outbuf, int32_t outbufsize, 
+		    char *inbuf, int32_t inbuflen, 
+		    const char *charset, int32_t ignoreBadChars,
+		    int32_t titleRecVersion){
 	g_errno = 0;
 	if (inbuflen == 0) return 0;
 	// alias for iconv
@@ -228,7 +234,7 @@ long 	ucToUnicode(UChar *outbuf, long outbufsize,
 	}
 
 	iconv_t cd = gbiconv_open("UTF-16LE", csAlias);
-	long numBadChars = 0;
+	int32_t numBadChars = 0;
 	if (cd == (iconv_t)-1) {	
 		log("uni: Error opening input conversion"
 		    " descriptor for %s: %s (%d)\n", 
@@ -247,7 +253,7 @@ long 	ucToUnicode(UChar *outbuf, long outbufsize,
 		// just find the size needed for conversion
 #define TMP_SIZE 32
 		char buf[TMP_SIZE];
-		long len = 0;
+		int32_t len = 0;
 		while (inRemaining) {
 			pout = buf;
 			outRemaining = TMP_SIZE;
@@ -329,7 +335,7 @@ long 	ucToUnicode(UChar *outbuf, long outbufsize,
 	}
 done:
 	gbiconv_close(cd);
-	long len =  (outbufsize - outRemaining) ;
+	int32_t len =  (outbufsize - outRemaining) ;
 	len = len>=outbufsize-1?outbufsize-2:len;
 	len >>= 1;
 	//len = outbuf[len]=='\0'?len-1:len;
@@ -337,7 +343,7 @@ done:
 	static char eflag = 1;
 	if (numBadChars) {
 		if ( eflag )
-			log(LOG_DEBUG, "uni: ucToUnicode: got %ld bad chars "
+			log(LOG_DEBUG, "uni: ucToUnicode: got %"INT32" bad chars "
 			    "in conversion. Only reported once.", numBadChars);
 		// this flag makes it so no bad characters are reported
 		// from now on
@@ -360,9 +366,9 @@ done:
 */
 
 
-long 	ucToAny(char *outbuf, long outbufsize, char *charset_out,
-		 char *inbuf, long inbuflen, char *charset_in,
-		 long ignoreBadChars , long niceness ){
+int32_t 	ucToAny(char *outbuf, int32_t outbufsize, char *charset_out,
+		 char *inbuf, int32_t inbuflen, char *charset_in,
+		 int32_t ignoreBadChars , int32_t niceness ){
 	if (inbuflen == 0) return 0;
 	// alias for iconv
 	char *csAlias = charset_in;
@@ -374,7 +380,7 @@ long 	ucToAny(char *outbuf, long outbufsize, char *charset_out,
 		csAlias = "WINDOWS-1252";
 	
 	iconv_t cd = gbiconv_open(charset_out, csAlias);
-	long numBadChars = 0;
+	int32_t numBadChars = 0;
 	if (cd == (iconv_t)-1) {	
 		log("uni: Error opening input conversion"
 		    " descriptor for %s: %s (%d)\n", 
@@ -393,7 +399,7 @@ long 	ucToAny(char *outbuf, long outbufsize, char *charset_out,
 		// just find the size needed for conversion
 #define TMP_SIZE 32
 		char buf[TMP_SIZE];
-		long len = 0;
+		int32_t len = 0;
 		while (inRemaining) {
 			QUICKPOLL(niceness);
 			pout = buf;
@@ -464,7 +470,7 @@ long 	ucToAny(char *outbuf, long outbufsize, char *charset_out,
 	}
 done:
 	gbiconv_close(cd);
-	long len =  (outbufsize - outRemaining) ;
+	int32_t len =  (outbufsize - outRemaining) ;
 	len = len>=outbufsize-1?outbufsize-2:len;
 	//len >>= 1;
 	//len = outbuf[len]=='\0'?len-1:len;
@@ -472,7 +478,7 @@ done:
 	static char eflag = 1;
 	if (numBadChars) {
 		if ( eflag )
-			log(LOG_DEBUG, "uni: ucToAny: got %ld bad chars "
+			log(LOG_DEBUG, "uni: ucToAny: got %"INT32" bad chars "
 			    "in conversion 2. Only reported once.",
 			    numBadChars);
 		// this flag makes it so no bad characters are reported
@@ -485,8 +491,8 @@ done:
 
 // produces a canonical decomposition of UTF-8 input
 /*
-long utf8CDecompose(	char*       outBuf, long outBufSize,
-			const char* inBuf,  long inBufSize,
+int32_t utf8CDecompose(	char*       outBuf, int32_t outBufSize,
+			const char* inBuf,  int32_t inBufSize,
 			bool decodeEntities) {
 	const char *p = inBuf;
 	const char *pend = inBuf + inBufSize;
@@ -499,7 +505,7 @@ long utf8CDecompose(	char*       outBuf, long outBufSize,
 		else
 			c = utf8Decode(p, (char**) &p);
 		UChar32 decomp[32];
-		long decompLen = recursiveCDExpand(c, decomp, 32);
+		int32_t decompLen = recursiveCDExpand(c, decomp, 32);
 		for (int i = 0; i < decompLen && (q < qend); i++) {
 			UChar32 d = decomp[i];
 			unsigned char cc = ucCombiningClass(d);
@@ -515,7 +521,7 @@ long utf8CDecompose(	char*       outBuf, long outBufSize,
 					qq = qprev;
 				}
 				if (qq < q){ // move chars out of the way
-					long cSize = utf8Size(c);
+					int32_t cSize = utf8Size(c);
 					memmove(qq+cSize, qq, (q-qq));
 				}
 				q += utf8Encode(d, qq);
@@ -528,8 +534,8 @@ long utf8CDecompose(	char*       outBuf, long outBufSize,
 }
 */
 /*
-long ucFromUnicode( char *outbuf, long outbufSize, 
-		    const UChar *inbuf, long inbufSize, 
+int32_t ucFromUnicode( char *outbuf, int32_t outbufSize, 
+		    const UChar *inbuf, int32_t inbufSize, 
 		    const char *charset){
 	// alias for iconv
 	const char *csAlias = charset;
@@ -557,7 +563,7 @@ long ucFromUnicode( char *outbuf, long outbufSize,
 		// just find the size needed for conversion
 #define TMP_SIZE 32
 		char buf[TMP_SIZE];
-		long len = 0;
+		int32_t len = 0;
 		while (inRemaining) {
 			pout = buf;
 			outRemaining = TMP_SIZE;
@@ -618,7 +624,7 @@ long ucFromUnicode( char *outbuf, long outbufSize,
 	}
 done:
 	gbiconv_close(cd);
-	long len =  outbufSize - outRemaining;
+	int32_t len =  outbufSize - outRemaining;
 	//len = len>=outbufsize?outbufsize-1:len;
 	//len = outbuf[len]=='\0'?len-1:len;
 	//outbuf[len] = '\0';
@@ -862,7 +868,7 @@ static char ascii_c5[] = {
 	'z', // bc
 	'Z', // bd
 	'z', // be
-	's'  // bf (long s)
+	's'  // bf (int32_t s)
 };
 
 
@@ -1078,9 +1084,9 @@ static bichar utf_cf[] = {
 */	
 
 /*
-//long utf8ToAscii(char *outbuf, long outbufsize,
-long stripAccentMarks (char *outbuf, long outbufsize,
-		       unsigned char *p, long inbuflen) { // inbuf
+//int32_t utf8ToAscii(char *outbuf, int32_t outbufsize,
+int32_t stripAccentMarks (char *outbuf, int32_t outbufsize,
+		       unsigned char *p, int32_t inbuflen) { // inbuf
 
 	char *dst = outbuf;
 	unsigned char *pend = p + inbuflen;
@@ -1132,11 +1138,11 @@ long stripAccentMarks (char *outbuf, long outbufsize,
 */
 
 
-long stripAccentMarks (char *outbuf, long outbufsize,
-		       unsigned char *p, long inbuflen) {
+int32_t stripAccentMarks (char *outbuf, int32_t outbufsize,
+		       unsigned char *p, int32_t inbuflen) {
 	char *s = (char *)p;
 	char *send = (char *)p + inbuflen;
-	long cs;
+	int32_t cs;
 	char *dst = outbuf;
 	for ( ; s < send ; s += cs ) {
 		// how big is this character?
@@ -1145,20 +1151,20 @@ long stripAccentMarks (char *outbuf, long outbufsize,
 		UChar32 uc = utf8Decode ( s );
 		// break "uc" into decomposition of UChar32s
 		UChar32 ttt[32];
-		long klen = recursiveKDExpand(uc,ttt,32);
+		int32_t klen = recursiveKDExpand(uc,ttt,32);
 		if(klen>32){char *xx=NULL;*xx=0;}
 		// sanity
 		if ( dst + 5 > outbuf+outbufsize ) return -1;
 		// if the same, leave it! it had no accent marks or other
 		// modifiers...
 		if ( klen <= 1 ) {
-			memcpy ( dst , s , cs );
+			gbmemcpy ( dst , s , cs );
 			dst += cs;
 			continue;
 		}
 		// take the first one as the stripped
 		// convert back to utf8
-		long stored = utf8Encode ( ttt[0] , dst );
+		int32_t stored = utf8Encode ( ttt[0] , dst );
 		// skip over the stored utf8 char
 		dst += stored;
 	}
@@ -1172,8 +1178,8 @@ long stripAccentMarks (char *outbuf, long outbufsize,
 // helper function for printing unicode text range
 // slen is length in UChars
 /*
-long ucToAscii(char *buf, long bufsize, UChar *s, long slen){
-	long count=0;
+int32_t ucToAscii(char *buf, int32_t bufsize, UChar *s, int32_t slen){
+	int32_t count=0;
 	for (UChar *p = s ; 
 	     p < (s+slen) && count < bufsize-1 ; ) {
 		UChar32 c = utf16Decode(p, &p);
@@ -1206,30 +1212,30 @@ long ucToAscii(char *buf, long bufsize, UChar *s, long slen){
 }
 
 // char* version
-long ucToAscii(char *buf, long bufsize, char *s, long slen){
+int32_t ucToAscii(char *buf, int32_t bufsize, char *s, int32_t slen){
 	return ucToAscii(buf, bufsize, (UChar*)s, slen/2);
 }
 */
 
 //static char s_dbuf[4096];
 
-//char *uccDebug(char *s, long slen){
+//char *uccDebug(char *s, int32_t slen){
 //	ucToAscii(s_dbuf, 4096, s, slen);
 //	return s_dbuf;
 //}
 
 
-//char *ucUDebug(UChar *s, long slen){
+//char *ucUDebug(UChar *s, int32_t slen){
 //	ucToAscii(s_dbuf, 4096, s, slen);
 //	return s_dbuf;
 //}
 
 static iconv_t cd_latin1_u8 = (iconv_t)-1;
-long latin1ToUtf8(char *outbuf, long outbufsize, 
-		  char *inbuf, long inbuflen){
-	if ((int)cd_latin1_u8 < 0) {
+int32_t latin1ToUtf8(char *outbuf, int32_t outbufsize, 
+		  char *inbuf, int32_t inbuflen){
+	if ( cd_latin1_u8 < 0) {
 		cd_latin1_u8 = gbiconv_open("UTF-8", "WINDOWS-1252");
-		if ((int)cd_latin1_u8 < 0) {	
+		if ( cd_latin1_u8 < 0) {	
 			log("uni: Error opening output conversion"
 			    " descriptor for utf-8: %s (%d)\n", 
 			    strerror(g_errno),g_errno);
@@ -1271,7 +1277,7 @@ long latin1ToUtf8(char *outbuf, long outbufsize,
 		}
 	}
 done:
-	long len =  outbufsize - outRemaining;
+	int32_t len =  outbufsize - outRemaining;
 	len = len>=outbufsize?outbufsize-1:len;
 	//len = outbuf[len]=='\0'?len-1:len;
 	outbuf[len] = '\0';
@@ -1281,8 +1287,8 @@ done:
 /*
 
 static iconv_t cd_u16_u8 = (iconv_t)-1;
-long utf16ToUtf8(char *outbuf, long outbufsize, 
-		   UChar *inbuf, long inbuflen){
+int32_t utf16ToUtf8(char *outbuf, int32_t outbufsize, 
+		   UChar *inbuf, int32_t inbuflen){
 	if ((int)cd_u16_u8 < 0) {
 		//printf("opening iconv descriptor\n");
 		cd_u16_u8 = gbiconv_open("UTF-8", "UTF-16LE");
@@ -1330,7 +1336,7 @@ long utf16ToUtf8(char *outbuf, long outbufsize,
 		}
 	}
 done:
-	long len =  outbufsize - outRemaining;
+	int32_t len =  outbufsize - outRemaining;
 	len = len>=outbufsize?outbufsize-1:len;
 	outbuf[len] = '\0';
 	return len;
@@ -1338,8 +1344,8 @@ done:
 }
 
 static iconv_t cd_u16_latin1 = (iconv_t)-1;
-long utf16ToLatin1(char *outbuf, long outbufsize, 
-		   UChar *inbuf, long inbuflen){
+int32_t utf16ToLatin1(char *outbuf, int32_t outbufsize, 
+		   UChar *inbuf, int32_t inbuflen){
 	if ((int)cd_u16_latin1 < 0) {
 		//printf("opening iconv descriptor\n");
 		cd_u16_latin1 = gbiconv_open("WINDOWS-1252", "UTF-16LE");
@@ -1385,7 +1391,7 @@ long utf16ToLatin1(char *outbuf, long outbufsize,
 		}
 	}
 done:
-	long len =  outbufsize - outRemaining;
+	int32_t len =  outbufsize - outRemaining;
 	len = len>=outbufsize?outbufsize-1:len;
 
 	outbuf[len] = '\0';
@@ -1393,8 +1399,8 @@ done:
 	
 }
 
-long utf16ToUtf8_intern(char* outbuf, long outbufSize, 
-		 UChar *s, long slen){
+int32_t utf16ToUtf8_intern(char* outbuf, int32_t outbufSize, 
+		 UChar *s, int32_t slen){
 	UChar *p = s;
 	UChar *next = NULL;
 	UChar32 c;
@@ -1413,9 +1419,9 @@ long utf16ToUtf8_intern(char* outbuf, long outbufSize,
 // . convert a UTF-16 str to UTF-8
 // . if buf is NULL, allocate memory for the conversion
 // . return NULL on error
-char *utf16ToUtf8Alloc( char *utf16Str, long utf16StrLen,
-			char *buf, long *bufSize ) {
-	long size = 0;
+char *utf16ToUtf8Alloc( char *utf16Str, int32_t utf16StrLen,
+			char *buf, int32_t *bufSize ) {
+	int32_t size = 0;
 	if ( ! buf ) {
 		size = ucFromUnicode( NULL, 0,
 				      (UChar *)utf16Str, utf16StrLen>>1,
@@ -1424,14 +1430,14 @@ char *utf16ToUtf8Alloc( char *utf16Str, long utf16StrLen,
 		buf = (char *)mmalloc( size, "utf8str" );
 		if ( ! buf ) {
 			g_errno = ENOMEM;
-			log( "query: Could not allocate %ld bytes for "
+			log( "query: Could not allocate %"INT32" bytes for "
 			     "utf16toUtf8Alloc", size );
 			return NULL;
 		}
 	}
 	
 	errno = 0;
-	long resLen = ucFromUnicode( buf, *bufSize, 
+	int32_t resLen = ucFromUnicode( buf, *bufSize, 
 				     (UChar *)utf16Str, utf16StrLen>>1,
 				     "UTF-8" );
 
@@ -1471,10 +1477,10 @@ int utf8_parse_buf(char *s){
 */
 
 /*
-long ucAtoL(UChar* buf, long len) {
-	long ret = 0;
+int32_t ucAtoL(UChar* buf, int32_t len) {
+	int32_t ret = 0;
 	bool inNumber=false;
-	long sign = 1;  // plus or minus 1
+	int32_t sign = 1;  // plus or minus 1
 	for (UChar *p = buf;
 	     p < (buf+len) ; ){
 		UChar32 c = utf16Decode(p, &p);
@@ -1490,10 +1496,10 @@ long ucAtoL(UChar* buf, long len) {
 	return ret;
 }
 
-long ucTrimWhitespaceInplace(UChar * buf, long bufLen) {
+int32_t ucTrimWhitespaceInplace(UChar * buf, int32_t bufLen) {
 
 	UChar *start = buf;
-	long newLen = bufLen;
+	int32_t newLen = bufLen;
 	UChar *p = buf;
 	while(p < buf+bufLen){
 		UChar *pnext;
@@ -1521,8 +1527,8 @@ long ucTrimWhitespaceInplace(UChar * buf, long bufLen) {
 // FIXME: Whacketty-hacketty
 // This is only used in one spot (nofollow)so I'm ignoring all the 
 // Unicode collation and normalization stuff right now
-long ucStrCaseCmp(UChar *s1, long slen1, UChar*s2, long slen2) {
-	long len = slen1;
+int32_t ucStrCaseCmp(UChar *s1, int32_t slen1, UChar*s2, int32_t slen2) {
+	int32_t len = slen1;
 	if (slen2 < len) len = slen2;
 	UChar *p = s1;
 	UChar *q = s2;
@@ -1533,14 +1539,14 @@ long ucStrCaseCmp(UChar *s1, long slen1, UChar*s2, long slen2) {
 		if (c1 < c2) return -1;
 		if (c1 > c2) return 1;
 	}
-	// strings are identical...unless one is shorter
+	// strings are identical...unless one is int16_ter
 	if (slen1 < slen2) return -1;
 	if (slen1 > slen2) return 1;
 	
 	return 0;
 }
-long ucStrCaseCmp(UChar *s1, long slen1, char*s2, long slen2) {
-	long len = slen1;
+int32_t ucStrCaseCmp(UChar *s1, int32_t slen1, char*s2, int32_t slen2) {
+	int32_t len = slen1;
 	if (slen2 < len) len = slen2;
 	UChar *p = s1;
 	char *q = s2;
@@ -1551,15 +1557,15 @@ long ucStrCaseCmp(UChar *s1, long slen1, char*s2, long slen2) {
 		if (c1 < c2) return -1;
 		if (c1 > c2) return 1;
 	}
-	// strings are identical...unless one is shorter
+	// strings are identical...unless one is int16_ter
 	if (slen1 < slen2) return -1;
 	if (slen1 > slen2) return 1;
 	
 	return 0;
 }
 
-long ucStrCmp(UChar *s1, long slen1, UChar*s2, long slen2) {
-	long len = slen1;
+int32_t ucStrCmp(UChar *s1, int32_t slen1, UChar*s2, int32_t slen2) {
+	int32_t len = slen1;
 	if (slen2 < len) len = slen2;
 	UChar *p = s1;
 	UChar *q = s2;
@@ -1570,23 +1576,23 @@ long ucStrCmp(UChar *s1, long slen1, UChar*s2, long slen2) {
 		if (c1 < c2) return -1;
 		if (c1 > c2) return 1;
 	}
-	// strings are identical...unless one is shorter
+	// strings are identical...unless one is int16_ter
 	if (slen1 < slen2) return -1;
 	if (slen1 > slen2) return 1;
 	
 	return 0;
 }
 
-long ucStrNLen(UChar *s, long maxLen) {
-	long len = 0;
+int32_t ucStrNLen(UChar *s, int32_t maxLen) {
+	int32_t len = 0;
 	while (len < maxLen && s[len]) len++;
 	return len;
 }
 // look for an ascii substring in a utf-16 string
-UChar *ucStrNCaseStr(UChar *haystack, long haylen, char *needle) {
-	long matchLen = 0;
-	long needleLen = gbstrlen(needle);
-	for (long i = 0; i < haylen;i++){
+UChar *ucStrNCaseStr(UChar *haystack, int32_t haylen, char *needle) {
+	int32_t matchLen = 0;
+	int32_t needleLen = gbstrlen(needle);
+	for (int32_t i = 0; i < haylen;i++){
 		UChar32 c1 = ucToLower(haystack[i]);
 		UChar32 c2 = to_lower(needle[matchLen]);
 		if ( c1 != c2 ){
@@ -1604,10 +1610,10 @@ UChar *ucStrNCaseStr(UChar *haystack, long haylen, char *needle) {
 	return NULL;
 }
 
-UChar *ucStrNCaseStr(UChar *haystack, long haylen, char *needle, 
-		     long needleLen) {
-	long matchLen = 0;
-	for (long i = 0; i < haylen;i++){
+UChar *ucStrNCaseStr(UChar *haystack, int32_t haylen, char *needle, 
+		     int32_t needleLen) {
+	int32_t matchLen = 0;
+	for (int32_t i = 0; i < haylen;i++){
 		UChar32 c1 = ucToLower(haystack[i]);
 		UChar32 c2 = to_lower(needle[matchLen]);
 		if ( c1 != c2 ){
@@ -1626,10 +1632,10 @@ UChar *ucStrNCaseStr(UChar *haystack, long haylen, char *needle,
 }
 
 // look for a utf-16 substring in a utf-16 string
-UChar *ucStrNCaseStr(UChar *haystack, long haylen,
-		     UChar *needle, long needleLen) {
-	long matchLen = 0;
-	for (long i = 0; i < haylen;i++){
+UChar *ucStrNCaseStr(UChar *haystack, int32_t haylen,
+		     UChar *needle, int32_t needleLen) {
+	int32_t matchLen = 0;
+	for (int32_t i = 0; i < haylen;i++){
 		UChar32 c1 = ucToLower(haystack[i]);
 		UChar32 c2 = ucToLower(needle[matchLen]);
 		if ( c1 != c2 ){
@@ -1649,8 +1655,8 @@ UChar *ucStrNCaseStr(UChar *haystack, long haylen,
 
 // look for a unicode substring in an ascii string
 char *ucStrNCaseStr(char *haystack,
-		    UChar *needle, long needleLen) {
-	long matchLen = 0;
+		    UChar *needle, int32_t needleLen) {
+	int32_t matchLen = 0;
 	for (char *h = haystack; *h; h++) {
 		UChar32 c1 = to_lower(*h);
 		UChar32 c2 = ucToLower(needle[matchLen]);
@@ -1670,9 +1676,9 @@ char *ucStrNCaseStr(char *haystack,
 }
 
 // look for a unicode substring in an ascii string
-char *ucStrNCaseStr(char *haystack, long haylen,
-		    UChar *needle, long needleLen) {
-	long matchLen = 0;
+char *ucStrNCaseStr(char *haystack, int32_t haylen,
+		    UChar *needle, int32_t needleLen) {
+	int32_t matchLen = 0;
 	for (char *h = haystack; h-haystack < haylen; h++) {
 		UChar32 c1 = to_lower(*h);
 		UChar32 c2 = ucToLower(needle[matchLen]);
@@ -1698,6 +1704,11 @@ void resetUnicode ( ) {
 }
 
 bool openIconvDescriptors() {
+
+	// why do this when we call gbiconv_open() directly from ucToAny()
+	// and other functions?
+	return true;
+
 	for (int i=2; i <= 2258 ; i++ ){
 		if (!supportedCharset(i)) continue;
 
@@ -1715,15 +1726,16 @@ bool openIconvDescriptors() {
 			csAlias = "CP932";
 		}
 		
-		iconv_t cd1 = gbiconv_open("UTF-16LE", csAlias);
-
+		//iconv_t cd1 = gbiconv_open("UTF-16LE", csAlias);
+		iconv_t cd1 = gbiconv_open("UTF-8", csAlias);
 		if (cd1 == (iconv_t)-1) {	
-			return false;
+		 	//return false;
 		}
-		iconv_t cd2 = gbiconv_open(csAlias, "UTF-16LE");
 
+		//iconv_t cd2 = gbiconv_open(csAlias, "UTF-16LE");
+		iconv_t cd2 = gbiconv_open(csAlias, "UTF-8");
 		if (cd2 == (iconv_t)-1) {	
-			return false;
+			//return false;
 		}
 	}
 	// ...and the ones that don't involve utf16

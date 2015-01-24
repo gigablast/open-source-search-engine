@@ -40,20 +40,20 @@ public:
 	RdbList    m_tagdbList;
 	Msg0       m_msg0;
 	RdbList    m_banTagList;
-	long       m_ban;
+	int32_t       m_ban;
 	bool       m_isSuperTurk;
 	char       m_turkUser[256];
 	// hash64n() of m_turkUser:
-	long long  m_callertuid64;
+	int64_t  m_callertuid64;
 	//char       m_turkUserEncoded[512];
 	char       m_showTurkUser[256];
-	long long  m_tuid64;
-	long       m_turkIp;
-	long       m_date1;
-	long       m_date2;
-	//char       m_isRootAdmin;
+	int64_t  m_tuid64;
+	int32_t       m_turkIp;
+	int32_t       m_date1;
+	int32_t       m_date2;
+	//char       m_isMasterAdmin;
 	char       m_coll [ MAX_COLL_LEN + 1];
-	long       m_collLen;
+	int32_t       m_collLen;
 	TcpSocket *m_socket;
 	Url        m_url;
 	Msg4       m_msg4;
@@ -62,7 +62,7 @@ public:
 	//TagRec     m_tagRec;
 	time_t     m_t1;
 	time_t     m_t2;
-	long       m_useXml;
+	int32_t       m_useXml;
 	char       m_mdy1[16];
 	char       m_mdy2[16];
 };
@@ -74,21 +74,21 @@ time_t getTimet ( char *ds ) {
 
 	char *p = ds;
 
-	long month = atol(p);
+	int32_t month = atol(p);
 
 	// skip to next /
 	for ( ; *p && *p != '/' ; p++ );
 	if ( *p != '/' ) return 0;
 	p++;
 
-	long day = atol(p);
+	int32_t day = atol(p);
 
 	// skip to next /
 	for ( ; *p && *p != '/' ; p++ );
 	if ( *p != '/' ) return 0;
 	p++;
 
-	long year = atol(p);
+	int32_t year = atol(p);
 	if ( year < 1900 ) year += 2000;
 
 	// make the time
@@ -157,8 +157,8 @@ bool sendPageTurkStats ( TcpSocket *s , HttpRequest *r ) {
 	}
 
 	char *coll    = cr->m_coll;
-	long  collLen = gbstrlen ( coll );
-	memcpy ( st->m_coll , coll , collLen );
+	int32_t  collLen = gbstrlen ( coll );
+	gbmemcpy ( st->m_coll , coll , collLen );
 	st->m_coll [ collLen ] = '\0';
 	st->m_collLen=collLen;
 
@@ -247,7 +247,7 @@ bool initBannedTable ( State60 *st ) {
 	key128_t sk = g_tagdb.makeStartKey ( &u );
 	key128_t ek = g_tagdb.makeEndKey ( &u );
 
-	// shortcut
+	// int16_tcut
 	Msg0 *m = &st->m_msg0;
 	// get the list
 	if ( ! m->getList ( -1               , // hostId
@@ -286,10 +286,10 @@ bool gotBanTagList ( State60 *st ) {
 		delete (st);
 	}		
 
-	// shortcut
+	// int16_tcut
 	RdbList *list = &st->m_banTagList;
 
-	//long turkuser = getTagTypeFromStr("turkuser");
+	//int32_t turkuser = getTagTypeFromStr("turkuser");
 
 	// scan the list
 	for ( ; ! list->isExhausted() ; list->skipCurrentRecord() ) {
@@ -299,7 +299,7 @@ bool gotBanTagList ( State60 *st ) {
 		Tag *tag = (Tag *)list->getCurrentRec();
 		// get tag user
 		char *data  = tag->getTagData();
-		long  dsize = tag->getTagDataSize();
+		int32_t  dsize = tag->getTagDataSize();
 		// sanity -- we got type 123456 sometimes!!! wtf?
 		//if ( tag->m_type != turkuser ) {char*xx=NULL;*xx=0;}
 		// skip if unbanned
@@ -311,7 +311,7 @@ bool gotBanTagList ( State60 *st ) {
 		// null term it
 		data[dsize-3] = '\0';
 		// hash the turkip or turkusername that is banned
-		long long key64 = hash64n(data);
+		int64_t key64 = hash64n(data);
 		// add to table now. return true w/ g_errno set on error
 		if ( ! s_banTable.addKey ( &key64 ) ) goto haderror;
 	}
@@ -351,7 +351,7 @@ bool banTableReady ( State60 *st ) {
 	// maybe the ip was passed in
 	char *banTurkIp = st->m_r.getString("banevalip",NULL);
 	// make a 64 bit key of what we want to ban/unban
-	long long  key64 = 0LL;
+	int64_t  key64 = 0LL;
 	char      *data = NULL;
 	// use ip if that not there
 	if ( banTurkUser ) {
@@ -359,7 +359,7 @@ bool banTableReady ( State60 *st ) {
 		data  = banTurkUser;
 	}
 	else if ( banTurkIp ) {
-		key64 = (long long)atoip(banTurkIp);
+		key64 = (int64_t)atoip(banTurkIp);
 		data  = banTurkIp;
 	}
 	else {
@@ -370,13 +370,13 @@ bool banTableReady ( State60 *st ) {
 	// add the tag then (overwrite?)
 	SafeBuf *tbuf = &st->m_tagBuf;
 	// . make the fake url
-	// . %llu.gbturkuser.com
-	// . %llu could be the ip as a 32 bit long or it could be
+	// . %"UINT64".gbturkuser.com
+	// . %"UINT64" could be the ip as a 32 bit int32_t or it could be
 	//   a 64 bit hash of the turk user name
 	char fakebanurl[256];
-	sprintf(fakebanurl,"gbturkuser.com/%llu",key64);
+	sprintf(fakebanurl,"gbturkuser.com/%"UINT64"",key64);
 	// use this timesampe
-	long now = getTimeGlobal();
+	int32_t now = getTimeGlobal();
 	// must be 0 or 1
 	if ( st->m_ban != 0 && st->m_ban != 1 ) { char *xx=NULL;*xx=0; }
 
@@ -388,7 +388,7 @@ bool banTableReady ( State60 *st ) {
 	// make the data (e.g. "mwells,1"  or "1.2.3.4,1") means that
 	// mwells and 1.2.3.4 are banned turkusernames/turkips
 	char dbuf[1024];
-	sprintf(dbuf,"%s,%li",data,st->m_ban);
+	sprintf(dbuf,"%s,%"INT32"",data,st->m_ban);
 	// first rdbid
 	//if ( ! tbuf->pushChar ( RDB_TURKDB ) ) goto hadError;
 	// add that tag to our buffer
@@ -502,7 +502,7 @@ bool printHeader ( char *turkUser , char *turkIp, char *coll , SafeBuf *sb ) {
 bool sendPageInstructions ( State60 *st ) {
 
 
-	// shortcut
+	// int16_tcut
 	SafeBuf *sb = &st->m_sb;
 
 	if( ! printHeader ( st->m_turkUser,
@@ -546,7 +546,7 @@ bool sendPageTurkStats2 ( State60 *st ) {
 	if ( ! ds1[0] ) ds1 = "01/01/2000";
 	if ( ! ds2[0] ) ds2 = "12/31/2029";
 
-	// shortcut
+	// int16_tcut
 	SafeBuf *sb = &st->m_sb;
 
 	if ( ! st->m_useXml &&
@@ -615,7 +615,7 @@ bool sendPageTurkStats2 ( State60 *st ) {
 	if ( ! st->m_tuid64 ) sprintf(fakeUrl,"gbturkvotestat.com");
 	// just scan vote stats for that user... should still be sorted
 	// by Tag::m_timestamp since the tag type is "votestatbydate"
-	else sprintf(fakeUrl,"%llugbturkvotestat.com",st->m_tuid64);
+	else sprintf(fakeUrl,"%"UINT64"gbturkvotestat.com",st->m_tuid64);
 
 	// . now read in the list of turkvotestatbydate tags
 	//   and skip tags whose username does not match "turkuser"
@@ -626,8 +626,8 @@ bool sendPageTurkStats2 ( State60 *st ) {
 	key128_t sk = g_tagdb.makeStartKey ( &u );
 	key128_t ek = g_tagdb.makeEndKey ( &u );
 	// getDeduphash() now complements the timestamps
-	unsigned long ct1 = ~((unsigned long)st->m_t1);
-	unsigned long ct2 = ~((unsigned long)st->m_t2);
+	uint32_t ct1 = ~((uint32_t)st->m_t1);
+	uint32_t ct2 = ~((uint32_t)st->m_t2);
 	// and getDedupHash() uses tag timestamp for turkvotestatbydate tags
 	// so HACK that in here
 	sk.n0 = ct2;
@@ -645,10 +645,10 @@ bool sendPageTurkStats2 ( State60 *st ) {
 
 	// . if partap is requesting stats less than 24 hours old -- error out!
 	// . get time now in UTC
-	unsigned long now = getTimeGlobal();
+	uint32_t now = getTimeGlobal();
 	bool bad = true;
 	if ( ! st->m_useXml ) bad = false;
-	if ( (unsigned long)st->m_t2 < now - 24 *3600 ) bad = false;
+	if ( (uint32_t)st->m_t2 < now - 24 *3600 ) bad = false;
 	if ( bad ) {
 		log("turk: requesting stats < 24 hrs old");
 		// TODO: re-enable this before launch
@@ -662,7 +662,7 @@ bool sendPageTurkStats2 ( State60 *st ) {
 		*/
 	}
 
-	// shortcut
+	// int16_tcut
 	Msg0 *m = &st->m_msg0;
 	// get the list
 	if ( ! m->getList ( -1               , // hostId
@@ -712,7 +712,7 @@ void gotTagList ( void *state ) {
 	if ( st->m_showTurkUser[0] ) showTurkUser = st->m_showTurkUser;
 
 
-	// shortcut
+	// int16_tcut
 	RdbList *list = &st->m_tagdbList;
 
 
@@ -741,35 +741,35 @@ void gotTagList ( void *state ) {
 class TurkUserStat {
 public:
 
-	long m_errorPassed;
-	long m_errorFailed;
-	long m_errorUnconfirmed;
-	long m_errorNone;
+	int32_t m_errorPassed;
+	int32_t m_errorFailed;
+	int32_t m_errorUnconfirmed;
+	int32_t m_errorNone;
 
-	long m_titlePassed;
-	long m_titleFailed;
-	long m_titleUnconfirmed;
-	long m_titleNone;
+	int32_t m_titlePassed;
+	int32_t m_titleFailed;
+	int32_t m_titleUnconfirmed;
+	int32_t m_titleNone;
 
-	long m_venuePassed;
-	long m_venueFailed;
-	long m_venueUnconfirmed;
-	long m_venueNone;
+	int32_t m_venuePassed;
+	int32_t m_venueFailed;
+	int32_t m_venueUnconfirmed;
+	int32_t m_venueNone;
 
-	long m_descrPassed;
-	long m_descrFailed;
-	long m_descrUnconfirmed;
-	long m_descrNone;
+	int32_t m_descrPassed;
+	int32_t m_descrFailed;
+	int32_t m_descrUnconfirmed;
+	int32_t m_descrNone;
 
 	float m_totalEarned;
 	char  m_isBanned;
 	char  m_isSuperTurk;
-	long long m_tuid64;
+	int64_t m_tuid64;
 
-	//long m_numYoungSubmissions; // numyoungvotes
-	long m_turkUserOff;
-	long m_turkUserIps[32];
-	long m_numTurkUserIps;
+	//int32_t m_numYoungSubmissions; // numyoungvotes
+	int32_t m_turkUserOff;
+	int32_t m_turkUserIps[32];
+	int32_t m_numTurkUserIps;
 };
 	
 
@@ -806,7 +806,7 @@ bool printAllUserStats ( SafeBuf *sb , RdbList *list , State60 *st ) {
 	// set to top
 	list->resetListPtr();
 	// scan tags
-	//long turkvotestatbydate = getTagTypeFromStr("turkvotestatbydate");
+	//int32_t turkvotestatbydate = getTagTypeFromStr("turkvotestatbydate");
 	// loop over all tags in the buf, see if we got a dup
 	for ( ; ! list->isExhausted() ; list->skipCurrentRecord() ) {
 		// breathe
@@ -816,11 +816,11 @@ bool printAllUserStats ( SafeBuf *sb , RdbList *list , State60 *st ) {
 		// get tag user
 		char *user  = tag->getUser();
 		char *data  = tag->getTagData();
-		long  dsize = tag->getTagDataSize();
+		int32_t  dsize = tag->getTagDataSize();
 		// was good or bad or unconfirmed? 
 		//char vv = data[dsize-3]; // o->good a->bad e->unconfirmed
 		// make key
-		long long tuid64 = hash64n ( user );
+		int64_t tuid64 = hash64n ( user );
 		// already in table?
 		TurkUserStat *tus = (TurkUserStat *)tust.getValue(&tuid64);
 		// make a new one if not there
@@ -843,7 +843,7 @@ bool printAllUserStats ( SafeBuf *sb , RdbList *list , State60 *st ) {
 		}
 
 		// add in ip
-		long k; for ( k = 0 ; k < tus->m_numTurkUserIps ; k++ ) {
+		int32_t k; for ( k = 0 ; k < tus->m_numTurkUserIps ; k++ ) {
 			// breathe
 			QUICKPOLL(TURKNICE);
 			if ( tus->m_turkUserIps[k] == tag->m_ip ) break;
@@ -979,8 +979,8 @@ bool printAllUserStats ( SafeBuf *sb , RdbList *list , State60 *st ) {
 	if ( ! array.reserve ( 4 * tust.m_numSlotsUsed ) ) return false;
 	// store ptrs
 	TurkUserStat **pp = (TurkUserStat **)array.getBufStart();
-	long npp = 0;
-	for ( long i = 0 ; i < tust.m_numSlots ; i++ ) {
+	int32_t npp = 0;
+	for ( int32_t i = 0 ; i < tust.m_numSlots ; i++ ) {
 		// breathe
 		QUICKPOLL(TURKNICE);
 		if ( ! tust.m_flags[i] ) continue;
@@ -1015,10 +1015,10 @@ bool printAllUserStats ( SafeBuf *sb , RdbList *list , State60 *st ) {
 		// are they banned?
 		tus->m_isBanned = false;
 		// see if any of their ips are banned
-		for ( long k = 0 ; k < tus->m_numTurkUserIps ; k++ ) {
+		for ( int32_t k = 0 ; k < tus->m_numTurkUserIps ; k++ ) {
 			// breathe
 			QUICKPOLL(TURKNICE);
-			long ip = tus->m_turkUserIps[k];
+			int32_t ip = tus->m_turkUserIps[k];
 			// . if any ips are banned, user is banned!
 			// . show partap 0.00 pay then
 			if ( ! isTurkBanned ( NULL, ip ) ) continue;
@@ -1036,7 +1036,7 @@ bool printAllUserStats ( SafeBuf *sb , RdbList *list , State60 *st ) {
 	char flag = 1;
  bubbleLoop:
 	flag = 0;
-	for ( long i = 1 ; i < npp ; i++ ) {
+	for ( int32_t i = 1 ; i < npp ; i++ ) {
 		if ( pp[i]->m_totalEarned <= pp[i-1]->m_totalEarned ) continue;
 		// swap em
 		TurkUserStat *tmp = pp[i-1];
@@ -1048,10 +1048,10 @@ bool printAllUserStats ( SafeBuf *sb , RdbList *list , State60 *st ) {
 
 
 	// print out the turk user stats table
-	for ( long i = 0 ; i < npp ; i++ ) {
+	for ( int32_t i = 0 ; i < npp ; i++ ) {
 		// breathe
 		QUICKPOLL(TURKNICE);
-		// shortcut
+		// int16_tcut
 		TurkUserStat *tus = pp[i];
 		// get name
 		char *tun = usb.getBufStart() + tus->m_turkUserOff;
@@ -1105,14 +1105,14 @@ bool printAllUserStats ( SafeBuf *sb , RdbList *list , State60 *st ) {
 		// only print ban/unban link if they are superturk
 		if ( st->m_isSuperTurk && ! targetSuper ) {
 			// is the turkusername banned?
-			long ban = 1;
-			//long long tuid64 = hash64n(tun);
+			int32_t ban = 1;
+			//int64_t tuid64 = hash64n(tun);
 			//Tag *btag = (Tag *)s_banTable.getValue ( &tuid64 );
 			//if ( btag ) ban = 0;
 			if ( tus->m_isBanned ) ban = 0;
 			if ( ! sb->safePrintf("<td><a href=/evalstats?"
 					      "evaluser=%s&"
-					      "ban=%li&"
+					      "ban=%"INT32"&"
 					      "banevaluser="
 					      ,st->m_turkUser
 					      ,ban))
@@ -1166,13 +1166,13 @@ bool printAllUserStats ( SafeBuf *sb , RdbList *list , State60 *st ) {
 		if ( showIps && ! sb->safePrintf("<td>" ) ) return false;
 		// print all the ips they came from when voting so
 		// we can ban individual ips from being turks
-		for ( long k = 0 ; k < tus->m_numTurkUserIps ; k++ ) {
+		for ( int32_t k = 0 ; k < tus->m_numTurkUserIps ; k++ ) {
 			// breathe
 			QUICKPOLL(TURKNICE);
 			if ( ! showIps ) break;
-			long ip = tus->m_turkUserIps[k];
-			long ip64 = (long long)ip;
-			long ban = 1;
+			int32_t ip = tus->m_turkUserIps[k];
+			int32_t ip64 = (int64_t)ip;
+			int32_t ban = 1;
 			char *cmd = "banip";
 			Tag *btag = (Tag *)s_banTable.getValue ( &ip64 );
 			if ( btag ) { 
@@ -1194,7 +1194,7 @@ bool printAllUserStats ( SafeBuf *sb , RdbList *list , State60 *st ) {
 			if ( ! sb->safePrintf("<nobr>") ) return false;
 			if ( showBanLink &&
 			     ! sb->safePrintf("<a href=banevalip=%s&"
-					      "ban=%li>%s</a> &nbsp; "
+					      "ban=%"INT32">%s</a> &nbsp; "
 					      ,ips 
 					      ,ban
 					      ,cmd) )
@@ -1208,40 +1208,40 @@ bool printAllUserStats ( SafeBuf *sb , RdbList *list , State60 *st ) {
 			return false;
 
 		// print vote count stats
-		if ( ! sb->safePrintf("<td>%li</td>"
-				      "<td>%li</td>"
-				      "<td>%li</td>"
-				      "<td>%li</td>"
+		if ( ! sb->safePrintf("<td>%"INT32"</td>"
+				      "<td>%"INT32"</td>"
+				      "<td>%"INT32"</td>"
+				      "<td>%"INT32"</td>"
 				      ,tus->m_errorPassed
 				      ,tus->m_errorFailed
 				      ,tus->m_errorUnconfirmed 
 				      ,tus->m_errorNone ) )
 			return false;
 		// print vote count stats
-		if ( ! sb->safePrintf("<td>%li</td>"
-				      "<td>%li</td>"
-				      "<td>%li</td>"
-				      "<td>%li</td>"
+		if ( ! sb->safePrintf("<td>%"INT32"</td>"
+				      "<td>%"INT32"</td>"
+				      "<td>%"INT32"</td>"
+				      "<td>%"INT32"</td>"
 				      ,tus->m_titlePassed
 				      ,tus->m_titleFailed
 				      ,tus->m_titleUnconfirmed 
 				      ,tus->m_titleNone ) )
 			return false;
 		// print vote count stats
-		if ( ! sb->safePrintf("<td>%li</td>"
-				      "<td>%li</td>"
-				      "<td>%li</td>"
-				      "<td>%li</td>"
+		if ( ! sb->safePrintf("<td>%"INT32"</td>"
+				      "<td>%"INT32"</td>"
+				      "<td>%"INT32"</td>"
+				      "<td>%"INT32"</td>"
 				      ,tus->m_venuePassed
 				      ,tus->m_venueFailed
 				      ,tus->m_venueUnconfirmed 
 				      ,tus->m_venueNone ) )
 			return false;
 		// print vote count stats
-		if ( ! sb->safePrintf("<td>%li</td>"
-				      "<td>%li</td>"
-				      "<td>%li</td>"
-				      "<td>%li</td>"
+		if ( ! sb->safePrintf("<td>%"INT32"</td>"
+				      "<td>%"INT32"</td>"
+				      "<td>%"INT32"</td>"
+				      "<td>%"INT32"</td>"
 				      ,tus->m_descrPassed
 				      ,tus->m_descrFailed
 				      ,tus->m_descrUnconfirmed 
@@ -1351,16 +1351,16 @@ bool printSingleUserStats ( SafeBuf *sb , RdbList *list, char *showTurkUser ,
 			      "</tr>\n" ) )
 		return false;
 
-	long  lastDayNum = -1;
-	long  dayNum = -1;
-	//long  numGood = 0;
-	//long  numBad  = 0;
-	//long  numUnconfirmed = 0;
+	int32_t  lastDayNum = -1;
+	int32_t  dayNum = -1;
+	//int32_t  numGood = 0;
+	//int32_t  numBad  = 0;
+	//int32_t  numUnconfirmed = 0;
 	float dailyEarned = 0.0;
-	long count = 0;
+	int32_t count = 0;
 	// 2 cents per good vote
 	// scan tags
-	long turkvotestatbydate = getTagTypeFromStr("turkvotestatbydate");
+	int32_t turkvotestatbydate = getTagTypeFromStr("turkvotestatbydate");
 	// loop over all tags in the buf, see if we got a dup
 	for ( ; ; list->skipCurrentRecord() ) {
 		// breathe
@@ -1416,10 +1416,10 @@ bool printSingleUserStats ( SafeBuf *sb , RdbList *list, char *showTurkUser ,
 			else if ( ! st->m_useXml &&
 				  ! sb->safePrintf ("<tr>"
 						    "<td colspan=10>"
-						    //"votes=%li "
-						    //"passedvotes=%li "
-						    //"failedvotes=%li "
-						    //"unconfirmedvotes=%li "
+						    //"votes=%"INT32" "
+						    //"passedvotes=%"INT32" "
+						    //"failedvotes=%"INT32" "
+						    //"unconfirmedvotes=%"INT32" "
 						    //"accuracy=%.0f%% "
 						    "earned=<b>$%.02f</b> "
 						    "</td>"
@@ -1443,17 +1443,17 @@ bool printSingleUserStats ( SafeBuf *sb , RdbList *list, char *showTurkUser ,
 		if ( ! tag ) break;
 
 		// hash of url event being voted on is contained in
-		unsigned long long tagUh48;
+		uint64_t tagUh48;
 		// address/date content hash of event voted on
-		unsigned long tagAdch;
+		uint32_t tagAdch;
 		// good|bad|unconfirmed
 		char status[16];
 		// set these
 		char *data  = tag->getTagData();
-		long  dsize = tag->getTagDataSize();
+		int32_t  dsize = tag->getTagDataSize();
 		// TODO: binary encode the tag data for speed?? it breaks
 		// our rules for tagdb, but might be worth it
-		sscanf ( tag->getTagData(),"%llu,%lu,%s",
+		sscanf ( tag->getTagData(),"%"UINT64",%"UINT32",%s",
 			 &tagUh48,&tagAdch,status);
 
 		// update this for printing out daily stats at end of day
@@ -1470,12 +1470,12 @@ bool printSingleUserStats ( SafeBuf *sb , RdbList *list, char *showTurkUser ,
 		char link[256];
 		sprintf(link,
 			"<a href=\"/eval?evaluser=%s&evalip=%s&c=%s&"
-			"q=gbuh48:%llu+"
+			"q=gbuh48:%"UINT64"+"
 			// only if we directly turked it!
 			// on salsapower.com there are event's with same
 			// adch32 but in different places on page
-			"gbturkeddirectlyby:%llu+"
-			"gbadch32:%lu#top\">link</a>",
+			"gbturkeddirectlyby:%"UINT64"+"
+			"gbadch32:%"UINT32"#top\">link</a>",
 			st->m_turkUser,iptoa(st->m_turkIp),st->m_coll,
 			tagUh48,
 			st->m_tuid64,
@@ -1484,7 +1484,7 @@ bool printSingleUserStats ( SafeBuf *sb , RdbList *list, char *showTurkUser ,
 		// print it out
 		if ( ! st->m_useXml &&
 		     ! sb->safePrintf ( "<tr>"
-					"<td>%li</td>"
+					"<td>%"INT32"</td>"
 					"<td>%s</td>"
 					"<td>%s</td>"
 					"<td>%s</td>"
@@ -1645,14 +1645,14 @@ public:
 	bool processLoop ( ) ;
 
 	bool addSupplementalVoteTags ( char *furl ,
-				       long now,
+				       int32_t now,
 				       char *turkUser,
 				       class TurkLock *tk ,
-				       unsigned long mainSentch32,
-				       unsigned long mainSentth32,
+				       uint32_t mainSentch32,
+				       uint32_t mainSentth32,
 				       char *votePrefix ,
 				       char *hiddenPrefix,
-				       long votePower,
+				       int32_t votePower,
 				       SafeBuf *sb );
 
 
@@ -1660,7 +1660,7 @@ public:
 	HttpRequest *m_r;
 	void *m_state;
 	void (*m_callback)(void *state);
-	long m_stage;
+	int32_t m_stage;
 
 	//Msg12 m_msg12;
 
@@ -1686,22 +1686,22 @@ public:
 	SafeBuf      m_sb;
 	CaptchaState m_cst;
 	bool         m_isSuperTurk;
-	long long    m_tuid64;
-	//char         m_isRootAdmin;
+	int64_t    m_tuid64;
+	//char         m_isMasterAdmin;
 	char         m_coll [ MAX_COLL_LEN + 1];
-	long         m_collLen;
+	int32_t         m_collLen;
 	TcpSocket   *m_socket;
 	Msg40        m_msg40;
 	SearchInput  m_si;
 	Query        m_qq;
-	long         m_round;
+	int32_t         m_round;
 	HttpRequest  m_r;
 	Msg1e        m_me;
-	long         m_i;
+	int32_t         m_i;
 	// this means the user supplied the query, not us!
 	bool         m_isTurkSpecialQuery;//m_checkTemplateTable;
 	bool         m_showTurkInstructions;
-	//long         m_lastLaunched;
+	//int32_t         m_lastLaunched;
 };
 
 static bool getResults ( State61 *st ) ;
@@ -1750,7 +1750,7 @@ void gotGoogleCaptchaReply ( void *state , TcpSocket *s ) {
 		presentTurkForm ( st );
 		return;
 	}
-	// shortcut
+	// int16_tcut
 	SafeBuf *sb = &st->m_sb;
 	// print the full response
 	//sb->safePrintf ( "Last Captcha Result: %s<br><br>",content);
@@ -1775,7 +1775,7 @@ bool verifyCaptchaInput ( TcpSocket *socket ,
 			  void *st ,
 			  void (callback)(void *state,TcpSocket *s) ) {
 
-	long ip         = socket->m_ip;
+	int32_t ip         = socket->m_ip;
 	char *challenge = r->getString("recaptcha_challenge_field",NULL);
 	char *response  = r->getString("recaptcha_response_field",NULL);
 
@@ -1879,8 +1879,8 @@ bool sendPageTurk ( TcpSocket *s , HttpRequest *r ) {
 	if ( ! cr ) { char *xx=NULL;*xx=0; }
 	// get collection name and its length
 	char *coll    = cr->m_coll;
-	long  collLen = gbstrlen ( coll );
-	memcpy ( st->m_coll , coll , collLen );
+	int32_t  collLen = gbstrlen ( coll );
+	gbmemcpy ( st->m_coll , coll , collLen );
 	st->m_coll [ collLen ] = '\0';
 	st->m_collLen=collLen;
 
@@ -1926,7 +1926,7 @@ bool sendPageTurk ( TcpSocket *s , HttpRequest *r ) {
 
 	// if they hit reload on the page that appeared right after they
 	// solved the captcha, fix that!
-	long score3 = s_captchaTable.getScore ( &st->m_tuid64 );
+	int32_t score3 = s_captchaTable.getScore ( &st->m_tuid64 );
 	if ( score3 != 0 ) captchasubmit = NULL;
 
 	if ( captchasubmit ) {
@@ -1946,7 +1946,7 @@ bool sendPageTurk ( TcpSocket *s , HttpRequest *r ) {
 	}
 
 	// trick em
-	long turkIp = atoip(turkIpStr);
+	int32_t turkIp = atoip(turkIpStr);
 	if ( isTurkBanned ( &st->m_tuid64, turkIp ) ) {
 		g_errno = EDNSTIMEDOUT;
 		goto hadError;
@@ -1985,7 +1985,7 @@ bool sendPageTurk ( TcpSocket *s , HttpRequest *r ) {
 	// since we are always host #0, just keep a global table
 	// that has how many times each turk user has voted today without
 	// having a captcha!
-	long score = s_captchaTable.getScore ( &st->m_tuid64 );
+	int32_t score = s_captchaTable.getScore ( &st->m_tuid64 );
 	// 20 votes or more means do a captch
 	if ( score == 0 ) doCaptcha = true;
 	// but not super turk!
@@ -1994,7 +1994,7 @@ bool sendPageTurk ( TcpSocket *s , HttpRequest *r ) {
 	doCaptcha = false;
 	// before doing a search query, see if we shold do a captcha
 	if ( doCaptcha ) {
-		// shortcut
+		// int16_tcut
 		SafeBuf *sb = &st->m_sb;
 		// sometimes provide a captcha
 		if ( ! printCaptcha ( st ) ) goto hadError;
@@ -2027,7 +2027,7 @@ void doneReindexing ( void *state ) {
 bool presentTurkForm ( State61 *st ) {
 
 	// set stuff now
-	//st->m_isRootAdmin = isAdmin;
+	//st->m_isMasterAdmin = isAdmin;
 
 	// if g_errno was set then the last injection did not go through
 	// perhaps because of ENOMEM or the geocoder was down!
@@ -2107,7 +2107,7 @@ bool getResults ( State61 *st ) {
 
 	// prefer getting the stuff turked first so we can confirm it
 	// and get people paid!!
-	long turked = 1;
+	int32_t turked = 1;
 	if ( st->m_round == 0 ) turked = 1;
 	if ( st->m_round == 1 ) turked = 0;
 	// . if no results from the first 2 rounds, now we try a 3rd
@@ -2116,7 +2116,7 @@ bool getResults ( State61 *st ) {
 	// . so we can end up directly turking every event if we do not
 	//   have 5 total turks that whose 5 indirect votes are required
 	//   to give consensus/confirmation on an event.
-	long long tuh64 = st->m_tuid64;
+	int64_t tuh64 = st->m_tuid64;
 	if ( st->m_round == 2 ) tuh64  = 0;
 
 	// advance!
@@ -2132,11 +2132,11 @@ bool getResults ( State61 *st ) {
 	char tq[1024];
 	sprintf ( tq, 
 		  // avoid events we already turked directly
-		  "-gbturkeddirectlyby:%llu "
+		  "-gbturkeddirectlyby:%"UINT64" "
 		  // if NOT all (error,title,venue) got an indirect vote
 		  // from us, then we should directly turk it! its like
 		  // a half ass indirect turk ...
-		  "-gberrortitlevenueturkedindirectlyby:%llu "
+		  "-gberrortitlevenueturkedindirectlyby:%"UINT64" "
 		  // avoid events with outlinked titles ALWAYS. i only
 		  // added these back in so that if the turks cause an event
 		  // to get an outlinked title we do not lose all the voting
@@ -2164,7 +2164,7 @@ bool getResults ( State61 *st ) {
 		  //   or something...
 		  "-gbstorehours:1 "
 		  // sometimes do initial eval, sometimes confirm old eval...
-		  "+gbturked:%li "
+		  "+gbturked:%"INT32" "
 		  "%s"
 		  ,st->m_tuid64
 		  // use a fake value of 0 for this to turn it off!
@@ -2211,14 +2211,14 @@ bool getResults ( State61 *st ) {
 
 class TurkLock {
 public:
-	long long m_tuid64;
-	long      m_turkIp;
-	unsigned long m_adch32;
-	unsigned long m_adth32;
+	int64_t m_tuid64;
+	int32_t      m_turkIp;
+	uint32_t m_adch32;
+	uint32_t m_adth32;
 	bool      m_isSuperTurk;
-	long long m_uh48;
+	int64_t m_uh48;
 	time_t    m_addTime;
-	unsigned long long m_templateHash64;
+	uint64_t m_templateHash64;
 	bool m_isTurkSpecialQuery;
 };
 
@@ -2229,13 +2229,13 @@ RdbCache g_templateCache;
 
 // returns false if blocked, true otherwise
 bool gotResults ( State61 *st ) {
-	// shortcut
+	// int16_tcut
 	Msg40 *m40 = &st->m_msg40;
 
 	// have we exhausted all queries?
 	bool exhausted = (st->m_round >= 3);
 
-	long numResults = m40->getNumResults();
+	int32_t numResults = m40->getNumResults();
 
 	// if no results, try another query or print empty page if can't
 	if ( numResults <= 0 && ! exhausted ) return getResults (st);
@@ -2247,7 +2247,7 @@ bool gotResults ( State61 *st ) {
 		// . init the lock table, send back error msg
 		// . now we allow dups so superturks can lock something
 		//   in addition to one regular turk
-		if ( ! g_lockerTable.set (8,(long)sizeof(TurkLock)
+		if ( ! g_lockerTable.set (8,(int32_t)sizeof(TurkLock)
 					  ,64,NULL,0,true,0,"lckrtbl") ){
 		hadError:
 			char *errmsg = mstrerror(g_errno);
@@ -2277,13 +2277,13 @@ bool gotResults ( State61 *st ) {
 		s_ttinit = true;
 	}
 
-	// shortcut
+	// int16_tcut
 	//Msg12 *m12 = &st->m_me.m_msg12;
 
 	// debug for now
 	//g_conf.m_logDebugSpider = true;
 
-	unsigned long long templateHash64 ;
+	uint64_t templateHash64 ;
 
 
 	// . scan lockertable and remove any old lock you may have had
@@ -2295,12 +2295,12 @@ bool gotResults ( State61 *st ) {
 	//   remove their lock so others can turk the page
 	// . and if the try to submit the turk form after an hour
 	//   it will probably log the fradulated comment below
-	long now = getTimeGlobal();
+	int32_t now = getTimeGlobal();
 	HashTableX *ht = &g_lockerTable;
 	// come up here if we did remove something
  redo:
 	// timeout old locks first (cleanup)
-	for ( long i = 0 ; i < ht->m_numSlots ; i ++ ) {
+	for ( int32_t i = 0 ; i < ht->m_numSlots ; i ++ ) {
 		// breathe
 		QUICKPOLL(TURKNICE);
 		// skip if empty
@@ -2318,9 +2318,9 @@ bool gotResults ( State61 *st ) {
 		// remove it?
 		if ( ! nuke ) continue;
 		// get key
-		long long uh48 = tk->m_uh48;
+		int64_t uh48 = tk->m_uh48;
 		// ok, it is expired
-		log("turk: force releasing turk lock on uh48=%llu",uh48);
+		log("turk: force releasing turk lock on uh48=%"UINT64"",uh48);
 		// do it
 		ht->removeSlot ( i );
 		// re do full loop
@@ -2339,12 +2339,12 @@ bool gotResults ( State61 *st ) {
 		mr = m40->m_msg20[st->m_i]->m_r;
 		// no need to do lock checking if doing a direct query
 		if ( st->m_isTurkSpecialQuery ) break;
-		// shortcut
-		long long uh48 = mr->m_urlHash48;
-		// shortcut
+		// int16_tcut
+		int64_t uh48 = mr->m_urlHash48;
+		// int16_tcut
 		HashTableX *ht = &g_lockerTable;
 		// check our lock table
-		long tslot = ht->getSlot(&uh48);
+		int32_t tslot = ht->getSlot(&uh48);
 		// assume we own it
 		bool available = true;
 		// iterate over locks
@@ -2491,7 +2491,7 @@ bool gotResults ( State61 *st ) {
 		     ! g_lockerTable.addKey(&mr->m_urlHash48,&tk))
 			goto hadError;
 		// log that too
-		log("turk: adding lock uh48=%llu for %s",
+		log("turk: adding lock uh48=%"UINT64" for %s",
 		    mr->m_urlHash48,turkUser);
 		// now display the first search result
 		// use this for now
@@ -2536,7 +2536,7 @@ bool gotResults ( State61 *st ) {
 				      // cnsp=1 means do not print disclaimer
 				      // "This is Gigablast's cached page..."
 				      "/get?"
-				      "c=%s&d=%lli&qh=0&links=1&cnsp=1&eb=%s"
+				      "c=%s&d=%"INT64"&qh=0&links=1&cnsp=1&eb=%s"
 				      "#gbscrolldown"
 				      "\" "
 				      "scrolling=yes "
@@ -2628,7 +2628,7 @@ bool Msg1e::processLoop ( ) {
 		return true;
 	}
 
-	// shortcut for all stages to use
+	// int16_tcut for all stages to use
 	XmlDoc *xd = &m_msg7.m_xd;
 
 	///////////////////////////
@@ -2638,8 +2638,8 @@ bool Msg1e::processLoop ( ) {
 	///////////////////////////
 
 	if ( m_stage == 0 ) {
-		long long docId = m_r->getLongLong("docid",0LL);
-		log("turk: loading old title rec for turked docid=%llu "
+		int64_t docId = m_r->getLongLong("docid",0LL);
+		log("turk: loading old title rec for turked docid=%"UINT64" "
 		    ,docId);
 		if ( docId == 0LL ) { g_errno = ENODOCID; return true; }
 		CollectionRec *cr = g_collectiondb.getRec ( m_r );
@@ -2665,19 +2665,19 @@ bool Msg1e::processLoop ( ) {
 	//////////////
 
 	// get key
-	long long uh48 = xd->getFirstUrlHash48();
+	int64_t uh48 = xd->getFirstUrlHash48();
 	char *url = xd->getFirstUrl()->getUrl();
 
 	// need this now i guess
 	char      *turkUser = m_r->getString("evaluser",NULL);
-	long long  tuid64 = hash64n ( turkUser );
+	int64_t  tuid64 = hash64n ( turkUser );
 
-	// shortcut
+	// int16_tcut
 	HashTableX *ht = &g_lockerTable;
 	// . make sure this is the url they had locked
 	// . prevents turk from turking a url they should not be
 	// . try to find the lock that belongs to us
-	long tslot = ht->getSlot(&uh48);
+	int32_t tslot = ht->getSlot(&uh48);
 	// assume no lock
 	TurkLock *tk = NULL;
 	// iterate over locks
@@ -2693,25 +2693,25 @@ bool Msg1e::processLoop ( ) {
 
 	// needs to be there
 	if ( ! tk ) {
-		log("turk: turk fradulated bogus docid uh48=%llu",uh48);
+		log("turk: turk fradulated bogus docid uh48=%"UINT64"",uh48);
 		g_errno = EPLSRESUBMIT;
 		return true;
 	}
 	// see if banned
-	//long turkIp = atoip(turkIpStr);
+	//int32_t turkIp = atoip(turkIpStr);
 	if ( isTurkBanned ( &tk->m_tuid64, tk->m_turkIp ) ) {
-		log("turk: turk is banned. wtf uh48=%llu",uh48);
+		log("turk: turk is banned. wtf uh48=%"UINT64"",uh48);
 		g_errno = EDNSTIMEDOUT;
 		return true;
 	}
 	// must match us
 	if ( tk->m_tuid64 != tuid64 ) {
-		log("turk: wrong turkuser for lock uh48=%llu",uh48);
+		log("turk: wrong turkuser for lock uh48=%"UINT64"",uh48);
 		g_errno = EBADENGINEER;
 		return true;
 	}
 	if ( ! tk->m_adch32 ) {
-		log("turk: missing adch32 for lock uh48=%llu",uh48);
+		log("turk: missing adch32 for lock uh48=%"UINT64"",uh48);
 		g_errno = EBADENGINEER;
 		return true;
 	}
@@ -2732,33 +2732,33 @@ bool Msg1e::processLoop ( ) {
 
 	if ( m_stage == 1 ) {
 		// log the stages
-		log("turk: adding turk votes for uh48=%llu url=%s",
+		log("turk: adding turk votes for uh48=%"UINT64" url=%s",
 		    uh48,url);
 		// info on turk's ip
 		//char *turkUser  = m_r->getString("turkuser",NULL);
 		//char *userIpStr = m_r->getString("turkip",NULL);
-		//long  turkIp    = 0;
+		//int32_t  turkIp    = 0;
 		//if ( userIpStr ) turkIp = atoip(userIpStr);
-		// get long longs since they are printed as 32-bit unsigned
+		// get int64_ts since they are printed as 32-bit unsigned
 		// so if they exceed 3 billion or so HttpRequest::getLong()
 		// would falter!
-		//longlong adch64=m_r->getLongLong("addressdatecontenthash",0);
-		//long long adth64=m_r->getLongLong("addressdatetaghash",0);
+		//int32_tint32_t adch64=m_r->getLongLong("addressdatecontenthash",0);
+		//int64_t adth64=m_r->getLongLong("addressdatetaghash",0);
 		// but ultimately they are 32 bit unsigned
-		//unsigned long adch32 = (unsigned long)adch64;
-		//unsigned long adth32 = (unsigned long)adth64;
-		// shortcuts
-		long now = getTimeGlobal();
+		//uint32_t adch32 = (uint32_t)adch64;
+		//uint32_t adth32 = (uint32_t)adth64;
+		// int16_tcuts
+		int32_t now = getTimeGlobal();
 		SafeBuf *sb = &m_sb;
 
-		long votePower = 1;
+		int32_t votePower = 1;
 		//char isSuperTurk = m_r->getLong("superturk",0);
 		if ( tk->m_isSuperTurk ) votePower = 5;
 
-		long reject = m_r->getLong ( "reject" , 0 );
+		int32_t reject = m_r->getLong ( "reject" , 0 );
 		// error?
 		if ( reject <= -1 || reject >= 10 ) {
-			log("turk: reject code error = %li",reject);
+			log("turk: reject code error = %"INT32"",reject);
 			g_errno = EBADENGINEER;
 			return true;
 		}
@@ -2774,10 +2774,10 @@ bool Msg1e::processLoop ( ) {
 		// for the same adth32 together
 		char fakeSite[64+MAX_URL_LEN];
 		char *dom  = xd->getFirstUrl()->getDomain();
-		long  dlen = xd->getFirstUrl()->getDomainLen();
+		int32_t  dlen = xd->getFirstUrl()->getDomainLen();
 		char  c = dom[dlen];
 		dom[dlen] = '\0';
-		sprintf(fakeSite,"adth32-%lu-%s",tk->m_adth32,dom );
+		sprintf(fakeSite,"adth32-%"UINT32"-%s",tk->m_adth32,dom );
 		dom[dlen] = c;
 
 
@@ -2794,7 +2794,7 @@ bool Msg1e::processLoop ( ) {
 		// data=<uh48>,<adch32>,<adth32>>,<sentch32>
 		// <sentth32>,<"title"|"venue"|"descr"|"error">,[0|1+] 
 		//(c=contenthash,t=taghash)
-		sprintf ( dataVal,"%llu,%lu,%lu,%lu,%lu,%li,error,%li",
+		sprintf ( dataVal,"%"UINT64",%"UINT32",%"UINT32",%"UINT32",%"UINT32",%"INT32",error,%"INT32"",
 			  uh48,tk->m_adch32,tk->m_adth32,
 			  // since we do not have a single sentence
 			  // for this vote, it is for the event
@@ -2831,10 +2831,10 @@ bool Msg1e::processLoop ( ) {
 				g_errno = EBADENGINEER;
 				return true;
 			}
-			// its format is like %lu-%li = (sentch32-sentth32)
-			unsigned long titlech32 = 0;
-			unsigned long titleth32 = 0;
-			sscanf ( title , "%lu-%lu", &titlech32, &titleth32 );
+			// its format is like %"UINT32"-%"INT32" = (sentch32-sentth32)
+			uint32_t titlech32 = 0;
+			uint32_t titleth32 = 0;
+			sscanf ( title , "%"UINT32"-%"UINT32"", &titlech32, &titleth32 );
 			// add vote tag into here
 			char dataVal[256];
 			// sanity check
@@ -2842,7 +2842,7 @@ bool Msg1e::processLoop ( ) {
 			// data=<uh48>,<adch32>,<adth32>>,<sentch32>
 			// <sentth32>,<"title"|"venue"|"descr"|"error">,[0|1+] 
 			//(c=contenthash,t=taghash)
-			sprintf ( dataVal,"%llu,%lu,%lu,%lu,%lu,%li,title,1",
+			sprintf ( dataVal,"%"UINT64",%"UINT32",%"UINT32",%"UINT32",%"UINT32",%"INT32",title,1",
 				  uh48,tk->m_adch32,tk->m_adth32,
 				  titlech32,titleth32,votePower);
 			// put tag into this rdb
@@ -2896,16 +2896,16 @@ bool Msg1e::processLoop ( ) {
 			}
 			// if none, do not add
 			if ( strcmp ( venue, "none" ) == 0 ) goto skipVenue;
-			// its format is like %lu-%li = (sentch32-sentth32)
-			unsigned long venuech32 = 0;
-			unsigned long venueth32 = 0;
-			sscanf ( venue , "%lu-%lu", &venuech32, &venueth32 );
+			// its format is like %"UINT32"-%"INT32" = (sentch32-sentth32)
+			uint32_t venuech32 = 0;
+			uint32_t venueth32 = 0;
+			sscanf ( venue , "%"UINT32"-%"UINT32"", &venuech32, &venueth32 );
 			// add vote tag into here
 			char dataVal[256];
 			// data=<uh48>,<adch32>,<adth32>>,<sentch32>
 			// <sentth32>,<"title"|"venue"|"descr"|"error">,[0|1+] 
 			//(c=contenthash,t=taghash)
-			sprintf ( dataVal,"%llu,%lu,%lu,%lu,%lu,%li,venue,1",
+			sprintf ( dataVal,"%"UINT64",%"UINT32",%"UINT32",%"UINT32",%"UINT32",%"INT32",venue,1",
 				  uh48,tk->m_adch32,tk->m_adth32,
 				  venuech32,venueth32,votePower);
 			// put tag into this rdb
@@ -2946,7 +2946,7 @@ bool Msg1e::processLoop ( ) {
 		///////////////////
 
 		// scan the cgi inputs for tags we need to add
-		for ( long i = 0 ; i < m_r->m_numFields ; i++ ) {
+		for ( int32_t i = 0 ; i < m_r->m_numFields ; i++ ) {
 			// breathe
 			QUICKPOLL(TURKNICE);
 			// not if rejected!
@@ -2986,7 +2986,7 @@ bool Msg1e::processLoop ( ) {
 			// . 'r' means REcord. should we record the vote?
 			//if ( ival[0]=='9' ) record = true;
 			name[0]='r';
-			long record = m_r->getLong ( name, 0 );
+			int32_t record = m_r->getLong ( name, 0 );
 			name[0]='i';
 			// always record if not description vote
 			if ( name[2] != 'd' ) record = 1;
@@ -3000,7 +3000,7 @@ bool Msg1e::processLoop ( ) {
 			// skip if unchanged and not title
 			if ( ! record && ! changed ) continue;
 			// assume this
-			long modVotePower = votePower;
+			int32_t modVotePower = votePower;
 			// HACK: skip is true just use a voting power of 0 to
 			// indicate we did not change the default vote. because
 			// we only want to compare the changes a turk made to
@@ -3035,7 +3035,7 @@ bool Msg1e::processLoop ( ) {
 			*subend1 = '\0';
 			
 			char *voteField = NULL;
-			long  favor     = 1;
+			int32_t  favor     = 1;
 
 			if      ( name[2] == 'd' &&   nowChecked ) 
 				voteField = "descr";
@@ -3058,7 +3058,7 @@ bool Msg1e::processLoop ( ) {
 			// . content hash based tag
 			// . sub1 is contenthash32
 			// . sub2 is taghash32
-			sprintf ( dataVal ,"%llu,%lu,%lu,%s,%s,%li,%5s,%li",
+			sprintf ( dataVal ,"%"UINT64",%"UINT32",%"UINT32",%s,%s,%"INT32",%5s,%"INT32"",
 				  uh48,tk->m_adch32,tk->m_adth32,
 				  sub1,sub2,modVotePower,voteField,favor);
 
@@ -3075,7 +3075,7 @@ bool Msg1e::processLoop ( ) {
 		Msg4 *m = &xd->m_msg4;
 		
 		char *metaList     = sb->getBufStart();
-		long  metaListSize = sb->length();
+		int32_t  metaListSize = sb->length();
 
 		// advance stage
 		m_stage = 2;
@@ -3100,7 +3100,7 @@ bool Msg1e::processLoop ( ) {
 		// advance stage
 		m_stage = 3;
 		// log the stages
-		log("turk: flushing msg4 buffers for uh48=%llu url=%s",
+		log("turk: flushing msg4 buffers for uh48=%"UINT64" url=%s",
 		    uh48,url);
 		// flush it. true = wait?
 		if ( ! flushMsg4Buffers ( this , processLoopWrapper ) ) 
@@ -3126,7 +3126,7 @@ bool Msg1e::processLoop ( ) {
 		CollectionRec *cr = g_collectiondb.getRec ( m_r );
 		char *coll = cr->m_coll;
 		// log the stages
-		log("turk: calling msg7 inject on turked uh48=%llu url=%s",
+		log("turk: calling msg7 inject on turked uh48=%"UINT64" url=%s",
 		    uh48,url);
 		//if ( ! xd->m_contentTypeValid ) { char *xx=NULL;*xx=0; }
 		// make it call set3 on the xmldoc just once
@@ -3163,19 +3163,19 @@ bool Msg1e::processLoop ( ) {
 	// add the remaining urls to spiderdb i guess
 	if ( m_stage == 4 ) {
 		// log it now
-		log("turk: done indexing injected doc uh48=%llu url=%s",
+		log("turk: done indexing injected doc uh48=%"UINT64" url=%s",
 		    uh48,url);
 		m_stage = 5;
 		char *dom  = xd->getFirstUrl()->getDomain();
-		long  dlen = xd->getFirstUrl()->getDomainLen();
+		int32_t  dlen = xd->getFirstUrl()->getDomainLen();
 		char  c = dom[dlen];
 		dom[dlen] = '\0';
 		// reindex all OTHER pages that have an event with this
 		// same address/date tag hash. they are likely made from
 		// the same template
 		sprintf(m_queryBuf,
-			"gbadth32:%lu "
-			"-gbuh48:%llu "
+			"gbadth32:%"UINT32" "
+			"-gbuh48:%"UINT64" "
 			"site:%s"
 			,tk->m_adth32
 			,uh48
@@ -3215,12 +3215,12 @@ bool Msg1e::processLoop ( ) {
 			log("turk: failed to add template key");
 		//if ( ! m_msg12.removeAllLocks() ) return false;
 		//g_lockerTable.removeKey(&uh48);
-		// shortcut
+		// int16_tcut
 		HashTableX *ht = &g_lockerTable;
 		// . make sure this is the url they had locked
 		// . prevents turk from turking a url they should not be
 		// . try to find the lock that belongs to us
-		long tslot = ht->getSlot(&uh48);
+		int32_t tslot = ht->getSlot(&uh48);
 		// assume no lock
 		TurkLock *tk = NULL;
 		// iterate over locks
@@ -3237,7 +3237,7 @@ bool Msg1e::processLoop ( ) {
 		// info on turk's ip
 		//char *turkUser  = m_r->getString("turkuser",NULL);
 		// log it
-		log("turk: releasing lock on uh48=%llu for turk=%s url=%s",
+		log("turk: releasing lock on uh48=%"UINT64" for turk=%s url=%s",
 		    uh48,turkUser,url);
 	}
 
@@ -3260,26 +3260,26 @@ bool Msg1e::processLoop ( ) {
 // . so now we must add a vote tag for them as well because it isn't clear
 //   if either is the true one...
 bool Msg1e::addSupplementalVoteTags ( char *furl ,
-				      long now,
+				      int32_t now,
 				      char *turkUser,
 				      TurkLock *tk ,
-				      unsigned long mainSentch32,
-				      unsigned long mainSentth32,
+				      uint32_t mainSentch32,
+				      uint32_t mainSentth32,
 				      // votePrefix is "titl" or "venu"
 				      char *votePrefix ,
 				      // "i-desc-" or "venue-"
 				      char *hiddenPrefix , 
-				      long votePower,
+				      int32_t votePower,
 				      // store tagdb recs into here
 				      SafeBuf *sb ) { 
 	char dbuf[1024];
 	HashTableX dedup;
 	dedup.set(4,0,32,dbuf,1024,false,TURKNICE,"supdbuf");
-	long count = 2;
+	int32_t count = 2;
 
-	long hplen = gbstrlen(hiddenPrefix);
+	int32_t hplen = gbstrlen(hiddenPrefix);
 
-	for ( long i = 0 ; i < m_r->m_numFields ; i++ ) {
+	for ( int32_t i = 0 ; i < m_r->m_numFields ; i++ ) {
 		// breathe
 		QUICKPOLL(TURKNICE);
 		// get it
@@ -3288,9 +3288,9 @@ bool Msg1e::addSupplementalVoteTags ( char *furl ,
 		// . "i-venue-*-*", "i-title-*-*" or "i-desc-* or "venue-"
 		if ( strncmp(name,hiddenPrefix,hplen) ) continue;
 		// decompose into ch32-th32
-		unsigned long sentch32 = 0;
-		unsigned long sentth32 = 0;
-		sscanf(name+hplen,"%lu-%lu", &sentch32,&sentth32);
+		uint32_t sentch32 = 0;
+		uint32_t sentth32 = 0;
+		sscanf(name+hplen,"%"UINT32"-%"UINT32"", &sentch32,&sentth32);
 		// skip if ch32 does not match
 		if ( sentch32 != mainSentch32 ) continue;
 		// skip if taghash already matches
@@ -3307,8 +3307,8 @@ bool Msg1e::addSupplementalVoteTags ( char *furl ,
 		// [0|1+] 
 		//(c=contenthash,t=taghash)
 		// titl2-4
-		sprintf ( dataVal,"%llu,%lu,%lu,%lu,%lu,"
-			  "%li,%s%li,1",
+		sprintf ( dataVal,"%"UINT64",%"UINT32",%"UINT32",%"UINT32",%"UINT32","
+			  "%"INT32",%s%"INT32",1",
 			  tk->m_uh48,
 			  tk->m_adch32,
 			  tk->m_adth32,
@@ -3352,14 +3352,14 @@ bool Msg1e::addSupplementalVoteTags ( char *furl ,
 		// <"title"|"venue"|"descr"|"error">,
 		// [0|1+] 
 		//(c=contenthash,t=taghash)
-		sprintf ( dataVal,"%llu,%lu,%lu,%lu,%lu,"
-			  "%li,%s%li,1",
+		sprintf ( dataVal,"%"UINT64",%"UINT32",%"UINT32",%"UINT32",%"UINT32","
+			  "%"INT32",%s%"INT32",1",
 			  tk->m_uh48,tk->m_adch32,tk->m_adth32,
-			  (unsigned long)0,//titlech32,
-			  (unsigned long)0,//sentth32,
-			  (unsigned long)0,//votePower,
+			  (uint32_t)0,//titlech32,
+			  (uint32_t)0,//sentth32,
+			  (uint32_t)0,//votePower,
 			  votePrefix,
-			  (unsigned long)count);
+			  (uint32_t)count);
 		// put tag into this rdb
 		//if ( ! sb->pushChar ( (char)RDB_TURKDB ) ) 
 		//	return true;
@@ -3410,7 +3410,7 @@ bool printCaptcha2 ( SafeBuf *sb ) {
 
 bool printCaptcha ( State61 *st ) {
 
-	// shortcuts
+	// int16_tcuts
 	SafeBuf *sb = &st->m_sb;
 
 	// did we get a turk user? should be there!
@@ -3438,14 +3438,14 @@ bool printCaptcha ( State61 *st ) {
 	return printCaptcha2 ( sb );
 }
 
-bool isTurkBanned ( long long *tuid64 , long turkIp ) {
+bool isTurkBanned ( int64_t *tuid64 , int32_t turkIp ) {
 	// is the turkusername banned?
 	if ( tuid64 ) {
 		Tag *btag = (Tag *)s_banTable.getValue ( tuid64 );
 		if ( btag ) return true;
 	}
 	if ( turkIp ) {
-		long ip64 = (long long)turkIp;
+		int32_t ip64 = (int64_t)turkIp;
 		Tag *btag = (Tag *)s_banTable.getValue ( &ip64 );
 		if ( btag ) return true;
 	}
@@ -3456,7 +3456,7 @@ bool isSuperTurk ( char *turkUser ) {
 	// get the list of superturks
 	char *tt = g_conf.m_superTurks;
 	// length of it
-	long tulen = gbstrlen(turkUser);
+	int32_t tulen = gbstrlen(turkUser);
 	// scan for turkuser
 	char *p = tt;
 	char lastChar = ' ';

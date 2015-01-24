@@ -5,20 +5,20 @@
 
 // . returns false if blocked, true otherwise
 // . sets g_errno on error
-// . numCatids is an array of longs, each the number of catids for
+// . numCatids is an array of int32_ts, each the number of catids for
 //   the corrisponding url, length equal to number of urls
-// . catids is an array of longs with the catids for the urls
+// . catids is an array of int32_ts with the catids for the urls
 bool Msg9b::addCatRecs ( char *urls        ,
 			 char *coll        , 
-			 long  collLen     ,
-			 long  filenum     ,
+			 int32_t  collLen     ,
+			 int32_t  filenum     ,
 			 void *state       ,
 			 void (*callback)(void *state) ,
 			 unsigned char *numCatids   ,
-			 long *catids      ,
-			 long niceness,
+			 int32_t *catids      ,
+			 int32_t niceness,
 			 bool deleteRecs) {
-	//long dbIndex = RDB_CATDB;
+	//int32_t dbIndex = RDB_CATDB;
 	// use default collection
 	//coll    = g_conf.m_dirColl;
 	//collLen = gbstrlen(coll);
@@ -45,24 +45,24 @@ bool Msg9b::addCatRecs ( char *urls        ,
 	// . key(12) + dataSize(4) + filenum(4) + url + ?NULL?
 	// . assume about 15 bytes per url
 	// . hopefully this will be big enough to prevent many reallocs
-	long usize = gbstrlen(urls);
-	long initSize = ((usize / 15)*(12+4+4+1) + usize);
+	int32_t usize = gbstrlen(urls);
+	int32_t initSize = ((usize / 15)*(12+4+4+1) + usize);
 	if ( ! m_list.growList ( initSize ) ) {
 		g_errno = ENOMEM;
-		log("admin: Failed to allocate %li bytes to hold "
+		log("admin: Failed to allocate %"INT32" bytes to hold "
 		    "urls to add to tagdb.", initSize);
 		return true;
 	}
 	// loop over all urls in "urls" buffer
 	char *p = urls;
 	// stop when we hit the NULL at the end of "urls"
-	long k = 0;
-	long c = 0;
-	long lastk = 0;
-	//long firstPosIds = -1;
+	int32_t k = 0;
+	int32_t c = 0;
+	int32_t lastk = 0;
+	//int32_t firstPosIds = -1;
 	while ( *p ) {
 		if (  *p != '\n' ||  lastk != k   ) {
-			log (LOG_WARN, "Msg9b: FOUND BAD URL IN LIST AT %li, "
+			log (LOG_WARN, "Msg9b: FOUND BAD URL IN LIST AT %"INT32", "
 				       "EXITING", k );
 			return true;
 		}
@@ -72,7 +72,7 @@ bool Msg9b::addCatRecs ( char *urls        ,
 		while ( is_wspace_a (*p) ) p++;
 		if (  p - lastp > 1 ) {
 			log(LOG_WARN, "Msg9b: SKIPPED TWO SPACES IN A ROW AT "
-				      " %li, EXITING", k );
+				      " %"INT32", EXITING", k );
 			//return true;
 		}
 		// break if end
@@ -112,7 +112,7 @@ bool Msg9b::addCatRecs ( char *urls        ,
 		// add url to our list
 		// extract the record itself (SiteRec::m_rec/m_recSize)
 		char *data     = sr.getData ();
-		long  dataSize = sr.getDataSize ();
+		int32_t  dataSize = sr.getDataSize ();
 		key_t key;
 		// sanity test
 		CatRec cr2;
@@ -147,8 +147,8 @@ bool Msg9b::addCatRecs ( char *urls        ,
 		//sb.safeMemcpy(p , e-p );
 		sb.safeStrcpy(sr.m_url);
 		sb.safePrintf(" ");
-		for ( long i = 0 ; i < numCatids[k] ; i++ )
-			sb.safePrintf ( "%li " , catids[c+i] );
+		for ( int32_t i = 0 ; i < numCatids[k] ; i++ )
+			sb.safePrintf ( "%"INT32" " , catids[c+i] );
 		log("catdb: adding key=%s url=%s",
 		    KEYSTR(&key,12),
 		    sb.getBufStart());
@@ -166,8 +166,8 @@ bool Msg9b::addCatRecs ( char *urls        ,
 		
 		QUICKPOLL((niceness));
 	}
-	log ( LOG_INFO, "Msg9b: %li sites and %li links added. "
-	      "listSize=%li", k , c , m_list.m_listSize );
+	log ( LOG_INFO, "Msg9b: %"INT32" sites and %"INT32" links added. "
+	      "listSize=%"INT32"", k , c , m_list.m_listSize );
 	// . now add the m_list to tagdb using msg1
 	// . use high priority (niceness of 0)
 	// . i raised niceness from 0 to 1 so multicast does not use the

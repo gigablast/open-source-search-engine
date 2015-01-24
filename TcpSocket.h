@@ -52,7 +52,7 @@ class TcpSocket {
 	bool sendCompleted   ( ) { return ( m_totalSent == m_totalToSend ); };
 	bool readCompleted   ( ) { return ( m_totalRead == m_totalToRead ); };
 
-	void setTimeout   (long timeout ) { m_timeout = timeout; };
+	void setTimeout   (int32_t timeout ) { m_timeout = timeout; };
 
 
 	// . call m_callback when on transcation completion, error or timeout
@@ -64,38 +64,38 @@ class TcpSocket {
 
 	int         m_sd;               // socket descriptor
 	char       *m_hostname;         // may be NULL
- 	long long   m_startTime;        // time the send/read started
-	long long   m_lastActionTime;   // of send or receive or connect
+ 	int64_t   m_startTime;        // time the send/read started
+	int64_t   m_lastActionTime;   // of send or receive or connect
 
 	// m_ip is 0 on dns lookup error, -1 if not found
-	long        m_ip;               // ip of connected host
-	short       m_port;             // port of connected host
+	int32_t        m_ip;               // ip of connected host
+	int16_t       m_port;             // port of connected host
 	char        m_sockState;        // see #defines above
 
 	// userid that is logged in
-	//long m_userId32;
+	//int32_t m_userId32;
 
-	long        m_numDestroys;
+	int32_t        m_numDestroys;
 
 	char m_tunnelMode;
 
 	// . getMsgPiece() is called when we need more to send
 	char       *m_sendBuf;
-	long        m_sendBufSize;
-	long        m_sendOffset;
-	long        m_sendBufUsed; // how much of it is relevant data
-	long        m_totalSent;   // bytes sent so far
-	long        m_totalToSend;
+	int32_t        m_sendBufSize;
+	int32_t        m_sendOffset;
+	int32_t        m_sendBufUsed; // how much of it is relevant data
+	int32_t        m_totalSent;   // bytes sent so far
+	int32_t        m_totalToSend;
 
 	// NOTE: for now i've skipped allowing reception of LARGE msgs and
 	//       thereby freezing putMsgPiece() for a while
 	// . putMsgPiece() is called to flush m_readBuf (if > m_maxReadBufSize)
 	char       *m_readBuf;        // might be NULL if unalloc'd
-	long        m_readBufSize;    // size of alloc'd buffer, m_readBuf
-	long        m_readOffset;     // next position to read into m_readBuf
-	//long        m_storeOffset;  // how much of it is stored (putMsgPiece)
-	long        m_totalRead;    // bytes read so far
-	long        m_totalToRead;    // -1 means unknown
+	int32_t        m_readBufSize;    // size of alloc'd buffer, m_readBuf
+	int32_t        m_readOffset;     // next position to read into m_readBuf
+	//int32_t        m_storeOffset;  // how much of it is stored (putMsgPiece)
+	int32_t        m_totalRead;    // bytes read so far
+	int32_t        m_totalToRead;    // -1 means unknown
 	//void       *m_readCallbackData; // maybe holds reception file handle
 
 	//char        m_tmpBuf[TCP_READ_BUF_SIZE];
@@ -112,18 +112,18 @@ class TcpSocket {
 	char        m_flags;
 
 	// timeout (ms) relative to m_lastActionTime (last read or write)
-	long        m_timeout;
+	int32_t        m_timeout;
 
 	// . max bytes to read as a function of content type
 	// . varies from collection to collection so you must specify it
 	//   in call to HttpServer::getDoc()
-	long        m_maxTextDocLen;  // if reading text/html or text/plain
-	long        m_maxOtherDocLen; // if reading other doc types
+	int32_t        m_maxTextDocLen;  // if reading text/html or text/plain
+	int32_t        m_maxOtherDocLen; // if reading other doc types
 
 	char        m_niceness;
 	char        m_streamingMode;
 
-	long m_shutdownStart;
+	int32_t m_shutdownStart;
 
 	// SSL members
 	SSL  *m_ssl;
@@ -136,7 +136,7 @@ class TcpSocket {
 	SafeBuf m_handyBuf;
 	// this maps the requested http path to a service in our
 	// WebPages[] array. like "search" or "admin controls" etc.
-	long m_pageNum;
+	int32_t m_pageNum;
 
 	// used for debugging, PageResults.cpp sets this to the State0 ptr
 	char *m_tmp;

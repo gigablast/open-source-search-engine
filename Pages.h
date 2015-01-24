@@ -5,8 +5,13 @@
 #ifndef _PAGES_H_
 #define _PAGES_H_
 
-bool printRedBox2 ( SafeBuf *sb , bool isRootWebPage = false ) ;
-bool printRedBox ( SafeBuf *mb , bool isRootWebPage = false ) ;
+bool printRedBox2 ( SafeBuf *sb , 
+		    class TcpSocket *sock , 
+		    class HttpRequest *hr );
+
+bool printRedBox  ( SafeBuf *mb , 
+		    class TcpSocket *sock , 
+		    class HttpRequest *hr );
 
 // for PageEvents.cpp and Accessdb.cpp
 //#define RESULTSWIDTHSTR "550px"
@@ -36,7 +41,7 @@ bool sendPageBasicSettings   ( TcpSocket *s , HttpRequest *r );
 bool sendPageBasicStatus     ( TcpSocket *s , HttpRequest *r );
 //bool sendPageBasicDiffbot    ( TcpSocket *s , HttpRequest *r );
 
-bool printGigabotAdvice ( SafeBuf *sb , long page , HttpRequest *hr ,
+bool printGigabotAdvice ( SafeBuf *sb , int32_t page , HttpRequest *hr ,
 			  char *gerrmsg ) ;
 
 bool sendPageRoot     ( TcpSocket *s , HttpRequest *r );
@@ -104,6 +109,9 @@ bool sendPageQA ( TcpSocket *sock , HttpRequest *hr ) ;
 // values for WebPage::m_flags
 #define PG_NOAPI 0x01
 #define PG_STATUS 0x02
+#define PG_COLLADMIN 0x04
+#define PG_MASTERADMIN 0x08
+#define PG_ACTIVE      0x10
 
 // . description of a dynamic page
 // . we have a static array of these in Pages.cpp
@@ -111,7 +119,7 @@ class WebPage {
  public:
 	char  m_pageNum;  // see enum array below for this
 	char *m_filename;
-	long  m_flen;
+	int32_t  m_flen;
 	char *m_name;     // for printing the links to the pages in admin sect.
 	bool  m_cast;     // broadcast input to all hosts?
 	char  m_usePost;  // use a POST request/reply instead of GET?
@@ -119,7 +127,7 @@ class WebPage {
 	//char  m_perm;     // permissions, see USER_* #define's below
 	char *m_desc; // page description
 	bool (* m_function)(TcpSocket *s , HttpRequest *r);
-	long  m_niceness;
+	int32_t  m_niceness;
 	char *m_reserved1;
 	char *m_reserved2;
 	char  m_pgflags;
@@ -131,7 +139,7 @@ class Pages {
 
  public:
 
-	WebPage *getPage ( long page ) ;
+	WebPage *getPage ( int32_t page ) ;
 
 	// . associate each page number (like PAGE_SEARCH) with a callback
 	//   to which we pass the HttpRequest and TcpSocket
@@ -140,17 +148,17 @@ class Pages {
 
 	// return page number for a filename
 	// returns -1 if page not found
-	long getPageNumber ( char *filename );
+	int32_t getPageNumber ( char *filename );
 
 	// a request like "GET /sockets" should return PAGE_SOCKETS
-	long getDynamicPageNumber ( HttpRequest *r ) ;
+	int32_t getDynamicPageNumber ( HttpRequest *r ) ;
 
-	char *getPath ( long page ) ;
+	char *getPath ( int32_t page ) ;
 
-	long getNumPages ( );
+	int32_t getNumPages ( );
 	// this passes control to the dynamic page generation routine based
 	// on the path of the GET request
-	bool sendDynamicReply ( TcpSocket *s , HttpRequest *r , long page );
+	bool sendDynamicReply ( TcpSocket *s , HttpRequest *r , int32_t page );
 
 	// . each dynamic page generation routine MUST call this to send
 	//   its reply to the requesting client's browser
@@ -158,21 +166,21 @@ class Pages {
 	// . sets g_errno on error
 	bool sendPage ( TcpSocket *s           ,
 			char      *page        ,
-			long       pageLen     ,
-			long       cacheTime   ,
+			int32_t       pageLen     ,
+			int32_t       cacheTime   ,
 			bool       POSTReply   ,
 			char      *contentType ) ;
 
 
-	bool broadcastRequest ( TcpSocket *s , HttpRequest *r , long page ) ;
+	bool broadcastRequest ( TcpSocket *s , HttpRequest *r , int32_t page ) ;
 
 	// . returns USER_PUBLIC, USER_MASTER, USER_ADMIN or USER_SPAM
 	// . used to determine if the client browser has the permission
-	//long getUserType ( TcpSocket *s , HttpRequest *r ) ;
+	//int32_t getUserType ( TcpSocket *s , HttpRequest *r ) ;
 
 
 
-	bool getNiceness ( long page );
+	bool getNiceness ( int32_t page );
 
 	//
 	// HTML generation utility routines
@@ -191,18 +199,18 @@ class Pages {
 					 HttpRequest *r    ,
 					 char        *qs      = NULL,
 					 char	     *scripts = NULL,
-					 long	      scriptsLen = 0);
+					 int32_t	      scriptsLen = 0);
 
 	bool printAdminTop2            ( SafeBuf *sb    ,
-					 long    page   ,
-					 //long    user   ,
+					 int32_t    page   ,
+					 //int32_t    user   ,
 					 char   *username,
 					 char   *coll   ,
 					 char   *pwd    ,
-					 long    fromIp ,
+					 int32_t    fromIp ,
 					 char        *qs      = NULL,
 					 char	     *scripts = NULL,
-					 long	      scriptsLen = 0);
+					 int32_t	      scriptsLen = 0);
 
 	void printFormTop(  SafeBuf *sb, HttpRequest *r );
 	void printFormData( SafeBuf *sb, TcpSocket *s, HttpRequest *r );
@@ -216,13 +224,13 @@ class Pages {
 	bool  printTail                ( SafeBuf* sb, 
 					 bool isLocal );
 	bool printSubmit ( SafeBuf *sb ) ;
-					 //long user , 
+					 //int32_t user , 
 					 //char *username,
 					 //char *pwd );
 	//char *printTail                ( char *p    ,
 	//				 char *pend ,
 	//				 bool isLocal );
-	//long  user ,
+	//int32_t  user ,
 	//char *username,
 	//char *pwd  ) ;
 	bool  printColors              ( SafeBuf *sb , char* bodyJavascript = "" ) ;
@@ -235,39 +243,39 @@ class Pages {
 	bool  printLogo                ( SafeBuf *sb, char *coll ) ;
 	//char *printLogo              ( char *p , char *pend , char *coll ) ;
 	bool  printHostLinks           ( SafeBuf *sb  ,
-					 long  page   ,
+					 int32_t  page   ,
 					 char *username ,
 					 char *password ,
 					 char *coll   ,
 					 char *pwd    ,
-					 long  fromIp ,
+					 int32_t  fromIp ,
 					 char *qs = NULL ) ;
 	/*
 	char *printHostLinks           ( char *p      ,
 					 char *pend   ,
-					 long  page   ,
+					 int32_t  page   ,
 					 char *coll   ,
 					 char *pwd    ,
-					 long  fromIp ,
+					 int32_t  fromIp ,
 					 char *qs = NULL ) ;
 	*/
 	bool  printAdminLinks          ( SafeBuf *sb, 
-					 long  page ,
+					 int32_t  page ,
 					 char *coll ,
 					 bool isBasic );
 	/*
 	char *printAdminLinks          ( char *p    , 
 					 char *pend , 
-					 long  page ,
-					 //long  user ,
+					 int32_t  page ,
+					 //int32_t  user ,
 					 char *username,
 					 char *coll ,
 					 char *pwd  ,
 					 bool  top  ) ;
 	*/
 	bool  printCollectionNavBar ( SafeBuf *sb     ,
-				      long  page     ,
-				      //long  user     ,
+				      int32_t  page     ,
+				      //int32_t  user     ,
 				      char *username,
 				      char *coll     ,
 				      char *pwd      ,
@@ -277,8 +285,8 @@ class Pages {
 	/*
 	char *printCollectionNavBar    ( char *p    ,
 					 char *pend , 
-					 long  page ,
-					 //long  user ,
+					 int32_t  page ,
+					 //int32_t  user ,
 					 char *username,
 					 char *coll ,
 					 char *pwd  ,
@@ -286,20 +294,20 @@ class Pages {
 	*/
 	/*
 	bool printRulesetDropDown ( SafeBuf *sb        ,
-				    long  user         ,
+				    int32_t  user         ,
 				    char *cgi          ,
-				    long  selectedNum  ,
-				    long  subscript    );
+				    int32_t  selectedNum  ,
+				    int32_t  subscript    );
 
 	char *printRulesetDropDown     ( char *p           , 
 					 char *pend        ,
-					 long  user        ,
+					 int32_t  user        ,
 					 char *cgi         ,
-					 long  selectedNum ,
-					 long  subscript   ) ;
+					 int32_t  selectedNum ,
+					 int32_t  subscript   ) ;
 
-	char *printRulesetDescriptions ( char *p , char *pend , long user ) ;
-	bool  printRulesetDescriptions ( SafeBuf *sb , long user ) ;
+	char *printRulesetDescriptions ( char *p , char *pend , int32_t user ) ;
+	bool  printRulesetDescriptions ( SafeBuf *sb , int32_t user ) ;
 	*/
 };
 
@@ -310,13 +318,13 @@ extern class Pages g_pages;
 // . some pages also have urls like /search to mean page=0
 enum {
 	// dummy pages
-	PAGE_NOHOSTLINKS = 0,
-	PAGE_ADMIN     ,
+	//PAGE_NOHOSTLINKS = 0,
+	//PAGE_ADMIN     ,
 	//PAGE_QUALITY   ,
-	PAGE_PUBLIC    ,
+	//PAGE_PUBLIC    ,
 
 	// public pages
-	PAGE_ROOT        ,
+	PAGE_ROOT        =0,
 	PAGE_RESULTS     ,
 	//PAGE_WIDGET,
 	PAGE_ADDURL      , // 5
@@ -331,7 +339,7 @@ enum {
 	PAGE_BASIC_STATUS , 
 	//PAGE_BASIC_SEARCH , // TODO
 	//PAGE_BASIC_DIFFBOT , // TODO
-	PAGE_BASIC_SECURITY ,
+	PAGE_COLLPASSWORDS ,//BASIC_SECURITY ,
 	PAGE_BASIC_SEARCH ,
 
 	// master admin pages
@@ -341,7 +349,8 @@ enum {
 	PAGE_SPIDER      , 
 	PAGE_SPIDERPROXIES ,
 	PAGE_LOG         ,
-	PAGE_SECURITY    , // 19
+	PAGE_COLLPASSWORDS2 ,//BASIC_SECURITY ,
+	PAGE_MASTERPASSWORDS , // 19
 	PAGE_ADDCOLL     , //20	 
 	PAGE_DELCOLL     , 
 	PAGE_CLONECOLL   ,
@@ -375,7 +384,7 @@ enum {
 	PAGE_API ,
 
 	PAGE_RULES       ,
-	PAGE_INDEXDB     ,  //30
+	//	PAGE_INDEXDB     ,  //30
 	PAGE_TITLEDB     ,  
 	//PAGE_STATSDB	 ,
 
@@ -401,6 +410,6 @@ enum {
 	PAGE_NONE     	};
 	
 
-bool printApiForPage ( SafeBuf *sb , long PAGENUM , CollectionRec *cr ) ;
+bool printApiForPage ( SafeBuf *sb , int32_t PAGENUM , CollectionRec *cr ) ;
 
 #endif

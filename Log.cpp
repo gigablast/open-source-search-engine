@@ -26,10 +26,10 @@ static pthread_mutex_t s_lock = PTHREAD_MUTEX_INITIALIZER;
 // char      *g_ptermPtr = NULL;
 // char      *g_pend     = NULL;
 char      *g_dbuf          = NULL;
-long       g_dbufSize       = 0;
+int32_t       g_dbufSize       = 0;
 
-// main process id
-static pid_t s_pid = -1;
+// main process id. pthread_t is 64 bit and pid_t is 32 bit on 64 bit oses
+static pthread_t s_pid = (pthread_t)-1;
 
 void Log::setPid ( ) {
 	s_pid = getpidtid();
@@ -61,6 +61,34 @@ void Log::reset ( ) {
 #endif
 }
 
+// for example, RENAME log000 to log000-2013_11_04-18:19:32
+bool renameCurrentLogFile ( ) {
+	File f;
+	char tmp[16];
+	sprintf(tmp,"log%03"INT32"",g_hostdb.m_hostId);
+	f.set ( g_hostdb.m_dir , tmp );
+	// make new filename like log000-2013_11_04-18:19:32
+	time_t now = getTimeLocal();
+	tm *tm1 = gmtime((const time_t *)&now);
+	char tmp2[64];
+	strftime(tmp2,64,"%Y_%m_%d-%T",tm1);
+	SafeBuf newName;
+	if ( ! newName.safePrintf ( "%slog%03"INT32"-%s",
+				    g_hostdb.m_dir,
+				    g_hostdb.m_hostId,
+				    tmp2 ) ) {
+		fprintf(stderr,"log rename failed\n");
+		return false;
+	}
+	// rename log000 to log000-2013_11_04-18:19:32
+	if ( f.doesExist() ) {
+		//fprintf(stdout,"renaming file\n");
+		f.rename ( newName.getBufStart() );
+	}
+	return true;
+}
+
+
 bool Log::init ( char *filename ) {
 	// set the main process id
 	//s_pid = getpidtid();
@@ -89,30 +117,12 @@ bool Log::init ( char *filename ) {
 	// RENAME log000 to log000-2013_11_04-18:19:32
 	//
 	if ( g_conf.m_runAsDaemon ) {
-		File f;
-		char tmp[16];
-		sprintf(tmp,"log%03li",g_hostdb.m_hostId);
-		f.set ( g_hostdb.m_dir , tmp );
-		// make new filename like log000-2013_11_04-18:19:32
-		time_t now = getTimeLocal();
-		tm *tm1 = gmtime((const time_t *)&now);
-		char tmp2[64];
-		strftime(tmp2,64,"%Y_%m_%d-%T",tm1);
-		SafeBuf newName;
-		if ( ! newName.safePrintf ( "%slog%03li-%s",
-					    g_hostdb.m_dir,
-					    g_hostdb.m_hostId,
-					    tmp2 ) ) {
-			fprintf(stderr,"log rename failed\n");
-			return false;
-		}
-		// rename log000 to log000-2013_11_04-18:19:32
-		if ( f.doesExist() ) {
-			//fprintf(stdout,"renaming file\n");
-			f.rename ( newName.getBufStart() );
-		}
+		// returns false on error
+		if ( ! renameCurrentLogFile() ) return false;
 	}
 
+	// get size of current file. getFileSize() is defined in File.h.
+	m_logFileSize = getFileSize ( m_filename );
 
 	// open it for appending.
 	// create with -rw-rw-r-- permissions if it's not there.
@@ -126,9 +136,9 @@ bool Log::init ( char *filename ) {
 	return false;
 }
 /*
-static const char *getTypeString ( long type ) ;
+static const char *getTypeString ( int32_t type ) ;
 
-const char *getTypeString ( long type ) {
+const char *getTypeString ( int32_t type ) {
 	switch ( type ) {
 	case LOG_INFO  : return "INFO ";
 	case LOG_WARN  : return "WARN ";
@@ -144,7 +154,7 @@ const char *getTypeString ( long type ) {
 */
 #define MAX_LINE_LEN 20048
 
-bool Log::shouldLog ( long type , char *msg ) {
+bool Log::shouldLog ( int32_t type , char *msg ) {
 	// always log warnings
 	if ( type == LOG_WARN ) return true;
 	if ( type == LOG_INFO ) return g_conf.m_logInfo;
@@ -207,8 +217,12 @@ bool Log::shouldLog ( long type , char *msg ) {
 	return true;
 }
 
+// 1GB max log file size
+#define MAXLOGFILESIZE 1000000000
+// for testing:
+//#define MAXLOGFILESIZE 3000
 
-bool Log::logR ( long long now , long type , char *msg , bool asterisk ,
+bool Log::logR ( int64_t now , int32_t type , char *msg , bool asterisk ,
 		 bool forced ) {
 
 	// filter if we should
@@ -222,7 +236,7 @@ bool Log::logR ( long long now , long type , char *msg , bool asterisk ,
 		return logLater ( now , type , msg , NULL );
 	//if ( g_inSigHandler ) return false;
 	// get "msg"'s length
-	long msgLen = gbstrlen ( msg );
+	int32_t msgLen = gbstrlen ( msg );
 
 #ifdef PTHREADS
 	// lock for threads
@@ -246,21 +260,21 @@ bool Log::logR ( long long now , long type , char *msg , bool asterisk ,
 	// chop off any spaces at the end of the msg.
 	while ( is_wspace_a ( msg [ msgLen - 1 ] ) && msgLen > 0 ) msgLen--;
 	// get this pid
-	pid_t pid = getpidtid();
+	pthread_t pid = getpidtid();
 	// a tmp buffer
 	char tt [ MAX_LINE_LEN ];
 	char *p    = tt;
-	char *pend = tt + MAX_LINE_LEN;
+	//char *pend = tt + MAX_LINE_LEN;
 	/*
 	// print timestamp, hostid, type
 	if ( g_hostdb.m_numHosts <= 999 ) 
-		sprintf ( p , "%llu %03li %s ",
+		sprintf ( p , "%"UINT64" %03"INT32" %s ",
 			  now , g_hostdb.m_hostId , getTypeString(type) );
 	else if ( g_hostdb.m_numHosts <= 9999 ) 
-		sprintf ( p , "%llu %04li %s ",
+		sprintf ( p , "%"UINT64" %04"INT32" %s ",
 			  now , g_hostdb.m_hostId , getTypeString(type) );
 	else if ( g_hostdb.m_numHosts <= 99999 ) 
-		sprintf ( p , "%llu %05li %s ",
+		sprintf ( p , "%"UINT64" %05"INT32" %s ",
 			  now , g_hostdb.m_hostId , getTypeString(type) );
 	*/
 
@@ -269,34 +283,35 @@ bool Log::logR ( long long now , long type , char *msg , bool asterisk ,
 
 	if ( m_logTimestamps ) {
 		if ( g_hostdb.m_numHosts <= 999 ) 
-			sprintf ( p , "%llu %03li ",
+			sprintf ( p , "%"UINT64" %03"INT32" ",
 				  now , g_hostdb.m_hostId );
 		else if ( g_hostdb.m_numHosts <= 9999 ) 
-			sprintf ( p , "%llu %04li ",
+			sprintf ( p , "%"UINT64" %04"INT32" ",
 				  now , g_hostdb.m_hostId );
 		else if ( g_hostdb.m_numHosts <= 99999 ) 
-			sprintf ( p , "%llu %05li ",
+			sprintf ( p , "%"UINT64" %05"INT32" ",
 				  now , g_hostdb.m_hostId );
 		p += gbstrlen ( p );
 	}
 
 	// msg resource
 	char *x = msg;
-	long cc = 7;
+	//int32_t cc = 7;
 	// the first 7 bytes or up to the : must be ascii
 	//while ( p < pend && *x && is_alnum_a(*x) ) { *p++ = *x++; cc--; }
 	// space pad
 	//while ( cc-- > 0 ) *p++ = ' ';
 	// ignore the label for now...
-	while ( p < pend && *x && is_alnum_a(*x) ) { x++; cc--; }
+	// MDW... no i like it
+	//while ( p < pend && *x && is_alnum_a(*x) ) { x++; cc--; }
 	// thread id if in "thread"
-	if ( pid != s_pid && s_pid != -1 ) {
-		//sprintf ( p , "[%li] " , (long)getpid() );
-		sprintf ( p , "[%lu] " , (unsigned long)pid );
+	if ( pid != s_pid && s_pid != (pthread_t)-1 ) {
+		//sprintf ( p , "[%"INT32"] " , (int32_t)getpid() );
+		sprintf ( p , "[%"UINT64"] " , (uint64_t)pid );
 		p += gbstrlen ( p );
 	}
 	// then message itself
-	long avail = (MAX_LINE_LEN) - (p - tt) - 1;
+	int32_t avail = (MAX_LINE_LEN) - (p - tt) - 1;
 	if ( msgLen > avail ) msgLen = avail;
 	if ( *x == ':' ) x++;
 	if ( *x == ' ' ) x++;
@@ -311,7 +326,7 @@ bool Log::logR ( long long now , long type , char *msg , bool asterisk ,
 	//	*p++ = '.';
 	*p ='\0';
 	// the total length, not including the \0
-	long tlen = p - tt;
+	int32_t tlen = p - tt;
 
 	// call sprintf, but first make sure we have room in m_buf and in
 	// the arrays. who know how much room the sprintf is going to need???
@@ -334,7 +349,7 @@ bool Log::logR ( long long now , long type , char *msg , bool asterisk ,
 	for ( ; ttp < ttpend ; ttp += cs ) {
 		cs = getUtf8CharSize ( ttp );
 		if ( is_binary_utf8 ( ttp ) ) {
-			for ( long k = 0 ; k < cs ; k++ ) *ttp++ = '.';
+			for ( int32_t k = 0 ; k < cs ; k++ ) *ttp++ = '.';
 			// careful not to skip the already skipped bytes
 			cs = 0;
 			continue;
@@ -345,14 +360,22 @@ bool Log::logR ( long long now , long type , char *msg , bool asterisk ,
 		if ( *ttp == '\t' ) *ttp = ' ';
 	}
 
+	// . if filesize would be too big then make a new log file
+	// . should make a new m_fd
+	if ( m_logFileSize + tlen+1 > MAXLOGFILESIZE )
+		makeNewLogFile();
+
 	if ( m_fd >= 0 ) {
 		write ( m_fd , tt , tlen );
 		write ( m_fd , "\n", 1 );
+		m_logFileSize += tlen + 1;
 	}
 	else {
 		// print it out for now
 		fprintf ( stderr, "%s\n", tt );
 	}
+
+
 
 	// set the stuff in the array
 	m_errorMsg      [m_numErrors] = msg;
@@ -369,6 +392,28 @@ bool Log::logR ( long long now , long type , char *msg , bool asterisk ,
 	return false;
 }
 
+bool Log::makeNewLogFile ( ) {
+	// . rename old log file like log000 to log000-2013_11_04-18:19:32
+	// . returns false on error
+	if ( ! renameCurrentLogFile() ) return false;
+	// close old fd
+	if ( m_fd >= 0 ) ::close ( m_fd );
+	// invalidate
+	m_fd = -1;
+	// reset
+	m_logFileSize = 0;
+	// open it for appending.
+	// create with -rw-rw-r-- permissions if it's not there.
+	m_fd = open ( m_filename , 
+		      O_APPEND | O_CREAT | O_RDWR , 
+		      S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH );
+	if ( m_fd >= 0 ) return true;
+	// bitch to stderr and return false on error
+	fprintf(stderr,"could not open new log file %s for appending\n",
+		m_filename);
+	return false;
+}
+
 // keep a special buf
 static char  s_buf[1024*64];
 static char *s_bufEnd   = s_buf + 1024*64;
@@ -381,7 +426,7 @@ static char  s_problem  = '\0';
 // . 4 bytes = size of string space
 // . X bytes = NULL terminated format string
 // . X bytes = 0-3 bytes word-alignment padding
-bool Log::logLater ( long long now, long type, char *format, va_list ap ) {
+bool Log::logLater ( int64_t now, int32_t type, char *format, va_list ap ) {
 	//return false;
 	// we have to be in a sig handler
 	//if ( ! g_inSigHandler ) 
@@ -393,14 +438,14 @@ bool Log::logLater ( long long now, long type, char *format, va_list ap ) {
 	// save old s_ptr in case we have error
 	char *start = s_ptr;
 	// size of format string we must store
-	long flen = gbstrlen ( format ) + 1;
+	int32_t flen = gbstrlen ( format ) + 1;
 	// do we have room to store the stuff?
 	if ( s_ptr + 4 + 4 + flen > s_bufEnd ) {
 		s_overflow = true; 
 		return false;
 	}
 	// first 4 bytes are the size of the string space, write later
-	long stringSizes = 0;
+	int32_t stringSizes = 0;
 	s_ptr += 4;
 	// the priorty is the 2nd 4 bytes
 	memcpy_ass ( s_ptr , (char *)&type , 4 );
@@ -412,7 +457,7 @@ bool Log::logLater ( long long now, long type, char *format, va_list ap ) {
 	char *p = format;
 	// point to the variable args data
 	char *pap = (char *)ap;
-	// loop looking for %s, %li, etc.
+	// loop looking for %s, %"INT32", etc.
  loop:
 	while ( *p && *p != '%' ) p++;
 	// bail if done
@@ -423,10 +468,10 @@ bool Log::logLater ( long long now, long type, char *format, va_list ap ) {
 	if ( *p == '%' ) { p++; goto loop; }
 	// skip following numbers, those are part of format
 	while ( *p && is_digit(*p) ) p++;
-	// is it a long, half or int? if so, leave as is.
+	// is it a int32_t, half or int? if so, leave as is.
 	if ( *p == 'l' ) { 
 		pap += 4; 
-		// it could be a long long
+		// it could be a int64_t
 		if ( (*p+1) == 'l' ) pap += 4;
 		goto loop; 
 	}
@@ -437,7 +482,7 @@ bool Log::logLater ( long long now, long type, char *format, va_list ap ) {
 	// . if so store it on s_ptr
 	if ( *p == 's' ) {
 		char *s = *(char **)pap;
-		long  slen = gbstrlen(s) + 1;
+		int32_t  slen = gbstrlen(s) + 1;
 		if ( s_ptr + slen >= s_bufEnd ) {
 			s_ptr = start;
 			s_overflow = true; 
@@ -460,7 +505,7 @@ bool Log::logLater ( long long now, long type, char *format, va_list ap ) {
 	// how big were the strings we stored, if any
 	memcpy_ass ( start , (char *)&stringSizes , 4 );
 	// size of args we must store
-	long apsize = pap - (char *)ap;
+	int32_t apsize = pap - (char *)ap;
 	// bail if not enough room
 	if ( s_ptr + 8 + 4 + 3 + apsize >= s_bufEnd ) {
 		s_ptr = start;
@@ -474,7 +519,7 @@ bool Log::logLater ( long long now, long type, char *format, va_list ap ) {
 	memcpy_ass ( s_ptr , (char *)&apsize , 4 );
 	s_ptr += 4;
 	// dword align
-	long rem = ((unsigned long)s_ptr) % 4;
+	int32_t rem = ((PTRTYPE)s_ptr) % 4;
 	if ( rem > 0 ) s_ptr +=  4 - rem;
 	// store the args themselves
 	memcpy_ass ( s_ptr , (char *)ap , apsize );
@@ -525,18 +570,18 @@ void Log::printBuf ( ) {
 		return;
 	}
 	// first 4 bytes are the size of the string arguments
-	long stringSizes;
-	memcpy ( (char *)&stringSizes , p , 4 );
+	int32_t stringSizes;
+	gbmemcpy ( (char *)&stringSizes , p , 4 );
 	p += 4;
 	// then the type of the msg
-	long type;
-	memcpy ( (char *)&type , p , 4 );
+	int32_t type;
+	gbmemcpy ( (char *)&type , p , 4 );
 	p += 4;
 	// then the format string
 	char *format = p;
 	// its length including the \0
-	//long flen = gbstrlen ( format ) + 1;
-	long flen = 0;
+	//int32_t flen = gbstrlen ( format ) + 1;
+	int32_t flen = 0;
 	char *q = format;
 	while ( q < pend && *q ) q++;
 	if ( q >= pend ) {
@@ -555,18 +600,20 @@ void Log::printBuf ( ) {
 		return;
 	}
 	// get time
-	long long now ;
-	memcpy ( (char *)&now , p , 8 );
+	int64_t now ;
+	gbmemcpy ( (char *)&now , p , 8 );
 	p += 8;
 	// get size of args
-	long apsize ;
-	memcpy ( (char *)&apsize , p , 4 );
+	int32_t apsize ;
+	gbmemcpy ( (char *)&apsize , p , 4 );
 	p += 4;
 	// dword align
-	long rem = ((unsigned long)p) % 4;
+	int32_t rem = ((PTRTYPE)p) % 4;
 	if ( rem > 0 ) p +=  4 - rem;
 	// get va_list... needs to be word aligned!!
-	va_list ap = (char*)(void*)p;
+	va_list ap ;
+	// MDW FIX ME
+	//ap = (char *)(void*)p;
 	p += apsize;
 	// . sanity check
 	// . i've seen this happen a lot lately since i started logging cancel
@@ -595,7 +642,7 @@ void Log::printBuf ( ) {
 bool Log::dumpLog ( ) {
 	// . usually g_errno is set to something
 	// . save it in case we set g_errno
-	long errnum = g_errno;
+	int32_t errnum = g_errno;
 	// for now don't dump
 	m_numErrors =  0;
 	m_bufPtr    =  0;
@@ -619,11 +666,11 @@ bool Log::dumpLog ( ) {
 		char tmp[1024 * 2];
 		snprintf ( tmp , 1024*2 , "%s(UTC):%s" , ct , m_errorMsg[i] );
 		// TODO: add port #
-		long tmpLen = gbstrlen(tmp);
+		int32_t tmpLen = gbstrlen(tmp);
 		// filter out garbage
-		for ( long j=0; j < tmpLen ; j++ )
+		for ( int32_t j=0; j < tmpLen ; j++ )
 			if ( !isascii(tmp[j]) ) tmp[j]='X';
-		long n = write ( m_fd , tmp , tmpLen ); 
+		int32_t n = write ( m_fd , tmp , tmpLen ); 
 		if ( n == tmpLen ) continue;
 		fprintf(stderr,"Log::dumpLog: %s\n",mstrerror(g_errno));
 		// reload the original g_errno
@@ -636,7 +683,7 @@ bool Log::dumpLog ( ) {
 	return true;
 }
 
-bool log ( long type , char *formatString , ...) {
+bool log ( int32_t type , char *formatString , ...) {
 	if ( g_log.m_disabled ) return false;
 	// do not log it if we should not
 	if ( ! g_log.shouldLog ( type , formatString ) ) return false;
@@ -688,7 +735,7 @@ bool log ( char *formatString , ... ) {
 	return false;
 }
 
-bool logf ( long type , char *formatString , ...) {
+bool logf ( int32_t type , char *formatString , ...) {
 	if ( g_log.m_disabled ) return false;
 	// do not log it if we should not
 	//if ( type == LOG_WARN && ! g_conf.m_logWarnings ) return false;

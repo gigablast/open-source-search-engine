@@ -16,12 +16,12 @@ static bool sendReply        ( void *state  , bool addUrlEnabled );
 // 	Msg4       m_msg4;
 // 	//TcpSocket *m_socket;
 // 	//HttpRequest m_hr;
-// 	//long       m_urlLen;
+// 	//int32_t       m_urlLen;
 // 	//char       m_url[MAX_URL_LEN];
 // 	//bool       m_strip;
 // 	//bool       m_spiderLinks;
-// 	long       m_numSent;
-// 	long       m_numReceived;
+// 	int32_t       m_numSent;
+// 	int32_t       m_numReceived;
 // 	SpiderRequest m_sreq;
 // };
 
@@ -53,7 +53,7 @@ bool sendPageAddUrl2 ( TcpSocket *sock , HttpRequest *hr ) {
 
 	// . get fields from cgi field of the requested url
 	// . get the search query
-	long  urlLen = 0;
+	int32_t  urlLen = 0;
 	char *urls = hr->getString ( "urls" , &urlLen , NULL /*default*/);
 	// also try "url" and "urls"
 	//if ( ! url ) url = r->getString ( "url" , &urlLen , NULL );
@@ -122,7 +122,7 @@ bool sendPageAddUrl2 ( TcpSocket *sock , HttpRequest *hr ) {
 		status = false;
 
 	// empty?
-	long size = gr->m_listBuf.length();
+	int32_t size = gr->m_listBuf.length();
 	
 	// error?
 	if ( ! status ) {
@@ -188,7 +188,7 @@ bool sendReply ( void *state , bool addUrlEnabled ) {
 	}
 
 
-	long ulen = 0;
+	int32_t ulen = 0;
 	char *url = gr->m_urlsBuf;
 	if ( url ) ulen = gbstrlen (url);
 

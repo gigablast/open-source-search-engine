@@ -28,8 +28,8 @@ bool Phrases::set( Words    *words,
 		   Bits     *bits ,
 		   bool      useStopWords , 
 		   bool      useStems     ,
-		   long      titleRecVersion,
-		   long      niceness) {
+		   int32_t      titleRecVersion,
+		   int32_t      niceness) {
 	// reset in case being re-used
 	reset();
 	// always reset this
@@ -60,8 +60,8 @@ bool Phrases::set( Words    *words,
 	//if ( m_sections ) m_sectionPtrs = m_sections->m_sectionPtrs;
 
 	// how much mem do we need?
-	//long need = (18+1+(3+8*3)) * m_numPhrases;
-	long need = m_numPhrases * (8+8+1+1+1);
+	//int32_t need = (18+1+(3+8*3)) * m_numPhrases;
+	int32_t need = m_numPhrases * (8+8+1+1+1);
 	//if ( m_wordScores ) need += 4 * m_numPhrases;
 
 	// alloc if we need to
@@ -75,15 +75,15 @@ bool Phrases::set( Words    *words,
 	m_bufSize = need;
 	// set up arrays
 	char *p = m_buf;
-	//m_phraseIds      = (long long *)p ; p += m_numPhrases * 8;
+	//m_phraseIds      = (int64_t *)p ; p += m_numPhrases * 8;
 	// phrase not using stop words
-	m_phraseIds2     = (long long *)p ; p += m_numPhrases * 8;
-	m_phraseIds3     = (long long *)p ; p += m_numPhrases * 8;
-	//m_phraseIds4     = (long long *)p ; p += m_numPhrases * 8;
-	//m_phraseIds5     = (long long *)p ; p += m_numPhrases * 8;
-	//m_stripPhraseIds = (long long *)p ; p += m_numPhrases * 8;
+	m_phraseIds2     = (int64_t *)p ; p += m_numPhrases * 8;
+	m_phraseIds3     = (int64_t *)p ; p += m_numPhrases * 8;
+	//m_phraseIds4     = (int64_t *)p ; p += m_numPhrases * 8;
+	//m_phraseIds5     = (int64_t *)p ; p += m_numPhrases * 8;
+	//m_stripPhraseIds = (int64_t *)p ; p += m_numPhrases * 8;
 	//if ( m_wordScores ) {
-	//	m_phraseScores  = (long  *)p ;
+	//	m_phraseScores  = (int32_t  *)p ;
 	//	p += m_numPhrases * 4;
 	//}
 	m_phraseSpam    = (unsigned char *)p ; p += m_numPhrases * 1;
@@ -117,7 +117,7 @@ bool Phrases::set( Words    *words,
 	// . set the phrases
 	// . sets m_phraseIds [i]
 	// . sets m_phraseSpam[i] to PSKIP if NO phrase exists
-	for ( long i = 0 ; i < words->getNumWords() ; i++ ) {
+	for ( int32_t i = 0 ; i < words->getNumWords() ; i++ ) {
 		if ( ! m_wids[i] ) continue;
 		setPhrase ( i , niceness);
 	}
@@ -130,7 +130,7 @@ bool Phrases::set( Words    *words,
 // . read.ofmice
 // . ofmice
 // . mice.andmen
-void Phrases::setPhrase ( long i, long niceness ) {
+void Phrases::setPhrase ( int32_t i, int32_t niceness ) {
 	// . if the ith word cannot start a phrase then we have no phrase
 	// . we indicate NULL phrasesIds with a spam of PSKIP
 	// . we now index all regardless! we want to be able to search
@@ -150,31 +150,31 @@ void Phrases::setPhrase ( long i, long niceness ) {
 	//}
 
 	// hash of the phrase
-	long long h   = 0LL; 
+	int64_t h   = 0LL; 
 	// the hash of the two-word phrase (now we do 3,4 and 5 word phrases)
-	long long h2  = 0LL; 
-	long long h3  = 0LL; 
-	//long long h4  = 0LL; 
-	//long long h5  = 0LL; 
+	int64_t h2  = 0LL; 
+	int64_t h3  = 0LL; 
+	//int64_t h4  = 0LL; 
+	//int64_t h5  = 0LL; 
 	// reset
 	unsigned char pos = 0;
 	// now look for other tokens that should follow the ith token
-	long          nw               = m_words->getNumWords();
-	long          numWordsInPhrase = 1;
+	int32_t          nw               = m_words->getNumWords();
+	int32_t          numWordsInPhrase = 1;
 	// use the min spam from all words in the phrase as the spam for phrase
 	char minSpam = -1;
 	// we need to hash "1 / 8" differently from "1.8" from "1,000" etc.
 	char isNum = is_digit(m_wptrs[i][0]);
 	// min score
-	//long minScore ;
+	//int32_t minScore ;
 	//if ( m_wordScores ) minScore = m_wordScores[i];
 	// if i is not a stop word, it can set the min spam initially
 	//if ( ! m_bits->isStopWord(i) &&m_spam ) minSpam = m_spam->getSpam(i);
 	// do not include punct/tag words in the m_numWordsTotal[j] count
 	// of the total words in the phrase. these are just usesless tails.
-	long lastWordj = -1;
+	int32_t lastWordj = -1;
 	// loop over following words
-	long j;
+	int32_t j;
 	bool hasHyphen ;
 	bool hasStopWord2 ;
 
@@ -221,7 +221,7 @@ void Phrases::setPhrase ( long i, long niceness ) {
 				// set this
 				hasStopWord = true;
 				// insert "and"
-				long conti=pos;
+				int32_t conti=pos;
 				h = hash64Lower_utf8_cont("and",3,h,&conti);
 				pos=conti;
 				// the two-word phrase, set it if we need to
@@ -267,7 +267,7 @@ void Phrases::setPhrase ( long i, long niceness ) {
 			//for ( ; p < pend ; p++ ) 
 			//	h ^= g_hashtab[pos++][*p];
 
-			long conti = pos;
+			int32_t conti = pos;
 
 			// . get the punctuation mark separting two numbers
 			// . use space if can't find one
@@ -394,34 +394,34 @@ void Phrases::setPhrase ( long i, long niceness ) {
 	//if(m_phraseScores && minScore == 0x7fffffff ) {char *xx =NULL;*xx=0;}
 	// debug msg
 	//char *w = m_words->getWord(i) ;
-	//long  wlen = m_words->getWordLen(i) ; 
-	//for ( long k = 0 ; k < wlen ; k++ )
+	//int32_t  wlen = m_words->getWordLen(i) ; 
+	//for ( int32_t k = 0 ; k < wlen ; k++ )
 	//	fprintf(stderr,"%c",w[k]);
-	//fprintf(stderr,"--> hash=%llu\n",(unsigned long long)h);
+	//fprintf(stderr,"--> hash=%"UINT64"\n",(uint64_t)h);
 }
 
 // . store phrase that starts with word #i into "printBuf"
 // . return bytes stored in "printBuf"
-char *Phrases::getPhrase ( long i , long *phrLen , long npw ) {
+char *Phrases::getPhrase ( int32_t i , int32_t *phrLen , int32_t npw ) {
 	// return 0 if no phrase
 	if ( m_phraseSpam[i] == PSKIP ) return NULL;
 	// store the phrase in here
 	static char buf[256];
 	// . how many words, including punct words, are in phrase?
 	// . this should never be 1 or less
-	//long  n     = m_numWordsTotal[i] ;
-	long  n ;
+	//int32_t  n     = m_numWordsTotal[i] ;
+	int32_t  n ;
 	if      ( npw == 2 ) n = m_numWordsTotal2[i] ;
 	else if ( npw == 3 ) n = m_numWordsTotal3[i] ;
 	else { char *xx=NULL; *xx=0; }
 	//char *w1    = m_words->getWord(i);
 	//char *w2    = m_words->getWord(i+n-1);
-	//long  wlen2 = m_words->getWordLen(i+n-1);
-	//long  plen  = ( w2 - w1 ) + wlen2;
+	//int32_t  wlen2 = m_words->getWordLen(i+n-1);
+	//int32_t  plen  = ( w2 - w1 ) + wlen2;
 
 	char *s     = buf;
 	char *send  = buf + 255;
-	for (long w = i;w<i+n;w++){
+	for (int32_t w = i;w<i+n;w++){
 		if (!m_words->isAlnum(w)){
 			// skip spaces for now since we has altogether now
 			*s++ = ' ';
@@ -448,9 +448,9 @@ char *Phrases::getPhrase ( long i , long *phrLen , long npw ) {
 		}
 		char *w1   = m_words->getWord(w);
 		char *wend = w1 + m_words->getWordLen(w);
-		for ( long j = 0 ; j < m_words->getWordLen(w) && s<send ; j++){
+		for ( int32_t j = 0 ; j < m_words->getWordLen(w) && s<send ; j++){
 			// write the lower case char from w1+j into "s"
-			long size = to_lower_utf8 ( s , send , w1 + j , wend );
+			int32_t size = to_lower_utf8 ( s , send , w1 + j , wend );
 			// advance
 			j += size;
 			s += size;
@@ -468,18 +468,18 @@ char *Phrases::getPhrase ( long i , long *phrLen , long npw ) {
 /*
 // . store phrase that starts with word #i into "printBuf"
 // . return bytes stored in "printBuf"
-char *Phrases::getNWordPhrase ( long i , long *phrLen , long npw ) {
+char *Phrases::getNWordPhrase ( int32_t i , int32_t *phrLen , int32_t npw ) {
 	// return 0 if no phrase
 	if ( m_phraseSpam[i] == PSKIP ) return NULL;
 	// store the phrase in here
 	static char buf[512];
 	// . how many words, including punct words, are in phrase?
 	// . this should never be 1 or less
-        long  n     = m_numWordsTotal[i] ;
+        int32_t  n     = m_numWordsTotal[i] ;
 	char *dst   = buf;
 	char *dend  = buf + 255;
-	long  count = 0;
-	for (long w = i; w<i+n && count<npw; w++ ) {
+	int32_t  count = 0;
+	for (int32_t w = i; w<i+n && count<npw; w++ ) {
 		// do not breach the buffer
 		if ( dst + 4 >= dend ) break;
 		// all non alnum chars are spaces now
@@ -490,7 +490,7 @@ char *Phrases::getNWordPhrase ( long i , long *phrLen , long npw ) {
 		}
 		count++;
 		char *w1   = m_words->getWord(w);
-		long  wlen = m_words->getWordLen(w);
+		int32_t  wlen = m_words->getWordLen(w);
 		// store the word in lower case into "dst"
 		to_lower_utf8 ( dst , dend , w1 , w1 + wlen );
 		// advance destination cursor
@@ -506,31 +506,31 @@ char *Phrases::getNWordPhrase ( long i , long *phrLen , long npw ) {
 */
 
 /*
-char *Phrases::getStripPhrase ( long i , long *phrLen ) {
+char *Phrases::getStripPhrase ( int32_t i , int32_t *phrLen ) {
 	// return 0 if no phrase
 	if ( m_phraseSpam[i] == PSKIP ) return NULL;
 	// store the phrase in here
 	static char buf[512];
 	// . how many words, including punct words, are in phrase?
 	// . this should never be 1 or less
-        long  n     = m_numWordsTotal[i] ;
+        int32_t  n     = m_numWordsTotal[i] ;
 	//char *w1    = m_words->getWord(i);
 	//char *w2    = m_words->getWord(i+n-1);
-	//long  wlen2 = m_words->getWordLen(i+n-1);
-	//long  plen  = ( w2 - w1 ) + wlen2;
+	//int32_t  wlen2 = m_words->getWordLen(i+n-1);
+	//int32_t  plen  = ( w2 - w1 ) + wlen2;
 
 	char *s     = buf;
 	char *send  = buf + 255;
-	for (long w = i;w<i+n;w++){
+	for (int32_t w = i;w<i+n;w++){
 		if (!m_words->isAlnum(w)){
 			*s++ = ' ';
 			continue;
 		}
 		char *w1 = m_words->getWord(w);
 
-		for ( long j = 0 ; j < m_words->getWordLen(w) && s<send ; j++){
+		for ( int32_t j = 0 ; j < m_words->getWordLen(w) && s<send ; j++){
 			// write the lower case char from w1+j into "s"
-			long size = to_lower_ascii_utf8 ( s , send , w1 + j );
+			int32_t size = to_lower_ascii_utf8 ( s , send , w1 + j );
 			// advance
 			j += size;
 			s += size;
@@ -553,22 +553,22 @@ char *Phrases::getStripPhrase ( long i , long *phrLen ) {
 // . hash all the words into "table"
 bool Phrases::hash ( TermTable      *table          , 
 		     Weights        *weightsPtr     ,
-		     unsigned long   baseScore      ,
-		     unsigned long   maxScore       ,
-		     long long       startHash      ,
+		     uint32_t   baseScore      ,
+		     uint32_t   maxScore       ,
+		     int64_t       startHash      ,
 		     char           *prefix1        ,
-		     long            prefixLen1     ,
+		     int32_t            prefixLen1     ,
 		     char           *prefix2        ,
-		     long            prefixLen2     ,
+		     int32_t            prefixLen2     ,
 		     bool            hashUniqueOnly ,
-		     long            titleRecVersion,
-		     long            niceness       ) {
+		     int32_t            titleRecVersion,
+		     int32_t            niceness       ) {
 
 	// don't hash if score is 0 or less.
 	if (baseScore <= 0) return true;
 
 	// point to the phrase weights array, m_pw[]
-	long *weights = NULL;
+	int32_t *weights = NULL;
 	if ( weightsPtr ) weights = weightsPtr->m_pw;
 
 	// is the table storing the terms as strings, too? used by 
@@ -577,9 +577,9 @@ bool Phrases::hash ( TermTable      *table          ,
 
 	// . now add each phraseId to the index table
 	// . TODO: might want to add w/ uniqueOnly on if spam is 100%
-	unsigned long score;
+	uint32_t score;
 	bool huo;
-	for (long i =0; i < m_numPhrases; i++) {
+	for (int32_t i =0; i < m_numPhrases; i++) {
 		// should we hash this phraseId only if it's not hashed yet?
 		huo = hashUniqueOnly;
 		// a phraseSpam of PSKIP means word #i does not start a phrase
@@ -592,11 +592,11 @@ bool Phrases::hash ( TermTable      *table          ,
 			// skip if the weight is 0, we probably have menu 
 			// eelimination technology turned on...
 			if ( weights[i] == 0 ) continue;
-			// . the old way:  we used a signed long which could
+			// . the old way:  we used a signed int32_t which could
 			//   overflow before the divide and make artificially 
 			//   high term scores
 			//if(titleRecVersion < 85)
-			//	score = (long)((long)score * weights[i]) / DW;
+			//	score = (int32_t)((int32_t)score * weights[i]) / DW;
 			//else    score = (score * weights[i]) / DW;
 			score = (score * weights[i]) / DW;
 		}
@@ -607,13 +607,13 @@ bool Phrases::hash ( TermTable      *table          ,
 		// should hash just enough to index the phrase
 		if ( ! score ) { score = 1; huo = true; }
 		// get the phrase hash (includes coll,field prefixes)
-		long long h = g_indexdb.getTermId (startHash ,m_phraseIds[i]) ;
+		int64_t h = g_indexdb.getTermId (startHash ,m_phraseIds[i]) ;
 		
-		//long long h2 = 0LL;
+		//int64_t h2 = 0LL;
 		//if (m_stripPhraseIds[i])
 		//	h2 = g_indexdb.getTermId (startHash ,
 		//				  m_stripPhraseIds[i]) ;
-		long long h2 = g_indexdb.getTermId(startHash,m_phraseIds2[i]);
+		int64_t h2 = g_indexdb.getTermId(startHash,m_phraseIds2[i]);
 		// we must mask it before adding it to the table because
 		// this table is also used to hash IndexLists into that come
 		// from LinkInfo classes (incoming link text). And when
@@ -621,7 +621,7 @@ bool Phrases::hash ( TermTable      *table          ,
 		// So we should too...
 		//h = h & TERMID_MASK;
 		// add to table
-		//long score2;
+		//int32_t score2;
 		//if ( titleRecVersion >= 36 ) {
 		//score2 = score >> 1;
 		//if ( score2 <= 0 ) score2 = 1;
@@ -643,9 +643,9 @@ bool Phrases::hash ( TermTable      *table          ,
 			continue;
 		}
 		// add phrase as string to hash table if we need to as well
-		long  plen;
+		int32_t  plen;
 		char *p = getPhrase ( i , &plen );
-		long slen;
+		int32_t slen;
 		//#if 1
 		char *s = table->storeTerm ( p , plen ,
 					     prefix1 , prefixLen1 ,
@@ -682,7 +682,7 @@ bool Phrases::hash ( TermTable      *table          ,
 //   in a phrase
 // . used by SimpleQuery class to see if a word is in a phrase or not
 // . if it is then the query may choose not to represent the word by itself
-bool Phrases::isInPhrase ( long n ) {
+bool Phrases::isInPhrase ( int32_t n ) {
 	// returns true if we started a phrase (our phraseSpam is not PSKIP)
 	if ( m_phraseSpam[n] != PSKIP ) return true;
 	// . see if we were in a phrase started by a word before us
@@ -698,7 +698,7 @@ bool Phrases::isInPhrase ( long n ) {
 // . get the index of the word that starts this phrase
 // . returns -1 if none...factored out for 
 // . getLeftPhraseId and getLeftStripPhraseId
-long Phrases::getLeftPhraseIndex( long i ) {
+int32_t Phrases::getLeftPhraseIndex( int32_t i ) {
 	// return 0 if we no words before us
 	while ( i  > 0 ) {
 		// check punct before
@@ -722,19 +722,19 @@ long Phrases::getLeftPhraseIndex( long i ) {
 // . get the id of the phrase we are in that we do not start
 // . returns 0 if none, even though 0 may be a valid phraseId!! TODO: fix
 
-long long Phrases::getLeftPhraseId ( long i ) {
-	long index = getLeftPhraseIndex(i);
+int64_t Phrases::getLeftPhraseId ( int32_t i ) {
+	int32_t index = getLeftPhraseIndex(i);
 	if ( index < 0 ) return 0LL;
 	return getPhraseId(index);
 }
 
-long long Phrases::getLeftStripPhraseId ( long i ) {
-	long index = getLeftPhraseIndex(i);
+int64_t Phrases::getLeftStripPhraseId ( int32_t i ) {
+	int32_t index = getLeftPhraseIndex(i);
 	if ( index < 0 ) return 0LL;
 	return getStripPhraseId(index);
 }
 */
-long Phrases::getMaxWordsInPhrase ( long i , long long *pid ) { 
+int32_t Phrases::getMaxWordsInPhrase ( int32_t i , int64_t *pid ) { 
 
 	*pid = 0LL;
 
@@ -763,7 +763,7 @@ long Phrases::getMaxWordsInPhrase ( long i , long long *pid ) {
 }
 
 
-long Phrases::getMinWordsInPhrase ( long i , long long *pid ) { 
+int32_t Phrases::getMinWordsInPhrase ( int32_t i , int64_t *pid ) { 
 
 	*pid = 0LL;
 

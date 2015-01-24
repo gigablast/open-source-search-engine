@@ -11,7 +11,7 @@ bool g_inPageInject = false;
 // TODO: meta redirect tag to host if hostId not ours
 static bool processLoop ( void *state ) ;
 static bool gotXmlDoc ( void *state ) ;
-static bool sendErrorReply ( void *state , long err ) ;
+static bool sendErrorReply ( void *state , int32_t err ) ;
 
 // . returns false if blocked, true otherwise
 // . sets g_errno on error
@@ -29,10 +29,10 @@ bool sendPageParser ( TcpSocket *s , HttpRequest *r ) {
 bool sendPageParser2 ( TcpSocket   *s , 
 		       HttpRequest *r ,
 		       State8      *st ,
-		       long long    docId ,
+		       int64_t    docId ,
 		       Query       *q ,
 		       // in query term space, not imap space
-		       long long   *termFreqs       ,
+		       int64_t   *termFreqs       ,
 		       // in imap space
 		       float       *termFreqWeights ,
 		       // in imap space
@@ -40,26 +40,26 @@ bool sendPageParser2 ( TcpSocket   *s ,
 		       void        *state ,
 		       void       (* callback)(void *state) ) {
 
-	//log("parser: read sock=%li",s->m_sd);
+	//log("parser: read sock=%"INT32"",s->m_sd);
 
 	// might a simple request to addsomething to validated.*.txt file
 	// from XmlDoc::print() or XmlDoc::validateOutput()
 	char *add = r->getString("add",NULL);
-	//long long uh64 = r->getLongLong("uh64",0LL);
+	//int64_t uh64 = r->getLongLong("uh64",0LL);
 	char *uh64str = r->getString("uh64",NULL);
 	//char *divTag = r->getString("div",NULL);
 	if ( uh64str ) {
 		// convert add to number
-		long addNum = 0;
+		int32_t addNum = 0;
 		if ( to_lower_a(add[0])=='t' ) // "true" or "false"?
 			addNum = 1;
 		// convert it. skip beginning "str" inserted to prevent
-		// javascript from messing with the long long since it
+		// javascript from messing with the int64_t since it
 		// was rounding it!
-		//long long uh64 = atoll(uh64str);//+3);
+		//int64_t uh64 = atoll(uh64str);//+3);
 		// urldecode that
-		//long divTagLen = gbstrlen(divTag);
-		//long newLen  = urlDecode ( divTag , divTag , divTagLen );
+		//int32_t divTagLen = gbstrlen(divTag);
+		//int32_t newLen  = urlDecode ( divTag , divTag , divTagLen );
 		// null term?
 		//divTag[newLen] = '\0';
 		// do it. this is defined in XmlDoc.cpp
@@ -116,7 +116,7 @@ bool sendPageParser2 ( TcpSocket   *s ,
 	g_inPageParser = true;
 
 	// password, too
-	long pwdLen = 0;
+	int32_t pwdLen = 0;
 	char *pwd = r->getString ( "pwd" , &pwdLen );
 	if ( pwdLen > 31 ) pwdLen = 31;
 	if ( pwdLen > 0 ) strncpy ( st->m_pwd , pwd , pwdLen );
@@ -139,11 +139,11 @@ bool sendPageParser2 ( TcpSocket   *s ,
 		st->m_titleRecVersion = TITLEREC_CURRENT_VERSION;
 	// default to 0 if not provided
 	st->m_hopCount = r->getLong("hc",0);
-	//long  ulen    = 0;
+	//int32_t  ulen    = 0;
 	//char *u     = r->getString ( "u" , &ulen     , NULL /*default*/);
-	long  old     = r->getLong   ( "old", 0 );
+	int32_t  old     = r->getLong   ( "old", 0 );
 	// set query
-	long qlen;
+	int32_t qlen;
 	char *qs = r->getString("q",&qlen,NULL);
 	if ( qs ) st->m_tq.set2 ( qs , langUnknown , true );
 	// url will override docid if given
@@ -165,7 +165,7 @@ bool sendPageParser2 ( TcpSocket   *s ,
 	// range.
 	st->m_oips     = r->getLong("oips"    ,0);
 
-	long  linkInfoLen  = 0;
+	int32_t  linkInfoLen  = 0;
 	// default is NULL
 	char *linkInfoColl = r->getString ( "oli" , &linkInfoLen, NULL );
 	if ( linkInfoColl ) strcpy ( st->m_linkInfoColl , linkInfoColl );
@@ -206,7 +206,7 @@ bool sendPageParser2 ( TcpSocket   *s ,
 	char *oips   = "";
 	char *us     = "";
 	if ( st->m_u && st->m_u[0] ) us = st->m_u;
-	//if ( st->m_sfn != -1 ) sprintf ( rtu , "%li",st->m_sfn );
+	//if ( st->m_sfn != -1 ) sprintf ( rtu , "%"INT32"",st->m_sfn );
 	if ( st->m_old ) dd = " checked";
 	if ( st->m_recycle            ) rr     = " checked";
 	if ( st->m_recycle2           ) rr2    = " checked";
@@ -220,7 +220,7 @@ bool sendPageParser2 ( TcpSocket   *s ,
 			 LIGHT_BLUE );
 
 
-	long clen;
+	int32_t clen;
 	char *contentParm = r->getString("content",&clen,"");
 	
 	// print the input form
@@ -284,7 +284,7 @@ bool sendPageParser2 ( TcpSocket   *s ,
 		  "Hop count to use: "
 		  "</td>"
 		  "<td>"
-		  "<input type=text name=\"hc\" size=\"4\" value=\"%li\"> "
+		  "<input type=text name=\"hc\" size=\"4\" value=\"%"INT32"\"> "
 		  "</td>"
 		  "<td>"
 		  "(-1 is unknown. For root urls hopcount is always 0)<br>"
@@ -423,16 +423,16 @@ bool sendPageParser2 ( TcpSocket   *s ,
 		  "<td>"
 		       //"<input type=checkbox name=xml value=1> "
 		       "<select name=ctype>\n"
-		       "<option value=%li selected>HTML</option>\n"
-		       "<option value=%li selected>XML</option>\n"
-		       "<option value=%li selected>JSON</option>\n"
+		       "<option value=%"INT32" selected>HTML</option>\n"
+		       "<option value=%"INT32">XML</option>\n"
+		       "<option value=%"INT32">JSON</option>\n"
 		       "</select>\n"
 
 		  "</td>"
 		       "</tr>",
-		       (long)CT_HTML,
-		       (long)CT_XML,
-		       (long)CT_JSON
+		       (int32_t)CT_HTML,
+		       (int32_t)CT_XML,
+		       (int32_t)CT_JSON
 			  );
 
 	xbuf->safePrintf(
@@ -477,7 +477,7 @@ bool sendPageParser2 ( TcpSocket   *s ,
 	SpiderRequest sreq;
 	sreq.reset();
 	strcpy(sreq.m_url,st->m_u);
-	long firstIp = hash32n(st->m_u);
+	int32_t firstIp = hash32n(st->m_u);
 	if ( firstIp == -1 || firstIp == 0 ) firstIp = 1;
 	// parentdocid of 0
 	sreq.setKey( firstIp, 0LL, false );
@@ -494,7 +494,7 @@ bool sendPageParser2 ( TcpSocket   *s ,
 	// . get provided content if any
 	// . will be NULL if none provided
 	// . "content" may contain a MIME
-	long  contentLen = 0;
+	int32_t  contentLen = 0;
 	char *content = r->getString ( "content" , &contentLen , NULL );
 	// is the "content" url-encoded? default is true.
 	bool contentIsEncoded = true;
@@ -516,8 +516,8 @@ bool sendPageParser2 ( TcpSocket   *s ,
 	// if facebook, load xml content from title rec...
 	bool isFacebook = (bool)strstr(st->m_u,"http://www.facebook.com/");
 	if ( isFacebook && ! content ) {
-		long long docId = g_titledb.getProbableDocId(st->m_u);
-		sprintf(sreq.m_url ,"%llu", docId );
+		int64_t docId = g_titledb.getProbableDocId(st->m_u);
+		sprintf(sreq.m_url ,"%"UINT64"", docId );
 		sreq.m_isPageReindex = true;
 	}
 
@@ -526,7 +526,7 @@ bool sendPageParser2 ( TcpSocket   *s ,
 		st->m_dbuf.purge();
 		st->m_dbuf.safeStrcpy(content);
 		//char *data = strstr(content,"\r\n\r\n");
-		//long dataPos = 0;
+		//int32_t dataPos = 0;
 		//if ( data ) dataPos = (data + 4) - content;
 		//st->m_dbuf.convertJSONtoXML(0,dataPos);
 		//st->m_dbuf.decodeJSON(0);
@@ -564,7 +564,7 @@ bool processLoop ( void *state ) {
 	// error?
 	if ( g_errno ) return sendErrorReply ( st , g_errno );
 
-	// shortcut
+	// int16_tcut
 	SafeBuf *xbuf = &st->m_xbuf;
 
 	if ( st->m_u && st->m_u[0] ) {
@@ -599,7 +599,7 @@ bool processLoop ( void *state ) {
 	// print the final tail
 	//p += g_httpServer.printTail ( p , pend - p );
 
-	//log("parser: send sock=%li",st->m_s->m_sd);
+	//log("parser: send sock=%"INT32"",st->m_s->m_sd);
 	
 	// now encapsulate it in html head/tail and send it off
 	bool status = g_httpServer.sendDynamicPage( st->m_s , 
@@ -624,7 +624,7 @@ bool processLoop ( void *state ) {
 
 
 // returns true
-bool sendErrorReply ( void *state , long err ) {
+bool sendErrorReply ( void *state , int32_t err ) {
 	// ensure this is set
 	if ( ! err ) { char *xx=NULL;*xx=0; }
 	// get it
@@ -674,7 +674,7 @@ bool sendPageAnalyze ( TcpSocket *s , HttpRequest *r ) {
 	st->m_u               = NULL;
 
 	// password, too
-	long pwdLen = 0;
+	int32_t pwdLen = 0;
 	char *pwd = r->getString ( "pwd" , &pwdLen );
 	if ( pwdLen > 31 ) pwdLen = 31;
 	if ( pwdLen > 0 ) strncpy ( st->m_pwd , pwd , pwdLen );
@@ -688,7 +688,7 @@ bool sendPageAnalyze ( TcpSocket *s , HttpRequest *r ) {
 	char *coll    = r->getString ( "c" , &st->m_collLen ,NULL /*default*/);
 	if ( ! coll ) coll = g_conf.m_defaultColl;
 	if ( ! coll ) coll = "main";
-	long collLen = gbstrlen(coll);
+	int32_t collLen = gbstrlen(coll);
 	if ( collLen > MAX_COLL_LEN ) return sendErrorReply ( st , ENOBUFS );
 	strcpy ( st->m_coll , coll );
 
@@ -698,16 +698,16 @@ bool sendPageAnalyze ( TcpSocket *s , HttpRequest *r ) {
 		st->m_titleRecVersion = TITLEREC_CURRENT_VERSION;
 	// default to 0 if not provided
 	st->m_hopCount = r->getLong("hc",0);
-	long  old     = r->getLong   ( "old", 0 );
+	int32_t  old     = r->getLong   ( "old", 0 );
 	// set query
-	long qlen;
+	int32_t qlen;
 	char *qs = r->getString("q",&qlen,NULL);
 	if ( qs ) st->m_tq.set2 ( qs , langUnknown , true );
 	// url will override docid if given
 	st->m_docId = r->getLongLong ("d",-1);
 	st->m_docId = r->getLongLong ("docid",st->m_docId);
 
-	long ulen;
+	int32_t ulen;
 	char *u = st->m_r.getString("u",&ulen,NULL);
 	if ( ! u ) u = st->m_r.getString("url",&ulen,NULL);
 	if ( ! u && st->m_docId == -1LL ) 
@@ -731,7 +731,7 @@ bool sendPageAnalyze ( TcpSocket *s , HttpRequest *r ) {
 	st->m_oips     = r->getLong("oips"    ,0);
 	//st->m_page = r->getLong("page",1);
 
-	long  linkInfoLen  = 0;
+	int32_t  linkInfoLen  = 0;
 	// default is NULL
 	char *linkInfoColl = r->getString ( "oli" , &linkInfoLen, NULL );
 	if ( linkInfoColl ) strcpy ( st->m_linkInfoColl , linkInfoColl );
@@ -755,7 +755,7 @@ bool sendPageAnalyze ( TcpSocket *s , HttpRequest *r ) {
 
 	XmlDoc *xd = &st->m_xd;
 
-	long isXml = r->getLong("xml",0);
+	int32_t isXml = r->getLong("xml",0);
 
 	// if got docid, use that
 	if ( st->m_docId != -1 ) {
@@ -788,7 +788,7 @@ bool sendPageAnalyze ( TcpSocket *s , HttpRequest *r ) {
 	SpiderRequest sreq;
 	sreq.reset();
 	if ( st->m_u ) strcpy(sreq.m_url,st->m_u);
-	long firstIp = hash32n(st->m_u);
+	int32_t firstIp = hash32n(st->m_u);
 	if ( firstIp == -1 || firstIp == 0 ) firstIp = 1;
 	// parentdocid of 0
 	sreq.setKey( firstIp, 0LL, false );
@@ -805,7 +805,7 @@ bool sendPageAnalyze ( TcpSocket *s , HttpRequest *r ) {
 	// . get provided content if any
 	// . will be NULL if none provided
 	// . "content" may contain a MIME
-	long  contentLen = 0;
+	int32_t  contentLen = 0;
 	char *content = r->getString ( "content" , &contentLen , NULL );
 	// is the "content" url-encoded? default is true.
 	bool contentIsEncoded = true;
@@ -820,7 +820,7 @@ bool sendPageAnalyze ( TcpSocket *s , HttpRequest *r ) {
 
 	//uint8_t contentType = CT_HTML;
 	//if ( isXml ) contentType = CT_XML;
-	long ctype = r->getLong("ctype",CT_HTML);
+	int32_t ctype = r->getLong("ctype",CT_HTML);
 
 	// . use the enormous power of our new XmlDoc class
 	// . this returns false if blocked
@@ -874,7 +874,7 @@ bool gotXmlDoc ( void *state ) {
 	// error?
 	if ( g_errno ) return sendErrorReply ( st , g_errno );
 
-	// shortcut
+	// int16_tcut
 	SafeBuf *xbuf = &st->m_xbuf;
 
 	bool printIt = false;
@@ -911,7 +911,7 @@ bool gotXmlDoc ( void *state ) {
 		if ( g_errno ) return sendErrorReply ( st , g_errno );
 	}
 
-	long isXml = st->m_r.getLong("xml",0);
+	int32_t isXml = st->m_r.getLong("xml",0);
 	char ctype2 = CT_HTML;
 	if ( isXml ) ctype2 = CT_XML;
 	// now encapsulate it in html head/tail and send it off

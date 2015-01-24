@@ -9,6 +9,7 @@
 #include "Test.h"
 #include "Speller.h"
 #include "SpiderProxy.h" // OP_GETPROXY OP_RETPROXY
+#include "zlib.h"
 
 char *g_fakeReply = 
 	"HTTP/1.0 200 (OK)\r\n"
@@ -16,52 +17,52 @@ char *g_fakeReply =
 	"Connection: Close\r\n"
 	"Content-Type: text/html\r\n\r\n\0";
 
-long convertIntoLinks ( char *reply , long replySize ) ;
-long filterRobotsTxt ( char *reply , long replySize , HttpMime *mime ,
-		       long niceness , char *userAgent , long uaLen ) ;
+int32_t convertIntoLinks ( char *reply , int32_t replySize ) ;
+int32_t filterRobotsTxt ( char *reply , int32_t replySize , HttpMime *mime ,
+		       int32_t niceness , char *userAgent , int32_t uaLen ) ;
 bool getIframeExpandedContent ( Msg13Request *r , TcpSocket *ts );
 void gotIframeExpandedContent ( void *state ) ;
 
 bool addToHammerQueue ( Msg13Request *r ) ;
 void scanHammerQueue ( int fd , void *state );
 void downloadTheDocForReals ( Msg13Request *r ) ;
-char *getRandUserAgent ( long urlIp , long proxyIp , long proxyPort ) ;
+char *getRandUserAgent ( int32_t urlIp , int32_t proxyIp , int32_t proxyPort ) ;
 
 // utility functions
-bool getTestSpideredDate ( Url *u , long *origSpiderDate , char *testDir ) ;
-bool addTestSpideredDate ( Url *u , long  spideredTime   , char *testDir ) ;
+bool getTestSpideredDate ( Url *u , int32_t *origSpiderDate , char *testDir ) ;
+bool addTestSpideredDate ( Url *u , int32_t  spideredTime   , char *testDir ) ;
 bool getTestDoc ( char *u , class TcpSocket *ts , Msg13Request *r );
-bool addTestDoc ( long long urlHash64 , char *httpReply , long httpReplySize ,
-		  long err , Msg13Request *r ) ;
+bool addTestDoc ( int64_t urlHash64 , char *httpReply , int32_t httpReplySize ,
+		  int32_t err , Msg13Request *r ) ;
 
 static void gotForwardedReplyWrapper ( void *state , UdpSlot *slot ) ;
-static void handleRequest13 ( UdpSlot *slot , long niceness ) ;
+static void handleRequest13 ( UdpSlot *slot , int32_t niceness ) ;
 //static bool downloadDoc     ( UdpSlot *slot, Msg13Request* r ) ;
 static void gotHttpReply    ( void *state , TcpSocket *ts ) ;
 static void gotHttpReply2 ( void *state , 
 			    char *reply , 
-			    long  replySize ,
-			    long  replyAllocSize ,
+			    int32_t  replySize ,
+			    int32_t  replyAllocSize ,
 			    TcpSocket *ts ) ;
 static void passOnReply     ( void *state , UdpSlot *slot ) ;
 
-bool hasIframe           ( char *reply, long replySize , long niceness );
-long hasGoodDates        ( char *content, 
-			   long contentLen, 
+bool hasIframe           ( char *reply, int32_t replySize , int32_t niceness );
+int32_t hasGoodDates        ( char *content, 
+			   int32_t contentLen, 
 			   Xml *xml, 
 			   Words *words,
 			   char ctype,
-			   long niceness );
-char getContentTypeQuick ( HttpMime *mime, char *reply, long replySize , 
-			   long niceness ) ;
-long convertIntoLinks    ( char *reply, long replySize , Xml *xml , 
-			   long niceness ) ;
+			   int32_t niceness );
+char getContentTypeQuick ( HttpMime *mime, char *reply, int32_t replySize , 
+			   int32_t niceness ) ;
+int32_t convertIntoLinks    ( char *reply, int32_t replySize , Xml *xml , 
+			   int32_t niceness ) ;
 
 
 static bool setProxiedUrlFromSquidProxiedRequest ( Msg13Request *r );
 static void stripProxyAuthorization ( char *squidProxiedReqBuf ) ;
 static void fixGETorPOST ( char *squidProxiedReqBuf ) ;
-static long long computeProxiedCacheKey64 ( Msg13Request *r ) ;
+static int64_t computeProxiedCacheKey64 ( Msg13Request *r ) ;
 
 // cache for robots.txt pages
 static RdbCache s_httpCacheRobots;
@@ -100,12 +101,12 @@ bool Msg13::registerHandler ( ) {
 		return false;
 
 	// use 3MB per cache
-	long memRobots = 3000000;
+	int32_t memRobots = 3000000;
 	// make 10MB now that we have proxied url (i.e. squid) capabilities
-	long memOthers = 10000000;
+	int32_t memOthers = 10000000;
 	// assume 15k avg cache file
-	long maxCacheNodesRobots = memRobots / 106;
-	long maxCacheNodesOthers = memOthers / (10*1024);
+	int32_t maxCacheNodesRobots = memRobots / 106;
+	int32_t maxCacheNodesOthers = memOthers / (10*1024);
 
 	if ( ! s_httpCacheRobots.init ( memRobots ,
 					-1        , // fixedDataSize
@@ -127,7 +128,7 @@ bool Msg13::registerHandler ( ) {
 
 	// . set up the request table (aka wait in line table)
 	// . allowDups = "true"
-	if ( ! s_rt.set ( 8 , 4 , 0 , NULL , 0 , true,0,"wait13tbl") )
+	if ( ! s_rt.set ( 8 ,sizeof(UdpSlot *),0,NULL,0,true,0,"wait13tbl") )
 		return false;
 
 	if ( ! g_loop.registerSleepCallback(10,NULL,scanHammerQueue) )
@@ -153,7 +154,7 @@ bool Msg13::getDoc ( Msg13Request *r,
 	char *s = "<td class=\"smallfont\" align=\"right\">November 14th, 2011 10:06 AM</td>\r\n\t\t";
 	strcpy(buf,s);
 	Xml xml;
-	long status = hasGoodDates ( buf ,
+	int32_t status = hasGoodDates ( buf ,
 				     gbstrlen(buf),
 				     &xml , 
 				     CT_HTML,
@@ -271,19 +272,19 @@ bool Msg13::getDoc ( Msg13Request *r,
 
 bool Msg13::forwardRequest ( ) {
 
-	// shortcut
+	// int16_tcut
 	Msg13Request *r = m_request;
 
 	//
 	// forward this request to the host responsible for this url's ip
 	//
-	long nh     = g_hostdb.m_numHosts;
-	long hostId = hash32h(((unsigned long)r->m_firstIp >> 8), 0) % nh;
+	int32_t nh     = g_hostdb.m_numHosts;
+	int32_t hostId = hash32h(((uint32_t)r->m_firstIp >> 8), 0) % nh;
 	// get host to send to from hostId
 	Host *h = NULL;
 	// . pick first alive host, starting with "hostId" as the hostId
 	// . if all dead, send to the original and we will timeout > 200 secs
-	for ( long count = 0 ; count <= nh ; count++ ) {
+	for ( int32_t count = 0 ; count <= nh ; count++ ) {
 		// get that host
 		//h = g_hostdb.getProxy ( hostId );;
 		h = g_hostdb.getHost ( hostId );
@@ -301,8 +302,8 @@ bool Msg13::forwardRequest ( ) {
 	if ( g_conf.m_logDebugSpider )
 		logf ( LOG_DEBUG, 
 		       "spider: sending download request of %s firstIp=%s "
-		       "uh48=%llu to "
-		       "host %li (child=%li)", r->ptr_url, iptoa(r->m_firstIp), 
+		       "uh48=%"UINT64" to "
+		       "host %"INT32" (child=%"INT32")", r->ptr_url, iptoa(r->m_firstIp), 
 		       r->m_urlHash48, hostId,
 		       r->m_skipHammerCheck);
 
@@ -310,7 +311,7 @@ bool Msg13::forwardRequest ( ) {
 	if ( r->m_useTestCache && ! r->m_testDir[0] ) { char *xx=NULL;*xx=0;}
 
 	// fill up the request
-	long requestBufSize = r->getSize();
+	int32_t requestBufSize = r->getSize();
 
 	// we have to serialize it now because it has cookies as well as
 	// the url.
@@ -356,7 +357,7 @@ bool Msg13::forwardRequest ( ) {
 }
 
 void gotForwardedReplyWrapper ( void *state , UdpSlot *slot ) {
-	// shortcut
+	// int16_tcut
 	Msg13 *THIS = (Msg13 *)state;
 	// return if this blocked
 	if ( ! THIS->gotForwardedReply ( slot ) ) return;
@@ -370,8 +371,8 @@ bool Msg13::gotForwardedReply ( UdpSlot *slot ) {
 	//slot->m_sendBufAlloc = NULL;
 	// what did he give us?
 	char *reply          = slot->m_readBuf;
-	long  replySize      = slot->m_readBufSize;
-	long  replyAllocSize = slot->m_readBufMaxSize;
+	int32_t  replySize      = slot->m_readBufSize;
+	int32_t  replyAllocSize = slot->m_readBufMaxSize;
 	// UdpServer::makeReadBuf() sets m_readBuf to -1 when calling
 	// alloc() with a zero length, so fix that
 	if ( replySize == 0 ) reply = NULL;
@@ -386,7 +387,7 @@ bool Msg13::gotForwardedReply ( UdpSlot *slot ) {
 
 #include "PageInject.h"
 
-bool Msg13::gotFinalReply ( char *reply, long replySize, long replyAllocSize ){
+bool Msg13::gotFinalReply ( char *reply, int32_t replySize, int32_t replyAllocSize ){
 
 	// how is this happening? ah from image downloads...
 	if ( m_replyBuf ) { char *xx=NULL;*xx=0; }
@@ -395,11 +396,11 @@ bool Msg13::gotFinalReply ( char *reply, long replySize, long replyAllocSize ){
 	m_replyBuf     = NULL;
 	m_replyBufSize = 0;
 
-	// shortcut
+	// int16_tcut
 	Msg13Request *r = m_request;
 
-	//log("msg13: reply=%lx replysize=%li g_errno=%s",
-	//    (long)reply,(long)replySize,mstrerror(g_errno));
+	//log("msg13: reply=%"XINT32" replysize=%"INT32" g_errno=%s",
+	//    (int32_t)reply,(int32_t)replySize,mstrerror(g_errno));
 
 	if ( g_conf.m_logDebugRobots || g_conf.m_logDebugDownloads )
 		logf(LOG_DEBUG,"spider: FINALIZED %s firstIp=%s",
@@ -441,11 +442,11 @@ bool Msg13::gotFinalReply ( char *reply, long replySize, long replyAllocSize ){
 	if ( ! r->m_compressReply ) return true;
 
 	// get uncompressed size
-	uint32_t unzippedLen = *(long*)reply;
+	uint32_t unzippedLen = *(int32_t*)reply;
 	// sanity checks
 	if ( unzippedLen > 10000000 ) {
 		log("spider: downloaded probable corrupt gzipped doc "
-		    "with unzipped len of %li",(long)unzippedLen);
+		    "with unzipped len of %"INT32"",(int32_t)unzippedLen);
 		g_errno = ECORRUPTDATA;
 		return true;
 	}
@@ -456,16 +457,19 @@ bool Msg13::gotFinalReply ( char *reply, long replySize, long replyAllocSize ){
 		return true;
 	}
 	// make another var to get mangled by gbuncompress
-	unsigned long uncompressedLen = unzippedLen;
+	uint32_t uncompressedLen = unzippedLen;
 	// uncompress it
 	int zipErr = gbuncompress( (unsigned char*)newBuf  ,  // dst
 				   &uncompressedLen        ,  // dstLen
 				   (unsigned char*)reply+4 ,  // src
 				   replySize - 4           ); // srcLen
-	if(zipErr != Z_OK || uncompressedLen!=(long unsigned int)unzippedLen) {
+	if(zipErr != Z_OK || 
+	   uncompressedLen!=(uint32_t)unzippedLen) {
 		log("spider: had error unzipping Msg13 reply. unzipped "
-		    "len should be %li but is %li. ziperr=%li",
-		    (long)uncompressedLen,(long)unzippedLen,(long)zipErr);
+		    "len should be %"INT32" but is %"INT32". ziperr=%"INT32"",
+		    (int32_t)uncompressedLen,
+		    (int32_t)unzippedLen,
+		    (int32_t)zipErr);
 		mfree (newBuf, unzippedLen, "Msg13UnzipError");
 		g_errno = ECORRUPTDATA;//EBADREPLYSIZE;
 		return true;
@@ -493,8 +497,8 @@ bool Msg13::gotFinalReply ( char *reply, long replySize, long replyAllocSize ){
 
 	// log it for now
 	if ( g_conf.m_logDebugSpider )
-		log("http: got doc %s %li to %li",
-		    r->ptr_url,(long)replySize,(long)uncompressedLen);
+		log("http: got doc %s %"INT32" to %"INT32"",
+		    r->ptr_url,(int32_t)replySize,(int32_t)uncompressedLen);
 
 	return true;
 }
@@ -506,7 +510,7 @@ Msg13Request *s_hammerQueueTail = NULL;
 
 // . only return false if you want slot to be nuked w/o replying
 // . MUST always call g_udpServer::sendReply() or sendErrorReply()
-void handleRequest13 ( UdpSlot *slot , long niceness  ) {
+void handleRequest13 ( UdpSlot *slot , int32_t niceness  ) {
 
  	// cast it
 	Msg13Request *r = (Msg13Request *)slot->m_readBuf;
@@ -530,7 +534,8 @@ void handleRequest13 ( UdpSlot *slot , long niceness  ) {
 		url.set ( r->ptr_url );
 		// . never download /master urls from ips of hosts in cluster
 		// . TODO: FIX! the pages might be in another cluster!
-		if ( ( strncasecmp ( url.getPath() , "/master/" , 8 ) == 0 ||
+		// . pages are now /admin/* not any /master/* any more.
+		if ( ( //strncasecmp ( url.getPath() , "/master/" , 8 ) == 0 ||
 		       strncasecmp ( url.getPath() , "/admin/"  , 7 ) == 0 )) {
 			log("spider: Got request to download possible "
 			    "gigablast control page %s. Sending back "
@@ -546,7 +551,7 @@ void handleRequest13 ( UdpSlot *slot , long niceness  ) {
 	// . this returns true if robots.txt file for hostname found in cache
 	// . don't copy since, we analyze immediately and don't block
 	char *rec;
-	long  recSize;
+	int32_t  recSize;
 	// get the cache
 	RdbCache *c = &s_httpCacheOthers;
 	if ( r->m_isRobotsTxt ) c = &s_httpCacheRobots;
@@ -569,7 +574,7 @@ void handleRequest13 ( UdpSlot *slot , long niceness  ) {
 		// log debug?
 		//if ( r->m_isSquidProxiedUrl )
 		if ( g_conf.m_logDebugSpider )
-			log("proxy: found %li bytes in cache for %s",
+			log("proxy: found %"INT32" bytes in cache for %s",
 			    recSize,r->ptr_url);
 
 		r->m_foundInCache = true;
@@ -597,7 +602,7 @@ void handleRequest13 ( UdpSlot *slot , long niceness  ) {
 
 	if ( ! s_flag ) {
 		s_flag = true;
-		s_hammerCache.init ( 5000       , // maxcachemem,
+		s_hammerCache.init ( 15000       , // maxcachemem,
 				     8          , // fixed data size
 				     false      , // support lists?
 				     500        , // max nodes
@@ -645,12 +650,12 @@ void handleRequest13 ( UdpSlot *slot , long niceness  ) {
 	// send to a proxy if we are doing compression and not a proxy
 	if ( r->m_useCompressionProxy && ! g_hostdb.m_myHost->m_isProxy ) {
 		// use this key to select which proxy host
-		long key = ((uint32_t)r->m_firstIp >> 8);
+		int32_t key = ((uint32_t)r->m_firstIp >> 8);
 		// send to host "h"
 		Host *h = g_hostdb.getBestSpiderCompressionProxy(&key);
 		if ( g_conf.m_logDebugSpider )
 			log(LOG_DEBUG,"spider: sending to compression proxy "
-			    "%s:%lu",iptoa(h->m_ip),(unsigned long)h->m_port);
+			    "%s:%"UINT32"",iptoa(h->m_ip),(uint32_t)h->m_port);
 		// . otherwise, send the request to the key host
 		// . returns false and sets g_errno on error
 		// . now wait for 2 minutes before timing out
@@ -732,8 +737,12 @@ void downloadTheDocForReals2 ( Msg13Request *r ) {
 	// user can turn off proxy use with this switch
 	if ( ! g_conf.m_useProxyIps ) useProxies = false;
 
+	// for diffbot turn ON if use robots is off
+	if ( r->m_forceUseFloaters ) useProxies = true;
+
 	// we gotta have some proxy ips that we can use
 	if ( ! g_conf.m_proxyIps.hasDigits() ) useProxies = false;
+
 
 	// we did not need a spider proxy ip so send this reuest to a host
 	// to download the url
@@ -783,7 +792,7 @@ void downloadTheDocForReals2 ( Msg13Request *r ) {
 					 NULL         ,
 					 r         , // state data
 					 gotProxyHostReplyWrapper  ,
-					 10    )){// 10 sec timeout
+					 9999999  )){// 9999999 sec timeout
 		// sanity check
 		if ( ! g_errno ) { char *xx=NULL;*xx=0; }
 		// report it
@@ -796,7 +805,7 @@ void downloadTheDocForReals2 ( Msg13Request *r ) {
 }
 
 void gotProxyHostReplyWrapper ( void *state , UdpSlot *slot ) {
-	// shortcut
+	// int16_tcut
 	Msg13Request *r = (Msg13Request *)state;
 	//Msg13 *THIS = r->m_parent;
 	// don't let udpserver free the request, it's our m_urlIp
@@ -805,7 +814,7 @@ void gotProxyHostReplyWrapper ( void *state , UdpSlot *slot ) {
 	if ( g_errno ) {
 		// note it
 		log("sproxy: got proxy request error: %s",mstrerror(g_errno));
-		g_udpServer.sendErrorReply(slot,g_errno);
+		g_udpServer.sendErrorReply(r->m_udpSlot,g_errno);
 		return;
 	}
 	//
@@ -813,13 +822,13 @@ void gotProxyHostReplyWrapper ( void *state , UdpSlot *slot ) {
 	//
 	// what did he give us?
 	char *reply          = slot->m_readBuf;
-	long  replySize      = slot->m_readBufSize;
-	//long  replyAllocSize = slot->m_readBufMaxSize;
+	int32_t  replySize      = slot->m_readBufSize;
+	//int32_t  replyAllocSize = slot->m_readBufMaxSize;
 	// bad reply? ip/port/LBid
 	if ( replySize != sizeof(ProxyReply) ) {
-		log("sproxy: bad 54 reply size of %li != %li",
-		    replySize,(long)sizeof(ProxyReply));
-		g_udpServer.sendErrorReply(slot,g_errno);
+		log("sproxy: bad 54 reply size of %"INT32" != %"INT32"",
+		    replySize,(int32_t)sizeof(ProxyReply));
+		g_udpServer.sendErrorReply(r->m_udpSlot,g_errno);
 		return;
 	}
 
@@ -879,6 +888,11 @@ void downloadTheDocForReals3a ( Msg13Request *r ) {
 
 void downloadTheDocForReals3b ( Msg13Request *r ) {
 
+	int64_t nowms = gettimeofdayInMilliseconds();
+
+	// assume no download start time
+	r->m_downloadStartTimeMS = 0;
+
 	// . store time now
 	// . no, now we store 0 to indicate in progress, then we
 	//   will overwrite it with a timestamp when the download completes
@@ -893,10 +907,9 @@ void downloadTheDocForReals3b ( Msg13Request *r ) {
 	}
 	else if ( ! r->m_skipHammerCheck ) {
 		// get time now
-		long long nowms = gettimeofdayInMilliseconds();
 		s_hammerCache.addLongLong(0,r->m_firstIp, nowms);
 		log(LOG_DEBUG,
-		    "spider: adding new time to hammercache for %s %s = %lli",
+		    "spider: adding new time to hammercache for %s %s = %"INT64"",
 		    iptoa(r->m_firstIp),r->ptr_url,nowms);
 	}
 	else {
@@ -907,11 +920,14 @@ void downloadTheDocForReals3b ( Msg13Request *r ) {
 
 	// note it
 	if ( g_conf.m_logDebugSpider )
-		log("spider: adding special \"in-progress\" time of %lli for "
+		log("spider: adding special \"in-progress\" time "
+		    "of %"INT32" for "
 		    "firstIp=%s "
 		    "url=%s "
 		    "to msg13::hammerCache",
-		    -1LL,iptoa(r->m_firstIp),r->ptr_url);
+		    0,//-1,
+		    iptoa(r->m_firstIp),
+		    r->ptr_url);
 
 
 
@@ -919,9 +935,9 @@ void downloadTheDocForReals3b ( Msg13Request *r ) {
 	//if ( g_conf.m_qaBuildMode ) r->m_addToTestCache = true;
 	// note it here
 	if ( g_conf.m_logDebugSpider )
-		log("spider: downloading %s (%s) (skiphammercheck=%li)",
+		log("spider: downloading %s (%s) (skiphammercheck=%"INT32")",
 		    r->ptr_url,iptoa(r->m_urlIp) ,
-		    (long)r->m_skipHammerCheck);
+		    (int32_t)r->m_skipHammerCheck);
 
 	// use the default agent unless scraping
 	// force to event guru bot for now
@@ -944,8 +960,8 @@ void downloadTheDocForReals3b ( Msg13Request *r ) {
 	// . for bulk jobs avoid actual downloads of the page for efficiency
 	// . g_fakeReply is just a simple mostly empty 200 http reply
 	if ( r->m_isCustomCrawl == 2 ) {
-		long slen = gbstrlen(g_fakeReply);
-		long fakeBufSize = slen + 1;
+		int32_t slen = gbstrlen(g_fakeReply);
+		int32_t fakeBufSize = slen + 1;
 		// try to fix memleak
 		char *fakeBuf = g_fakeReply;//mdup ( s, fakeBufSize , "fkblk");
 		//r->m_freeMe = fakeBuf;
@@ -974,10 +990,11 @@ void downloadTheDocForReals3b ( Msg13Request *r ) {
 	if ( r->m_proxyIp ) {
 		char tmpIp[64];
 		sprintf(tmpIp,"%s",iptoa(r->m_urlIp));
-		log("sproxy: got proxy %s:%li and agent=\"%s\" to spider "
-		    "%s %s (numBannedProxies=%li)",
+		log(LOG_INFO,
+		    "sproxy: got proxy %s:%"INT32" and agent=\"%s\" to spider "
+		    "%s %s (numBannedProxies=%"INT32")",
 		    iptoa(r->m_proxyIp),
-		    (long)r->m_proxyPort,
+		    (int32_t)r->m_proxyPort,
 		    agent,
 		    tmpIp,
 		    r->ptr_url,
@@ -1000,6 +1017,9 @@ void downloadTheDocForReals3b ( Msg13Request *r ) {
 	if ( r->m_isSquidProxiedUrl && ! r->m_proxyIp )
 		fixGETorPOST ( exactRequest );
 
+	// indicate start of download so we can overwrite the 0 we stored
+	// into the hammercache
+	r->m_downloadStartTimeMS = nowms;
 
 	// . download it
 	// . if m_proxyIp is non-zero it will make requests like:
@@ -1038,7 +1058,7 @@ void downloadTheDocForReals3b ( Msg13Request *r ) {
 	return ;
 }
 
-static long s_55Out = 0;
+static int32_t s_55Out = 0;
 
 void doneReportingStatsWrapper ( void *state, UdpSlot *slot ) {
 	//Msg13Request *r = (Msg13Request *)state;
@@ -1069,7 +1089,7 @@ bool ipWasBanned ( TcpSocket *ts , const char **msg ) {
 	HttpMime mime;
 	mime.set ( ts->m_readBuf , ts->m_readOffset , NULL );
 
-	long httpStatus = mime.getHttpStatus();
+	int32_t httpStatus = mime.getHttpStatus();
 	if ( httpStatus == 403 ) {
 		*msg = "status 403 forbidden";
 		return true;
@@ -1118,7 +1138,7 @@ void gotHttpReply9 ( void *state , TcpSocket *ts ) {
 		if ( r->m_hasMoreProxiesToTry )  msg = "Trying another proxy.";
 		char tmpIp[64];
 		sprintf(tmpIp,"%s",iptoa(r->m_urlIp));
-		log("msg13: detected that proxy %s is banned (tries=%li) by "
+		log("msg13: detected that proxy %s is banned (tries=%"INT32") by "
 		    "url %s %s [%s]. %s"
 		    , iptoa(r->m_proxyIp) // r->m_banProxyIp
 		    , r->m_proxyTries
@@ -1182,7 +1202,7 @@ void gotHttpReply9 ( void *state , TcpSocket *ts ) {
 		s_55Out++;
 		// sanity
 		if ( s_55Out > 500 )
-			log("sproxy: s55out > 500 = %li",s_55Out);
+			log("sproxy: s55out > 500 = %"INT32"",s_55Out);
 	}
 	// sanity check
 	//if ( ! g_errno ) { char *xx=NULL;*xx=0; }
@@ -1191,7 +1211,7 @@ void gotHttpReply9 ( void *state , TcpSocket *ts ) {
 	// it failed i guess proceed
 	gotHttpReply( state , ts );
 }
-
+/*
 static void doneInjectingProxyReply ( void *state ) {
 	Msg7 *msg7 = (Msg7 *)state;
 	if ( g_errno )
@@ -1203,9 +1223,11 @@ static void doneInjectingProxyReply ( void *state ) {
 }
 
 static bool markupServerReply ( Msg13Request *r , TcpSocket *ts );
+*/
 
 void gotHttpReply ( void *state , TcpSocket *ts ) {
 
+	/*
  	// cast it
 	Msg13Request *r = (Msg13Request *)state;
 
@@ -1232,7 +1254,7 @@ void gotHttpReply ( void *state , TcpSocket *ts ) {
 		}
 		mnew ( msg7, sizeof(Msg7), "m7st" );
 
-		long httpReplyLen = ts->m_readOffset;
+		int32_t httpReplyLen = ts->m_readOffset;
 
 		// parse out the http mime
 		HttpMime hm;
@@ -1295,6 +1317,7 @@ void gotHttpReply ( void *state , TcpSocket *ts ) {
 			ts = NULL;
 		}
 	}
+	*/
 
 	// if we had no error, TcpSocket should be legit
 	if ( ts ) {
@@ -1315,12 +1338,12 @@ void gotHttpReply ( void *state , TcpSocket *ts ) {
 
 void gotHttpReply2 ( void *state , 
 		     char *reply , 
-		     long  replySize ,
-		     long  replyAllocSize ,
+		     int32_t  replySize ,
+		     int32_t  replyAllocSize ,
 		     TcpSocket *ts ) {
 
 	// save error
-	long savedErr = g_errno;
+	int32_t savedErr = g_errno;
 
 	Msg13Request *r    = (Msg13Request *) state;
 	UdpSlot      *slot = r->m_udpSlot;
@@ -1332,19 +1355,31 @@ void gotHttpReply2 ( void *state ,
 		    mstrerror(g_errno),r->ptr_url,iptoa(r->m_urlIp));
 
 	// get time now
-	long long nowms = gettimeofdayInMilliseconds();
+	int64_t nowms = gettimeofdayInMilliseconds();
+
+	// right now there is a 0 in there to indicate in-progress.
+	// so we must overwrite with either the download start time or the
+	// download end time.
+	int64_t timeToAdd = r->m_downloadStartTimeMS;
+	if ( r->m_crawlDelayFromEnd ) timeToAdd = nowms;
+
 	// . now store the current time in the cache
 	// . do NOT do this for robots.txt etc. where we skip hammer check
-	if ( r->m_crawlDelayFromEnd && ! r->m_skipHammerCheck )
-		s_hammerCache.addLongLong(0,r->m_firstIp,nowms);
-	// note it
-	if ( g_conf.m_logDebugSpider )
-		log("spider: adding final download end time of %lli for "
-		    "firstIp=%s "
-		    "url=%s "
-		    "to msg13::hammerCache",
-		    nowms,iptoa(r->m_firstIp),r->ptr_url);
+	if ( ! r->m_skipHammerCheck ) 
+		s_hammerCache.addLongLong(0,r->m_firstIp,timeToAdd);
 
+	// note it
+	if ( g_conf.m_logDebugSpider && ! r->m_skipHammerCheck )
+		log(LOG_DEBUG,"spider: adding last download time "
+		    "of %"INT64" for firstIp=%s url=%s "
+		    "to msg13::hammerCache",
+		    timeToAdd,iptoa(r->m_firstIp),r->ptr_url);
+
+
+	if ( g_conf.m_logDebugSpider )
+		log(LOG_DEBUG,"spider: got http reply for firstip=%s url=%s",
+		    iptoa(r->m_firstIp),r->ptr_url);
+	
 
 	// sanity. this was happening from iframe download
 	//if ( g_errno == EDNSTIMEDOUT ) { char *xx=NULL;*xx=0; }
@@ -1358,7 +1393,7 @@ void gotHttpReply2 ( void *state ,
 	if ( replySize > replyAllocSize ) { char *xx=NULL;*xx=0; }
 
 	// save original size
-	long originalSize = replySize;
+	int32_t originalSize = replySize;
 
 	// . add the reply to our test cache
 	// . if g_errno is set to something like "TCP Timed Out" then
@@ -1370,10 +1405,10 @@ void gotHttpReply2 ( void *state ,
 
 	// note it
 	if ( r->m_useTestCache && g_conf.m_logDebugSpider )
-		logf(LOG_DEBUG,"spider: got reply for %s firstIp=%s uh48=%llu",
+		logf(LOG_DEBUG,"spider: got reply for %s firstIp=%s uh48=%"UINT64"",
 		     r->ptr_url,iptoa(r->m_firstIp),r->m_urlHash48);
 
-	long niceness = r->m_niceness;
+	int32_t niceness = r->m_niceness;
 
 	// sanity check
 	if ( replySize>0 && reply[replySize-1]!= '\0') { char *xx=NULL;*xx=0; }
@@ -1381,20 +1416,20 @@ void gotHttpReply2 ( void *state ,
 	// assume http status is 200
 	bool goodStatus = true;
 
-	long long *docsPtr     = NULL;
-	long long *bytesInPtr  = NULL;
-	long long *bytesOutPtr = NULL;
+	int64_t *docsPtr     = NULL;
+	int64_t *bytesInPtr  = NULL;
+	int64_t *bytesOutPtr = NULL;
 
 	// use this mime
 	HttpMime mime;
-	long httpStatus = 0; // 200;
+	int32_t httpStatus = 0; // 200;
 
 	// do not do any of the content analysis routines below if we
 	// had a g_errno like ETCPTIMEDOUT or EBADMIME or whatever...
 	if ( savedErr ) goodStatus = false;
 
 	// no, its on the content only, NOT including mime
-	long mimeLen = 0;
+	int32_t mimeLen = 0;
 
 	// only bother rewriting the error mime if user wanted compression
 	// otherwise, don't bother rewriting it.
@@ -1423,24 +1458,24 @@ void gotHttpReply2 ( void *state ,
 			char tmpBuf[2048];
 			char *p = tmpBuf;
 			p += sprintf( tmpBuf, 
-				      "HTTP/1.0 %li\r\n"
+				      "HTTP/1.0 %"INT32"\r\n"
 				      "Content-Length: 0\r\n" ,
 				      httpStatus );
 			// convery redirect urls back to requester
 			char *loc    = mime.getLocationField();
-			long  locLen = mime.getLocationFieldLen();
+			int32_t  locLen = mime.getLocationFieldLen();
 			// if too big, forget it! otherwise we breach tmpBuf
 			if ( loc && locLen > 0 && locLen < 1024 ) {
 				p += sprintf ( p , "Location: " );
-				memcpy ( p , loc , locLen );
+				gbmemcpy ( p , loc , locLen );
 				p += locLen;
-				memcpy ( p , "\r\n", 2 );
+				gbmemcpy ( p , "\r\n", 2 );
 				p += 2;
 			}
 			// close it up
 			p += sprintf ( p , "\r\n" );
 			// copy it over as new reply, include \0
-			long newSize = p - tmpBuf + 1;
+			int32_t newSize = p - tmpBuf + 1;
 			if ( newSize >= 2048 ) { char *xx=NULL;*xx=0; }
 			// record in the stats
 			docsPtr     = &g_stats.m_compressMimeErrorDocs;
@@ -1448,7 +1483,7 @@ void gotHttpReply2 ( void *state ,
 			bytesOutPtr = &g_stats.m_compressMimeErrorBytesOut;
 			// only replace orig reply if we are smaller
 			if ( newSize < replySize ) {
-				memcpy ( reply , tmpBuf , newSize );
+				gbmemcpy ( reply , tmpBuf , newSize );
 				replySize = newSize;
 			}
 			// reset content hash
@@ -1462,7 +1497,7 @@ void gotHttpReply2 ( void *state ,
 	// point to the content
 	char *content = reply + mimeLen;
 	// reduce length by that
-	long contentLen = replySize - 1 - mimeLen;
+	int32_t contentLen = replySize - 1 - mimeLen;
 	// fix bad crap
 	if ( contentLen < 0 ) contentLen = 0;
 
@@ -1497,7 +1532,7 @@ void gotHttpReply2 ( void *state ,
 	     r->m_forEvents &&
 	     !r->m_isRobotsTxt && 
 	     r->m_compressReply ) {
-		long cs = getCharsetFast ( &mime,
+		int32_t cs = getCharsetFast ( &mime,
 					   r->ptr_url,
 					   content,
 					   contentLen,
@@ -1551,10 +1586,10 @@ void gotHttpReply2 ( void *state ,
 		// make sure we loaded the unifiedDict (do now in main.cpp)
 		//g_speller.init();
 		// detect language, if we can
-		long score;
+		int32_t score;
 		// returns -1 and sets g_errno on error, 
 		// because 0 means langUnknown
-		long langid = words.getLanguage(NULL,1000,niceness,&score);
+		int32_t langid = words.getLanguage(NULL,1000,niceness,&score);
 		// anything 2+ is non-english
 		if ( langid >= 2 ) {
 			// record in the stats
@@ -1625,7 +1660,7 @@ void gotHttpReply2 ( void *state ,
 	     // if we got iframes we can't tell if content changed
 	     ! hasIframe2 ) {
 		// compute it
-		long ch32 = getContentHash32Fast( (unsigned char *)content ,
+		int32_t ch32 = getContentHash32Fast( (unsigned char *)content ,
 						  contentLen ,
 						  niceness );
 		// unchanged?
@@ -1659,7 +1694,7 @@ void gotHttpReply2 ( void *state ,
 
 
 	// by default assume it has a good date
-	long status = 1;
+	int32_t status = 1;
 
 	// sanity
 	if ( reply && replySize>0 && reply[replySize-1]!='\0') {
@@ -1716,7 +1751,7 @@ void gotHttpReply2 ( void *state ,
 		// take this out until it works for 
 		// user-agent: *\ndisallow: blah
 		//char *ua = "Gigabot";
-		//long uaLen = gbstrlen(ua);
+		//int32_t uaLen = gbstrlen(ua);
 		//replySize = filterRobotsTxt (reply,replySize,&mime,niceness,
 		//			     ua,uaLen);
 		// record in the stats
@@ -1742,13 +1777,13 @@ void gotHttpReply2 ( void *state ,
 	// to send that back!
 	if ( r->m_compressReply && replySize>0 && ! savedErr ) {
 		// how big should the compression buf be?
-		long need = sizeof(long) +        // unzipped size
-			(long)(replySize * 1.01) + // worst case size
+		int32_t need = sizeof(int32_t) +        // unzipped size
+			(int32_t)(replySize * 1.01) + // worst case size
 			25;                       // for zlib
 		// for 7-zip
 		need += 300;
 		// back buffer to hold compressed reply
-		unsigned long compressedLen;
+		uint32_t compressedLen;
 		char *compressedBuf = (char*)mmalloc(need, "Msg13Zip");
 		if ( ! compressedBuf ) {
 			g_errno = ENOMEM;
@@ -1758,7 +1793,7 @@ void gotHttpReply2 ( void *state ,
 
 		// store uncompressed length as first four bytes in the
 		// compressedBuf
-		*(long *)compressedBuf = replySize;
+		*(int32_t *)compressedBuf = replySize;
 		// the remaining bytes are for data
 		compressedLen = need - 4;
 		// leave the first 4 bytes to hold the uncompressed size
@@ -1767,7 +1802,9 @@ void gotHttpReply2 ( void *state ,
 					 (unsigned char*)reply, 
 					 replySize);
 		if(zipErr != Z_OK) {
-			log("spider: had error zipping Msg13 reply.");
+			log("spider: had error zipping Msg13 reply. %s "
+			    "(%"INT32")",
+			    zError(zipErr),(int32_t)zipErr);
 			mfree (compressedBuf, need, "Msg13ZipError");
 			g_errno = ECORRUPTDATA;
 			g_udpServer.sendErrorReply(slot,g_errno);
@@ -1818,20 +1855,20 @@ void gotHttpReply2 ( void *state ,
 		g_errno = 0;
 	}
 
-	// shortcut
+	// int16_tcut
 	UdpServer *us = &g_udpServer;
 
 	// how many have this key?
-	long count = s_rt.getCount ( &r->m_cacheKey );
+	int32_t count = s_rt.getCount ( &r->m_cacheKey );
 	// sanity check
 	if ( count < 1 ) { char *xx=NULL;*xx=0; }
 
 	// send a reply for all waiting in line
-	long tableSlot;
+	int32_t tableSlot;
 	// loop
 	for ( ; ( tableSlot = s_rt.getSlot ( &r->m_cacheKey) ) >= 0 ; ) {
 		// use this
-		long err = 0;
+		int32_t err = 0;
 		// set g_errno appropriately
 		//if ( ! ts || savedErr ) err = savedErr;
 		if ( savedErr ) err = savedErr;
@@ -1862,7 +1899,7 @@ void gotHttpReply2 ( void *state ,
 		}
 		// replicate the reply. might return NULL and set g_errno
 		char *copy          = reply;
-		long  copyAllocSize = replyAllocSize;
+		int32_t  copyAllocSize = replyAllocSize;
 		// . only copy it if we are not the last guy in the table
 		// . no, now always copy it
 		if ( --count > 0 && ! err ) {
@@ -1937,15 +1974,15 @@ void passOnReply ( void *state , UdpSlot *slot ) {
 
 	// what did he give us?
 	char *reply          = slot->m_readBuf;
-	long  replySize      = slot->m_readBufSize;
-	long  replyAllocSize = slot->m_readBufMaxSize;
+	int32_t  replySize      = slot->m_readBufSize;
+	int32_t  replyAllocSize = slot->m_readBufMaxSize;
 	// do not allow "slot" to free the read buf since it is being used
 	// as the send buf for "udpSlot"
 	slot->m_readBuf     = NULL;
 	slot->m_readBufSize = 0;
 	// prevent udpserver from trying to free g_fakeReply
 	if ( reply == g_fakeReply ) replyAllocSize = 0;
-	//long  replyAllocSize = slot->m_readBufSize;
+	//int32_t  replyAllocSize = slot->m_readBufSize;
 	// just forward it on
 	g_udpServer.sendReply_ass (reply,replySize,
 				   reply,replyAllocSize,
@@ -1966,7 +2003,7 @@ bool getTestDoc ( char *u , TcpSocket *ts , Msg13Request *r ) {
 	// sanity check
 	//if ( strcmp(m_coll,"qatest123") ) { char *xx=NULL;*xx=0; }
 	// hash the url into 64 bits
-	long long h = hash64 ( u , gbstrlen(u) );
+	int64_t h = hash64 ( u , gbstrlen(u) );
 	// read the spider date file first
 	char fn[300]; 
 	File f;
@@ -1981,18 +2018,18 @@ bool getTestDoc ( char *u , TcpSocket *ts , Msg13Request *r ) {
 	//if ( ! td ) td = "test-page-parser";
 	if ( ! td[0] ) { char *xx=NULL;*xx=0; }
 	// make http reply filename
-	sprintf(fn,"%s/%s/doc.%llu.html",g_hostdb.m_dir,td,h);
+	sprintf(fn,"%s/%s/doc.%"UINT64".html",g_hostdb.m_dir,td,h);
 	// look it up
 	f.set ( fn );
 	// try to get it
 	if ( ! f.doesExist() ) {
 		//if ( g_conf.m_logDebugSpider )
-			log("test: doc not found in test cache: %s (%llu)",
+			log("test: doc not found in test cache: %s (%"UINT64")",
 			    u,h);
 		return false;
 	}
 	// get size
-	long fs = f.getFileSize();
+	int32_t fs = f.getFileSize();
 	// error?
 	if ( fs == -1 ) 
 		return log("test: error getting file size from test");
@@ -2003,17 +2040,17 @@ bool getTestDoc ( char *u , TcpSocket *ts , Msg13Request *r ) {
 	// open it
 	f.open ( O_RDWR );
 	// read the HTTP REPLY in
-	long rs = f.read ( buf , fs , 0 );
+	int32_t rs = f.read ( buf , fs , 0 );
 	// not read enough?
 	if ( rs != fs ) {
 		mfree ( buf,fs,"gtd");
-		return log("test: read returned %li != %li",rs,fs);
+		return log("test: read returned %"INT32" != %"INT32"",rs,fs);
 	}
 	f.close();
 	// null term it
 	buf[fs] = '\0';
 
-	// was it error=%lu ?
+	// was it error=%"UINT32" ?
 	if ( ! strncmp(buf,"errno=",6) ) {
 		ts->m_readBuf     = NULL;
 		ts->m_readBufSize = 0;
@@ -2023,7 +2060,7 @@ bool getTestDoc ( char *u , TcpSocket *ts , Msg13Request *r ) {
 		mfree ( buf , fs+1 , "gtd" );
 		// log it for now
 		if ( g_conf.m_logDebugSpider )
-			log("test: GOT ERROR doc in test cache: %s (%llu) "
+			log("test: GOT ERROR doc in test cache: %s (%"UINT64") "
 			    "[%s]",u,h, mstrerror(g_errno));
 		if ( ! g_errno ) { char *xx=NULL;*xx=0; }
 		return true;
@@ -2031,9 +2068,9 @@ bool getTestDoc ( char *u , TcpSocket *ts , Msg13Request *r ) {
 
 	// log it for now
 	//if ( g_conf.m_logDebugSpider )
-		log("test: GOT doc in test cache: %s (%llu)",u,h);
+		log("test: GOT doc in test cache: %s (%"UINT64")",u,h);
 		
-	//fprintf(stderr,"scp gk252:/e/test-spider/doc.%llu.* /home/mwells/gigablast/test-parser/\n",h);
+	//fprintf(stderr,"scp gk252:/e/test-spider/doc.%"UINT64".* /home/mwells/gigablast/test-parser/\n",h);
 
 	// set the slot up now
 	//slot->m_readBuf        = buf;
@@ -2047,21 +2084,21 @@ bool getTestDoc ( char *u , TcpSocket *ts , Msg13Request *r ) {
 	return true;
 }
 
-bool getTestSpideredDate ( Url *u , long *origSpideredDate , char *testDir ) {
+bool getTestSpideredDate ( Url *u , int32_t *origSpideredDate , char *testDir ) {
 	// hash the url into 64 bits
-	long long uh64 = hash64(u->getUrl(),u->getUrlLen());
+	int64_t uh64 = hash64(u->getUrl(),u->getUrlLen());
 	// read the spider date file first
 	char fn[2000]; 
 	File f;
 	// get the spider date then
-	sprintf(fn,"%s/%s/doc.%llu.spiderdate.txt",
+	sprintf(fn,"%s/%s/doc.%"UINT64".spiderdate.txt",
 		g_hostdb.m_dir,testDir,uh64);
 	// look it up
 	f.set ( fn );
 	// try to get it
 	if ( ! f.doesExist() ) return false;
 	// get size
-	long fs = f.getFileSize();
+	int32_t fs = f.getFileSize();
 	// error?
 	if ( fs == -1 ) return log("test: error getting file size from test");
 	// open it
@@ -2069,7 +2106,7 @@ bool getTestSpideredDate ( Url *u , long *origSpideredDate , char *testDir ) {
 	// make a buf
 	char dbuf[200];
 	// read the date in (int format)
-	long rs = f.read ( dbuf , fs , 0 );
+	int32_t rs = f.read ( dbuf , fs , 0 );
 	// sanity check
 	if ( rs <= 0 ) { char *xx=NULL;*xx=0; }
 	// get it
@@ -2077,47 +2114,47 @@ bool getTestSpideredDate ( Url *u , long *origSpideredDate , char *testDir ) {
 	// close it
 	f.close();
 	// note it
-	//log("test: read spiderdate of %lu for %s",*origSpideredDate,
+	//log("test: read spiderdate of %"UINT32" for %s",*origSpideredDate,
 	//    u->getUrl());
 	// good to go
 	return true;
 }
 
-bool addTestSpideredDate ( Url *u , long spideredTime , char *testDir ) {
+bool addTestSpideredDate ( Url *u , int32_t spideredTime , char *testDir ) {
 
 	// ensure dir exists
 	::mkdir(testDir,S_IRWXU);
 
 	// set this
-	long long uh64 = hash64(u->getUrl(),u->getUrlLen());
+	int64_t uh64 = hash64(u->getUrl(),u->getUrlLen());
 	// make that into a filename
 	char fn[300]; 
-	sprintf(fn,"%s/%s/doc.%llu.spiderdate.txt",
+	sprintf(fn,"%s/%s/doc.%"UINT64".spiderdate.txt",
 		g_hostdb.m_dir,testDir,uh64);
 	// look it up
 	File f; f.set ( fn );
 	// if already there, return now
 	if ( f.doesExist() ) return true;
 	// make it into buf
-	char dbuf[200]; sprintf ( dbuf ,"%lu\n",spideredTime);
+	char dbuf[200]; sprintf ( dbuf ,"%"INT32"\n",spideredTime);
 	// open it
 	f.open ( O_RDWR | O_CREAT );
 	// write it now
-	long ws = f.write ( dbuf , gbstrlen(dbuf) , 0 );
+	int32_t ws = f.write ( dbuf , gbstrlen(dbuf) , 0 );
 	// close it
 	f.close();
 	// panic?
-	if ( ws != (long)gbstrlen(dbuf) )
-		return log("test: error writing %li != %li to %s",ws,
-			   (long)gbstrlen(dbuf),fn);
+	if ( ws != (int32_t)gbstrlen(dbuf) )
+		return log("test: error writing %"INT32" != %"INT32" to %s",ws,
+			   (int32_t)gbstrlen(dbuf),fn);
 	// close it up
 	//f.close();
 	return true;
 }
 
 // add it to our "qatest123" subdir
-bool addTestDoc ( long long urlHash64 , char *httpReply , long httpReplySize ,
-		  long err , Msg13Request *r ) {
+bool addTestDoc ( int64_t urlHash64 , char *httpReply , int32_t httpReplySize ,
+		  int32_t err , Msg13Request *r ) {
 
 	char fn[300];
 	// default to being from PageInject
@@ -2129,7 +2166,7 @@ bool addTestDoc ( long long urlHash64 , char *httpReply , long httpReplySize ,
 	char *td = r->m_testDir;
 	if ( ! td[0] ) { char *xx=NULL;*xx=0; }
 	// make that into a filename
-	sprintf(fn,"%s/%s/doc.%llu.html",g_hostdb.m_dir,td,urlHash64);
+	sprintf(fn,"%s/%s/doc.%"UINT64".html",g_hostdb.m_dir,td,urlHash64);
 	// look it up
 	File f; f.set ( fn );
 	// if already there, return now
@@ -2138,24 +2175,24 @@ bool addTestDoc ( long long urlHash64 , char *httpReply , long httpReplySize ,
 	f.open ( O_RDWR | O_CREAT );
 	// log it for now
 	//if ( g_conf.m_logDebugSpider )
-	log("test: ADDING doc to test cache: %llu",urlHash64);
+	log("test: ADDING doc to test cache: %"UINT64"",urlHash64);
 
 	// write error only?
 	if ( err ) {
 		char ebuf[256];
-		sprintf(ebuf,"errno=%lu\n",err);
+		sprintf(ebuf,"errno=%"INT32"\n",err);
 		f.write(ebuf,gbstrlen(ebuf),0);
 		f.close();
 		return true;
 	}
 
 	// write it now
-	long ws = f.write ( httpReply , httpReplySize , 0 );
+	int32_t ws = f.write ( httpReply , httpReplySize , 0 );
 	// close it
 	f.close();
 	// panic?
 	if ( ws != httpReplySize )
-		return log("test: error writing %li != %li to %s",ws,
+		return log("test: error writing %"INT32" != %"INT32" to %s",ws,
 			   httpReplySize,fn);
 	// all done, success
 	return true;
@@ -2165,10 +2202,10 @@ bool addTestDoc ( long long urlHash64 , char *httpReply , long httpReplySize ,
 // . return new reply size
 // . return -1 on error w/ g_errno set on error
 // . replySize includes terminating \0??? i dunno
-long convertIntoLinks ( char *reply , 
-			long replySize , 
+int32_t convertIntoLinks ( char *reply , 
+			int32_t replySize , 
 			Xml *xml ,
-			long niceness ) {
+			int32_t niceness ) {
 	// the "doQuickSet" is just for us and make things faster and
 	// more compressed...
 	Links links;
@@ -2186,7 +2223,7 @@ long convertIntoLinks ( char *reply ,
 	// use this to ensure we do not breach
 	char *dstEnd = reply + replySize;
 	// . store into the new buffer
-	// . use memcpy() because it deal with potential overlap issues
+	// . use gbmemcpy() because it deal with potential overlap issues
 	char *dst    = reply;
 	// store the thing first
 	if ( dst + 100 >= dstEnd ) 
@@ -2205,36 +2242,36 @@ long convertIntoLinks ( char *reply ,
 	char *content = dst;
 			 
 	// this tells xmldoc.cpp what's up
-	//memcpy ( dst , "<!--links-->\n", 13 );
+	//gbmemcpy ( dst , "<!--links-->\n", 13 );
 	//dst += 13;
 	// iterate over the links
-	for ( long i = 0 ; i < links.m_numLinks ; i++ ) {
+	for ( int32_t i = 0 ; i < links.m_numLinks ; i++ ) {
 		// breathe
 		QUICKPOLL(niceness);
 		// get link
 		char *str = links.getLink(i);
 		// get size
-		long len = links.getLinkLen(i);
+		int32_t len = links.getLinkLen(i);
 		// ensure no breach. if so, return now
 		if ( dst + len + 2 > dstEnd ) return dst - reply;
 		// lead it
-		memcpy ( dst, "<a href=", 8 );
+		gbmemcpy ( dst, "<a href=", 8 );
 		dst += 8;
 		// copy over, should be ok with overlaps
-		memcpy ( dst , str , len );
+		gbmemcpy ( dst , str , len );
 		dst += len;
 		// end tag and line
-		memcpy ( dst , "></a>\n", 6 );
+		gbmemcpy ( dst , "></a>\n", 6 );
 		dst += 6;
 	}
 	// null term it!
 	*dst++ = '\0';
 	// content length
-	long clen = dst - content - 1;
+	int32_t clen = dst - content - 1;
 	// the last digit
 	char *dptr = saved + 7;
 	// store it up top in the mime header
-	for ( long x = 0 ; x < 8 ; x++ ) {
+	for ( int32_t x = 0 ; x < 8 ; x++ ) {
 		//if ( clen == 0 ) *dptr-- = ' ';
 		if ( clen == 0 ) break;
 		*dptr-- = '0' + (clen % 10);
@@ -2245,7 +2282,7 @@ long convertIntoLinks ( char *reply ,
 }
 
 // returns true if <iframe> tag in there
-bool hasIframe ( char *reply, long replySize , long niceness ) {
+bool hasIframe ( char *reply, int32_t replySize , int32_t niceness ) {
 	if ( ! reply || replySize <= 0 ) return false;
 	char *p = reply;
 	// exclude \0
@@ -2270,12 +2307,12 @@ bool hasIframe ( char *reply, long replySize , long niceness ) {
 // . TODO: for each street/city/state address, whether it is inlined or not,
 //   look it up in zak's db that has all the street names and their city/state.
 //   if it's in there then set AF_VERIFIED_STREET i guess...
-long hasGoodDates ( char *content ,
-		    long  contentLen , 
+int32_t hasGoodDates ( char *content ,
+		    int32_t  contentLen , 
 		    Xml *xml , 
 		    Words *words,
 		    char ctype ,
-		    long niceness ) {
+		    int32_t niceness ) {
 	// now scan the text nodes for dates i guess...
 	Dates dates;
 	if ( ! dates.parseDates ( words ,
@@ -2287,13 +2324,13 @@ long hasGoodDates ( char *content ,
 				  ctype ) )
 		return -1;
 	// get the current year/month/etc in utc
-	long now = getTimeLocal();
+	time_t now = getTimeLocal();
 	struct tm *timeStruct = gmtime ( &now );
-	long year = 1900 + timeStruct->tm_year;
+	int32_t year = 1900 + timeStruct->tm_year;
 	// day of month. starts at 1.
-	long day  = timeStruct->tm_mday;
+	int32_t day  = timeStruct->tm_mday;
 	// 0 is january. but we use 1 for january in Dates.cpp, so add 1.
-	long month = timeStruct->tm_mon + 1;
+	int32_t month = timeStruct->tm_mon + 1;
 
 	bool gotTOD      = false;
 	bool gotMonthDow = false;
@@ -2302,22 +2339,22 @@ long hasGoodDates ( char *content ,
 	Date *d2 = NULL;
 
 	// scan the dates we got, looking for certain types
-	for ( long i = 0 ; i < dates.m_numDatePtrs ; i++ ) {
-		// shortcut
+	for ( int32_t i = 0 ; i < dates.m_numDatePtrs ; i++ ) {
+		// int16_tcut
 		Date *di = dates.m_datePtrs[i];
 		// skip if nuked
 		if ( ! di ) continue;
-		// shortcut
+		// int16_tcut
 		datetype_t dt = di->m_hasType;
 		// must be a tod month or dow
 		if ( !(dt & (DT_TOD|DT_MONTH|DT_DOW)) ) continue;
 		// get the date's year
-		long diyear = di->m_maxYear;
-		if ( (long)di->m_year <= 0 ) diyear = 0;
+		int32_t diyear = di->m_maxYear;
+		if ( (int32_t)di->m_year <= 0 ) diyear = 0;
 		// if it has a year but it is old, forget it
 		if ( diyear > 0 && diyear < year ) continue;
 		// get the date's month
-		long dimonth = di->m_month;
+		int32_t dimonth = di->m_month;
 		// if has no year but, assuming it was this year, the month
 		// and monthday is over
 		if ( diyear == year && // this year,before or nonr
@@ -2378,7 +2415,7 @@ long hasGoodDates ( char *content ,
 		// return -1 with g_errno set on error
 		return -1;
 	// scan the addresses
-	for ( long i = 0 ; i < aa.m_am.getNumPtrs() ; i++ ) {
+	for ( int32_t i = 0 ; i < aa.m_am.getNumPtrs() ; i++ ) {
 		// breathe
                 QUICKPOLL(niceness);
 		// get it
@@ -2398,8 +2435,8 @@ long hasGoodDates ( char *content ,
 
 char getContentTypeQuick ( HttpMime *mime,
 			   char *reply , 
-			   long replySize , 
-			   long niceness ) {
+			   int32_t replySize , 
+			   int32_t niceness ) {
 	char ctype = mime->getContentType();
 	char ctype2 = 0;
 	if ( replySize>0 && reply ) {
@@ -2415,12 +2452,12 @@ char getContentTypeQuick ( HttpMime *mime,
 // . return new size, might be zero...
 // . use a minimal mime as well
 // . keep in same buffer
-long filterRobotsTxt ( char *reply , 
-		       long replySize , 
+int32_t filterRobotsTxt ( char *reply , 
+		       int32_t replySize , 
 		       HttpMime *mime ,
-		       long niceness ,
+		       int32_t niceness ,
 		       char *userAgent ,
-		       long  userAgentLen ) {
+		       int32_t  userAgentLen ) {
 	// bail if nothing
 	if ( ! reply || replySize <= 0 ) return replySize;
 	// skip mime
@@ -2454,14 +2491,14 @@ long filterRobotsTxt ( char *reply ,
 		if ( ! *s || agent ) {
 			// this is a problem... if somehow its got a smaller
 			// mime than us, we can't let our new mime overwrite 
-			// the user-agent line we were going to memcpy()
+			// the user-agent line we were going to gbmemcpy()
 			if ( reply + 16 > agent ) return replySize;
 			if ( dst == reply ) {
-				memcpy ( dst , "HTTP/1.0 200\r\n\r\n", 16 );
+				gbmemcpy ( dst , "HTTP/1.0 200\r\n\r\n", 16 );
 				dst += 16;
 			}
 			// store the user-agent and following allows/disallows
-			memcpy ( dst, agent , start - agent );
+			gbmemcpy ( dst, agent , start - agent );
 			dst += ( start - agent );
 			// restart
 			agent = NULL;
@@ -2511,13 +2548,13 @@ bool getIframeExpandedContent ( Msg13Request *r , TcpSocket *ts ) {
 
 	if ( ! ts ) { char *xx=NULL;*xx=0; }
 
-	long niceness = r->m_niceness;
+	int32_t niceness = r->m_niceness;
 
 	// ok, we've an attempt now
 	r->m_attemptedIframeExpansion = true;
 
 	// we are doing something to destroy reply, so make a copy of it!
-	long copySize = ts->m_readOffset + 1;
+	int32_t copySize = ts->m_readOffset + 1;
 	char *copy = (char *)mdup ( ts->m_readBuf , copySize , "ifrmcpy" );
 	if ( ! copy ) return true;
 	// sanity, must include \0 at the end
@@ -2537,7 +2574,7 @@ bool getIframeExpandedContent ( Msg13Request *r , TcpSocket *ts ) {
 	SpiderRequest sreq;
 	sreq.reset();
 	strcpy(sreq.m_url,r->ptr_url);
-	long firstIp = hash32n(r->ptr_url);
+	int32_t firstIp = hash32n(r->ptr_url);
 	if ( firstIp == -1 || firstIp == 0 ) firstIp = 1;
 	sreq.setKey( firstIp,0LL, false );
 	sreq.m_isInjecting   = 1; 
@@ -2653,7 +2690,7 @@ bool getIframeExpandedContent ( Msg13Request *r , TcpSocket *ts ) {
 		    " err=%s",r->ptr_url,mstrerror(g_errno));
 
 	// save g_errno for returning
-	long saved = g_errno;
+	int32_t saved = g_errno;
 
 	// this also means that the iframe tag was probably not expanded
 	// because it was from google.com or bing.com or had a bad src attribut
@@ -2685,7 +2722,7 @@ bool getIframeExpandedContent ( Msg13Request *r , TcpSocket *ts ) {
 
 void gotIframeExpandedContent ( void *state ) {
 	// save error in case mdelete nukes it
-	long saved = g_errno;
+	int32_t saved = g_errno;
 
 	XmlDoc *xd = (XmlDoc *)state;
 	// this was stored in xd
@@ -2699,7 +2736,7 @@ void gotIframeExpandedContent ( void *state ) {
 
 	// assume we had no expansion or there was an error
 	char *reply          = NULL;
-	long  replySize      = 0;
+	int32_t  replySize      = 0;
 
 	// . if no error, then grab it
 	// . if failed to get the iframe content then m_didExpansion should
@@ -2756,6 +2793,7 @@ void gotIframeExpandedContent ( void *state ) {
 	delete  ( xd );
 }
 
+#define DELAYPERBAN 500
 
 // returns true if we queue the request to download later
 bool addToHammerQueue ( Msg13Request *r ) {
@@ -2769,13 +2807,18 @@ bool addToHammerQueue ( Msg13Request *r ) {
 	// . make sure we are not hammering an ip
 	// . returns 0 if currently downloading a url from that ip
 	// . returns -1 if not found
-	long long last = s_hammerCache.getLongLong(0,r->m_firstIp,30,true);
+	int64_t last = s_hammerCache.getLongLong(0,r->m_firstIp,-1,true);
 	// get time now
-	long long nowms = gettimeofdayInMilliseconds();
+	int64_t nowms = gettimeofdayInMilliseconds();
 	// how long has it been since last download START time?
-	long long waited = nowms - last;
+	int64_t waited = nowms - last;
 
-	long crawlDelayMS = r->m_crawlDelayMS;
+	int32_t crawlDelayMS = r->m_crawlDelayMS;
+
+	if ( g_conf.m_logDebugSpider )
+		log(LOG_DEBUG,"spider: got timestamp of %"INT64" from "
+		    "hammercache (waited=%"INT64") for %s",last,waited,
+		    iptoa(r->m_firstIp));
 
 	// . if we got a proxybackoff base it on # of banned proxies for urlIp
 	// . try to be more sensitive for more sensitive website policies
@@ -2783,8 +2826,11 @@ bool addToHammerQueue ( Msg13Request *r ) {
 	//   responsible, or who banned it, but be more sensitive anyway
 	if ( //r->m_hammerCallback == downloadTheDocForReals3b &&
 	     r->m_numBannedProxies &&
-	     r->m_numBannedProxies * 2000 > crawlDelayMS )
-		crawlDelayMS = r->m_numBannedProxies * 2000;
+	     r->m_numBannedProxies * DELAYPERBAN > crawlDelayMS ) {
+		crawlDelayMS = r->m_numBannedProxies * DELAYPERBAN;
+		if ( crawlDelayMS > MAX_PROXYCRAWLDELAYMS )
+			crawlDelayMS = MAX_PROXYCRAWLDELAYMS;
+	}
 
 	bool queueIt = false;
 	if ( last > 0 && waited < crawlDelayMS ) queueIt = true;
@@ -2795,14 +2841,15 @@ bool addToHammerQueue ( Msg13Request *r ) {
 	// ignore it if from iframe expansion etc.
 	if ( r->m_skipHammerCheck ) queueIt = false;
 
-	// . queue it up if we haven't waited long enough
+	// . queue it up if we haven't waited int32_t enough
 	// . then the functionr, scanHammerQueue(), will re-eval all
 	//   the download requests in this hammer queue every 10ms. 
 	// . it will just lookup the lastdownload time in the cache,
 	//   which will store maybe a -1 if currently downloading...
 	if ( queueIt ) {
 		// debug
-		log("spider: adding %s to crawldelayqueue cd=%lims",
+		log(LOG_INFO,
+		    "spider: adding %s to crawldelayqueue cd=%"INT32"ms",
 		    r->ptr_url,crawlDelayMS);
 		// save this
 		//r->m_udpSlot = slot; // this is already saved!
@@ -2823,7 +2870,7 @@ bool addToHammerQueue ( Msg13Request *r ) {
 	// if we had it in cache check the wait time
 	if ( last > 0 && waited < crawlDelayMS ) {
 		log("spider: hammering firstIp=%s url=%s "
-		    "only waited %lli ms of %li ms",
+		    "only waited %"INT64" ms of %"INT32" ms",
 		    iptoa(r->m_firstIp),r->ptr_url,waited,
 		    crawlDelayMS);
 		// this guy has too many redirects and it fails us...
@@ -2839,7 +2886,7 @@ bool addToHammerQueue ( Msg13Request *r ) {
 	//s_hammerCache.addLongLong(0,r->m_firstIp,nowms);
 	// note it
 	//if ( g_conf.m_logDebugSpider )
-	//	log("spider: adding download end time of %llu for "
+	//	log("spider: adding download end time of %"UINT64" for "
 	//	    "firstIp=%s "
 	//	    "url=%s "
 	//	    "to msg13::hammerCache",
@@ -2855,7 +2902,7 @@ void scanHammerQueue ( int fd , void *state ) {
 
 	if ( ! s_hammerQueueHead ) return;
 
-	long long nowms = gettimeofdayInMilliseconds();
+	int64_t nowms = gettimeofdayInMilliseconds();
 
  top:
 
@@ -2863,7 +2910,7 @@ void scanHammerQueue ( int fd , void *state ) {
 	if ( ! r ) return;
 
 	Msg13Request *prev = NULL;
-	long long waited = -1LL;
+	int64_t waited = -1LL;
 	Msg13Request *nextLink = NULL;
 
 	//bool useProxies = true;
@@ -2879,13 +2926,13 @@ void scanHammerQueue ( int fd , void *state ) {
 		// downloadTheDocForReals() could free "r" so save this here
 		nextLink = r->m_nextLink;
 
-		long long last;
+		int64_t last;
 		last = s_hammerCache.getLongLong(0,r->m_firstIp,30,true);
 		// is one from this ip outstanding?
 		if ( last == 0LL && r->m_crawlDelayFromEnd ) continue;
 
 
-		long crawlDelayMS = r->m_crawlDelayMS;
+		int32_t crawlDelayMS = r->m_crawlDelayMS;
 
 		// . if we got a proxybackoff base it on # of banned proxies 
 		// . try to be more sensitive for more sensitive website policy
@@ -2894,17 +2941,17 @@ void scanHammerQueue ( int fd , void *state ) {
 		if ( //useProxies && 
 		     r->m_numBannedProxies &&
 		     r->m_hammerCallback == downloadTheDocForReals3b )
-			crawlDelayMS = r->m_numBannedProxies * 2000;
+			crawlDelayMS = r->m_numBannedProxies * DELAYPERBAN;
 
 		// download finished? 
 		if ( last > 0 ) {
 		        waited = nowms - last;
-			// but skip if haven't waited long enough
+			// but skip if haven't waited int32_t enough
 			if ( waited < crawlDelayMS ) continue;
 		}
 		// debug
 		//log("spider: downloading %s from crawldelay queue "
-		//    "waited=%llims crawldelay=%lims", 
+		//    "waited=%"INT64"ms crawldelay=%"INT32"ms", 
 		//    r->ptr_url,waited,r->m_crawlDelayMS);
 
 		// good to go
@@ -2919,7 +2966,7 @@ void scanHammerQueue ( int fd , void *state ) {
 
 		if ( g_conf.m_logDebugSpider )
 			log(LOG_DEBUG,"spider: calling hammer callback for "
-			    "%s (timestamp=%lli,waited=%lli,crawlDelayMS=%li)",
+			    "%s (timestamp=%"INT64",waited=%"INT64",crawlDelayMS=%"INT32")",
 			    r->ptr_url,
 			    last,
 			    waited,
@@ -2966,7 +3013,7 @@ void stripProxyAuthorization ( char *squidProxiedReqBuf ) {
  loop:
 	// include space so it won't match anything in url
 	char *needle = "Proxy-Authorization: ";
-	char *s = strcasestr ( squidProxiedReqBuf , needle );
+	char *s = gb_strcasestr ( squidProxiedReqBuf , needle );
 	if ( ! s ) return;
 	// find next \r\n
 	char *end = strstr ( s , "\r\n");
@@ -2974,10 +3021,10 @@ void stripProxyAuthorization ( char *squidProxiedReqBuf ) {
 	// bury the \r\n as well
 	end += 2;
 	// bury that string
-	long reqLen = gbstrlen(squidProxiedReqBuf);
+	int32_t reqLen = gbstrlen(squidProxiedReqBuf);
 	char *reqEnd = squidProxiedReqBuf + reqLen;
 	// include \0, so add +1
-	memcpy ( s ,end , reqEnd-end + 1);
+	gbmemcpy ( s ,end , reqEnd-end + 1);
 	// bury more of them
 	goto loop;
 }
@@ -2987,7 +3034,7 @@ void stripProxyAuthorization ( char *squidProxiedReqBuf ) {
 // . TODO: add "Host:xyz.con\r\n" ?
 void fixGETorPOST ( char *squidProxiedReqBuf ) {
 	char *s = strstr ( squidProxiedReqBuf , "GET http" );
-	long slen = 8;
+	int32_t slen = 8;
 	if ( ! s ) {
 		s = strstr ( squidProxiedReqBuf , "POST http");
 		slen = 9;
@@ -3011,7 +3058,7 @@ void fixGETorPOST ( char *squidProxiedReqBuf ) {
 	// bury the http://xyz.com part now
 	char *reqEnd = squidProxiedReqBuf + gbstrlen(squidProxiedReqBuf);
 	// include the terminating \0, so add +1
-	memcpy ( httpStart , s , reqEnd - s + 1 );
+	gbmemcpy ( httpStart , s , reqEnd - s + 1 );
 	// now make HTTP/1.1 into HTTP/1.0
 	char *hs = strstr ( httpStart , "HTTP/1.1" );
 	if ( ! hs ) return;
@@ -3022,21 +3069,28 @@ void fixGETorPOST ( char *squidProxiedReqBuf ) {
 bool setProxiedUrlFromSquidProxiedRequest ( Msg13Request *r ) {
 
 	// this is actually the entire http request mime, not a url
-	char *squidProxiedReqBuf = r->ptr_url;
+	//char *squidProxiedReqBuf = r->ptr_url;
 
-	char *s = strstr ( squidProxiedReqBuf , "GET http" );
-	long slen = 8;
-	if ( ! s ) {
-		s = strstr ( squidProxiedReqBuf , "POST http");
-		slen = 9;
-	}
-	if ( ! s ) {
-		s = strstr ( squidProxiedReqBuf , "HEAD http");
-		slen = 9;
-	}
-	if ( ! s ) return false;
+	// int16_tcut. this is the actual squid request like
+	// "CONNECT www.youtube.com:443 HTTP/1.1\r\nProxy-COnnection: ... "
+	// or
+	// "GET http://www.youtube.com/..."
+	char *s = r->ptr_url;
+	char *pu = NULL;
 
-	r->m_proxiedUrl = s + slen - 4;
+	if ( strncmp ( s , "GET http" ,8 ) == 0 ) 
+		pu = s + 4;
+	else if ( strncmp ( s , "POST http" ,9 ) == 0 )
+		pu = s + 5;
+	else if ( strncmp ( s , "HEAD http" ,9 ) == 0 )
+		pu = s + 5;
+	// this doesn't always have http:// usually just a hostname
+	else if ( strncmp ( s , "CONNECT " ,8 ) == 0 )
+		pu = s + 8;
+
+	if ( ! pu ) return false;
+
+	r->m_proxiedUrl = pu;
 
 	// find end of it
 	char *p = r->m_proxiedUrl;
@@ -3050,10 +3104,17 @@ bool setProxiedUrlFromSquidProxiedRequest ( Msg13Request *r ) {
 // . for the page cache we hash the url and the cookie to make the cache key
 // . also the GET/POST method i guess
 // . returns 0 on issues
-long long computeProxiedCacheKey64 ( Msg13Request *r ) {
+int64_t computeProxiedCacheKey64 ( Msg13Request *r ) {
 
 	// hash the url
 	char *start = r->m_proxiedUrl;
+
+	// how can this happen?
+	if ( ! start ) {
+		log("proxy: no proxied url");
+		return 0LL;
+	}
+
 	// skip http:// or https://
 	// skip forward
 	char *s = start;
@@ -3065,7 +3126,7 @@ long long computeProxiedCacheKey64 ( Msg13Request *r ) {
 	for ( ; *s && ! is_wspace_a(*s)  ; s++ ) {
 		if ( *s == '?' && ! cgi ) cgi = s; }
 	// hash the url
-	long long h64 = hash64 ( start , s - start );
+	int64_t h64 = hash64 ( start , s - start );
 
 
 	//
@@ -3097,11 +3158,12 @@ long long computeProxiedCacheKey64 ( Msg13Request *r ) {
 	// incorporate cookie hash
 	h64 = hash64 ( start , s - start , h64 );
 
-	//log("debug: cookiehash=%lli",hash64(start,s-start));
+	//log("debug: cookiehash=%"INT64"",hash64(start,s-start));
 
 	return h64;
 }
 
+/*
 static void sendBackInlineSectionVotingBuf ( void *xd ) ;
 
 // . returns false if blocks and will call gotHttpReply2() when done
@@ -3114,7 +3176,7 @@ static void sendBackInlineSectionVotingBuf ( void *xd ) ;
 bool markupServerReply ( Msg13Request *r , TcpSocket *ts ) {
 
 	char *httpReply = ts->m_readBuf;
-	long  httpReplyLen = ts->m_readOffset;
+	int32_t  httpReplyLen = ts->m_readOffset;
 
 	HttpMime mime;
 	mime.set ( httpReply , httpReplyLen , NULL );
@@ -3206,14 +3268,14 @@ void sendBackInlineSectionVotingBuf ( void *state ) {
 	XmlDoc *xd = (XmlDoc *)state;
 
 	// error?
-	long saved = g_errno;
+	int32_t saved = g_errno;
 
 	SafeBuf *buf = &xd->m_inlineSectionVotingBuf;
 
 	// steal it. this should now start with the original http mime
 	char *reply          = buf->getBufStart();
-	long  replySize      = buf->length() + 1; // include \0
-	long  replyAllocSize = buf->getCapacity();
+	int32_t  replySize      = buf->length() + 1; // include \0
+	int32_t  replyAllocSize = buf->getCapacity();
 
 	// we hack stashed this. is just the original udpslot readbuf
 	Msg13Request *r = xd->m_hsr;
@@ -3260,7 +3322,7 @@ void sendBackInlineSectionVotingBuf ( void *state ) {
 	// 			   replyAllocSize,
 	// 			   r->m_udpSlot);
 }
-
+*/
 
 static char *s_agentList[] = {
 	"Mozilla/5.0 (compatible; U; ABrowse 0.6; Syllable) AppleWebKit/420+ (KHTML, like Gecko)",
@@ -3672,7 +3734,6 @@ static char *s_agentList[] = {
 	"Mozilla/5.0 (Macintosh; U; PPC Mac OS X Mach-O; en-US; rv:1.0.1) Gecko/20021216 Chimera/0.6",
 	"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_9_2) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/36.0.1944.0 Safari/537.36",
 	"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_9_3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/35.0.1916.47 Safari/537.36",
-	"Mozilla/5.0 (Windows NT 5.1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/34.0.1847.116 Safari/537.36 Mozilla/5.0 (iPad; U; CPU OS 3_2 like Mac OS X; en-us) AppleWebKit/531.21.10 (KHTML, like Gecko) Version/4.0.4 Mobile/7B334b Safari/531.21.10",
 	"Mozilla/5.0 (Windows NT 6.2; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/32.0.1667.0 Safari/537.36",
 	"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_9_0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/32.0.1664.3 Safari/537.36",
 	"Mozilla/5.0 (Windows NT 5.1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/31.0.1650.16 Safari/537.36",
@@ -8173,7 +8234,6 @@ static char *s_agentList[] = {
 	"Mozilla/5.0 (X11; Linux; rv:2.0.1) Gecko/20100101 Firefox/4.0.1 Midori/0.4",
 	"Mozilla/5.0 (X11; U; Linux; pt-br) AppleWebKit/531+ (KHTML, like Gecko) Safari/531.2+ Midori/0.3",
 	"Mozilla/5.0 (X11; U; Linux i686; pt-br; rv:1.8.1) Gecko/20061010 Firefox/2.0 Midori/0.2.0",
-	"Mozilla/5.0 (iPhone; U; Linux i686; pt-br) AppleWebKit/532+ (KHTML, like Gecko) Version/3.0 Mobile/1A538b Safari/419.3 Midori/0.2.0",
 	"Mozilla/5.0 (X11; U; Linux; it-it) AppleWebKit/531+ (KHTML, like Gecko) Safari/531.2+ Midori/0.2",
 	"Mozilla/5.0 (X11; U; Linux x86_64; en-us) AppleWebKit/532+ (KHTML, like Gecko) Safari/419.3 Midori/0.1.8",
 	"Mozilla/5.0 (X11; U; Linux; fr-fr) AppleWebKit/532+ (KHTML, like Gecko) Safari/419.3 Midori/0.1.7",
@@ -8313,7 +8373,6 @@ static char *s_agentList[] = {
 	"Mozilla/5.0 (Windows; U; Windows NT 5.0; en-US; rv:1.9.2a1pre) Gecko",
 	"Mozilla/5.0 (Windows; U; Windows NT 5.1; pl; rv:1.9.2.3) Gecko/20100401 Lightningquail/3.6.3",
 	"Mozilla/5.0 (X11; ; Linux i686; rv:1.9.2.20) Gecko/20110805",
-	"Mozilla/5.0 (Windows; U; Windows NT 5.1; fr; rv:1.9.2.13) Gecko/20101203 iPhone",
 	"Mozilla/5.0 (Macintosh; U; Intel Mac OS X 10.6; en-US; rv:1.9.2.13; ) Gecko/20101203",
 	"Mozilla/5.0 (Windows; U; Windows NT 6.0; en-US; rv:1.9.1b3) Gecko/20090305",
 	"Mozilla/5.0 (Windows; U; Windows NT 5.1; zh-TW; rv:1.9.0.9) Gecko/2009040821",
@@ -10040,10 +10099,8 @@ static char *s_agentList[] = {
 	"Mozilla/5.0 (Macintosh; U; Intel Mac OS X 10_6_4; en-US) AppleWebKit/534.7 (KHTML, like Gecko) RockMelt/0.8.36.116 Chrome/7.0.517.44 Safari/534.7",
 	"Mozilla/5.0 (Macintosh; U; Intel Mac OS X 10_5_8; en-US) AppleWebKit/534.7 (KHTML, like Gecko) RockMelt/0.8.36.116 Chrome/7.0.517.44 Safari/534.7",
 	"Mozilla/5.0 (Macintosh; U; Intel Mac OS X 10_6_4; ha) AppleWebKit/534.13 (KHTML, like Gecko) RockMelt/0.445.436.1326 Chrome/12.0.632.107 Safari/534.13",
-	"Mozilla/5.0 (iPad; CPU OS 6_0 like Mac OS X) AppleWebKit/536.26 (KHTML, like Gecko) Version/6.0 Mobile/10A5355d Safari/8536.25",
 	"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_6_8) AppleWebKit/537.13+ (KHTML, like Gecko) Version/5.1.7 Safari/534.57.2",
 	"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_7_3) AppleWebKit/534.55.3 (KHTML, like Gecko) Version/5.1.3 Safari/534.53.10",
-	"Mozilla/5.0 (iPad; CPU OS 5_1 like Mac OS X) AppleWebKit/534.46 (KHTML, like Gecko ) Version/5.1 Mobile/9B176 Safari/7534.48.3",
 	"Mozilla/5.0 (Macintosh; U; Intel Mac OS X 10_6_8; de-at) AppleWebKit/533.21.1 (KHTML, like Gecko) Version/5.0.5 Safari/533.21.1",
 	"Mozilla/5.0 (Macintosh; U; Intel Mac OS X 10_6_7; da-dk) AppleWebKit/533.21.1 (KHTML, like Gecko) Version/5.0.5 Safari/533.21.1",
 	"Mozilla/5.0 (Windows; U; Windows NT 6.1; tr-TR) AppleWebKit/533.20.25 (KHTML, like Gecko) Version/5.0.4 Safari/533.20.27",
@@ -10080,7 +10137,6 @@ static char *s_agentList[] = {
 	"Mozilla/5.0 (Macintosh; U; Intel Mac OS X 10_6_6; fr-ch) AppleWebKit/533.19.4 (KHTML, like Gecko) Version/5.0.3 Safari/533.19.4",
 	"Mozilla/5.0 (Macintosh; U; Intel Mac OS X 10_6_5; de-de) AppleWebKit/534.15+ (KHTML, like Gecko) Version/5.0.3 Safari/533.19.4",
 	"Mozilla/5.0 (Macintosh; U; Intel Mac OS X 10_6_5; ar) AppleWebKit/533.19.4 (KHTML, like Gecko) Version/5.0.3 Safari/533.19.4",
-	"Mozilla/5.0 (Android 2.2; Windows; U; Windows NT 6.1; en-US) AppleWebKit/533.19.4 (KHTML, like Gecko) Version/5.0.3 Safari/533.19.4",
 	"Mozilla/5.0 (Windows; U; Windows NT 6.1; zh-HK) AppleWebKit/533.18.1 (KHTML, like Gecko) Version/5.0.2 Safari/533.18.5",
 	"Mozilla/5.0 (Windows; U; Windows NT 6.1; en-US) AppleWebKit/533.19.4 (KHTML, like Gecko) Version/5.0.2 Safari/533.18.5",
 	"Mozilla/5.0 (Windows; U; Windows NT 6.0; tr-TR) AppleWebKit/533.18.1 (KHTML, like Gecko) Version/5.0.2 Safari/533.18.5",
@@ -10089,18 +10145,6 @@ static char *s_agentList[] = {
 	"Mozilla/5.0 (Windows; U; Windows NT 5.1; zh-TW) AppleWebKit/533.19.4 (KHTML, like Gecko) Version/5.0.2 Safari/533.18.5",
 	"Mozilla/5.0 (Windows; U; Windows NT 5.1; ru-RU) AppleWebKit/533.18.1 (KHTML, like Gecko) Version/5.0.2 Safari/533.18.5",
 	"Mozilla/5.0 (Macintosh; U; Intel Mac OS X 10_5_8; zh-cn) AppleWebKit/533.18.1 (KHTML, like Gecko) Version/5.0.2 Safari/533.18.5",
-	"Mozilla/5.0 (iPod; U; CPU iPhone OS 4_3_3 like Mac OS X; ja-jp) AppleWebKit/533.17.9 (KHTML, like Gecko) Version/5.0.2 Mobile/8J2 Safari/6533.18.5",
-	"Mozilla/5.0 (iPod; U; CPU iPhone OS 4_3_1 like Mac OS X; zh-cn) AppleWebKit/533.17.9 (KHTML, like Gecko) Version/5.0.2 Mobile/8G4 Safari/6533.18.5",
-	"Mozilla/5.0 (iPod; U; CPU iPhone OS 4_2_1 like Mac OS X; he-il) AppleWebKit/533.17.9 (KHTML, like Gecko) Version/5.0.2 Mobile/8C148 Safari/6533.18.5",
-	"Mozilla/5.0 (iPhone; U; ru; CPU iPhone OS 4_2_1 like Mac OS X; ru) AppleWebKit/533.17.9 (KHTML, like Gecko) Version/5.0.2 Mobile/8C148a Safari/6533.18.5",
-	"Mozilla/5.0 (iPhone; U; ru; CPU iPhone OS 4_2_1 like Mac OS X; fr) AppleWebKit/533.17.9 (KHTML, like Gecko) Version/5.0.2 Mobile/8C148a Safari/6533.18.5",
-	"Mozilla/5.0 (iPhone; U; fr; CPU iPhone OS 4_2_1 like Mac OS X; fr) AppleWebKit/533.17.9 (KHTML, like Gecko) Version/5.0.2 Mobile/8C148a Safari/6533.18.5",
-	"Mozilla/5.0 (iPhone; U; CPU iPhone OS 4_3_1 like Mac OS X; zh-tw) AppleWebKit/533.17.9 (KHTML, like Gecko) Version/5.0.2 Mobile/8G4 Safari/6533.18.5",
-	"Mozilla/5.0 (iPhone; U; CPU iPhone OS 4_3 like Mac OS X; pl-pl) AppleWebKit/533.17.9 (KHTML, like Gecko) Version/5.0.2 Mobile/8F190 Safari/6533.18.5",
-	"Mozilla/5.0 (iPhone; U; CPU iPhone OS 4_3 like Mac OS X; fr-fr) AppleWebKit/533.17.9 (KHTML, like Gecko) Version/5.0.2 Mobile/8F190 Safari/6533.18.5",
-	"Mozilla/5.0 (iPhone; U; CPU iPhone OS 4_3 like Mac OS X; en-gb) AppleWebKit/533.17.9 (KHTML, like Gecko) Version/5.0.2 Mobile/8F190 Safari/6533.18.5",
-	"Mozilla/5.0 (iPhone; U; CPU iPhone OS 4_2_1 like Mac OS X; ru-ru) AppleWebKit/533.17.9 (KHTML, like Gecko) Version/5.0.2 Mobile/8C148 Safari/6533.18.5",
-	"Mozilla/5.0 (iPhone; U; CPU iPhone OS 4_2_1 like Mac OS X; nb-no) AppleWebKit/533.17.9 (KHTML, like Gecko) Version/5.0.2 Mobile/8C148a Safari/6533.18.5",
 	"Mozilla/5.0 (Windows; U; Windows NT 5.2; en-US) AppleWebKit/533.17.8 (KHTML, like Gecko) Version/5.0.1 Safari/533.17.8",
 	"Mozilla/5.0 (Macintosh; U; Intel Mac OS X 10_6_4; th-th) AppleWebKit/533.17.8 (KHTML, like Gecko) Version/5.0.1 Safari/533.17.8",
 	"Mozilla/5.0 (X11; U; Linux x86_64; en-us) AppleWebKit/531.2+ (KHTML, like Gecko) Version/5.0 Safari/531.2+",
@@ -10151,11 +10195,6 @@ static char *s_agentList[] = {
 	"Mozilla/5.0 (Macintosh; U; Intel Mac OS X 10_6_2; ja-jp) AppleWebKit/531.22.7 (KHTML, like Gecko) Version/4.0.5 Safari/531.22.7",
 	"Mozilla/5.0 (Macintosh; U; Intel Mac OS X 10_5_8; nl-nl) AppleWebKit/531.22.7 (KHTML, like Gecko) Version/4.0.5 Safari/531.22.7",
 	"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_6_8) AppleWebKit/534.57.2 (KHTML, like Gecko) Version/4.0.5 Safari/531.22.7",
-	"Mozilla/5.0 (iPhone; U; CPU iPhone OS 4_1 like Mac OS X; en-us) AppleWebKit/532.9 (KHTML, like Gecko) Version/4.0.5 Mobile/8B5097d Safari/6531.22.7",
-	"Mozilla/5.0 (iPhone; U; CPU iPhone OS 4_1 like Mac OS X; en-us) AppleWebKit/532.9 (KHTML, like Gecko) Version/4.0.5 Mobile/8B117 Safari/6531.22.7",
-	"Mozilla/5.0(iPad; U; CPU iPhone OS 3_2 like Mac OS X; en-us) AppleWebKit/531.21.10 (KHTML, like Gecko) Version/4.0.4 Mobile/7B314 Safari/531.21.10gin_lib.cc",
-	"Mozilla/5.0(iPad; U; CPU iPhone OS 3_2 like Mac OS X; en-us) AppleWebKit/531.21.10 (KHTML, like Gecko) Version/4.0.4 Mobile/7B314 Safari/531.21.10",
-	"Mozilla/5.0(iPad; U; CPU iPhone OS 3_2 like Mac OS X; en-us) AppleWebKit/531.21.10 (KHTML, like Gecko) Version/4.0.4 Mobile/7B314 Safari/123",
 	"Mozilla/5.0 (Windows; U; Windows NT 6.1; zh-TW) AppleWebKit/531.21.8 (KHTML, like Gecko) Version/4.0.4 Safari/531.21.10",
 	"Mozilla/5.0 (Windows; U; Windows NT 6.1; ko-KR) AppleWebKit/531.21.8 (KHTML, like Gecko) Version/4.0.4 Safari/531.21.10",
 	"Mozilla/5.0 (Windows; U; Windows NT 6.0; en-US) AppleWebKit/533.18.1 (KHTML, like Gecko) Version/4.0.4 Safari/531.21.10",
@@ -10167,12 +10206,6 @@ static char *s_agentList[] = {
 	"Mozilla/5.0 (Macintosh; U; Intel Mac OS X 10_6_2; ru-ru) AppleWebKit/533.2+ (KHTML, like Gecko) Version/4.0.4 Safari/531.21.10",
 	"Mozilla/5.0 (Macintosh; U; Intel Mac OS X 10_6_2; en-us) AppleWebKit/531.21.8 (KHTML, like Gecko) Version/4.0.4 Safari/531.21.10",
 	"Mozilla/5.0 (Macintosh; U; Intel Mac OS X 10_6_2; de-at) AppleWebKit/531.21.8 (KHTML, like Gecko) Version/4.0.4 Safari/531.21.10",
-	"Mozilla/5.0 (iPhone; U; CPU OS 3_2 like Mac OS X; en-us) AppleWebKit/531.21.10 (KHTML, like Gecko) Version/4.0.4 Mobile/7B334b Safari/531.21.10",
-	"Mozilla/5.0 (iPhone Simulator; U; CPU iPhone OS 3_2 like Mac OS X; en-us) AppleWebKit/531.21.10 (KHTML, like Gecko) Version/4.0.4 Mobile/7D11 Safari/531.21.10",
-	"Mozilla/5.0 (iPad;U;CPU OS 3_2_2 like Mac OS X; en-us) AppleWebKit/531.21.10 (KHTML, like Gecko) Version/4.0.4 Mobile/7B500 Safari/531.21.10",
-	"Mozilla/5.0 (iPad; U; CPU OS 3_2_2 like Mac OS X; en-us) AppleWebKit/531.21.10 (KHTML, like Gecko) Version/4.0.4 Mobile/7B500 Safari/53",
-	"Mozilla/5.0 (iPad; U; CPU OS 3_2 like Mac OS X; es-es) AppleWebKit/531.21.10 (KHTML, like Gecko) Version/4.0.4 Mobile/7B367 Safari/531.21.10",
-	"Mozilla/5.0 (iPad; U; CPU OS 3_2 like Mac OS X; es-es) AppleWebKit/531.21.10 (KHTML, like Gecko) Version/4.0.4 Mobile/7B360 Safari/531.21.10",
 	"Mozilla/5.0 (Windows; U; Windows NT 6.0; fr-ch) AppleWebKit/531.9 (KHTML, like Gecko) Version/4.0.3 Safari/531.9",
 	"Mozilla/5.0 (Windows; U; Windows NT 6.0; en-us) AppleWebKit/531.9 (KHTML, like Gecko) Version/4.0.3 Safari/531.9",
 	"Mozilla/5.0 (Macintosh; U; PPC Mac OS X 10_5_8; en-us) AppleWebKit/532.0+ (KHTML, like Gecko) Version/4.0.3 Safari/531.9.2009",
@@ -10279,7 +10312,6 @@ static char *s_agentList[] = {
 	"Mozilla/5.0 (Windows; U; Windows NT 5.1; en-US) AppleWebKit/525.18 (KHTML, like Gecko) Version/3.1.1 Safari/525.17",
 	"Mozilla/5.0 (Windows; U; Windows NT 5.1; en-US) AppleWebKit/525+ (KHTML, like Gecko) Version/3.1.1 Safari/525.17",
 	"Mozilla/5.0 (Windows; U; Windows NT 5.1; ca-es) AppleWebKit/525.18 (KHTML, like Gecko) Version/3.1.1 Safari/525.20",
-	"Mozilla/5.0 (Mozilla/5.0 (iPhone; U; CPU iPhone OS 2_0_1 like Mac OS X; fr-fr) AppleWebKit/525.18.1 (KHTML, like Gecko) Version/3.1.1 Mobile/5G77 Safari/525.20",
 	"Mozilla/5.0 (Macintosh; U; PPC Mac OS X 10_5_3; sv-se) AppleWebKit/525.18 (KHTML, like Gecko) Version/3.1.1 Safari/525.20",
 	"Mozilla/5.0 (Macintosh; U; PPC Mac OS X 10_5_3; en-us) AppleWebKit/525.18 (KHTML, like Gecko) Version/3.1.1 Safari/525.20",
 	"Mozilla/5.0 (Macintosh; U; PPC Mac OS X 10_5_3; en) AppleWebKit/525.18 (KHTML, like Gecko) Version/3.1.1 Safari/525.20",
@@ -10300,7 +10332,6 @@ static char *s_agentList[] = {
 	"Mozilla/5.0 (Windows; U; Windows NT 5.1; da-DK) AppleWebKit/525.13 (KHTML, like Gecko) Version/3.1 Safari/525.13.3",
 	"Mozilla/5.0 (Macintosh; U; PPC Mac OS X 10_5_4; en-us) AppleWebKit/525.18 (KHTML, like Gecko) Version/3.1 Safari/525.13",
 	"Mozilla/5.0 (Macintosh; U; PPC Mac OS X 10_5_2; en-gb) AppleWebKit/526+ (KHTML, like Gecko) Version/3.1 Safari/525.9",
-	"Mozilla/5.0 (Macintosh; U; PPC Mac OS X 10_5_2; en-gb) AppleWebKit/526+ (KHTML, like Gecko) Version/3.1 iPhone",
 	"Mozilla/5.0 (Macintosh; U; PPC Mac OS X 10_4_11; nl-nl) AppleWebKit/525.13 (KHTML, like Gecko) Version/3.1 Safari/525.13",
 	"Mozilla/5.0 (Macintosh; U; Intel Mac OS X; zh-tw) AppleWebKit/525.13 (KHTML, like Gecko) Version/3.1 Safari/525.13.3",
 	"Mozilla/5.0 (Macintosh; U; Intel Mac OS X 10_5_6; en-us) AppleWebKit/525.27.1 (KHTML, like Gecko) Version/3.1 Safari/525.13",
@@ -10596,7 +10627,6 @@ static char *s_agentList[] = {
 	"Mozilla/5.0 (Macintosh; U; PPC Mac OS X; en-us) AppleWebKit/85.7 (KHTML, like Gecko) Safari/85.5",
 	"Mozilla/5.0 (Macintosh; U; PPC Mac OS X; de-de) AppleWebKit/85.7 (KHTML, like Gecko) Safari/85.7",
 	"Mozilla/5.0 (Macintosh; U; PPC Mac OS X; de-de) AppleWebKit/85.7 (KHTML, like Gecko) Safari/85.5",
-	"Mozilla/5.0 (X11; U; Linux i686; en-US; rv:1.9.0.3) Gecko/2008092816 Mobile Safari 1.1.3",
 	"Mozilla/5.0 (Windows; U; Windows NT 6.1; zh-CN) AppleWebKit/533+ (KHTML, like Gecko)",
 	"Mozilla/5.0 (Windows; U; Windows NT 5.1; en-US) AppleWebKit/528.8 (KHTML, like Gecko)",
 	"Mozilla/5.0 (Windows NT 5.1) AppleWebKit/534.34 (KHTML, like Gecko) Dooble/1.40 Safari/534.34",
@@ -11705,20 +11735,20 @@ static char *s_agentList[] = {
 	"Mozilla/4.0 (compatible; MSIE 7.0; AOL 9.1; AOLBuild 4334.27; Windows NT 5.1; .NET CLR 1.1.4322; .NET CLR 2.0.50727; .NET CLR 3.0.04506.30; InfoPath.1); UnAuth-State"
 };
 
-char *getRandUserAgent ( long urlIp , long proxyIp , long proxyPort ) {
+char *getRandUserAgent ( int32_t urlIp , int32_t proxyIp , int32_t proxyPort ) {
 	// it is a function of the website ip and the proxy ip
-	unsigned long x = (unsigned long)urlIp;
+	uint32_t x = (uint32_t)urlIp;
 	x = hash32h ( x , proxyIp );
 	x = hash32h ( x , proxyPort );
 	// // get count
-	long numAgents = sizeof(s_agentList)/sizeof(char *);
+	int32_t numAgents = sizeof(s_agentList)/sizeof(char *);
 	// // select from the list then
-	long n = x % numAgents;
+	int32_t n = x % numAgents;
 
 	// just make it random all the time
-	//long n = rand() % numAgents;
+	//int32_t n = rand() % numAgents;
 
-	//log("urlip=%lu proxyip=%lu proxyport=%lu n=%li",
+	//log("urlip=%"UINT32" proxyip=%"UINT32" proxyport=%"UINT32" n=%"INT32"",
 	//    urlIp,proxyIp,proxyPort,n);
 
 	return s_agentList[n];

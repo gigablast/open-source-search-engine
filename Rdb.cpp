@@ -53,7 +53,7 @@ void Rdb::reset ( ) {
 	//	return;
 	//}
 	/*
-	for ( long i = 0 ; i < m_numBases ; i++ ) {
+	for ( int32_t i = 0 ; i < m_numBases ; i++ ) {
 		if ( ! m_bases[i] ) continue;
 		mdelete ( m_bases[i] , sizeof(RdbBase) , "Rdb Coll" );
 		delete (m_bases[i]);
@@ -91,7 +91,8 @@ RdbBase *Rdb::getBase ( collnum_t collnum )  {
 	// RdbBase for statsdb, etc. resides in collrec #0 i guess
 	CollectionRec *cr = g_collectiondb.m_recs[collnum];
 	if ( ! cr ) return NULL;
-	return cr->m_bases[(unsigned char)m_rdbId];
+	// this might load the rdbbase on demand now
+	return cr->getBase ( m_rdbId ); // m_bases[(unsigned char)m_rdbId];
 }
 
 // used by Rdb::addBase1()
@@ -104,11 +105,16 @@ void Rdb::addBase ( collnum_t collnum , RdbBase *base ) {
 	}
 	CollectionRec *cr = g_collectiondb.m_recs[collnum];
 	if ( ! cr ) return;
-	if ( cr->m_bases[(unsigned char)m_rdbId] ) { char *xx=NULL;*xx=0; }
-	cr->m_bases[(unsigned char)m_rdbId] = base;
+	//if ( cr->m_bases[(unsigned char)m_rdbId] ) { char *xx=NULL;*xx=0; }
+	RdbBase *oldBase = cr->getBasePtr ( m_rdbId );
+	if ( oldBase ) { char *xx=NULL;*xx=0; }
+	//cr->m_bases[(unsigned char)m_rdbId] = base;
+	cr->setBasePtr ( m_rdbId , base );
 	log ( LOG_DEBUG,"db: added base to collrec "
-	    "for rdb=%s rdbid=%li coll=%s collnum=%li base=0x%lx",
-	    m_dbname,(long)m_rdbId,cr->m_coll,(long)collnum,(long)base);
+	    "for rdb=%s rdbid=%"INT32" coll=%s collnum=%"INT32" "
+	      "base=0x%"PTRFMT"",
+	    m_dbname,(int32_t)m_rdbId,cr->m_coll,(int32_t)collnum,
+	      (PTRTYPE)base);
 }
 
 
@@ -118,13 +124,13 @@ void Rdb::addBase ( collnum_t collnum , RdbBase *base ) {
 bool Rdb::init ( char          *dir                  ,
 		  char          *dbname               ,
 		  bool           dedup                ,
-		  long           fixedDataSize        ,
-		  long           minToMerge           ,
-		  long           maxTreeMem           ,
-		  long           maxTreeNodes         ,
+		  int32_t           fixedDataSize        ,
+		  int32_t           minToMerge           ,
+		  int32_t           maxTreeMem           ,
+		  int32_t           maxTreeNodes         ,
 		  bool           isTreeBalanced       ,
-		  long           maxCacheMem          ,
-		  long           maxCacheNodes        ,
+		  int32_t           maxCacheMem          ,
+		  int32_t           maxCacheNodes        ,
 		  bool           useHalfKeys          ,
 		  bool           loadCacheFromDisk    ,
 		  DiskPageCache *pc                   ,
@@ -143,7 +149,7 @@ bool Rdb::init ( char          *dir                  ,
 	m_isCollectionLess = isCollectionLess;
 	// save the dbname NULL terminated into m_dbname/m_dbnameLen
 	m_dbnameLen = gbstrlen ( dbname );
-	memcpy ( m_dbname , dbname , m_dbnameLen );
+	gbmemcpy ( m_dbname , dbname , m_dbnameLen );
 	m_dbname [ m_dbnameLen ] = '\0';
 	// store the other parameters for initializing each Rdb
 	m_dedup            = dedup;
@@ -245,7 +251,7 @@ bool Rdb::init ( char          *dir                  ,
 	// . set tree to use our fixed data size
 	// . returns false and sets g_errno on error
 	if(m_useTree) { 
-		long rdbId = m_rdbId;
+		int32_t rdbId = m_rdbId;
 		// statsdb is collectionless really so pass on to tree
 		if ( rdbId == RDB_STATSDB ) rdbId = -1;
 		if ( ! m_tree.set ( fixedDataSize  , 
@@ -295,7 +301,7 @@ bool Rdb::init ( char          *dir                  ,
 	}
 
 	// now get how much mem the tree is using (not including stored recs)
-	long dataMem;
+	int32_t dataMem;
 	if(m_useTree) dataMem = maxTreeMem - m_tree.getTreeOverhead();
 	else          dataMem = maxTreeMem - m_buckets.getMemOccupied( );
 
@@ -333,7 +339,7 @@ bool Rdb::init ( char          *dir                  ,
 	//	return g_syncdb.addColl ( NULL );
 
 	// set this for use below
-	//*(long long *)m_gbcounteventsTermId =
+	//*(int64_t *)m_gbcounteventsTermId =
 	//	hash64n("gbeventcount")&TERMID_MASK;
 
 	m_initialized = true;
@@ -361,16 +367,16 @@ bool Rdb::updateToRebuildFiles ( Rdb *rdb2 , char *coll ) {
 	// how come not in repair mode?
 	if ( ! g_repairMode ) { char *xx = NULL; *xx = 0; }
 	// make a dir in the trash subfolder to hold them
-	unsigned long t = (unsigned long)getTime();
+	uint32_t t = (uint32_t)getTime();
 	char dstDir[256];
 	// make the trash dir if not there
 	sprintf ( dstDir , "%s/trash/" , g_hostdb.m_dir );
-	long status = ::mkdir ( dstDir ,
+	int32_t status = ::mkdir ( dstDir ,
 				S_IRUSR | S_IWUSR | S_IXUSR | 
 				S_IRGRP | S_IWGRP | S_IXGRP | 
 				S_IROTH | S_IXOTH ) ;
 	// we have to create it
-	sprintf ( dstDir , "%s/trash/rebuilt%li/" , g_hostdb.m_dir , t );
+	sprintf ( dstDir , "%s/trash/rebuilt%"UINT32"/" , g_hostdb.m_dir , t );
 	status = ::mkdir ( dstDir ,
 				S_IRUSR | S_IWUSR | S_IXUSR | 
 				S_IRGRP | S_IWGRP | S_IXGRP | 
@@ -493,9 +499,9 @@ bool Rdb::addRdbBase2 ( collnum_t collnum ) { // addColl2()
 	// ensure no max breech
 	if ( collnum < (collnum_t) 0 ) {
 		g_errno = ENOBUFS;
-		long long maxColls = 1LL << (sizeof(collnum_t)*8);
+		int64_t maxColls = 1LL << (sizeof(collnum_t)*8);
 		return log("db: %s: Failed to add collection #%i. Would "
-			   "breech maximum number of collections, %lli.",
+			   "breech maximum number of collections, %"INT64".",
 			   m_dbname,collnum,maxColls);
 	}
 
@@ -510,21 +516,22 @@ bool Rdb::addRdbBase2 ( collnum_t collnum ) { // addColl2()
 
 	// . ensure no previous one exists
 	// . well it will be there but will be uninitialized, m_rdb will b NULL
-	RdbBase *base = getBase ( collnum );
+	RdbBase *base = NULL;
+	if ( cr ) base = cr->getBasePtr ( m_rdbId );
 	if ( base ) { // m_bases [ collnum ] ) {
 		g_errno = EBADENGINEER;
 		return log("db: Rdb for db \"%s\" and "
-			   "collection \"%s\" (collnum %li) exists.",
-			   m_dbname,coll,(long)collnum);
+			   "collection \"%s\" (collnum %"INT32") exists.",
+			   m_dbname,coll,(int32_t)collnum);
 	}
 	// make a new one
 	RdbBase *newColl = NULL;
 	try {newColl= new(RdbBase);}
 	catch(...){
 		g_errno = ENOMEM;
-		return log("db: %s: Failed to allocate %li bytes for "
+		return log("db: %s: Failed to allocate %"INT32" bytes for "
 			   "collection \"%s\".",
-			   m_dbname,(long)sizeof(Rdb),coll);
+			   m_dbname,(int32_t)sizeof(Rdb),coll);
 	}
 	mnew(newColl, sizeof(RdbBase), "Rdb Coll");
 	//m_bases [ collnum ] = newColl;
@@ -572,7 +579,7 @@ bool Rdb::addRdbBase2 ( collnum_t collnum ) { // addColl2()
 		return false;
 	}
 
-	//if ( (long)collnum >= m_numBases ) m_numBases = (long)collnum + 1;
+	//if ( (int32_t)collnum >= m_numBases ) m_numBases = (int32_t)collnum + 1;
 	// Success
 	return true;
 }
@@ -580,7 +587,9 @@ bool Rdb::addRdbBase2 ( collnum_t collnum ) { // addColl2()
 bool Rdb::resetBase ( collnum_t collnum ) {
 	CollectionRec *cr = g_collectiondb.getRec(collnum);
 	if ( ! cr ) return true;
-	RdbBase *base = cr->m_bases[(unsigned char)m_rdbId];
+	//RdbBase *base = cr->m_bases[(unsigned char)m_rdbId];
+	// get the ptr, don't use CollectionRec::getBase() so we do not swapin
+	RdbBase *base = cr->getBasePtr (m_rdbId);
 	if ( ! base ) return true;
 	base->reset();
 	return true;
@@ -605,12 +614,12 @@ bool Rdb::deleteAllRecs ( collnum_t collnum ) {
 		return true;
 	}
 
-
-	RdbBase *base = cr->m_bases[(unsigned char)m_rdbId];
+	//Rdbbase *base = cr->m_bases[(unsigned char)m_rdbId];
+	RdbBase *base = cr->getBase(m_rdbId);
 	if ( ! base ) return true;
 
 	// scan files in there
-	for ( long i = 0 ; i < base->m_numFiles ; i++ ) {
+	for ( int32_t i = 0 ; i < base->m_numFiles ; i++ ) {
 		BigFile *f = base->m_files[i];
 		// move to trash
 		char newdir[1024];
@@ -668,7 +677,8 @@ bool Rdb::deleteColl ( collnum_t collnum , collnum_t newCollnum ) {
 
 	// NULL it out...
 	CollectionRec *oldcr = g_collectiondb.getRec(collnum);
-	oldcr->m_bases[(unsigned char)m_rdbId] = NULL;
+	//oldcr->m_bases[(unsigned char)m_rdbId] = NULL;
+	oldcr->setBasePtr ( m_rdbId , NULL );
 	char *coll = oldcr->m_coll;
 
 	char *msg = "deleted";
@@ -689,33 +699,33 @@ bool Rdb::deleteColl ( collnum_t collnum , collnum_t newCollnum ) {
 
 	
 	log(LOG_DEBUG,"db: %s base from collrec "
-	    "rdb=%s rdbid=%li coll=%s collnum=%li newcollnum=%li",
-	    msg,m_dbname,(long)m_rdbId,coll,(long)collnum,
-	    (long)newCollnum);
+	    "rdb=%s rdbid=%"INT32" coll=%s collnum=%"INT32" newcollnum=%"INT32"",
+	    msg,m_dbname,(int32_t)m_rdbId,coll,(int32_t)collnum,
+	    (int32_t)newCollnum);
 
 
 	// new dir. otherwise RdbDump will try to dump out the recs to
 	// the old dir and it will end up coring
 	//char tmp[1024];
-	//sprintf(tmp , "%scoll.%s.%li",g_hostdb.m_dir,coll,(long)newCollnum );
+	//sprintf(tmp , "%scoll.%s.%"INT32"",g_hostdb.m_dir,coll,(int32_t)newCollnum );
 	//m_dir.set ( tmp );
 
 	// move the files into trash
 	// nuke it on disk
 	char oldname[1024];
-	sprintf(oldname, "%scoll.%s.%li/",g_hostdb.m_dir,coll,
-		(long)collnum);
+	sprintf(oldname, "%scoll.%s.%"INT32"/",g_hostdb.m_dir,coll,
+		(int32_t)collnum);
 	char newname[1024];
-	sprintf(newname, "%strash/coll.%s.%li.%lli/",g_hostdb.m_dir,coll,
-		(long)collnum,gettimeofdayInMilliseconds());
+	sprintf(newname, "%strash/coll.%s.%"INT32".%"INT64"/",g_hostdb.m_dir,coll,
+		(int32_t)collnum,gettimeofdayInMilliseconds());
 	//Dir d; d.set ( dname );
 	// ensure ./trash dir is there
 	makeTrashDir();
 	// move into that dir
 	::rename ( oldname , newname );
 
-	log ( LOG_DEBUG, "db: cleared data for coll \"%s\" (%li) rdb=%s.",
-	       coll,(long)collnum ,getDbnameFromId(m_rdbId));
+	log ( LOG_DEBUG, "db: cleared data for coll \"%s\" (%"INT32") rdb=%s.",
+	       coll,(int32_t)collnum ,getDbnameFromId(m_rdbId));
 
 	return true;
 }
@@ -806,7 +816,7 @@ bool Rdb::close ( void *state , void (* callback)(void *state ), bool urgent ,
 	     g_merge.m_rdbId == m_rdbId &&
 	     ( g_merge.m_numThreads || g_merge.m_dump.m_isDumping ) ) {
 		// do not spam this message
-		long long now = gettimeofdayInMilliseconds();
+		int64_t now = gettimeofdayInMilliseconds();
 		if ( now - m_lastTime >= 500 ) {
 			log(LOG_INFO,"db: Waiting for merge to finish last "
 			    "write for %s.",m_dbname);
@@ -825,7 +835,7 @@ bool Rdb::close ( void *state , void (* callback)(void *state ), bool urgent ,
 	     g_merge2.m_rdbId == m_rdbId &&
 	     ( g_merge2.m_numThreads || g_merge2.m_dump.m_isDumping ) ) {
 		// do not spam this message
-		long long now = gettimeofdayInMilliseconds();
+		int64_t now = gettimeofdayInMilliseconds();
 		if ( now - m_lastTime >= 500 ) {
 			log(LOG_INFO,"db: Waiting for merge to finish last "
 			    "write for %s.",m_dbname);
@@ -846,7 +856,7 @@ bool Rdb::close ( void *state , void (* callback)(void *state ), bool urgent ,
 	//if ( m_isReallyClosing&&m_cache.useDisk() ) m_cache.save ( m_dbname);
 	if ( m_isReallyClosing ) {
 		// now loop over bases
-		for ( long i = 0 ; i < g_collectiondb.m_numRecs ; i++ ) {
+		for ( int32_t i = 0 ; i < g_collectiondb.m_numRecs ; i++ ) {
 			//CollectionRec *cr = g_collectiondb.m_recs[i];
 			// there can be holes if one was deleted
 			//if ( ! cr ) continue;
@@ -855,7 +865,7 @@ bool Rdb::close ( void *state , void (* callback)(void *state ), bool urgent ,
 			//if ( m_bases[i] ) m_bases[i]->closeMaps ( m_urgent );
 			if ( base ) base->closeMaps ( m_urgent );
 		}
-		//for ( long i = 0 ; i < m_numFiles ; i++ )
+		//for ( int32_t i = 0 ; i < m_numFiles ; i++ )
 		//	// this won't write it if it doesn't need to
 		//	if ( m_maps[i] ) m_maps[i]->close ( m_urgent );
 	}
@@ -1038,12 +1048,16 @@ bool Rdb::saveTree ( bool useThread ) {
 }
 
 bool Rdb::saveMaps ( bool useThread ) {
-	//for ( long i = 0 ; i < m_numBases ; i++ )
+	//for ( int32_t i = 0 ; i < m_numBases ; i++ )
 	//	if ( m_bases[i] ) m_bases[i]->saveMaps ( useThread );
 	// now loop over bases
-	for ( long i = 0 ; i < getNumBases() ; i++ ) {
+	for ( int32_t i = 0 ; i < getNumBases() ; i++ ) {
+		CollectionRec *cr = g_collectiondb.m_recs[i];
+		if ( ! cr ) continue;
+		// if swapped out, this will be NULL, so skip it
+		RdbBase *base = cr->getBasePtr(m_rdbId);
 		// shut it down
-		RdbBase *base = getBase(i);
+		//RdbBase *base = getBase(i);
 		//if ( m_bases[i] ) m_bases[i]->closeMaps ( m_urgent );
 		//if ( base ) base->closeMaps ( m_urgent );
 		if ( base ) base->saveMaps ( useThread );
@@ -1107,9 +1121,9 @@ bool Rdb::loadTree ( ) {
 	else {
 		if(!m_buckets.loadBuckets(m_dbname))
 			return log("db: Could not load saved buckets.");
-		long numKeys = m_buckets.getNumKeys();
+		int32_t numKeys = m_buckets.getNumKeys();
 		
-		// log("db: Loaded %li recs from %s's buckets on disk.",
+		// log("db: Loaded %"INT32" recs from %s's buckets on disk.",
 		//     numKeys, m_dbname);
 		
 		if(!m_buckets.testAndRepair()) {
@@ -1122,7 +1136,7 @@ bool Rdb::loadTree ( ) {
 		if(treeExists) {
 			m_buckets.addTree(&m_tree);
 			if(m_buckets.getNumKeys() - numKeys > 0) {
-				log("db: Imported %li recs from %s's tree to "
+				log("db: Imported %"INT32" recs from %s's tree to "
 				    "buckets.",
 				    m_buckets.getNumKeys()-numKeys, m_dbname);
 			}
@@ -1131,7 +1145,8 @@ bool Rdb::loadTree ( ) {
 			}
 			else {
 				char newFilename[256];
-				sprintf(newFilename,"%s-%li.old",filename, getTime());
+				sprintf(newFilename,"%s-%"INT32".old",
+					filename, (int32_t)getTime());
 				bool usingThreads = g_conf.m_useThreads;
 				g_conf.m_useThreads = false;
 				file.rename(newFilename);
@@ -1151,7 +1166,7 @@ static void doneDumpingCollWrapper ( void *state ) ;
 
 // . start dumping the tree
 // . returns false and sets g_errno on error
-bool Rdb::dumpTree ( long niceness ) {
+bool Rdb::dumpTree ( int32_t niceness ) {
 	if ( m_useTree ) {
 		if (m_tree.getNumUsedNodes() <= 0 ) return true;
 	}
@@ -1239,13 +1254,17 @@ bool Rdb::dumpTree ( long niceness ) {
 	// reset g_errno -- don't forget!
 	g_errno = 0;
 	// get max number of files
-	long max = MAX_RDB_FILES - 2;
+	int32_t max = MAX_RDB_FILES - 2;
 	// but less if titledb, because it uses a tfn
 	if ( m_isTitledb && max > 240 ) max = 240;
 	// . keep the number of files down
 	// . dont dump all the way up to the max, leave one open for merging
-	for ( long i = 0 ; i < getNumBases() ; i++ ) {
-		RdbBase *base = getBase(i);
+	for ( int32_t i = 0 ; i < getNumBases() ; i++ ) {
+		CollectionRec *cr = g_collectiondb.m_recs[i];
+		if ( ! cr ) continue;
+		// if swapped out, this will be NULL, so skip it
+		RdbBase *base = cr->getBasePtr(m_rdbId);
+		//RdbBase *base = getBase(i);
 		if ( base && base->m_numFiles >= max ) {
 			base->attemptMerge (1,false);//niceness,forced?
 			g_errno = ETOOMANYFILES;
@@ -1277,27 +1296,27 @@ bool Rdb::dumpTree ( long niceness ) {
 	// . is resumed when dump is completed
 	// m_merge.suspendMerge();
 	// allocate enough memory for the map of this file
-	//long fileSize = m_tree.getMemOccupiedForList(); 
+	//int32_t fileSize = m_tree.getMemOccupiedForList(); 
 	// . this returns false and sets g_errno on error
 	// . we return false if g_errno was set
 	//if ( ! m_maps[n]->setMapSizeFromFileSize ( fileSize ) ) return false;
 	// with titledb we can dump in 5meg chunks w/o worrying about
 	// RdbTree::deleteList() being way slow
 	/*
-	long numUsedNodes  = m_tree.getNumUsedNodes();
-	long totalOverhead = m_tree.getRecOverhead() * numUsedNodes;
-	long recSizes      = m_tree.getMemOccupied() - totalOverhead;
+	int32_t numUsedNodes  = m_tree.getNumUsedNodes();
+	int32_t totalOverhead = m_tree.getRecOverhead() * numUsedNodes;
+	int32_t recSizes      = m_tree.getMemOccupied() - totalOverhead;
 	// add the header, key plus dataSize, back in
-	long headerSize = sizeof(key_t);
+	int32_t headerSize = sizeof(key_t);
 	if ( m_fixedDataSize == -1 ) headerSize += 4;
 	recSizes += headerSize * numUsedNodes;
 	// get the avg rec size when serialized for a dump
-	long avgRecSize;
+	int32_t avgRecSize;
 	if   ( numUsedNodes > 0 ) avgRecSize = recSizes / numUsedNodes;
 	else                      avgRecSize = 12;
 	// the main problem is here is that RdbTree::deleteList() is slow
 	// as a function of the number of nodes
-	long bufSize = 17000 * avgRecSize;
+	int32_t bufSize = 17000 * avgRecSize;
 	//if ( bufSize > 5*1024*1024 ) bufSize = 5*1024*1024;
 	// seems like RdbTree::getList() takes 2+ seconds when getting a 5meg
 	// list of titlerecs... why?
@@ -1344,13 +1363,13 @@ bool Rdb::gotTokenForDump ( ) {
 	m_waitingForTokenForDump = false;
 	*/
 	// debug msg
-	log(LOG_INFO,"db: Dumping %s to disk. nice=%li",m_dbname,niceness);
+	log(LOG_INFO,"db: Dumping %s to disk. nice=%"INT32"",m_dbname,niceness);
 
 	// record last dump time so main.cpp will not save us this period
 	m_lastWrite = gettimeofdayInMilliseconds();
 
 	// only try to fix once per dump session
-	long long start = m_lastWrite; //gettimeofdayInMilliseconds();
+	int64_t start = m_lastWrite; //gettimeofdayInMilliseconds();
 	// do not do chain testing because that is too slow
 	if ( m_useTree && ! m_tree.checkTree ( false /* printMsgs?*/, false/*chain?*/) ) {
 		log("db: %s tree was corrupted in memory. Trying to fix. "
@@ -1366,7 +1385,41 @@ bool Rdb::gotTokenForDump ( ) {
 	}
 	log(LOG_INFO,
 	    "db: Checking validity of in memory data of %s before dumping, "
-	    "took %lli ms.",m_dbname,gettimeofdayInMilliseconds()-start);
+	    "took %"INT64" ms.",m_dbname,gettimeofdayInMilliseconds()-start);
+
+	////
+	//
+	// see what collnums are in the tree and just try those
+	//
+	////
+	CollectionRec *cr = NULL;
+	for ( int32_t i = 0 ; i < g_collectiondb.m_numRecs ; i++ ) {
+		cr = g_collectiondb.m_recs[i];
+		if ( ! cr ) continue;
+		// reset his tree count flag thing
+		cr->m_treeCount = 0;
+	}
+	if ( m_useTree ) {
+		// now scan the rdbtree and inc treecount where appropriate
+		for ( int32_t i = 0 ; i < m_tree.m_minUnusedNode ; i++ ) {
+			// skip node if parents is -2 (unoccupied)
+			if ( m_tree.m_parents[i] == -2 ) continue;
+			// get rec from tree collnum
+			cr = g_collectiondb.m_recs[m_tree.m_collnums[i]];
+			if ( cr ) cr->m_treeCount++;
+		}
+	}
+	else {
+		for(int32_t i = 0; i < m_buckets.m_numBuckets; i++) {
+			RdbBucket *b = m_buckets.m_buckets[i];
+			collnum_t cn = b->getCollnum();
+			int32_t nk = b->getNumKeys();
+			for ( int32_t j = 0 ; j < nk; j++ ) {
+				cr = g_collectiondb.m_recs[cn];
+				if ( cr ) cr->m_treeCount++;
+			}
+		}
+	}
 
 	// loop through collections, dump each one
 	m_dumpCollnum = (collnum_t)-1;
@@ -1387,10 +1440,21 @@ bool Rdb::gotTokenForDump ( ) {
 bool Rdb::dumpCollLoop ( ) {
 
  loop:
+	// if no more, we're done...
+	if ( m_dumpCollnum >= getNumBases() ) return true;
+
 	// the only was g_errno can be set here is from a previous dump
 	// error?
 	if ( g_errno ) {
-		RdbBase *base = getBase(m_dumpCollnum);
+	hadError:
+		// if swapped out, this will be NULL, so skip it
+		RdbBase *base = NULL;
+		CollectionRec *cr = NULL;
+		if ( m_dumpCollnum>=0 ) 
+			cr = g_collectiondb.m_recs[m_dumpCollnum];
+		if ( cr ) 
+			base = cr->getBasePtr(m_rdbId);
+		//RdbBase *base = getBase(m_dumpCollnum);
 		log("build: Error dumping collection: %s.",mstrerror(g_errno));
 		// . if we wrote nothing, remove the file
 		// . if coll was deleted under us, base will be NULL!
@@ -1407,21 +1471,48 @@ bool Rdb::dumpCollLoop ( ) {
 		s_lastTryTime = getTime();
 		return true;
 	}
-	// advance
+	// advance for next round
 	m_dumpCollnum++;
-	// advance m_dumpCollnum until we have a non-null RdbBase
-	while ( m_dumpCollnum < getNumBases() && ! getBase(m_dumpCollnum) )
-		m_dumpCollnum++;
+
+	// don't bother getting the base for all collections because
+	// we end up swapping them in
+	for ( ; m_dumpCollnum < getNumBases() ; m_dumpCollnum++ ) {
+		// collection rdbs like statsdb are ok to process
+		if ( m_isCollectionLess ) break;
+		// otherwise get the coll rec now
+		CollectionRec *cr = g_collectiondb.m_recs[m_dumpCollnum];
+		// skip if empty
+		if ( ! cr ) continue;
+		// skip if no recs in tree
+		if ( cr->m_treeCount == 0 ) continue;
+		// ok, it's good to dump
+		break;
+	}
+
 	// if no more, we're done...
 	if ( m_dumpCollnum >= getNumBases() ) return true;
 
+	// base is null if swapped out. skip it then. is that correct?
+	// probably not!
+	//RdbBase *base = cr->getBasePtr(m_rdbId);//m_dumpCollnum);
+
+	// swap it in for dumping purposes if we have to
+	// "cr" is NULL potentially for collectionless rdbs, like statsdb,
+	// do we can't involve that...
 	RdbBase *base = getBase(m_dumpCollnum);
+
+	// hwo can this happen? error swappingin?
+	if ( ! base ) { 
+		log("rdb: dumpcollloop base was null for cn=%"INT32"",
+		    (int32_t)m_dumpCollnum);
+		goto hadError;
+	}
 
 	// before we create the file, see if tree has anything for this coll
 	//key_t k; k.setMin();
 	if(m_useTree) {
 		char *k = KEYMIN();
-		long nn = m_tree.getNextNode ( m_dumpCollnum , k );
+		int32_t nn = m_tree.getNextNode ( m_dumpCollnum , k );
 		if ( nn < 0 ) goto loop;
 		if ( m_tree.m_collnums[nn] != m_dumpCollnum ) goto loop;
 	}
@@ -1430,7 +1521,7 @@ bool Rdb::dumpCollLoop ( ) {
 	}
 	// . MDW ADDING A NEW FILE SHOULD BE IN RDBDUMP.CPP NOW... NO!
 	// . get the biggest fileId
-	long id2 = -1;
+	int32_t id2 = -1;
 	if ( m_isTitledb ) {
 		//id2 = base->getAvailId2 ( );
 		// this is obsolete, make it always 000 now
@@ -1461,10 +1552,10 @@ bool Rdb::dumpCollLoop ( ) {
 	//bufSize = 100*1024;
 	// . when it's getting a list from the tree almost everything is frozen
 	// . like 100ms sometimes, lower down to 25k buf size
-	//long bufSize = 25*1024;
+	//int32_t bufSize = 25*1024;
 	// what is the avg rec size?
-	long numRecs;
-	long avgSize;
+	int32_t numRecs;
+	int32_t avgSize;
 
 	if(m_useTree) {
 		numRecs = m_tree.getNumUsedNodes(); 
@@ -1480,14 +1571,14 @@ bool Rdb::dumpCollLoop ( ) {
 	//   a lot more recs than for titledb!! by far.
 	// . 200k takes 17ms to get list and 37ms to delete it for indexdb
 	//   on a 2.8Ghz pentium
-	//long bufSize = 40*1024;
+	//int32_t bufSize = 40*1024;
 	// . don't get more than 3000 recs from the tree because it gets slow
 	// . we'd like to write as much out as possible to reduce possible
 	//   file interlacing when synchronous writes are enabled. RdbTree::
 	//   getList() should really be sped up by doing the neighbor node
 	//   thing. would help for adding lists, too, maybe.
-	long bufSize  = 300 * 1024;
-	long bufSize2 = 3000 * avgSize ;
+	int32_t bufSize  = 300 * 1024;
+	int32_t bufSize2 = 3000 * avgSize ;
 	if ( bufSize2 < 20*1024 ) bufSize2 = 20*1024;
 	if ( bufSize2 < bufSize ) bufSize  = bufSize2;
 	if(!m_useTree) bufSize *= 4; //buckets are much faster at getting lists
@@ -1497,7 +1588,7 @@ bool Rdb::dumpCollLoop ( ) {
 	// negative recs, so it is like indexdb...
 	//if ( this == g_spiderdb.getRdb  () ) bufSize = 20*1024;
 	// how big will file be? upper bound.
-	long long maxFileSize;
+	int64_t maxFileSize;
 	// . NOTE: this is NOT an upper bound, stuff can be added to the
 	//         tree WHILE we are dumping. this causes a problem because
 	//         the DiskPageCache, BigFile::m_pc, allocs mem when you call
@@ -1512,7 +1603,7 @@ bool Rdb::dumpCollLoop ( ) {
 	// being more, by like 20% or so, otherwise we do not make a
 	// big enough diskpagecache and it logs breach msgs... does not
 	// seem to happen with buckets based stuff... hmmm...
-	if ( m_useTree ) maxFileSize = ((long long)maxFileSize) * 120LL/100LL;
+	if ( m_useTree ) maxFileSize = ((int64_t)maxFileSize) * 120LL/100LL;
 	//if(m_niceness) g_loop.quickPoll(m_niceness, 
 	//__PRETTY_FUNCTION__, __LINE__);
 
@@ -1580,7 +1671,7 @@ void doneDumpingCollWrapper ( void *state ) {
 // RdbDump.cpp::dumpTree()
 void Rdb::doneDumping ( ) {
 	// msg
-	//log(LOG_INFO,"db: Done dumping %s to %s (#%li): %s.",
+	//log(LOG_INFO,"db: Done dumping %s to %s (#%"INT32"): %s.",
 	//    m_dbname,m_files[n]->getFilename(),n,mstrerror(g_errno));
 	log(LOG_INFO,"db: Done dumping %s: %s.",m_dbname,
 	    mstrerror(m_dumpErrno));
@@ -1596,7 +1687,7 @@ void Rdb::doneDumping ( ) {
 	// . on g_errno the dumped file will be removed from "sync" file and
 	//   from m_files and m_maps
 	// . TODO: move this logic into RdbDump.cpp
-	//for ( long i = 0 ; i < getNumBases() ; i++ ) {
+	//for ( int32_t i = 0 ; i < getNumBases() ; i++ ) {
 	//	if ( m_bases[i] ) m_bases[i]->doneDumping();
 	//}
 	// if we're closing shop then return
@@ -1661,9 +1752,15 @@ void attemptMergeAll ( int fd , void *state ) {
 }
 
 // called by main.cpp
-void Rdb::attemptMerge ( long niceness , bool forced , bool doLog ) {
-	for ( long i = 0 ; i < getNumBases() ; i++ ) {
-		RdbBase *base = getBase(i);
+void Rdb::attemptMerge ( int32_t niceness , bool forced , bool doLog ) {
+
+	for ( int32_t i = 0 ; i < getNumBases() ; i++ ) {
+
+		CollectionRec *cr = g_collectiondb.m_recs[i];
+		if ( ! cr ) continue;
+		// if swapped out, this will be NULL, so skip it
+		RdbBase *base = cr->getBasePtr(m_rdbId);
+		//RdbBase *base = getBase(i);
 		if ( ! base ) continue;
 		base->attemptMerge(niceness,forced,doLog);
 		// stop if we got unlink/rename threads out from a merge
@@ -1677,7 +1774,7 @@ void Rdb::attemptMerge ( long niceness , bool forced , bool doLog ) {
 // . return false and set g_errno on error
 // . TODO: speedup with m_tree.addSortedKeys() already partially written
 bool Rdb::addList ( collnum_t collnum , RdbList *list,
-		    long niceness/*, bool isSorted*/ ) {
+		    int32_t niceness/*, bool isSorted*/ ) {
 	// pick it
 	if ( collnum < 0 || collnum > getNumBases() || ! getBase(collnum) ) {
 		g_errno = ENOCOLLREC;
@@ -1699,6 +1796,8 @@ bool Rdb::addList ( collnum_t collnum , RdbList *list,
 	//}
 	// we now call getTimeGlobal() so we need to be in sync with host #0
 	if ( ! isClockInSync () ) {
+		// log("rdb: can not add data because clock not in sync with "
+		//     "host #0. issuing try again reply.");
 		g_errno = ETRYAGAIN; 
 		return false;
 	}
@@ -1729,7 +1828,7 @@ bool Rdb::addList ( collnum_t collnum , RdbList *list,
 		// allow banning of sites still
 		//m_rdbId == RDB_TAGDB     ) ) {
 		log("db: How did an add come in while in repair mode?"
-		    " rdbId=%li",(long)m_rdbId);
+		    " rdbId=%"INT32"",(int32_t)m_rdbId);
 		g_errno = EREPAIRING;
 		return false;
 	}
@@ -1740,8 +1839,8 @@ bool Rdb::addList ( collnum_t collnum , RdbList *list,
 	     m_rdbId != RDB_TAGDB &&
 	     m_rdbId != RDB_TURKDB ) {
 		log("db: How did an add come in while in full repair mode?"
-		    " addCollnum=%li repairCollnum=%li db=%s",
-		    (long)collnum , (long)g_repair.m_newCollnum ,
+		    " addCollnum=%"INT32" repairCollnum=%"INT32" db=%s",
+		    (int32_t)collnum , (int32_t)g_repair.m_newCollnum ,
 		    m_dbname );
 		g_errno = EREPAIRING;
 		return false;
@@ -1766,7 +1865,7 @@ bool Rdb::addList ( collnum_t collnum , RdbList *list,
 	// lock it
 	m_inAddList = true;
 
-	//log("msg1: in addlist niceness=%li",niceness);
+	//log("msg1: in addlist niceness=%"INT32"",niceness);
 
 	// . if we don't have enough room to store list, initiate a dump and
 	//   return g_errno of ETRYAGAIN
@@ -1778,7 +1877,7 @@ bool Rdb::addList ( collnum_t collnum , RdbList *list,
 		if ( m_useTree && m_tree.getNumUsedNodes() <= 0 ) {
 			g_errno = ELISTTOOBIG;
 			return log("db: Tried to add a record that is "
-				   "simply too big (%li bytes) to ever fit in "
+				   "simply too big (%"INT32" bytes) to ever fit in "
 				   "the memory "
 				   "space for %s. Please increase the max "
 				   "memory for %s in gb.conf.",
@@ -1805,7 +1904,7 @@ bool Rdb::addList ( collnum_t collnum , RdbList *list,
 
 	// set this for event interval records
 	m_nowGlobal = 0;//getTimeGlobal();
-	// shortcut this too
+	// int16_tcut this too
 	CollectionRec    *cr = g_collectiondb.getRec(collnum);
 	m_sortByDateTablePtr = &cr->m_sortByDateTable;
 
@@ -1814,7 +1913,7 @@ bool Rdb::addList ( collnum_t collnum , RdbList *list,
 	//key_t key      = list->getCurrentKey();
 	char key[MAX_KEY_BYTES];
 	list->getCurrentKey(key);
-	long  dataSize ;
+	int32_t  dataSize ;
 	char *data     ;
 	// negative keys have no data
 	if ( ! KEYNEG(key) ) {
@@ -1831,15 +1930,15 @@ bool Rdb::addList ( collnum_t collnum , RdbList *list,
 		char *s = "adding";
 		if ( KEYNEG(key) ) s = "removing";
 		// get the titledb docid
-		long long d = g_titledb.getDocIdFromKey ( (key_t *)key );
-		logf(LOG_DEBUG,"tfndb: %s docid %lli to titledb.",s,d);
+		int64_t d = g_titledb.getDocIdFromKey ( (key_t *)key );
+		logf(LOG_DEBUG,"tfndb: %s docid %"INT64" to titledb.",s,d);
 	}
 */
 
 	if ( ! addRecord ( collnum , key , data , dataSize, niceness ) ) {
 		// bitch
-		static long s_last = 0;
-		long now = time(NULL);
+		static int32_t s_last = 0;
+		int32_t now = time(NULL);
 		// . do not log this more than once per second to stop log spam
 		// . i think this can really lockup the cpu, too
 		if ( now - s_last != 0 ) 
@@ -1868,13 +1967,13 @@ bool Rdb::addList ( collnum_t collnum , RdbList *list,
 	// verify we added it right
 	if ( m_rdbId == RDB_TITLEDB ) { // && KEYPOS(key) ) {
 		// get the titledb docid
-		long long d = g_titledb.getDocIdFromKey ( (key_t *)key );
+		int64_t d = g_titledb.getDocIdFromKey ( (key_t *)key );
 	// check the tree for this docid
 	RdbTree *tt = g_titledb.m_rdb.getTree();
 	// make titledb keys
 	key_t startKey = g_titledb.makeFirstTitleRecKey ( d );
 	key_t endKey   = g_titledb.makeLastTitleRecKey  ( d );
-	long  n        = tt->getNextNode ( collnum , startKey );
+	int32_t  n        = tt->getNextNode ( collnum , startKey );
 	// sanity check -- make sure url is NULL terminated
 	//if ( ulen > 0 && st->m_url[st->m_ulen] ) { char*xx=NULL;*xx=0; }
 	// Tfndb::makeExtQuick masks the host hash with TFNDB_EXTMASK
@@ -1886,7 +1985,7 @@ bool Rdb::addList ( collnum_t collnum , RdbList *list,
 	if ( mask1 < mask2 ) min = mask1;
 	else                 min = mask2;
 	// if url provided, set "e"
-	//long e; if ( ulen > 0 ) e = g_tfndb.makeExtQuick ( st->m_url ) & min;
+	//int32_t e; if ( ulen > 0 ) e = g_tfndb.makeExtQuick ( st->m_url ) & min;
 	// there should only be one match, one titlerec per docid!
 	char *sss = "did not find";
 	for ( ; n >= 0 ; n = tt->getNextNode ( n ) ) {
@@ -1897,7 +1996,7 @@ bool Rdb::addList ( collnum_t collnum , RdbList *list,
 		// if passed limit, break out, no match
 		if ( k > endKey ) break;
 		// get the extended hash (aka extHash, aka hostHash)
-		//long e2 = g_titledb.getHostHash ( k ) & min;
+		//int32_t e2 = g_titledb.getHostHash ( k ) & min;
 		// if a url was provided and not a docid, must match the exts
 		//if ( ulen > 0 && e != e2 ) continue;
 		// . if we matched a negative key, then ENOTFOUND
@@ -1911,7 +2010,7 @@ bool Rdb::addList ( collnum_t collnum , RdbList *list,
 		break;
 	}
 	if ( KEYPOS(key) )
-		logf(LOG_DEBUG,"tfndb: %s docid %lli at node %li",sss,d,n);
+		logf(LOG_DEBUG,"tfndb: %s docid %"INT64" at node %"INT32"",sss,d,n);
 	}
 */
 
@@ -1920,8 +2019,8 @@ bool Rdb::addList ( collnum_t collnum , RdbList *list,
 	/*
 	if ( m_rdbId == RDB_TITLEDB && KEYNEG(key) ) {
 		// make the tfndb record
-		long long docId = g_titledb.getDocIdFromKey ((key_t *) key );
-		long long uh48  = g_titledb.getUrlHash48 ((key_t *)key);
+		int64_t docId = g_titledb.getDocIdFromKey ((key_t *) key );
+		int64_t uh48  = g_titledb.getUrlHash48 ((key_t *)key);
 		// . tfn=0 delete=true
 		// . use a tfn of 0 because RdbList::indexMerge_r() ignores
 		//   the "tfn bits" when merging/comparing two tfndb keys
@@ -1930,7 +2029,7 @@ bool Rdb::addList ( collnum_t collnum , RdbList *list,
 		// add this negative key to tfndb
 		Rdb *tdb = g_tfndb.getRdb();
 		// debug log
-		//logf(LOG_DEBUG,"tfndb: REMOVING tfndb docid %lli.",docId);
+		//logf(LOG_DEBUG,"tfndb: REMOVING tfndb docid %"INT64".",docId);
 		// if no room, bail. caller should dump tfndb and retry later.
 		if ( ! tdb->addRecord(collnum,(char *)&tk,NULL,0,niceness) ) {
 			// if it is OOM... dump it!
@@ -1957,7 +2056,7 @@ bool Rdb::addList ( collnum_t collnum , RdbList *list,
 	// return true if not ready for dump yet
 	if ( ! needsDump () ) return true;
 	// bad?
-	//log("rdb: dumptree niceness=%li",niceness);
+	//log("rdb: dumptree niceness=%"INT32"",niceness);
 	// if dump started ok, return true
 	if ( niceness != 0 ) if ( dumpTree( 1/*niceness*/ ) ) return true;
 	// technically, since we added the record, it is not an error
@@ -1980,11 +2079,11 @@ bool Rdb::needsDump ( ) {
 	if ( m_rdbId != RDB_DOLEDB ) return false;
 
 	// set this if not valid
-	//static long s_lastDumpTryTime = -1;
+	//static int32_t s_lastDumpTryTime = -1;
 	//if ( s_lastDumpTryTime == -1 )
 	//	s_lastDumpTryTime = getTimeLocal();
 	// try to dump doledb every 24 hrs
-	//long now = getTimeLocal();
+	//int32_t now = getTimeLocal();
 	//if ( now - s_lastDumpTryTime >= 3600*24 ) return true;
 
 	// or dump doledb if a ton of negative recs...
@@ -1996,20 +2095,20 @@ bool Rdb::needsDump ( ) {
 
 bool Rdb::hasRoom ( RdbList *list ) {
 	// how many nodes will tree need?
-	long numNodes = list->getNumRecs( );
+	int32_t numNodes = list->getNumRecs( );
 	if ( !m_useTree && !m_buckets.hasRoom(numNodes)) return false;
 	// how many nodes will tree need?
 	// how much space will RdbMem, m_mem, need?
-	//long overhead = sizeof(key_t);
-	long overhead = m_ks;
+	//int32_t overhead = sizeof(key_t);
+	int32_t overhead = m_ks;
 	if ( list->getFixedDataSize() == -1 ) overhead += 4;
 	// how much mem will the data use?
-	long long dataSpace = list->getListSize() - (numNodes * overhead);
+	int64_t dataSpace = list->getListSize() - (numNodes * overhead);
 	// does tree have room for these nodes?
 	if ( m_useTree && m_tree.getNumAvailNodes() < numNodes ) return false;
 
 	// does m_mem have room for "dataSpace"?
-	if ( (long long)m_mem.getAvailMem() < dataSpace ) return false;
+	if ( (int64_t)m_mem.getAvailMem() < dataSpace ) return false;
 	// otherwise, we do have room
 	return true;
 }
@@ -2020,9 +2119,9 @@ bool Rdb::hasRoom ( RdbList *list ) {
 //   because dump should complete soon and free up some mem
 // . this overwrites dups
 bool Rdb::addRecord ( collnum_t collnum, 
-		      //key_t &key , char *data , long dataSize ){
-		      char *key , char *data , long dataSize,
-		      long niceness){
+		      //key_t &key , char *data , int32_t dataSize ){
+		      char *key , char *data , int32_t dataSize,
+		      int32_t niceness){
 	if ( ! getBase(collnum) ) {
 		g_errno = EBADENGINEER;
 		log(LOG_LOGIC,"db: addRecord: collection #%i is gone.",
@@ -2033,8 +2132,8 @@ bool Rdb::addRecord ( collnum_t collnum,
 	// skip if tree not writable
 	if ( ! g_process.m_powerIsOn ) {
 		// log it every 3 seconds
-		static long s_last = 0;
-		long now = getTime();
+		static int32_t s_last = 0;
+		int32_t now = getTime();
 		if ( now - s_last > 3 ) {
 			s_last = now;
 			log("db: addRecord: power is off. try again.");
@@ -2081,8 +2180,8 @@ bool Rdb::addRecord ( collnum_t collnum,
 	// sanity check
 	else if ( m_fixedDataSize >= 0 && dataSize != m_fixedDataSize ) {
 		g_errno = EBADENGINEER;
-		log(LOG_LOGIC,"db: addRecord: DataSize is %li should "
-		    "be %li", dataSize,m_fixedDataSize );
+		log(LOG_LOGIC,"db: addRecord: DataSize is %"INT32" should "
+		    "be %"INT32"", dataSize,m_fixedDataSize );
 		char *xx=NULL;*xx=0;
 		return false;
 	}
@@ -2104,7 +2203,7 @@ bool Rdb::addRecord ( collnum_t collnum,
 		data = (char *) m_mem.dupData ( key, data, dataSize, collnum);
 		if ( ! data ) { 
 			g_errno = ETRYAGAIN; 
-			return log("db: Could not allocate %li bytes to add "
+			return log("db: Could not allocate %"INT32" bytes to add "
 				   "data to %s. Retrying.",dataSize,m_dbname);
 		}
 	}
@@ -2117,8 +2216,8 @@ bool Rdb::addRecord ( collnum_t collnum,
 	// sanity check
 	//if ( m_fixedDataSize >= 0 && dataSize != m_fixedDataSize ) {
 	//	g_errno = EBADENGINEER;
-	//	log(LOG_LOGIC,"db: addRecord: DataSize is %li should "
-	//	    "be %li", dataSize,m_fixedDataSize );
+	//	log(LOG_LOGIC,"db: addRecord: DataSize is %"INT32" should "
+	//	    "be %"INT32"", dataSize,m_fixedDataSize );
 	//	char *xx=NULL;*xx=0;
 	//	return false;
 	//}
@@ -2126,7 +2225,7 @@ bool Rdb::addRecord ( collnum_t collnum,
 	// . TODO: save this tree-walking state for adding the node!!!
 	// . TODO: use somethin like getNode(key,&lastNode)
 	//         then addNode (lastNode,key,data,dataSize)
-	//	   long lastNode;
+	//	   int32_t lastNode;
 	// . #1) if we're adding a positive key, replace negative counterpart
 	//       in the tree, because we'll override the positive rec it was
 	//       deleting
@@ -2135,7 +2234,7 @@ bool Rdb::addRecord ( collnum_t collnum,
 	//       the positive counterpart was overriding one on disk (as in #1)
 	//key_t oppKey = key ;
 	char oppKey[MAX_KEY_BYTES];
-	long n = -1;
+	int32_t n = -1;
 
 	// if we are TFNDB, get the node independent of the
 	// tfnnum bits so we can overwrite it even though the key is
@@ -2155,7 +2254,7 @@ bool Rdb::addRecord ( collnum_t collnum,
 		// get it
 		if ( n >= 0 ) {
 			// get uh48 being added
-			long long uh48 = g_tfndb.getUrlHash48((key_t *)key);
+			int64_t uh48 = g_tfndb.getUrlHash48((key_t *)key);
 			// get that key
 			ok = m_tree.getKey( n );
 			// see if it matches our uh48, if not then
@@ -2185,9 +2284,9 @@ bool Rdb::addRecord ( collnum_t collnum,
 		if ( KEYNEG(key) ) {
 			// log debug
 			logf(LOG_DEBUG,"spider: removed doledb key "
-			     "for pri=%li time=%lu uh48=%llu",
-			     (long)g_doledb.getPriority(&doleKey),
-			     (long)g_doledb.getSpiderTime(&doleKey),
+			     "for pri=%"INT32" time=%"UINT32" uh48=%"UINT64"",
+			     (int32_t)g_doledb.getPriority(&doleKey),
+			     (uint32_t)g_doledb.getSpiderTime(&doleKey),
 			     g_doledb.getUrlHash48(&doleKey));
 		}
 		else {
@@ -2197,9 +2296,10 @@ bool Rdb::addRecord ( collnum_t collnum,
 			// log debug
 			SpiderRequest *sreq = (SpiderRequest *)data;
 			logf(LOG_DEBUG,"spider: added doledb key "
-			     "for pri=%li time=%lu uh48=%llu docid=%lli u=%s",
-			     (long)g_doledb.getPriority(&doleKey),
-			     (long)g_doledb.getSpiderTime(&doleKey),
+			     "for pri=%"INT32" time=%"UINT32" "
+			     "uh48=%"UINT64" docid=%"INT64" u=%s",
+			     (int32_t)g_doledb.getPriority(&doleKey),
+			     (uint32_t)g_doledb.getSpiderTime(&doleKey),
 			     g_doledb.getUrlHash48(&doleKey),
 			     sreq->m_probDocId,
 			     sreq->m_url);
@@ -2228,10 +2328,10 @@ bool Rdb::addRecord ( collnum_t collnum,
 			if ( sc ) {
 				// remove the local lock on this
 				HashTableX *ht = &g_spiderLoop.m_lockTable;
-				// shortcut 
-				long long uh48=g_doledb.getUrlHash48(&doleKey);
+				// int16_tcut 
+				int64_t uh48=g_doledb.getUrlHash48(&doleKey);
 				// check tree
-				long slot = ht->getSlot ( &uh48 );
+				int32_t slot = ht->getSlot ( &uh48 );
 				// nuke it
 				if ( slot >= 0 ) ht->removeSlot ( slot );
 				// get coll
@@ -2239,7 +2339,7 @@ bool Rdb::addRecord ( collnum_t collnum,
 					// log debug
 					logf(LOG_DEBUG,"spider: rdb: "
 					     "got negative doledb "
-					     "key for uh48=%llu - removing "
+					     "key for uh48=%"UINT64" - removing "
 					     "spidering lock",
 					     g_doledb.getUrlHash48(&doleKey));
 			}
@@ -2272,7 +2372,7 @@ bool Rdb::addRecord ( collnum_t collnum,
 	// debug testing
 	//if ( m_rdbId == RDB_CATDB ) {
 	//	// show key
-	//	log("rdb: adding key=%s to tree n=%li",KEYSTR(key,12) ,n);
+	//	log("rdb: adding key=%s to tree n=%"INT32"",KEYSTR(key,12) ,n);
 	//}
 
 
@@ -2381,20 +2481,20 @@ bool Rdb::addRecord ( collnum_t collnum,
 	// . TODO: add using "lastNode" as a start node for the insertion point
 	// . should set g_errno if failed
 	// . caller should retry on g_errno of ETRYAGAIN or ENOMEM
-	long tn;
+	int32_t tn;
 	if ( !m_useTree ) {
 		// debug indexdb
 		/*
 		if ( m_rdbId == RDB_INDEXDB ) {
-			long long termId = g_indexdb.getTermId ( (key_t *)key);
-			logf(LOG_DEBUG,"rdb: adding tid=%llu to indexb",
+			int64_t termId = g_indexdb.getTermId ( (key_t *)key);
+			logf(LOG_DEBUG,"rdb: adding tid=%"UINT64" to indexb",
 			     termId);
 		}
 		*/
 		if ( m_buckets.addNode ( collnum , key , data , dataSize )>=0){
 			// sanity test
-			//long long tid = g_datedb.getTermId((key128_t *)key);
-			//if ( tid == *(long long *)m_gbcounteventsTermId )
+			//int64_t tid = g_datedb.getTermId((key128_t *)key);
+			//if ( tid == *(int64_t *)m_gbcounteventsTermId )
 			//	log("ghey");
 			// . datedb special counting of events
 			// . check termid quickly
@@ -2460,7 +2560,7 @@ bool Rdb::addRecord ( collnum_t collnum,
 		if ( ! sc ) return true;
 		// if doing doledb...
 		if ( m_rdbId == RDB_DOLEDB ) {
-			long pri = g_doledb.getPriority((key_t *)key);
+			int32_t pri = g_doledb.getPriority((key_t *)key);
 			// skip over corruption
 			if ( pri < 0 || pri >= MAX_SPIDER_PRIORITIES )
 				return true;
@@ -2473,7 +2573,7 @@ bool Rdb::addRecord ( collnum_t collnum,
 				       sizeof(key_t) );
 				// debug log
 				if ( g_conf.m_logDebugSpider )
-					log("spider: cursor reset pri=%li to "
+					log("spider: cursor reset pri=%"INT32" to "
 					    "%s",
 					    pri,KEYSTR(key,12));
 			}
@@ -2482,8 +2582,8 @@ bool Rdb::addRecord ( collnum_t collnum,
 		}
 		// . ok, now add that reply to the cache
 		// . g_now is in milliseconds!
-		//long nowGlobal = localToGlobalTimeSeconds ( g_now/1000 );
-		//long nowGlobal = getTimeGlobal();
+		//int32_t nowGlobal = localToGlobalTimeSeconds ( g_now/1000 );
+		//int32_t nowGlobal = getTimeGlobal();
 		// assume this is the rec (4 byte dataSize,spiderdb key is 
 		// now 16 bytes)
 		SpiderRequest *sreq=(SpiderRequest *)(orig-4-sizeof(key128_t));
@@ -2495,8 +2595,8 @@ bool Rdb::addRecord ( collnum_t collnum,
 			if ( g_conf.m_logDebugSpider )
 				logf(LOG_DEBUG,"spider: rdb: added spider "
 				     "request to spiderdb rdb tree "
-				     "addnode=%li "
-				     "request for uh48=%llu prntdocid=%llu "
+				     "addnode=%"INT32" "
+				     "request for uh48=%"UINT64" prntdocid=%"UINT64" "
 				     "firstIp=%s spiderdbkey=%s",
 				     tn,
 				     sreq->getUrlHash48(), 
@@ -2514,12 +2614,12 @@ bool Rdb::addRecord ( collnum_t collnum,
 		}
 		// otherwise repl
 		else {
-			// shortcut - cast it to reply
+			// int16_tcut - cast it to reply
 			SpiderReply *rr = (SpiderReply *)sreq;
 			// log that. why isn't this undoling always
 			if ( g_conf.m_logDebugSpider )
 				logf(LOG_DEBUG,"rdb: rdb: got spider reply"
-				     " for uh48=%llu",rr->getUrlHash48());
+				     " for uh48=%"UINT64"",rr->getUrlHash48());
 			// add the reply
 			sc->addSpiderReply(rr);
 			// don't actually add it if "fake". i.e. if it
@@ -2533,14 +2633,14 @@ bool Rdb::addRecord ( collnum_t collnum,
 			// as they completed and when i tried to rerun it
 			// the title recs were not found since they were deleted,
 			// so we gotta add the replies now.
-			long indexCode = rr->m_errCode;
+			int32_t indexCode = rr->m_errCode;
 			if ( //indexCode == EINTERNALERROR ||
 			     indexCode == EABANDONED ||
 			     indexCode == EHITCRAWLLIMIT ||
 			     indexCode == EHITPROCESSLIMIT ) {
 				log("rdb: not adding spiderreply to rdb "
 				    "because "
-				    "it was an internal error for uh48=%llu "
+				    "it was an internal error for uh48=%"UINT64" "
 				    "errCode = %s",
 				    rr->getUrlHash48(),
 				    mstrerror(indexCode));
@@ -2559,7 +2659,7 @@ bool Rdb::addRecord ( collnum_t collnum,
 		// get the tree directly
 		RdbTree *tree = g_tfndb.getRdb()->getTree();
 		// remove the key we added
-		long n = tree->deleteNode ( collnum, (char *)&uk , true ) ;
+		int32_t n = tree->deleteNode ( collnum, (char *)&uk , true ) ;
 		// sanity check
 		if ( n < 0 ) {
 			log("db: Did not find tfndb key to rollback.");
@@ -2568,7 +2668,7 @@ bool Rdb::addRecord ( collnum_t collnum,
 		// did we have an "oppKey"?
 		if ( s_tfndbHadOppKey ) {
 			// add it back
-			long n = tree->addNode(collnum,(char *)&s_tfndbOppKey);
+			int32_t n = tree->addNode(collnum,(char *)&s_tfndbOppKey);
 			// see if this can ever fail, i do not see why it
 			// would since we deleted it above
 			if ( n < 0 ) {
@@ -2597,10 +2697,10 @@ bool Rdb::addRecord ( collnum_t collnum,
 
 // . use the maps and tree to estimate the size of this list w/o hitting disk
 // . used by Indexdb.cpp to get the size of a list for IDF weighting purposes
-long long Rdb::getListSize ( collnum_t collnum,
+int64_t Rdb::getListSize ( collnum_t collnum,
 			//key_t startKey , key_t endKey , key_t *max ,
 			char *startKey , char *endKey , char *max ,
-			long long oldTruncationLimit ) {
+			int64_t oldTruncationLimit ) {
 	// pick it
 	//collnum_t collnum = g_collectiondb.getCollnum ( coll );
 	if ( collnum < 0 || collnum > getNumBases() || ! getBase(collnum) )
@@ -2609,16 +2709,21 @@ long long Rdb::getListSize ( collnum_t collnum,
 					    oldTruncationLimit);
 }
 
-long long Rdb::getNumGlobalRecs ( ) {
+int64_t Rdb::getNumGlobalRecs ( ) {
 	return getNumTotalRecs() * g_hostdb.m_numShards;//Groups;
 }
 
 // . return number of positive records - negative records
-long long Rdb::getNumTotalRecs ( bool useCache ) {
+int64_t Rdb::getNumTotalRecs ( bool useCache ) {
+
+	// are we catdb or statsdb? then we have no associated collections
+	// because we are used globally, by all collections
+	if ( m_isCollectionLess )
+		return m_collectionlessBase->getNumTotalRecs();
 
 	// this gets slammed w/ too many collections so use a cache...
 	//if ( g_collectiondb.m_numRecsUsed > 10 ) {
-	long now = 0;
+	int32_t now = 0;
 	if ( useCache ) {
 		now = getTimeLocal();
 		if ( now - m_cacheLastTime == 0 ) 
@@ -2626,13 +2731,16 @@ long long Rdb::getNumTotalRecs ( bool useCache ) {
 	}
 
 	// same as num recs
-	long nb = getNumBases();
+	int32_t nb = getNumBases();
 
-	long long total = 0LL;
+	int64_t total = 0LL;
 
 	//return 0; // too many collections!!
-	for ( long i = 0 ; i < nb ; i++ ) {
-		RdbBase *base = getBase(i);
+	for ( int32_t i = 0 ; i < nb ; i++ ) {
+		CollectionRec *cr = g_collectiondb.m_recs[i];
+		if ( ! cr ) continue;
+		// if swapped out, this will be NULL, so skip it
+		RdbBase *base = cr->getBasePtr(m_rdbId);
 		if ( ! base ) continue;
 		total += base->getNumTotalRecs();
 	}
@@ -2650,10 +2758,14 @@ long long Rdb::getNumTotalRecs ( bool useCache ) {
 
 // . how much mem is alloced for all of our maps?
 // . we have one map per file
-long long Rdb::getMapMemAlloced () {
-	long long total = 0;
-	for ( long i = 0 ; i < getNumBases() ; i++ ) {
-		RdbBase *base = getBase(i);
+int64_t Rdb::getMapMemAlloced () {
+	int64_t total = 0;
+	for ( int32_t i = 0 ; i < getNumBases() ; i++ ) {
+		// skip null base if swapped out
+		CollectionRec *cr = g_collectiondb.m_recs[i];
+		if ( ! cr ) return true;
+		RdbBase *base = cr->getBasePtr(m_rdbId);		
+		//RdbBase *base = getBase(i);
 		if ( ! base ) continue;
 		total += base->getMapMemAlloced();
 	}
@@ -2661,10 +2773,14 @@ long long Rdb::getMapMemAlloced () {
 }
 
 // sum of all parts of all big files
-long Rdb::getNumSmallFiles ( ) {
-	long total = 0;
-	for ( long i = 0 ; i < getNumBases() ; i++ ) {
-		RdbBase *base = getBase(i);
+int32_t Rdb::getNumSmallFiles ( ) {
+	int32_t total = 0;
+	for ( int32_t i = 0 ; i < getNumBases() ; i++ ) {
+		// skip null base if swapped out
+		CollectionRec *cr = g_collectiondb.m_recs[i];
+		if ( ! cr ) return true;
+		RdbBase *base = cr->getBasePtr(m_rdbId);		
+		//RdbBase *base = getBase(i);
 		if ( ! base ) continue;
 		total += base->getNumSmallFiles();
 	}
@@ -2672,20 +2788,28 @@ long Rdb::getNumSmallFiles ( ) {
 }
 
 // sum of all parts of all big files
-long Rdb::getNumFiles ( ) {
-	long total = 0;
-	for ( long i = 0 ; i < getNumBases() ; i++ ) {
-		RdbBase *base = getBase(i);
+int32_t Rdb::getNumFiles ( ) {
+	int32_t total = 0;
+	for ( int32_t i = 0 ; i < getNumBases() ; i++ ) {
+		CollectionRec *cr = g_collectiondb.m_recs[i];
+		if ( ! cr ) continue;
+		// if swapped out, this will be NULL, so skip it
+		RdbBase *base = cr->getBasePtr(m_rdbId);
+		//RdbBase *base = getBase(i);
 		if ( ! base ) continue;
 		total += base->getNumFiles();
 	}
 	return total;
 }
 
-long long Rdb::getDiskSpaceUsed ( ) {
-	long long total = 0;
-	for ( long i = 0 ; i < getNumBases() ; i++ ) {
-		RdbBase *base = getBase(i);
+int64_t Rdb::getDiskSpaceUsed ( ) {
+	int64_t total = 0;
+	for ( int32_t i = 0 ; i < getNumBases() ; i++ ) {
+		CollectionRec *cr = g_collectiondb.m_recs[i];
+		if ( ! cr ) continue;
+		// if swapped out, this will be NULL, so skip it
+		RdbBase *base = cr->getBasePtr(m_rdbId);
+		//RdbBase *base = getBase(i);
 		if ( ! base ) continue;
 		total += base->getDiskSpaceUsed();
 	}
@@ -2696,8 +2820,12 @@ bool Rdb::isMerging ( ) {
 	// use this for speed
 	return (bool)m_numMergesOut;
 
-	for ( long i = 0 ; i < getNumBases() ; i++ ) {
-		RdbBase *base = getBase(i);
+	for ( int32_t i = 0 ; i < getNumBases() ; i++ ) {
+		CollectionRec *cr = g_collectiondb.m_recs[i];
+		if ( ! cr ) continue;
+		// if swapped out, this will be NULL, so skip it
+		RdbBase *base = cr->getBasePtr(m_rdbId);
+		//RdbBase *base = getBase(i);
 		if ( ! base ) continue;
 		if ( base->isMerging() ) return true;
 	}
@@ -2830,9 +2958,9 @@ char getKeySizeFromRdbId ( uint8_t rdbId ) {
 		if ( RDB_END >= 50 ) { char *xx=NULL;*xx=0; }
 		// . loop over all possible rdbIds
 		// . RDB_NONE is 0!
-		for ( long i = 1 ; i < RDB_END ; i++ ) {
+		for ( int32_t i = 1 ; i < RDB_END ; i++ ) {
 			// assume 12
-			long ks = 12;
+			int32_t ks = 12;
 			// only these are 16 as of now
 			if ( //i == RDB_DATEDB    ||
 			     i == RDB_SPIDERDB  ||
@@ -2861,18 +2989,18 @@ char getKeySizeFromRdbId ( uint8_t rdbId ) {
 }
 
 // returns -1 if dataSize is variable
-long getDataSizeFromRdbId ( uint8_t rdbId ) {
+int32_t getDataSizeFromRdbId ( uint8_t rdbId ) {
 	static bool s_flag = true;
-	static long s_table2[80];
+	static int32_t s_table2[80];
 	if ( s_flag ) {
 		// only stock the table once
 		s_flag = false;
 		// sanity check
 		if ( RDB_END >= 80 ) { char *xx=NULL;*xx=0; }
 		// loop over all possible rdbIds
-		for ( long i = 1 ; i < RDB_END ; i++ ) {
+		for ( int32_t i = 1 ; i < RDB_END ; i++ ) {
 			// assume none
-			long ds = 0;
+			int32_t ds = 0;
 			// only these are 16 as of now
 			if ( i == RDB_POSDB ||
 			     i == RDB_INDEXDB ||
@@ -2933,7 +3061,7 @@ long getDataSizeFromRdbId ( uint8_t rdbId ) {
 char *getDbnameFromId ( uint8_t rdbId ) {
         Rdb *rdb = getRdbFromId ( rdbId );
 	if ( rdb ) return rdb->m_dbname;
-	log(LOG_LOGIC,"db: rdbId of %li is invalid.",(long)rdbId);
+	log(LOG_LOGIC,"db: rdbId of %"INT32" is invalid.",(int32_t)rdbId);
 	return "INVALID";
 }
 
@@ -2960,7 +3088,7 @@ RdbBase *getRdbBase ( uint8_t rdbId , char *coll ) {
 RdbBase *getRdbBase ( uint8_t rdbId , collnum_t collnum ) {
 	Rdb *rdb = getRdbFromId ( rdbId );
 	if ( ! rdb ) {
-		log("db: Collection #%li does not exist.",(long)collnum);
+		log("db: Collection #%"INT32" does not exist.",(int32_t)collnum);
 		return NULL;
 	}
 	if ( rdb->m_isCollectionLess ) collnum = (collnum_t) 0;
@@ -2999,7 +3127,7 @@ RdbCache *getCache ( uint8_t rdbId ) {
 */
 
 // calls addList above
-bool Rdb::addList ( char *coll , RdbList *list, long niceness ) {
+bool Rdb::addList ( char *coll , RdbList *list, int32_t niceness ) {
 	// catdb has no collection per se
 	if ( m_isCollectionLess )
 		return addList ((collnum_t)0,list,niceness);
@@ -3012,9 +3140,9 @@ bool Rdb::addList ( char *coll , RdbList *list, long niceness ) {
 	return addList ( collnum , list, niceness );
 }
 
-//bool Rdb::addRecord ( char *coll , key_t &key, char *data, long dataSize ) {
-bool Rdb::addRecord ( char *coll , char *key, char *data, long dataSize,
-		      long niceness) {
+//bool Rdb::addRecord ( char *coll , key_t &key, char *data, int32_t dataSize ) {
+bool Rdb::addRecord ( char *coll , char *key, char *data, int32_t dataSize,
+		      int32_t niceness) {
 	// catdb has no collection per se
 	if ( m_isCollectionLess )
 		return addRecord ((collnum_t)0,
@@ -3030,28 +3158,28 @@ bool Rdb::addRecord ( char *coll , char *key, char *data, long dataSize,
 }
 
 
-long Rdb::getNumUsedNodes ( ) {
+int32_t Rdb::getNumUsedNodes ( ) {
 	 if(m_useTree) return m_tree.getNumUsedNodes(); 
 	 return m_buckets.getNumKeys();
 }
 
-long Rdb::getMaxTreeMem() {
+int32_t Rdb::getMaxTreeMem() {
 	if(m_useTree) return m_tree.getMaxMem();
 	return m_buckets.getMaxMem();
 }
 
-long Rdb::getNumNegativeKeys() {
+int32_t Rdb::getNumNegativeKeys() {
 	 if(m_useTree) return m_tree.getNumNegativeKeys(); 
 	 return m_buckets.getNumNegativeKeys();
 }
 
 
-long Rdb::getTreeMemOccupied() {
+int32_t Rdb::getTreeMemOccupied() {
 	 if(m_useTree) return m_tree.getMemOccupied(); 
 	 return m_buckets.getMemOccupied();
 }
 
-long Rdb::getTreeMemAlloced () {
+int32_t Rdb::getTreeMemAlloced () {
 	 if(m_useTree) return m_tree.getMemAlloced(); 
 	 return m_buckets.getMemAlloced();
 }

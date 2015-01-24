@@ -22,7 +22,7 @@ bool Msg40Cache::setFromCache ( Msg40 *msg40 ) {
 
 	// set the msg40 from the list's data buf
 	char *data     = list.getList();
-	long  dataSize = list.getListSize();
+	int32_t  dataSize = list.getListSize();
 
 	setMsg40FromData ( msg40 , data , dataSize );
 

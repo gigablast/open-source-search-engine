@@ -106,7 +106,7 @@ Language::Language(){
 	// . this maps an ascii char to a char in dict space
 	// . used in loadNarrow
 	/*
-	for ( long i = 0 ; i < 256 ; i++ ) {
+	for ( int32_t i = 0 ; i < 256 ; i++ ) {
 		unsigned char d = to_upper_ascii(i);
 		if ( is_alpha(d) ) {
 			// some like char 254 aren't really ascii!!
@@ -156,17 +156,17 @@ bool Language::convertLatin1DictToUTF8( char *infile ){
 	// this loop goes through all the words and only adds those
 	// words into the phonetic dict that have phonets.
 	while ( fgets ( buf , 1024 , fdr ) ) {
-		long wlen = gbstrlen(buf);
+		int32_t wlen = gbstrlen(buf);
 		if ( wlen <= 0 || wlen > MAX_PHRASE_LEN )
 			continue;
 		// remove the newline \n
 		buf [wlen - 1] = '\0';
 
-		long outLen = latin1ToUtf8(out, 4*1024, buf, gbstrlen(buf));
+		int32_t outLen = latin1ToUtf8(out, 4*1024, buf, gbstrlen(buf));
 		// write out the trailing \n as well
 		out[outLen] = '\n';
 		outLen++;
-		long wn = write ( fdw , out , outLen ) ;
+		int32_t wn = write ( fdw , out , outLen ) ;
 		if ( wn != outLen )
 			return log("lang:  write: %s",
 				   strerror(errno));
@@ -216,8 +216,8 @@ void Language::reset(){
 	m_removeAccents = true;
 }
 
-bool Language::init( char *unifiedBuf, long unifiedBufSize, long lang, 
-		     long hostsPerSplit, unsigned long myHash ){
+bool Language::init( char *unifiedBuf, int32_t unifiedBufSize, int32_t lang, 
+		     int32_t hostsPerSplit, uint32_t myHash ){
 
 	reset();
 
@@ -271,7 +271,7 @@ bool Language::loadRules ( ) {
 	}
 	
 	// get file size
-	long fileSize = f.getFileSize() ;
+	int32_t fileSize = f.getFileSize() ;
 
 	// store a \0 at the end
 	m_rulesBufSize = fileSize + 1;
@@ -293,7 +293,7 @@ bool Language::loadRules ( ) {
 	m_rulesBuf[fileSize] = '\0';
 
 	// change \n to \0
-	for ( long i = 0 ; i < m_rulesBufSize ; i++ ) {
+	for ( int32_t i = 0 ; i < m_rulesBufSize ; i++ ) {
 		if ( m_rulesBuf[i] != '\n' )
 			continue;
 		m_rulesBuf[i] = '\0';
@@ -357,14 +357,14 @@ bool Language::loadRules ( ) {
 	}		
 	
 	// init
-	for ( long i = 0; i < MAX_CHARS; i++) {
+	for ( int32_t i = 0; i < MAX_CHARS; i++) {
 		m_ruleStarts[i] = -1;
 		m_ruleChars[i] = false;
 	}
 
 	// do the loop again and assign the pointers	
 	p = m_rulesBuf;
-	long numRules = 0;
+	int32_t numRules = 0;
 	while ( p < ( m_rulesBuf + m_rulesBufSize ) ){
 		char *start = p;
 		// if it is a comment, skip
@@ -405,15 +405,15 @@ bool Language::loadRules ( ) {
 			// mark the chars that occur in the rule
 			// lets just mark the first char. It seems to suffice
 			if ( *p )
-			  m_ruleChars[(long)*p] = true;
+			  m_ruleChars[(int32_t)*p] = true;
 		}
 		p += gbstrlen(p) + 1;
 	}
 	
 	// m_ruleStarts[i] points to the index of the m_rulesPtr where the 
 	// rule of character i starts
-	for ( long i = 0; i < numRules; i += 2) {
-		long k = (UChar8) m_rulesPtr[i][0];
+	for ( int32_t i = 0; i < numRules; i += 2) {
+		int32_t k = (UChar8) m_rulesPtr[i][0];
 		if  ( m_ruleStarts[k] < 0 )
 			m_ruleStarts[k] = i;
 	}
@@ -421,12 +421,12 @@ bool Language::loadRules ( ) {
 	return true;
 }
 
-bool Language::loadSpellerDict( char *spellerBuf, long spellerBufSize, 
-				long hostsPerSplit, unsigned long myHash ){
+bool Language::loadSpellerDict( char *spellerBuf, int32_t spellerBufSize, 
+				int32_t hostsPerSplit, uint32_t myHash ){
 	File distributedPopFile;
 	char ff[1024];
 	// load the distributed pop file
-	sprintf ( ff , "%sdict/%s/%s.query.phonet.%li", g_hostdb.m_dir,
+	sprintf ( ff , "%sdict/%s/%s.query.phonet.%"INT32"", g_hostdb.m_dir,
 		  getLanguageAbbr(m_lang), getLanguageAbbr(m_lang), myHash);
 	distributedPopFile.set ( ff );
 	if ( ! distributedPopFile.open ( O_RDONLY ) ) {
@@ -446,7 +446,7 @@ bool Language::loadSpellerDict( char *spellerBuf, long spellerBufSize,
 	}
 	
 	// get file sizes
-	long distributedPopFileSize = distributedPopFile.getFileSize();
+	int32_t distributedPopFileSize = distributedPopFile.getFileSize();
 
 	// store a \0 at the end
 	m_distributedBufSize = distributedPopFileSize + 1;
@@ -494,12 +494,12 @@ bool Language::loadSpellerDict( char *spellerBuf, long spellerBufSize,
 		// check if phonet it present
 		if ( *phonet == '\0' )
 			continue;
-		unsigned long long phonetKey = hash64Lower_utf8(phonet);
+		uint64_t phonetKey = hash64Lower_utf8(phonet);
 		// check if this phonet belongs to this host
 		if ( phonetKey % hostsPerSplit != myHash )
 			continue;
 
-		unsigned long long h = hash64d(phrase, gbstrlen(phrase));
+		uint64_t h = hash64d(phrase, gbstrlen(phrase));
 
 		// check if this phrase belongs to this language
 		// can do that by calling spellers getphrasepopularity
@@ -530,7 +530,7 @@ bool Language::loadSpellerDict( char *spellerBuf, long spellerBufSize,
 	if ( !m_tuplePtr ) {
 		log("lang: mmalloc: %s",mstrerror(errno));return false;}
 
-	long numTuples = 0;
+	int32_t numTuples = 0;
 	
 	// now go through the unified dict again and assign the pointers
 	p = spellerBuf;
@@ -557,12 +557,12 @@ bool Language::loadSpellerDict( char *spellerBuf, long spellerBufSize,
 		if ( *phonet == '\0' )
 			continue;
 
-		unsigned long long phonetKey = hash64Lower_utf8(phonet);
+		uint64_t phonetKey = hash64Lower_utf8(phonet);
 		// check if this phonet belongs to this host
 		if ( phonetKey % hostsPerSplit != myHash )
 			continue;
 
-		unsigned long long h = hash64d(phrase, gbstrlen(phrase));
+		uint64_t h = hash64d(phrase, gbstrlen(phrase));
 
 		// check if this phrase belongs to this language
 		// can do that by calling spellers getphrasepopularity
@@ -592,7 +592,7 @@ bool Language::loadSpellerDict( char *spellerBuf, long spellerBufSize,
 
 
 	// sanity
-	for ( long j = 0 ; j< numTuples ; j++ )
+	for ( int32_t j = 0 ; j< numTuples ; j++ )
 		gbstrlen(m_tuplePtr[j]) ;
 
 	// sanity check
@@ -609,8 +609,8 @@ bool Language::loadSpellerDict( char *spellerBuf, long spellerBufSize,
 
 	char *tuple;
 	m_numPhonets = 0;
-	long startIndex = 0;
-	long index = 0;
+	int32_t startIndex = 0;
+	int32_t index = 0;
 	while ( index < m_numTuples ) {
 		// The distributed dict is stored as a tuple of 
 		// ( original phrase, phonetic, lang, score )
@@ -620,12 +620,12 @@ bool Language::loadSpellerDict( char *spellerBuf, long spellerBufSize,
 		// move to the phonet
 		tuple += gbstrlen(tuple) + 1;
 		
-		unsigned long long phonetKey = hash64Lower_utf8 ( tuple );
+		uint64_t phonetKey = hash64Lower_utf8 ( tuple );
 		if ( phonetKey % hostsPerSplit != myHash ){
 			index++;
 			continue;
 		}
-		long numWordsInPhonet = 0;
+		int32_t numWordsInPhonet = 0;
 		startIndex = index;
 		while ( index < m_numTuples ){
 			// first to come is the phrase
@@ -635,7 +635,7 @@ bool Language::loadSpellerDict( char *spellerBuf, long spellerBufSize,
 			// move to the phonet
 			tuple += gbstrlen(tuple) + 1;
 			
-			unsigned long long pKey = hash64Lower_utf8(tuple);
+			uint64_t pKey = hash64Lower_utf8(tuple);
 			if ( pKey != phonetKey )
 				break;
 
@@ -647,11 +647,11 @@ bool Language::loadSpellerDict( char *spellerBuf, long spellerBufSize,
 			if (phrase > m_distributedBuf && 
 			    phrase < m_distributedBuf + m_distributedBufSize){
 				// add the distributed pop words
-				unsigned long long h = hash64d( phrase,
+				uint64_t h = hash64d( phrase,
 							       gbstrlen(phrase));
-				long slot = m_distributedPopPhrases.
+				int32_t slot = m_distributedPopPhrases.
 					getSlot(h);
-				long pop = atoi(tuple);
+				int32_t pop = atoi(tuple);
 				if ( slot == -1 )
 					m_distributedPopPhrases.addKey(h, pop);
 			}
@@ -659,15 +659,15 @@ bool Language::loadSpellerDict( char *spellerBuf, long spellerBufSize,
 			index++;
 		}
 		       
-		long slot = m_phonetics.getSlot ( phonetKey );
+		int32_t slot = m_phonetics.getSlot ( phonetKey );
 		if ( slot != -1 ){
-			log(LOG_LOGIC, "speller: %ld != -1, %16llx, %s", 
+			log(LOG_LOGIC, "speller: %"INT32" != -1, %16"XINT64", %s", 
 				slot, phonetKey, tuple);
 			char *xx = NULL; *xx = 0;
 		}
 		
 		// make the composite value
-		unsigned long long value = startIndex;
+		uint64_t value = startIndex;
 		// make it the higher 32 bits
 		value <<= 32;
 		value += numWordsInPhonet;
@@ -676,15 +676,15 @@ bool Language::loadSpellerDict( char *spellerBuf, long spellerBufSize,
 		m_numPhonets++;
 	}
 		
-	log(LOG_INIT,"lang: Read %li words and %li phonets into memory",
+	log(LOG_INIT,"lang: Read %"INT32" words and %"INT32" phonets into memory",
 	    m_numTuples, m_numPhonets );
 	return true;
 }
 
 
 /*
-bool Language::loadNarrow( char *spellerBuf, long spellerBufSize, 
-			   long hostsPerSplit, unsigned long myHash ){
+bool Language::loadNarrow( char *spellerBuf, int32_t spellerBufSize, 
+			   int32_t hostsPerSplit, uint32_t myHash ){
 	// don't load for any other language except english
 	if ( m_lang != langEnglish )
 		return true;
@@ -709,7 +709,7 @@ bool Language::loadNarrow( char *spellerBuf, long spellerBufSize,
 		// skip (lang, score) tuple 
 		p += gbstrlen(p) + 1;
 
-		unsigned long long h = hash64d(phrase, gbstrlen(phrase));
+		uint64_t h = hash64d(phrase, gbstrlen(phrase));
 
 		// check if this phrase belongs to this language
 		// can do that by calling spellers getphrasepopularity
@@ -722,7 +722,7 @@ bool Language::loadNarrow( char *spellerBuf, long spellerBufSize,
 		if ( *phonet == '\0' ){
 			continue;
 		}
-		unsigned long long phonetKey = hash64Lower_utf8(phonet);
+		uint64_t phonetKey = hash64Lower_utf8(phonet);
 
 		// check if this phonet belongs to this host
 		if ( phonetKey % hostsPerSplit != myHash ){
@@ -786,7 +786,7 @@ bool Language::loadNarrow( char *spellerBuf, long spellerBufSize,
 		( NUM_CHARS * NUM_CHARS * NUM_CHARS * 4 * 2 );
 	m_narrowBuf = (char *) mmalloc( m_narrowBufSize, "LanguageNarrowBuf" );
 	if ( !m_narrowBuf ){
-		log("lang: Could not allocate %li bytes for narrow buf",
+		log("lang: Could not allocate %"INT32" bytes for narrow buf",
 		    m_narrowBufSize);
 		g_errno = ENOMEM;
 		return false;
@@ -797,12 +797,12 @@ bool Language::loadNarrow( char *spellerBuf, long spellerBufSize,
 	p += sizeof(char **) * m_numNarrowPtrs;
 	m_bckPtrs = (char **) p;
 	p += sizeof(char *) * m_numNarrowPtrs;
-	m_frntCharPtrs = (long *) p;
+	m_frntCharPtrs = (int32_t *) p;
 	p += NUM_CHARS * NUM_CHARS * NUM_CHARS * 4;
-	m_bckCharPtrs = (long *)p;
+	m_bckCharPtrs = (int32_t *)p;
 	p += NUM_CHARS * NUM_CHARS * NUM_CHARS * 4;
 
-	long numNarrowPtrs = 0;
+	int32_t numNarrowPtrs = 0;
 	// go through the loop again and set the positions
 	p = spellerBuf;
 	while ( p < spellerBuf + spellerBufSize - 1){
@@ -821,7 +821,7 @@ bool Language::loadNarrow( char *spellerBuf, long spellerBufSize,
 		// skip (lang, score) tuple 
 		p += gbstrlen(p) + 1;
 
-		unsigned long long h = hash64d(phrase, gbstrlen(phrase));
+		uint64_t h = hash64d(phrase, gbstrlen(phrase));
 
 		// check if this phrase belongs to this language
 		// can do that by calling spellers getphrasepopularity
@@ -834,7 +834,7 @@ bool Language::loadNarrow( char *spellerBuf, long spellerBufSize,
 		if ( *phonet == '\0' ){
 			continue;
 		}
-		unsigned long long phonetKey = hash64Lower_utf8(phonet);
+		uint64_t phonetKey = hash64Lower_utf8(phonet);
 
 		// check if this phonet belongs to this host
 		if ( phonetKey % hostsPerSplit != myHash ){
@@ -897,7 +897,7 @@ bool Language::loadNarrow( char *spellerBuf, long spellerBufSize,
 
 	// sanity check
 	if ( numNarrowPtrs != m_numNarrowPtrs ){
-		log(LOG_LOGIC, "speller: %ld != %ld numNarrowPtrs",
+		log(LOG_LOGIC, "speller: %"INT32" != %"INT32" numNarrowPtrs",
 			numNarrowPtrs, m_numNarrowPtrs);
 		char *xx=NULL; *xx=0;
 	}
@@ -906,17 +906,17 @@ bool Language::loadNarrow( char *spellerBuf, long spellerBufSize,
 	gbsort ( m_bckPtrs, m_numNarrowPtrs, sizeof(char*), cmpBck );
 
 	// printing them out
-	//for ( long i = 0; i < m_numNarrowPtrs; i++ )
+	//for ( int32_t i = 0; i < m_numNarrowPtrs; i++ )
 	//	log ( "lang: frnt=%s\t\t bck=%s", 
 	//      m_frntPtrs[i] + gbstrlen(m_frntPtrs[i]) + 1, 
 	//      m_bckPtrs[i] + gbstrlen(m_bckPtrs[i]) + 1);
 
 	// now set the m_frntCharPtrs and m_bckCharPtrs
-	for ( long i = 0; i < NUM_CHARS * NUM_CHARS * NUM_CHARS; i++ ){
+	for ( int32_t i = 0; i < NUM_CHARS * NUM_CHARS * NUM_CHARS; i++ ){
 		m_frntCharPtrs[i] = -1;
 		m_bckCharPtrs[i] = -1;
 	}
-	for ( long i = 0; i < m_numNarrowPtrs; i++ ){
+	for ( int32_t i = 0; i < m_numNarrowPtrs; i++ ){
 		// align to the phrase
 		char *frnt = m_frntPtrs[i];
 		char *bck = m_bckPtrs[i];
@@ -929,8 +929,8 @@ bool Language::loadNarrow( char *spellerBuf, long spellerBufSize,
 		char b1 = to_dict_char(bck[-1]);
 		char b2 = to_dict_char(bck[-2]);
 
-		long fx = f0 * NUM_CHARS * NUM_CHARS + f1 * NUM_CHARS + f2;
-		long bx = b0 * NUM_CHARS * NUM_CHARS + b1 * NUM_CHARS + b2;
+		int32_t fx = f0 * NUM_CHARS * NUM_CHARS + f1 * NUM_CHARS + f2;
+		int32_t bx = b0 * NUM_CHARS * NUM_CHARS + b1 * NUM_CHARS + b2;
 		if ( m_frntCharPtrs[fx] == -1 )
 			m_frntCharPtrs[fx]= i;
 		if ( m_bckCharPtrs[bx] == -1 )
@@ -957,13 +957,13 @@ bool Language::loadDictHashTable( ){
 	
 	// this loop goes through all the words 
 	while ( fgets ( buf , 1024 , fdr ) ) {
-		long wlen = gbstrlen(buf);
+		int32_t wlen = gbstrlen(buf);
 		if ( wlen <= 0 || wlen > MAX_PHRASE_LEN )
 			continue;
 		// remove the newline \n
 		buf [wlen - 1] = '\0';
 		char *p = buf;
-		long pop = atoi(p);
+		int32_t pop = atoi(p);
 		// move to the phrase
 		while ( *p != '\t' )
 			p++;
@@ -973,10 +973,10 @@ bool Language::loadDictHashTable( ){
 		while ( *p != '\t' )
 			p++;
 		
-		unsigned long long key = hash64d( phrase, p - phrase);
-		long slot = m_dict.getSlot(key);
+		uint64_t key = hash64d( phrase, p - phrase);
+		int32_t slot = m_dict.getSlot(key);
 		
-		long value = 0;
+		int32_t value = 0;
 		if ( slot != -1 ){
 			value = m_dict.getValueFromSlot(slot);
 			if ( pop < value )
@@ -997,13 +997,13 @@ bool Language::loadDictHashTable( ){
 	
 	// this loop goes through all the words 
 	while ( fgets ( buf , 1024 , fdr ) ) {
-		long wlen = gbstrlen(buf);
+		int32_t wlen = gbstrlen(buf);
 		if ( wlen <= 0 || wlen > MAX_PHRASE_LEN )
 			continue;
 		// remove the newline \n
 		buf [wlen - 1] = '\0';
 		char *p = buf;
-		long pop = atoi(p);
+		int32_t pop = atoi(p);
 		// move to the phrase
 		while ( *p != '\t' )
 			p++;
@@ -1013,10 +1013,10 @@ bool Language::loadDictHashTable( ){
 		while ( *p != '\t' )
 			p++;
 		
-		unsigned long long key = hash64d( p, p - phrase);
-		long slot = m_dict.getSlot(key);
+		uint64_t key = hash64d( p, p - phrase);
+		int32_t slot = m_dict.getSlot(key);
 		
-		long value = 0;
+		int32_t value = 0;
 		if ( slot != -1 ){
 			value = m_dict.getValueFromSlot(slot);
 			if ( pop < value )
@@ -1029,10 +1029,10 @@ bool Language::loadDictHashTable( ){
 
 	// now for the title rec dicts. If the phrase is only present in the
 	// titlerec dict then store it as a negative value
-	for ( long i = 0; i < NUM_CHARS; i++ ){
+	for ( int32_t i = 0; i < NUM_CHARS; i++ ){
 		// open the input file
 		FILE *fdr;
-		sprintf ( ff , "%sdict/%s/%s.dict.%li", g_hostdb.m_dir,
+		sprintf ( ff , "%sdict/%s/%s.dict.%"INT32"", g_hostdb.m_dir,
 			  getLanguageAbbr(m_lang), getLanguageAbbr(m_lang), i);
 		// then open 
 		fdr = fopen ( ff, "r" );
@@ -1043,23 +1043,23 @@ bool Language::loadDictHashTable( ){
 		// this loop goes through all the words and only adds those
 		// words into the phonetic dict that have phonets.
 		while ( fgets ( buf , 1024 , fdr ) ) {
-			long wlen = gbstrlen(buf);
+			int32_t wlen = gbstrlen(buf);
 			if ( wlen <= 0 || wlen > MAX_PHRASE_LEN )
 				continue;
 			// remove the newline \n
 			buf [wlen - 1] = '\0';
 			char *p = buf;
-			long pop = ( atoi(p) * 32000 )/ 10000;
+			int32_t pop = ( atoi(p) * 32000 )/ 10000;
 			// move to the phrase
 			while ( *p != '\t' )
 				p++;
 			p++;
-			unsigned long long key = hash64d( p, gbstrlen(p) );
+			uint64_t key = hash64d( p, gbstrlen(p) );
 			// add only if it is not found in english dict and 
 			// query dict
-			long slot = m_dict.getSlot(key);
+			int32_t slot = m_dict.getSlot(key);
 
-			long value = 0;
+			int32_t value = 0;
 			if ( slot != -1 ){
 				value = m_dict.getValueFromSlot(slot);
 				if ( pop < value )
@@ -1094,12 +1094,12 @@ bool Language::loadWikipediaWords(){
 	// go through the words in dict/words
 	while ( fgets ( buf , 1024 , fdr ) ) {
 		// length of word(s), including the terminating \n
-		long wlen = gbstrlen(buf) ;
+		int32_t wlen = gbstrlen(buf) ;
 		// skip if empty
 		if ( wlen <= 0 ) continue;
 		buf[wlen-1]='\0';
-		unsigned long key = hash32d(buf, gbstrlen(buf));
-		long slot = m_wiki.getSlot ( key );
+		uint32_t key = hash32d(buf, gbstrlen(buf));
+		int32_t slot = m_wiki.getSlot ( key );
 		if ( slot != -1 ){
 			continue;
 			char *xx=NULL; *xx=0;
@@ -1127,12 +1127,12 @@ bool Language::loadMispelledWords(){
 	// go through the words in dict/words
 	while ( fgets ( buf , 1024 , fdr ) ) {
 		// length of word(s), including the terminating \n
-		long wlen = gbstrlen(buf) ;
+		int32_t wlen = gbstrlen(buf) ;
 		// skip if empty
 		if ( wlen <= 0 ) continue;
 		buf[wlen-1]='\0';
-		unsigned long key = hash32d(buf, gbstrlen(buf));
-		long slot = m_misp.getSlot ( key );
+		uint32_t key = hash32d(buf, gbstrlen(buf));
+		int32_t slot = m_misp.getSlot ( key );
 		if ( slot != -1 ){
 			char *xx=NULL; *xx=0;
 		}
@@ -1150,15 +1150,15 @@ bool Language::loadMispelledWords(){
 ///////////////////////////////////////////////////////
 
 /*
-long Language::narrowPhrase ( char *request, char *phrases, long *pops, 
-			     long maxPhrases ){
+int32_t Language::narrowPhrase ( char *request, char *phrases, int32_t *pops, 
+			     int32_t maxPhrases ){
 	// if we haven't been loaded, just return
 	if ( m_numNarrowPtrs == 0 )
 		return 0;
 
-	long numPhrases = 0;
+	int32_t numPhrases = 0;
 
-	long requestLen = gbstrlen(request);
+	int32_t requestLen = gbstrlen(request);
 	// don't check for narrow phrase if the original phrase is more than
 	// MAX_PHRASE_LEN - 3 OR less than 3 chars.
 	// Why MAX_PHRASE_LEN - 3 ? Because then only can we find a narrow 
@@ -1175,16 +1175,16 @@ long Language::narrowPhrase ( char *request, char *phrases, long *pops,
 	char b1 = to_dict_char(bck[-1]);
 	char b2 = to_dict_char(bck[-2]);
 
-	unsigned long long start = gettimeofdayInMilliseconds();
-	long minPop = 0;
+	uint64_t start = gettimeofdayInMilliseconds();
+	int32_t minPop = 0;
 	char req[MAX_PHRASE_LEN];
 	// first get all the ones in the front
 	strcpy(req, request);
 	// add a space so that we match the exact phrase
 	req[requestLen] = ' ';
 	req[requestLen + 1] = '\0';
-	long fx = f0 * NUM_CHARS * NUM_CHARS + f1 * NUM_CHARS + f2;
-	long index = m_frntCharPtrs[fx];
+	int32_t fx = f0 * NUM_CHARS * NUM_CHARS + f1 * NUM_CHARS + f2;
+	int32_t index = m_frntCharPtrs[fx];
 	if ( index == -1 )
 		goto skipFrnt;
 	while ( index < m_numNarrowPtrs ){
@@ -1192,14 +1192,14 @@ long Language::narrowPhrase ( char *request, char *phrases, long *pops,
 
 		char *phrase = tuple;
 		//check if we have gone over the phrase (if present) or not
-		long cmp = strncasecmp (phrase, req, gbstrlen(req));
+		int32_t cmp = strncasecmp (phrase, req, gbstrlen(req));
 		if ( cmp > 0 )
 			break;
 		if ( cmp < 0 )
 			continue;
 
 		// found it. get the popularity
-		long pop = 0;
+		int32_t pop = 0;
 		// if its from the distributed dict, get it directly
 		if ( tuple > m_distributedBuf && 
 		     tuple < m_distributedBuf + m_distributedBufSize ){ 
@@ -1211,12 +1211,12 @@ long Language::narrowPhrase ( char *request, char *phrases, long *pops,
 		}
 		// else get it by getphrasePopularity 
 		else {
-			unsigned long long h = hash64d(phrase, gbstrlen(phrase));
+			uint64_t h = hash64d(phrase, gbstrlen(phrase));
 			pop = g_speller.getPhrasePopularity(phrase, h, false, 
 							    m_lang);
 		}
 
-		long indx = numPhrases;
+		int32_t indx = numPhrases;
 		// if not full
 		if ( numPhrases < maxPhrases )
 			numPhrases++;
@@ -1224,9 +1224,9 @@ long Language::narrowPhrase ( char *request, char *phrases, long *pops,
 		else{
 			if ( minPop >= pop )
 				continue;
-			long minIndx = 0;
+			int32_t minIndx = 0;
 			minPop = pops[0];
-			for ( long j = 1; j < maxPhrases; j++ ){
+			for ( int32_t j = 1; j < maxPhrases; j++ ){
 				if ( minPop < pops[j] )
 						continue;
 				minPop = pops[j];
@@ -1241,7 +1241,7 @@ long Language::narrowPhrase ( char *request, char *phrases, long *pops,
 		// store the pop
 		pops[indx] = pop;
 		strcpy ( &phrases[MAX_FRAG_SIZE * indx],phrase );
-		log (LOG_DEBUG,"speller: Narrow phrase=%s, pop=%li",
+		log (LOG_DEBUG,"speller: Narrow phrase=%s, pop=%"INT32"",
 		     &phrases[MAX_FRAG_SIZE * indx], pops[indx]);
 	}
 
@@ -1249,7 +1249,7 @@ long Language::narrowPhrase ( char *request, char *phrases, long *pops,
 	// now get the back
 	req[0] = ' ';
 	strcpy(&req[1],request);
-	long bx = b0 * NUM_CHARS * NUM_CHARS + b1 * NUM_CHARS + b2;
+	int32_t bx = b0 * NUM_CHARS * NUM_CHARS + b1 * NUM_CHARS + b2;
 	index = m_bckCharPtrs[bx];
 	if ( index == -1 )
 		return numPhrases;
@@ -1275,7 +1275,7 @@ long Language::narrowPhrase ( char *request, char *phrases, long *pops,
 		}
 
 		// found it
-		long pop = 0;
+		int32_t pop = 0;
 		// if its from the distributed dict, get it directly
 		if ( tuple > m_distributedBuf && 
 		     tuple < m_distributedBuf + m_distributedBufSize ){ 
@@ -1287,12 +1287,12 @@ long Language::narrowPhrase ( char *request, char *phrases, long *pops,
 		}
 		// else get it by getphrasePopularity 
 		else {
-			unsigned long long h = hash64d(phrase, gbstrlen(phrase));
+			uint64_t h = hash64d(phrase, gbstrlen(phrase));
 			pop = g_speller.getPhrasePopularity(phrase, h, false, 
 							    m_lang);
 		}
 
-		long indx = numPhrases;
+		int32_t indx = numPhrases;
 		// if not full
 		if ( numPhrases < maxPhrases )
 			numPhrases++;
@@ -1300,9 +1300,9 @@ long Language::narrowPhrase ( char *request, char *phrases, long *pops,
 		else{
 			if ( minPop >= pop )
 				continue;
-			long minIndx = 0;
+			int32_t minIndx = 0;
 			minPop = pops[0];
-			for ( long j = 1; j < maxPhrases; j++ ){
+			for ( int32_t j = 1; j < maxPhrases; j++ ){
 				if ( minPop < pops[j] )
 						continue;
 				minPop = pops[j];
@@ -1317,13 +1317,13 @@ long Language::narrowPhrase ( char *request, char *phrases, long *pops,
 		// store the pop
 		pops[indx] = pop;
 		strcpy ( &phrases[MAX_FRAG_SIZE * indx],phrase );
-		log (LOG_DEBUG,"speller: Narrow phrase=%s, pop=%li",
+		log (LOG_DEBUG,"speller: Narrow phrase=%s, pop=%"INT32"",
 		     &phrases[MAX_FRAG_SIZE * indx], pops[indx]);
 	}
 
-	unsigned long long took = gettimeofdayInMilliseconds() - start;
+	uint64_t took = gettimeofdayInMilliseconds() - start;
 	if ( took > 5)
-		log ( LOG_WARN,"lang: Finding narrow phrases took %lli ms",
+		log ( LOG_WARN,"lang: Finding narrow phrases took %"INT64" ms",
 		      took );
 	return numPhrases;
 }
@@ -1331,8 +1331,8 @@ long Language::narrowPhrase ( char *request, char *phrases, long *pops,
 
 // . return the clean buffer that can be spellchecked
 // . in utf8 always now
-bool Language::makeClean( char *src, long srcSize,
-			  char *dst, long dstSize ) {
+bool Language::makeClean( char *src, int32_t srcSize,
+			  char *dst, int32_t dstSize ) {
 	//char *pin = inBuf;
 	//char *pout = outBuf;
 	char *srcEnd = src + srcSize;
@@ -1351,8 +1351,8 @@ bool Language::makeClean( char *src, long srcSize,
 		// Since we're english cannot check anything but ASCII
 		//if ( c > 0x7f )
 		//	return false;
-		//if (!ucIsAlnum(c) && !ucIsWhiteSpace(c) && c != (long)'\'' &&
-		//     c != (long)' ' && c != (long)'-' )
+		//if (!ucIsAlnum(c) && !ucIsWhiteSpace(c) && c != (int32_t)'\'' &&
+		//     c != (int32_t)' ' && c != (int32_t)'-' )
 		//	return false;
 
 		// skip more advanced forms of punct
@@ -1383,9 +1383,9 @@ bool Language::makeClean( char *src, long srcSize,
 // Then tries to split the word and finds recommendations by the word score
 // Stores the top MAX_RECOMMENDATIONS in the array, and then returns the
 // highest popularity recommendation out of them
-bool Language::getRecommendation( char *origWord, long origWordLen,
-				  char *recommendation, long recommendationLen,
-				  bool *found, long *score, long *popularity, 
+bool Language::getRecommendation( char *origWord, int32_t origWordLen,
+				  char *recommendation, int32_t recommendationLen,
+				  bool *found, int32_t *score, int32_t *popularity, 
 				  bool  forceReco ){
 
 	// if rules and words are not loaded, return
@@ -1402,11 +1402,11 @@ bool Language::getRecommendation( char *origWord, long origWordLen,
 
 	Reco recos[MAX_RECOMMENDATIONS];
 	// also keep the lowest score that we've found.
-	long lowestScore = LARGE_SCORE;
+	int32_t lowestScore = LARGE_SCORE;
 
 	/*char recos[MAX_RECOMMENDATIONS][MAX_PHRASE_LEN];
-	  long recoScores[MAX_RECOMMENDATIONS];*/
-	long numRecos = 0;
+	  int32_t recoScores[MAX_RECOMMENDATIONS];*/
+	int32_t numRecos = 0;
 	// null end recommendation in case we don't find anything.
 	*recommendation = '\0';
 
@@ -1424,7 +1424,7 @@ bool Language::getRecommendation( char *origWord, long origWordLen,
 		// phrases and then move on to individual words. This should
 		// eliminate bugs like saying "brittany spears" is correct
 		// because the phrase shall be checked before individual words
-		unsigned long long h = hash64d( origWord, gbstrlen(origWord));
+		uint64_t h = hash64d( origWord, gbstrlen(origWord));
 		if ( g_speller.getPhrasePopularity( origWord, 
 							h, false ) != 0 ){
 			*found = true;
@@ -1438,7 +1438,7 @@ bool Language::getRecommendation( char *origWord, long origWordLen,
 		}
 	}
 
-	//long minRecoScore = LARGE_SCORE;
+	//int32_t minRecoScore = LARGE_SCORE;
 
 	// clean the word, i.e. convert word to uppercase and
 	// remove possible accents
@@ -1456,7 +1456,7 @@ bool Language::getRecommendation( char *origWord, long origWordLen,
 
 	// this is the max score that we are trying to get
 	// this is the radius around the misspelled word that we are checking
-	long tryForScore = 3 * ( m_wordWeight * m_editDistanceWeightsMax )/100;
+	int32_t tryForScore = 3 * ( m_wordWeight * m_editDistanceWeightsMax )/100;
 	// decrease score by 50pc if the length of the phonet is less than 5
 	// decrease score by 20pc if the length of the phonet is less than 7
 	if ( gbstrlen(origPhonet) < 5 ) tryForScore -= tryForScore / 2;
@@ -1465,7 +1465,7 @@ bool Language::getRecommendation( char *origWord, long origWordLen,
 	
 
 	// first try the same phonetic as the original word
-	long origLen = gbstrlen(origPhonet);
+	int32_t origLen = gbstrlen(origPhonet);
 
 	// first add the original
 	strcpy ( possiblePhonet, origPhonet );
@@ -1478,16 +1478,16 @@ bool Language::getRecommendation( char *origWord, long origWordLen,
 	// generate different phonets using addition, deletion, substitution
 	// and swapping.
 	// ADDITION
-	for ( long i = 0; i < origLen + 1; i++ ){
-		for ( long j = 0; j < MAX_CHARS; j++ ){
+	for ( int32_t i = 0; i < origLen + 1; i++ ){
+		for ( int32_t j = 0; j < MAX_CHARS; j++ ){
 			if ( !m_ruleChars[j] ) continue;
 			char *p = possiblePhonet;
 			// first put in all the chars the are before the char
 			// to be added
-			memcpy ( p, origPhonet, i ); p += i;
+			gbmemcpy ( p, origPhonet, i ); p += i;
 			// the index of m_ruleChars[] is the char to be added
 			*p++ = j;
-			memcpy ( p, origPhonet + i, origLen - i ); 
+			gbmemcpy ( p, origPhonet + i, origLen - i ); 
 			p += origLen - i;
 			*p++ = '\0';
 			numRecos = tryPhonet( possiblePhonet, origPhonet,
@@ -1497,12 +1497,12 @@ bool Language::getRecommendation( char *origWord, long origWordLen,
 	}
 	
 	// DELETION
-	for ( long i = 0; i < origLen; i++ ){
+	for ( int32_t i = 0; i < origLen; i++ ){
 		char *p = possiblePhonet;
 		// put the chars that come before the deleted char
-		memcpy ( p, origPhonet, i ); p += i;
+		gbmemcpy ( p, origPhonet, i ); p += i;
 		// put the chars that come after the deleted char
-		memcpy ( p, origPhonet + i + 1, origLen - i - 1 ); 
+		gbmemcpy ( p, origPhonet + i + 1, origLen - i - 1 ); 
 		p += origLen - i - 1;
 		*p++ = '\0';
 		numRecos = tryPhonet( possiblePhonet, origPhonet,
@@ -1511,18 +1511,18 @@ bool Language::getRecommendation( char *origWord, long origWordLen,
 	}
 
 	// SUBSTITUTION
-	for ( long i = 0; i < origLen; i++ ){
-		for ( long j = 0; j < MAX_CHARS; j++ ){
+	for ( int32_t i = 0; i < origLen; i++ ){
+		for ( int32_t j = 0; j < MAX_CHARS; j++ ){
 			if ( !m_ruleChars[j] ) continue;
 			char *p = possiblePhonet;
 			// cannot substitue if both chars are the same
 			if ( j == *( origPhonet + i ) ) continue;
 			// put the chars that come before the substituted char
-			memcpy ( p, origPhonet, i ); p += i;
+			gbmemcpy ( p, origPhonet, i ); p += i;
 			// substitute the char
 			*p++ = j;
 			// put the chars that come after the deleted char
-			memcpy ( p, origPhonet + i + 1, origLen - i - 1); 
+			gbmemcpy ( p, origPhonet + i + 1, origLen - i - 1); 
 			p += origLen - i - 1;
 			*p++ = '\0';
 			numRecos = tryPhonet( possiblePhonet, origPhonet, 
@@ -1532,17 +1532,17 @@ bool Language::getRecommendation( char *origWord, long origWordLen,
 	}
 	
 	// SWAPPING
-	for ( long i = 0; i < origLen - 1; i++ ){
+	for ( int32_t i = 0; i < origLen - 1; i++ ){
 		char *p = possiblePhonet;
 		// cannot swap if both chars are the same
 		if ( *( origPhonet + i ) == *( origPhonet + i + 1 ) ) continue;
 		// put the chars that come before the swapped char
-		memcpy ( p, origPhonet, i ); p += i;
+		gbmemcpy ( p, origPhonet, i ); p += i;
 		//swap the chars
 		*p++ = *( origPhonet + i + 1);
 		*p++ = *( origPhonet + i );
 		// put the chars that come after the deleted char
-		memcpy ( p, origPhonet + i + 2, origLen - i - 2); 
+		gbmemcpy ( p, origPhonet + i + 2, origLen - i - 2); 
 		p += origLen - i - 2;
 		*p++ = '\0';
 		numRecos = tryPhonet( possiblePhonet, origPhonet,
@@ -1564,16 +1564,16 @@ bool Language::getRecommendation( char *origWord, long origWordLen,
 	splitWord[ gbstrlen(splitWord) + 1 ] = '\0';
 	splitWord[ gbstrlen(splitWord) ] = splitWord[ gbstrlen(splitWord) - 1 ];
 	
-	for ( long i = gbstrlen( origWord ) - 2; i >= 2; --i) {
+	for ( int32_t i = gbstrlen( origWord ) - 2; i >= 2; --i) {
 		splitWord[i+1] = splitWord[i];
 		splitWord[i] = '\0';
 		
-		unsigned long long h = hash64d ( splitWord, gbstrlen(splitWord));
+		uint64_t h = hash64d ( splitWord, gbstrlen(splitWord));
 		// check if the split words exist in the dictionary
-		long pop = g_speller.getPhrasePopularity(splitWord,h,false);
+		int32_t pop = g_speller.getPhrasePopularity(splitWord,h,false);
 		if ( pop == 0 ){
 			// check the distributed dict also
-			long slot = m_distributedPopPhrases.getSlot(h);
+			int32_t slot = m_distributedPopPhrases.getSlot(h);
 			if ( slot != -1 ) 
 				pop = m_distributedPopPhrases.
 					getValueFromSlot(slot);
@@ -1586,7 +1586,7 @@ bool Language::getRecommendation( char *origWord, long origWordLen,
 						     false );
 		if ( pop == 0 ){
 			// check the distributed dict also
-			long slot = m_distributedPopPhrases.getSlot(h);
+			int32_t slot = m_distributedPopPhrases.getSlot(h);
 			if ( slot != -1 ) 
 				pop = m_distributedPopPhrases.
 					getValueFromSlot(slot);
@@ -1596,17 +1596,17 @@ bool Language::getRecommendation( char *origWord, long origWordLen,
 		
 		// replace the '\0' in between the split with a ' '
 		splitWord[i] = ' ';
-		long wordScore = m_editDistanceWeightsDel2 * 3 / 2;
+		int32_t wordScore = m_editDistanceWeightsDel2 * 3 / 2;
 		char phonetReco[MAX_PHRASE_LEN];
 		// get phonetic
 		getPhonetic ( splitWord, gbstrlen(splitWord), phonetReco,
 			      MAX_PHRASE_LEN );
 
-		long soundslikeScore = editDistance ( origPhonet,
+		int32_t soundslikeScore = editDistance ( origPhonet,
 						      phonetReco );
 		// the final score taking into consideration the
 		// phonetic score as well as the word score
-		long score = weightedAverage ( soundslikeScore, wordScore );
+		int32_t score = weightedAverage ( soundslikeScore, wordScore );
 
 		if ( score > tryForScore + m_span )
 			continue;
@@ -1621,8 +1621,8 @@ bool Language::getRecommendation( char *origWord, long origWordLen,
 			lowestScore = score;
 
 		// try to add this to the recommendations
-		/*log ( LOG_WARN, "lang: reco=%s wordScore=%li "
-		      "phonetScore=%li score=%li", 
+		/*log ( LOG_WARN, "lang: reco=%s wordScore=%"INT32" "
+		      "phonetScore=%"INT32" score=%"INT32"", 
 		      splitWord, wordScore, soundslikeScore, score );*/
 
 		if ( numRecos < MAX_RECOMMENDATIONS ){
@@ -1632,10 +1632,10 @@ bool Language::getRecommendation( char *origWord, long origWordLen,
 			continue;
 		}
 
-		long maxScore = 0;
-		long maxIndex = 0;
+		int32_t maxScore = 0;
+		int32_t maxIndex = 0;
 		// find the largest score
-		for ( long k = 0; k < numRecos; k++ ){
+		for ( int32_t k = 0; k < numRecos; k++ ){
 			if ( recos[k].score > maxScore ){
 				maxScore = recos[k].score;
 				maxIndex = k;
@@ -1662,16 +1662,16 @@ bool Language::getRecommendation( char *origWord, long origWordLen,
 	log ( LOG_DEBUG, "speller: --------Top Recos--------" );
 
 	// select the best recommendation among them by score
-	long bestRecoIndex = 0;
-	long bestRecoPop = -1;
-	for ( long i = 0; i < numRecos; i++ ){
-		unsigned long long h = hash64d ( recos[i].reco, 
+	int32_t bestRecoIndex = 0;
+	int32_t bestRecoPop = -1;
+	for ( int32_t i = 0; i < numRecos; i++ ){
+		uint64_t h = hash64d ( recos[i].reco, 
 					    gbstrlen(recos[i].reco));
-		long pop = g_speller.getPhrasePopularity(recos[i].reco, h, 
+		int32_t pop = g_speller.getPhrasePopularity(recos[i].reco, h, 
 							 false);
 		if ( pop == 0 ){
 			// check the distributed dict also
-			long slot = m_distributedPopPhrases.getSlot(h);
+			int32_t slot = m_distributedPopPhrases.getSlot(h);
 			if ( slot != -1 ) 
 				pop = m_distributedPopPhrases.
 					getValueFromSlot(slot);
@@ -1684,7 +1684,7 @@ bool Language::getRecommendation( char *origWord, long origWordLen,
 			bestRecoPop = pop;
 			bestRecoIndex = i;
 		}
-		log ( LOG_DEBUG,"speller: %li) reco=%s score=%li pop=%li",
+		log ( LOG_DEBUG,"speller: %"INT32") reco=%s score=%"INT32" pop=%"INT32"",
 		      i, recos[i].reco, recos[i].score, pop );
 	}
 
@@ -1697,23 +1697,23 @@ bool Language::getRecommendation( char *origWord, long origWordLen,
 	return true;
 }
 
-long Language::tryPhonet( char *phonetTmp, char *origPhonet, 
-			  char *origClean, long tryForScore,
-			  Reco *recos, long numRecos, long *lowestScore ){ 
+int32_t Language::tryPhonet( char *phonetTmp, char *origPhonet, 
+			  char *origClean, int32_t tryForScore,
+			  Reco *recos, int32_t numRecos, int32_t *lowestScore ){ 
 	// go through all the phonetics and select those that have score <= 100
-	unsigned long long key = hash64Lower_utf8(phonetTmp);
-	long slot = m_phonetics.getSlot ( key );
+	uint64_t key = hash64Lower_utf8(phonetTmp);
+	int32_t slot = m_phonetics.getSlot ( key );
 	if ( slot == -1 )
 		return numRecos;
 	
 	// the value is a combination of the index and the number of
 	// words having the same phonet
-	unsigned long long value = m_phonetics.getValueFromSlot(slot);
+	uint64_t value = m_phonetics.getValueFromSlot(slot);
 	
-	long index = value >> 32;
-	long numWordsInPhonet = value & 0xffffffff;
+	int32_t index = value >> 32;
+	int32_t numWordsInPhonet = value & 0xffffffff;
 
-	log ( LOG_DEBUG,"speller: next phonet is %s, index=%li, numWords=%li",
+	log ( LOG_DEBUG,"speller: next phonet is %s, index=%"INT32", numWords=%"INT32"",
 	      phonetTmp, index, numWordsInPhonet );	
 
 	//if ( strcmp(phonetTmp,"WST") == 0 )
@@ -1724,16 +1724,16 @@ long Language::tryPhonet( char *phonetTmp, char *origPhonet,
 	// the letters of the word phonet. e.g. word Phonet = "PLKN", 
 	// phonet = "PLKS" phonet score is 95 for phonets that contain 
 	// all letters, and 0 where the phonets are same.
-	long phonetScore = limit1EditDistance( phonetTmp, origPhonet );
+	int32_t phonetScore = limit1EditDistance( phonetTmp, origPhonet );
 	if ( phonetScore >= LARGE_SCORE ) 
 		return numRecos;
 
 	//log ( LOG_WARN,"lang: checking phonet %s, "
-	//"numWords=%li",phonetTmp, numWordsInPhonet);
+	//"numWords=%"INT32"",phonetTmp, numWordsInPhonet);
 	
 	// this phonet works, for all the words under this phonet,
 	// get their score.
-	for ( long j = 0; j < numWordsInPhonet; j++ ){
+	for ( int32_t j = 0; j < numWordsInPhonet; j++ ){
 		// The dict is stored as a tuple of 
 		// ( original phrase, phonetic, (lang, score)... )
 		char *wordReco = m_tuplePtr[j + index];
@@ -1753,20 +1753,20 @@ long Language::tryPhonet( char *phonetTmp, char *origPhonet,
 		}
 		
 		// we want the min Score, so this is init'ed to max
-		long wordScore = LARGE_SCORE;
+		int32_t wordScore = LARGE_SCORE;
 		
 		// init this to phonetScore
-		long soundslikeScore = phonetScore;
+		int32_t soundslikeScore = phonetScore;
 		
-		//log (LOG_WARN,"lang: %s\t%s\t%s %li %li",
+		//log (LOG_WARN,"lang: %s\t%s\t%s %"INT32" %"INT32"",
 		//   wordReco, cleanReco, phonetReco, 
 		//   wordScore, soundslikeScore);
 		
 		if ( wordScore >= LARGE_SCORE ){
-			long slScore = soundslikeScore;
+			int32_t slScore = soundslikeScore;
 			if ( slScore >= LARGE_SCORE )
 				slScore = 0;
-			long level =  ( 100 * tryForScore - 
+			int32_t level =  ( 100 * tryForScore - 
 					m_soundslikeWeight * slScore )/
 				(m_wordWeight * 
 				 m_editDistanceWeightsMin);
@@ -1774,7 +1774,7 @@ long Language::tryPhonet( char *phonetTmp, char *origPhonet,
 			if ( level < 0 ) 
 				level = 0;
 			
-			if ( level >= long(slScore/
+			if ( level >= int32_t(slScore/
 					   m_editDistanceWeightsMin))
 				wordScore = editDistance ( origClean,
 							   cleanReco,
@@ -1798,7 +1798,7 @@ long Language::tryPhonet( char *phonetTmp, char *origPhonet,
 
 		// the final score taking into consideration the
 		// phonetic score as well as the word score
-		long score = weightedAverage ( soundslikeScore, 
+		int32_t score = weightedAverage ( soundslikeScore, 
 					       wordScore );
 
 		if ( score > tryForScore + m_span || score == 0)
@@ -1813,15 +1813,15 @@ long Language::tryPhonet( char *phonetTmp, char *origPhonet,
 		if ( score < *lowestScore )
 			*lowestScore = score;
 
-		/*long reduceScore=reduceScore(origClean,cleanReco);
+		/*int32_t reduceScore=reduceScore(origClean,cleanReco);
 		if ( reduceScore > 0 )
 			log ( LOG_DEBUG,"lang: reducing score request=%s, "
-			      "reco=%s, score=%li, reduce=%li", origClean, 
+			      "reco=%s, score=%"INT32", reduce=%"INT32"", origClean, 
 			      cleanReco, score, reduceScore );
 			      score -= reduceScore;*/
 		
 		//log ( LOG_WARN, "lang: reco=%s phonet=%s "
-		//"wordScore=%li phonetScore=%li score=%li", 
+		//"wordScore=%"INT32" phonetScore=%"INT32" score=%"INT32"", 
 		//wordReco, phonetReco, wordScore, 
 		//soundslikeScore, score );
 
@@ -1838,10 +1838,10 @@ long Language::tryPhonet( char *phonetTmp, char *origPhonet,
 			continue;
 		}
 
-		long maxScore = 0;
-		long maxIndex = 0;
+		int32_t maxScore = 0;
+		int32_t maxIndex = 0;
 		// find the largest score
-		for ( long k = 0; k < numRecos; k++ ){
+		for ( int32_t k = 0; k < numRecos; k++ ){
 			if ( recos[k].score > maxScore ){
 				maxScore = recos[k].score;
 				maxIndex = k;
@@ -1859,14 +1859,14 @@ long Language::tryPhonet( char *phonetTmp, char *origPhonet,
 	return numRecos;
 }
 
-long Language::editDistance( char *a, char *b, long level, // starting level
-			       long limit ) { // maximum level
+int32_t Language::editDistance( char *a, char *b, int32_t level, // starting level
+			       int32_t limit ) { // maximum level
 	// sanity check
 	if ( level <= 0  || limit < level){
 		char *xx = NULL; *xx = 0;
 	}
 
-	long score = LARGE_SCORE;
+	int32_t score = LARGE_SCORE;
 	while (score >= LARGE_SCORE && level <= limit) {
 		if (level == 2)
 			score = limit2EditDistance( a, b );
@@ -1881,13 +1881,13 @@ long Language::editDistance( char *a, char *b, long level, // starting level
 	return score;
 }
 
-long Language::weightedAverage(long soundslikeScore, long wordScore) {
+int32_t Language::weightedAverage(int32_t soundslikeScore, int32_t wordScore) {
 	return ( m_wordWeight * wordScore + 
 		 m_soundslikeWeight * soundslikeScore) / 100;
 }
 
-long Language::limitEditDistance( char * a, char * b, 
-				    long limit ) {
+int32_t Language::limitEditDistance( char * a, char * b, 
+				    int32_t limit ) {
 	limit = limit * m_editDistanceWeightsMax;
 	static const int size = 10;
 	struct Edit {
@@ -1899,8 +1899,8 @@ long Language::limitEditDistance( char * a, char * b,
 	Edit * i = begin;
 	//	const char * a0;
 	//	const char * b0;
-	long score = 0;
-	long min = LARGE_SCORE;
+	int32_t score = 0;
+	int32_t min = LARGE_SCORE;
     
 	while (true) {
 		while (*a == *b) {
@@ -2015,8 +2015,8 @@ long Language::limitEditDistance( char * a, char * b,
 
 
 
-long Language::limit1EditDistance( char *a, char *b ){
-	long min = LARGE_SCORE;
+int32_t Language::limit1EditDistance( char *a, char *b ){
+	int32_t min = LARGE_SCORE;
 	char * amax = a;
     
 	while(*a == *b) { 
@@ -2069,7 +2069,7 @@ long Language::limit1EditDistance( char *a, char *b ){
 
 
 
-long Language::limit2EditDistance( char *a, char *b ) {
+int32_t Language::limit2EditDistance( char *a, char *b ) {
 	int min = LARGE_SCORE;
 	char * amax = a;
     
@@ -2128,8 +2128,8 @@ long Language::limit2EditDistance( char *a, char *b ) {
 }
 
 
-long  Language::checkRest( char *a, char *b, 
-			     long w, char *amax, long min ){
+int32_t  Language::checkRest( char *a, char *b, 
+			     int32_t w, char *amax, int32_t min ){
 	char *a0 = a; 
 	char *b0 = b;
 	while(*a0 == *b0) {
@@ -2144,7 +2144,7 @@ long  Language::checkRest( char *a, char *b,
 	return min;
 }
 
-long Language::check2( char *a, char *b, long w, char *amax, long min ){
+int32_t Language::check2( char *a, char *b, int32_t w, char *amax, int32_t min ){
 	char *aa = a; 
 	char *bb = b;
 	while(*aa == *bb) {
@@ -2187,24 +2187,24 @@ long Language::check2( char *a, char *b, long w, char *amax, long min ){
 	return min;
 }
 
-short Language::editDistance( char *a0, char *b0 ){
-	long aSize = gbstrlen(a0) + 1;
-	long bSize = gbstrlen(b0) + 1;
-	//	VARARRAY(short, e_d, a_size * b_size);
-	short e[aSize * bSize];
+int16_t Language::editDistance( char *a0, char *b0 ){
+	int32_t aSize = gbstrlen(a0) + 1;
+	int32_t bSize = gbstrlen(b0) + 1;
+	//	VARARRAY(int16_t, e_d, a_size * b_size);
+	int16_t e[aSize * bSize];
 
 	//	ShortMatrix e(a_size,b_size,e_d);
 	
 	e[0] = 0;// e(0, 0) = 0;
-	for ( long j = 1; j != bSize; ++j )
+	for ( int32_t j = 1; j != bSize; ++j )
 		e[0 + j * aSize] = e[(j-1) * aSize] + 
 			m_editDistanceWeightsDel1;
 	const char * a = a0 - 1;
 	const char * b = b0 - 1;
-	short te;
-	for (long i = 1; i != aSize; ++i) {
+	int16_t te;
+	for (int32_t i = 1; i != aSize; ++i) {
 		e[i] = e[i-1] + m_editDistanceWeightsDel2;
-		for (long j = 1; j != bSize; ++j) {
+		for (int32_t j = 1; j != bSize; ++j) {
 			if (a[i] == b[j]) {
 				e[i + j * aSize] = e[(i-1) + (j-1) * aSize];
 			} 
@@ -2236,12 +2236,12 @@ short Language::editDistance( char *a0, char *b0 ){
 // reduces score for substitutions that are close on the key board
 // eg. we want "hakt" --> "halt", but it used to give "hakt"->"hat"
 // string 'a' is the mispelling, string 'b' is the recommendation
-short Language::reduceScore ( char *a, char *b ){
+int16_t Language::reduceScore ( char *a, char *b ){
 	// reduce score only for substitutions and for 1 edit hop away
 	// so essentially both strings should be of the same length
 	if ( gbstrlen(a) != gbstrlen(b) )
 		return 0;
-	short reduceScore = 0;
+	int16_t reduceScore = 0;
 	while ( *a && *b ){
 		if ( *a == *b ){
 			a++;
@@ -2280,29 +2280,29 @@ short Language::reduceScore ( char *a, char *b ){
 
 
 
-bool Language::getPhonetic( char *origWord, long origWordLen,
-			    char *target, long targetLen ){
+bool Language::getPhonetic( char *origWord, int32_t origWordLen,
+			    char *target, int32_t targetLen ){
 	*target = '\0';
 	char word[MAX_PHRASE_LEN];
 	if ( !makeClean(origWord, origWordLen, word, targetLen ) )
 		return false;
-	long wordLen = gbstrlen(word);
-	long i = 0;
-	long j = 0;
-	long k = 0; // number of letters found
-	long n = 0; // index of m_rulesPtr where the rules for the char starts
-	long p = 0; // priority of the rule
-	long z = 0;
+	int32_t wordLen = gbstrlen(word);
+	int32_t i = 0;
+	int32_t j = 0;
+	int32_t k = 0; // number of letters found
+	int32_t n = 0; // index of m_rulesPtr where the rules for the char starts
+	int32_t p = 0; // priority of the rule
+	int32_t z = 0;
 
-	long k0 = -333;
-	long n0 = -333;
-	long p0 = -333;
-	long z0 = 0;
+	int32_t k0 = -333;
+	int32_t n0 = -333;
+	int32_t p0 = -333;
+	int32_t z0 = 0;
 	char c,c0;
 	const char *s;
 	while ( word[i] ){
 		c = word[i];
-		//log ( LOG_WARN,"lang: Checking Position %li, word=%s "
+		//log ( LOG_WARN,"lang: Checking Position %"INT32", word=%s "
 		//     "\ttarget=%s", j, word, target );
 
 		z0 = 0;
@@ -2313,7 +2313,7 @@ bool Language::getPhonetic( char *origWord, long origWordLen,
 			// check all rules that start with the same letter
 			while ( m_rulesPtr[n] && m_rulesPtr[n][0] == (UChar8) c ){
 				//log( LOG_WARN, "lang: Checking rule "
-				// "No.%li, \"%s\"\t--> \"%\"s", n, 
+				// "No.%"INT32", \"%s\"\t--> \"%\"s", n, 
 				// m_rulesPtr[n], m_rulesPtr[n+1]);
 				
 				/**  check whole string  **/
@@ -2406,7 +2406,7 @@ bool Language::getPhonetic( char *origWord, long origWordLen,
 							/*log (LOG_WARN,
 							  "lang: "
 							  "follow-up rule "
-							  "No.%li....%s\t --> 
+							  "No.%"INT32"....%s\t --> 
 							  %s",n0,
 							  m_rulesPtr[n0], 
 							  m_rulesPtr[n0+1] );*/
@@ -2451,7 +2451,7 @@ bool Language::getPhonetic( char *origWord, long origWordLen,
 							    (*s == '$' && !isalpha(word[i+k0]))) {
 								if (k0 == k) {
 									/**  this is just a piece of the string  **/
-									//log(LOG_WARN,"lang: discarded (too short)");
+									//log(LOG_WARN,"lang: discarded (too int16_t)");
 									n0 += 2;
 									continue;
 								}
@@ -2469,8 +2469,8 @@ bool Language::getPhonetic( char *origWord, long origWordLen,
 							n0 += 2;
 						} /**  End of "while (parms.rules[n0][0] == c0)"  **/
 						if (p0 >= p  && m_rulesPtr[n0][0] == c0) {
-							/*log(LOG_WARN,"lang: Rule No.%li, %s",n, m_rulesPtr[n]);
-							  log(LOG_WARN,"lang: not used because of follow-up Rule No.%li, %s",
+							/*log(LOG_WARN,"lang: Rule No.%"INT32", %s",n, m_rulesPtr[n]);
+							  log(LOG_WARN,"lang: not used because of follow-up Rule No.%"INT32", %s",
 							  n0,m_rulesPtr[n0]);*/
 							n += 2;
 							continue;
@@ -2479,7 +2479,7 @@ bool Language::getPhonetic( char *origWord, long origWordLen,
 					
 					/**  replace string  **/
 					/*log(LOG_WARN,"lang: Using rule "
-					  "No.%li, %s\t --> %s", n,
+					  "No.%"INT32", %s\t --> %s", n,
 					  m_rulesPtr[n],m_rulesPtr[n+1]);*/
 
 					s = m_rulesPtr[n+1];
@@ -2570,17 +2570,17 @@ bool Language::getPhonetic( char *origWord, long origWordLen,
 	return true;
 }
 
-bool Language::hasMispelling(char *phrase, long phraseLen){
+bool Language::hasMispelling(char *phrase, int32_t phraseLen){
 	char *p = phrase;
 	char *pend = p;
 	while ( pend < phrase + phraseLen ){
 		while ( *pend != ' ' && pend < phrase + phraseLen )
 			pend++;
 		char word[1024];
-		memcpy(word, p, pend - p);
+		gbmemcpy(word, p, pend - p);
 		word[pend - p] = '\0';
-		unsigned long key = hash32d(p, pend - p);
-		long slot = m_misp.getSlot(key);
+		uint32_t key = hash32d(p, pend - p);
+		int32_t slot = m_misp.getSlot(key);
 		if ( slot != -1 ){
 			log(LOG_WARN,"lang: found mispelling in %s", word);
  			return true;
@@ -2599,9 +2599,9 @@ bool Language::hasMispelling(char *phrase, long phraseLen){
 
 /*
 // . return false and set g_errno on error, true on success
-bool Language::generateDicts ( long numWordsToDump , char *coll ) {
+bool Language::generateDicts ( int32_t numWordsToDump , char *coll ) {
 	log(LOG_INIT,
-	    "lang: Reading first %li words from titledb records in "
+	    "lang: Reading first %"INT32" words from titledb records in "
 	    "collection '%s'.",
 	    numWordsToDump,coll);
 
@@ -2659,14 +2659,14 @@ bool Language::generateDicts ( long numWordsToDump , char *coll ) {
 	//if ( ! addDictWords ( ) ) return false;
 
 	// sort each file
-	for ( long i = 0 ; i < NUM_CHARS ; i++ ) {
+	for ( int32_t i = 0 ; i < NUM_CHARS ; i++ ) {
 		char tmp[1024];
 		// . sort should treat all lower chars as upper
 		// . sort in reverse order so longer fragments are on top
-		//   of their shorter sub fragments so if they have the
+		//   of their int16_ter sub fragments so if they have the
 		//   same score in the end, we'll keep the longer fragment
-		sprintf(tmp,"sort -f -r %stmp/%s/%s.words.%li > "
-			"%stmp/%s/%s.words.%li.sorted",
+		sprintf(tmp,"sort -f -r %stmp/%s/%s.words.%"INT32" > "
+			"%stmp/%s/%s.words.%"INT32".sorted",
 			g_hostdb.m_dir, getLanguageAbbr(m_lang),
 			getLanguageAbbr(m_lang), i, g_hostdb.m_dir,
 			getLanguageAbbr(m_lang), getLanguageAbbr(m_lang), i);
@@ -2699,25 +2699,25 @@ bool Language::generateDicts ( long numWordsToDump , char *coll ) {
 // . do not dump out a word/phrase more than once for the same titleRec
 // . stores files in /tmp/ dir
 // . return false and set g_errno on error, true on success
-bool Language::makeWordFiles ( long numWordsToDump , long numWordsPerPhrase ,
+bool Language::makeWordFiles ( int32_t numWordsToDump , int32_t numWordsPerPhrase ,
 			      char *coll ) {
 
-	long numDumped = 0;
+	int32_t numDumped = 0;
 
 	// message
-	log(LOG_INIT,"lang: Dumping first %li words/phrases.", 
+	log(LOG_INIT,"lang: Dumping first %"INT32" words/phrases.", 
 	     numWordsToDump );
 
 	// . only allow 1 vote per ip domain
 	// . assume each titlerec has about 50 words in it
-	unsigned long  maxNumIps   = numWordsToDump / 50 ;
+	uint32_t  maxNumIps   = numWordsToDump / 50 ;
 	if ( maxNumIps < 100000 ) maxNumIps = 100000;
-	long  iptableSize = maxNumIps * 4;
-	log(LOG_INIT,"lang: Allocating %li bytes.", iptableSize );
-	long *iptable = (long *) mmalloc ( iptableSize , "Language" );
+	int32_t  iptableSize = maxNumIps * 4;
+	log(LOG_INIT,"lang: Allocating %"INT32" bytes.", iptableSize );
+	int32_t *iptable = (int32_t *) mmalloc ( iptableSize , "Language" );
 	if ( ! iptable ) {
 		return log(
-			   "lang: Could not allocate %li bytes: %s",
+			   "lang: Could not allocate %"INT32" bytes: %s",
 			   iptableSize,mstrerror(g_errno));
 	}
 	memset ( iptable , 0 , iptableSize );
@@ -2728,15 +2728,15 @@ bool Language::makeWordFiles ( long numWordsToDump , long numWordsPerPhrase ,
 	//dummy.set ( "www.jinx.com" , gbstrlen("www.jinx.com") );
 	//sr.set (  &dummy , coll , gbstrlen(coll) , 7 ); // filenum
 	// read in 12 byte key, 4 byte size then data of that size
-	unsigned long ip;
-	long totalVoters = 0;
-	unsigned long h;
+	uint32_t ip;
+	int32_t totalVoters = 0;
+	uint32_t h;
 	// buffer used for storing de-tagged doc content
 
 	// JAB: warning abatement
-	// long xbufSize ;
+	// int32_t xbufSize ;
 	// declare up here so we can jump to done: label
-	long nw;
+	int32_t nw;
 	//XmlDoc doc;
 	Words w;
 	Xml xml;
@@ -2744,19 +2744,19 @@ bool Language::makeWordFiles ( long numWordsToDump , long numWordsPerPhrase ,
 	TitleRec tr;
 	// JAB: warning abatement
 	//char xbuf [ 1024*512 ] ; //1024 ];
-	//long jx = numWordsPerPhrase * 2; 
+	//int32_t jx = numWordsPerPhrase * 2; 
 	// the word vote table to ensure one vote per word per doc
-	long  vnumEntries ;
-	long  vtableSize  = 0 ;
-	long *vtable = NULL;
+	int32_t  vnumEntries ;
+	int32_t  vtableSize  = 0 ;
+	int32_t *vtable = NULL;
 	// display titlerec # we are scanning
-	long  count = 0;
+	int32_t  count = 0;
 
 	// open all files for appending
 	int fds [ NUM_CHARS ];
-	for ( long i = 0 ; i < NUM_CHARS ; i++ ) {
+	for ( int32_t i = 0 ; i < NUM_CHARS ; i++ ) {
 		char ff[1024];
-		sprintf ( ff , "%stmp/%s/%s.words.%li", g_hostdb.m_dir,
+		sprintf ( ff , "%stmp/%s/%s.words.%"INT32"", g_hostdb.m_dir,
 			  getLanguageAbbr(m_lang),getLanguageAbbr(m_lang), i );
 		// delete it first
 		unlink ( ff );
@@ -2789,15 +2789,15 @@ bool Language::makeWordFiles ( long numWordsToDump , long numWordsPerPhrase ,
 	// turn off threads
 	g_threads.disableThreads();
 	// get a meg at a time
-	long minRecSizes = 1024*1024;
+	int32_t minRecSizes = 1024*1024;
 	Msg5 msg5;
 	Msg5 msg5b;
 	RdbList list;
 	key_t k       ;
 	char *rec     ;
-	long  recSize ;
-	long  sameip = 0;
-	long  y;
+	int32_t  recSize ;
+	int32_t  sameip = 0;
+	int32_t  y;
 	char  quality;
  loop:
 	// use msg5 to get the list, should ALWAYS block since no threads
@@ -2827,7 +2827,7 @@ bool Language::makeWordFiles ( long numWordsToDump , long numWordsPerPhrase ,
 		return false;
 	}
 	// all done if empty
-	log(LOG_INIT, "lang: got list: %ld recs", list.getNumRecs());
+	log(LOG_INIT, "lang: got list: %"INT32" recs", list.getNumRecs());
 	if ( list.isEmpty() ) goto done;
 
 	k       = list.getCurrentKey();
@@ -2835,7 +2835,7 @@ bool Language::makeWordFiles ( long numWordsToDump , long numWordsPerPhrase ,
 	recSize = list.getCurrentRecSize();
 
 	startKey = *(key_t *)list.getLastKey();
-	startKey += (unsigned long) 1;
+	startKey += (uint32_t) 1;
 	// watch out for wrap around
 	if ( startKey < *(key_t *)list.getLastKey() ) goto done;
 
@@ -2865,10 +2865,10 @@ tr.set ( rec , recSize , false ) ; // owndata?
  ipchain:
 	if ( iptable[h] ) {
 		// skip if already voted
-		if ( iptable[h] == (long)ip ) { sameip++; goto loop; }
+		if ( iptable[h] == (int32_t)ip ) { sameip++; goto loop; }
 		// chain to next bucket
 		if ( ++h >= maxNumIps ) h = 0;
-		if ( ++y >  (long)maxNumIps ) {
+		if ( ++y >  (int32_t)maxNumIps ) {
 			log(LOG_LOGIC,"spell: IP table is too small. "
 			    "Exiting.");
 			char *xx = NULL; *xx = 0;
@@ -2907,22 +2907,22 @@ tr.set ( rec , recSize , false ) ; // owndata?
 	// . wvtable = word vote table
 	vnumEntries = (nw * numWordsPerPhrase * 130) / 100;
 	vtableSize  = vnumEntries * 4;
-	//log("mallocing2b %li bytes", vtableSize );
+	//log("mallocing2b %"INT32" bytes", vtableSize );
 	if ( (count % 100) == 0 )
-		log(LOG_INIT,"lang: Scanning document %li "
-		    "(%li dup ips, %li words dumped).",
+		log(LOG_INIT,"lang: Scanning document %"INT32" "
+		    "(%"INT32" dup ips, %"INT32" words dumped).",
 		    count,sameip,numDumped);
 	count++;
-	vtable = (long *) mmalloc ( vtableSize , "Language" );
+	vtable = (int32_t *) mmalloc ( vtableSize , "Language" );
 	if ( ! vtable ) {
 		mfree ( iptable , iptableSize , "Language" );
-		return log("lang: Failed to allocate %li "
+		return log("lang: Failed to allocate %"INT32" "
 			   "bytes: %s.",iptableSize,mstrerror(g_errno));
 	}
 	memset ( vtable , 0 , vtableSize );
 
 	// every other word is punctuation, so step by 2
-	for ( long i = 0 ; i < nw ; i ++ ) {
+	for ( int32_t i = 0 ; i < nw ; i ++ ) {
 		// skip punct. wordId is 0.
 		if ( w.isPunct(i) ) continue;
 
@@ -2932,7 +2932,7 @@ tr.set ( rec , recSize , false ) ; // owndata?
 		char *tmpp = tmp;
 		char *tmpend = tmp + 1024 - 3;
 		char *ww    = w.getWord(i);
-		long  wwlen = w.getWordLen(i);
+		int32_t  wwlen = w.getWordLen(i);
 		if ( wwlen < 2 )
 			continue;
 		bool isStop = ::isStopWord ( ww, wwlen, w.getWordId (i));
@@ -2944,24 +2944,24 @@ tr.set ( rec , recSize , false ) ; // owndata?
 			if ( wwlen == 1 && ww[0] != 'a' ) isStop = false;
 		}
 		// loop over # of words per phrase
-		for ( long k = 1 ; k < numWordsPerPhrase ; k++ ) {
+		for ( int32_t k = 1 ; k < numWordsPerPhrase ; k++ ) {
 
 			tmpp = tmp;
 
 			// stop words cannot start dictionary phrases
 			if ( k > 1 && isStop ) break;
 
-			long lastj = -1;
+			int32_t lastj = -1;
 
 			// do not end on stop word either
-			for ( long j = i ; j < i + k * 2 ; j++ ) {
+			for ( int32_t j = i ; j < i + k * 2 ; j++ ) {
 				// skip if overflow
 				if ( j >= nw ) continue;
 				// skip punct
 				if ( w.isPunct(j) ) continue;
 				// point to word
 				char *ww    = w.getWord(j);
-				long  wwlen = w.getWordLen(j);
+				int32_t  wwlen = w.getWordLen(j);
 				// if no room to store word, skip it
 				if ( tmpp + wwlen >= tmpend ) { 
 					tmpp = tmp; break; }
@@ -2971,7 +2971,7 @@ tr.set ( rec , recSize , false ) ; // owndata?
 				char tx[1024];
 
 				// n is how many bytes we wrote into "tx"
-				long n = to_lower_utf8(tmpp,tmpend,ww,wwlen);
+				int32_t n = to_lower_utf8(tmpp,tmpend,ww,wwlen);
 				// advance it
 				tmpp += n;
 
@@ -2996,8 +2996,8 @@ tr.set ( rec , recSize , false ) ; // owndata?
 			if ( k > 1 && lastj >= 0 ) {
 
 				char      *ww    = w.getWord    ( lastj );
-				long       wwlen = w.getWordLen ( lastj );
-				long long  wid   = w.getWordId  ( lastj );
+				int32_t       wwlen = w.getWordLen ( lastj );
+				int64_t  wid   = w.getWordId  ( lastj );
 				bool       isStop = ::isStopWord(ww,wwlen,wid);
 				// BUT ok if Capitalized or number
 				if ( isStop ) {
@@ -3011,7 +3011,7 @@ tr.set ( rec , recSize , false ) ; // owndata?
 			// overwrite it, terminate with a \n
 			*tmpp = '\n';
 			// how long is it? does not include terminating \n
-			long tmplen = tmpp - tmp;
+			int32_t tmplen = tmpp - tmp;
 			// skip if nothing
 			if ( tmplen <= 0 ) 
 				continue;
@@ -3025,24 +3025,24 @@ tr.set ( rec , recSize , false ) ; // owndata?
 			// we need to preserve distinguish between proper
 			// and improper accent marks, so don't do just ascii
 			// by using wh = w.getWordId(j)
-			unsigned long long hh = hash64Lower_utf8 (tmp,tmplen );
+			uint64_t hh = hash64Lower_utf8 (tmp,tmplen );
 			// don't allow more than one vote per doc for a word
-			long ii = hh % vnumEntries;
+			int32_t ii = hh % vnumEntries;
 		vchain:
-			if ( vtable[ii] && vtable[ii] != (long)hh ) {
+			if ( vtable[ii] && vtable[ii] != (int32_t)hh ) {
 				if ( ++ii >= vnumEntries ) ii = 0 ;
 				goto vchain;
 			}
 			if ( vtable[ii] ) continue;
 			// store it
-			vtable[ii] = (long)hh;
+			vtable[ii] = (int32_t)hh;
 
 			// a new word for this doc
 			// append the word out to file
-			long fn = to_dict_char(tmp[0]);
+			int32_t fn = to_dict_char(tmp[0]);
 			// write the hash before the word
 			//char tt[32];
-			//sprintf ( tt , "%016llx ", hh );
+			//sprintf ( tt , "%016"XINT64" ", hh );
 			//if ( write ( fds[fn], tt , 17 ) != 17 )
 			//	return log("spell: makeWordFiles: write: %s",
 			//		   strerror(errno));
@@ -3050,10 +3050,10 @@ tr.set ( rec , recSize , false ) ; // owndata?
 			tmpp++;
 			*tmpp = '\0';
 			sprintf(tmpx,"%s", tmp);
-			long tmpxlen = gbstrlen(tmpx);
+			int32_t tmpxlen = gbstrlen(tmpx);
 			
 			// write out the trailing \n as well
-			long wn = write ( fds[fn] , tmpx , tmpxlen ) ;
+			int32_t wn = write ( fds[fn] , tmpx , tmpxlen ) ;
 			if ( wn != tmpxlen )
 				return log("spell: makeWordFiles: write: %s",
 					   strerror(errno));
@@ -3074,7 +3074,7 @@ tr.set ( rec , recSize , false ) ; // owndata?
 	if ( vtable ) mfree ( vtable , vtableSize , "Language");
 	vtable = NULL;
 	// close all files
-	for ( long i = 0 ; i < NUM_CHARS ; i++ )
+	for ( int32_t i = 0 ; i < NUM_CHARS ; i++ )
 		close ( fds[i] );
 
 	return true;
@@ -3082,26 +3082,26 @@ tr.set ( rec , recSize , false ) ; // owndata?
 
 #define NUM_UNIFILES MAX_LANGUAGES
 
-bool Language::makePopFiles ( long numWordsToDump , long numWordsPerPhrase ,
+bool Language::makePopFiles ( int32_t numWordsToDump , int32_t numWordsPerPhrase ,
 			     char *coll) {
 
-	long numDumped = 0;
-	long docCount = 0;
+	int32_t numDumped = 0;
+	int32_t docCount = 0;
 
 	// message
-	log(LOG_INIT,"lang: Dumping first %li words/phrases.", 
+	log(LOG_INIT,"lang: Dumping first %"INT32" words/phrases.", 
 	     numWordsToDump );
 
 	// . only allow 1 vote per ip domain
 	// . assume each titlerec has about 50 words in it
-	unsigned long  maxNumIps   = numWordsToDump / 50 ;
+	uint32_t  maxNumIps   = numWordsToDump / 50 ;
 	if ( maxNumIps < 100000 ) maxNumIps = 100000;
-	long  iptableSize = maxNumIps * 4;
-	log(LOG_INIT,"lang: Allocating %li bytes.", iptableSize );
-	long *iptable = (long *) mmalloc ( iptableSize , "Language" );
+	int32_t  iptableSize = maxNumIps * 4;
+	log(LOG_INIT,"lang: Allocating %"INT32" bytes.", iptableSize );
+	int32_t *iptable = (int32_t *) mmalloc ( iptableSize , "Language" );
 	if ( ! iptable ) {
 		return log(
-			   "lang: Could not allocate %li bytes: %s",
+			   "lang: Could not allocate %"INT32" bytes: %s",
 			   iptableSize,mstrerror(g_errno));
 	}
 	memset ( iptable , 0 , iptableSize );
@@ -3112,14 +3112,14 @@ bool Language::makePopFiles ( long numWordsToDump , long numWordsPerPhrase ,
 	//dummy.set ( "www.jinx.com" , gbstrlen("www.jinx.com") );
 	//sr.set (  &dummy , coll , gbstrlen(coll) , 7 ); // filenum
 	// read in 12 byte key, 4 byte size then data of that size
-	unsigned long ip;
-	long totalVoters = 0;
-	unsigned long h;
+	uint32_t ip;
+	int32_t totalVoters = 0;
+	uint32_t h;
 	// buffer used for storing de-tagged doc content
 
-	long xbufSize ;
+	int32_t xbufSize ;
 	// declare up here so we can jump to done: label
-	long nw;
+	int32_t nw;
 	//XmlDoc doc;
 	Words w;
 	Xml xml;
@@ -3127,19 +3127,19 @@ bool Language::makePopFiles ( long numWordsToDump , long numWordsPerPhrase ,
 	Url *u;
 	TitleRec tr;
 	char xbuf [ 1024*512 ] ; //1024 ];
-	//long jx = numWordsPerPhrase * 2; 
+	//int32_t jx = numWordsPerPhrase * 2; 
 	// the word vote table to ensure one vote per word per doc
-	long  vnumEntries ;
-	long  vtableSize  = 0 ;
-	long *vtable = NULL;
+	int32_t  vnumEntries ;
+	int32_t  vtableSize  = 0 ;
+	int32_t *vtable = NULL;
 	// display titlerec # we are scanning
-	long  count = 0;
+	int32_t  count = 0;
 
 	// open all files for appending
 	int fds [ NUM_UNIFILES ];
-	for ( long i = 0 ; i < NUM_UNIFILES ; i++ ) {
+	for ( int32_t i = 0 ; i < NUM_UNIFILES ; i++ ) {
 		char ff[1024];
-		sprintf ( ff , "%stmp/%s/%s.popwords.%li", g_hostdb.m_dir ,
+		sprintf ( ff , "%stmp/%s/%s.popwords.%"INT32"", g_hostdb.m_dir ,
 			  getLanguageAbbr(m_lang),getLanguageAbbr(m_lang), i );
 		// delete it first
 		unlink ( ff );
@@ -3172,17 +3172,17 @@ bool Language::makePopFiles ( long numWordsToDump , long numWordsPerPhrase ,
 	// turn off threads
 	g_threads.disableThreads();
 	// get a meg at a time
-	long minRecSizes = 1024*1024;
+	int32_t minRecSizes = 1024*1024;
 	Msg5 msg5;
 	Msg5 msg5b;
 	RdbList list;
 	key_t k       ;
 	char *rec     ;
-	long  recSize ;
-	long  sameip = 0;
-	long  y;
+	int32_t  recSize ;
+	int32_t  sameip = 0;
+	int32_t  y;
 	char  quality;
-	long badFlags = SEC_SCRIPT|SEC_STYLE|SEC_SELECT;
+	int32_t badFlags = SEC_SCRIPT|SEC_STYLE|SEC_SELECT;
 	Sections ss;
 
  loop:
@@ -3213,7 +3213,7 @@ bool Language::makePopFiles ( long numWordsToDump , long numWordsPerPhrase ,
 		return false;
 	}
 	// all done if empty
-	log(LOG_INIT, "lang: got list: %ld recs", list.getNumRecs());
+	log(LOG_INIT, "lang: got list: %"INT32" recs", list.getNumRecs());
 	if ( list.isEmpty() ) goto done;
 	list.resetListPtr();
 docloop:
@@ -3246,10 +3246,10 @@ tr.set ( rec , recSize , false ) ; // owndata?
  ipchain:
 	if ( iptable[h] ) {
 		// skip if already voted
-		if ( iptable[h] == (long)ip ) { sameip++; goto docdone; }
+		if ( iptable[h] == (int32_t)ip ) { sameip++; goto docdone; }
 		// chain to next bucket
 		if ( ++h >= maxNumIps ) h = 0;
-		if ( ++y >  (long)maxNumIps ) {
+		if ( ++y >  (int32_t)maxNumIps ) {
 			log(LOG_LOGIC,"spell: IP table is too small. "
 			    "Exiting.");
 			char *xx = NULL; *xx = 0;
@@ -3292,23 +3292,23 @@ tr.set ( rec , recSize , false ) ; // owndata?
 	// . wvtable = word vote table
 	vnumEntries = (nw * numWordsPerPhrase * 130) / 100;
 	vtableSize  = vnumEntries * 4;
-	//log("mallocing2b %li bytes", vtableSize );
+	//log("mallocing2b %"INT32" bytes", vtableSize );
 	if ( (count % 100) == 0 )
-		log(LOG_INIT,"lang: Scanning document %li "
-		    "(%li dup ips, %li words dumped).",
+		log(LOG_INIT,"lang: Scanning document %"INT32" "
+		    "(%"INT32" dup ips, %"INT32" words dumped).",
 		    count,sameip,numDumped);
 	count++;
-	vtable = (long *) mmalloc ( vtableSize , "Language" );
+	vtable = (int32_t *) mmalloc ( vtableSize , "Language" );
 	if ( ! vtable ) {
 		mfree ( iptable , iptableSize , "Language" );
-		return log("lang: Failed to allocate %li "
+		return log("lang: Failed to allocate %"INT32" "
 			   "bytes: %s.",iptableSize,mstrerror(g_errno));
 	}
 	memset ( vtable , 0 , vtableSize );
 
 	// every other word is punctuation, so step by 2
 	//log("Adding %d words", nw);
-	for ( long i = 0 ; i < nw ; i ++ ) {
+	for ( int32_t i = 0 ; i < nw ; i ++ ) {
 		// skip punct
 		//if ( w.isPunct(i) ) continue;
 		//if ( !s.getScore(i) ) continue;
@@ -3320,7 +3320,7 @@ tr.set ( rec , recSize , false ) ; // owndata?
 		char  *tmpp = tmp;
 		char  *tmpend = tmp + 2048 - 3;
 		char  *ww    = w.getWord(i);
-		long   wwlen = w.getWordLen(i);
+		int32_t   wwlen = w.getWordLen(i);
 		bool isStop = ::isStopWord ( ww, wwlen, w.getWordId (i));
 		// BUT ok if Capitalized or number
 		if ( isStop ) {
@@ -3331,17 +3331,17 @@ tr.set ( rec , recSize , false ) ; // owndata?
 				isStop = false;
 		}
 		// loop over # of words per phrase
-		for ( long k = 1 ; k < numWordsPerPhrase ; k++ ) {
+		for ( int32_t k = 1 ; k < numWordsPerPhrase ; k++ ) {
 
 			tmpp = tmp;
 
 			// stop words cannot start dictionary phrases
 			if ( k > 1 && isStop ) break;
 
-			long lastj = -1;
+			int32_t lastj = -1;
 
 			// do not end on stop word either
-			for ( long j = i ; j < i + k * 2 ; j++ ) {
+			for ( int32_t j = i ; j < i + k * 2 ; j++ ) {
 				// skip if overflow
 				if ( j >= nw ) continue;
 				// skip punct
@@ -3351,7 +3351,7 @@ tr.set ( rec , recSize , false ) ; // owndata?
 					continue;
 				// point to word
 				char *ww    = w.getWord(j);
-				long  wwlen = w.getWordLen(j);
+				int32_t  wwlen = w.getWordLen(j);
 				// if no room to store word, skip it
 				if ( tmpp + wwlen >= tmpend ) { 
 					tmpp = tmp; break; }
@@ -3360,7 +3360,7 @@ tr.set ( rec , recSize , false ) ; // owndata?
 				// they way it should
 
 				// n is how many bytes we wrote into "tx"
-				long n = to_lower_utf8(tmpp,tmpend,ww,wwlen);
+				int32_t n = to_lower_utf8(tmpp,tmpend,ww,wwlen);
 				// advance it
 				tmpp += n;
 
@@ -3378,8 +3378,8 @@ tr.set ( rec , recSize , false ) ; // owndata?
 			if ( k > 1 && lastj >= 0 ) {
 
 				char      *ww    = w.getWord    ( lastj );
-				long       wwlen = w.getWordLen ( lastj );
-				long long  wid   = w.getWordId  ( lastj );
+				int32_t       wwlen = w.getWordLen ( lastj );
+				int64_t  wid   = w.getWordId  ( lastj );
 				
 				isStop =::isStopWord(ww,wwlen,wid);
 
@@ -3395,7 +3395,7 @@ tr.set ( rec , recSize , false ) ; // owndata?
 			// overwrite it, terminate with a \n
 			*tmpp = '\n';
 			// how long is it? does not include terminating \n
-			long tmplen = tmpp - tmp;
+			int32_t tmplen = tmpp - tmp;
 			// skip if nothing
 			if ( tmplen <= 0 ) continue;
 			// skip word if it has binary chars in it
@@ -3407,30 +3407,30 @@ tr.set ( rec , recSize , false ) ; // owndata?
 			// we need to preserve distinguish between proper
 			// and improper accent marks, so don't do just ascii
 			// by using wh = w.getWordId(i+j)
-			unsigned long long hh = hash64Lower_utf8 (tmp,tmplen );
+			uint64_t hh = hash64Lower_utf8 (tmp,tmplen );
 			// don't allow more than one vote per doc for a word
-			long ii = hh % vnumEntries;
+			int32_t ii = hh % vnumEntries;
 		vchain:
-			if ( vtable[ii] && vtable[ii] != (long)hh ) {
+			if ( vtable[ii] && vtable[ii] != (int32_t)hh ) {
 				if ( ++ii >= vnumEntries ) ii = 0 ;
 				goto vchain;
 			}
 			if ( vtable[ii] ) continue;
 			// store it
-			vtable[ii] = (long)hh;
+			vtable[ii] = (int32_t)hh;
 
 			// a new word for this doc
 			// append the word out to file
-			//long fn = to_dict_char(tmp[0]);
-			long fn = tr.getLanguage();
+			//int32_t fn = to_dict_char(tmp[0]);
+			int32_t fn = tr.getLanguage();
 			// write the hash before the word
 			//char tt[32];
-			//sprintf ( tt , "%016llx ", hh );
+			//sprintf ( tt , "%016"XINT64" ", hh );
 			//if ( write ( fds[fn], tt , 17 ) != 17 )
 			//	return log("spell: makeWordFiles: write: %s",
 			//		   strerror(errno));
 			// write out the trailing \n as well
-			long wn = write ( fds[fn] , tmp , tmplen + 1) ;
+			int32_t wn = write ( fds[fn] , tmp , tmplen + 1) ;
 			if ( wn != tmplen + 1 )
 				return log("spell: makePopFiles: "
 					   "write: %s",
@@ -3441,7 +3441,7 @@ tr.set ( rec , recSize , false ) ; // owndata?
 				goto done;
 		}
 	}
-	//log(LOG_INIT, "lang: got %ld docs, %ld words", 
+	//log(LOG_INIT, "lang: got %"INT32" docs, %"INT32" words", 
 	//docCount, numDumped);
 
 	// breakout:
@@ -3455,18 +3455,18 @@ docdone:
 		goto docloop;
 
 	startKey = *(key_t *)list.getLastKey();
-	startKey += (unsigned long) 1;
+	startKey += (uint32_t) 1;
 	// watch out for wrap around
 	if ( startKey < *(key_t *)list.getLastKey() ) goto done;
 	goto loop;
 
  done:
 	// don't need the word voting table anymore
-	log(LOG_INIT, "lang: got %ld docs total", docCount);
+	log(LOG_INIT, "lang: got %"INT32" docs total", docCount);
 	if ( vtable ) mfree ( vtable , vtableSize , "Language");
 	vtable = NULL;
 	// close all files
-	for ( long i = 0 ; i < NUM_UNIFILES ; i++ ) close ( fds[i] );
+	for ( int32_t i = 0 ; i < NUM_UNIFILES ; i++ ) close ( fds[i] );
 
 	return true;
 }
@@ -3475,14 +3475,14 @@ docdone:
 //   with scores
 // . score is number of times that word/phrase was found in the file
 // . truncate each file to the top "maxWordsPerFile" words/phrases
-bool Language::makeScoreFiles ( long maxWordsPerFile ) {
+bool Language::makeScoreFiles ( int32_t maxWordsPerFile ) {
 
 	// convert each file
-	for ( long i = 0 ; i < NUM_CHARS ; i++ ) {
+	for ( int32_t i = 0 ; i < NUM_CHARS ; i++ ) {
 
 		// open the file for reading
 		char ff[1024];
-		sprintf ( ff , "%stmp/%s/%s.words.%li.sorted", g_hostdb.m_dir,
+		sprintf ( ff , "%stmp/%s/%s.words.%"INT32".sorted", g_hostdb.m_dir,
 			  getLanguageAbbr(m_lang),getLanguageAbbr(m_lang), i );
 		FILE *fdr = fopen ( ff , "r" );
 		if ( ! fdr )
@@ -3491,7 +3491,7 @@ bool Language::makeScoreFiles ( long maxWordsPerFile ) {
 				   "%s.",ff, strerror(errno));
 
 		// and one for writing out score/word pairs
-		sprintf ( ff, "%stmp/%s/%s.words.%li.prescored",g_hostdb.m_dir,
+		sprintf ( ff, "%stmp/%s/%s.words.%"INT32".prescored",g_hostdb.m_dir,
 			  getLanguageAbbr(m_lang),getLanguageAbbr(m_lang), i );
 		FILE *fdw = fopen ( ff , "w" );
 		if ( ! fdw )
@@ -3502,15 +3502,15 @@ bool Language::makeScoreFiles ( long maxWordsPerFile ) {
 		log(LOG_INIT,"lang: Making %s.", ff );
 
 		// ongoing score count
-		long score = 0;
-		long oldscore = 0;
+		int32_t score = 0;
+		int32_t oldscore = 0;
 		// store last word/phrase in here
 		char lastw [ 1029];
 		lastw[0] = '\0';
 		// and its hash in here
-		unsigned long long lasthh = 0;
+		uint64_t lasthh = 0;
 		char pbuf[1024];
-		//long bonus = 0;
+		//int32_t bonus = 0;
 		//bool gotit = false; // do we start w/ '*'? means in dict.
 		// read in each line
 		while ( fgets ( pbuf , 1024 , fdr ) ) {
@@ -3530,15 +3530,15 @@ bool Language::makeScoreFiles ( long maxWordsPerFile ) {
 			if ( (p[0] == 'a' || p[0] == 'A') && p[1] == ' ')
 				continue;
 			// don't include terminating \n in the length
-			long plen = gbstrlen(p) - 1;
+			int32_t plen = gbstrlen(p) - 1;
 			if ( plen <= 0 ) continue;
 			// skip if too big and might have been truncated
 			if ( plen >= 1000 ) continue;
 			// NULL terminate it to take off ending * and/or \n
 			p [plen] = '\0';
 			// get the hash of this word/phrase
-			unsigned long long hh = hash64Lower_utf8 ( p , plen );
-			//sscanf ( buf , "%llx" , &hh );
+			uint64_t hh = hash64Lower_utf8 ( p , plen );
+			//sscanf ( buf , "%"XINT64"" , &hh );
 			// was it same as last? if so, tally and continue
 			if ( hh == lasthh ) { 
 				score++;
@@ -3551,9 +3551,9 @@ bool Language::makeScoreFiles ( long maxWordsPerFile ) {
 			// . print out the word before us
 			if ( score >= MIN_DOCS ) {
 				//if ( gotit ) // bonus ) 
-				//	fprintf(fdw,"%05li *%s\n",score,lastw);
+				//	fprintf(fdw,"%05"INT32" *%s\n",score,lastw);
 				//else
-				fprintf(fdw,"%05li %s\n" ,score,lastw);
+				fprintf(fdw,"%05"INT32" %s\n" ,score,lastw);
 			}
 			// we are now the new word
 			lasthh    = hh;
@@ -3567,9 +3567,9 @@ bool Language::makeScoreFiles ( long maxWordsPerFile ) {
 		// skip if too big and might have been truncated
 		//score += bonus;
 		if ( score >= MIN_DOCS &&  gbstrlen(lastw) < 1000)  {
-			//if (gotit) fprintf (fdw,"%05li *%s\n",score,lastw );
-			// else       fprintf (fdw,"%05li %s\n" ,score,lastw );
-			fprintf (fdw,"%05li %s\n" ,score,lastw );
+			//if (gotit) fprintf (fdw,"%05"INT32" *%s\n",score,lastw );
+			// else       fprintf (fdw,"%05"INT32" %s\n" ,score,lastw );
+			fprintf (fdw,"%05"INT32" %s\n" ,score,lastw );
 		}
 
 		fclose ( fdr );
@@ -3581,7 +3581,7 @@ bool Language::makeScoreFiles ( long maxWordsPerFile ) {
 		//
 
 		// open the file for reading
-		sprintf ( ff, "%stmp/%s/%s.words.%li.prescored",g_hostdb.m_dir,
+		sprintf ( ff, "%stmp/%s/%s.words.%"INT32".prescored",g_hostdb.m_dir,
 			  getLanguageAbbr(m_lang),getLanguageAbbr(m_lang), i );
 		fdr = fopen ( ff , "r" );
 		if ( ! fdr )
@@ -3590,7 +3590,7 @@ bool Language::makeScoreFiles ( long maxWordsPerFile ) {
 				   "%s.",ff, strerror(errno));
 
 		// and one for writing out score/word pairs
-		sprintf ( ff , "%stmp/%s/%s.words.%li.scored", g_hostdb.m_dir,
+		sprintf ( ff , "%stmp/%s/%s.words.%"INT32".scored", g_hostdb.m_dir,
 			  getLanguageAbbr(m_lang),getLanguageAbbr(m_lang), i );
 		fdw = fopen ( ff , "w" );
 		if ( ! fdw )
@@ -3603,11 +3603,11 @@ bool Language::makeScoreFiles ( long maxWordsPerFile ) {
 		while ( fgets ( pbuf , 1024 , fdr ) ) {
 			char *p = pbuf;
 			// don't include terminating \n in the length
-			long plen = gbstrlen(p) - 1;
+			int32_t plen = gbstrlen(p) - 1;
 			// NULL terminate it to take off ending * and/or \n
 			p [plen] = '\0';
 			// get score
-			long score = atoi(p);
+			int32_t score = atoi(p);
 			// advance p over score and separating space
 			while ( isdigit(*p) ) p++;
 			p++;
@@ -3618,7 +3618,7 @@ bool Language::makeScoreFiles ( long maxWordsPerFile ) {
 			//if ( strcmp ( p , "a wide variety of topics" )==0)
 			//	log("got it");
 			// does the new chunk match the last one?
-			long n;
+			int32_t n;
 			for ( n = 0 ; p[n] && 
 				      to_lower_a(p[n]) == 
 				      to_lower_a(lastw[n]); n++ );
@@ -3633,9 +3633,9 @@ bool Language::makeScoreFiles ( long maxWordsPerFile ) {
 			// . save it to disk
 			// . this puts the asterisk back at the end of the
 			//   word for easier reading
-			//if ( gotit) fprintf(fdw,"%05li %s*\n",score,p);
-			//else        fprintf(fdw,"%05li %s\n" ,score,p);
-			fprintf(fdw,"%05li\t%s\n" ,score,p);
+			//if ( gotit) fprintf(fdw,"%05"INT32" %s*\n",score,p);
+			//else        fprintf(fdw,"%05"INT32" %s\n" ,score,p);
+			fprintf(fdw,"%05"INT32"\t%s\n" ,score,p);
 			// store as last
 			oldscore = score;
 			strncpy ( lastw , p , 1010 );
@@ -3643,11 +3643,11 @@ bool Language::makeScoreFiles ( long maxWordsPerFile ) {
 		fclose ( fdr );
 		fclose ( fdw );
 
-		// sort the score file and output to dict.%li
+		// sort the score file and output to dict.%"INT32"
 		char bb[1024];
 		sprintf( bb,
-			 "sort -f -r %stmp/%s/%s.words.%li.scored | "
-			 "head -%li > %sdict.new/%s/%s.dict.%li",
+			 "sort -f -r %stmp/%s/%s.words.%"INT32".scored | "
+			 "head -%"INT32" > %sdict.new/%s/%s.dict.%"INT32"",
 			 g_hostdb.m_dir, getLanguageAbbr(m_lang),
 			 getLanguageAbbr(m_lang), i, maxWordsPerFile,
 			 g_hostdb.m_dir, getLanguageAbbr(m_lang),
@@ -3656,7 +3656,7 @@ bool Language::makeScoreFiles ( long maxWordsPerFile ) {
 		gbsystem ( bb );
 
 		// make the phonets for it too
-		//sprintf(bb,"%sdict.new/dict.%li",g_hostdb.m_dir,i);
+		//sprintf(bb,"%sdict.new/dict.%"INT32"",g_hostdb.m_dir,i);
 		//makePhonet ( bb );
 	}
 	return true;
@@ -3665,10 +3665,10 @@ bool Language::makeScoreFiles ( long maxWordsPerFile ) {
 // Get the queries from the http query requests and use them as phrases
 bool Language::makeQueryFiles ( ) {
 	char buf [1024*10];
-	for ( long i = 1; i < 2; i++ ){
+	for ( int32_t i = 1; i < 2; i++ ){
 	//fdr = fopen ( "dict/queries.mamma","r" );
 		char fx[1024];
-		sprintf( fx,"%sdict/queries.mamma%li",g_hostdb.m_dir, i );
+		sprintf( fx,"%sdict/queries.mamma%"INT32"",g_hostdb.m_dir, i );
 		FILE *fdr = fopen ( fx,"r" );
 		if ( ! fdr ) {
 			return log("lang: Could not open query file for "
@@ -3677,7 +3677,7 @@ bool Language::makeQueryFiles ( ) {
 
 		// open for writing	
 		char ff[1024];
-		sprintf ( ff , "%stmp/dict.queries.%li", g_hostdb.m_dir, i );
+		sprintf ( ff , "%stmp/dict.queries.%"INT32"", g_hostdb.m_dir, i );
 		// delete it first
 		unlink ( ff );
 		// then open a new one for appending
@@ -3694,7 +3694,7 @@ bool Language::makeQueryFiles ( ) {
 		while ( fgets ( buf , 1024 * 10, fdr ) ) {
 			buf[1024 * 10 - 1] = '\0';
 			// length of word(s), including the terminating \n
-			long wlen = gbstrlen(buf) ;
+			int32_t wlen = gbstrlen(buf) ;
 			// skip if empty
 			if ( wlen <= 0 ) continue;
 			buf[wlen-1]='\0';
@@ -3709,11 +3709,11 @@ bool Language::makeQueryFiles ( ) {
 			r2.set( r1.getRequest(), r1.getRequestLen(), NULL );
 
 			char frag[1024];
-			long flen;
+			int32_t flen;
 			char *query = r2.getString( "uip",&flen );
-			memcpy ( frag, query, flen );
+			gbmemcpy ( frag, query, flen );
 			frag[flen++] = '\t';
-			long queryLen;
+			int32_t queryLen;
 			query = r2.getString( "q",&queryLen );
 
 			q.set(query, queryLen, NULL, 0, true);
@@ -3724,9 +3724,9 @@ bool Language::makeQueryFiles ( ) {
 			if ( q.m_isBoolean )
 				continue;
 
-			long nqw = q.m_numWords;
-			for ( long i = 0 ; i < nqw ; i++ ) {
-				long fragLen = flen;
+			int32_t nqw = q.m_numWords;
+			for ( int32_t i = 0 ; i < nqw ; i++ ) {
+				int32_t fragLen = flen;
 				// get a word in the Query to start a fragment
 				// with
 				QueryWord *qw = &q.m_qwords[i];
@@ -3760,8 +3760,8 @@ bool Language::makeQueryFiles ( ) {
 				//    words that can be in a fragment
 				//   that starts with word #i start of the frag
 				char *p    = qw->m_word;
-				long  plen = 0;
-				long  lastLen = 0;
+				int32_t  plen = 0;
+				int32_t  lastLen = 0;
 				for ( ; i < nqw ; i++ ) {
 					// . skip if we should
 					// . keep punct, however
@@ -3817,7 +3817,7 @@ bool Language::makeQueryFiles ( ) {
 						continue;
 					}
 					// otherwise, more than 1 byte char
-					memcpy(frag+fragLen,p,cs);
+					gbmemcpy(frag+fragLen,p,cs);
 					fragLen += cs;
 				}
 
@@ -3831,7 +3831,7 @@ bool Language::makeQueryFiles ( ) {
 				frag[fragLen] = '\0';
 		
 				// write out the trailing \n as well
-				long wn = write ( fdw, frag, fragLen ) ;
+				int32_t wn = write ( fdw, frag, fragLen ) ;
 				if ( wn != fragLen )
 					return log("spell: makeWordFiles: "
 						   "write: %s",
@@ -3953,14 +3953,14 @@ bool StateWik::getSummary( ){
 	
 	m_numMsg20sOutstanding = 0;
 	m_numMsg20sReceived = 0;
-	long numLaunched = 0;
+	int32_t numLaunched = 0;
 	// launch MAX_FRAG_SIZE msg20's at a time, wait for all of them
 	while ( numLaunched < MAX_FRAG_SIZE && !m_list.isExhausted() ){
-		long long docId   = m_list.getCurrentDocId () ;
+		int64_t docId   = m_list.getCurrentDocId () ;
 		// set the summary request then get it!
 		Msg20Request req;
 		Query *q = &m_q;
-		//long nt                = q->m_numTerms;
+		//int32_t nt                = q->m_numTerms;
 		req.ptr_qbuf             = q->getQuery();
 		req.size_qbuf            = q->getQueryLen()+1;
 		req.ptr_coll             = m_coll;
@@ -3999,7 +3999,7 @@ bool StateWik::getSummary( ){
 				0,//m_si->m_displayMetasLen  ,
 				0,//bigSampleRadius          ,
 				0,//bigSampleMaxLen         ,
-				true,//m_si->m_isRootAdmin ,
+				true,//m_si->m_isMasterAdmin ,
 				true   , //requireallterms
 				false    , //count links
 				0,
@@ -4054,12 +4054,12 @@ void gotSummaryWrapper ( void *state ){
 
 bool StateWik::gotSummary ( ){
 	
-	for ( long i = 0; i < m_numMsg20sLaunched; i++ ){
+	for ( int32_t i = 0; i < m_numMsg20sLaunched; i++ ){
 		if ( m_msg20s[i].m_errno )
 			continue;
 
 		char frag[MAX_FRAG_SIZE];
-		long flen = 0;
+		int32_t flen = 0;
 
 		strcpy(frag, m_msg20s[i].getTitle());
 		flen = gbstrlen(frag);
@@ -4084,7 +4084,7 @@ bool StateWik::gotSummary ( ){
 			continue;
 
 		// check if all the letters are not alphabets
-		long numAlphas = 0;
+		int32_t numAlphas = 0;
 		// anoterh loop
 		p    = frag;
 		for ( ; p < pend ; p += getUtf8CharSize(p) ) {
@@ -4101,7 +4101,7 @@ bool StateWik::gotSummary ( ){
 			//   m_msg20s[i].getUrl(),frag );
 			
 		// write out the trailing \n as well
-		long wn = write ( m_fdw, frag, flen ) ;
+		int32_t wn = write ( m_fdw, frag, flen ) ;
 		if ( wn != flen )
 			continue;
 	}
@@ -4115,7 +4115,7 @@ bool StateWik::gotSummary ( ){
 
 		// see if u can get some more of the list.
 		m_startKey = *(key_t *)m_list.getLastKey();
-		m_startKey += (unsigned long) 1;
+		m_startKey += (uint32_t) 1;
 		
 		// watch out for wrap around
 		if ( m_startKey >= *(key_t *)m_list.getLastKey() ) 
@@ -4156,7 +4156,7 @@ bool Language::makeDict(){
 	
 	// TODO : CHANGE THIS TO USE fgets
 	// get file size
-	long fileSize = f.getFileSize() ;
+	int32_t fileSize = f.getFileSize() ;
 	
 	// store a \0 at the end
 	st->m_dictBufSize = fileSize + 1;
@@ -4176,7 +4176,7 @@ bool Language::makeDict(){
 
 	// change \n to \0
 	st->m_numTuples = 0;
-	for ( long i = 0 ; i < st->m_dictBufSize ; i++ ) {
+	for ( int32_t i = 0 ; i < st->m_dictBufSize ; i++ ) {
 		if ( st->m_dictBuf[i] != '\n' ) continue;
 		st->m_dictBuf[i] = '\0';
 		st->m_numTuples++;
@@ -4185,14 +4185,14 @@ bool Language::makeDict(){
 	f.close();
 
 	// log a msg
-	log(LOG_INIT,"lang: read %li words into memory", st->m_numTuples );
+	log(LOG_INIT,"lang: read %"INT32" words into memory", st->m_numTuples );
 
 	// alloc space to make them into termids
 	st->m_bufSize = st->m_numTuples * ( sizeof (char*) + 
-					    2 * sizeof (long long) );
+					    2 * sizeof (int64_t) );
 	st->m_buf = (char *) mmalloc ( st->m_bufSize, "LanguagePtrs" );
 	if ( !st->m_buf ) {
-		log ( LOG_WARN,"lang: could not alloc %li bytes", 
+		log ( LOG_WARN,"lang: could not alloc %"INT32" bytes", 
 		      st->m_bufSize );
 		g_errno = ENOMEM;
 		return true;
@@ -4200,19 +4200,19 @@ bool Language::makeDict(){
 	char *p = st->m_buf;
 	st->m_wordsPtr = (char **) p;
 	p += st->m_numTuples * sizeof(char *);
-	st->m_termIds = (long long *)p;
-	p += st->m_numTuples * sizeof(long long);
-	st->m_termFreqs = (long long *)p;
-	p += st->m_numTuples * sizeof(long long);
+	st->m_termIds = (int64_t *)p;
+	p += st->m_numTuples * sizeof(int64_t);
+	st->m_termFreqs = (int64_t *)p;
+	p += st->m_numTuples * sizeof(int64_t);
 
 	char *coll    = g_conf.m_defaultColl;
-	long collLen  = gbstrlen(coll);
+	int32_t collLen  = gbstrlen(coll);
 	p = st->m_dictBuf;
 
-	for ( long i = 0; i < st->m_numTuples; i++ ){
+	for ( int32_t i = 0; i < st->m_numTuples; i++ ){
 		st->m_wordsPtr[i] = p;
 		p += gbstrlen(p) + 1;
-		long wordLen = gbstrlen(st->m_wordsPtr[i]);
+		int32_t wordLen = gbstrlen(st->m_wordsPtr[i]);
 		// . set query class
 		// . a boolFlag of 0 means query is not boolean
 		Query q;
@@ -4257,17 +4257,17 @@ bool Language::gotTermFreqs( StateDict *st ){
 		st->m_numTuples = 0;
 	}
 
-	long long max = 0LL;
-	for ( long i = 0; i < st->m_numTuples; i++ ){
+	int64_t max = 0LL;
+	for ( int32_t i = 0; i < st->m_numTuples; i++ ){
 		if ( st->m_termFreqs[i] > max )
 			max = st->m_termFreqs[i];
 	}
 
 	char cleanWord[MAX_PHRASE_LEN];
 	char phonetic[MAX_PHRASE_LEN];
-	long wordLen = 0;
+	int32_t wordLen = 0;
 	char tmp[1024];
-	for ( long i = 0; i < st->m_numTuples; i++ ){
+	for ( int32_t i = 0; i < st->m_numTuples; i++ ){
 		wordLen = gbstrlen(st->m_wordsPtr[i]);
 			     
 		// clean the word, i.e. convert word to uppercase and
@@ -4278,11 +4278,11 @@ bool Language::gotTermFreqs( StateDict *st ){
 		getPhonetic ( cleanWord, gbstrlen(cleanWord), 
 			      phonetic, MAX_PHRASE_LEN );
 		
-		long long freq = ( st->m_termFreqs[i] * 32000 ) / max ;
-		sprintf(tmp,"%lli\t%s\t%s\n", freq,
+		int64_t freq = ( st->m_termFreqs[i] * 32000 ) / max ;
+		sprintf(tmp,"%"INT64"\t%s\t%s\n", freq,
 			st->m_wordsPtr[i], phonetic);
 
-		unsigned long wn = write ( fd , tmp , gbstrlen(tmp) ) ;
+		uint32_t wn = write ( fd , tmp , gbstrlen(tmp) ) ;
 		if ( wn != gbstrlen(tmp) ){
 			log("lang: makeWordFiles: write: %s",
 			    strerror(errno));
@@ -4323,7 +4323,7 @@ bool StateAff::openAffinityFile( ){
 		return true;
 	// open for reading
 	char ff[1024];
-	sprintf ( ff , "%sdict/dict.%li", g_hostdb.m_dir, m_fileNum );
+	sprintf ( ff , "%sdict/dict.%"INT32"", g_hostdb.m_dir, m_fileNum );
 	m_fdr = fopen ( ff, "r" );
 	if ( !m_fdr ) {
 		log("lang: test: Could not open %s for "
@@ -4332,7 +4332,7 @@ bool StateAff::openAffinityFile( ){
 	}
 
 	// open for writing	
-	sprintf ( ff , "%sdict.new/dict.%li.aff", g_hostdb.m_dir, 
+	sprintf ( ff , "%sdict.new/dict.%"INT32".aff", g_hostdb.m_dir, 
 		  m_fileNum );
 	// delete it first
 	unlink ( ff );
@@ -4357,7 +4357,7 @@ bool Language::launchAffinity(StateAff *st){
 	// go through the words in dict/words
 	while ( fgets ( m_buf , MAX_FRAG_SIZE , m_fdr ) ){
 		// length of word(s), including the terminating \n
-		long wlen = gbstrlen(m_buf) ;
+		int32_t wlen = gbstrlen(m_buf) ;
 		// skip if empty
 		if ( wlen <= 0 )
 			return launchAffinity(st);
@@ -4369,10 +4369,10 @@ bool Language::launchAffinity(StateAff *st){
 		p++;
 
 		char *coll    = g_conf.m_defaultColl;
-		long  collLen = gbstrlen(coll);
+		int32_t  collLen = gbstrlen(coll);
 		// . set query class
 		// . a boolFlag of 0 means query is not boolean
-		long numTerms = 0;
+		int32_t numTerms = 0;
 		Query *q = &m_q;
 		if ( q->set ( p, gbstrlen(p), coll, collLen, 0 ) ) 
 			numTerms = q->getNumTerms();
@@ -4382,7 +4382,7 @@ bool Language::launchAffinity(StateAff *st){
 			char dst[1096];
 			sprintf( dst, "00000\t%s\n", m_buf );
 			log("%s",dst);
-			unsigned long wn = write(m_fdw, dst, gbstrlen(dst));
+			uint32_t wn = write(m_fdw, dst, gbstrlen(dst));
 			if ( wn != gbstrlen(dst) )
 				log("lang: genTopPopFile: write: %s",
 				    strerror(errno));
@@ -4440,7 +4440,7 @@ bool StateAff::gotAffinityFreqs1( ){
 		p++;
 		
 	char *coll    = g_conf.m_defaultColl;
-	long  collLen = gbstrlen(coll);
+	int32_t  collLen = gbstrlen(coll);
 	// . set query class
 	// . a boolFlag of 0 means query is not boolean
 	Query *q = &m_q;
@@ -4482,8 +4482,8 @@ bool StateAff::gotAffinityFreqs2(StateAff *st){
 	
 	char dst[1096];
 	sprintf( dst, "%05.0f\t%s\n", affinity, m_buf );
-	log("num=%lli, denom=%lli, %s",m_numerator,m_denominator,dst);
-	unsigned long wn = write ( m_fdw , dst , gbstrlen(dst) ) ;
+	log("num=%"INT64", denom=%"INT64", %s",m_numerator,m_denominator,dst);
+	uint32_t wn = write ( m_fdw , dst , gbstrlen(dst) ) ;
 	if ( wn != gbstrlen(dst) )
 		log("lang: genTopPopFile: write: %s",strerror(errno));
 	
@@ -4546,7 +4546,7 @@ bool Language::cleanDictFile ( ) {
 	while ( fgets ( buf , 1024 * 10, fdr ) ) {
 		buf[1024 * 10 - 1] = '\0';
 		// length of word(s), including the terminating \n
-		long wlen = gbstrlen(buf) ;
+		int32_t wlen = gbstrlen(buf) ;
 		// skip if empty
 		if ( wlen <= 0 ) continue;
 		//buf[wlen-1]='\0';
@@ -4562,7 +4562,7 @@ bool Language::cleanDictFile ( ) {
 			continue;
 			
 		// write out the trailing \n as well
-		long wn = write ( fdw, buf, wlen ) ;
+		int32_t wn = write ( fdw, buf, wlen ) ;
 		if ( wn != wlen )
 			return log("spell: makeWordFiles: "
 				   "write: %s",
@@ -4596,7 +4596,7 @@ bool Language::makePhonet( char *infile){
 			   "%s.", outfile, strerror(errno));
 	
 	char  buf[1024];
-	long  max = 0;
+	int32_t  max = 0;
 	// open the input file
 	FILE *fdr;
 	// then open 
@@ -4607,7 +4607,7 @@ bool Language::makePhonet( char *infile){
 	
 	// this loop goes through all the tuples and finds max score
 	while ( fgets ( buf , 1024 , fdr ) ) {
-		long wlen = gbstrlen(buf);
+		int32_t wlen = gbstrlen(buf);
 		if ( wlen <= 0 || wlen > MAX_PHRASE_LEN )
 			continue;
 		// remove the newline \n
@@ -4632,13 +4632,13 @@ bool Language::makePhonet( char *infile){
 	char *wordPtr;
 	char  cleanWord[MAX_PHRASE_LEN];
 	char  phonetic[MAX_PHRASE_LEN];
-	long  wordLen = 0;
+	int32_t  wordLen = 0;
 	char  tmp[1024];
 	
 	// this loop goes through all the tuples and only adds those
 	// tuples into the phonetic dict that have phonets. Normalizes scores.
 	while ( fgets ( buf , 1024 , fdr ) ) {
-		long wlen = gbstrlen(buf);
+		int32_t wlen = gbstrlen(buf);
 		if ( wlen <= 0 || wlen > MAX_PHRASE_LEN )
 			continue;
 		// remove the newline \n
@@ -4648,7 +4648,7 @@ bool Language::makePhonet( char *infile){
 			p++;
 		// first is the popularity score
 		scorePtr = p;
-		long long score = (long long ) atoi(scorePtr);
+		int64_t score = (int64_t ) atoi(scorePtr);
 		// normalize score
 		score =  ( score * 32000 )/ max;
 
@@ -4680,9 +4680,9 @@ bool Language::makePhonet( char *infile){
 			log ( "got 0 len phonetic of phrase %s", p );
 			continue;
 		}
-		sprintf(tmp,"%lli\t%s\t%s\n",score, wordPtr, phonetic);
+		sprintf(tmp,"%"INT64"\t%s\t%s\n",score, wordPtr, phonetic);
 		
-		unsigned long wn = write ( fdw , tmp , gbstrlen(tmp) ) ;
+		uint32_t wn = write ( fdw , tmp , gbstrlen(tmp) ) ;
 		if ( wn != gbstrlen(tmp) )
 			return log("lang: makePopPhonet: write: "
 				   "%s",strerror(errno));
@@ -4717,7 +4717,7 @@ bool Language::genTopPopFile ( char *infile ){
 			   "%s.", outfile, strerror(errno));
 	
 	char  buf[1024];
-	long count = 0;
+	int32_t count = 0;
 
 	// this loop goes through all the words and only adds those
 	// tuples into the distributed file that belong to this host.
@@ -4726,10 +4726,10 @@ bool Language::genTopPopFile ( char *infile ){
 		if ( count++ >= TOP_POP_PHRASES )
 			break;
 
-		long wlen = gbstrlen(buf);
+		int32_t wlen = gbstrlen(buf);
 		if ( wlen <= 0 || wlen > MAX_PHRASE_LEN )
 			continue;
-		unsigned long wn = write ( fdw , buf , gbstrlen(buf) ) ;
+		uint32_t wn = write ( fdw , buf , gbstrlen(buf) ) ;
 		if ( wn != gbstrlen(buf) )
 			return log("lang: genTopPopFile: write: "
 				   "%s",strerror(errno));
@@ -4743,7 +4743,7 @@ bool Language::genTopPopFile ( char *infile ){
 
 // the distributed pop file is stored as a tuple of (phrase, phonet, lang, pop)
 // to comply with the unified dict
-bool Language::genDistributedPopFile ( char *infile, unsigned long myHash ){
+bool Language::genDistributedPopFile ( char *infile, uint32_t myHash ){
 	// open the input file
 	FILE *fdr;
 	// then open 
@@ -4755,7 +4755,7 @@ bool Language::genDistributedPopFile ( char *infile, unsigned long myHash ){
 	// create the output file
 	int fdw;
 	char outfile[1024];
-	sprintf ( outfile , "%s.%li", infile, myHash );
+	sprintf ( outfile , "%s.%"INT32"", infile, myHash );
 	// delete it first
 	unlink ( outfile );
 	// then open a new one for appending
@@ -4768,9 +4768,9 @@ bool Language::genDistributedPopFile ( char *infile, unsigned long myHash ){
 	
 	char  buf[1024];
 	
-	long hostsPerSplit = g_hostdb.m_numHosts / g_hostdb.m_indexSplits;
+	int32_t hostsPerSplit = g_hostdb.m_numHosts / g_hostdb.m_indexSplits;
 	hostsPerSplit /= g_hostdb.m_numHostsPerShard;
-	long count = 0;
+	int32_t count = 0;
 
 	// this loop goes through all the words and only adds those
 	// tuples into the distributed file that belong to this host.
@@ -4779,7 +4779,7 @@ bool Language::genDistributedPopFile ( char *infile, unsigned long myHash ){
 		// put in the top pop file
 		if ( count++ < TOP_POP_PHRASES )
 			continue;
-		long wlen = gbstrlen(buf);
+		int32_t wlen = gbstrlen(buf);
 		if ( wlen <= 0 || wlen > MAX_PHRASE_LEN )
 			continue;
 		// remove the newline \n
@@ -4803,15 +4803,15 @@ bool Language::genDistributedPopFile ( char *infile, unsigned long myHash ){
 			continue;
 
 		char *phonet = p;
-		unsigned long long phonetKey = hash64Lower_utf8(phonet);
+		uint64_t phonetKey = hash64Lower_utf8(phonet);
 		if ( phonetKey % hostsPerSplit != myHash )
 			continue;
 		char tmp[1024];
 		sprintf(tmp,"%s\t%s\n", phrase, score);
 		// put the \n in place of \0
 		//buf [wlen-1] = '\n';
-		unsigned long wn = write ( fdw , tmp , gbstrlen(tmp) ) ;
-		if ( (long)wn != gbstrlen(tmp) )
+		uint32_t wn = write ( fdw , tmp , gbstrlen(tmp) ) ;
+		if ( (int32_t)wn != gbstrlen(tmp) )
 			return log("lang: genDistributedPop: write: "
 				   "%s",strerror(errno));
 	}
@@ -4824,7 +4824,7 @@ bool Language::genDistributedPopFile ( char *infile, unsigned long myHash ){
 // spellcheck each word in the pop words dictionary with forceReco on so that
 // we get a recommendation. Output words that have a recommendation that has
 // 4 times the popularity of the word
-long Language::spellcheckDict(){
+int32_t Language::spellcheckDict(){
 	if ( !loadWikipediaWords() )
 		return 0;
 
@@ -4853,21 +4853,21 @@ long Language::spellcheckDict(){
 		return log("lang: Could not open %s for writing: "
 			   "%s.", outfile, strerror(errno));
 
-	HashTableT <long,long> kickedOutPhrases;
+	HashTableT <int32_t,int32_t> kickedOutPhrases;
 	kickedOutPhrases.set(256);
 
-	long notFound = 0;
+	int32_t notFound = 0;
 
 	char buf[1026];
 	//char dst[1026];
 	// go through the words in dict/words
 	while ( fgets ( buf , MAX_FRAG_SIZE , fd ) ) {
 		// length of word(s), including the terminating \n
-		long wlen = gbstrlen(buf) ;
+		int32_t wlen = gbstrlen(buf) ;
 		// skip if empty
 		if ( wlen <= 0 ) continue;
 		buf[wlen-1]='\0';
-		for ( long j = 0; j < wlen; j++ )
+		for ( int32_t j = 0; j < wlen; j++ )
 			if ( buf[j] == '\t')
 				buf[j] = '\0';
 
@@ -4887,15 +4887,15 @@ long Language::spellcheckDict(){
 			    word);
 			continue;
 			}*/
-		unsigned long long h = hash64d ( word, gbstrlen(word));
+		uint64_t h = hash64d ( word, gbstrlen(word));
 
 		bool isInWiki = false;
 		// if the phrase is in wikipedia, its safe
-		long slot = m_wiki.getSlot(h);
+		int32_t slot = m_wiki.getSlot(h);
 		if ( slot != -1 )
 			isInWiki = true;
 
-		long wordPop = g_speller.getPhrasePopularity( word, h, false );
+		int32_t wordPop = g_speller.getPhrasePopularity( word, h, false );
 		if ( wordPop == 0 ) {
 			slot = m_distributedPopPhrases.getSlot(h);
 			if ( slot != -1 ){
@@ -4915,15 +4915,15 @@ long Language::spellcheckDict(){
 
 		char recommendation[MAX_PHRASE_LEN];
 		bool found;
-		long score;
-		long pop;
+		int32_t score;
+		int32_t pop;
 		
 		/*
 		if ( !isPhrase && !isInWiki ){
 			// just the the best narrow phrase we can find
-			long numNarrow = 0;
+			int32_t numNarrow = 0;
 			char narrow[MAX_PHRASE_LEN];
-			long narrowPop;
+			int32_t narrowPop;
 			numNarrow = narrowPhrase ( word, narrow, 
 						   &narrowPop, 1 );
 			
@@ -4947,7 +4947,7 @@ long Language::spellcheckDict(){
 		// kicked out phrase was good. BUT should we put the kicked 
 		// out phrase back ??
 		if ( reco && !isInWiki ){
-			long h1 = hash32d ( recommendation,
+			int32_t h1 = hash32d ( recommendation,
 					    gbstrlen(recommendation) );
 			slot = m_wiki.getSlot(h1);
 
@@ -4979,15 +4979,15 @@ long Language::spellcheckDict(){
 			
 			sprintf(tmp,"%s\t%s\t%s\n",buf, tuple, 
 				tuple + gbstrlen(tuple) + 1);
-			unsigned long wn = write ( fdw , tmp , gbstrlen(tmp) );
-			if ( (long)wn != gbstrlen(tmp) )
+			uint32_t wn = write ( fdw , tmp , gbstrlen(tmp) );
+			if ( (int32_t)wn != gbstrlen(tmp) )
 				return log("spell: spellCheckDict: write: "
 					   "%s",strerror(errno));
 			continue;
 		}
 		kickedOutPhrases.addKey(h,1);
 		log ( LOG_WARN,"lang: not found=%s, reco=%s, "
-		      "score=%li, wordPop=%li, recoPop=%li",
+		      "score=%"INT32", wordPop=%"INT32", recoPop=%"INT32"",
 		      buf + gbstrlen(buf) + 1, recommendation, score, 
 		      wordPop, pop );
 		notFound++;

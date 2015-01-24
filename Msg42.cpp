@@ -3,7 +3,7 @@
 #include "Msg42.h"
 
 static void gotReplyWrapper42 ( void *state , void *state2 ) ;
-static void handleRequest42 ( UdpSlot *slot , long netnice ) ;
+static void handleRequest42 ( UdpSlot *slot , int32_t netnice ) ;
 
 bool Msg42::registerHandler ( ) {
         // . register ourselves with the udp server
@@ -18,11 +18,11 @@ bool Msg42::registerHandler ( ) {
 // . "termIds/termFreqs" should NOT be on the stack in case we block
 // . i based this on ../titledb/Msg23.cpp 
 bool Msg42::getTermFreq ( char      *coll       ,
-			  long       maxAge     ,
-			  long long  termId     ,
+			  int32_t       maxAge     ,
+			  int64_t  termId     ,
 			  void      *state      ,
 			  void (* callback)(void *state ) ,
-			  long       niceness   ) {
+			  int32_t       niceness   ) {
 	// warning
 	if ( ! coll ) log(LOG_LOGIC,"net: NULL collection. msg42.");
 	// keep a pointer for the caller
@@ -38,18 +38,18 @@ bool Msg42::getTermFreq ( char      *coll       ,
 
 	// . now what group do we belong to?
 	// . groupMask has hi bits set before it sets low bits
-	//unsigned long groupId = key.n1 & g_hostdb.m_groupMask;
-	unsigned long groupId = g_linkdb.getGroupIdFromUrlHash(termId);
+	//uint32_t groupId = key.n1 & g_hostdb.m_groupMask;
+	uint32_t groupId = g_linkdb.getGroupIdFromUrlHash(termId);
 
 	// . make a request
 	// . just send the termId and collection name
 	char *p = m_request;
-	*(long long *)p = termId ; p += 8;
+	*(int64_t *)p = termId ; p += 8;
 	strcpy ( p , coll ); p += gbstrlen(coll) + 1; // copy includes \0
 
-	long timeout = 5;
+	int32_t timeout = 5;
 	// in case it fails somehow
-	*(long long *)m_reply = 0LL;
+	*(int64_t *)m_reply = 0LL;
 	
 	// .  multicast to a host in group
 	// . returns false and sets g_errno on error
@@ -94,8 +94,8 @@ void Msg42::gotReply ( ) {
 
 	// . get best reply for multicast
 	// . we are responsible for freeing it
-	long  replySize;
-	long  replyMaxSize;
+	int32_t  replySize;
+	int32_t  replyMaxSize;
 	bool  freeit;
 	char *reply = m_mcast.getBestReply( &replySize, &replyMaxSize, 
 					    &freeit );
@@ -104,34 +104,34 @@ void Msg42::gotReply ( ) {
 		log(LOG_LOGIC,"query: Got bad reply for term "
 		    "frequency. Bad.");
 	// buf should have the # of records for m_termId
-	m_termFreq = *(long long *)m_reply ;
+	m_termFreq = *(int64_t *)m_reply ;
 }
 
 // . handle a request to get a linkInfo for a given docId/url/collection
 // . returns false if slot should be nuked and no reply sent
 // . sometimes sets g_errno on error
-void handleRequest42 ( UdpSlot *slot , long netnice ) {
+void handleRequest42 ( UdpSlot *slot , int32_t netnice ) {
 	// get the request
         char *request     = slot->m_readBuf;
-        long  requestSize = slot->m_readBufSize;
+        int32_t  requestSize = slot->m_readBufSize;
 	// if niceness is 0, use the higher priority udpServer
 	UdpServer *us = &g_udpServer;
 	//if ( netnice == 0 ) us = &g_udpServer2;
         // ensure it's size
         if ( requestSize <= 8 ) {
-		log("query: Got bad request size of %li for term frequency.",
+		log("query: Got bad request size of %"INT32" for term frequency.",
 		    requestSize);
                 us->sendErrorReply ( slot , EBADREQUESTSIZE ); 
 		return;
 	}
-	long long  termId = *(long long *) (request) ; 
+	int64_t  termId = *(int64_t *) (request) ; 
 	char      *coll   = request + 8;
 
-	long long termFreq = g_linkdb.getTermFreq(coll,termId);
+	int64_t termFreq = g_linkdb.getTermFreq(coll,termId);
 	// serialize it into a reply buffer 
 	// no need to malloc since we have the tmp buf
 	char *reply = slot->m_tmpBuf;
-	*(long long *)reply = termFreq ;
+	*(int64_t *)reply = termFreq ;
 	// . send back the buffer, it now belongs to the slot
 	// . this list and all our local vars should be freed on return
 	us->sendReply_ass ( reply , 8 , reply , 8 , slot );

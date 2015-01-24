@@ -228,47 +228,47 @@ static HashTableX s_abbrTable;
 static bool       s_abbrInitialized = false;
 
 /*
-static bool initTable ( HashTableX *table, char *words[], long size ) {
+static bool initTable ( HashTableX *table, char *words[], int32_t size ) {
 	// set up the hash table
 	if ( ! table->set ( 8 , 4 , size * 2,NULL,0,false,MAX_NICENESS,
 			    "abbrtbl") ) 
 		return log("build: Could not init abbreviation table.");
 	// now add in all the stop words
-	long n = (long)size/ sizeof(char *); 
-	for ( long i = 0 ; i < n ; i++ ) {
+	int32_t n = (int32_t)size/ sizeof(char *); 
+	for ( int32_t i = 0 ; i < n ; i++ ) {
 		char      *sw    = words[i];
-		//long     swlen = gbstrlen ( sw );
-		long long  swh   = hash64Lower_utf8 ( sw );
+		//int32_t     swlen = gbstrlen ( sw );
+		int64_t  swh   = hash64Lower_utf8 ( sw );
 		if ( ! table->addTerm (&swh,i+1) ) return false;
 	}
 	return true;
 }
 */
 
-bool isAbbr ( long long h , bool *hasWordAfter ) {
+bool isAbbr ( int64_t h , bool *hasWordAfter ) {
 	if ( ! s_abbrInitialized ) {
-		// shortcut
+		// int16_tcut
 		HashTableX *t = &s_abbrTable;
 		// set up the hash table
-		long n = ((long)sizeof(s_abbrs99))/ ((long)sizeof(Abbr));
+		int32_t n = ((int32_t)sizeof(s_abbrs99))/ ((int32_t)sizeof(Abbr));
 		if ( ! t->set ( 8,4,n*4, NULL,0,false,MAX_NICENESS,"abbrtbl")) 
 			return log("build: Could not init abbrev table.");
 		// now add in all the stop words
-		for ( long i = 0 ; i < n ; i++ ) {
+		for ( int32_t i = 0 ; i < n ; i++ ) {
 			char      *sw    = s_abbrs99[i].m_str;
-			long long  swh   = hash64Lower_utf8 ( sw );
-			long val = i + 1;
+			int64_t  swh   = hash64Lower_utf8 ( sw );
+			int32_t val = i + 1;
 			if ( ! t->addKey (&swh,&val) ) return false;
 		}
 		s_abbrInitialized = true;
 		// test it
-		long long h = hash64Lower_utf8("St");
+		int64_t h = hash64Lower_utf8("St");
 		if ( ! t->isInTable(&h) ) { char *xx=NULL;*xx=0; }
-		long sc = s_abbrTable.getScore ( &h );
+		int32_t sc = s_abbrTable.getScore ( &h );
 		if ( sc >= n ) { char *xx=NULL;*xx=0; }
 	} 
 	// get from table
-	long sc = s_abbrTable.getScore ( &h );
+	int32_t sc = s_abbrTable.getScore ( &h );
 	if ( sc <= 0 ) return false;
 	if ( hasWordAfter ) *hasWordAfter = s_abbrs99[sc-1].m_hasWordAfter;
 	return true;

@@ -15,7 +15,7 @@ class Wiki {
 	void reset();
 
 
-	long getNumWordsInWikiPhrase ( long i , class Words *words );
+	int32_t getNumWordsInWikiPhrase ( int32_t i , class Words *words );
 
 	// if a phrase in a query is in a wikipedia title, then increase
 	// its affWeights beyond the normal 1.0
@@ -38,7 +38,7 @@ class Wiki {
 	// . wikititles.txt (loads wikititles.dat if and date is newer)
 	bool load();
 	
-	bool loadText ( long size ) ;
+	bool loadText ( int32_t size ) ;
 
 	// . save the binary hash table to disk to make loading faster
 	// . wikititles.dat
@@ -55,9 +55,9 @@ class Wiki {
 	void *m_state;
 	void (* m_callback)(void *);
 
-	long m_txtSize;
+	int32_t m_txtSize;
 
-	long m_errno;
+	int32_t m_errno;
 
 	char m_opened;
 	FileState m_fs;

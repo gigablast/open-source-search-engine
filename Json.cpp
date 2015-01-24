@@ -5,7 +5,7 @@ class JsonItem *Json::addNewItem () {
 
 	JsonItem *ji = (JsonItem *)m_sb.getBuf();
 
-	if ( m_sb.m_length + (long)sizeof(JsonItem) > m_sb.m_capacity ) {
+	if ( m_sb.m_length + (int32_t)sizeof(JsonItem) > m_sb.m_capacity ) {
 		log("json: preventing buffer breach");
 		return NULL;
 	}
@@ -64,7 +64,7 @@ JsonItem *Json::getItem ( char *name ) {
 
 #include "Mem.h" // gbstrlen()
 
-JsonItem *Json::parseJsonStringIntoJsonItems ( char *json , long niceness ) {
+JsonItem *Json::parseJsonStringIntoJsonItems ( char *json , int32_t niceness ) {
 
 	m_prev = NULL;
 
@@ -78,7 +78,7 @@ JsonItem *Json::parseJsonStringIntoJsonItems ( char *json , long niceness ) {
 	// how much space will we need to avoid any reallocs?
 	char *p = json;
 	bool inQuote = false;
-	long need = 0;
+	int32_t need = 0;
 	for ( ; *p ; p++ ) {
 		// ignore any escaped char. also \x1234
 		if ( *p == '\\' ) {
@@ -113,10 +113,10 @@ JsonItem *Json::parseJsonStringIntoJsonItems ( char *json , long niceness ) {
 	// for testing if we realloc
 	char *mem = m_sb.getBufStart();
 
-	long  size;
+	int32_t  size;
 
 	char *NAME = NULL;
-	long  NAMELEN = 0;
+	int32_t  NAMELEN = 0;
 
 	// reset p
 	p = json;
@@ -175,7 +175,8 @@ JsonItem *Json::parseJsonStringIntoJsonItems ( char *json , long niceness ) {
 			// current ji is an object type then
 			ji->m_type = JT_ARRAY;
 			// start of array hack. HACK!
-			ji->m_valueLong = (long)p;
+			//ji->m_valueLong = (int32_t)p;
+			ji->m_valueArray = p;
 			// set the name
 			ji->m_name    = NAME;
 			ji->m_nameLen = NAMELEN;
@@ -193,7 +194,7 @@ JsonItem *Json::parseJsonStringIntoJsonItems ( char *json , long niceness ) {
 				NAME    = px->m_name;
 				NAMELEN = px->m_nameLen;
 				// start of array hack. HACK!
-				char *start = (char *)px->m_valueLong;
+				char *start = (char *)px->m_valueArray;//Long;
 				// include ending ']' in length of array
 				px->m_valueLen = p - start + 1;
 				m_stackPtr--;
@@ -220,7 +221,7 @@ JsonItem *Json::parseJsonStringIntoJsonItems ( char *json , long niceness ) {
 			for ( ; *x && is_wspace_a(*x) ; x++ );
 			// define the string
 			char *str  = p + 1;
-			long  slen = end - str;
+			int32_t  slen = end - str;
 			// . if a colon follows, it was a field
 			if ( *x == ':' ) {
 
@@ -255,7 +256,7 @@ JsonItem *Json::parseJsonStringIntoJsonItems ( char *json , long niceness ) {
 				ji->m_name    = NAME;
 				ji->m_nameLen = NAMELEN;
 				// get length decoded
-				long curr = m_sb.length();
+				int32_t curr = m_sb.length();
 				// store decoded string right after jsonitem
 				if ( !m_sb.safeDecodeJSONToUtf8 (str,slen,
 								 niceness ))
@@ -285,9 +286,9 @@ JsonItem *Json::parseJsonStringIntoJsonItems ( char *json , long niceness ) {
 			ji = addNewItem();
 			if ( ! ji ) return NULL;
 			// copy the number as a string as well
-			long curr = m_sb.length();
+			int32_t curr = m_sb.length();
 			// what is the length of it?
-			long slen = 4;
+			int32_t slen = 4;
 			ji->m_valueLong = 1;
 			ji->m_valueDouble = 1.0;
 			if ( *p == 'f' ) {
@@ -327,17 +328,19 @@ JsonItem *Json::parseJsonStringIntoJsonItems ( char *json , long niceness ) {
 			for ( ; *end && (is_digit(*end) || *end=='.');end++) ;
 			// define the string
 			char *str  = p;
-			long  slen = end - str;
+			int32_t  slen = end - str;
 			// make a new one
 			ji = addNewItem();
 			if ( ! ji ) return NULL;
+			// back up over negative sign?
+			if ( str > json && str[-1] == '-' ) str--;
 			// decode
 			//char c = str[slen];
 			//str[slen] = '\0';
 			ji->m_valueLong = atol(str);
 			ji->m_valueDouble = atof(str);
 			// copy the number as a string as well
-			long curr = m_sb.length();
+			int32_t curr = m_sb.length();
 			// store decoded string right after jsonitem
 			if ( !m_sb.safeDecodeJSONToUtf8 ( str, slen,niceness))
 				return NULL;
@@ -379,12 +382,12 @@ void Json::test ( ) {
 		"in 2010\",\"18083009\":\"Apple personal digital assistants\",\"23475157\":\"Touchscreen portable media players\",\"30107877\":\"IPad\",\"9301031\":\"Apple Inc. hardware\",\"27765345\":\"IOS (Apple)\",\"26588084\":\"Tablet computers\"},\"type\":1,\"senseRank\":1,\"variety\":0.49056603773584906,\"depth\":0.5882352941176471},{\"id\":18839,\"positions\":[[1945,1950],[2204,2209]],\"name\":\"Music\",\"score\":0.7,\"contentMatch\":1,\"categories\":{\"991222\":\"Performing arts\",\"693016\":\"Entertainment\",\"691484\":\"Music\"},\"type\":1,\"senseRank\":1,\"variety\":0.22264150943396221,\"depth\":0.7058823529411764}],\"media\":[{\"pixelHeight\":350,\"link\":\"http://www.onlinemba.com/wp-content/uploads/2013/02/apple-innovates-invert-350x350.png\",\"primary\":\"true\",\"pixelWidth\":350,\"type\":\"image\"}]}";
 
 
-	long niceness = 0;
+	int32_t niceness = 0;
 
 	JsonItem *ji = parseJsonStringIntoJsonItems ( json , niceness );
 
 	// print them out?
-	//log("json: type0=%li",(long)ji->m_type);
+	//log("json: type0=%"INT32"",(int32_t)ji->m_type);
 	// sanity test
 	if ( ji->m_type != 6 ) { char *xx=NULL;*xx=0; }
 
@@ -399,7 +402,7 @@ bool JsonItem::getCompoundName ( SafeBuf &nameBuf ) {
 	JsonItem *p = this;//ji;
 	char *lastName = NULL;
 	char *nameArray[20];
-	long  numNames = 0;
+	int32_t  numNames = 0;
 	for ( ; p ; p = p->m_parent ) {
 		// empty name?
 		if ( ! p->m_name ) continue;
@@ -418,7 +421,7 @@ bool JsonItem::getCompoundName ( SafeBuf &nameBuf ) {
 		break;
 	}
 	// assemble the names in reverse order which is correct order
-	for ( long i = 1 ; i <= numNames ; i++ ) {
+	for ( int32_t i = 1 ; i <= numNames ; i++ ) {
 		// copy into our safebuf
 		if ( ! nameBuf.safeStrcpy ( nameArray[numNames-i]) ) 
 			return false;
@@ -449,7 +452,7 @@ bool JsonItem::isInArray ( ) {
 }
 
 // convert nubers and bools to strings for this one
-char *JsonItem::getValueAsString ( long *valueLen ) {
+char *JsonItem::getValueAsString ( int32_t *valueLen ) {
 
 	// strings are the same
 	if ( m_type == JT_STRING ) {
@@ -460,7 +463,7 @@ char *JsonItem::getValueAsString ( long *valueLen ) {
 	// numbers...
 	static char s_numBuf[64];
 	if ( (float)m_valueLong == m_valueDouble ) {
-		*valueLen = sprintf ( s_numBuf,"%li", m_valueLong );
+		*valueLen = sprintf ( s_numBuf,"%"INT32"", m_valueLong );
 		return s_numBuf;
 	}
 

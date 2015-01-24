@@ -19,21 +19,21 @@ class Scraper {
 	bool init ( );
 	void wakeUp ( ) ;
 	void gotPhrase ( ) ;
-	//bool gotPages ( long i, TcpSocket *s ) ;
-	//bool addedScrapedSites ( long i ) ;
-	//bool gotUrlInfo ( long i ) ;
+	//bool gotPages ( int32_t i, TcpSocket *s ) ;
+	//bool addedScrapedSites ( int32_t i ) ;
+	//bool gotUrlInfo ( int32_t i ) ;
 	//bool wrapItUp ( );
 	bool indexedDoc ( );
 
 	bool scrapeProCog();
 	
 	char m_coll[MAX_COLL_LEN+1];
-	long m_numReceived;
-	long m_numSent;
+	int32_t m_numReceived;
+	int32_t m_numSent;
 
-	long  m_qtype;
+	int32_t  m_qtype;
 	//Url   m_urls[MAX_SCRAPES_OUT];
-	//long  m_numUrls;
+	//int32_t  m_numUrls;
 
 	//Msg9a m_msg9a[MAX_SCRAPES_OUT];
 
@@ -45,7 +45,7 @@ class Scraper {
 
 	XmlDoc m_xd;
 
-	//long    m_numOutlinks;
+	//int32_t    m_numOutlinks;
 	//Links   m_links;
 	//MsgE    m_msge;
 	//RdbList m_list;

@@ -57,7 +57,7 @@ bool LanguagePages::setLanguagePage(uint8_t lang,
 			(uint8_t *)mmalloc(uint8strlen(pageText) + 1, "langPage");
 		if(!m_languagePages[lang]) return(false);
 		memset(m_languagePages[lang], 0, uint8strlen(pageText) + 1);
-		memcpy(m_languagePages[lang], pageText, uint8strlen(pageText));
+		gbmemcpy(m_languagePages[lang], pageText, uint8strlen(pageText));
 	} else {
 		m_languagePages[lang] = pageText;
 	}
@@ -80,7 +80,7 @@ bool LanguagePages::setLanguageHeader(uint8_t lang,
 			(uint8_t *)mmalloc(uint8strlen(pageText) + 1, "langHeader");
 		if(!m_languageHeaders[lang]) return(false);
 		memset(m_languageHeaders[lang], 0, uint8strlen(pageText) + 1);
-		memcpy(m_languageHeaders[lang], pageText, uint8strlen(pageText));
+		gbmemcpy(m_languageHeaders[lang], pageText, uint8strlen(pageText));
 	} else {
 		m_languageHeaders[lang] = pageText;
 	}
@@ -103,7 +103,7 @@ bool LanguagePages::setLanguageFooter(uint8_t lang,
 			(uint8_t *)mmalloc(uint8strlen(pageText) + 1, "langFooter");
 		if(!m_languageFooters[lang]) return(false);
 		memset(m_languageFooters[lang], 0, uint8strlen(pageText) + 1);
-		memcpy(m_languageFooters[lang], pageText, uint8strlen(pageText));
+		gbmemcpy(m_languageFooters[lang], pageText, uint8strlen(pageText));
 	} else {
 		m_languageFooters[lang] = pageText;
 	}
@@ -111,21 +111,21 @@ bool LanguagePages::setLanguageFooter(uint8_t lang,
 	return(true);
 }
 
-uint8_t *LanguagePages::getLanguagePage(uint8_t lang, long *len) {
+uint8_t *LanguagePages::getLanguagePage(uint8_t lang, int32_t *len) {
 	if(lang > MAX_LANGUAGES) return(NULL);
 	if(m_loading) return(NULL);
 	if(len) *len = m_PageSize[lang];
 	return m_languagePages[lang];
 }
 
-uint8_t *LanguagePages::getLanguageHeader(uint8_t lang, long *len) {
+uint8_t *LanguagePages::getLanguageHeader(uint8_t lang, int32_t *len) {
 	if(lang > MAX_LANGUAGES) return(NULL);
 	if(m_loading) return(NULL);
 	if(len) *len = m_HeaderSize[lang];
 	return m_languageHeaders[lang];
 }
 
-uint8_t *LanguagePages::getLanguageFooter(uint8_t lang, long *len) {
+uint8_t *LanguagePages::getLanguageFooter(uint8_t lang, int32_t *len) {
 	if(lang >= MAX_LANGUAGES) return(NULL);
 	if(m_loading) return(NULL);
 	if(len) *len = m_FooterSize[lang];

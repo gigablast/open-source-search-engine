@@ -8,7 +8,7 @@ class LinkedList {
 
 	// . returns false and set g_errno on error
 	// . comparison key is first 16 bytes of link data
-	bool init ( long linkSize , long maxNumLinks );
+	bool init ( int32_t linkSize , int32_t maxNumLinks );
 
 	// . TRY to add a slot
 	// . returns false if not added, true if added

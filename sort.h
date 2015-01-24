@@ -18,14 +18,14 @@ extern void gbqsort(void *aa, size_t n, size_t es,
 extern void gbmergesort(void *base, size_t nmemb, size_t size,
 			int (*cmp)(const void *, const void *),
 			int niceness = 0,
-			char* bufSpace = NULL, long bufSpaceSize = 0);
+			char* bufSpace = NULL, int32_t bufSpaceSize = 0);
 
 //*****************************************************************************
 /* Copyright (C) 1999 Lucent Technologies */
 /* From 'Programming Pearls' by Jon Bentley */
 
 /* Lucent Technologies license: */
-/* You may use this code for any purpose, as long as you */
+/* You may use this code for any purpose, as int32_t as you */
 /* leave the copyright notice and book citation attached. */
 //*****************************************************************************
 
@@ -65,9 +65,9 @@ inline void swap_10(uint8_t* pi, uint8_t* pj) {
 	if (pi == pj)
 		return;
 	uint8_t		tmp[10];
-	memcpy(tmp, pi, 10);
-	memcpy(pi, pj, 10);
-	memcpy(pj, tmp, 10);
+	gbmemcpy(tmp, pi, 10);
+	gbmemcpy(pi, pj, 10);
+	gbmemcpy(pj, tmp, 10);
 }
 
 inline void siftup_10_1_5(uint8_t* arr, int32_t u) {

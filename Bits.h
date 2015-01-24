@@ -116,36 +116,36 @@ class Bits {
 	Bits();
 	~Bits();
 
-	bool set2 ( Words *words, long niceness ) {
+	bool set2 ( Words *words, int32_t niceness ) {
 		return set ( words,TITLEREC_CURRENT_VERSION,niceness); };
 
 	// . returns false and sets errno on error
 	bool set ( Words *words , 
 		   char titleRecVersion ,
-		   long niceness ,
+		   int32_t niceness ,
 		   // provide it with a buffer to prevent a malloc
 		   char         *buf    = NULL ,
-		   long          bufSize= 0    );
+		   int32_t          bufSize= 0    );
 
 	bool setForSummary ( Words *words ,
 			     // provide it with a buffer to prevent a malloc
 			     char         *buf    = NULL ,
-			     long          bufSize= 0    );
+			     int32_t          bufSize= 0    );
 
 	void reset();
 
-	bool isStopWord      (long i) {return m_bits[i]&D_IS_STOPWORD;};
-	bool canBeInPhrase   (long i) {return m_bits[i]&D_CAN_BE_IN_PHRASE;};
-	bool canStartPhrase  (long i) {return m_bits[i]&D_CAN_START_PHRASE;};
-	bool canPeriodPreceed(long i) {return m_bits[i]&D_CAN_PERIOD_PRECEED;};
-	bool canPairAcross   (long i) {return m_bits[i]&D_CAN_PAIR_ACROSS;};
-	//bool isIndexable     (long i) {return m_bits[i]&D_IS_INDEXABLE;};
-	bool isCap           (long i) {return m_bits[i]&D_IS_CAP;};
+	bool isStopWord      (int32_t i) {return m_bits[i]&D_IS_STOPWORD;};
+	bool canBeInPhrase   (int32_t i) {return m_bits[i]&D_CAN_BE_IN_PHRASE;};
+	bool canStartPhrase  (int32_t i) {return m_bits[i]&D_CAN_START_PHRASE;};
+	bool canPeriodPreceed(int32_t i) {return m_bits[i]&D_CAN_PERIOD_PRECEED;};
+	bool canPairAcross   (int32_t i) {return m_bits[i]&D_CAN_PAIR_ACROSS;};
+	//bool isIndexable     (int32_t i) {return m_bits[i]&D_IS_INDEXABLE;};
+	bool isCap           (int32_t i) {return m_bits[i]&D_IS_CAP;};
 	void printBits ( );
-	void printBit  ( long i );
+	void printBit  ( int32_t i );
 
 	void setInLinkBits ( class Sections *ss ) ;
-	void setInUrlBits  ( long niceness );
+	void setInUrlBits  ( int32_t niceness );
 
 	bool m_inLinkBitsSet;
 	bool m_inUrlBitsSet;
@@ -155,15 +155,15 @@ class Bits {
 
 	// leave public so Query.cpp can tweak this
 	wbit_t *m_bits ;
-	long    m_bitsSize;
+	int32_t    m_bitsSize;
 
-	long m_niceness;
+	int32_t m_niceness;
 
 	// . wordbits
 	// . used only by setForSummary() now to avoid having to update a
 	//   lot of code
 	swbit_t *m_swbits;
-	long     m_swbitsSize;
+	int32_t     m_swbitsSize;
 
  private:
 
@@ -174,10 +174,10 @@ class Bits {
 	bool m_needsFree;
 
 	// get bits for the ith word
-	wbit_t getAlnumBits ( long i , wbit_t prevBits );
+	wbit_t getAlnumBits ( int32_t i , wbit_t prevBits );
 
 	// get bits for the ith word
-	wbit_t getPunctuationBits  ( char *s , long slen ) ;
+	wbit_t getPunctuationBits  ( char *s , int32_t slen ) ;
 };
 
 #endif

@@ -9,12 +9,12 @@
 // . call g_httpServer.sendDynamicPage() to send it
 bool sendPagePerf ( TcpSocket *s , HttpRequest *r ) {
 	// if ip is not from matt wells, don't print this stuff, too sensitive
-	//long matt1 = atoip ( MATTIP1 , gbstrlen(MATTIP1) );
-	//long matt2 = atoip ( MATTIP2 , gbstrlen(MATTIP2) );
+	//int32_t matt1 = atoip ( MATTIP1 , gbstrlen(MATTIP1) );
+	//int32_t matt2 = atoip ( MATTIP2 , gbstrlen(MATTIP2) );
 	// allow connection if i'm running this on lenny, too
 	//if ( s->m_ip != matt1 && s->m_ip != matt2 )
 	//	return g_httpServer.sendErrorReply(s,500,mstrerror(g_errno));
-	//long refreshLen = 0;
+	//int32_t refreshLen = 0;
 	//if(r->getString ( "refresh" , &refreshLen) ) {
 	//	g_stats.dumpGIF ();
 	//	return g_httpServer.sendDynamicPage ( s , "x", 1 );
@@ -31,10 +31,10 @@ bool sendPagePerf ( TcpSocket *s , HttpRequest *r ) {
 
 
 	// password, too
-	//long pwdLen = 0;
+	//int32_t pwdLen = 0;
 	//char *pwd = r->getString ( "pwd" , &pwdLen );
 
-	long autoRefresh = r->getLong("rr", 0);
+	int32_t autoRefresh = r->getLong("rr", 0);
 	if(autoRefresh > 0) {
 		p.safePrintf("<script language=\"JavaScript\"><!--\n ");
 
@@ -65,7 +65,7 @@ bool sendPagePerf ( TcpSocket *s , HttpRequest *r ) {
 		     "        if (req.status == 200) {"
 		     "        var uniq = new Date();"
 		     "        uniq.getTime();"
-		     "   document.diskgraph.src=\"/diskGraph%li.gif?\" + uniq;"
+		     "   document.diskgraph.src=\"/diskGraph%"INT32".gif?\" + uniq;"
 		     "        timeit();"
 		     "    } else {"
 	     //   "            alert(\"There was a problem retrieving \");"
@@ -87,10 +87,12 @@ bool sendPagePerf ( TcpSocket *s , HttpRequest *r ) {
 
 	//get the 'path' part of the request.
 	char rbuf[1024];
-	if(r->getRequestLen() > 1023)
-		memcpy( rbuf, r->getRequest(), 1023);
-	else
-		memcpy( rbuf, r->getRequest(), r->getRequestLen());
+	if(r->getRequestLen() > 1023) {
+		gbmemcpy( rbuf, r->getRequest(), 1023);
+	}
+	else {
+		gbmemcpy( rbuf, r->getRequest(), r->getRequestLen());
+	}
 	char* rbufEnd = rbuf;
 	//skip GET
 	while (!isspace(*rbufEnd)) rbufEnd++;
@@ -109,7 +111,7 @@ bool sendPagePerf ( TcpSocket *s , HttpRequest *r ) {
 		       "<center>"
 		       //"<br>"
 		       //"<img name=\"diskgraph\" 
-		       //src=/diskGraph%li.gif><br><br>",
+		       //src=/diskGraph%"INT32".gif><br><br>",
 		       //g_hostdb.m_hostId );
 		     );
 
@@ -300,7 +302,7 @@ bool sendPagePerf ( TcpSocket *s , HttpRequest *r ) {
 	// print the final tail
 	//p += g_httpServer.printTail ( p , pend - p );
 
-	long bufLen = p.length();
+	int32_t bufLen = p.length();
 	// . send this page
 	// . encapsulates in html header and tail
 	// . make a Mime

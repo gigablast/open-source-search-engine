@@ -19,18 +19,18 @@ public:
 	void            get(void *state, httpdoc_callback_t callback);
 	Url 		m_url;
 	bool 		m_done;
-	long 		m_errno;
-	long long 	m_startTime;
-	long long 	m_elapsed;
+	int32_t 		m_errno;
+	int64_t 	m_startTime;
+	int64_t 	m_elapsed;
 
 	char           *m_buf;
 	bool            m_ownBuf;
-	long     	m_bufSize;
+	int32_t     	m_bufSize;
 
 	char 	       *m_content;
-	long     	m_contentLen;
-	short           m_httpStatus;
-	short           m_charset;
+	int32_t     	m_contentLen;
+	int16_t           m_httpStatus;
+	int16_t           m_charset;
 	void           *m_state;
 	httpdoc_callback_t m_callback;
 };
@@ -89,22 +89,22 @@ private:
 	int m_curTestSize;
 
 	char **m_parserUrls;
-	long m_numParserUrls;
+	int32_t m_numParserUrls;
 
 	char **m_queries;
-	long m_numQueries;
+	int32_t m_numQueries;
 	
-	long m_numTests;
-	long m_nextTest;
+	int32_t m_numTests;
+	int32_t m_nextTest;
 
 	char  *m_pbuf;
-	long   m_pbufSize;
+	int32_t   m_pbufSize;
 	char **m_pbufPtr;
-	long   m_pbufPtrSize;
+	int32_t   m_pbufPtrSize;
 	char  *m_qbuf;
-	long   m_qbufSize;
+	int32_t   m_qbufSize;
 	char **m_qbufPtr;
-	long   m_qbufPtrSize;
+	int32_t   m_qbufPtrSize;
 };
 
 #endif 

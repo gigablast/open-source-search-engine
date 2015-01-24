@@ -79,23 +79,23 @@
 /* extern char *g_ptermPtr ; */
 /* extern char *g_pend; */
 extern char *g_dbuf;
-extern long  g_dbufSize;
+extern int32_t  g_dbufSize;
 
 #ifdef _CHECK_FORMAT_STRING_
-bool log ( long type , char *formatString , ... ) 
+bool log ( int32_t type , char *formatString , ... ) 
 	__attribute__ ((format(printf, 2, 3)));
 bool log ( char *formatString , ... )
 	__attribute__ ((format(printf, 1, 2)));
-bool logf ( long type , char *formatString , ... )
+bool logf ( int32_t type , char *formatString , ... )
 	__attribute__ ((format(printf, 2, 3)));
 #else
 // may also syslog and fprintf the msg.
 // ALWAYS returns FALSE (i.e. 0)!!!! so you can say return log.log(...)
-bool log ( long type , char *formatString , ... ) ;
+bool log ( int32_t type , char *formatString , ... ) ;
 // this defaults to type of LOG_WARN
 bool log ( char *formatString , ... ) ;
 // force it to be logged, even if off on log controls panel
-bool logf ( long type , char *formatString , ... ) ;
+bool logf ( int32_t type , char *formatString , ... ) ;
 #endif
 
 class Log { 
@@ -112,11 +112,11 @@ class Log {
 	// . if "asterisk" is true we print an asterisk to indicate that
 	//   the msg was actually logged earlier but only printed now because
 	//   we were in a signal handler at the time
-	bool logR ( long long now, long type, char *msg, bool asterisk ,
+	bool logR ( int64_t now, int32_t type, char *msg, bool asterisk ,
 		    bool forced = false );
 
 	// returns false if msg should not be logged, true if it should
-	bool shouldLog ( long type , char *msg ) ;
+	bool shouldLog ( int32_t type , char *msg ) ;
 
 	// just initialize with no file
 	Log () ;
@@ -136,7 +136,7 @@ class Log {
 	void printBuf ( );
 
 	// this is only called when in a signal handler
-	bool logLater ( long long now , long type , char *formatString , 
+	bool logLater ( int64_t now , int32_t type , char *formatString , 
 			va_list ap );
 
 	bool          m_disabled;
@@ -154,9 +154,12 @@ class Log {
 	char   *m_hostname;
 	int     m_port;
 
+	int64_t m_logFileSize;
+	bool makeNewLogFile ( );
+
 	char         *m_errorMsg      [ MAX_LOG_MSGS ];
-	short int     m_errorMsgLen   [ MAX_LOG_MSGS ];
-	long long     m_errorTime     [ MAX_LOG_MSGS ];
+	int16_t     m_errorMsgLen   [ MAX_LOG_MSGS ];
+	int64_t     m_errorTime     [ MAX_LOG_MSGS ];
 	unsigned char m_errorType     [ MAX_LOG_MSGS ];
 	int           m_numErrors;
 

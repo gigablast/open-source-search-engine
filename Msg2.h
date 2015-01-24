@@ -32,9 +32,9 @@ class Msg2 {
 	// . returns false if blocked, true otherwise
 	// . sets errno on error
 	// . "termIds/termFreqs" should NOT be on the stack in case we block
-	bool getLists ( long     rdbId       ,
+	bool getLists ( int32_t     rdbId       ,
 			collnum_t collnum ,//char    *coll        ,
-			long     maxAge      ,
+			int32_t     maxAge      ,
 			bool     addToCache  ,
 			//key_t   *startKeys   ,
 			//key_t   *endKeys     ,
@@ -47,50 +47,50 @@ class Msg2 {
 			char *whiteList,
 			// for intersecting ranges of docids separately
 			// to prevent OOM errors
-			long long docIdStart,
-			long long docIdEnd,
+			int64_t docIdStart,
+			int64_t docIdEnd,
 			// isSplit[i] is true if list #i is split.
 			// i.e. gbdom:xyz.com, etc.
 			//char    *isSplit , 
-			long    *minRecSizes ,
-			//long     numLists    ,
+			int32_t    *minRecSizes ,
+			//int32_t     numLists    ,
 			RdbList *lists       ,
 			void    *state       ,
 			void (* callback)(void *state )  ,
 			class Msg39Request *request ,
-			long     niceness = MAX_NICENESS ,
+			int32_t     niceness = MAX_NICENESS ,
 			bool     doMerge  = true         ,
 			bool     isDebug  = false        ,
-			long    *bestSenderHostIds = NULL    ,
+			int32_t    *bestSenderHostIds = NULL    ,
 			bool     restrictPosdb   = false   ,
 			char     forceParitySplit     = -1   ,
 			bool     checkCache           = false);
 	bool getLists();
 
-	long  m_i;
+	int32_t  m_i;
 
 	// list of sites to restrict search results to. space separated
 	char *m_whiteList;
-	long long m_docIdStart;
-	long long m_docIdEnd;
+	int64_t m_docIdStart;
+	int64_t m_docIdEnd;
 	char *m_p;
-	long  m_w;
+	int32_t  m_w;
 	RdbList m_whiteLists [ MAX_WHITELISTS ];
 
 	// for posdbtable to get lists
-	//long getNumListGroups ( ) { return m_query->m_numTerms; }
+	//int32_t getNumListGroups ( ) { return m_query->m_numTerms; }
 
 	// . get each list group
 	// . lists are from oldest to newest
-	//RdbList **getListGroup       ( long i ){return m_msg5[i].m_listPtrs;}
-	//long   getNumListsInGroup ( long i ){return m_msg5[i].m_numListPtrs;}
+	//RdbList **getListGroup       ( int32_t i ){return m_msg5[i].m_listPtrs;}
+	//int32_t   getNumListsInGroup ( int32_t i ){return m_msg5[i].m_numListPtrs;}
 
 
-	RdbList *getList ( long i ) { return &m_lists[i]; }
-	long getNumLists ( ) { return m_query->m_numTerms; }
+	RdbList *getList ( int32_t i ) { return &m_lists[i]; }
+	int32_t getNumLists ( ) { return m_query->m_numTerms; }
 
 	// get how many bytes we read
-	//long getTotalRead() { return m_totalRead; };
+	//int32_t getTotalRead() { return m_totalRead; };
 
 	class Msg5 *getAvailMsg5();
 	void returnMsg5 ( class Msg5 *msg5 ) ;
@@ -103,7 +103,7 @@ class Msg2 {
 	//Msg0 m_msg0  [ MSG2_MAX_REQUESTS ];
 	bool m_avail [ MSG2_MAX_REQUESTS ]; // which msg0s are available?
 
-	long m_errno;
+	int32_t m_errno;
 
 	RdbList *m_lists;
 
@@ -112,25 +112,25 @@ class Msg2 {
 
 	// used for getting component lists if compound list is empty
 	void     mergeLists_r       ( ) ;
-	long    *m_componentCodes;
+	int32_t    *m_componentCodes;
 	char    *m_ignore;
 	class Query *m_query;
 	class QueryTerm *m_qterms;
 	//char     m_cacheKeys[MAX_NUM_LISTS * MAX_KEY_BYTES];
-	long    *m_minRecSizes;
-	long     m_maxAge;
-	long     m_numLists;
+	int32_t    *m_minRecSizes;
+	int32_t     m_maxAge;
+	int32_t     m_numLists;
 	bool     m_getComponents;
 	char     m_rdbId;
 	bool     m_addToCache;
 	//char    *m_coll;
 	collnum_t m_collnum;
 	bool     m_restrictPosdb;
-	long     m_compoundListMaxSize;
+	int32_t     m_compoundListMaxSize;
 	char     m_forceParitySplit;
 	bool     m_checkCache;
-	long     m_k;
-	long     m_n;
+	int32_t     m_k;
+	int32_t     m_n;
 	//RdbList *m_listPtrs [ MAX_NUM_LISTS ];
 
 	class Msg39Request *m_req;
@@ -138,12 +138,12 @@ class Msg2 {
 	// true if its a compound list that needs to be inserted into the cache
 	//char m_needsCaching [ MAX_NUM_LISTS ];
 
-	long m_numReplies  ;
-	long m_numRequests ;
+	int32_t m_numReplies  ;
+	int32_t m_numRequests ;
 
 	void *m_state ;
 	void ( * m_callback ) ( void *state );
-	long  m_niceness;
+	int32_t  m_niceness;
 
 	// . should lists from cache, tree and disk files be merged into one?
 	// . or appended out of order? 
@@ -154,10 +154,10 @@ class Msg2 {
 	bool m_isDebug;
 
 	// keep a count of bytes read from all lists (local or remote)
-	//long m_totalRead;
+	//int32_t m_totalRead;
 
 	// start time
-	long long m_startTime;
+	int64_t m_startTime;
 };
 
 #endif

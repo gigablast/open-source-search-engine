@@ -4,7 +4,7 @@
 #include "Tfndb.h"     // g_tfndb.makeKey()
 #include "UdpServer.h"
 
-static void handleRequest22 ( UdpSlot *slot , long netnice ) ;
+static void handleRequest22 ( UdpSlot *slot , int32_t netnice ) ;
 
 bool Msg22::registerHandler ( ) {
         // . register ourselves with the udp server
@@ -28,11 +28,11 @@ static void gotReplyWrapper22     ( void *state1 , void *state2 ) ;
 // . calls callback(state) when done
 // . returns false if blocked true otherwise
 bool Msg22::getAvailDocIdOnly ( Msg22Request  *r              ,
-				long long preferredDocId ,
+				int64_t preferredDocId ,
 				char *coll ,
 				void *state ,
 				void (* callback)(void *state) ,
-				long niceness ) {
+				int32_t niceness ) {
 	return getTitleRec ( r ,
 			     NULL     , //   url
 			     preferredDocId    ,
@@ -60,10 +60,10 @@ bool Msg22::getAvailDocIdOnly ( Msg22Request  *r              ,
 // . "url" must be NULL terminated
 bool Msg22::getTitleRec ( Msg22Request  *r              ,
 			  char          *url            ,
-			  long long      docId          ,
+			  int64_t      docId          ,
 			  char          *coll           ,
 			  char         **titleRecPtrPtr ,
-			  long          *titleRecSizePtr,
+			  int32_t          *titleRecSizePtr,
 			  bool           justCheckTfndb ,
 			  // when indexing spider replies we just want
 			  // a unique docid... "docId" should be the desired
@@ -71,10 +71,10 @@ bool Msg22::getTitleRec ( Msg22Request  *r              ,
 			  bool           getAvailDocIdOnly  ,
 			  void          *state          ,
 			  void         (* callback) (void *state) ,
-			  long           niceness       ,
+			  int32_t           niceness       ,
 			  bool           addToCache     ,
-			  long           maxCacheAge    ,
-			  long           timeout        ,
+			  int32_t           maxCacheAge    ,
+			  int32_t           timeout        ,
 			  bool           doLoadBalancing ) {
 
 	// sanity
@@ -145,27 +145,27 @@ bool Msg22::getTitleRec ( Msg22Request  *r              ,
 
 	/*
 	// if clusterdb, do bias
-	long firstHostId = -1;
+	int32_t firstHostId = -1;
 	// i don't see why not to always bias it, this makes tfndb page cache
 	// twice as effective for all lookups
-	long numTwins = g_hostdb.getNumHostsPerShard();
-	//long long bias=((0x0000003fffffffffLL)/(long long)numTwins);
-	long long sectionWidth = (DOCID_MASK/(long long)numTwins) + 1;
-	long hostNum = (docId & DOCID_MASK) / sectionWidth;
-	long numHosts = g_hostdb.getNumHostsPerShard();
+	int32_t numTwins = g_hostdb.getNumHostsPerShard();
+	//int64_t bias=((0x0000003fffffffffLL)/(int64_t)numTwins);
+	int64_t sectionWidth = (DOCID_MASK/(int64_t)numTwins) + 1;
+	int32_t hostNum = (docId & DOCID_MASK) / sectionWidth;
+	int32_t numHosts = g_hostdb.getNumHostsPerShard();
 	Host *hosts = g_hostdb.getGroup ( groupId );
 	if ( hostNum >= numHosts ) { char *xx = NULL; *xx = 0; }
 	firstHostId = hosts [ hostNum ].m_hostId ;
 	*/
 
 	// get our group
-	long  allNumHosts = g_hostdb.getNumHostsPerShard();
+	int32_t  allNumHosts = g_hostdb.getNumHostsPerShard();
 	Host *allHosts    = g_hostdb.getShard ( shardNum );//Group ( groupId );
 
 	// put all alive hosts in this array
 	Host *cand[32];
-	long long  nc = 0;
-	for ( long i = 0 ; i < allNumHosts ; i++ ) {
+	int64_t  nc = 0;
+	for ( int32_t i = 0 ; i < allNumHosts ; i++ ) {
 		// get that host
 		Host *hh = &allHosts[i];
 		// skip if dead
@@ -175,22 +175,22 @@ bool Msg22::getTitleRec ( Msg22Request  *r              ,
 	}
 	// if none alive, make them all candidates then
 	bool allDead = (nc == 0);
-	for ( long i = 0 ; allDead && i < allNumHosts ; i++ ) 
+	for ( int32_t i = 0 ; allDead && i < allNumHosts ; i++ ) 
 		cand[nc++] = &allHosts[i];
 
 	// route based on docid region, not parity, because we want to hit
 	// the urldb page cache as much as possible
-	long long sectionWidth =((128LL*1024*1024)/nc)+1;//(DOCID_MASK/nc)+1LL;
+	int64_t sectionWidth =((128LL*1024*1024)/nc)+1;//(DOCID_MASK/nc)+1LL;
 	// we mod by 1MB since tied scores resort to sorting by docid
 	// so we don't want to overload the host responsible for the lowest
 	// range of docids. CAUTION: do this for msg22 too!
 	// in this way we should still ensure a pretty good biased urldb
 	// cache... 
 	// . TODO: fix the urldb cache preload logic
-	long hostNum = (docId % (128LL*1024*1024)) / sectionWidth;
+	int32_t hostNum = (docId % (128LL*1024*1024)) / sectionWidth;
 	if ( hostNum < 0 ) hostNum = 0; // watch out for negative docids
 	if ( hostNum >= nc ) { char *xx = NULL; *xx = 0; }
-	long firstHostId = cand [ hostNum ]->m_hostId ;
+	int32_t firstHostId = cand [ hostNum ]->m_hostId ;
 
 	// while this prevents tfndb seeks, it also causes bottlenecks
 	// if one host is particularly slow, because load balancing is
@@ -247,7 +247,7 @@ void gotReplyWrapper22 ( void *state1 , void *state2 ) {
 void Msg22::gotReply ( ) {
 	// save g_errno
 	m_errno = g_errno;
-	// shortcut
+	// int16_tcut
 	Msg22Request *r = m_r;
 	// back
 	m_outstanding = false;
@@ -260,7 +260,7 @@ void Msg22::gotReply ( ) {
 			    r->m_url,mstrerror(g_errno));
 		else
 			log("db: Had error getting title record for docId of "
-			    "%lli: %s.",r->m_docId,mstrerror(g_errno));
+			    "%"INT64": %s.",r->m_docId,mstrerror(g_errno));
 		// free reply buf right away
 		m_mcast.reset();
 		m_callback ( m_state );
@@ -271,8 +271,8 @@ void Msg22::gotReply ( ) {
 	QUICKPOLL ( r->m_niceness );
 
 	// get the reply
-	long  replySize = -1 ;
-	long  maxSize   ;
+	int32_t  replySize = -1 ;
+	int32_t  maxSize   ;
 	bool  freeIt    ;
 	char *reply     = m_mcast.getBestReply (&replySize, &maxSize, &freeIt);
 	relabel( reply, maxSize, "Msg22-mcastGBR" );
@@ -295,7 +295,7 @@ void Msg22::gotReply ( ) {
 		// we did not find it
 		m_found = false;
 		// get docid provided
-		long long d = *(long long *)reply;
+		int64_t d = *(int64_t *)reply;
 		// this is -1 or 0 if none available
 		m_availDocId = d;
 		// nuke the reply
@@ -304,8 +304,8 @@ void Msg22::gotReply ( ) {
 		m_errno = ENOTFOUND;
 		// debug msg
 		//if ( m_availDocId != m_probableDocId && m_url )
-		//	log(LOG_DEBUG,"build: Avail docid %lli != probable "
-		//	     "of %lli for %s.", 
+		//	log(LOG_DEBUG,"build: Avail docid %"INT64" != probable "
+		//	     "of %"INT64" for %s.", 
 		//	     m_availDocId, m_probableDocId , m_urlPtr );
 		// this is having problems in Msg23::gotTitleRec()
 		m_callback ( m_state );
@@ -338,21 +338,21 @@ void Msg22::gotReply ( ) {
 class State22 {
 public:
 	UdpSlot   *m_slot;
-	//long       m_tfn;
-	//long       m_tfn2;
-	long long  m_pd;
-	long long  m_docId1;
-	long long  m_docId2;
+	//int32_t       m_tfn;
+	//int32_t       m_tfn2;
+	int64_t  m_pd;
+	int64_t  m_docId1;
+	int64_t  m_docId2;
 	//RdbList    m_ulist;
 	RdbList    m_tlist;
 	Msg5       m_msg5;
 	Msg5       m_msg5b;
-	long long  m_availDocId;
-	long long  m_uh48;
+	int64_t  m_availDocId;
+	int64_t  m_uh48;
 	class Msg22Request *m_r;
 	// free slot request here too
 	char *m_slotReadBuf;
-	long  m_slotAllocSize;
+	int32_t  m_slotAllocSize;
 	State22() {m_slotReadBuf = NULL;};
 	~State22() {
 		if ( m_slotReadBuf )
@@ -365,8 +365,8 @@ public:
 static void gotTitleList ( void *state , RdbList *list , Msg5 *msg5 ) ;
 //void gotUrlListWrapper     ( void *state , RdbList *list , Msg5 *msg5 ) ;
 
-void handleRequest22 ( UdpSlot *slot , long netnice ) {
-	// shortcut
+void handleRequest22 ( UdpSlot *slot , int32_t netnice ) {
+	// int16_tcut
 	UdpServer *us = &g_udpServer;
 	// get the request
 	Msg22Request *r = (Msg22Request *)slot->m_readBuf;
@@ -374,9 +374,9 @@ void handleRequest22 ( UdpSlot *slot , long netnice ) {
 	//char *coll = g_collectiondb.getCollName ( r->m_collnum );
 
 	// sanity check
-	long  requestSize = slot->m_readBufSize;
+	int32_t  requestSize = slot->m_readBufSize;
 	if ( requestSize < r->getMinSize() ) {
-		log("db: Got bad request size of %li bytes for title record. "
+		log("db: Got bad request size of %"INT32" bytes for title record. "
 		    "Need at least 28.",  requestSize );
 		us->sendErrorReply ( slot , EBADREQUESTSIZE );
 		return;
@@ -385,9 +385,9 @@ void handleRequest22 ( UdpSlot *slot , long netnice ) {
 	// get base, returns NULL and sets g_errno to ENOCOLLREC on error
 	RdbBase *tbase; 
 	if ( ! (tbase=getRdbBase(RDB_TITLEDB,r->m_collnum) ) ) {
-		log("db: Could not get title rec in collection # %li "
+		log("db: Could not get title rec in collection # %"INT32" "
 		    "because rdbbase is null.",
-		    (long)r->m_collnum);
+		    (int32_t)r->m_collnum);
 		g_errno = EBADENGINEER;
 		us->sendErrorReply ( slot , g_errno ); 
 		return; 
@@ -417,7 +417,7 @@ void handleRequest22 ( UdpSlot *slot , long netnice ) {
        try { st = new (State22); }
        catch ( ... ) {
 	       g_errno = ENOMEM;
-	       log("query: Msg22: new(%i): %s", sizeof(State22),
+	       log("query: Msg22: new(%"INT32"): %s", (int32_t)sizeof(State22),
 		   mstrerror(g_errno));
 	       us->sendErrorReply ( slot , g_errno );
 	       return;
@@ -452,9 +452,9 @@ void handleRequest22 ( UdpSlot *slot , long netnice ) {
        // but if we are requesting an available docid, it might be taken
        // so try the range
        if ( r->m_getAvailDocIdOnly ) {
-	       long long pd = r->m_docId;
-	       long long d1 = g_titledb.getFirstProbableDocId ( pd );
-	       long long d2 = g_titledb.getLastProbableDocId  ( pd );
+	       int64_t pd = r->m_docId;
+	       int64_t d1 = g_titledb.getFirstProbableDocId ( pd );
+	       int64_t d2 = g_titledb.getLastProbableDocId  ( pd );
 	       // sanity - bad url with bad subdomain?
 	       if ( pd < d1 || pd > d2 ) { char *xx=NULL;*xx=0; }
 	       // make sure we get a decent sample in titledb then in 
@@ -466,14 +466,14 @@ void handleRequest22 ( UdpSlot *slot , long netnice ) {
        // . otherwise, url was given, like from Msg15
        // . we may get multiple tfndb recs
        if ( r->m_url[0] ) {
-	       long  dlen = 0;
+	       int32_t  dlen = 0;
 	       // this causes ip based urls to be inconsistent with the call
 	       // to getProbableDocId(url) below
 	       char *dom  = getDomFast ( r->m_url , &dlen );
 	       // bogus url?
 	       if ( ! dom ) {
 		       log("msg22: got bad url in request: %s from "
-			   "hostid %li for msg22 call ",
+			   "hostid %"INT32" for msg22 call ",
 			   r->m_url,slot->m_host->m_hostId);
 		       g_errno = EBADURL;
 		       us->sendErrorReply ( slot , g_errno ); 
@@ -481,9 +481,9 @@ void handleRequest22 ( UdpSlot *slot , long netnice ) {
 		       delete ( st );
 		       return; 
 	       }
-	       long long pd = g_titledb.getProbableDocId (r->m_url,dom,dlen);
-	       long long d1 = g_titledb.getFirstProbableDocId ( pd );
-	       long long d2 = g_titledb.getLastProbableDocId  ( pd );
+	       int64_t pd = g_titledb.getProbableDocId (r->m_url,dom,dlen);
+	       int64_t d1 = g_titledb.getFirstProbableDocId ( pd );
+	       int64_t d2 = g_titledb.getLastProbableDocId  ( pd );
 	       // sanity - bad url with bad subdomain?
 	       if ( pd < d1 || pd > d2 ) { char *xx=NULL;*xx=0; }
 	       // there are no del bits in tfndb
@@ -499,7 +499,7 @@ void handleRequest22 ( UdpSlot *slot , long netnice ) {
        QUICKPOLL ( r->m_niceness );
        
        /*
-       // shortcut
+       // int16_tcut
        Rdb *tdb = g_titledb.getRdb();
 
        // init this
@@ -526,7 +526,7 @@ void handleRequest22 ( UdpSlot *slot , long netnice ) {
        // make titledb keys
        key_t startKey = g_titledb.makeFirstKey ( st->m_docId1 );
        key_t endKey   = g_titledb.makeLastKey  ( st->m_docId2 );
-       long  n        = tt->getNextNode ( r->m_collnum , startKey );
+       int32_t  n        = tt->getNextNode ( r->m_collnum , startKey );
        
        // there should only be one match, one titlerec per docid!
        for ( ; n >= 0 ; n = tt->getNextNode ( n ) ) {
@@ -539,7 +539,7 @@ void handleRequest22 ( UdpSlot *slot , long netnice ) {
 	       // if we had a url make sure uh48 matches
 	       if ( r->m_url[0] ) {
 		       // get it
-		       long long uh48 = g_titledb.getUrlHash48(&k);
+		       int64_t uh48 = g_titledb.getUrlHash48(&k);
 		       // sanity check
 		       if ( st->m_uh48 == 0 ) { char *xx=NULL;*xx=0; }
 		       // we must match this exactly
@@ -565,11 +565,11 @@ void handleRequest22 ( UdpSlot *slot , long netnice ) {
 	       }
 	       // ok, we got a match, return it
 	       char *data     = tt->getData     ( n );
-	       long  dataSize = tt->getDataSize ( n );
+	       int32_t  dataSize = tt->getDataSize ( n );
 	       // wierd!
 	       if ( dataSize == 0 ) { char *xx=NULL;*xx=0; }
 	       // send the whole rec back
-	       long need = 12 + 4 + dataSize;
+	       int32_t need = 12 + 4 + dataSize;
 	       // will this copy it? not!
 	       char *buf = (char *)mmalloc ( need , "msg22t" );
 	       if ( ! buf ) {
@@ -587,9 +587,9 @@ void handleRequest22 ( UdpSlot *slot , long netnice ) {
 	       // store key
 	       *(key_t *)p = k; p += sizeof(key_t);
 	       // then dataSize
-	       *(long *)p = dataSize; p += 4;
+	       *(int32_t *)p = dataSize; p += 4;
 	       // then the data
-	       memcpy ( p , data , dataSize ); p += dataSize;
+	       gbmemcpy ( p , data , dataSize ); p += dataSize;
 	       // send off the record
 	       us->sendReply_ass (buf, need,buf, need,slot);
 	       // don't forget to free the state
@@ -635,7 +635,7 @@ void handleRequest22 ( UdpSlot *slot , long netnice ) {
 static void gotTitleList ( void *state , RdbList *list , Msg5 *msg5 ) ;
 
 void gotUrlListWrapper ( void *state , RdbList *list , Msg5 *msg5 ) {
-	// shortcuts
+	// int16_tcuts
 	State22   *st = (State22 *)state;
 	UdpServer *us = &g_udpServer;
 
@@ -643,8 +643,8 @@ void gotUrlListWrapper ( void *state , RdbList *list , Msg5 *msg5 ) {
 	if ( g_errno ) { 
 		log("db: Had error getting info from tfndb: %s.",
 		    mstrerror(g_errno));
-		log("db: uk1.n1=%li n0=%lli uk2.n1=%li n0=%lli "
-		    "d1=%lli d2=%lli.",
+		log("db: uk1.n1=%"INT32" n0=%"INT64" uk2.n1=%"INT32" n0=%"INT64" "
+		    "d1=%"INT64" d2=%"INT64".",
 		    ((key_t *)st->m_msg5.m_startKey)->n1 ,
 		    ((key_t *)st->m_msg5.m_startKey)->n0 ,
 		    ((key_t *)st->m_msg5.m_endKey)->n1   ,
@@ -657,7 +657,7 @@ void gotUrlListWrapper ( void *state , RdbList *list , Msg5 *msg5 ) {
 		return;
 	}
 
-	// shortcuts
+	// int16_tcuts
 	RdbList      *ulist = &st->m_ulist;
 	Msg22Request *r     = st->m_r;
 	char         *coll  = g_collectiondb.getCollName ( r->m_collnum );
@@ -669,7 +669,7 @@ void gotUrlListWrapper ( void *state , RdbList *list , Msg5 *msg5 ) {
 	RdbBase *tbase = getRdbBase(RDB_TITLEDB,coll);
 
 	// set probable docid
-	long long pd = 0LL;
+	int64_t pd = 0LL;
 	if ( r->m_url[0] ) {
 		pd = g_titledb.getProbableDocId(r->m_url);
 		// sanity
@@ -678,11 +678,11 @@ void gotUrlListWrapper ( void *state , RdbList *list , Msg5 *msg5 ) {
 
 	// . these are both meant to be available docids
 	// . if ad2 gets exhausted we use ad1
-	long long ad1 = st->m_docId1;
-	long long ad2 = pd;
+	int64_t ad1 = st->m_docId1;
+	int64_t ad2 = pd;
 
 
-	long tfn = -1;
+	int32_t tfn = -1;
 	// sanity check. make sure did not load from tfndb if did not need to
 	if ( ! ulist->isExhausted() && st->m_tfn2 >= 0 ) {char *xx=NULL;*xx=0;}
 	// if only one titledb file and none in memory use it
@@ -702,7 +702,7 @@ void gotUrlListWrapper ( void *state , RdbList *list , Msg5 *msg5 ) {
 		// if we have a url and no docid, we gotta check uh48!
 		if ( r->m_url[0] && g_tfndb.getUrlHash48(&k)!=st->m_uh48){
 			// get docid of that guy
-			long long dd = g_tfndb.getDocId(&k);
+			int64_t dd = g_tfndb.getDocId(&k);
 			// if matches avail docid, inc it
 			if ( dd == ad1 ) ad1++;
 			if ( dd == ad2 ) ad2++;
@@ -727,7 +727,7 @@ void gotUrlListWrapper ( void *state , RdbList *list , Msg5 *msg5 ) {
 	if ( ad1 >= pd           ) ad1 = 0LL;
 	if ( ad2 >  st->m_docId2 ) ad2 = 0LL;
 	// get best
-	long long ad = ad2;
+	int64_t ad = ad2;
 	// but wrap around if we need to
 	if ( ad == 0LL ) ad = ad1;
 
@@ -749,7 +749,7 @@ void gotUrlListWrapper ( void *state , RdbList *list , Msg5 *msg5 ) {
 	//   00f3b2ff63af66c9 docId=261670033643 e=0x6c tfn=217 clean=0 half=0 
 	// . Msg16 will only use the avail docid if the titleRec is not found
 	if ( r->m_url[0] && pd != ad ) {
-		//log(LOG_INFO,"build: Docid %lli collided. %s Changing "
+		//log(LOG_INFO,"build: Docid %"INT64" collided. %s Changing "
 		//
 		// http://www.airliegardens.org/events.asp?dt=2&date=8/5/2011
 		//
@@ -758,8 +758,8 @@ void gotUrlListWrapper ( void *state , RdbList *list , Msg5 *msg5 ) {
 		// http://www.bbonline.com/i/chicago.html
 		//
 		// collision alert!
-		log("spider: Docid %lli collided. %s Changing "
-		    "to %lli.", r->m_docId , r->m_url , ad );
+		log("spider: Docid %"INT64" collided. %s Changing "
+		    "to %"INT64".", r->m_docId , r->m_url , ad );
 		// debug this for now
 		//char *xx=NULL;*xx=0; 
 	}
@@ -772,7 +772,7 @@ void gotUrlListWrapper ( void *state , RdbList *list , Msg5 *msg5 ) {
 		// store docid in reply
 		char *p = st->m_slot->m_tmpBuf;
 		// send back the available docid
-		*(long long *)p = ad;
+		*(int64_t *)p = ad;
 		// send it
 		us->sendReply_ass ( p , 8 , p , 8 , st->m_slot );
 		// don't forget to free state
@@ -811,12 +811,12 @@ void gotUrlListWrapper ( void *state , RdbList *list , Msg5 *msg5 ) {
 	//   spawning a thread. there is no blocking. TRICKY. so if it is in 
 	//   the tree at this point we'll get it, but may end up scanning the
 	//   file with the older version of the doc... not too bad.
-	long startFileNum = tbase->getFileNumFromId2 ( tfn );
+	int32_t startFileNum = tbase->getFileNumFromId2 ( tfn );
 
 	// if tfn refers to a missing titledb file...
 	if ( startFileNum < 0 ) {
 		if ( r->m_url[0] ) log("db: titledb missing url %s",r->m_url);
-		else        log("db: titledb missing docid %lli", r->m_docId);
+		else        log("db: titledb missing docid %"INT64"", r->m_docId);
 		us->sendErrorReply ( st->m_slot,ENOTFOUND );
 		mdelete ( st , sizeof(State22) , "Msg22" );
 		delete ( st ); 
@@ -867,7 +867,7 @@ void gotTitleList ( void *state , RdbList *list , Msg5 *msg5 ) {
 	State22 *st = (State22 *)state;
 	// if niceness is 0, use the higher priority udpServer
 	UdpServer *us = &g_udpServer;
-	// shortcut
+	// int16_tcut
 	Msg22Request *r = st->m_r;
 	// breathe
 	QUICKPOLL(r->m_niceness);
@@ -888,7 +888,7 @@ void gotTitleList ( void *state , RdbList *list , Msg5 *msg5 ) {
 	RdbList *tlist = &st->m_tlist;
 
 	// set probable docid
-	long long pd = 0LL;
+	int64_t pd = 0LL;
 	if ( r->m_url[0] ) {
 		pd = g_titledb.getProbableDocId(r->m_url);
 		if ( pd != st->m_pd ) { 
@@ -906,8 +906,8 @@ void gotTitleList ( void *state , RdbList *list , Msg5 *msg5 ) {
 
 	// . these are both meant to be available docids
 	// . if ad2 gets exhausted we use ad1
-	long long ad1 = st->m_docId1;
-	long long ad2 = pd;
+	int64_t ad1 = st->m_docId1;
+	int64_t ad2 = pd;
 
 
 	bool docIdWasFound = false;
@@ -918,14 +918,14 @@ void gotTitleList ( void *state , RdbList *list , Msg5 *msg5 ) {
 		QUICKPOLL ( r->m_niceness );
 		// get the rec
 		char *rec     = tlist->getCurrentRec();
-		long  recSize = tlist->getCurrentRecSize();
+		int32_t  recSize = tlist->getCurrentRecSize();
 		// get that key
 		key_t *k = (key_t *)rec;
 		// skip negative recs, first one should not be negative however
 		if ( ( k->n0 & 0x01 ) == 0x00 ) continue;
 
 		// get docid of that titlerec
-		long long dd = g_titledb.getDocId(k);
+		int64_t dd = g_titledb.getDocId(k);
 
 		if ( r->m_getAvailDocIdOnly ) {
 			// make sure our available docids are availble!
@@ -936,7 +936,7 @@ void gotTitleList ( void *state , RdbList *list , Msg5 *msg5 ) {
 		// if we had a url make sure uh48 matches
 		else if ( r->m_url[0] ) {
 			// get it
-			long long uh48 = g_titledb.getUrlHash48(k);
+			int64_t uh48 = g_titledb.getUrlHash48(k);
 			// sanity check
 			if ( st->m_uh48 == 0 ) { char *xx=NULL;*xx=0; }
 			// make sure our available docids are availble!
@@ -976,7 +976,7 @@ void gotTitleList ( void *state , RdbList *list , Msg5 *msg5 ) {
 			// otherwise, alloc space for the reply
 			reply = (char *)mmalloc (recSize, "Msg22");
 			if ( ! reply ) goto hadError;
-			memcpy ( reply , rec , recSize );
+			gbmemcpy ( reply , rec , recSize );
 		}
 		// otherwise we send back the whole list!
 		else {
@@ -996,7 +996,7 @@ void gotTitleList ( void *state , RdbList *list , Msg5 *msg5 ) {
 	if ( ad1 >= pd           ) ad1 = 0LL;
 	if ( ad2 >  st->m_docId2 ) ad2 = 0LL;
 	// get best
-	long long ad = ad2;
+	int64_t ad = ad2;
 	// but wrap around if we need to
 	if ( ad == 0LL ) ad = ad1;
 	// if "docId" was unmatched that should be the preferred available
@@ -1007,14 +1007,14 @@ void gotTitleList ( void *state , RdbList *list , Msg5 *msg5 ) {
 	st->m_availDocId = ad;
 	// note it
 	if ( ad == 0LL && (r->m_getAvailDocIdOnly || r->m_url[0]) ) 
-		log("msg22: avail docid is 0 for pd=%lli!",pd);
+		log("msg22: avail docid is 0 for pd=%"INT64"!",pd);
 
 	// . ok, return an available docid
 	if ( r->m_url[0] || r->m_justCheckTfndb || r->m_getAvailDocIdOnly ) {
 		// store docid in reply
 		char *p = st->m_slot->m_tmpBuf;
 		// send back the available docid
-		*(long long *)p = st->m_availDocId;
+		*(int64_t *)p = st->m_availDocId;
 		// send it
 		us->sendReply_ass ( p , 8 , p , 8 , st->m_slot );
 		// don't forget to free state
@@ -1024,8 +1024,8 @@ void gotTitleList ( void *state , RdbList *list , Msg5 *msg5 ) {
 	}
 
 	// not found! and it was a docid based request...
-	log("msg22: could not find title rec for docid %llu collnum=%li",
-	    r->m_docId,(long)r->m_collnum);
+	log("msg22: could not find title rec for docid %"UINT64" collnum=%"INT32"",
+	    r->m_docId,(int32_t)r->m_collnum);
 	g_errno = ENOTFOUND;
 	goto hadError;
 }

@@ -23,51 +23,51 @@
 
 class SafeBuf;
 // some memory manipulation functions inlined below
-long long htonll ( unsigned long long a );
-long long ntohll ( unsigned long long a );
+int64_t htonll ( uint64_t a );
+int64_t ntohll ( uint64_t a );
 key_t ntohkey ( key_t key ) ;
 key_t htonkey ( key_t key ) ;
 
 /*
-long getNumBitsOn ( unsigned char      bits );
-long getNumBitsOn ( unsigned short     bits );
-long getNumBitsOn ( unsigned long      bits );
-long getNumBitsOn ( unsigned long long bits );
+int32_t getNumBitsOn ( unsigned char      bits );
+int32_t getNumBitsOn ( uint16_t     bits );
+int32_t getNumBitsOn ( uint32_t      bits );
+int32_t getNumBitsOn ( uint64_t bits );
 */
 
 // assume only one bit is set for this (used by Address.cpp)
-long getBitPosLL   ( uint8_t *bit );
+int32_t getBitPosLL   ( uint8_t *bit );
 
-long getHighestLitBit  ( unsigned char     bits ) ;
-long getHighestLitBit  ( unsigned short    bits ) ;
+int32_t getHighestLitBit  ( unsigned char     bits ) ;
+int32_t getHighestLitBit  ( uint16_t    bits ) ;
 
-// these are bit #'s, like 0,1,2,3,...63 for long longs
-long getLowestLitBitLL ( unsigned long long bits ) ;
+// these are bit #'s, like 0,1,2,3,...63 for int64_ts
+int32_t getLowestLitBitLL ( uint64_t bits ) ;
 
 // this is the value, like 0,1,2,4, ... 4billion
-unsigned long      getHighestLitBitValue   ( unsigned long      bits ) ;
-unsigned long long getHighestLitBitValueLL ( unsigned long long bits ) ;
+uint32_t      getHighestLitBitValue   ( uint32_t      bits ) ;
+uint64_t getHighestLitBitValueLL ( uint64_t bits ) ;
 
 
-unsigned long reverseBits ( unsigned long x ) ;
+uint32_t reverseBits ( uint32_t x ) ;
 
 // async signal safe functions
-void memcpy_ass ( register void *dest , register const void *src , long len ) ;
-void memset_ass ( register void *dst , register const char c , long len ) ;
-void memset_nice ( register void *dst , register const char c , long len ,
-		   long niceness ) ;
+//void memcpy_ass ( register void *dest , register const void *src , int32_t len ) ;
+void memset_ass ( register void *dst , register const char c , int32_t len ) ;
+void memset_nice ( register void *dst , register const char c , int32_t len ,
+		   int32_t niceness ) ;
 
 // . "*Bits" is bit offset in *
 // . nb is the # of bits to compare or copy
 // . returns -1 if dst < src, 0 if equal, +1 if dst > src
 // . bit #0 is the least significant bit on this little endian machine
 // . TODO: should we speed this up?
-long membitcmp  ( void *dst, long dstBits, void *src, long srcBits, long nb );
+int32_t membitcmp  ( void *dst, int32_t dstBits, void *src, int32_t srcBits, int32_t nb );
 // like above byt returns # of bits in common
-long membitcmp2 ( void *dst, long dstBits, void *src, long srcBits, long nb );
+int32_t membitcmp2 ( void *dst, int32_t dstBits, void *src, int32_t srcBits, int32_t nb );
 // two bit copies, membitcpy1 starts copying at low bit, 2 at high bit
-void membitcpy1 ( void *dst, long dstBits, void *src, long srcBits, long nb );
-void membitcpy2 ( void *dst, long dstBits, void *src, long srcBits, long nb );
+void membitcpy1 ( void *dst, int32_t dstBits, void *src, int32_t srcBits, int32_t nb );
+void membitcpy2 ( void *dst, int32_t dstBits, void *src, int32_t srcBits, int32_t nb );
 
 inline int gbstrlen ( const char *s ) {
 	if ( ! s ) { char *xx=NULL;*xx=0; }
@@ -81,7 +81,7 @@ class Mem {
 	Mem();
 	~Mem();
 
-	bool init ( long long maxMem );
+	bool init ( int64_t maxMem );
 
 	void  setPid();
 	pid_t getPid();
@@ -91,54 +91,54 @@ class Mem {
 	void *gbrealloc ( void *oldPtr, int oldSize, int newSize,
 				const char *note);
 	void  gbfree    ( void *ptr , int size , const char *note);
-	char *dup     ( const void *data , long dataSize , const char *note);
+	char *dup     ( const void *data , int32_t dataSize , const char *note);
 	char *strdup  ( const char *string , const char *note ) {
 		return dup ( string , gbstrlen ( string ) + 1 , note ); };
 
-	long validate();
+	int32_t validate();
 
 	//void *gbmalloc2  ( int size , const char *note  );
 	//void *gbcalloc2  ( int size , const char *note);
 	//void *gbrealloc2 ( void *oldPtr,int oldSize ,int newSize,
 	//			const char *note);
 	//void  gbfree2    ( void *ptr , int size , const char *note);
-	//char *dup2       ( const void *data , long dataSize ,
+	//char *dup2       ( const void *data , int32_t dataSize ,
 	//			const char *note);
 
 	// this one does not include new/delete mem, only *alloc()/free() mem
-	long long getUsedMem () { return m_used; };
-	long long getAvailMem() ;
+	int64_t getUsedMem () { return m_used; };
+	int64_t getAvailMem() ;
 	// the max mem ever alloced
-	long long getMaxAlloced() { return m_maxAlloced; };
-	long long getMaxAlloc  () { return m_maxAlloc; };
+	int64_t getMaxAlloced() { return m_maxAlloced; };
+	int64_t getMaxAlloc  () { return m_maxAlloc; };
 	const char *getMaxAllocBy() { return m_maxAllocBy; };
 	// the max mem we can use!
-	long long getMaxMem () ;
+	int64_t getMaxMem () ;
 
-	long getNumAllocated() { return m_numAllocated; };
+	int32_t getNumAllocated() { return m_numAllocated; };
 
-	long long getNumTotalAllocated() { return m_numTotalAllocated; };
+	int64_t getNumTotalAllocated() { return m_numTotalAllocated; };
 
 	// # of currently allocated chunks
-	long getNumChunks(); 
+	int32_t getNumChunks(); 
 
 	// for debugging
-	long printBits  ( void *src, long b , long nb );
+	int32_t printBits  ( void *src, int32_t b , int32_t nb );
 
 	// who underan/overran their buffers?
-	int  printBreech   ( long i , char core ) ;
+	int  printBreech   ( int32_t i , char core ) ;
 	int  printBreeches ( char core ) ;
 	// print mem usage stats
 	int  printMem      ( ) ;
-	void addMem ( void *mem , long size , const char *note , char isnew ) ;
-	bool rmMem  ( void *mem , long size , const char *note ) ;
-	bool lblMem ( void *mem , long size , const char *note );
+	void addMem ( void *mem , int32_t size , const char *note , char isnew ) ;
+	bool rmMem  ( void *mem , int32_t size , const char *note ) ;
+	bool lblMem ( void *mem , int32_t size , const char *note );
 
-	long getMemSize  ( void *mem );
-	long getMemSlot  ( void *mem );
+	int32_t getMemSize  ( void *mem );
+	int32_t getMemSlot  ( void *mem );
 
-	void addnew ( void *ptr , long size , const char *note ) ;
-	void delnew ( void *ptr , long size , const char *note ) ;
+	void addnew ( void *ptr , int32_t size , const char *note ) ;
+	void delnew ( void *ptr , int32_t size , const char *note ) ;
 
 	bool printMemBreakdownTable(SafeBuf* sb, 
 				    char *lightblue, 
@@ -148,30 +148,33 @@ class Mem {
 	// setStackPointer() must be called from main, and ptr should
 	// be the address of the first variable declared in main.
 	void setStackPointer( char *ptr );
-	long checkStackSize();
+	int32_t checkStackSize();
 
-	long findPtr ( void *target ) ;
+	int32_t findPtr ( void *target ) ;
 
 	// alloc this much memory then immediately free it.
 	// this should assign this many pages to this process id so no other
 	// process can grab them -- only us.
 	// TODO: use sbrk()
-	//	bool  reserveMem ( long long bytesToReserve );
+	//	bool  reserveMem ( int64_t bytesToReserve );
 
-	long long m_maxAlloced; // at any one time
-	long long m_maxAlloc; // the biggest single alloc ever done
+	int64_t m_maxAlloced; // at any one time
+	int64_t m_maxAlloc; // the biggest single alloc ever done
 	const char *m_maxAllocBy; // the biggest single alloc ever done
-	long long m_maxMem;
+	int64_t m_maxMem;
 
 	// shared mem used
-	long long m_sharedUsed;
+	int64_t m_sharedUsed;
 
 	// currently used mem (estimate)
-	long long m_used;
+	int64_t m_used;
 
-	long          m_numAllocated;
-	long long     m_numTotalAllocated;
-	unsigned long m_memtablesize;
+	// count how many allocs/news failed
+	int32_t m_outOfMems;
+
+	int32_t          m_numAllocated;
+	int64_t     m_numTotalAllocated;
+	uint32_t m_memtablesize;
 
  protected:
 	char *m_stackStart;
@@ -192,15 +195,15 @@ inline void *mrealloc (void *oldPtr, int oldSize, int newSize,
 	return g_mem.gbrealloc(oldPtr,oldSize,newSize,note);};
 inline void  mfree    ( void *ptr , int size , const char *note) {
 	return g_mem.gbfree(ptr,size,note);};
-inline char *mdup     ( const void *data , long dataSize , const char *note) {
+inline char *mdup     ( const void *data , int32_t dataSize , const char *note) {
 	return g_mem.dup(data,dataSize,note);};
 inline char *mstrdup  ( const char *string , const char *note ) {
 	return g_mem.strdup(string,note);};
-inline void mnew ( void *ptr , long size , const char *note ) {
+inline void mnew ( void *ptr , int32_t size , const char *note ) {
 	return g_mem.addnew ( ptr , size , note );};
-inline void mdelete ( void *ptr , long size , const char *note ) {
+inline void mdelete ( void *ptr , int32_t size , const char *note ) {
 	return g_mem.delnew ( ptr , size , note ); };
-inline bool relabel   ( void *ptr , long size , const char *note ) {
+inline bool relabel   ( void *ptr , int32_t size , const char *note ) {
 	return g_mem.lblMem( ptr, size, note ); };
 
 //#ifdef _LEAKCHECK_
@@ -219,16 +222,16 @@ void * operator new (size_t size) throw (std::bad_alloc);
 //#endif
 inline void *coreme ( int x ) { char *xx = NULL; *xx = 0; return NULL; }
 
-long getAllocSize(void *p);
+int32_t getAllocSize(void *p);
 //void * operator new (size_t size) ;
 
-inline long getHighestLitBit ( unsigned short bits ) {
+inline int32_t getHighestLitBit ( uint16_t bits ) {
 	unsigned char b = *((unsigned char *)(&bits) + 1);
 	if ( ! b ) return getHighestLitBit ( (unsigned char) bits );
 	return 8 + getHighestLitBit ( (unsigned char) b );
 }
 
-inline long getHighestLitBit ( unsigned char c ) {
+inline int32_t getHighestLitBit ( unsigned char c ) {
 	static char a[256] = { 0, 0, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3, 3, 
 			       4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 
 			       5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 
@@ -250,23 +253,23 @@ inline long getHighestLitBit ( unsigned char c ) {
 
 extern char g_a[];
 
-inline long getNumBitsOn8 ( unsigned char c ) {
+inline int32_t getNumBitsOn8 ( unsigned char c ) {
 	return g_a[(unsigned char) c];
 }
 
-inline long getNumBitsOn16 ( unsigned short bits ) {
+inline int32_t getNumBitsOn16 ( uint16_t bits ) {
 	return 	g_a [ *((unsigned char *)(&bits) + 0)  ] +
 		g_a [ *((unsigned char *)(&bits) + 1)  ] ;
 }
 
-inline long getNumBitsOn32 ( unsigned long bits ) {
+inline int32_t getNumBitsOn32 ( uint32_t bits ) {
 	return 	g_a [ *((unsigned char *)(&bits) + 0)  ] +
 		g_a [ *((unsigned char *)(&bits) + 1)  ] +
 		g_a [ *((unsigned char *)(&bits) + 2)  ] +
 		g_a [ *((unsigned char *)(&bits) + 3)  ] ;
 }
 
-inline long getNumBitsOn64 ( unsigned long long bits ) {
+inline int32_t getNumBitsOn64 ( uint64_t bits ) {
 	return 	g_a [ *((unsigned char *)(&bits) + 0)  ] +
 		g_a [ *((unsigned char *)(&bits) + 1)  ] +
 		g_a [ *((unsigned char *)(&bits) + 2)  ] +
@@ -278,9 +281,9 @@ inline long getNumBitsOn64 ( unsigned long long bits ) {
 }
 
 // assume only one bit is set for this (used by Address.cpp)
-inline long getBitPosLL ( uint8_t *bit ) {
-	// which long is it in?
-	if ( *(long *)bit ) {
+inline int32_t getBitPosLL ( uint8_t *bit ) {
+	// which int32_t is it in?
+	if ( *(int32_t *)bit ) {
 		if ( bit[0] ) return getHighestLitBit ( bit[0] );
 		if ( bit[1] ) return getHighestLitBit ( bit[1] ) + 8;
 		if ( bit[2] ) return getHighestLitBit ( bit[2] ) + 16;

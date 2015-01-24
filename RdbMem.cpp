@@ -32,7 +32,7 @@ void RdbMem::clear ( ) {
 #include <asm/page.h> // PAGE_SIZE
 
 // return #of bytes scanned for timing purposes
-long RdbMem::scanMem ( ) {
+int32_t RdbMem::scanMem ( ) {
 	// ahh.. just scan the whole thing to keep it simple
 	char *p    = m_mem + 64 ;
 	char *pend = m_mem + m_memSize;
@@ -43,7 +43,7 @@ long RdbMem::scanMem ( ) {
 */
 
 // initialize us with the RdbDump class your rdb is using
-bool RdbMem::init ( Rdb *rdb , long memToAlloc , char keySize ,
+bool RdbMem::init ( Rdb *rdb , int32_t memToAlloc , char keySize ,
 		    char *allocName ) {
 	// hold on to this so we know if dump is going on
 	//m_dump = dump;
@@ -57,8 +57,8 @@ bool RdbMem::init ( Rdb *rdb , long memToAlloc , char keySize ,
 	if ( ! m_mem ) 	return log("RdbMem::init: %s", mstrerror(g_errno));
 	m_memSize = memToAlloc;
 	// rush it into mem for real
-	long n = m_memSize / 4;
-	for ( long i = 0 ; i < n ; i++ ) ((long *)m_mem)[i] = 0;
+	int32_t n = m_memSize / 4;
+	for ( int32_t i = 0 ; i < n ; i++ ) ((int32_t *)m_mem)[i] = 0;
 	// set up primary/secondary mem ptrs
 	m_ptr1 = m_mem;
 	// secondary mem initially grow downward
@@ -66,7 +66,7 @@ bool RdbMem::init ( Rdb *rdb , long memToAlloc , char keySize ,
 	// . set our limit markers
 	// . one for when primary mem, m_ptr1, is growing upward
 	//   and the other for when it's growing downward
-	long long limit = ((long long)m_memSize * 90LL) / 100LL;
+	int64_t limit = ((int64_t)m_memSize * 90LL) / 100LL;
 	m_90up   = m_mem + limit;
 	m_90down = m_mem + m_memSize - limit;
 	// success
@@ -77,17 +77,17 @@ bool RdbMem::init ( Rdb *rdb , long memToAlloc , char keySize ,
 // . if a dump is going on and this key has already been dumped
 //   (we check RdbDump::getFirstKey()/getLastKey()) add it to the
 //   secondary mem space, otherwise add it to the primary mem space
-//void *RdbMem::dupData ( key_t key , char *data , long dataSize ) {
-void *RdbMem::dupData ( char *key , char *data , long dataSize ,
+//void *RdbMem::dupData ( key_t key , char *data , int32_t dataSize ) {
+void *RdbMem::dupData ( char *key , char *data , int32_t dataSize ,
 			collnum_t collnum ) {
 	char *s = (char *) allocData ( key , dataSize , collnum );
 	if ( ! s ) return NULL;
-	memcpy ( s , data , dataSize );
+	gbmemcpy ( s , data , dataSize );
 	return s;
 }
 
-//void *RdbMem::allocData ( key_t key , long dataSize ) {
-void *RdbMem::allocData ( char *key , long dataSize , collnum_t collnum ) {
+//void *RdbMem::allocData ( key_t key , int32_t dataSize ) {
+void *RdbMem::allocData ( char *key , int32_t dataSize , collnum_t collnum ) {
 	// if we're dumping and key has been dumped, use the secondary mem
 	//if ( m_dump->isDumping() && key < m_dump->getLastKeyInQueue() ) {
 	if ( m_rdb->m_inDumpLoop && // m_dump->isDumping() && 
@@ -109,8 +109,8 @@ void *RdbMem::allocData ( char *key , long dataSize , collnum_t collnum ) {
 			m_ptr2 -= dataSize;
 			// note it
 			//if ( m_ks == 16 )
-			//log("rdbmem: ptr2a=%lu size=%li",
-			//    (long)m_ptr2,dataSize);
+			//log("rdbmem: ptr2a=%"UINT32" size=%"INT32"",
+			//    (int32_t)m_ptr2,dataSize);
 			return m_ptr2;
 		}
 		// . if it's growing up...
@@ -120,8 +120,8 @@ void *RdbMem::allocData ( char *key , long dataSize , collnum_t collnum ) {
 		m_ptr2 += dataSize;
 		// note it
 		//if ( m_ks == 16 )
-		//log("rdbmem: ptr2b=%lu size=%li",
-		//    (long)m_ptr2-dataSize,dataSize);
+		//log("rdbmem: ptr2b=%"UINT32" size=%"INT32"",
+		//    (int32_t)m_ptr2-dataSize,dataSize);
 		return m_ptr2 - dataSize;
 	}
 	// . otherwise, use the primary mem
@@ -135,7 +135,7 @@ void *RdbMem::allocData ( char *key , long dataSize , collnum_t collnum ) {
 		if ( m_ptr1 < m_90down ) m_is90PercentFull = true;
 		// note it
 		//if ( m_ks == 16 )
-		//log("rdbmem: ptr1a=%lu size=%li",(long)m_ptr1,dataSize);
+		//log("rdbmem: ptr1a=%"UINT32" size=%"INT32"",(int32_t)m_ptr1,dataSize);
 		// return the ptr
 		return m_ptr1;
 	}
@@ -148,7 +148,7 @@ void *RdbMem::allocData ( char *key , long dataSize , collnum_t collnum ) {
 	if ( m_ptr1 > m_90up ) m_is90PercentFull = true;
 	// note it
 	//if ( m_ks == 16 )
-	//log("rdbmem: ptr1b=%lu size=%li",(long)m_ptr1-dataSize,dataSize);
+	//log("rdbmem: ptr1b=%"UINT32" size=%"INT32"",(int32_t)m_ptr1-dataSize,dataSize);
 	// return the ptr
 	return m_ptr1 - dataSize;
 }
@@ -162,7 +162,7 @@ void RdbMem::freeDumpedMem() {
 	char *tmp = m_ptr1;
 	// debug
 	//logf(LOG_DEBUG,
-	//     "db: freeing dumped mem ptr1=%lx ptr2=%lx.",m_ptr1,m_ptr2);
+	//     "db: freeing dumped mem ptr1=%"XINT32" ptr2=%"XINT32".",m_ptr1,m_ptr2);
 	// primary pointer, m_ptr1, becomes m_ptr2
 	m_ptr1 = m_ptr2;
 	// secondary ptr becomes primary

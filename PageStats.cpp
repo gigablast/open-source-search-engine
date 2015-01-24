@@ -1,6 +1,6 @@
 #include "gb-include.h"
 
-#include "Indexdb.h"     // makeKey(long long docId)
+#include "Indexdb.h"     // makeKey(int64_t docId)
 #include "Datedb.h"
 #include "Titledb.h"
 //#include "Revdb.h"
@@ -31,7 +31,7 @@
 //#include "Msg0.h" // g_termlistCache
 #include "Msg13.h"
 
-bool printNumAbbr ( SafeBuf &p, long long vvv ) {
+bool printNumAbbr ( SafeBuf &p, int64_t vvv ) {
 	float val = (float)vvv;
 	char *suffix = "K";
 	val /= 1024;
@@ -46,14 +46,14 @@ bool printNumAbbr ( SafeBuf &p, long long vvv ) {
 }
 
 bool printUptime ( SafeBuf &sb ) {
-	long uptime = time(NULL) - g_stats.m_uptimeStart ;
+	int32_t uptime = time(NULL) - g_stats.m_uptimeStart ;
 	// sanity check... wtf?
 	if ( uptime < 0 ) { uptime = 0; };
 
-	long days  = uptime / 86400; uptime -= days  * 86400;
-	long hours = uptime /  3600; uptime -= hours * 3600;
-	long mins  = uptime /    60; uptime -= mins  * 60;
-	long secs  = uptime;
+	int32_t days  = uptime / 86400; uptime -= days  * 86400;
+	int32_t hours = uptime /  3600; uptime -= hours * 3600;
+	int32_t mins  = uptime /    60; uptime -= mins  * 60;
+	int32_t secs  = uptime;
 
 	// singular plural
 	char *ds = "day";
@@ -66,16 +66,16 @@ bool printUptime ( SafeBuf &sb ) {
 	if ( secs == 1 ) ss = "second";
 	
 	if ( days >= 1 )
-		sb.safePrintf("%li %s ",days,ds);
+		sb.safePrintf("%"INT32" %s ",days,ds);
 
 	if ( hours >= 1 )
-		sb.safePrintf("%li %s ", hours,hs);
+		sb.safePrintf("%"INT32" %s ", hours,hs);
 
 	if ( mins >= 1 )
-		sb.safePrintf("%li %s ", mins,ms);
+		sb.safePrintf("%"INT32" %s ", mins,ms);
 
 	if ( secs != 0 ) 
-		sb.safePrintf(" %li %s",secs,ss);
+		sb.safePrintf(" %"INT32" %s",secs,ss);
 	return true;
 }
 
@@ -92,7 +92,7 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 	//char *p    = buf;
 	//char *pend = buf + 64*1024;
 	// password, too
-	//long pwdLen = 0;
+	//int32_t pwdLen = 0;
 	//char *pwd = r->getString ( "pwd" , &pwdLen );
 	//if ( pwdLen > 31 ) pwdLen = 31;
 	//char pbuf [32];
@@ -126,13 +126,13 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 			      "<td colspan=2>"
 			      "<center><b>Memory</b></td></tr>\n"
 			      "<tr class=poo><td><b>memory allocated</b>"
-			      "</td><td>%lli</td></tr>\n"
+			      "</td><td>%"INT64"</td></tr>\n"
 			      "<tr class=poo><td><b>max memory limit</b>"
-			      "</td><td>%lli</td></tr>\n" 
+			      "</td><td>%"INT64"</td></tr>\n" 
 			      //"<tr class=poo><td>mem available</td>"
-			      //"<td>%lli</td></tr>\n"
+			      //"<td>%"INT64"</td></tr>\n"
 			      "<tr class=poo><td>max allocated</td>"
-			      "<td>%lli</td></tr>\n",
+			      "<td>%"INT64"</td></tr>\n",
 			      TABLE_STYLE ,
 			      g_mem.getUsedMem() ,
 			      g_mem.getMaxMem() ,
@@ -141,27 +141,45 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 			      );
 		p.safePrintf (
 			      "<tr class=poo><td>max single alloc</td>"
-			      "<td>%lli</td></tr>\n"
+			      "<td>%"INT64"</td></tr>\n"
 			      "<tr class=poo><td>max single alloc by</td>"
 			      "<td>%s</td></tr>\n" 
-			      "<tr class=poo><td>shared mem used</td>"
-			      "<td>%lli</td></tr>\n"
+
+			      // "<tr class=poo><td>shared mem used</td>"
+			      // "<td>%"INT64"</td></tr>\n"
+
+			      "<tr class=poo><td># out of memory errors</td>"
+			      "<td>%"INT32"</td></tr>\n"
+
 			      "<tr class=poo><td>swaps</td>"
-			      "<td>%lli</td></tr>\n",
+			      "<td>%"INT64"</td></tr>\n"
+
+			      // "<tr class=poo><td>"
+			      // "collections swapped out"
+			      // "</td>"
+			      // "<td>%"INT32"</td></tr>\n" 
+
+			      ,
 			      //"<tr class=poo><td>num alloc chunks</td>
-			      //<td>%li</td></tr>\n",
+			      //<td>%"INT32"</td></tr>\n",
 			      g_mem.getMaxAlloc(),
 			      g_mem.getMaxAllocBy() ,
-			      g_mem.m_sharedUsed,
-			      (long long)ru.ru_nswap); // idrss,
+
+			      //g_mem.m_sharedUsed,
+			      g_mem.m_outOfMems,
+
+			      (int64_t)ru.ru_nswap// idrss,
+			      //g_collectiondb.m_numCollsSwappedOut
+			      ); 
 		p.safePrintf (
 			      "<tr class=poo><td><b>current allocations</b>"
 			      "</td>"
-			      "<td>%li</td></tr>\n" 
+			      "<td>%"INT32"</td></tr>\n" 
 			      "<tr class=poo><td><b>total allocations</b></td>"
-			      "<td>%lli</td></tr>\n" ,
+			      "<td>%"INT64"</td></tr>\n" ,
 			      g_mem.getNumAllocated() ,
-			      (long long)g_mem.getNumTotalAllocated() );
+			      (int64_t)g_mem.getNumTotalAllocated() );
+
 	}
 
 
@@ -179,14 +197,14 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 
 	if ( format == FORMAT_XML ) 
 		p.safePrintf ("\t<memoryStats>\n"
-			      "\t\t<allocated>%lli</allocated>\n"
-			      "\t\t<max>%lli</max>\n" 
-			      "\t\t<maxAllocated>%lli</maxAllocated>\n"
-			      "\t\t<maxSingleAlloc>%lli</maxSingleAlloc>\n"
+			      "\t\t<allocated>%"INT64"</allocated>\n"
+			      "\t\t<max>%"INT64"</max>\n" 
+			      "\t\t<maxAllocated>%"INT64"</maxAllocated>\n"
+			      "\t\t<maxSingleAlloc>%"INT64"</maxSingleAlloc>\n"
 			      "\t\t<maxSingleAllocBy>%s</maxSingleAllocBy>\n"
-			      "\t\t<currentAllocations>%li"
+			      "\t\t<currentAllocations>%"INT32""
 			      "</currentAllocations>\n"
-			      "\t\t<totalAllocations>%lli</totalAllocations>\n"
+			      "\t\t<totalAllocations>%"INT64"</totalAllocations>\n"
 			      "\t</memoryStats>\n"
 			      , g_mem.getUsedMem()
 			      , g_mem.getMaxMem() 
@@ -194,17 +212,17 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 			      , g_mem.getMaxAlloc()
 			      , g_mem.getMaxAllocBy() 
 			      , g_mem.getNumAllocated() 
-			      , (long long)g_mem.getNumTotalAllocated() );
+			      , (int64_t)g_mem.getNumTotalAllocated() );
 
 	if ( format == FORMAT_JSON ) 
 		p.safePrintf ("\t\"memoryStats\":{\n"
-			      "\t\t\"allocated\":%lli,\n"
-			      "\t\t\"max\":%lli,\n" 
-			      "\t\t\"maxAllocated\":%lli,\n"
-			      "\t\t\"maxSingleAlloc\":%lli,\n"
+			      "\t\t\"allocated\":%"INT64",\n"
+			      "\t\t\"max\":%"INT64",\n" 
+			      "\t\t\"maxAllocated\":%"INT64",\n"
+			      "\t\t\"maxSingleAlloc\":%"INT64",\n"
 			      "\t\t\"maxSingleAllocBy\":\"%s\",\n"
-			      "\t\t\"currentAllocations\":%li,\n"
-			      "\t\t\"totalAllocations\":%lli\n"
+			      "\t\t\"currentAllocations\":%"INT32",\n"
+			      "\t\t\"totalAllocations\":%"INT64"\n"
 			      "\t},\n"
 			      , g_mem.getUsedMem()
 			      , g_mem.getMaxMem() 
@@ -212,7 +230,7 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 			      , g_mem.getMaxAlloc()
 			      , g_mem.getMaxAllocBy() 
 			      , g_mem.getNumAllocated() 
-			      , (long long)g_mem.getNumTotalAllocated() );
+			      , (int64_t)g_mem.getNumTotalAllocated() );
 
 
 			     
@@ -222,11 +240,11 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 
 	//Query performance stats
 	g_stats.calcQueryStats();
-	long days;
-	long hours;
-	long minutes;
-	long secs;
-	long msecs;
+	int32_t days;
+	int32_t hours;
+	int32_t minutes;
+	int32_t secs;
+	int32_t msecs;
 	getCalendarFromMs(g_stats.m_upTime,
 			  &days, 
 			  &hours, 
@@ -234,18 +252,18 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 			  &secs,
 			  &msecs);
 
-	long long avgTier0Time = 0;
-	long long avgTier1Time = 0;
-	long long avgTier2Time = 0;
+	int64_t avgTier0Time = 0;
+	int64_t avgTier1Time = 0;
+	int64_t avgTier2Time = 0;
 	if ( g_stats.m_tierHits[0] > 0 )
 		avgTier0Time = g_stats.m_tierTimes[0] /
-			(long long)g_stats.m_tierHits[0];
+			(int64_t)g_stats.m_tierHits[0];
 	if ( g_stats.m_tierHits[1] > 0 )
 		avgTier1Time = g_stats.m_tierTimes[1] /
-			(long long)g_stats.m_tierHits[1];
+			(int64_t)g_stats.m_tierHits[1];
 	if ( g_stats.m_tierHits[2] > 0 )
 		avgTier2Time = g_stats.m_tierTimes[2] /
-			(long long)g_stats.m_tierHits[2];
+			(int64_t)g_stats.m_tierHits[2];
 
 	if ( format == FORMAT_HTML )
 		p.safePrintf ( 
@@ -256,7 +274,7 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 			      "<center><b>Queries</b></td></tr>\n"
 
 			      "<tr class=poo><td><b>"
-			      "Average Query Latency for last %li queries"
+			      "Average Query Latency for last %"INT32" queries"
 			      ,TABLE_STYLE
 			      ,g_stats.m_numQueries
 			       );
@@ -265,7 +283,7 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 	if ( format == FORMAT_XML ) {
 		p.safePrintf("\t<queryStats>\n"
 			     "\t\t<sample>\n"
-			     "\t\t\t<size>last %li queries</size>\n"
+			     "\t\t\t<size>last %"INT32" queries</size>\n"
 			     ,g_stats.m_numQueries
 			     );
 
@@ -286,9 +304,9 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 
 		p.safePrintf(
 			     "\t\t<total>\n"
-			     "\t\t\t<numQueries>%li</numQueries>\n"
-			     "\t\t\t<numSuccesses>%li</numSuccesses>\n"
-			     "\t\t\t<numFailures>%li</numFailures>\n"
+			     "\t\t\t<numQueries>%"INT32"</numQueries>\n"
+			     "\t\t\t<numSuccesses>%"INT32"</numSuccesses>\n"
+			     "\t\t\t<numFailures>%"INT32"</numFailures>\n"
 			     // total
 			     , g_stats.m_totalNumQueries +
 			       g_stats.m_numSuccess + 
@@ -314,7 +332,7 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 		p.safePrintf("\t\t</total>\n"
 			     "\t</queryStats>\n"
 
-			     "\t<socketsClosedFromOverload>%li"
+			     "\t<socketsClosedFromOverload>%"INT32""
 			     "</socketsClosedFromOverload>\n"
 
 			     //days, hours, minutes, secs,
@@ -325,7 +343,7 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 	if ( format == FORMAT_JSON ) {
 		p.safePrintf("\t\"queryStats\":{\n"
 			     "\t\t\"sample\":{\n"
-			     "\t\t\t\"size\":\"last %li queries\",\n"
+			     "\t\t\t\"size\":\"last %"INT32" queries\",\n"
 			     ,g_stats.m_numQueries
 			     );
 
@@ -345,9 +363,9 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 
 		p.safePrintf(
 			     "\t\t\"total\":{\n"
-			     "\t\t\t\"numQueries\":%li,\n"
-			     "\t\t\t\"numSuccesses\":%li,\n"
-			     "\t\t\t\"numFailures\":%li,\n"
+			     "\t\t\t\"numQueries\":%"INT32",\n"
+			     "\t\t\t\"numSuccesses\":%"INT32",\n"
+			     "\t\t\t\"numFailures\":%"INT32",\n"
 			     // total
 			     , g_stats.m_totalNumQueries +
 			       g_stats.m_numSuccess + 
@@ -371,7 +389,7 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 		p.safePrintf("\t\t}\n" // total
 			     "\t},\n" // querystats
 
-			     "\t\"socketsClosedFromOverload\":%li,\n"
+			     "\t\"socketsClosedFromOverload\":%"INT32",\n"
 			     //days, hours, minutes, secs,
 			     , g_stats.m_closedSockets );
 	}
@@ -389,35 +407,35 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 		p.safePrintf(
 
 			     "<tr class=poo><td><b>Average queries/sec. for "
-			     "last %li queries"
+			     "last %"INT32" queries"
 			     "</b></td><td>%f queries/sec.</td></tr>\n"
 
 			     "<tr class=poo><td><b>Query Success Rate "
 			     "for last "
-			     "%li queries"
+			     "%"INT32" queries"
 			     "</b></td><td>%f"
 
 			     "<tr class=poo><td><b>Total Queries "
 			     "Served</b></td>"
-			     "<td>%li"
+			     "<td>%"INT32""
 			     "<tr class=poo><td><b>Total Successful "
 			     "Queries</b></td>"
-			     "<td>%li"
+			     "<td>%"INT32""
 			     "<tr class=poo><td><b>Total Failed "
 			     "Queries</b></td>"
-			     "<td>%li"
+			     "<td>%"INT32""
 			     "<tr class=poo><td><b>Total Query "
 			     "Success Rate</b></td>"
 			     "<td>%f"
 			     "</td></tr>"
 			     "<tr class=poo><td><b>Uptime"
-			     "</b></td><td>%li days %li "
-			     "hrs %li min %li sec"
+			     "</b></td><td>%"INT32" days %"INT32" "
+			     "hrs %"INT32" min %"INT32" sec"
 			     "</td></tr>"
 			     "<tr class=poo><td><b>"
 			     "Sockets Closed Because We Hit "
 			     "the Limit"
-			     "</b></td><td>%li"
+			     "</b></td><td>%"INT32""
 			     "</td></tr>",
 
 			     //g_stats.m_avgQueryTime, 
@@ -437,41 +455,41 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 			     days, hours, minutes, secs,
 			     g_stats.m_closedSockets );
 
-	long long total = 0;
-	for ( long i = 0 ; i <= CR_OK ; i++ )
+	int64_t total = 0;
+	for ( int32_t i = 0 ; i <= CR_OK ; i++ )
 		total += g_stats.m_filterStats[i];
 
 
 	if ( format == FORMAT_HTML )
 		p.safePrintf ( "<tr class=poo><td><b>Total DocIds Generated"
-			       "</b></td><td>%lli"
+			       "</b></td><td>%"INT64""
 			       "</td></tr>\n" , total );
 
 
 	if ( format == FORMAT_XML )
-		p.safePrintf ( "\t<totalDocIdsGenerated>%lli"
+		p.safePrintf ( "\t<totalDocIdsGenerated>%"INT64""
 			       "</totalDocIdsGenerated>\n" , total );
 
 	if ( format == FORMAT_JSON )
-		p.safePrintf ( "\t\"totalDocIdsGenerated\":%lli,\n",total);
+		p.safePrintf ( "\t\"totalDocIdsGenerated\":%"INT64",\n",total);
 
 	// print each filter stat
-	for ( long i = 0 ; i < CR_END ; i++ ) {
+	for ( int32_t i = 0 ; i < CR_END ; i++ ) {
 		if ( format == FORMAT_HTML )
 			p.safePrintf("<tr class=poo><td>&nbsp;&nbsp;%s</td>"
-				     "<td>%li</td></tr>\n" , 
+				     "<td>%"INT32"</td></tr>\n" , 
 				     g_crStrings[i],g_stats.m_filterStats[i] );
 		if ( format == FORMAT_XML )
 			p.safePrintf("\t<queryStat>\n"
 				     "\t\t<status><![CDATA[%s]]>"
 				     "</status>\n"
-				     "\t\t<count>%li</count>\n"
+				     "\t\t<count>%"INT32"</count>\n"
 				     "\t</queryStat>\n"
 				     ,g_crStrings[i],g_stats.m_filterStats[i]);
 		if ( format == FORMAT_JSON )
 			p.safePrintf("\t\"queryStat\":{\n"
 				     "\t\t\"status\":\"%s\",\n"
-				     "\t\t\"count\":%li\n"
+				     "\t\t\"count\":%"INT32"\n"
 				     "\t},\n"
 				     ,g_crStrings[i],g_stats.m_filterStats[i]);
 	}
@@ -479,13 +497,13 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 	// unless we bring indexdb back, don't need these
 	/*
 	p.safePrintf(
-		     "<tr class=poo><td><b>Tier 0 Hits</b></td><td>%li</td></tr>"
-		     "<tr class=poo><td><b>Tier 1 Hits</b></td><td>%li</td></tr>"
-		     "<tr class=poo><td><b>Tier 2 Hits</b></td><td>%li</td></tr>"
-		     "<tr class=poo><td><b>Tier 2 Exhausted</b></td><td>%li</td></tr>"
-		     "<tr class=poo><td><b>Avg Tier 0 Time</b></td><td>%llims</td></tr>"
-		     "<tr class=poo><td><b>Avg Tier 1 Time</b></td><td>%llims</td></tr>"
-		     "<tr class=poo><td><b>Avg Tier 2 Time</b></td><td>%llims</td></tr>",
+		     "<tr class=poo><td><b>Tier 0 Hits</b></td><td>%"INT32"</td></tr>"
+		     "<tr class=poo><td><b>Tier 1 Hits</b></td><td>%"INT32"</td></tr>"
+		     "<tr class=poo><td><b>Tier 2 Hits</b></td><td>%"INT32"</td></tr>"
+		     "<tr class=poo><td><b>Tier 2 Exhausted</b></td><td>%"INT32"</td></tr>"
+		     "<tr class=poo><td><b>Avg Tier 0 Time</b></td><td>%"INT64"ms</td></tr>"
+		     "<tr class=poo><td><b>Avg Tier 1 Time</b></td><td>%"INT64"ms</td></tr>"
+		     "<tr class=poo><td><b>Avg Tier 2 Time</b></td><td>%"INT64"ms</td></tr>",
 		     g_stats.m_tierHits[0], g_stats.m_tierHits[1],
 		     g_stats.m_tierHits[2], g_stats.m_tier2Misses,
 		     avgTier0Time, avgTier1Time, avgTier2Time,
@@ -494,17 +512,17 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 
 	/*
 	p.safePrintf(
-		     "<tr class=poo><td><b>Msg3a Slow Recalls</b></td><td>%li</td></tr>"
-		     "<tr class=poo><td><b>Msg3a Quick Recalls</b></td><td>%li</td></tr>"
-		     "<tr class=poo><td><b>Msg3a Msg40 Recalls</b></td><td>%li</td></tr>"
+		     "<tr class=poo><td><b>Msg3a Slow Recalls</b></td><td>%"INT32"</td></tr>"
+		     "<tr class=poo><td><b>Msg3a Quick Recalls</b></td><td>%"INT32"</td></tr>"
+		     "<tr class=poo><td><b>Msg3a Msg40 Recalls</b></td><td>%"INT32"</td></tr>"
 
 		     "<tr class=poo><td><b>Unjustified iCache Misses</b></td>"
-		     "<td>%li</td></tr>"
+		     "<td>%"INT32"</td></tr>"
 
-		     "<tr class=poo><td>&nbsp;&nbsp;&nbsp;2</td><td>%li</td></tr>"
-		     "<tr class=poo><td>&nbsp;&nbsp;&nbsp;3</td><td>%li</td></tr>"
-		     "<tr class=poo><td>&nbsp;&nbsp;&nbsp;4</td><td>%li</td></tr>"
-		     "<tr class=poo><td>&nbsp;&nbsp;&nbsp;5+</td><td>%li</td></tr>"
+		     "<tr class=poo><td>&nbsp;&nbsp;&nbsp;2</td><td>%"INT32"</td></tr>"
+		     "<tr class=poo><td>&nbsp;&nbsp;&nbsp;3</td><td>%"INT32"</td></tr>"
+		     "<tr class=poo><td>&nbsp;&nbsp;&nbsp;4</td><td>%"INT32"</td></tr>"
+		     "<tr class=poo><td>&nbsp;&nbsp;&nbsp;5+</td><td>%"INT32"</td></tr>"
 		     g_stats.m_msg3aSlowRecalls,
 		     g_stats.m_msg3aFastRecalls,
 		     g_stats.m_msg3aRecallCnt,
@@ -533,12 +551,12 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 			     "<td><b>Last HostId Used</b></td>"
 			     "</tr>\n" );
 		// print out load of each stripe
-		long numStripes = g_hostdb.getNumStripes();
-		for ( long i = 0 ; i < numStripes ; i++ )
-			p.safePrintf("<tr class=poo><td>%li</td>"
-				     "<td>%li</td>"
-				     "<td>%li</td>"
-				     "<td>%li</td></tr>\n" ,
+		int32_t numStripes = g_hostdb.getNumStripes();
+		for ( int32_t i = 0 ; i < numStripes ; i++ )
+			p.safePrintf("<tr class=poo><td>%"INT32"</td>"
+				     "<td>%"INT32"</td>"
+				     "<td>%"INT32"</td>"
+				     "<td>%"INT32"</td></tr>\n" ,
 				     i , 
 				     g_proxy.m_queriesOutOnStripe [i],
 				     g_proxy.m_termsOutOnStripe   [i],
@@ -572,13 +590,13 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 	//caches[6] = &g_forcedCache;
 	//caches[9] = &g_msg20Cache;
 	//caches[10] = &g_tagdb.m_listCache;
-	long numCaches = 5;
+	int32_t numCaches = 5;
 
 	if ( format == FORMAT_HTML )
 		p.safePrintf (
 		  "<table %s>"
 		  "<tr class=hdrow>"
-		  "<td colspan=%li>"
+		  "<td colspan=%"INT32">"
 		  "<center><b>Caches"
 		  "</b></td></tr>\n",
 		  TABLE_STYLE,
@@ -596,55 +614,55 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 		// 1st column is empty
 		p.safePrintf ("<tr class=poo><td>&nbsp;</td>");  
 
-	for ( long i = 0 ; format == FORMAT_XML && i < numCaches ; i++ ) {
+	for ( int32_t i = 0 ; format == FORMAT_XML && i < numCaches ; i++ ) {
 		p.safePrintf("\t<cacheStats>\n");
 		p.safePrintf("\t\t<name>%s</name>\n",caches[i]->getDbname());
-		long long a = caches[i]->getNumHits();
-		long long b = caches[i]->getNumMisses();
+		int64_t a = caches[i]->getNumHits();
+		int64_t b = caches[i]->getNumMisses();
 		double r = 100.0 * (double)a / (double)(a+b);
 		p.safePrintf("\t\t<hitRatio>");
 		if ( a+b > 0.0 ) p.safePrintf("%.1f%%",r);
 		p.safePrintf("</hitRatio>\n");
-		p.safePrintf("\t\t<numHits>%lli</numHits>\n",a);
-		p.safePrintf("\t\t<numMisses>%lli</numMisses>\n",b);
-		p.safePrintf("\t\t<numTries>%lli</numTries>\n",a+b);
+		p.safePrintf("\t\t<numHits>%"INT64"</numHits>\n",a);
+		p.safePrintf("\t\t<numMisses>%"INT64"</numMisses>\n",b);
+		p.safePrintf("\t\t<numTries>%"INT64"</numTries>\n",a+b);
 
-		p.safePrintf("\t\t<numUsedSlots>%li</numUsedSlots>\n",
+		p.safePrintf("\t\t<numUsedSlots>%"INT32"</numUsedSlots>\n",
 			     caches[i]->getNumUsedNodes());
-		p.safePrintf("\t\t<numTotalSlots>%li</numTotalSlots>\n",
+		p.safePrintf("\t\t<numTotalSlots>%"INT32"</numTotalSlots>\n",
 			     caches[i]->getNumTotalNodes());
-		p.safePrintf("\t\t<bytesUsed>%li</bytesUsed>\n",
+		p.safePrintf("\t\t<bytesUsed>%"INT32"</bytesUsed>\n",
 			     caches[i]->getMemOccupied());
-		p.safePrintf("\t\t<maxBytes>%li</maxBytes>\n",
+		p.safePrintf("\t\t<maxBytes>%"INT32"</maxBytes>\n",
 			     caches[i]->getMaxMem());
-		p.safePrintf("\t\t<saveToDisk>%li</saveToDisk>\n",
-			     (long)caches[i]->useDisk());
+		p.safePrintf("\t\t<saveToDisk>%"INT32"</saveToDisk>\n",
+			     (int32_t)caches[i]->useDisk());
 		p.safePrintf("\t</cacheStats>\n");
 	}
 
-	for ( long i = 0 ; format == FORMAT_JSON && i < numCaches ; i++ ) {
+	for ( int32_t i = 0 ; format == FORMAT_JSON && i < numCaches ; i++ ) {
 		p.safePrintf("\t\"cacheStats\":{\n");
 		p.safePrintf("\t\t\"name\":\"%s\",\n",caches[i]->getDbname());
-		long long a = caches[i]->getNumHits();
-		long long b = caches[i]->getNumMisses();
+		int64_t a = caches[i]->getNumHits();
+		int64_t b = caches[i]->getNumMisses();
 		double r = 100.0 * (double)a / (double)(a+b);
 		p.safePrintf("\t\t\"hitRatio\":\"");
 		if ( a+b > 0.0 ) p.safePrintf("%.1f%%",r);
 		p.safePrintf("\",\n");
-		p.safePrintf("\t\t\"numHits\":%lli,\n",a);
-		p.safePrintf("\t\t\"numMisses\":%lli,\n",b);
-		p.safePrintf("\t\t\"numTries\":%lli,\n",a+b);
+		p.safePrintf("\t\t\"numHits\":%"INT64",\n",a);
+		p.safePrintf("\t\t\"numMisses\":%"INT64",\n",b);
+		p.safePrintf("\t\t\"numTries\":%"INT64",\n",a+b);
 
-		p.safePrintf("\t\t\"numUsedSlots\":%li,\n",
+		p.safePrintf("\t\t\"numUsedSlots\":%"INT32",\n",
 			     caches[i]->getNumUsedNodes());
-		p.safePrintf("\t\t\"numTotalSlots\":%li,\n",
+		p.safePrintf("\t\t\"numTotalSlots\":%"INT32",\n",
 			     caches[i]->getNumTotalNodes());
-		p.safePrintf("\t\t\"bytesUsed\":%li,\n",
+		p.safePrintf("\t\t\"bytesUsed\":%"INT32",\n",
 			     caches[i]->getMemOccupied());
-		p.safePrintf("\t\t\"maxBytes\":%li,\n",
+		p.safePrintf("\t\t\"maxBytes\":%"INT32",\n",
 			     caches[i]->getMaxMem());
-		p.safePrintf("\t\t\"saveToDisk\":%li\n",
-			     (long)caches[i]->useDisk());
+		p.safePrintf("\t\t\"saveToDisk\":%"INT32"\n",
+			     (int32_t)caches[i]->useDisk());
 		p.safePrintf("\t},\n");
 	}
 
@@ -653,15 +671,15 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 	if ( format == FORMAT_XML || format == FORMAT_JSON )
 		goto skip1;
 
-	for ( long i = 0 ; i < numCaches ; i++ ) {
+	for ( int32_t i = 0 ; i < numCaches ; i++ ) {
 		p.safePrintf("<td><b>%s</b></td>",caches[i]->getDbname() );
 	}
 	//p.safePrintf ("<td><b><i>Total</i></b></td></tr>\n" );
 
 	p.safePrintf ("</tr>\n<tr class=poo><td><b><nobr>hit ratio</td>" );
-	for ( long i = 0 ; i < numCaches ; i++ ) {
-		long long a = caches[i]->getNumHits();
-		long long b = caches[i]->getNumMisses();
+	for ( int32_t i = 0 ; i < numCaches ; i++ ) {
+		int64_t a = caches[i]->getNumHits();
+		int64_t b = caches[i]->getNumMisses();
 		double r = 100.0 * (double)a / (double)(a+b);
 		if ( a+b > 0.0 ) 
 			p.safePrintf("<td>%.1f%%</td>",r);
@@ -670,52 +688,52 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 	}
 
 	p.safePrintf ("</tr>\n<tr class=poo><td><b><nobr>hits</td>" );
-	for ( long i = 0 ; i < numCaches ; i++ ) {
-		long long a = caches[i]->getNumHits();
-		p.safePrintf("<td>%lli</td>",a);
+	for ( int32_t i = 0 ; i < numCaches ; i++ ) {
+		int64_t a = caches[i]->getNumHits();
+		p.safePrintf("<td>%"INT64"</td>",a);
 	}
 
 	p.safePrintf ("</tr>\n<tr class=poo><td><b><nobr>tries</td>" );
-	for ( long i = 0 ; i < numCaches ; i++ ) {
-		long long a = caches[i]->getNumHits();
-		long long b = caches[i]->getNumMisses();
-		p.safePrintf("<td>%lli</td>",a+b);
+	for ( int32_t i = 0 ; i < numCaches ; i++ ) {
+		int64_t a = caches[i]->getNumHits();
+		int64_t b = caches[i]->getNumMisses();
+		p.safePrintf("<td>%"INT64"</td>",a+b);
 	}
 
 	p.safePrintf ("</tr>\n<tr class=poo><td><b><nobr>used slots</td>" );
-	for ( long i = 0 ; i < numCaches ; i++ ) {
-		long long a = caches[i]->getNumUsedNodes();
-		p.safePrintf("<td>%lli</td>",a);
+	for ( int32_t i = 0 ; i < numCaches ; i++ ) {
+		int64_t a = caches[i]->getNumUsedNodes();
+		p.safePrintf("<td>%"INT64"</td>",a);
 	}
 
 	p.safePrintf ("</tr>\n<tr class=poo><td><b><nobr>max slots</td>" );
-	for ( long i = 0 ; i < numCaches ; i++ ) {
-		long long a = caches[i]->getNumTotalNodes();
-		p.safePrintf("<td>%lli</td>",a);
+	for ( int32_t i = 0 ; i < numCaches ; i++ ) {
+		int64_t a = caches[i]->getNumTotalNodes();
+		p.safePrintf("<td>%"INT64"</td>",a);
 	}
 
 	p.safePrintf ("</tr>\n<tr class=poo><td><b><nobr>used bytes</td>" );
-	for ( long i = 0 ; i < numCaches ; i++ ) {
-		long long a = caches[i]->getMemOccupied();
-		p.safePrintf("<td>%lli</td>",a);
+	for ( int32_t i = 0 ; i < numCaches ; i++ ) {
+		int64_t a = caches[i]->getMemOccupied();
+		p.safePrintf("<td>%"INT64"</td>",a);
 	}
 
 	p.safePrintf ("</tr>\n<tr class=poo><td><b><nobr>max bytes</td>" );
-	for ( long i = 0 ; i < numCaches ; i++ ) {
-		long long a = caches[i]->getMaxMem();
-		p.safePrintf("<td>%lli</td>",a);
+	for ( int32_t i = 0 ; i < numCaches ; i++ ) {
+		int64_t a = caches[i]->getMaxMem();
+		p.safePrintf("<td>%"INT64"</td>",a);
 	}
 
 	//p.safePrintf ("</tr>\n<tr class=poo><td><b><nobr>max age</td>" );
-	//for ( long i = 0 ; i < numCaches ; i++ ) {
-	//	long long a = caches[i]->getMaxMem();
-	//	p.safePrintf("<td>%lli</td>",a);
+	//for ( int32_t i = 0 ; i < numCaches ; i++ ) {
+	//	int64_t a = caches[i]->getMaxMem();
+	//	p.safePrintf("<td>%"INT64"</td>",a);
 	//}
 
 	p.safePrintf ("</tr>\n<tr class=poo><td><b><nobr>save to disk</td>" );
-	for ( long i = 0 ; i < numCaches ; i++ ) {
-		long long a = caches[i]->useDisk();
-		p.safePrintf("<td>%lli</td>",a);
+	for ( int32_t i = 0 ; i < numCaches ; i++ ) {
+		int64_t a = caches[i]->useDisk();
+		p.safePrintf("<td>%"INT64"</td>",a);
 	}
 
 	// end the table now
@@ -728,13 +746,13 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 	//
 	/*
 	p.safePrintf ("<tr class=poo><td><b>Query Terms</b></td>" );
-	for ( long i = 0; i < MAX_TIERS; i++ )
-		p.safePrintf ( "<td><b>Tier #%li</b></td>",i );
+	for ( int32_t i = 0; i < MAX_TIERS; i++ )
+		p.safePrintf ( "<td><b>Tier #%"INT32"</b></td>",i );
 	p.safePrintf ( "</tr><tr class=poo>");
-	for ( long i = 0; i < 14; i++ ){
-		p.safePrintf ( "<td>&nbsp;&nbsp;&nbsp;%li</td>", i+1 );
-		for ( long j = 0; j < MAX_TIERS; j++ )
-			p.safePrintf ( "<td>%li</td>",
+	for ( int32_t i = 0; i < 14; i++ ){
+		p.safePrintf ( "<td>&nbsp;&nbsp;&nbsp;%"INT32"</td>", i+1 );
+		for ( int32_t j = 0; j < MAX_TIERS; j++ )
+			p.safePrintf ( "<td>%"INT32"</td>",
 				       g_stats.m_numTermsVsTier[i][j] );
 		p.safePrintf ( "</tr>" );
 	}
@@ -751,13 +769,13 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 		       "<td><b> 64+</b></td><td><b> 128+</b></td>"
 		       "<td><b> 256+</b></td></tr>\n",
 		       LIGHT_BLUE , DARK_BLUE );
-	for ( long i = 0; i < 14; i++ )
-		for ( long j = 0; j < MAX_TIERS; j++ ){
-			p.safePrintf( "<tr class=poo><td>query terms=%li, tier=%li</td>",
+	for ( int32_t i = 0; i < 14; i++ )
+		for ( int32_t j = 0; j < MAX_TIERS; j++ ){
+			p.safePrintf( "<tr class=poo><td>query terms=%"INT32", tier=%"INT32"</td>",
 				      i+1, j );
-			for ( long k = 0; k < 7; k++ ){
-				long n = g_stats.m_termsVsTierExp[i][j][k];
-				p.safePrintf( "<td>%li</td>",n );
+			for ( int32_t k = 0; k < 7; k++ ){
+				int32_t n = g_stats.m_termsVsTierExp[i][j][k];
+				p.safePrintf( "<td>%"INT32"</td>",n );
 			}
 			p.safePrintf( "</tr>" );
 		}
@@ -796,6 +814,10 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 	SafeBuf ubuf;
 	printUptime ( ubuf );
 
+	int arch = 32;
+	if ( __WORDSIZE == 64 ) arch = 64;
+	if ( __WORDSIZE == 128 ) arch = 128;
+
 	if ( format == FORMAT_HTML )
 		p.safePrintf (
 			      "<table %s>"
@@ -803,32 +825,34 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 			      "<td colspan=2>"
 			      "<center><b>General Info</b></td></tr>\n"
 			      "<tr class=poo><td><b>Uptime</b></td><td>%s</td></tr>\n"
-			      "<tr class=poo><td><b>Process ID</b></td><td>%lu</td></tr>\n"
-			      "<tr class=poo><td><b>Corrupted Disk Reads</b></td><td>%li</td></tr>\n"
-			      "<tr class=poo><td><b>SIGALRMS</b></td><td>%li</td></tr>\n"
-			      "<tr class=poo><td><b>SIGVTALRMS</b></td><td>%li</td></tr>\n"
+			      "<tr class=poo><td><b>Process ID</b></td><td>%"UINT32"</td></tr>\n"
+			      "<tr class=poo><td><b>Corrupted Disk Reads</b></td><td>%"INT32"</td></tr>\n"
+			      "<tr class=poo><td><b>SIGALRMS</b></td><td>%"INT32"</td></tr>\n"
+			      "<tr class=poo><td><b>SIGVTALRMS</b></td><td>%"INT32"</td></tr>\n"
 
-			      "<tr class=poo><td><b>SIGCHLDS</b></td><td>%li</td></tr>\n"
-			      "<tr class=poo><td><b>SIGQUEUES</b></td><td>%li</td></tr>\n"
-			      "<tr class=poo><td><b>SIGOTHERS</b></td><td>%li</td></tr>\n"
+			      "<tr class=poo><td><b>SIGCHLDS</b></td><td>%"INT32"</td></tr>\n"
+			      "<tr class=poo><td><b>SIGQUEUES</b></td><td>%"INT32"</td></tr>\n"
+			      "<tr class=poo><td><b>SIGOTHERS</b></td><td>%"INT32"</td></tr>\n"
 
-			      //"<tr class=poo><td><b>read signals</b></td><td>%lli</td></tr>\n"
-			      //"<tr class=poo><td><b>write signals</b></td><td>%lli</td></tr>\n"
-			      "<tr class=poo><td><b>quickpolls</b></td><td>%li</td></tr>\n"
+			      //"<tr class=poo><td><b>read signals</b></td><td>%"INT64"</td></tr>\n"
+			      //"<tr class=poo><td><b>write signals</b></td><td>%"INT64"</td></tr>\n"
+			      "<tr class=poo><td><b>quickpolls</b></td><td>%"INT32"</td></tr>\n"
 			      "<tr class=poo><td><b>Kernel Version</b></td><td>%s</td></tr>\n"
+			      "<tr class=poo><td><b>Gigablast Architecture</b></td><td>%i bit</td></tr>\n"
+			      
 			      //"<tr class=poo><td><b>Gigablast Version</b></td><td>%s %s</td></tr>\n"
-			      "<tr class=poo><td><b>Parsing Inconsistencies</b></td><td>%li</td>\n"
-			      "<tr class=poo><td><b>Index Shards</b></td><td>%li</td>\n"
-			      "<tr class=poo><td><b>Hosts per Shard</b></td><td>%li</td>\n"
-			      //"<tr class=poo><td><b>Fully Split</b></td><td>%li</td>\n"
-			      //"<tr class=poo><td><b>Tfndb Extension Bits</b></td><td>%li</td>\n"
+			      "<tr class=poo><td><b>Parsing Inconsistencies</b></td><td>%"INT32"</td>\n"
+			      "<tr class=poo><td><b>Index Shards</b></td><td>%"INT32"</td>\n"
+			      "<tr class=poo><td><b>Hosts per Shard</b></td><td>%"INT32"</td>\n"
+			      //"<tr class=poo><td><b>Fully Split</b></td><td>%"INT32"</td>\n"
+			      //"<tr class=poo><td><b>Tfndb Extension Bits</b></td><td>%"INT32"</td>\n"
 			      "</tr>\n"
-			      "<tr class=poo><td><b>Spider Locks</b></td><td>%li</td></tr>\n"
-			      "<tr class=poo><td><b>Local Time</b></td><td>%s (%li)</td></tr>\n"
+			      "<tr class=poo><td><b>Spider Locks</b></td><td>%"INT32"</td></tr>\n"
+			      "<tr class=poo><td><b>Local Time</b></td><td>%s (%"INT32")</td></tr>\n"
 			      ,
 			      TABLE_STYLE ,
 			      ubuf.getBufStart(),
-			      (unsigned long)getpid(),
+			      (uint32_t)getpid(),
 			      g_numCorrupt,
 			      g_numAlarms,
 			      g_numVTAlarms,
@@ -841,64 +865,69 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 			      //g_stats.m_writeSignals,
 			      g_numQuickPolls,
 			      kv , 
+			      arch,
 			      //GBPROJECTNAME,
 			      //GBVersion ,
 			      g_stats.m_parsingInconsistencies ,
-			      (long)g_hostdb.getNumShards(),//g_hostdb.m_indexSplits,
-			      (long)g_hostdb.getNumHostsPerShard(),
+			      (int32_t)g_hostdb.getNumShards(),//g_hostdb.m_indexSplits,
+			      (int32_t)g_hostdb.getNumHostsPerShard(),
 			      g_spiderLoop.m_lockTable.m_numSlotsUsed,
-			      //(long)g_conf.m_fullSplit,
-			      //(long)g_conf.m_tfndbExtBits,
+			      //(int32_t)g_conf.m_fullSplit,
+			      //(int32_t)g_conf.m_tfndbExtBits,
 			      nowStr,
-			      (long)now);//ctime(&time));
+			      (int32_t)now);//ctime(&time));
 
 	if ( format == FORMAT_XML ) 
 		p.safePrintf (
 			      "\t<generalStats>\n"
 			      "\t\t<uptime>%s</uptime>\n"
 
-			      "\t\t<corruptedDiskReads>%li"
+			      "\t\t<corruptedDiskReads>%"INT32""
 			      "</corruptedDiskReads>\n"
 
-			      "\t\t<SIGVTALARMS>%li</SIGVTALARMS>\n"
-			      "\t\t<quickpolls>%li</quickpolls>\n"
+			      "\t\t<SIGVTALARMS>%"INT32"</SIGVTALARMS>\n"
+			      "\t\t<quickpolls>%"INT32"</quickpolls>\n"
 
 			      "\t\t<kernelVersion><![CDATA[%s]]>"
 			      "</kernelVersion>\n"
 
-			      "\t\t<parsingInconsistencies>%li"
+			      "\t\t<gigablastArchitecture><![CDATA[%i bit]]>"
+			      "</gigablastArchitecture>\n"
+
+			      "\t\t<parsingInconsistencies>%"INT32""
 			      "</parsingInconsistencies>\n"
 
-			      "\t\t<numShards>%li</numShards>\n"
+			      "\t\t<numShards>%"INT32"</numShards>\n"
 
-			      "\t\t<hostsPerShard>%li</hostsPerShard>\n"
+			      "\t\t<hostsPerShard>%"INT32"</hostsPerShard>\n"
 
-			      "\t\t<spiderLocks>%li</spiderLocks>\n"
+			      "\t\t<spiderLocks>%"INT32"</spiderLocks>\n"
 
 			      "\t\t<localTimeStr>%s</localTimeStr>\n"
-			      "\t\t<localTime>%li</localTime>\n"
+			      "\t\t<localTime>%"INT32"</localTime>\n"
 			      ,
 			      ubuf.getBufStart(),
 			      g_numCorrupt,
 			      g_numAlarms,
 			      g_numQuickPolls,
 			      kv , 
+			      arch,
 			      g_stats.m_parsingInconsistencies ,
-			      (long)g_hostdb.getNumShards(),
-			      (long)g_hostdb.getNumHostsPerShard(),
+			      (int32_t)g_hostdb.getNumShards(),
+			      (int32_t)g_hostdb.getNumHostsPerShard(),
 			      g_spiderLoop.m_lockTable.m_numSlotsUsed,
 			      nowStr,
-			      (long)now);
+			      (int32_t)now);
 
 	if ( format == FORMAT_JSON ) {
 		p.safePrintf (
 			      "\t\"generalStats\":{\n"
 			      "\t\t\"uptime\":\"%s\",\n"
 
-			      "\t\t\"corruptedDiskReads\":%li,\n"
+			      "\t\t\"corruptedDiskReads\":%"INT32",\n"
 
-			      "\t\t\"SIGVTALARMS\":%li,\n"
-			      "\t\t\"quickpolls\":%li,\n"
+			      "\t\t\"SIGVTALARMS\":%"INT32",\n"
+			      "\t\t\"quickpolls\":%"INT32",\n"
 
 			      "\t\t\"kernelVersion\":\""
 			      ,
@@ -910,28 +939,30 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 		p.jsonEncode(kv);
 		p.safePrintf( "\",\n"
 
-			      "\t\t\"parsingInconsistencies\":%li,\n"
+			      "\t\t\"gigablastArchitecture\":\"%i bit\",\n"
+			      "\t\t\"parsingInconsistencies\":%"INT32",\n"
 
-			      "\t\t\"numShards\":%li,\n"
+			      "\t\t\"numShards\":%"INT32",\n"
 
-			      "\t\t\"hostsPerShard\":%li,\n"
+			      "\t\t\"hostsPerShard\":%"INT32",\n"
 
-			      "\t\t\"spiderLocks\":%li,\n"
+			      "\t\t\"spiderLocks\":%"INT32",\n"
 
 			      "\t\t\"localTimeStr\":\"%s\",\n"
-			      "\t\t\"localTime\":%li,\n"
+			      "\t\t\"localTime\":%"INT32",\n"
 			      ,
+			      arch,
 			      g_stats.m_parsingInconsistencies ,
-			      (long)g_hostdb.getNumShards(),
-			      (long)g_hostdb.getNumHostsPerShard(),
+			      (int32_t)g_hostdb.getNumShards(),
+			      (int32_t)g_hostdb.getNumHostsPerShard(),
 			      g_spiderLoop.m_lockTable.m_numSlotsUsed,
 			      nowStr,
-			      (long)now);
+			      (int32_t)now);
 	}
 
 
 
-	long nowg = 0;
+	time_t nowg = 0;
 
 	// end table
         if ( ! isClockInSync() ) {
@@ -949,20 +980,21 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 
 	if ( format == FORMAT_HTML )
 		p.safePrintf ( "<tr class=poo><td><b>Global Time</b></td>"
-			       "<td>%s (%li)</td></tr>\n" 
-			       "</table><br><br>", nowStr,nowg);//ctime(&time))
+			       "<td>%s (%"INT32")</td></tr>\n" 
+			       "</table><br><br>", nowStr,
+			       (int32_t)nowg);//ctime(&time))
 
 	if ( format == FORMAT_XML )
 		p.safePrintf ( "\t\t<globalTimeStr>%s</globalTimeStr>\n"
-			       "\t\t<globalTime>%li</globalTime>\n"
+			       "\t\t<globalTime>%"INT32"</globalTime>\n"
 			       "\t</generalStats>\n"
-			       ,nowStr,nowg);
+			       ,nowStr,(int32_t)nowg);
 
 	if ( format == FORMAT_JSON )
 		p.safePrintf ( "\t\t\"globalTimeStr\":\"%s\",\n"
-			       "\t\t\"globalTime\":%li\n"
+			       "\t\t\"globalTime\":%"INT32"\n"
 			       "\t},\n"
-			       ,nowStr,nowg);
+			       ,nowStr,(int32_t)nowg);
 
 
 	//
@@ -975,30 +1007,48 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 			      "<td colspan=2 class=hdrow>"
 			      "<center><b>Network</b></td></tr>\n"
 
+			      "<tr class=poo><td><b>http server "
+			      "bytes downloaded</b>"
+			      "</td><td>%"UINT64"</td></tr>\n" 
+
+			      "<tr class=poo><td><b>http server "
+			      "bytes downloaded (uncompressed)</b>"
+			      "</td><td>%"UINT64"</td></tr>\n" 
+
+			      "<tr class=poo><td><b>http server "
+			      "compression ratio</b>"
+			      "</td><td>%.02f</td></tr>\n" 
+			      
+
 			      "<tr class=poo><td><b>ip1 bytes/packets in</b>"
-			      "</td><td>%llu / %llu</td></tr>\n" 
+			      "</td><td>%"UINT64" / %"UINT64"</td></tr>\n" 
 
 			      "<tr class=poo><td><b>ip1 bytes/packets out</b>"
-			      "</td><td>%llu / %llu</td></tr>\n" 
+			      "</td><td>%"UINT64" / %"UINT64"</td></tr>\n" 
 
 			      "<tr class=poo><td><b>ip2 bytes/packets in</b>"
-			      "</td><td>%llu / %llu</td></tr>\n" 
+			      "</td><td>%"UINT64" / %"UINT64"</td></tr>\n" 
 
 			      "<tr class=poo><td><b>ip2 bytes/packets out</b>"
-			      "</td><td>%llu / %llu</td></tr>\n" 
+			      "</td><td>%"UINT64" / %"UINT64"</td></tr>\n" 
 
 			      "<tr class=poo><td><b>cancel acks sent</b>"
-			      "</td><td>%li</td></tr>\n" 
+			      "</td><td>%"INT32"</td></tr>\n" 
 			      "<tr class=poo><td><b>cancel acks read</b>"
-			      "</td><td>%li</td></tr>\n" 
+			      "</td><td>%"INT32"</td></tr>\n" 
 			      "<tr class=poo><td><b>dropped dgrams</b>"
-			      "</td><td>%li</td></tr>\n" 
+			      "</td><td>%"INT32"</td></tr>\n" 
 			      "<tr class=poo><td><b>corrupt dns reply "
 			      "dgrams</b>"
-			      "</td><td>%li</td></tr>\n" 
+			      "</td><td>%"INT32"</td></tr>\n" 
 
 			      ,
 			      TABLE_STYLE,
+
+			      g_httpServer.m_bytesDownloaded,
+			      g_httpServer.m_uncompressedBytes,
+			      g_httpServer.getCompressionRatio(),
+
 			      g_udpServer.m_eth0BytesIn,
 			      g_udpServer.m_eth0PacketsIn,
 
@@ -1022,29 +1072,44 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 		p.safePrintf ( 
 			      "\t<networkStats>\n"
 
-			      "\t\t<ip1BytesIn>%llu</ip1BytesIn>\n"
-			      "\t\t<ip1PacketsIn>%llu</ip1PacketsIn>\n"
+			      "\t\t<httpServerBytesDownloaded>%"UINT64""
+			      "</httpServerBytesDownloaded>\n"
 
-			      "\t\t<ip1BytesOut>%llu</ip1BytesOut>\n"
-			      "\t\t<ip1PacketsOut>%llu</ip1PacketsOut>\n"
+			      "\t\t<httpServerBytesDownloadedUncompressed>%"UINT64""
+			      "</httpServerBytesDownloadedUncompressed>\n"
 
-			      "\t\t<ip2BytesIn>%llu</ip2BytesIn>\n"
-			      "\t\t<ip2PacketsIn>%llu</ip2PacketsIn>\n"
+			      "\t\t<httpServerCompressionRatio>%.02f"
+			      "</httpServerCompressionRatio>\n"
 
-			      "\t\t<ip2BytesOut>%llu</ip2BytesOut>\n"
-			      "\t\t<ip2PacketsOut>%llu</ip2PacketsOut>\n"
+			      "\t\t<ip1BytesIn>%"UINT64"</ip1BytesIn>\n"
+			      "\t\t<ip1PacketsIn>%"UINT64"</ip1PacketsIn>\n"
 
-			      "\t\t<cancelAcksSent>%li</cancelAcksSent>\n"
+			      "\t\t<ip1BytesOut>%"UINT64"</ip1BytesOut>\n"
+			      "\t\t<ip1PacketsOut>%"UINT64"</ip1PacketsOut>\n"
 
-			      "\t\t<cancelAcksRead>%li</cancelAcksRead>\n"
+			      "\t\t<ip2BytesIn>%"UINT64"</ip2BytesIn>\n"
+			      "\t\t<ip2PacketsIn>%"UINT64"</ip2PacketsIn>\n"
 
-			      "\t\t<droppedDgrams>%li</droppedDgrams>\n"
+			      "\t\t<ip2BytesOut>%"UINT64"</ip2BytesOut>\n"
+			      "\t\t<ip2PacketsOut>%"UINT64"</ip2PacketsOut>\n"
 
-			      "\t\t<corruptDnsReplyDgrams>%li"
+			      "\t\t<cancelAcksSent>%"INT32"</cancelAcksSent>\n"
+
+			      "\t\t<cancelAcksRead>%"INT32"</cancelAcksRead>\n"
+
+			      "\t\t<droppedDgrams>%"INT32"</droppedDgrams>\n"
+
+			      "\t\t<corruptDnsReplyDgrams>%"INT32""
 			      "</corruptDnsReplyDgrams>\n"
 			      "\t</networkStats>\n"
 
 			      ,
+
+			      g_httpServer.m_bytesDownloaded,
+			      g_httpServer.m_uncompressedBytes,
+			      g_httpServer.getCompressionRatio(),
+
+
 			      g_udpServer.m_eth0BytesIn,
 			      g_udpServer.m_eth0PacketsIn,
 
@@ -1067,29 +1132,41 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 		p.safePrintf ( 
 			      "\t\"networkStats\":{\n"
 
-			      "\t\t\"ip1BytesIn\":%llu,\n"
-			      "\t\t\"ip1PacketsIn\":%llu,\n"
 
-			      "\t\t\"ip1BytesOut\":%llu,\n"
-			      "\t\t\"ip1PacketsOut\":%llu,\n"
+			      "\t\t\"httpServerBytesDownloaded\":%"UINT64",\n"
+			      "\t\t\"httpServerBytesDownloadedUncompressed\""
+			      ":%"UINT64",\n"
+			      "\t\t\"httpServerCompressionRatio\":%.02f,\n"
 
-			      "\t\t\"ip2BytesIn\":%llu,\n"
-			      "\t\t\"ip2PacketsIn\":%llu,\n"
+			      "\t\t\"ip1BytesIn\":%"UINT64",\n"
+			      "\t\t\"ip1PacketsIn\":%"UINT64",\n"
 
-			      "\t\t\"ip2BytesOut\":%llu,\n"
-			      "\t\t\"ip2PacketsOut\":%llu,\n"
+			      "\t\t\"ip1BytesOut\":%"UINT64",\n"
+			      "\t\t\"ip1PacketsOut\":%"UINT64",\n"
 
-			      "\t\t\"cancelAcksSent\":%li,\n"
+			      "\t\t\"ip2BytesIn\":%"UINT64",\n"
+			      "\t\t\"ip2PacketsIn\":%"UINT64",\n"
 
-			      "\t\t\"cancelAcksRead\":%li,\n"
+			      "\t\t\"ip2BytesOut\":%"UINT64",\n"
+			      "\t\t\"ip2PacketsOut\":%"UINT64",\n"
 
-			      "\t\t\"droppedDgrams\":%li,\n"
+			      "\t\t\"cancelAcksSent\":%"INT32",\n"
 
-			      "\t\t\"corruptDnsReplyDgrams\":%li\n"
+			      "\t\t\"cancelAcksRead\":%"INT32",\n"
+
+			      "\t\t\"droppedDgrams\":%"INT32",\n"
+
+			      "\t\t\"corruptDnsReplyDgrams\":%"INT32"\n"
 
 			      "\t},\n"
 
 			      ,
+
+			      g_httpServer.m_bytesDownloaded,
+			      g_httpServer.m_uncompressedBytes,
+			      g_httpServer.getCompressionRatio(),
+
+
 			      g_udpServer.m_eth0BytesIn,
 			      g_udpServer.m_eth0PacketsIn,
 
@@ -1110,16 +1187,16 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 
 
 	// break dropped dgrams down by msg type
-	//for ( long i = 0 ; i < 128 ; i++ ) {
+	//for ( int32_t i = 0 ; i < 128 ; i++ ) {
 	//	if ( ! g_udpServer.m_droppedNiceness0[i] ) continue;
 	//	p.safePrintf("<tr class=poo><td>msg%x niceness 0 dropped</td>"
-	//		     "<td>%li</td></tr>\n",
+	//		     "<td>%"INT32"</td></tr>\n",
 	//		     i,g_udpServer.m_droppedNiceness0[i]);
 	//}
-	//for ( long i = 0 ; i < 128 ; i++ ) {
+	//for ( int32_t i = 0 ; i < 128 ; i++ ) {
 	//	if ( ! g_udpServer.m_droppedNiceness1[i] ) continue;
 	//	p.safePrintf("<tr class=poo><td>msg%x dropped</td>"
-	//		     "<td>%li</td></tr>\n",
+	//		     "<td>%"INT32"</td></tr>\n",
 	//		     i,g_udpServer.m_droppedNiceness1[i]);
 	//}
 
@@ -1147,80 +1224,80 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 
 		       "<tr class=poo>"
 		       "<td>%s</td>"
-		       "<td>%llu</td>"
-		       "<td>%llu / %llu (%.02f)</td>"
+		       "<td>%"UINT64"</td>"
+		       "<td>%"UINT64" / %"UINT64" (%.02f)</td>"
 		       "</tr>"
 
 		       "<tr class=poo>"
 		       "<td>%s</td>"
-		       "<td>%llu</td>"
-		       "<td>%llu / %llu (%.02f)</td>"
+		       "<td>%"UINT64"</td>"
+		       "<td>%"UINT64" / %"UINT64" (%.02f)</td>"
 		       "</tr>"
 
 		       "<tr class=poo>"
 		       "<td>%s</td>"
-		       "<td>%llu</td>"
-		       "<td>%llu / %llu (%.02f)</td>"
+		       "<td>%"UINT64"</td>"
+		       "<td>%"UINT64" / %"UINT64" (%.02f)</td>"
 		       "</tr>"
 
 		       "<tr class=poo>"
 		       "<td>%s</td>"
-		       "<td>%llu</td>"
-		       "<td>%llu / %llu (%.02f)</td>"
+		       "<td>%"UINT64"</td>"
+		       "<td>%"UINT64" / %"UINT64" (%.02f)</td>"
 		       "</tr>"
 
 		       "<tr class=poo>"
 		       "<td>%s</td>"
-		       "<td>%llu</td>"
-		       "<td>%llu / %llu (%.02f)</td>"
+		       "<td>%"UINT64"</td>"
+		       "<td>%"UINT64" / %"UINT64" (%.02f)</td>"
 		       "</tr>"
 
 		       "<tr class=poo>"
 		       "<td>%s</td>"
-		       "<td>%llu</td>"
-		       "<td>%llu / %llu (%.02f)</td>"
+		       "<td>%"UINT64"</td>"
+		       "<td>%"UINT64" / %"UINT64" (%.02f)</td>"
 		       "</tr>"
 
 		       "<tr class=poo>"
 		       "<td>%s</td>"
-		       "<td>%llu</td>"
-		       "<td>%llu / %llu (%.02f)</td>"
+		       "<td>%"UINT64"</td>"
+		       "<td>%"UINT64" / %"UINT64" (%.02f)</td>"
 		       "</tr>"
 
 		       "<tr class=poo>"
 		       "<td>%s</td>"
-		       "<td>%llu</td>"
-		       "<td>%llu / %llu (%.02f)</td>"
+		       "<td>%"UINT64"</td>"
+		       "<td>%"UINT64" / %"UINT64" (%.02f)</td>"
 		       "</tr>"
 
 		       "<tr class=poo>"
 		       "<td>%s</td>"
-		       "<td>%llu</td>"
-		       "<td>%llu / %llu (%.02f)</td>"
+		       "<td>%"UINT64"</td>"
+		       "<td>%"UINT64" / %"UINT64" (%.02f)</td>"
 		       "</tr>"
 
 		       "<tr class=poo>"
 		       "<td>%s</td>"
-		       "<td>%llu</td>"
-		       "<td>%llu / %llu (%.02f)</td>"
+		       "<td>%"UINT64"</td>"
+		       "<td>%"UINT64" / %"UINT64" (%.02f)</td>"
 		       "</tr>"
 
 		       "<tr class=poo>"
 		       "<td>%s</td>"
-		       "<td>%llu</td>"
-		       "<td>%llu / %llu (%.02f)</td>"
+		       "<td>%"UINT64"</td>"
+		       "<td>%"UINT64" / %"UINT64" (%.02f)</td>"
 		       "</tr>"
 
 		       "<tr class=poo>"
 		       "<td>%s</td>"
-		       "<td>%llu</td>"
-		       "<td>%llu / %llu (%.02f)</td>"
+		       "<td>%"UINT64"</td>"
+		       "<td>%"UINT64" / %"UINT64" (%.02f)</td>"
 		       "</tr>"
 
 		       "<tr class=poo>"
 		       "<td>%s</td>"
-		       "<td>%llu</td>"
-		       "<td>%llu / %llu (%.02f)</td>"
+		       "<td>%"UINT64"</td>"
+		       "<td>%"UINT64" / %"UINT64" (%.02f)</td>"
 		       "</tr>"
 		       ,
 		       TABLE_STYLE,
@@ -1376,9 +1453,9 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 	// 	p.safePrintf("\t\"messageStats\":{\n");
 
 	// loop over niceness
-	for ( long i3 = 0 ; i3 < 2 ; i3++ ) {
+	for ( int32_t i3 = 0 ; i3 < 2 ; i3++ ) {
 	// print each msg stat
-	for ( long i1 = 0 ; i1 < MAX_MSG_TYPES ; i1++ ) {
+	for ( int32_t i1 = 0 ; i1 < MAX_MSG_TYPES ; i1++ ) {
 		// skip it if has no handler
 		if ( ! g_udpServer.m_handlers[i1] ) continue;
 		if ( ! g_stats.m_reroutes   [i1][i3] &&
@@ -1394,19 +1471,19 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 		if ( format == FORMAT_HTML )
 			p.safePrintf( 
 				     "<tr class=poo>"
-				     "<td>%li</td>"    // niceness, 0 or 1
+				     "<td>%"INT32"</td>"    // niceness, 0 or 1
 				     "<td>0x%hhx</td>" // msgType
-				     //"<td>%li</td>"    // request?
-				     "<td>%li</td>" // packets in
-				     "<td>%li</td>" // packets out
-				     "<td>%li</td>" // acks in
-				     "<td>%li</td>" // acks out
-				     "<td>%li</td>" // reroutes
-				     "<td>%li</td>" // dropped
-				     "<td>%li</td>" // cancel read
-				     "<td>%li</td>" // errors
-				     "<td>%li</td>" // timeouts
-				     "<td>%li</td>" // nomem
+				     //"<td>%"INT32"</td>"    // request?
+				     "<td>%"INT32"</td>" // packets in
+				     "<td>%"INT32"</td>" // packets out
+				     "<td>%"INT32"</td>" // acks in
+				     "<td>%"INT32"</td>" // acks out
+				     "<td>%"INT32"</td>" // reroutes
+				     "<td>%"INT32"</td>" // dropped
+				     "<td>%"INT32"</td>" // cancel read
+				     "<td>%"INT32"</td>" // errors
+				     "<td>%"INT32"</td>" // timeouts
+				     "<td>%"INT32"</td>" // nomem
 				     ,
 				     i3, // niceness
 				     (unsigned char)i1, // msgType
@@ -1425,18 +1502,18 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 		if ( format == FORMAT_XML )
 			p.safePrintf(
 				     "\t<messageStat>\n"
-				     "\t\t<niceness>%li</niceness>\n"
+				     "\t\t<niceness>%"INT32"</niceness>\n"
 				     "\t\t<msgType>0x%hhx</msgType>\n"
-				     "\t\t<packetsIn>%li</packetsIn>\n"
-				     "\t\t<packetsOut>%li</packetsOut>\n"
-				     "\t\t<acksIn>%li</acksIn>\n"
-				     "\t\t<acksOut>%li</acksOut>\n"
-				     "\t\t<reroutes>%li</reroutes>\n"
-				     "\t\t<dropped>%li</dropped>\n"
-				     "\t\t<cancelsRead>%li</cancelsRead>\n"
-				     "\t\t<errors>%li</errors>\n"
-				     "\t\t<timeouts>%li</timeouts>\n"
-				     "\t\t<noMem>%li</noMem>\n"
+				     "\t\t<packetsIn>%"INT32"</packetsIn>\n"
+				     "\t\t<packetsOut>%"INT32"</packetsOut>\n"
+				     "\t\t<acksIn>%"INT32"</acksIn>\n"
+				     "\t\t<acksOut>%"INT32"</acksOut>\n"
+				     "\t\t<reroutes>%"INT32"</reroutes>\n"
+				     "\t\t<dropped>%"INT32"</dropped>\n"
+				     "\t\t<cancelsRead>%"INT32"</cancelsRead>\n"
+				     "\t\t<errors>%"INT32"</errors>\n"
+				     "\t\t<timeouts>%"INT32"</timeouts>\n"
+				     "\t\t<noMem>%"INT32"</noMem>\n"
 				     "\t</messageStat>\n"
 				     ,i3, // niceness
 				     (unsigned char)i1, // msgType
@@ -1454,18 +1531,18 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 		if ( format == FORMAT_JSON )
 			p.safePrintf(
 				     "\t\"messageStat\":{\n"
-				     "\t\t\"niceness\":%li,\n"
+				     "\t\t\"niceness\":%"INT32",\n"
 				     "\t\t\"msgType\":\"0x%hhx\",\n"
-				     "\t\t\"packetsIn\":%li,\n"
-				     "\t\t\"packetsOut\":%li,\n"
-				     "\t\t\"acksIn\":%li,\n"
-				     "\t\t\"acksOut\":%li,\n"
-				     "\t\t\"reroutes\":%li,\n"
-				     "\t\t\"dropped\":%li,\n"
-				     "\t\t\"cancelsRead\":%li,\n"
-				     "\t\t\"errors\":%li,\n"
-				     "\t\t\"timeouts\":%li,\n"
-				     "\t\t\"noMem\":%li\n"
+				     "\t\t\"packetsIn\":%"INT32",\n"
+				     "\t\t\"packetsOut\":%"INT32",\n"
+				     "\t\t\"acksIn\":%"INT32",\n"
+				     "\t\t\"acksOut\":%"INT32",\n"
+				     "\t\t\"reroutes\":%"INT32",\n"
+				     "\t\t\"dropped\":%"INT32",\n"
+				     "\t\t\"cancelsRead\":%"INT32",\n"
+				     "\t\t\"errors\":%"INT32",\n"
+				     "\t\t\"timeouts\":%"INT32",\n"
+				     "\t\t\"noMem\":%"INT32"\n"
 				     "\t},\n"
 				     ,i3, // niceness
 				     (unsigned char)i1, // msgType
@@ -1527,17 +1604,17 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 
 	if ( format == FORMAT_HTML ) {
 		// print bucket headers
-		for ( long i = 0 ; i < MAX_BUCKETS ; i++ ) 
+		for ( int32_t i = 0 ; i < MAX_BUCKETS ; i++ ) 
 			p.safePrintf("<td>%i+</td>\n",(1<<i)-1);
 		p.safePrintf("</tr>\n");
 	}
 
 	// loop over niceness
-	for ( long i3 = 0 ; i3 < 2 ; i3++ ) {
+	for ( int32_t i3 = 0 ; i3 < 2 ; i3++ ) {
 	// loop over isRequest?
-	for ( long i2 = 0 ; i2 < 2 ; i2++ ) {
+	for ( int32_t i2 = 0 ; i2 < 2 ; i2++ ) {
 	// print each msg stat
-	for ( long i1 = 0 ; i1 < MAX_MSG_TYPES ; i1++ ) {
+	for ( int32_t i1 = 0 ; i1 < MAX_MSG_TYPES ; i1++ ) {
 	// skip it if has no handler
 	if ( ! g_udpServer.m_handlers[i1] ) continue;
 	// skip if xml
@@ -1545,29 +1622,29 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 		// print it all out.
 		// careful, second index is the nicenss, and third is
 		// the isReply. our loops are reversed.
-		long long total = g_stats.m_msgTotalOfSendTimes[i1][i3][i2];
-		long long nt    = g_stats.m_msgTotalSent       [i1][i3][i2];
+		int64_t total = g_stats.m_msgTotalOfSendTimes[i1][i3][i2];
+		int64_t nt    = g_stats.m_msgTotalSent       [i1][i3][i2];
 		// skip if no stat
 		if ( nt == 0 ) continue;
-		long      avg   = 0;
+		int32_t      avg   = 0;
 		if ( nt > 0 ) avg = total / nt;
 		p.safePrintf( 
 			     "<tr class=poo>"
-			      "<td>%li</td>"    // niceness, 0 or 1
-			      "<td>%li</td>"    // request?
+			      "<td>%"INT32"</td>"    // niceness, 0 or 1
+			      "<td>%"INT32"</td>"    // request?
 			      "<td>0x%hhx</td>" // msgType
-			      "<td>%lli</td>" // total sent
-			      "<td>%lims</td>" ,// avg send time in ms
+			      "<td>%"INT64"</td>" // total sent
+			      "<td>%"INT32"ms</td>" ,// avg send time in ms
 			      i3, // niceness
 			      i2, // request?
 			      (unsigned char)i1, // msgType
 			      nt,
 			      avg );
 		// print buckets
-		for ( long i4 = 0 ; i4 < MAX_BUCKETS ; i4++ ) {
-			long long count ;
+		for ( int32_t i4 = 0 ; i4 < MAX_BUCKETS ; i4++ ) {
+			int64_t count ;
 			count = g_stats.m_msgTotalSentByTime[i1][i3][i2][i4];
-			p.safePrintf("<td>%lli</td>",count);
+			p.safePrintf("<td>%"INT64"</td>",count);
 		}
 		p.safePrintf("</tr>\n");
 	}
@@ -1596,43 +1673,43 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 			      "<td><b>avg queued time</td>\n" ,
 			      TABLE_STYLE);
 		// print bucket headers
-		for ( long i = 0 ; i < MAX_BUCKETS ; i++ ) 
+		for ( int32_t i = 0 ; i < MAX_BUCKETS ; i++ ) 
 			p.safePrintf("<td>%i+</td>\n",(1<<i)-1);
 		p.safePrintf("</tr>\n");
 	}
 
 	// loop over niceness
-	for ( long i3 = 0 ; i3 < 2 ; i3++ ) {
+	for ( int32_t i3 = 0 ; i3 < 2 ; i3++ ) {
 	// print each msg stat
-	for ( long i1 = 0 ; i1 < MAX_MSG_TYPES ; i1++ ) {
+	for ( int32_t i1 = 0 ; i1 < MAX_MSG_TYPES ; i1++ ) {
 		// only html
 		if ( format != FORMAT_HTML ) break;
 		// skip it if has no handler
 		if ( ! g_udpServer.m_handlers[i1] ) continue;
 		// print it all out
-		long long total = g_stats.m_msgTotalOfQueuedTimes[i1][i3];
-		long long nt    = g_stats.m_msgTotalQueued       [i1][i3];
+		int64_t total = g_stats.m_msgTotalOfQueuedTimes[i1][i3];
+		int64_t nt    = g_stats.m_msgTotalQueued       [i1][i3];
 		// skip if no stat
 		if ( nt == 0 ) continue;
-		long      avg   = 0;
+		int32_t      avg   = 0;
 		if ( nt > 0 ) avg = total / nt;
 		p.safePrintf( 
 			     "<tr class=poo>"
-			      "<td>%li</td>"    // niceness, 0 or 1
+			      "<td>%"INT32"</td>"    // niceness, 0 or 1
 			     "<td>0x%hhx</td>" // msgType
-			      //"<td>%li</td>"    // request?
-			      "<td>%lli</td>" // total done
-			      "<td>%lims</td>" ,// avg handler time in ms
+			      //"<td>%"INT32"</td>"    // request?
+			      "<td>%"INT64"</td>" // total done
+			      "<td>%"INT32"ms</td>" ,// avg handler time in ms
 			      i3, // niceness
 			      (unsigned char)i1, // msgType
 			      //i2, // request?
 			      nt ,
 			      avg );
 		// print buckets
-		for ( long i4 = 0 ; i4 < MAX_BUCKETS ; i4++ ) {
-			long long count ;
+		for ( int32_t i4 = 0 ; i4 < MAX_BUCKETS ; i4++ ) {
+			int64_t count ;
 			count = g_stats.m_msgTotalQueuedByTime[i1][i3][i4];
-			p.safePrintf("<td>%lli</td>",count);
+			p.safePrintf("<td>%"INT64"</td>",count);
 		}
 		p.safePrintf("</tr>\n");
 	}
@@ -1661,43 +1738,43 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 			      "<td><b>avg gen time</td>\n" ,
 			      TABLE_STYLE);
 		// print bucket headers
-		for ( long i = 0 ; i < MAX_BUCKETS ; i++ ) 
+		for ( int32_t i = 0 ; i < MAX_BUCKETS ; i++ ) 
 			p.safePrintf("<td>%i+</td>\n",(1<<i)-1);
 		p.safePrintf("</tr>\n");
 	}
 
 	// loop over niceness
-	for ( long i3 = 0 ; i3 < 2 ; i3++ ) {
+	for ( int32_t i3 = 0 ; i3 < 2 ; i3++ ) {
 	// print each msg stat
-	for ( long i1 = 0 ; i1 < MAX_MSG_TYPES ; i1++ ) {
+	for ( int32_t i1 = 0 ; i1 < MAX_MSG_TYPES ; i1++ ) {
 		// only hyml
 		if ( format != FORMAT_HTML ) break;
 		// skip it if has no handler
 		if ( i1 != 0x41 && ! g_udpServer.m_handlers[i1] ) continue;
 		// print it all out
-		long long total = g_stats.m_msgTotalOfHandlerTimes[i1][i3];
-		long long nt    = g_stats.m_msgTotalHandlersCalled[i1][i3];
+		int64_t total = g_stats.m_msgTotalOfHandlerTimes[i1][i3];
+		int64_t nt    = g_stats.m_msgTotalHandlersCalled[i1][i3];
 		// skip if no stat
 		if ( nt == 0 ) continue;
-		long      avg   = 0;
+		int32_t      avg   = 0;
 		if ( nt > 0 ) avg = total / nt;
 		p.safePrintf( 
 			     "<tr class=poo>"
-			      "<td>%li</td>"    // niceness, 0 or 1
+			      "<td>%"INT32"</td>"    // niceness, 0 or 1
 			     "<td>0x%hhx</td>" // msgType
-			      //"<td>%li</td>"    // request?
-			      "<td>%lli</td>" // total called
-			      "<td>%lims</td>" ,// avg handler time in ms
+			      //"<td>%"INT32"</td>"    // request?
+			      "<td>%"INT64"</td>" // total called
+			      "<td>%"INT32"ms</td>" ,// avg handler time in ms
 			      i3, // niceness
 			      (unsigned char)i1, // msgType
 			      //i2, // request?
 			      nt ,
 			      avg );
 		// print buckets
-		for ( long i4 = 0 ; i4 < MAX_BUCKETS ; i4++ ) {
-			long long count ;
+		for ( int32_t i4 = 0 ; i4 < MAX_BUCKETS ; i4++ ) {
+			int64_t count ;
 			count = g_stats.m_msgTotalHandlersByTime[i1][i3][i4];
-			p.safePrintf("<td>%lli</td>",count);
+			p.safePrintf("<td>%"INT64"</td>",count);
 		}
 		p.safePrintf("</tr>\n");
 	}
@@ -1749,154 +1826,154 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 		//g_placedb.getRdb() ,
 		//g_sectiondb.getRdb()
 	};
-	long nr = sizeof(rdbs) / 4;
+	int32_t nr = sizeof(rdbs) / sizeof(Rdb *);
 
 	// print dbname
 	p.safePrintf("<tr class=poo><td>&nbsp;</td>");
-	for ( long i = 0 ; i < nr ; i++ ) 
+	for ( int32_t i = 0 ; i < nr ; i++ ) 
 		p.safePrintf("<td><b>%s</b></td>",rdbs[i]->m_dbname);
 	p.safePrintf("<td><i><b>Total</b></i></tr>\n");
 
-	//long long total ;
+	//int64_t total ;
 	float totalf ;
 
 	// print # big files
 	p.safePrintf("<tr class=poo><td><b># big files</b>*</td>");
 	total = 0LL;
-	for ( long i = 0 ; i < nr ; i++ ) {
-		long long val = rdbs[i]->getNumFiles();
+	for ( int32_t i = 0 ; i < nr ; i++ ) {
+		int64_t val = rdbs[i]->getNumFiles();
 		total += val;
-		p.safePrintf("<td>%llu</td>",val);
+		p.safePrintf("<td>%"UINT64"</td>",val);
 	}
-	p.safePrintf("<td>%lli</td></tr>\n",total);
+	p.safePrintf("<td>%"INT64"</td></tr>\n",total);
 
 
 	// print # small files
 	p.safePrintf("<tr class=poo><td><b># small files</b>*</td>");
 	total = 0LL;
-	for ( long i = 0 ; i < nr ; i++ ) {
-		long long val = rdbs[i]->getNumSmallFiles();
+	for ( int32_t i = 0 ; i < nr ; i++ ) {
+		int64_t val = rdbs[i]->getNumSmallFiles();
 		total += val;
-		p.safePrintf("<td>%llu</td>",val);
+		p.safePrintf("<td>%"UINT64"</td>",val);
 	}
-	p.safePrintf("<td>%lli</td></tr>\n",total);
+	p.safePrintf("<td>%"INT64"</td></tr>\n",total);
 
 
 	// print disk space used
 	p.safePrintf("<tr class=poo><td><b>disk space (MB)</b></td>");
 	total = 0LL;
-	for ( long i = 0 ; i < nr ; i++ ) {
-		long long val = rdbs[i]->getDiskSpaceUsed()/1000000;
+	for ( int32_t i = 0 ; i < nr ; i++ ) {
+		int64_t val = rdbs[i]->getDiskSpaceUsed()/1000000;
 		total += val;
-		p.safePrintf("<td>%llu</td>",val);
+		p.safePrintf("<td>%"UINT64"</td>",val);
 	}
-	p.safePrintf("<td>%lli</td></tr>\n",total);
+	p.safePrintf("<td>%"INT64"</td></tr>\n",total);
 
 
 	// print # recs total
 	p.safePrintf("<tr class=poo><td><b># recs</b></td>");
 	total = 0LL;
-	for ( long i = 0 ; i < nr ; i++ ) {
-		long long val = rdbs[i]->getNumTotalRecs();
+	for ( int32_t i = 0 ; i < nr ; i++ ) {
+		int64_t val = rdbs[i]->getNumTotalRecs();
 		total += val;
-		p.safePrintf("<td>%llu</td>",val);
+		p.safePrintf("<td>%"UINT64"</td>",val);
 	}
-	p.safePrintf("<td>%lli</td></tr>\n",total);
+	p.safePrintf("<td>%"INT64"</td></tr>\n",total);
 
 
 	// print # recs in mem
 	p.safePrintf("<tr class=poo><td><b># recs in mem</b></td>");
 	total = 0LL;
-	for ( long i = 0 ; i < nr ; i++ ) {
-		long long val = rdbs[i]->getNumUsedNodes();
+	for ( int32_t i = 0 ; i < nr ; i++ ) {
+		int64_t val = rdbs[i]->getNumUsedNodes();
 		total += val;
-		p.safePrintf("<td>%llu</td>",val);
+		p.safePrintf("<td>%"UINT64"</td>",val);
 	}
-	p.safePrintf("<td>%lli</td></tr>\n",total);
+	p.safePrintf("<td>%"INT64"</td></tr>\n",total);
 
 	// print # negative recs in mem
 	p.safePrintf("<tr class=poo><td><b># negative in mem</b></td>");
 	total = 0LL;
-	for ( long i = 0 ; i < nr ; i++ ) {
-		long long val = rdbs[i]->getNumNegativeKeys();
+	for ( int32_t i = 0 ; i < nr ; i++ ) {
+		int64_t val = rdbs[i]->getNumNegativeKeys();
 		total += val;
-		p.safePrintf("<td>%llu</td>",val);
+		p.safePrintf("<td>%"UINT64"</td>",val);
 	}
-	p.safePrintf("<td>%lli</td></tr>\n",total);
+	p.safePrintf("<td>%"INT64"</td></tr>\n",total);
 
 	// print mem occupied
 	p.safePrintf("<tr class=poo><td><b>mem occupied</b></td>");
 	total = 0LL;
-	for ( long i = 0 ; i < nr ; i++ ) {
-		long long val = rdbs[i]->getTreeMemOccupied();
+	for ( int32_t i = 0 ; i < nr ; i++ ) {
+		int64_t val = rdbs[i]->getTreeMemOccupied();
 		total += val;
-		p.safePrintf("<td>%llu</td>",val);
+		p.safePrintf("<td>%"UINT64"</td>",val);
 	}
-	p.safePrintf("<td>%lli</td></tr>\n",total);
+	p.safePrintf("<td>%"INT64"</td></tr>\n",total);
 
 	// print mem allocated
 	p.safePrintf("<tr class=poo><td><b>mem allocated</b></td>");
 	total = 0LL;
-	for ( long i = 0 ; i < nr ; i++ ) {
-		long long val = rdbs[i]->getTreeMemAlloced();
+	for ( int32_t i = 0 ; i < nr ; i++ ) {
+		int64_t val = rdbs[i]->getTreeMemAlloced();
 		total += val;
 		printNumAbbr ( p , val );
-		//p.safePrintf("<td>%llu</td>",val);
+		//p.safePrintf("<td>%"UINT64"</td>",val);
 	}
-	p.safePrintf("<td>%lli</td></tr>\n",total);
+	p.safePrintf("<td>%"INT64"</td></tr>\n",total);
 
 	// print mem max
 	p.safePrintf("<tr class=poo><td><b>mem max</b></td>");
 	total = 0LL;
-	for ( long i = 0 ; i < nr ; i++ ) {
-		long long val = rdbs[i]->getMaxTreeMem();
+	for ( int32_t i = 0 ; i < nr ; i++ ) {
+		int64_t val = rdbs[i]->getMaxTreeMem();
 		total += val;
 		printNumAbbr ( p , val );
-		//p.safePrintf("<td>%llu</td>",val);
+		//p.safePrintf("<td>%"UINT64"</td>",val);
 	}
-	p.safePrintf("<td>%lli</td></tr>\n",total);
+	p.safePrintf("<td>%"INT64"</td></tr>\n",total);
 
 	// print rdb mem used
 	p.safePrintf("<tr class=poo><td><b>rdb mem used</b></td>");
 	total = 0LL;
-	for ( long i = 0 ; i < nr ; i++ ) {
-		long long val = rdbs[i]->getRdbMem()->getUsedMem();
+	for ( int32_t i = 0 ; i < nr ; i++ ) {
+		int64_t val = rdbs[i]->getRdbMem()->getUsedMem();
 		total += val;
-		//p.safePrintf("<td>%llu</td>",val);
+		//p.safePrintf("<td>%"UINT64"</td>",val);
 		printNumAbbr ( p , val );
 	}
-	p.safePrintf("<td>%lli</td></tr>\n",total);
+	p.safePrintf("<td>%"INT64"</td></tr>\n",total);
 
 	// print rdb mem avail
 	p.safePrintf("<tr class=poo><td><b><nobr>rdb mem available</nobr></b></td>");
 	total = 0LL;
-	for ( long i = 0 ; i < nr ; i++ ) {
-		long long val = rdbs[i]->getRdbMem()->getAvailMem();
+	for ( int32_t i = 0 ; i < nr ; i++ ) {
+		int64_t val = rdbs[i]->getRdbMem()->getAvailMem();
 		total += val;
-		//p.safePrintf("<td>%llu</td>",val);
+		//p.safePrintf("<td>%"UINT64"</td>",val);
 		printNumAbbr ( p , val );
 	}
-	p.safePrintf("<td>%lli</td></tr>\n",total);
+	p.safePrintf("<td>%"INT64"</td></tr>\n",total);
 
 
 	// print map mem
 	p.safePrintf("<tr class=poo><td><b>map mem</b></td>");
 	total = 0LL;
-	for ( long i = 0 ; i < nr ; i++ ) {
-		long long val = rdbs[i]->getMapMemAlloced();
+	for ( int32_t i = 0 ; i < nr ; i++ ) {
+		int64_t val = rdbs[i]->getMapMemAlloced();
 		total += val;
-		p.safePrintf("<td>%llu</td>",val);
+		p.safePrintf("<td>%"UINT64"</td>",val);
 	}
-	p.safePrintf("<td>%lli</td></tr>\n",total);
+	p.safePrintf("<td>%"INT64"</td></tr>\n",total);
 
 	/*
 	// print rec cache hits %
 	p.safePrintf("<tr class=poo><td><b>rec cache hits %%</b></td>");
 	totalf = 0.0;
-	for ( long i = 0 ; i < nr ; i++ ) {
-		long long hits   = rdbs[i]->m_cache.getNumHits();
-		long long misses = rdbs[i]->m_cache.getNumHits();
-		long long sum    = hits + misses;
+	for ( int32_t i = 0 ; i < nr ; i++ ) {
+		int64_t hits   = rdbs[i]->m_cache.getNumHits();
+		int64_t misses = rdbs[i]->m_cache.getNumHits();
+		int64_t sum    = hits + misses;
 		float val = 0.0;
 		if ( sum > 0.0 ) val = ((float)hits * 100.0) / (float)sum;
 		totalf += val;
@@ -1908,87 +1985,87 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 	// print rec cache hits
 	p.safePrintf("<tr class=poo><td><b>rec cache hits</b></td>");
 	total = 0;
-	for ( long i = 0 ; i < nr ; i++ ) {
-		long long val = rdbs[i]->m_cache.getNumHits();
+	for ( int32_t i = 0 ; i < nr ; i++ ) {
+		int64_t val = rdbs[i]->m_cache.getNumHits();
 		total += val;
-		p.safePrintf("<td>%llu</td>",val);
+		p.safePrintf("<td>%"UINT64"</td>",val);
 	}
-	p.safePrintf("<td>%llu</td></tr>\n",total);
+	p.safePrintf("<td>%"UINT64"</td></tr>\n",total);
 
 
 	// print rec cache misses
 	p.safePrintf("<tr class=poo><td><b>rec cache misses</b></td>");
 	total = 0;
-	for ( long i = 0 ; i < nr ; i++ ) {
-		long long val = rdbs[i]->m_cache.getNumMisses();
+	for ( int32_t i = 0 ; i < nr ; i++ ) {
+		int64_t val = rdbs[i]->m_cache.getNumMisses();
 		total += val;
-		p.safePrintf("<td>%llu</td>",val);
+		p.safePrintf("<td>%"UINT64"</td>",val);
 	}
-	p.safePrintf("<td>%llu</td></tr>\n",total);
+	p.safePrintf("<td>%"UINT64"</td></tr>\n",total);
 
 	// print rec cache tries
 	p.safePrintf("<tr class=poo><td><b>rec cache tries</b></td>");
 	total = 0;
-	for ( long i = 0 ; i < nr ; i++ ) {
-		long long hits   = rdbs[i]->m_cache.getNumHits();
-		long long misses = rdbs[i]->m_cache.getNumHits();
-		long long val    = hits + misses;
+	for ( int32_t i = 0 ; i < nr ; i++ ) {
+		int64_t hits   = rdbs[i]->m_cache.getNumHits();
+		int64_t misses = rdbs[i]->m_cache.getNumHits();
+		int64_t val    = hits + misses;
 		total += val;
-		p.safePrintf("<td>%llu</td>",val);
+		p.safePrintf("<td>%"UINT64"</td>",val);
 	}
-	p.safePrintf("<td>%llu</td></tr>\n",total);
+	p.safePrintf("<td>%"UINT64"</td></tr>\n",total);
 
 	p.safePrintf("<tr class=poo><td><b>rec cache used slots</b></td>");
 	total = 0;
-	for ( long i = 0 ; i < nr ; i++ ) {
-		long long val = rdbs[i]->m_cache.getNumUsedNodes();
+	for ( int32_t i = 0 ; i < nr ; i++ ) {
+		int64_t val = rdbs[i]->m_cache.getNumUsedNodes();
 		total += val;
-		p.safePrintf("<td>%llu</td>",val);
+		p.safePrintf("<td>%"UINT64"</td>",val);
 	}
-	p.safePrintf("<td>%llu</td></tr>\n",total);
+	p.safePrintf("<td>%"UINT64"</td></tr>\n",total);
 
 
 	p.safePrintf("<tr class=poo><td><b>rec cache max slots</b></td>");
 	total = 0;
-	for ( long i = 0 ; i < nr ; i++ ) {
-		long long val = rdbs[i]->m_cache.getNumTotalNodes();
+	for ( int32_t i = 0 ; i < nr ; i++ ) {
+		int64_t val = rdbs[i]->m_cache.getNumTotalNodes();
 		total += val;
-		p.safePrintf("<td>%llu</td>",val);
+		p.safePrintf("<td>%"UINT64"</td>",val);
 	}
-	p.safePrintf("<td>%llu</td></tr>\n",total);
+	p.safePrintf("<td>%"UINT64"</td></tr>\n",total);
 
 
 	p.safePrintf("<tr class=poo><td><b>rec cache used bytes</b></td>");
 	total = 0;
-	for ( long i = 0 ; i < nr ; i++ ) {
-		long long val = rdbs[i]->m_cache.getMemOccupied();
+	for ( int32_t i = 0 ; i < nr ; i++ ) {
+		int64_t val = rdbs[i]->m_cache.getMemOccupied();
 		total += val;
-		p.safePrintf("<td>%llu</td>",val);
+		p.safePrintf("<td>%"UINT64"</td>",val);
 	}
-	p.safePrintf("<td>%llu</td></tr>\n",total);
+	p.safePrintf("<td>%"UINT64"</td></tr>\n",total);
 
 
 	p.safePrintf("<tr class=poo><td><b>rec cache max bytes</b></td>");
 	total = 0;
-	for ( long i = 0 ; i < nr ; i++ ) {
-		long long val = rdbs[i]->m_cache.getMaxMem();
+	for ( int32_t i = 0 ; i < nr ; i++ ) {
+		int64_t val = rdbs[i]->m_cache.getMaxMem();
 		total += val;
-		p.safePrintf("<td>%llu</td>",val);
+		p.safePrintf("<td>%"UINT64"</td>",val);
 	}
-	p.safePrintf("<td>%llu</td></tr>\n",total);
+	p.safePrintf("<td>%"UINT64"</td></tr>\n",total);
 	*/
 
 
 	p.safePrintf("<tr class=poo><td><b>page cache hits %%</b></td>");
 	totalf = 0.0;
-	for ( long i = 0 ; i < nr ; i++ ) {
+	for ( int32_t i = 0 ; i < nr ; i++ ) {
 		if ( ! rdbs[i]->m_pc ) {
 			p.safePrintf("<td>--</td>");
 			continue;
 		}
-		long long hits   = rdbs[i]->m_pc->getNumHits();
-		long long misses = rdbs[i]->m_pc->getNumMisses();
-		long long sum    = hits + misses;
+		int64_t hits   = rdbs[i]->m_pc->getNumHits();
+		int64_t misses = rdbs[i]->m_pc->getNumMisses();
+		int64_t sum    = hits + misses;
 		float val = 0.0;
 		if ( sum > 0.0 ) val = ((float)hits * 100.0) / (float)sum;
 		totalf += val;
@@ -2002,186 +2079,186 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 
 	p.safePrintf("<tr class=poo><td><b>page cache hits</b></td>");
 	total = 0;
-	for ( long i = 0 ; i < nr ; i++ ) {
+	for ( int32_t i = 0 ; i < nr ; i++ ) {
 		if ( ! rdbs[i]->m_pc ) {
 			p.safePrintf("<td>--</td>");
 			continue;
 		}
-		long long val = rdbs[i]->m_pc->getNumHits();
+		int64_t val = rdbs[i]->m_pc->getNumHits();
 		total += val;
-		p.safePrintf("<td>%llu</td>",val);
+		p.safePrintf("<td>%"UINT64"</td>",val);
 	}
-	p.safePrintf("<td>%llu</td></tr>\n",total);
+	p.safePrintf("<td>%"UINT64"</td></tr>\n",total);
 
 
 	p.safePrintf("<tr class=poo><td><b>page cache misses</b></td>");
 	total = 0;
-	for ( long i = 0 ; i < nr ; i++ ) {
+	for ( int32_t i = 0 ; i < nr ; i++ ) {
 		if ( ! rdbs[i]->m_pc ) {
 			p.safePrintf("<td>--</td>");
 			continue;
 		}
-		long long val = rdbs[i]->m_pc->getNumMisses();
+		int64_t val = rdbs[i]->m_pc->getNumMisses();
 		total += val;
-		p.safePrintf("<td>%llu</td>",val);
+		p.safePrintf("<td>%"UINT64"</td>",val);
 	}
-	p.safePrintf("<td>%llu</td></tr>\n",total);
+	p.safePrintf("<td>%"UINT64"</td></tr>\n",total);
 
 
 	p.safePrintf("<tr class=poo><td><b>page cache tries</b></td>");
 	total = 0;
-	for ( long i = 0 ; i < nr ; i++ ) {
+	for ( int32_t i = 0 ; i < nr ; i++ ) {
 		if ( ! rdbs[i]->m_pc ) {
 			p.safePrintf("<td>--</td>");
 			continue;
 		}
-		long long hits   = rdbs[i]->m_pc->getNumHits();
-		long long misses = rdbs[i]->m_pc->getNumMisses();
-		long long val    = hits + misses;
+		int64_t hits   = rdbs[i]->m_pc->getNumHits();
+		int64_t misses = rdbs[i]->m_pc->getNumMisses();
+		int64_t val    = hits + misses;
 		total += val;
-		p.safePrintf("<td>%llu</td>",val);
+		p.safePrintf("<td>%"UINT64"</td>",val);
 	}
-	p.safePrintf("<td>%llu</td></tr>\n",total);
+	p.safePrintf("<td>%"UINT64"</td></tr>\n",total);
 
 
 	p.safePrintf("<tr class=poo><td><b>page cache used</b></td>");
 	total = 0;
-	for ( long i = 0 ; i < nr ; i++ ) {
+	for ( int32_t i = 0 ; i < nr ; i++ ) {
 		if ( ! rdbs[i]->m_pc ) {
 			p.safePrintf("<td>--</td>");
 			continue;
 		}
-		long long val = rdbs[i]->m_pc->getMemUsed();
+		int64_t val = rdbs[i]->m_pc->getMemUsed();
 		total += val;
 		printNumAbbr ( p , val );
 	}
-	p.safePrintf("<td>%llu</td></tr>\n",total);
+	p.safePrintf("<td>%"UINT64"</td></tr>\n",total);
 
 
 	p.safePrintf("<tr class=poo><td><b><nobr>page cache allocated</nobr></b></td>");
 	total = 0;
-	for ( long i = 0 ; i < nr ; i++ ) {
+	for ( int32_t i = 0 ; i < nr ; i++ ) {
 		if ( ! rdbs[i]->m_pc ) {
 			p.safePrintf("<td>--</td>");
 			continue;
 		}
-		long long val = rdbs[i]->m_pc->getMemAlloced();
+		int64_t val = rdbs[i]->m_pc->getMemAlloced();
 		total += val;
 		printNumAbbr ( p , val );
 	}
-	p.safePrintf("<td>%llu</td></tr>\n",total);
+	p.safePrintf("<td>%"UINT64"</td></tr>\n",total);
 
 
 
 
 	p.safePrintf("<tr class=poo><td><b># disk seeks</b></td>");
 	total = 0;
-	for ( long i = 0 ; i < nr ; i++ ) {
-		long long val = rdbs[i]->getNumSeeks();
+	for ( int32_t i = 0 ; i < nr ; i++ ) {
+		int64_t val = rdbs[i]->getNumSeeks();
 		total += val;
-		p.safePrintf("<td>%llu</td>",val);
+		p.safePrintf("<td>%"UINT64"</td>",val);
 	}
-	p.safePrintf("<td>%llu</td></tr>\n",total);
+	p.safePrintf("<td>%"UINT64"</td></tr>\n",total);
 
 
 	p.safePrintf("<tr class=poo><td><b># disk re-seeks</b></td>");
 	total = 0;
-	for ( long i = 0 ; i < nr ; i++ ) {
-		long long val = rdbs[i]->getNumReSeeks();
+	for ( int32_t i = 0 ; i < nr ; i++ ) {
+		int64_t val = rdbs[i]->getNumReSeeks();
 		total += val;
-		p.safePrintf("<td>%llu</td>",val);
+		p.safePrintf("<td>%"UINT64"</td>",val);
 	}
-	p.safePrintf("<td>%llu</td></tr>\n",total);
+	p.safePrintf("<td>%"UINT64"</td></tr>\n",total);
 
 
 	p.safePrintf("<tr class=poo><td><b># bytes read</b></td>");
 	total = 0;
-	for ( long i = 0 ; i < nr ; i++ ) {
-		long long val = rdbs[i]->getNumRead();
+	for ( int32_t i = 0 ; i < nr ; i++ ) {
+		int64_t val = rdbs[i]->getNumRead();
 		total += val;
-		p.safePrintf("<td>%llu</td>",val);
+		p.safePrintf("<td>%"UINT64"</td>",val);
 	}
-	p.safePrintf("<td>%llu</td></tr>\n",total);
+	p.safePrintf("<td>%"UINT64"</td></tr>\n",total);
 
 
 	p.safePrintf("<tr class=poo><td><b># get requests read</b></td>");
 	total = 0;
-	for ( long i = 0 ; i < nr ; i++ ) {
-		long long val = rdbs[i]->getNumRequestsGet();
+	for ( int32_t i = 0 ; i < nr ; i++ ) {
+		int64_t val = rdbs[i]->getNumRequestsGet();
 		total += val;
-		p.safePrintf("<td>%llu</td>",val);
+		p.safePrintf("<td>%"UINT64"</td>",val);
 	}
-	p.safePrintf("<td>%llu</td></tr>\n",total);
+	p.safePrintf("<td>%"UINT64"</td></tr>\n",total);
 
 
 	p.safePrintf("<tr class=poo><td><b># get requests bytes</b></td>");
 	total = 0;
-	for ( long i = 0 ; i < nr ; i++ ) {
-		long long val = rdbs[i]->getNetReadGet();
+	for ( int32_t i = 0 ; i < nr ; i++ ) {
+		int64_t val = rdbs[i]->getNetReadGet();
 		total += val;
-		p.safePrintf("<td>%llu</td>",val);
+		p.safePrintf("<td>%"UINT64"</td>",val);
 	}
-	p.safePrintf("<td>%llu</td></tr>\n",total);
+	p.safePrintf("<td>%"UINT64"</td></tr>\n",total);
 
 
 	p.safePrintf("<tr class=poo><td><b># get replies sent</b></td>");
 	total = 0;
-	for ( long i = 0 ; i < nr ; i++ ) {
-		long long val = rdbs[i]->getNumRepliesGet();
+	for ( int32_t i = 0 ; i < nr ; i++ ) {
+		int64_t val = rdbs[i]->getNumRepliesGet();
 		total += val;
-		p.safePrintf("<td>%llu</td>",val);
+		p.safePrintf("<td>%"UINT64"</td>",val);
 	}
-	p.safePrintf("<td>%llu</td></tr>\n",total);
+	p.safePrintf("<td>%"UINT64"</td></tr>\n",total);
 
 
 	p.safePrintf("<tr class=poo><td><b># get reply bytes</b></td>");
 	total = 0;
-	for ( long i = 0 ; i < nr ; i++ ) {
-		long long val = rdbs[i]->getNetSentGet();
+	for ( int32_t i = 0 ; i < nr ; i++ ) {
+		int64_t val = rdbs[i]->getNetSentGet();
 		total += val;
-		p.safePrintf("<td>%llu</td>",val);
+		p.safePrintf("<td>%"UINT64"</td>",val);
 	}
-	p.safePrintf("<td>%llu</td></tr>\n",total);
+	p.safePrintf("<td>%"UINT64"</td></tr>\n",total);
 
 
 
 	p.safePrintf("<tr class=poo><td><b># add requests read</b></td>");
 	total = 0;
-	for ( long i = 0 ; i < nr ; i++ ) {
-		long long val = rdbs[i]->getNumRequestsAdd();
+	for ( int32_t i = 0 ; i < nr ; i++ ) {
+		int64_t val = rdbs[i]->getNumRequestsAdd();
 		total += val;
-		p.safePrintf("<td>%llu</td>",val);
+		p.safePrintf("<td>%"UINT64"</td>",val);
 	}
-	p.safePrintf("<td>%llu</td></tr>\n",total);
+	p.safePrintf("<td>%"UINT64"</td></tr>\n",total);
 
 
 	p.safePrintf("<tr class=poo><td><b># add requests bytes</b></td>");
 	total = 0;
-	for ( long i = 0 ; i < nr ; i++ ) {
-		long long val = rdbs[i]->getNetReadAdd();
+	for ( int32_t i = 0 ; i < nr ; i++ ) {
+		int64_t val = rdbs[i]->getNetReadAdd();
 		total += val;
-		p.safePrintf("<td>%llu</td>",val);
+		p.safePrintf("<td>%"UINT64"</td>",val);
 	}
-	p.safePrintf("<td>%llu</td></tr>\n",total);
+	p.safePrintf("<td>%"UINT64"</td></tr>\n",total);
 
 	p.safePrintf("<tr class=poo><td><b># add replies sent</b></td>");
 	total = 0;
-	for ( long i = 0 ; i < nr ; i++ ) {
-		long long val = rdbs[i]->getNumRepliesAdd();
+	for ( int32_t i = 0 ; i < nr ; i++ ) {
+		int64_t val = rdbs[i]->getNumRepliesAdd();
 		total += val;
-		p.safePrintf("<td>%llu</td>",val);
+		p.safePrintf("<td>%"UINT64"</td>",val);
 	}
-	p.safePrintf("<td>%llu</td></tr>\n",total);
+	p.safePrintf("<td>%"UINT64"</td></tr>\n",total);
 
 
 	p.safePrintf("<tr class=poo><td><b># add reply bytes</b></td>");
 	total = 0;
-	for ( long i = 0 ; i < nr ; i++ ) {
-		long long val = rdbs[i]->getNetSentAdd();
+	for ( int32_t i = 0 ; i < nr ; i++ ) {
+		int64_t val = rdbs[i]->getNetSentAdd();
 		total += val;
-		p.safePrintf("<td>%llu</td>",val);
+		p.safePrintf("<td>%"UINT64"</td>",val);
 	}
-	p.safePrintf("<td>%llu</td></tr>\n",total);
+	p.safePrintf("<td>%"UINT64"</td></tr>\n",total);
 
 
 
@@ -2218,8 +2295,8 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 	//p += g_httpServer.printTail ( p , pend - p );
 
 	// calculate buffer length
-	//long bufLen = p - buf;
-	long bufLen = p.length();
+	//int32_t bufLen = p - buf;
+	int32_t bufLen = p.length();
 
 	if ( format == FORMAT_XML ) {
 		p.safePrintf("</response>\n");

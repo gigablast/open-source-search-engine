@@ -39,7 +39,7 @@ class Facebookdb {
 	Rdb *getRdb ( ) { return &m_rdb; };
 	Rdb   m_rdb;
 	// key.n0 is the user id
-	long long getUserId ( void *fbrec ) {
+	int64_t getUserId ( void *fbrec ) {
 		// the delbit is the last bit, so shift over that
 		return (((key96_t *)fbrec)->n0) >> 1LL; }
 		
@@ -71,57 +71,57 @@ class FBRec {
 
 	// start of an rdb record
 	key96_t m_key;
-	long    m_dataSize;
+	int32_t    m_dataSize;
 
 	// i've seen these up to 999 trillion
-	long long m_fbId;
+	int64_t m_fbId;
 	// used for fetching
-	long   m_flags;
+	int32_t   m_flags;
 	time_t m_accessTokenCreated;
 	time_t m_eventsDownloaded;
-	//long   m_reserved1;
+	//int32_t   m_reserved1;
 	char   m_emailFrequency; // for just for you
 	char   m_reserved1b;
 	char   m_reserved1c;
 	char   m_reserved1d;
 
-	long   m_lastEmailAttempt;//reserved3; (for Recommendations)
-	long   m_nextRetry; // when to retry email if it failed (Recommenda...)
-	long   m_timeToEmail; // in minutes of the day (Recommendations)
-	long   m_myRadius; // for "Recommendations/JustForYou"
+	int32_t   m_lastEmailAttempt;//reserved3; (for Recommendations)
+	int32_t   m_nextRetry; // when to retry email if it failed (Recommenda...)
+	int32_t   m_timeToEmail; // in minutes of the day (Recommendations)
+	int32_t   m_myRadius; // for "Recommendations/JustForYou"
 
 	// . from what user was this user referred? 
 	// . this is how we pay the widgetmasters.
 	// . 0 means not referred via a widgetmaster's widget
-	long long m_originatingWidgetId;
+	int64_t m_originatingWidgetId;
 	// . the date they first logged into facebook (UTC)
 	// . also used to determine payment
 	time_t    m_firstFacebookLogin;
 	// to help 'autolocate'
-	long   m_lastLoginIP;
+	int32_t   m_lastLoginIP;
 
-	float  m_gpsLat;//long   m_reserved7;
-	float  m_gpsLon;//long   m_reserved8;
-	long   m_reserved9;
-	long   m_reserved10;
-	long   m_reserved11;
-	long   m_reserved12;
-	long   m_reserved13;
-	long   m_reserved14;
-	long   m_reserved15;
-	long   m_reserved16;
-	long   m_reserved17;
-	long   m_reserved18;
-	long   m_reserved19;
-	long   m_reserved20;
+	float  m_gpsLat;//int32_t   m_reserved7;
+	float  m_gpsLon;//int32_t   m_reserved8;
+	int32_t   m_reserved9;
+	int32_t   m_reserved10;
+	int32_t   m_reserved11;
+	int32_t   m_reserved12;
+	int32_t   m_reserved13;
+	int32_t   m_reserved14;
+	int32_t   m_reserved15;
+	int32_t   m_reserved16;
+	int32_t   m_reserved17;
+	int32_t   m_reserved18;
+	int32_t   m_reserved19;
+	int32_t   m_reserved20;
 
 	char m_verified;
 	char m_is_blocked;
 	char m_is_minor;
 	char m_is_app_user;
 	char m_timezone;
-	long m_likes_count;
-	long m_friend_count;
+	int32_t m_likes_count;
+	int32_t m_friend_count;
 
 	char *ptr_accessToken;
 	char *ptr_firstName;
@@ -168,43 +168,43 @@ class FBRec {
 	char *ptr_reserved8;
 	char *ptr_friendIds;
 
-	long size_accessToken;
-	long size_firstName;
-	long size_lastName;
-	long size_name;
-	long size_pic_square;
-	long size_religion;
-	long size_birthday;
-	long size_birthday_date;
-	long size_sex;
-	long size_hometown_location;
-	long size_current_location;
-	long size_activities;
-	long size_tv;
-	long size_email;
-	long size_interests;
-	long size_music;
-	long size_movies;
-	long size_books;
-	long size_about_me;
-	long size_status;
-	long size_online_presence;
-	long size_proxied_email;
-	long size_website;
-	long size_contact_email;
-	long size_work;
-	long size_education;
-	long size_sports;
-	long size_languages;
-	long size_mergedInterests;//reserved1;
-	long size_myLocation;//reserved2;
-	long size_reserved3;
-	long size_reserved4;
-	long size_reserved5;
-	long size_reserved6;
-	long size_reserved7;
-	long size_reserved8;
-	long size_friendIds;
+	int32_t size_accessToken;
+	int32_t size_firstName;
+	int32_t size_lastName;
+	int32_t size_name;
+	int32_t size_pic_square;
+	int32_t size_religion;
+	int32_t size_birthday;
+	int32_t size_birthday_date;
+	int32_t size_sex;
+	int32_t size_hometown_location;
+	int32_t size_current_location;
+	int32_t size_activities;
+	int32_t size_tv;
+	int32_t size_email;
+	int32_t size_interests;
+	int32_t size_music;
+	int32_t size_movies;
+	int32_t size_books;
+	int32_t size_about_me;
+	int32_t size_status;
+	int32_t size_online_presence;
+	int32_t size_proxied_email;
+	int32_t size_website;
+	int32_t size_contact_email;
+	int32_t size_work;
+	int32_t size_education;
+	int32_t size_sports;
+	int32_t size_languages;
+	int32_t size_mergedInterests;//reserved1;
+	int32_t size_myLocation;//reserved2;
+	int32_t size_reserved3;
+	int32_t size_reserved4;
+	int32_t size_reserved5;
+	int32_t size_reserved6;
+	int32_t size_reserved7;
+	int32_t size_reserved8;
+	int32_t size_friendIds;
 
 	char  m_buf[0];
 };
@@ -262,7 +262,7 @@ class FBRec {
 // this person, fbId? used by PageEvents to display a warning msg to
 // let the user know more events are pending so the search results might
 // be incomplete.
-bool isStillDownloading ( long long fbId , collnum_t collnum ) ;
+bool isStillDownloading ( int64_t fbId , collnum_t collnum ) ;
 
 class Msgfb {
 public:
@@ -280,7 +280,7 @@ public:
 				   void *state ,
 				   char *redirPath ,
 				   void (* callback) ( void *) ,
-				   long niceness );
+				   int32_t niceness );
 	bool downloadAccessToken ( );
 	bool gotFBAccessToken ( class TcpSocket *s );
 	bool doneRechecking ( );
@@ -295,7 +295,7 @@ public:
 	//
 	// event download & injection pipeline (pipeline #2)
 	//
-	bool processFBId ( long long fbId , 
+	bool processFBId ( int64_t fbId , 
 			   collnum_t collnum ,
 			   void *state, 
 			   void (* callback)(void *));
@@ -309,67 +309,67 @@ public:
 
 	bool makeLikedbKeyList ( class Msg7 *msg7 , class RdbList *list );
 	bool setFBRecFromFQLReply ( char *reply, 
-				    long replySize ,
+				    int32_t replySize ,
 				    class FBRec *fbrec );
-	//bool overwriteFriendsFromFQLReply ( char *reply, long replySize );
-	//bool overwriteEventIdsFromFQLReply ( char *reply, long replySize );
-	bool setNewEventIdsFromFQLReply ( char *reply, long replySize );
-	bool parseFacebookEventReply ( char *reply, long replySize );
+	//bool overwriteFriendsFromFQLReply ( char *reply, int32_t replySize );
+	//bool overwriteEventIdsFromFQLReply ( char *reply, int32_t replySize );
+	bool setNewEventIdsFromFQLReply ( char *reply, int32_t replySize );
+	bool parseFacebookEventReply ( char *reply, int32_t replySize );
 	// the http reply from facebook that contains event titles/descrs/etc.
 	bool  m_inProgress;
-	long  m_i;
+	int32_t  m_i;
 	char *m_facebookReply;
-	long  m_facebookReplySize;
-	long  m_facebookAllocSize;
+	int32_t  m_facebookReplySize;
+	int32_t  m_facebookAllocSize;
 	// another one
 	//char *m_facebookReply2;
-	//long  m_facebookReplySize2;
-	//long  m_facebookAllocSize2;
+	//int32_t  m_facebookReplySize2;
+	//int32_t  m_facebookAllocSize2;
 	// facebook reply buf is now rbuf
 	SafeBuf m_rbuf;
 	//char *m_facebookContent;
 	//char  m_c;
-	long m_eventStartNum;
-	long m_eventStep;
-	long m_errorCount;
-	long m_retryCount;
+	int32_t m_eventStartNum;
+	int32_t m_eventStep;
+	int32_t m_errorCount;
+	int32_t m_retryCount;
 
-	long m_phase;
+	int32_t m_phase;
 	SafeBuf m_fullReply;
-	long m_niceness;
-	long m_chunkStart;
-	long m_chunkSize;
-	long m_myChunkStart;
-	long m_myChunkSize;
+	int32_t m_niceness;
+	int32_t m_chunkStart;
+	int32_t m_chunkSize;
+	int32_t m_myChunkStart;
+	int32_t m_myChunkSize;
 	void queueLoop ( );
 
 	char *m_redirPath;
 
-	long long m_userToUserWidgetId;
+	int64_t m_userToUserWidgetId;
 
-	long m_privacy;
+	int32_t m_privacy;
 	// fixed length. include +1 for \0
 	char m_accessToken[MAX_TOKEN_LEN+1];
 
 	// parse output. set eventPtrs to NULL if not new!
 	//char     *m_eventPtrs[MAXEVENTPTRS];
-	//long      m_eventLens[MAXEVENTPTRS];
-	//long long m_eventIds [MAXEVENTPTRS];
+	//int32_t      m_eventLens[MAXEVENTPTRS];
+	//int64_t m_eventIds [MAXEVENTPTRS];
 	SafeBuf   m_evPtrBuf;
 	SafeBuf   m_evIdsBuf;
-	long      m_numEvents;
+	int32_t      m_numEvents;
 
 	// parse fql reply and store into here and reference from
 	// m_fbrec::ptr_* etc.
 	//SafeBuf m_sbuf;
 
-	long long m_fbId;
+	int64_t m_fbId;
 	void (*m_afterSaveCallback) ( void * );
 	HttpRequest m_hr;
 	TcpSocket *m_socket;
-	long m_requests;
-	long m_replies;
-	long m_errno;
+	int32_t m_requests;
+	int32_t m_replies;
+	int32_t m_errno;
 	RdbList m_list1;
 	RdbList m_list2;
 	RdbList m_list3;
@@ -397,7 +397,7 @@ public:
 	SafeBuf m_eidBuf; // fb event ids
 	HashTableX m_dedupEidBuf;
 
-	long long m_widgetId;
+	int64_t m_widgetId;
 
 	HashTableX m_likedbTable;
 };
@@ -420,63 +420,63 @@ class Likedb {
 	Rdb *getRdb ( ) { return &m_rdb; };
 	Rdb   m_rdb;
 
-	char *makeRecs ( long long  uid         ,
-			 long long  docId       ,
-			 long       eventId     ,
-			 long       rsvp_status ,
-			 long       start_time  ,
-			 unsigned long long eventHash64 ,
-			 long long  value       );
+	char *makeRecs ( int64_t  uid         ,
+			 int64_t  docId       ,
+			 int32_t       eventId     ,
+			 int32_t       rsvp_status ,
+			 int32_t       start_time  ,
+			 uint64_t eventHash64 ,
+			 int64_t  value       );
 
 	bool makeFriendTable ( class Msg39Request *req ,
-			       long likedbFlags , 
+			       int32_t likedbFlags , 
 			       class HashTableX *ht ) ;
 
-	long long getDocId ( key192_t *k ) { //return (k->n0)>>24; };
+	int64_t getDocId ( key192_t *k ) { //return (k->n0)>>24; };
 		// this is 1 if docid leads
 		if ( k->n0 & LF_TYPEBIT ) return k->n2 >> 26;
-		// otherwise it is in 2nd long long
+		// otherwise it is in 2nd int64_t
 		return k->n1 >> 26;
 	};
-	long long getDocIdFromRec ( char *rec );
+	int64_t getDocIdFromRec ( char *rec );
 
-	key192_t makeKey      ( long long docId, long eventId );
-	key192_t makeStartKey ( long long docId, long eventId );
-	key192_t makeEndKey   ( long long docId, long eventId );
+	key192_t makeKey      ( int64_t docId, int32_t eventId );
+	key192_t makeStartKey ( int64_t docId, int32_t eventId );
+	key192_t makeEndKey   ( int64_t docId, int32_t eventId );
 
-	key192_t makeStartKey2 ( long long uid ) ;
+	key192_t makeStartKey2 ( int64_t uid ) ;
 
-	long long getUserIdFromRec ( void *rec );
-	long getEventIdFromRec ( void *rec );
-	void setEventId ( char *rec , long eventId ) ;
+	int64_t getUserIdFromRec ( void *rec );
+	int32_t getEventIdFromRec ( void *rec );
+	void setEventId ( char *rec , int32_t eventId ) ;
 
-	long getRawFlagsFromRec  ( char *rec ) {
-		return  *(long *)rec ;};
-	long getFlagsFromRec  ( char *rec ) {
-		return (*(long *)rec) & ~(LF_DELBIT|LF_TYPEBIT);};
-	long getStartTimeFromRec ( char *rec ) {
-		return (*(long *)(rec+4)); };
-	unsigned long getEventHash32FromRec(char *rec){
-		return *(unsigned long *)(rec+sizeof(key192_t));};
-	long long getValueFromRec ( char *rec ) {
-		return *(long long *)(rec+sizeof(key192_t)+4);};
+	int32_t getRawFlagsFromRec  ( char *rec ) {
+		return  *(int32_t *)rec ;};
+	int32_t getFlagsFromRec  ( char *rec ) {
+		return (*(int32_t *)rec) & ~(LF_DELBIT|LF_TYPEBIT);};
+	int32_t getStartTimeFromRec ( char *rec ) {
+		return (*(int32_t *)(rec+4)); };
+	uint32_t getEventHash32FromRec(char *rec){
+		return *(uint32_t *)(rec+sizeof(key192_t));};
+	int64_t getValueFromRec ( char *rec ) {
+		return *(int64_t *)(rec+sizeof(key192_t)+4);};
 
 	// for the LF_ADDEDTOFACEBOOK flag
-	long long getFacebookEventId ( char *rec ) {
-		return *(long long *)(rec+sizeof(key192_t)+4);};
+	int64_t getFacebookEventId ( char *rec ) {
+		return *(int64_t *)(rec+sizeof(key192_t)+4);};
 
 	// . OR all the flags this user has set in the likedb list
 	// . used in PageEvents.cpp
-	long getUserFlags ( long long userId , long start_time ,
-			    char *list, long listSize ) ;
+	int32_t getUserFlags ( int64_t userId , int32_t start_time ,
+			    char *list, int32_t listSize ) ;
 
-	long getPositiveFlagsFromRec  ( char *rec ) ;
+	int32_t getPositiveFlagsFromRec  ( char *rec ) ;
 
-	char *getRecFromLikedbList ( long long userId ,
-				     long start_time ,
-				     long flags , 
+	char *getRecFromLikedbList ( int64_t userId ,
+				     int32_t start_time ,
+				     int32_t flags , 
 				     char *list ,
-				     long  listSize ) ;
+				     int32_t  listSize ) ;
 };
 
 /////////
@@ -493,12 +493,12 @@ class Msgfc {
 	Msg1 m_msg1;
 
 	// add this to likedb (or remove if "neg" is true.
-	bool addLikedbTag ( long long userId,
-			    long long docId,
-			    long      eventId,
-			    unsigned long long eventHash64 ,
-			    long start_time,
-			    long likedbTag , // LB_* #define's above
+	bool addLikedbTag ( int64_t userId,
+			    int64_t docId,
+			    int32_t      eventId,
+			    uint64_t eventHash64 ,
+			    int32_t start_time,
+			    int32_t likedbTag , // LB_* #define's above
 			    bool negative , // turn off that flag?
 			    char *coll,
 			    void *state ,
@@ -521,7 +521,7 @@ class EmailState {
 	void *m_singleState;
 	TcpSocket *m_socket;
 
-	long long m_fbId;
+	int64_t m_fbId;
 	SafeBuf m_emailResultsBuf;
 	SafeBuf m_emailLikedbListBuf;
 	char m_inUse;
@@ -532,8 +532,8 @@ class EmailState {
 	Msg1 m_msg1;
 	MsgC m_msgc;
 	class Emailer *m_emailer;
-	long m_ip;
-	long m_errno;
+	int32_t m_ip;
+	int32_t m_errno;
 	SafeBuf m_hrsb;
 	char *m_coll;
 };
@@ -545,7 +545,7 @@ class Emailer {
 
 	bool emailEntryLoop ( ) ;
 	bool emailScan ( class EmailState *es );
-	bool launchEmail ( long long fbId );
+	bool launchEmail ( int64_t fbId );
 	bool getMailServerIP ( EmailState *es );
 	bool gotMXIp ( EmailState *es );
 	bool gotEmailReply ( EmailState *es , TcpSocket *s );
@@ -556,7 +556,7 @@ class Emailer {
 	bool scanLoop ( ) ;
 	void gotScanList ( );
 
-	bool sendSingleEmail ( class EmailState *es , long long fbId );
+	bool sendSingleEmail ( class EmailState *es , int64_t fbId );
 
 	bool m_populateInProgress;
 	time_t m_lastScan;
@@ -572,8 +572,8 @@ class Emailer {
 	time_t m_lastEmailLoop;
 	bool   m_emailInProgress;
 
-	long   m_emailRequests;
-	long   m_emailReplies;
+	int32_t   m_emailRequests;
+	int32_t   m_emailReplies;
 
 	Msg0    m_msg0;
 	RdbList m_list2;
@@ -588,7 +588,7 @@ class Emailer {
 		m_emailReplies  = 0;
 		m_init = false;
 		m_lastEmailLoop = 0;
-		for ( long i = 0 ; i < MAX_OUTSTANDING_EMAILS;i++ )
+		for ( int32_t i = 0 ; i < MAX_OUTSTANDING_EMAILS;i++ )
 			m_emailStates[i].m_inUse = 0;
 	};
 

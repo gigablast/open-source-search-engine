@@ -1,6 +1,6 @@
 #include "gb-include.h"
 
-#include "Indexdb.h"     // makeKey(long long docId)
+#include "Indexdb.h"     // makeKey(int64_t docId)
 #include "Titledb.h"
 #include "Spider.h"
 #include "Tagdb.h"
@@ -19,22 +19,22 @@
 #include "Address.h" // getIPLocation
 #include "Proxy.h"
 
-//char *printNumResultsDropDown ( char *p, long n, bool *printedDropDown);
-bool printNumResultsDropDown ( SafeBuf& sb, long n, bool *printedDropDown);
+//char *printNumResultsDropDown ( char *p, int32_t n, bool *printedDropDown);
+bool printNumResultsDropDown ( SafeBuf& sb, int32_t n, bool *printedDropDown);
 //static char *printTopDirectory ( char *p, char *pend );
 static bool printTopDirectory ( SafeBuf& sb , char format );
 
 // this prints the last five queries
-//static long printLastQueries ( char *p , char *pend ) ;
+//static int32_t printLastQueries ( char *p , char *pend ) ;
 
-//static char *expandRootHtml ( char *p    , long plen    ,
+//static char *expandRootHtml ( char *p    , int32_t plen    ,
 /*
 static bool expandRootHtml  ( SafeBuf& sb,
-			      uint8_t *html , long htmlLen ,
-			      char *q    , long qlen    ,
+			      uint8_t *html , int32_t htmlLen ,
+			      char *q    , int32_t qlen    ,
 			      HttpRequest *r ,
 			      TcpSocket   *s ,
-			      long long docsInColl ,
+			      int64_t docsInColl ,
 			      CollectionRec *cr ) ;
 */
 
@@ -115,8 +115,8 @@ bool printFamilyFilter ( SafeBuf& sb , bool familyFilterOn ) {
 	//return p;
 }
 
-//char *printNumResultsDropDown ( char *p , long n , bool *printedDropDown ) {
-bool printNumResultsDropDown ( SafeBuf& sb , long n , bool *printedDropDown ) {
+//char *printNumResultsDropDown ( char *p , int32_t n , bool *printedDropDown ) {
+bool printNumResultsDropDown ( SafeBuf& sb , int32_t n , bool *printedDropDown ) {
 	if ( n!=10 && n!=20 && n!=30 && n!=50 && n!=100 )
 		//return p;
 		return true;
@@ -144,8 +144,8 @@ bool printNumResultsDropDown ( SafeBuf& sb , long n , bool *printedDropDown ) {
 	//return p;
 }
 
-//char *printDirectorySearchType ( char *p, long sdirt ) {
-bool printDirectorySearchType ( SafeBuf& sb, long sdirt ) {
+//char *printDirectorySearchType ( char *p, int32_t sdirt ) {
+bool printDirectorySearchType ( SafeBuf& sb, int32_t sdirt ) {
 	// default to entire directory
 	if (sdirt < 1 || sdirt > 4)
 		sdirt = 3;
@@ -186,7 +186,7 @@ bool printRadioButtons ( SafeBuf& sb , SearchInput *si ) {
 	// don't display this for directory search
 	// look it up. returns catId <= 0 if dmoz not setup yet.
 	// From PageDirectory.cpp
-	//long catId= g_categories->getIdFromPath(decodedPath, decodedPathLen);
+	//int32_t catId= g_categories->getIdFromPath(decodedPath, decodedPathLen);
 	// if /Top print the directory homepage
 	//if ( catId == 1 || catId <= 0 ) 
 	//	return true;
@@ -221,7 +221,7 @@ bool printRadioButtons ( SafeBuf& sb , SearchInput *si ) {
 		// . print cobranding radio buttons
 		//if ( p + si->m_sitesLen + 1 >= pend ) return p;
 		// if not explicitly instructed to print all sites
-		// and they are a long list, do not print all
+		// and they are a int32_t list, do not print all
 		/*
 		char tmp[1000];
 		char *x = si->m_sites;
@@ -279,8 +279,8 @@ bool printLogo ( SafeBuf& sb , SearchInput *si ) {
 		sb.safePrintf ( "<a href=\"%s\">", si->m_imgLink );
 	// print image width and length
 	if ( si->m_imgWidth >= 0 && si->m_imgHeight >= 0 ) 
-		//p += sprintf ( p , "<img width=%li height=%li ",
-		sb.safePrintf( "<img width=%li height=%li ",
+		//p += sprintf ( p , "<img width=%"INT32" height=%"INT32" ",
+		sb.safePrintf( "<img width=%"INT32" height=%"INT32" ",
 			       si->m_imgWidth , si->m_imgHeight );
 	else
 		//p += sprintf ( p , "<img " );
@@ -306,17 +306,17 @@ bool printLogo ( SafeBuf& sb , SearchInput *si ) {
 
 bool expandHtml (  SafeBuf& sb,
 		   char *head , 
-		   long hlen ,
+		   int32_t hlen ,
 		   char *q    , 
-		   long qlen ,
+		   int32_t qlen ,
 		   HttpRequest *r ,
 		   SearchInput *si,
 		   char *method ,
 		   CollectionRec *cr ) {
 	//char *pend = p + plen;
 	// store custom header into buf now
-	//for ( long i = 0 ; i < hlen && p+10 < pend ; i++ ) {
-	for ( long i = 0 ; i < hlen; i++ ) {
+	//for ( int32_t i = 0 ; i < hlen && p+10 < pend ; i++ ) {
+	for ( int32_t i = 0 ; i < hlen; i++ ) {
 		if ( head[i] != '%'   ) {
 			// *p++ = head[i];
 			sb.safeMemcpy((char*)&head[i], 1);
@@ -345,7 +345,7 @@ bool expandHtml (  SafeBuf& sb,
 			// now we got the %q, insert the query
 			char *p    = (char*) sb.getBuf();
 			char *pend = (char*) sb.getBufEnd();
-			long eqlen = dequote ( p , pend , q , qlen );
+			int32_t eqlen = dequote ( p , pend , q , qlen );
 			//p += eqlen;
 			sb.incrementLength(eqlen);
 			// skip over %q
@@ -367,7 +367,7 @@ bool expandHtml (  SafeBuf& sb,
 		     head[i+4] == 'r' &&
 		     head[i+5] == 'e' ) {
 			// insert the location
-			long whereLen;
+			int32_t whereLen;
 			char *where = r->getString("where",&whereLen);
 			// get it from cookie as well!
 			if ( ! where ) 
@@ -384,9 +384,9 @@ bool expandHtml (  SafeBuf& sb,
 				double radius;
 				char *city,*state,*ctry;
 				// use this by default
-				long ip = r->m_userIP;
+				int32_t ip = r->m_userIP;
 				// ip for testing?
-				long iplen;
+				int32_t iplen;
 				char *ips = r->getString("uip",&iplen);
 				if ( ips ) ip = atoip(ips);
 				// returns true if found in db
@@ -412,7 +412,7 @@ bool expandHtml (  SafeBuf& sb,
 		     head[i+3] == 'e' &&
 		     head[i+4] == 'n' ) {
 			// insert the location
-			long whenLen;
+			int32_t whenLen;
 			char *when = r->getString("when",&whenLen);
 			// skip over the %when
 			i += 4;
@@ -428,7 +428,7 @@ bool expandHtml (  SafeBuf& sb,
 		     head[i+5] == 'b' &&
 		     head[i+6] == 'y' ) {
 			// insert the location
-			long sortBy = r->getLong("sortby",1);
+			int32_t sortBy = r->getLong("sortby",1);
 			// print the radio buttons
 			char *cs[5];
 			cs[0]="";
@@ -451,8 +451,8 @@ bool expandHtml (  SafeBuf& sb,
 		if ( head[i+1] == 'e' ) { 
 			// now we got the %e, insert the query
 			char *p    = (char*) sb.getBuf();
-			long  plen = sb.getAvail();
-			long eqlen = urlEncode ( p , plen , q , qlen );
+			int32_t  plen = sb.getAvail();
+			int32_t eqlen = urlEncode ( p , plen , q , qlen );
 			//p += eqlen;
 			sb.incrementLength(eqlen);
 			// skip over %e
@@ -461,16 +461,16 @@ bool expandHtml (  SafeBuf& sb,
 		}
 		if ( head[i+1] == 'N' ) { 
 			// now we got the %N, insert the global doc count
-			//long long c=g_checksumdb.getRdb()->getNumGlobalRecs();
+			//int64_t c=g_checksumdb.getRdb()->getNumGlobalRecs();
 			//now each host tells us how many docs it has in itsping
-			long long c = g_hostdb.getNumGlobalRecs();
+			int64_t c = g_hostdb.getNumGlobalRecs();
 			c += g_conf.m_docCountAdjustment;
 			// never allow to go negative
 			if ( c < 0 ) c = 0;
 			//p+=ulltoa(p,c);
 			char *p = (char*) sb.getBuf();
 			sb.reserve2x(16);
-			long len = ulltoa(p, c);
+			int32_t len = ulltoa(p, c);
 			sb.incrementLength(len);
 			// skip over %N
 			i += 1;
@@ -480,10 +480,10 @@ bool expandHtml (  SafeBuf& sb,
 		if ( head[i+1] == 'E' ) { 
 			// now each host tells us how many docs it has in its
 			// ping request
-			long long c = g_hostdb.getNumGlobalEvents();
+			int64_t c = g_hostdb.getNumGlobalEvents();
 			char *p = (char*) sb.getBuf();
 			sb.reserve2x(16);
-			long len = ulltoa(p, c);
+			int32_t len = ulltoa(p, c);
 			sb.incrementLength(len);
 			// skip over %E
 			i += 1;
@@ -495,9 +495,9 @@ bool expandHtml (  SafeBuf& sb,
 			//p+=ulltoa(p,docsInColl);
 			char *p = (char*) sb.getBuf();
 			sb.reserve2x(16);
-			long long docsInColl = 0;
+			int64_t docsInColl = 0;
 			if ( cr ) docsInColl = cr->getNumDocsIndexed();
-			long len = ulltoa(p, docsInColl);
+			int32_t len = ulltoa(p, docsInColl);
 			sb.incrementLength(len);
 			// skip over %n
 			i += 1;
@@ -507,11 +507,11 @@ bool expandHtml (  SafeBuf& sb,
 		if ( head[i+1] == 'T' ) { 
 			// . print the final tail
 			// . only print admin link if we're local
-			//long  user = g_pages.getUserType ( s , r );
+			//int32_t  user = g_pages.getUserType ( s , r );
 			//char *username = g_users.getUsername(r);
 			//char *pwd  = r->getString ( "pwd" );
 			char *p    = (char*) sb.getBuf();
-			long  plen = sb.getAvail();
+			int32_t  plen = sb.getAvail();
 			//p = g_pages.printTail ( p , p + plen , user , pwd );
 			char *n = g_pages.printTail(p , p + plen ,
 						    r->isLocal());
@@ -528,7 +528,7 @@ bool expandHtml (  SafeBuf& sb,
 			// skip if not enough buffer
 			//if ( p + 1000 >= pend ) continue; 
 			// # results
-			//long n = r->getLong("n",10);
+			//int32_t n = r->getLong("n",10);
 			//bool printedDropDown;
 			//p = printNumResultsDropDown(p,n,&printedDropDown);
 			//printNumResultsDropDown(sb,n,&printedDropDown);
@@ -539,25 +539,25 @@ bool expandHtml (  SafeBuf& sb,
 			// . TODO: randomize its position to make parsing more 
 			//         difficult
 			// . this secret key is for submitting a new query
-			// long key;
+			// int32_t key;
 			// char kname[4];
 			// g_httpServer.getKey (&key,kname,NULL,0,time(NULL),0,
 			// 		     10);
-			//sprintf (p , "<input type=hidden name=%s value=%li>",
+			//sprintf (p , "<input type=hidden name=%s value=%"INT32">",
 			//	  kname,key);
 			//p += gbstrlen ( p );
 			// sb.safePrintf( "<input type=hidden name=%s "
-			//"value=%li>",
+			//"value=%"INT32">",
 			// 	       kname,key);
 
 			//adds param for default screen size
 			//if(cr)
 			//	sb.safePrintf("<input type=hidden "
-			//"id='screenWidth' name='ws' value=%li>", 
+			//"id='screenWidth' name='ws' value=%"INT32">", 
 			//cr->m_screenWidth);
 
 			// insert collection name too
-			long collLen;
+			int32_t collLen;
 			char *coll = r->getString ( "c" , &collLen );
 			if ( collLen > 0 && collLen < MAX_COLL_LEN ) {
 			        //sprintf (p,"<input type=hidden name=c "
@@ -565,7 +565,7 @@ bool expandHtml (  SafeBuf& sb,
 				//p += gbstrlen ( p );	
 				sb.safePrintf("<input type=hidden name=c "
 					      "value=\"");
-				//memcpy ( p , coll , collLen );
+				//gbmemcpy ( p , coll , collLen );
 				//p += collLen;
 				sb.safeMemcpy(coll, collLen);
 				//sprintf ( p , "\">\n");
@@ -654,10 +654,10 @@ bool printLeftColumnRocketAndTabs ( SafeBuf *sb ,
 
 		{"SEARCH","/"},
 
- 		{"DISCUSSIONS","/?searchtype=discussions"},
- 		{"PRODUCTS","/?searchtype=products"},
- 		{"ARTICLES","/?searchtype=articles"},
- 		{"IMAGES","/?searchtype=images"},
+ 		// {"DISCUSSIONS","/?searchtype=discussions"},
+ 		// {"PRODUCTS","/?searchtype=products"},
+ 		// {"ARTICLES","/?searchtype=articles"},
+ 		// {"IMAGES","/?searchtype=images"},
 
 		{"DIRECTORY","/Top"},
 		{"ADVANCED","/adv.html"},
@@ -708,7 +708,8 @@ bool printLeftColumnRocketAndTabs ( SafeBuf *sb ,
 			       "height=57 src=/computer2.png>");
 	else
 		sb->safePrintf("<br style=line-height:10px;>"
-			       "<img width=54 height=79 src=/rocket.jpg>"
+			       "<img border=0 "
+			       "width=54 height=79 src=/rocket.jpg>"
 			       );
 
 	sb->safePrintf ( "</div>"
@@ -719,10 +720,10 @@ bool printLeftColumnRocketAndTabs ( SafeBuf *sb ,
 			 "<br>"
 		      );
 
-	long n = sizeof(mi) / sizeof(MenuItem);
+	int32_t n = sizeof(mi) / sizeof(MenuItem);
 
 
-	for ( long i = 0 ; i < n ; i++ ) {
+	for ( int32_t i = 0 ; i < n ; i++ ) {
 
 		if ( isSearchResultsPage && i >= 5 ) break;
 
@@ -1061,7 +1062,7 @@ bool printWebHomePage ( SafeBuf &sb , HttpRequest *r , TcpSocket *sock ) {
 
 	sb.safePrintf("<input name=q type=text "
 		      "style=\""
-		      //"width:%lipx;"
+		      //"width:%"INT32"px;"
 		      "height:26px;"
 		      "padding:0px;"
 		      "font-weight:bold;"
@@ -1120,8 +1121,79 @@ bool printWebHomePage ( SafeBuf &sb , HttpRequest *r , TcpSocket *sock ) {
 		sb.safePrintf("\n");
 	}
 
+
+	// always the option to add event guru to their list of
+	// search engine in their browser
+	sb.safePrintf("<br>"
+		      //"<br>"
+
+		      "<script>\n"
+		      "function addEngine() {\n"
+		      "if (window.external && "
+		      "('AddSearchProvider' in window.external)) {\n"
+		      // Firefox 2 and IE 7, OpenSearch
+		      "window.external.AddSearchProvider('http://"
+		      "www.gigablast.com/searchbar.xml');\n"
+		      "}\n"
+		      "else if (window.sidebar && ('addSearchEngine' "
+		      "in window.sidebar)) {\n"
+		      // Firefox <= 1.5, Sherlock
+		      "window.sidebar.addSearchEngine('http://"
+		      "www.gigablast.com/searchbar.xml',"
+		      //"example.com/search-plugin.src',"
+		      "'http://www.gigablast.com/rocket.jpg'," //guru.png
+		      "'Search Plugin', '');\n"
+		      "}\n"
+		      "else {"
+		      // No search engine support (IE 6, Opera, etc).
+		      "alert('No search engine support');\n"
+		      "}\n"
+		      // do not ask again if they tried to add it
+		      // meta cookie should store this
+		      //"document.getElementById('addedse').value='1';\n"
+		      // NEVER ask again! permanent cookie
+		      "document.cookie = 'didse=3';"
+		      // make it invisible again
+		      //"var e = document.getElementById('addse');\n"
+		      //"e.style.display = 'none';\n"
+		      "}\n"
+
+
+		      "</script>\n"
+
+
+		      "<center>"
+		      "<a onclick='addEngine();' style="
+		      "cursor:pointer;"
+		      "cursor:hand;"
+		      "color:blue;"
+		      ">"
+
+		      "<img height=16 width=16 border=0 src=/rocket16.png>"
+
+		      "<font color=#505050>"
+		      "%c%c%c "
+		      "</font>"
+
+		      "&nbsp; "
+
+		      "Add Gigablast to your browser's "
+		      "search engines"
+		      "</a>"
+		      "</center>"
+		      "<br>"
+		      "<br>"
+
+		       // print triangle
+		       ,0xe2
+		       ,0x96
+		       ,0xbc
+
+		      );
+
+
 	// print any red boxes we might need to
-	if ( printRedBox2 ( &sb , true ) )
+	if ( printRedBox2 ( &sb , sock , r ) ) // true ) )
 		sb.safePrintf("<br>\n");
 
 	/*
@@ -1287,13 +1359,10 @@ bool printWebHomePage ( SafeBuf &sb , HttpRequest *r , TcpSocket *sock ) {
 	*/
 
 
-	/*
-
-
 	//
 	// begin new stuff
 	//
-
+	/*
 	// gradients
 	sb.safePrintf("<style><!--\n");
 	
@@ -1358,7 +1427,9 @@ bool printWebHomePage ( SafeBuf &sb , HttpRequest *r , TcpSocket *sock ) {
 	sb.safePrintf("</div>");
 
 	sb.safePrintf("</div>");
+	*/
 
+	/*
 
 	sb.safePrintf("<div class=grad style=\"border-radius:200px;border-color:blue;border-style:solid;border-width:3px;padding:12px;width:280px;height:280px;display:inline-block;z-index:105;color:black;margin-left:-50px;position:absolute;margin-top:50px;background-color:lightgray;\">");
 
@@ -1385,7 +1456,8 @@ bool printWebHomePage ( SafeBuf &sb , HttpRequest *r , TcpSocket *sock ) {
 	sb.safePrintf("</div>");
 
 	sb.safePrintf("</div>");
-
+	*/
+	/*
 
 	sb.safePrintf("<div class=grad style=\"border-radius:300px;border-color:blue;border-style:solid;border-width:3px;padding:12px;width:240px;height:240px;display:inline-block;z-index:110;color:black;margin-left:-240px;position:absolute;margin-top:230px;background-color:lightgray;\">");
 
@@ -1406,16 +1478,49 @@ bool printWebHomePage ( SafeBuf &sb , HttpRequest *r , TcpSocket *sock ) {
 
 	sb.safePrintf("</div>");
 
+	//
+	// donate with paypal bubble
+	//
+
+	sb.safePrintf("<div class=grad style=\"border-radius:300px;border-color:blue;border-style:solid;border-width:3px;padding:12px;width:180px;height:180px;display:inline-block;z-index:120;color:black;margin-left:10px;position:absolute;margin-top:270px;background-color:lightgray;\">");
+
+	sb.safePrintf("<br>");
+	sb.safePrintf("<b>");
+	sb.safePrintf("<font style=font-size:18px;margin-left:40px;>");
+	sb.safePrintf("Contribute");
+	sb.safePrintf("</font>");
+	sb.safePrintf("<br>");
+	sb.safePrintf("<br>");
+	sb.safePrintf("</b>");
+
+	sb.safePrintf("<div style=margin-left:15px;margin-right:5px;>");
 
 
-	//sb.safePrintf("</TD></TR></TABLE></body></html>");
+	sb.safePrintf(
 
-
+		      "Help Gigablast development with PayPal."
+		      "<br>"
+		      "<br>"
+		      // BEGIN PAYPAL DONATE BUTTON
+		      "<form action=\"https://www.paypal.com/cgi-bin/webscr\" method=\"post\" target=\"_top\">"
+		      "<input type=\"hidden\" name=\"cmd\" value=\"_donations\">"
+		      "<input type=\"hidden\" name=\"business\" value=\"2SFSFLUY3KS9Y\">"
+		      "<input type=\"hidden\" name=\"lc\" value=\"US\">"
+		      "<input type=\"hidden\" name=\"item_name\" value=\"Gigablast, Inc.\">"
+		      "<input type=\"hidden\" name=\"currency_code\" value=\"USD\">"
+		      "<input type=\"hidden\" name=\"bn\" value=\"PP-DonationsBF:btn_donateCC_LG.gif:NonHosted\">"
+		      "<input type=\"image\" src=\"https://www.paypalobjects.com/en_US/i/btn/btn_donateCC_LG.gif\" border=\"0\" name=\"submit\" alt=\"PayPal - The safer, easier way to pay online!\" height=47 width=147>"
+		      "<img alt=\"\" border=\"0\" src=\"https://www.paypalobjects.com/en_US/i/scr/pixel.gif\" width=\"1\" height=\"1\">"
+		      "</form>"
+		      // END PAYPAY BUTTON
+		      "</center></div></center>"
+		      //"</td>\n"
+		      );
+	*/
 	//
 	// end new stuff
 	//
 
-	*/
 
 	sb.safePrintf("\n");
 	sb.safePrintf("\n");
@@ -1487,7 +1592,7 @@ bool printAddUrlHomePage ( SafeBuf &sb , char *url , HttpRequest *r ) {
 
 	sb.safePrintf("<input name=urls type=text "
 		      "style=\""
-		      //"width:%lipx;"
+		      //"width:%"INT32"px;"
 		      "height:26px;"
 		      "padding:0px;"
 		      "font-weight:bold;"
@@ -1592,16 +1697,16 @@ bool printAddUrlHomePage ( SafeBuf &sb , char *url , HttpRequest *r ) {
 			      , root );
 		sb.urlEncode ( url );
 		// propagate "admin" if set
-		//long admin = hr->getLong("admin",-1);
-		//if ( admin != -1 ) sb.safePrintf("&admin=%li",admin);
+		//int32_t admin = hr->getLong("admin",-1);
+		//if ( admin != -1 ) sb.safePrintf("&admin=%"INT32"",admin);
 		// provide hash of the query so clients can't just pass in
 		// a bogus id to get search results from us
-		unsigned long h32 = hash32n(url);
+		uint32_t h32 = hash32n(url);
 		if ( h32 == 0 ) h32 = 1;
-		unsigned long long rand64 = gettimeofdayInMillisecondsLocal();
+		uint64_t rand64 = gettimeofdayInMillisecondsLocal();
 		// msg7 needs an explicit collection for /addurl for injecting
 		// in PageInject.cpp. it does not use defaults for safety.
-		sb.safePrintf("&id=%lu&c=%s&rand=%llu';\n"
+		sb.safePrintf("&id=%"UINT32"&c=%s&rand=%"UINT64"';\n"
 			      "client.open('GET', url );\n"
 			      "client.send();\n"
 			      "</script>\n"
@@ -1660,7 +1765,7 @@ bool printDirHomePage ( SafeBuf &sb , HttpRequest *r ) {
 
 	sb.safePrintf("<input name=q type=text "
 		      "style=\""
-		      //"width:%lipx;"
+		      //"width:%"INT32"px;"
 		      "height:26px;"
 		      "padding:0px;"
 		      "font-weight:bold;"
@@ -1733,7 +1838,7 @@ bool sendPageRoot ( TcpSocket *s , HttpRequest *r, char *cookie ) {
 	// print bgcolors, set focus, set font style
 	//p = g_httpServer.printFocus  ( p , pend );
 	//p = g_httpServer.printColors ( p , pend );
-	//long  qlen;
+	//int32_t  qlen;
 	//char *q = r->getString ( "q" , &qlen , NULL );
 	// insert collection name too
 	CollectionRec *cr = g_collectiondb.getRec(r);
@@ -1747,8 +1852,8 @@ bool sendPageRoot ( TcpSocket *s , HttpRequest *r, char *cookie ) {
 	/*
 	CollectionRec *cr = g_collectiondb.getRec ( coll );
 	uint8_t *hp = NULL;
-	long  hpLen;
-	long long  docsInColl = -1;
+	int32_t  hpLen;
+	int64_t  docsInColl = -1;
 	if ( ! cr ) {
 		// use the default 
 		Parm *pp = g_parms.getParm ( "hp" );
@@ -1808,9 +1913,9 @@ bool sendPageRoot ( TcpSocket *s , HttpRequest *r, char *cookie ) {
 	//bool isAdmin = g_collectiondb.isAdmin ( r , s );
 
 	// calculate bufLen
-	//long bufLen = p - buf;
+	//int32_t bufLen = p - buf;
 	// . now encapsulate it in html head/tail and send it off
-	// . the 0 means browser caches for however long it's set for
+	// . the 0 means browser caches for however int32_t it's set for
 	// . but we don't use 0 anymore, use -2 so it never gets cached so
 	//   our display of the # of pages in the index is fresh
 	// . no, but that will piss people off, its faster to keep it cached
@@ -1835,7 +1940,7 @@ bool sendPageRoot ( TcpSocket *s , HttpRequest *r, char *cookie ) {
 // . returns bytes stored into "p"
 // . used for entertainment purposes
 /*
-long printLastQueries ( char *p , char *pend ) {
+int32_t printLastQueries ( char *p , char *pend ) {
 	// if not 512 bytes left, bail
 	if ( pend - p < 512 ) return 0;
 	// return w/ no table if no queries have been added to g_qbuf yet
@@ -1843,25 +1948,25 @@ long printLastQueries ( char *p , char *pend ) {
 	// remember start for returning # of bytes stored
 	char *start = p;
 	// begin table (no border)
-	sprintf (p,"<br><table border=0><tr><td><center>Last %li queries:"
-		 "</td></tr>", (long)QBUF_NUMQUERIES );
+	sprintf (p,"<br><table border=0><tr><td><center>Last %"INT32" queries:"
+		 "</td></tr>", (int32_t)QBUF_NUMQUERIES );
 	p += gbstrlen ( p );		
 	// point to last query added
-	long n = g_nextq - 1;
+	int32_t n = g_nextq - 1;
 	// . wrap it if we need to
 	// . QBUF_NUMQUERIES is defined to be 5 in PageResults.h
 	if ( n < 0 ) n = QBUF_NUMQUERIES - 1;
 	// . print up to five queries
 	// . queries are stored by advancing g_nextq, so "i" should go backward
-	long count = 0;
-	for ( long i = n ; count < QBUF_NUMQUERIES ; count++ , i-- ) {
+	int32_t count = 0;
+	for ( int32_t i = n ; count < QBUF_NUMQUERIES ; count++ , i-- ) {
 		// wrap i if we need to
 		if ( i == -1 ) i = QBUF_NUMQUERIES - 1;
 		// if this query is empty, skip it (might be uninitialized)
 		if ( g_qbuf[i][0] == '\0' ) continue;
 		// point to the query (these are NULL terminated)
 		char *q    = g_qbuf[i];
-		long  qlen = gbstrlen(q);
+		int32_t  qlen = gbstrlen(q);
 		// bail if too big 
 		if ( p + qlen + 32 + 1024 >= pend ) return p - start;
 		// otherwise, print this query to the page
@@ -1890,7 +1995,7 @@ long printLastQueries ( char *p , char *pend ) {
 //char *printTopDirectory ( char *p, char *pend ) {
 bool printTopDirectory ( SafeBuf& sb , char format ) {
 
-	long nr = g_catdb.getRdb()->getNumTotalRecs();
+	int32_t nr = g_catdb.getRdb()->getNumTotalRecs();
 
 	// if no recs in catdb, print instructions
 	if ( nr == 0 && format == FORMAT_HTML)
@@ -2046,11 +2151,11 @@ bool printTopDirectory ( SafeBuf& sb , char format ) {
 	"</td></tr></table></center>\n",
 	195, 177, 195, 167);
 	// make sure there's room
-	//long topListLen = gbstrlen(topList);
+	//int32_t topListLen = gbstrlen(topList);
 	//if (pend - p <= topListLen+1)
 	//	return p;
 	// copy it in
-	//memcpy(p, topList, topListLen);
+	//gbmemcpy(p, topList, topListLen);
 	//p += topListLen;
 	//*p = '\0';
 	//return p;
@@ -2070,7 +2175,7 @@ bool printTopDirectory ( SafeBuf& sb , char format ) {
 #include "Spider.h"
 
 //static bool sendReply        ( void *state  , bool addUrlEnabled );
-static bool canSubmit        (unsigned long h, long now, long maxUrlsPerIpDom);
+static bool canSubmit        (uint32_t h, int32_t now, int32_t maxUrlsPerIpDom);
 
 //static void addedStuff ( void *state );
 
@@ -2081,8 +2186,8 @@ class State2 {
 public:
 	Url        m_url;
 	//char      *m_buf;
-	//long       m_bufLen;
-	//long       m_bufMaxLen;
+	//int32_t       m_bufLen;
+	//int32_t       m_bufMaxLen;
 };
 */
 
@@ -2091,14 +2196,14 @@ public:
 	//Msg4       m_msg4;
 	Msg7       m_msg7;
 	TcpSocket *m_socket;
-        bool       m_isRootAdmin;
+        bool       m_isMasterAdmin;
 	char       m_coll[MAX_COLL_LEN+1];
 	bool       m_goodAnswer;
 	bool       m_doTuringTest;
-	long       m_ufuLen;
+	int32_t       m_ufuLen;
 	char       m_ufu[MAX_URL_LEN];
 
-	//long       m_urlLen;
+	//int32_t       m_urlLen;
 	//char       m_url[MAX_URL_LEN];
 
 	//char       m_username[MAX_USER_SIZE];
@@ -2107,9 +2212,9 @@ public:
 	bool       m_forceRespider;
  	// buf filled by the links coming from google, msn, yahoo, etc
 	//State2     m_state2[5]; // gb, goog, yahoo, msn, ask
-	long       m_numSent;
-	long       m_numReceived;
-	//long       m_raw;
+	int32_t       m_numSent;
+	int32_t       m_numReceived;
+	//int32_t       m_raw;
 	//SpiderRequest m_sreq;
 };
 
@@ -2123,13 +2228,13 @@ static bool s_inprogress = false;
 bool sendPageAddUrl ( TcpSocket *sock , HttpRequest *hr ) {
 	// . get fields from cgi field of the requested url
 	// . get the search query
-	long  urlLen = 0;
+	int32_t  urlLen = 0;
 	char *url = hr->getString ( "urls" , &urlLen , NULL /*default*/);
 
 	// see if they provided a url of a file of urls if they did not
 	// provide a url to add directly
 	bool isAdmin = g_conf.isCollAdmin ( sock , hr );
-	long  ufuLen = 0;
+	int32_t  ufuLen = 0;
 	char *ufu = NULL;
 	//if ( isAdmin )
 	//	// get the url of a file of urls (ufu)
@@ -2142,7 +2247,7 @@ bool sendPageAddUrl ( TcpSocket *sock , HttpRequest *hr ) {
 		return g_httpServer.sendErrorReply(sock,500,"url too long");
 	}
 	// get the collection
-	//long  collLen = 0;
+	//int32_t  collLen = 0;
 	//char *coll9    = r->getString("c",NULL);//&collLen);
 	//if ( ! coll || ! coll[0] ) {
 	//	//coll    = g_conf.m_defaultColl;
@@ -2193,7 +2298,7 @@ bool sendPageAddUrl ( TcpSocket *sock , HttpRequest *hr ) {
 	//
 	// run the ajax script on load to submit the url now 
 	//
-	long id = hr->getLong("id",0);
+	int32_t id = hr->getLong("id",0);
 	// if we are not being called by the ajax loader, the put the
 	// ajax loader script into the html now
 	if ( id == 0 ) {
@@ -2269,7 +2374,7 @@ bool sendPageAddUrl ( TcpSocket *sock , HttpRequest *hr ) {
 	mnew ( st1 , sizeof(State1i) , "PageAddUrl" );
 	// save socket and isAdmin
 	st1->m_socket  = sock;
-	st1->m_isRootAdmin = isAdmin;
+	st1->m_isMasterAdmin = isAdmin;
 
 	/*
 	// save the url
@@ -2289,7 +2394,7 @@ bool sendPageAddUrl ( TcpSocket *sock , HttpRequest *hr ) {
 	// save the "ufu" (url of file of urls)
 	st1->m_ufu[0] = '\0';
 	st1->m_ufuLen  = ufuLen;
-	memcpy ( st1->m_ufu , ufu , ufuLen );
+	gbmemcpy ( st1->m_ufu , ufu , ufuLen );
 	st1->m_ufu[ufuLen] = '\0';
 
 	st1->m_doTuringTest = cr->m_doTuringTest;
@@ -2307,16 +2412,16 @@ bool sendPageAddUrl ( TcpSocket *sock , HttpRequest *hr ) {
 	st1->m_goodAnswer = true;
 
 	// get ip of submitter
-	//unsigned long h = ipdom ( s->m_ip );
+	//uint32_t h = ipdom ( s->m_ip );
 	// . use top 2 bytes now, some isps have large blocks
 	// . if this causes problems, then they can do pay for inclusion
-	unsigned long h = iptop ( sock->m_ip );
-	long codeLen;
+	uint32_t h = iptop ( sock->m_ip );
+	int32_t codeLen;
 	char* code = hr->getString("code", &codeLen);
 	if(g_autoBan.hasCode(code, codeLen, sock->m_ip)) {
-		long uipLen = 0;
+		int32_t uipLen = 0;
 		char* uip = hr->getString("uip",&uipLen);
-		long hip = 0;
+		int32_t hip = 0;
 		//use the uip when we have a raw query to test if 
 		//we can submit
 		if(uip) {
@@ -2338,10 +2443,10 @@ bool sendPageAddUrl ( TcpSocket *sock , HttpRequest *hr ) {
 	// . mdw: made force on the default
 	st1->m_forceRespider = hr->getLong("force",1); // 0);
 
-	long now = getTimeGlobal();
+	int32_t now = getTimeGlobal();
 	// . allow 1 submit every 1 hour
 	// . restrict by submitter domain ip
-	if ( ! st1->m_isRootAdmin &&
+	if ( ! st1->m_isMasterAdmin &&
 	     ! canSubmit ( h , now , cr->m_maxAddUrlsPerIpDomPerDay ) ) {
 		// return error page
 		//g_errno = ETOOEARLY;
@@ -2367,7 +2472,7 @@ bool sendPageAddUrl ( TcpSocket *sock , HttpRequest *hr ) {
 
 	// check it, if turing test is enabled for this collection
 	/*
-	if ( ! st1->m_isRootAdmin && cr->m_doTuringTest && 
+	if ( ! st1->m_isMasterAdmin && cr->m_doTuringTest && 
 	     ! g_turingTest.isHuman(r) )  {
 		// log note so we know it didn't make it
 		g_msg = " (error: bad answer)";
@@ -2422,7 +2527,7 @@ void doneInjectingWrapper3 ( void *st ) {
 	log(LOG_INFO,"http: add url %s (%s)",url ,mstrerror(g_errno));
 	// extract info from state
 	TcpSocket *sock    = st1->m_socket;
-	//bool       isAdmin = st1->m_isRootAdmin;
+	//bool       isAdmin = st1->m_isMasterAdmin;
 	//char      *url     = NULL;
 	//if ( st1->m_urlLen ) url = st1->m_url;
 	// re-null it out if just http://
@@ -2470,7 +2575,7 @@ void doneInjectingWrapper3 ( void *st ) {
 			log("addurls: Failed for user at %s: "
 			    "quota breeched.", iptoa(sock->m_ip));
 
-			//rb.safePrintf("Error. %li urls have "
+			//rb.safePrintf("Error. %"INT32" urls have "
 			//	      "already been submitted by "
 			//	      "this IP address for the "
 			//	      "last 24 hours. ",
@@ -2523,7 +2628,7 @@ void doneInjectingWrapper3 ( void *st ) {
 		}
 		else if ( st1->m_msg7.m_xd.m_indexCodeValid &&
 			  st1->m_msg7.m_xd.m_indexCode ) {
-			long ic = st1->m_msg7.m_xd.m_indexCode;
+			int32_t ic = st1->m_msg7.m_xd.m_indexCode;
 			sb.safePrintf("<b>Had error injecting url: %s</b>",
 				      mstrerror(ic));
 		}
@@ -2548,10 +2653,10 @@ void doneInjectingWrapper3 ( void *st ) {
 		else {
 			//rb.safePrintf("Add the url you want:");
 			// avoid hitting browser page cache
-			unsigned long rand32 = rand();
+			uint32_t rand32 = rand();
 			// in the mime to 0 seconds!
 			sb.safePrintf("<b>Url successfully added. "
-				      "<a href=/search?rand=%lu&"
+				      "<a href=/search?rand=%"UINT32"&"
 				      "c=%s&q=url%%3A",
 				      rand32,
 				      coll);
@@ -2601,8 +2706,8 @@ void doneInjectingWrapper3 ( void *st ) {
 // we get like 100k submissions a day!!!
 static HashTable s_htable;
 static bool      s_init = false;
-static long      s_lastTime = 0;
-bool canSubmit ( unsigned long h , long now , long maxAddUrlsPerIpDomPerDay ) {
+static int32_t      s_lastTime = 0;
+bool canSubmit ( uint32_t h , int32_t now , int32_t maxAddUrlsPerIpDomPerDay ) {
 	// . sometimes no limit
 	// . 0 means no limit because if they don't want any submission they
 	//   can just turn off add url and we want to avoid excess 
@@ -2623,7 +2728,7 @@ bool canSubmit ( unsigned long h , long now , long maxAddUrlsPerIpDomPerDay ) {
 	if ( s_htable.getNumSlotsUsed() > 47000 ) s_htable.clear ();
 	// . how many times has this IP domain submitted?
 	// . allow 10 times per day
-	long n = s_htable.getValue ( h );
+	int32_t n = s_htable.getValue ( h );
 	// if over 24hr limit then bail
 	if ( n >= maxAddUrlsPerIpDomPerDay ) return false;
 	// otherwise, inc it
@@ -2638,7 +2743,7 @@ void resetPageAddUrl ( ) {
 	s_htable.reset();
 }
 
-
+/*
 bool sendPageAdvanced ( TcpSocket *sock , HttpRequest *hr ) {
 
 	SafeBuf sb;
@@ -2813,7 +2918,7 @@ bool sendPageAdvanced ( TcpSocket *sock , HttpRequest *hr ) {
 
 	return true;
 }
-
+*/
 
 bool sendPageHelp ( TcpSocket *sock , HttpRequest *hr ) {
 
@@ -2837,6 +2942,11 @@ bool sendPageHelp ( TcpSocket *sock , HttpRequest *hr ) {
 	// 		      cr->m_coll);
 
 
+	char *qc = "demo";
+	char *host = "http://www.gigablast.com";
+	// for debug make it local on laptop
+	host = "";
+
 	sb.safePrintf(
 	"<br>"
 	"<table width=650px cellpadding=5 cellspacing=0 border=0>"
@@ -2857,30 +2967,30 @@ bool sendPageHelp ( TcpSocket *sock , HttpRequest *hr ) {
 	"<th><font color=33dcff>Description</font></th>"
 	"</tr>"
 	"<tr> "
-	"<td><a href=/search?q=cat+dog>cat dog</a></td>"
+	"<td><a href=%s/search?c=%s&q=cat+dog>cat dog</a></td>"
 	"            <td>Search results have the word <em>cat</em> and the word <em>dog</em> "
 	"              in them. They could also have <i>cats</i> and <i>dogs</i>.</td>"
 	"          </tr>"
 	""
 	""
 	"          <tr bgcolor=#E1FFFF> "
-	"            <td><a href=/search?q=%%2Bcat>+cat</a></td>"
+	"            <td><a href=%s/search?c=%s&q=%%2Bcat>+cat</a></td>"
 	"            <td>Search results have the word <em>cat</em> in them. If the search results has the word <i>cats</i> then it will not be included. The plus sign indicates an exact match and not to use synonyms, hypernyms or hyponyms or any other form of the word.</td>"
 	"          </tr>"
 	""
 	""
 	"          <tr> "
-	"            <td height=10><a href=/search?q=mp3+%%22take+five%%22>mp3&nbsp;\"take&nbsp;five\"</a></td>"
+	"            <td height=10><a href=%s/search?c=%s&q=mp3+%%22take+five%%22>mp3&nbsp;\"take&nbsp;five\"</a></td>"
 	"            <td>Search results have the word <em>mp3</em> and the exact phrase <em>take "
 	"              five</em> in them.</td>"
 	"          </tr>"
 	"          <tr bgcolor=#E1FFFF> "
-	"            <td><a href=/search?q=%%22john+smith%%22+-%%22bob+dole%%22>\"john&nbsp;smith\"&nbsp;-\"bob&nbsp;dole\"</a></td>"
+	"            <td><a href=%s/search?c=%s&q=%%22john+smith%%22+-%%22bob+dole%%22>\"john&nbsp;smith\"&nbsp;-\"bob&nbsp;dole\"</a></td>"
 	"            <td>Search results have the phrase <em>john smith</em> but NOT the "
 	"              phrase <em>bob dole</em> in them.</td>"
 	"          </tr>"
 	"          <tr> "
-	"            <td><a href=/search?q=bmx+-game>bmx&nbsp;-game</a></td>"
+	"            <td><a href=%s/search?c=%s&q=bmx+-game>bmx&nbsp;-game</a></td>"
 	"            <td>Search results have the word <em>bmx</em> but not <em>game</em>.</td>"
 	"          </tr>"
 	// "          <tr> "
@@ -2958,6 +3068,17 @@ bool sendPageHelp ( TcpSocket *sock , HttpRequest *hr ) {
 	// ""
 	// ""
 	, GOLD
+
+	, host
+	, qc
+	, host
+	, qc
+	, host
+	, qc
+	, host
+	, qc
+	, host
+	, qc
 		      );
 
 
@@ -2971,19 +3092,25 @@ bool sendPageHelp ( TcpSocket *sock , HttpRequest *hr ) {
 		      //"<td><font color=33dcff><b>Description</b></font></td>"
 		      // "</tr>"
 		      "<tr bgcolor=#E1FFFF>"
-		      "<td>cat | dog</td><td>"
+		      "<td><a href=%s/search?c=%s&q=cat|dog>cat | dog</a>"
+		      "</td><td>"
 		      "Match documents that have cat and dog in them, but "
 		      "do not allow cat to affect the ranking score, only "
 		      "dog. This is called a <i>query refinement</i>."
 		      "</td></tr>\n"
 
 		      "<tr bgcolor=#ffFFFF>"
-		      "<td>document.title:paper</td><td>"
+		      "<td><a href=%s/search?c=%s&q=document.title:paper>"
+		      "document.title:paper</a></td><td>"
 		      "That query will match a JSON document like "
 		      "<i>"
 		      "{ \"document\":{\"title\":\"This is a good paper.\" "
 		      "}}</i> or, alternatively, an XML document like <i>"
 
+		      , host
+		      , qc
+		      , host
+		      , qc
 
 		      );
 	sb.htmlEncode("<document><title>This is a good paper"
@@ -2996,8 +3123,8 @@ bool sendPageHelp ( TcpSocket *sock , HttpRequest *hr ) {
 	char *bgcolor = bg1;
 
 	// table of the query keywords
-	long n = getNumFieldCodes();
-	for ( long i = 0 ; i < n ; i++ ) {
+	int32_t n = getNumFieldCodes();
+	for ( int32_t i = 0 ; i < n ; i++ ) {
 		// get field #i
 		QueryField *f = &g_fields[i];
 
@@ -3036,8 +3163,11 @@ bool sendPageHelp ( TcpSocket *sock , HttpRequest *hr ) {
 		// fix table internal cell bordering
 		if ( ! d || d[0] == '\0' ) d = "&nbsp;";
 		sb.safePrintf("<tr bgcolor=%s>"
-			      "<td><nobr><a href=\"/search?q="
-			      , bgcolor );
+			      "<td><nobr><a href=\"%s/search?c=%s&q="
+			      , bgcolor
+			      , host
+			      , qc
+			      );
 		sb.urlEncode ( f->example );
 		sb.safePrintf("\">");
 		sb.safePrintf("%s</a></nobr></td>"
@@ -3089,17 +3219,17 @@ bool sendPageHelp ( TcpSocket *sock , HttpRequest *hr ) {
 	"              </td>"
 	"          </tr>"
 	"          <tr> "
-	"            <td><a href=/search?q=cat+AND+dog>cat&nbsp;AND&nbsp;dog</a></td>"
+	"            <td><a href=%s/search?c=%s&q=cat+AND+dog>cat&nbsp;AND&nbsp;dog</a></td>"
 	"            <td>Search results have the word <em>cat</em> AND the word <em>dog</em> "
 	"              in them.</td>"
 	"          </tr>"
 	"          <tr bgcolor=#E1FFFF> "
-	"            <td><a href=/search?q=cat+OR+dog>cat&nbsp;OR&nbsp;dog</a></td>"
+	"            <td><a href=%s/search?c=%s&q=cat+OR+dog>cat&nbsp;OR&nbsp;dog</a></td>"
 	"            <td>Search results have the word <em>cat</em> OR the word <em>dog</em> "
 	"              in them, but preference is given to results that have both words.</td>"
 	"          </tr>"
 	"          <tr> "
-	"            <td><a href=/search?q=cat+dog+OR+pig>cat&nbsp;dog&nbsp;OR&nbsp;pig</a></td>"
+	"            <td><a href=%s/search?c=%s&q=cat+dog+OR+pig>cat&nbsp;dog&nbsp;OR&nbsp;pig</a></td>"
 	"            <td>Search results have the two words <em>cat</em> and <em>dog</em> "
 	"              OR search results have the word <em>pig</em>, but preference is "
 	"              given to results that have all three words. This illustrates how "
@@ -3107,26 +3237,26 @@ bool sendPageHelp ( TcpSocket *sock , HttpRequest *hr ) {
 	"              to be true.</td>"
 	"          </tr>"
 	"          <tr bgcolor=#E1FFFF> "
-	"            <td><a href=/search?q=%%22cat+dog%%22+OR+pig>\"cat&nbsp;dog\"&nbsp;OR&nbsp;pig</a></td>"
+	"            <td><a href=%s/search?c=%s&q=%%22cat+dog%%22+OR+pig>\"cat&nbsp;dog\"&nbsp;OR&nbsp;pig</a></td>"
 	"            <td>Search results have the phrase <em>\"cat dog\"</em> in them OR they "
 	"              have the word <em>pig</em>, but preference is given to results that "
 	"              have both.</td>"
 	"          </tr>"
 	"          <tr> "
-	"            <td><a href=/search?q=title%%3A%%22cat+dog%%22+OR+pig>title</a><a href=/search?q=title%%3A%%22cat+dog%%22+OR+pig>:\"cat "
+	"            <td><a href=%s/search?c=%s&q=title%%3A%%22cat+dog%%22+OR+pig>title</a><a href=%s/search?c=%s&q=title%%3A%%22cat+dog%%22+OR+pig>:\"cat "
 	"              dog\" OR pig</a></td>"
 	"            <td>Search results have the phrase <em>\"cat dog\"</em> in their title "
 	"              OR they have the word <em>pig</em>, but preference is given to results "
 	"              that have both.</td>"
 	"          </tr>"
 	"          <tr bgcolor=#E1FFFF> "
-	"            <td><a href=/search?q=cat+OR+dog+OR+pig>cat&nbsp;OR&nbsp;dog&nbsp;OR&nbsp;pig</a></td>"
+	"            <td><a href=%s/search?c=%s&q=cat+OR+dog+OR+pig>cat&nbsp;OR&nbsp;dog&nbsp;OR&nbsp;pig</a></td>"
 	"            <td>Search results need only have one word, <em>cat</em> or <em>dog</em> "
 	"              or <em>pig</em>, but preference is given to results that have the "
 	"              most of the words.</td>"
 	"          </tr>"
 	"          <tr> "
-	"            <td><a href=/search?q=cat+OR+dog+AND+pig>cat&nbsp;OR&nbsp;dog&nbsp;AND&nbsp;pig</a></td>"
+	"            <td><a href=%s/search?c=%s&q=cat+OR+dog+AND+pig>cat&nbsp;OR&nbsp;dog&nbsp;AND&nbsp;pig</a></td>"
 	"            <td>Search results have <em>dog</em> and <em>pig</em>, but they may "
 	"              or may not have <em>cat</em>. Preference is given to results that "
 	"              have all three. To evaluate expressions with more than two operands, "
@@ -3140,11 +3270,11 @@ bool sendPageHelp ( TcpSocket *sock , HttpRequest *hr ) {
 	"              expressions with more than one boolean operator.</td>"
 	"          </tr>"
 	"          <tr bgcolor=#E1FFFF> "
-	"            <td><a href=/search?q=cat+AND+NOT+dog>cat&nbsp;AND&nbsp;NOT&nbsp;dog</a></td>"
+	"            <td><a href=%s/search?c=%s&q=cat+AND+NOT+dog>cat&nbsp;AND&nbsp;NOT&nbsp;dog</a></td>"
 	"            <td>Search results have <em>cat</em> but do not have <em>dog</em>.</td>"
 	"          </tr>"
 	"          <tr> "
-	"            <td><a href=/search?q=cat+AND+NOT+%%28dog+OR+pig%%29>cat&nbsp;AND&nbsp;NOT&nbsp;(dog&nbsp;OR&nbsp;pig)</a></td>"
+	"            <td><a href=%s/search?c=%s&q=cat+AND+NOT+%%28dog+OR+pig%%29>cat&nbsp;AND&nbsp;NOT&nbsp;(dog&nbsp;OR&nbsp;pig)</a></td>"
 	"            <td>Search results have <em>cat</em> but do not have <em>dog</em> "
 	"              and do not have <em>pig</em>. When evaluating a boolean expression "
 	"              that contains ()'s you can evaluate the sub-expression in the ()'s "
@@ -3155,7 +3285,7 @@ bool sendPageHelp ( TcpSocket *sock , HttpRequest *hr ) {
 	"              AND false = false</em>. Does anyone actually read this far?</td>"
 	"          </tr>"
 	"          <tr bgcolor=#E1FFFF> "
-	"            <td><a href=/search?q=%%28cat+OR+dog%%29+AND+NOT+%%28cat+AND+dog%%29>(cat&nbsp;OR&nbsp;dog)&nbsp;AND&nbsp;NOT&nbsp;(cat&nbsp;AND&nbsp;dog)</a></td>"
+	"            <td><a href=%s/search?c=%s&q=%%28cat+OR+dog%%29+AND+NOT+%%28cat+AND+dog%%29>(cat&nbsp;OR&nbsp;dog)&nbsp;AND&nbsp;NOT&nbsp;(cat&nbsp;AND&nbsp;dog)</a></td>"
 	"            <td>Search results have <em>cat</em> or <em>dog</em> but not both.</td>"
 	"          </tr>"
 	"          <tr> "
@@ -3174,6 +3304,28 @@ bool sendPageHelp ( TcpSocket *sock , HttpRequest *hr ) {
 	//"</table>"
 	//"<br>"
 		      , GOLD
+		      , host
+		      , qc
+		      , host
+		      , qc
+		      , host
+		      , qc
+		      , host
+		      , qc
+		      , host
+		      , qc
+		      , host
+		      , qc
+		      , host
+		      , qc
+		      , host
+		      , qc
+		      , host
+		      , qc
+		      , host
+		      , qc
+		      , host
+		      , qc
 		      );
 
 

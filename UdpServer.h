@@ -79,13 +79,13 @@ class UdpServer {
 	// . read/writeBufSize are the socket buf's size
 	// . pollTime is how often to call timePollWrapper() (in milliseconds)
 	// . it should be at least the minimal slot timeout
-	bool init ( unsigned short  port         , 
+	bool init ( uint16_t  port         , 
 		    UdpProtocol    *proto        , 
-		    long            niceness     ,
-		    long            readBufSize  ,
-		    long            writeBufSize ,
-		    long            pollTime     ,
-		    long            maxSlots     ,
+		    int32_t            niceness     ,
+		    int32_t            readBufSize  ,
+		    int32_t            writeBufSize ,
+		    int32_t            pollTime     ,
+		    int32_t            maxSlots     ,
 		    bool            isDns        );
 
 	bool m_isDns;
@@ -122,21 +122,21 @@ class UdpServer {
 	// . use an ip of 0 and port of 0 if you provide a hostId. use a hostid
 	//   of -1 to indicate no hostid.
 	bool sendRequest ( char     *msg          ,
-			   long      msgSize      ,
+			   int32_t      msgSize      ,
 			   unsigned char    msgType      ,
-			   unsigned long   ip     ,
-			   unsigned short  port   ,
-			   long      hostId       ,
+			   uint32_t   ip     ,
+			   uint16_t  port   ,
+			   int32_t      hostId       ,
 			   UdpSlot **retSlot      , // can be NULL
 			   void     *state        , // callback state
 			   void    (* callback ) (void *state, UdpSlot *slot) ,
-			   long      timeout      = 60 , // seconds
-			   short     backoff      = -1 ,
-			   short     maxWait      = -1   , // ms
+			   int32_t      timeout      = 60 , // seconds
+			   int16_t     backoff      = -1 ,
+			   int16_t     maxWait      = -1   , // ms
 			   char     *replyBuf     = NULL ,
-			   long      replyBufMaxSize = 0 ,
-			   long      niceness = 1 , 
-			   long      maxResends = -1 );
+			   int32_t      replyBufMaxSize = 0 ,
+			   int32_t      niceness = 1 , 
+			   int32_t      maxResends = -1 );
 
 	// . send a reply to the host specified in "slot"
 	// . slot is destroyed on error or completion of the send
@@ -145,31 +145,31 @@ class UdpServer {
 	// . we double backoff each time we wait w/o getting any ACK
 	// . don't wait longer than maxWait for a resend
 	void sendReply_ass (char     *msg        ,
-			    long      msgSize    ,
+			    int32_t      msgSize    ,
 			    char     *alloc      ,
-			    long      allocSize  ,
+			    int32_t      allocSize  ,
 			    UdpSlot  *slot       ,
-			    long      timeout    = 60   , // in seconds
+			    int32_t      timeout    = 60   , // in seconds
 			    void     *state      = NULL , // callback state
 			    void (* callback2)(void *state,UdpSlot *slot)=NULL,
-			    short     backoff    = -1 ,
-			    short     maxWait    = -1 ,
+			    int16_t     backoff    = -1 ,
+			    int16_t     maxWait    = -1 ,
 			    bool      isCallback2Hot = false ,
 			    bool      useSameSwitch  = false );
 
 	// . propagate an errno to the requesting machine
 	// . his callback will be called with errno set to "errnum"
 	void sendErrorReply ( UdpSlot   *slot     , 
-			      long       errnum   , 
-			      long       timeout  = 60 /*seconds*/ );
+			      int32_t       errnum   , 
+			      int32_t       timeout  = 60 /*seconds*/ );
 
 	// . too many transactions going on?
 	// . this is just an estimate...
-	//long getNumAvailSlots () { return MAX_UDP_SLOTS - m_topUsedSlot - 1; };
+	//int32_t getNumAvailSlots () { return MAX_UDP_SLOTS - m_topUsedSlot - 1; };
 
 	// an estimation as well
-	//long getNumUsedSlots  () { return m_topUsedSlot + 1; };
-	long getNumUsedSlots  () { return m_numUsedSlots; };
+	//int32_t getNumUsedSlots  () { return m_topUsedSlot + 1; };
+	int32_t getNumUsedSlots  () { return m_numUsedSlots; };
 	
 
 	// . when a request/msg of type "msgType" is received we call the
@@ -182,7 +182,7 @@ class UdpServer {
 	// . if you want the handler to be called while in an async signal
 	//   handler then set "isHandlerHot" to true
 	bool registerHandler ( unsigned char msgType, 
-			       void(* handler)(UdpSlot *,long) ,
+			       void(* handler)(UdpSlot *,int32_t) ,
 			       bool isHandlerHot = false );
 
 	// . frees the m_readBuf and m_sendBuf
@@ -204,31 +204,31 @@ class UdpServer {
 	// . returns false if it read nothing and had no errors
 	// . returns true  if it read something or had an error so you can
 	//   call it again ASAP because it has unfinished business
-	bool readPoll ( long long now );
+	bool readPoll ( int64_t now );
 
 	// . this is called by main/Loop.cpp when m_sock is ready for writing
 	// . actually it calls sendPollWrapper()
 	// . it sends as much as it can from all UdpSlots until one blocks
 	//   or until it's done 
 	// . sends both dgrams AND ACKs
-	bool sendPoll_ass ( bool allowResends , long long now );
+	bool sendPoll_ass ( bool allowResends , int64_t now );
 
 	// called every 30ms to get tokens? not any more...
 	void timePoll ( );
 
 	// called by readPoll()/sendPoll()/readTimeoutPoll() to do
 	// reading/sending/callbacks in that order until nothing left to do
-	void process_ass ( long long now , long maxNiceness = 100);
+	void process_ass ( int64_t now , int32_t maxNiceness = 100);
 
 	// . this is called by main/Loop.cpp every second
 	// . actually it calls readTimeoutPollWrapper()
 	// . call the callback of reception slots that have timed out
 	// . return true if we did something, like reset a slot for resend
 	//   or timed a slot out so it's callback should be called
-	bool readTimeoutPoll ( long long now ) ;
+	bool readTimeoutPoll ( int64_t now ) ;
 
 	// how nice as a server are we?
-	//long getNiceness ( ) { return m_niceness; };
+	//int32_t getNiceness ( ) { return m_niceness; };
 
 	// m_token should point to shared memory
 	//bool useSharedMem() ;
@@ -255,13 +255,13 @@ class UdpServer {
 	bool isSuspended        () { return m_isSuspended; };
 	bool needBottom         () { return m_needBottom; }   
 
-	UdpSlot *getUdpSlotNum   ( long  i ) { return &m_slots[i]; };
-	//bool   isEmpty         ( long i  ) { return (m_keys[i].n0 == 0LL);};
-	//long   getTopUsedSlot  (         ) { return m_topUsedSlot; };
+	UdpSlot *getUdpSlotNum   ( int32_t  i ) { return &m_slots[i]; };
+	//bool   isEmpty         ( int32_t i  ) { return (m_keys[i].n0 == 0LL);};
+	//int32_t   getTopUsedSlot  (         ) { return m_topUsedSlot; };
 
 	// try calling makeCallback() on all slots
-	bool makeCallbacks_ass ( long niceness );
-	bool makeCallbacks_ass2( long niceness );
+	bool makeCallbacks_ass ( int32_t niceness );
+	bool makeCallbacks_ass2( int32_t niceness );
 
 	// return true if we turned them off, false if we did not
 	bool interruptsOff() {
@@ -290,13 +290,13 @@ class UdpServer {
 	void printState();
 
 	// count how many of each msgType we drop, report on PageStats.cpp
-	//long m_droppedNiceness0[128];
-	//long m_droppedNiceness1[128];
+	//int32_t m_droppedNiceness0[128];
+	//int32_t m_droppedNiceness1[128];
 
 	// . we have up to 1 handler routine for each msg type
 	// . call these handlers for the corresponding msgType
 	// . msgTypes go from 0 to 64 i think (see UdpProtocol.h dgram header)
-	void (* m_handlers[MAX_MSG_TYPES])(UdpSlot *slot, long niceness);
+	void (* m_handlers[MAX_MSG_TYPES])(UdpSlot *slot, int32_t niceness);
 
 	// changes timeout to very low on dead hosts
 	bool timeoutDeadHosts ( class Host *h );
@@ -308,8 +308,8 @@ class UdpServer {
 	// . if server is restarted this will go back to 0 though 
 	// . the key of a UdpSlot is based on this, the endpoint ip/port and
 	//   whether it's a request/reply by/from us
-	long getTransId ( ) { 
-		long tid = m_nextTransId;
+	int32_t getTransId ( ) { 
+		int32_t tid = m_nextTransId;
 		m_nextTransId++;
 		if ( m_nextTransId >= UDP_MAX_TRANSID ) m_nextTransId = 0; 
 		return tid;
@@ -317,7 +317,7 @@ class UdpServer {
 
 	// . send as many dgrams as you can from slot's m_sendBuf
 	// . returns false and sets errno on error, true otherwise
-	bool doSending_ass ( UdpSlot *slot, bool allowResends, long long now );
+	bool doSending_ass ( UdpSlot *slot, bool allowResends, int64_t now );
 
 	// . calls a m_handler request handler if slot->m_callback is NULL
 	//   which means it was an incoming request
@@ -328,22 +328,22 @@ class UdpServer {
 	// . picks the slot that is most caught up to it's ACKs
 	// . picks resends first, however
 	// . then we send a dgram from that slot
-	UdpSlot *getBestSlotToSend ( long long now );
+	UdpSlot *getBestSlotToSend ( int64_t now );
 
 	// . reads a pending dgram on the udp stack
 	// . returns -1 on error, 0 if blocked, 1 if completed reading dgram
 	// . called by readPoll()
-	long readSock_ass ( UdpSlot **slot , long long now );
+	int32_t readSock_ass ( UdpSlot **slot , int64_t now );
 
 	// a debug util
-	void dumpdgram ( char *dgram , long dgramSize );
+	void dumpdgram ( char *dgram , int32_t dgramSize );
 
 	// returns false if cannot shutdown right now due to pending traffic
 	//bool tryShuttingDown ( bool callCallback ) ;
 
 	// our listening/sending udp socket and port
         int            m_sock ;  
-        unsigned short m_port ;
+        uint16_t m_port ;
 
 	// used to prevent cpu usage by sendPoll() when nothing can be sent
 	bool   m_gotMsgsToSend;
@@ -360,10 +360,10 @@ class UdpServer {
 	// . store a shutdown bit with it so we know if we crashed
 	// . on crashes add 1024 or so to the read value 
 	// . TODO: make somewhat random cuz it's easy to spoof like it is now
-	long         m_nextTransId;
+	int32_t         m_nextTransId;
 
 	// our niceness level
-	//long         m_niceness;
+	//int32_t         m_niceness;
 
 	// called when shutdown completes
 	void (*m_shutdownCallback )( void *state );
@@ -378,33 +378,33 @@ class UdpServer {
 	// . does not include requests whose replies we are sending, only
 	//   those whose replies have not yet been generated
 	// . starts counting as soon as first dgram of request is recvd
-	long   m_requestsInWaiting;
+	int32_t   m_requestsInWaiting;
 
 	// like m_requestsInWaiting but requests which spawn other requests
-	long   m_msg10sInWaiting;
-	long   m_msgc1sInWaiting;
-	//long   m_msgDsInWaiting;
-	//long   m_msg23sInWaiting;
-	long   m_msg25sInWaiting;
-	long   m_msg50sInWaiting;
-	long   m_msg39sInWaiting;
-	long   m_msg20sInWaiting;
-	long   m_msg2csInWaiting;
-	long   m_msg0csInWaiting;
-	long   m_msg0sInWaiting;
+	int32_t   m_msg10sInWaiting;
+	int32_t   m_msgc1sInWaiting;
+	//int32_t   m_msgDsInWaiting;
+	//int32_t   m_msg23sInWaiting;
+	int32_t   m_msg25sInWaiting;
+	int32_t   m_msg50sInWaiting;
+	int32_t   m_msg39sInWaiting;
+	int32_t   m_msg20sInWaiting;
+	int32_t   m_msg2csInWaiting;
+	int32_t   m_msg0csInWaiting;
+	int32_t   m_msg0sInWaiting;
 
 	// do we live on interrupts?
 	bool   m_isRealTime;
 
-	long m_outstandingConverts;
+	int32_t m_outstandingConverts;
 
 	// we now avoid malloc with these
 	//UdpSlot m_slots    [ MAX_UDP_SLOTS ];
 	// but alloc MAX_UDP_SLOTS of these in init so we don't blow the stack
 	UdpSlot *m_slots    ;
 	//key_t    m_keys     [ MAX_UDP_SLOTS ];
-	//long     m_topUsedSlot;
-	long     m_maxSlots;
+	//int32_t     m_topUsedSlot;
+	int32_t     m_maxSlots;
 
 	// routines
 	UdpSlot *getEmptyUdpSlot_ass ( key_t k );
@@ -421,10 +421,10 @@ class UdpServer {
 	// . hash table for converting keys to slots
 	// . if m_ptrs[i] is NULL, ith bucket is empty
 	UdpSlot       **m_ptrs;
-	long            m_numBuckets;
-	unsigned long   m_bucketMask;
+	int32_t            m_numBuckets;
+	uint32_t   m_bucketMask;
 	char           *m_buf;     // memory to hold m_ptrs
-	long            m_bufSize;
+	int32_t            m_bufSize;
 
 	// linked list of available slots (uses UdpSlot::m_next)
 	UdpSlot        *m_head;
@@ -434,23 +434,23 @@ class UdpServer {
 	// linked list of callback candidates
 	//UdpSlot        *m_head3;
 
-	long            m_numUsedSlots;
+	int32_t            m_numUsedSlots;
 
 	// stats
  public:
-	long long       m_eth0BytesIn;
-	long long       m_eth0BytesOut;
-	long long       m_eth0PacketsIn;
-	long long       m_eth0PacketsOut;
-	long long       m_eth1BytesIn;
-	long long       m_eth1BytesOut;
-	long long       m_eth1PacketsIn;
-	long long       m_eth1PacketsOut;
+	int64_t       m_eth0BytesIn;
+	int64_t       m_eth0BytesOut;
+	int64_t       m_eth0PacketsIn;
+	int64_t       m_eth0PacketsOut;
+	int64_t       m_eth1BytesIn;
+	int64_t       m_eth1BytesOut;
+	int64_t       m_eth1PacketsIn;
+	int64_t       m_eth1PacketsOut;
 
-	long long       m_outsiderPacketsIn;
-	long long       m_outsiderPacketsOut;
-	long long       m_outsiderBytesIn;
-	long long       m_outsiderBytesOut;
+	int64_t       m_outsiderPacketsIn;
+	int64_t       m_outsiderPacketsOut;
+	int64_t       m_outsiderBytesIn;
+	int64_t       m_outsiderBytesOut;
 };
 
 extern class UdpServer g_udpServer;
@@ -458,8 +458,8 @@ extern class UdpServer g_udpServer;
 // this is the high priority udpServer, it's requests are handled first
 extern class UdpServer g_udpServer2;
 
-extern long g_dropped;
-extern long g_corruptPackets;
+extern int32_t g_dropped;
+extern int32_t g_corruptPackets;
 extern bool g_inHandler;
 
 #endif

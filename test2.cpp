@@ -4,7 +4,7 @@
 
 #include "gb-include.h"
 
-long x,y,z;
+int32_t x,y,z;
 
 #define x y
 
@@ -14,12 +14,12 @@ long x,y,z;
 
 int main ( int argc , char *argv[] ) {
 
-	long m_bitScores[65536];
-	long scores[16];
-	long count = 65536;
+	int32_t m_bitScores[65536];
+	int32_t scores[16];
+	int32_t count = 65536;
 	// . each set bit in singleMask and phraseMask have a term freq
 	// . count can be 65536, so this can take a couple million cycles!!
-	for ( unsigned long i = 0 ; i < count ; i++ ) {
+	for ( uint32_t i = 0 ; i < count ; i++ ) {
 		// loop through each on bit for "i"
 		m_bitScores[i] = 0;
 		if ( i & 0x0001 ) m_bitScores[i] += scores[0];

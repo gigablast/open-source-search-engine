@@ -83,17 +83,17 @@ bool Msgaa::addSitePathDepth ( TagRec *gr  ,
 	// check the current tag for an age
 	Tag *tag = gr->getTag("sitepathdepth");
 	// if there and the age is young, skip it
-	long age = -1;
-	long now = getTimeGlobal();
+	int32_t age = -1;
+	int32_t now = getTimeGlobal();
 	if ( tag ) age = now - tag->m_timestamp;
 	// if there, at least get it
-	if ( tag ) m_oldSitePathDepth = (long)tag->m_data[0];
+	if ( tag ) m_oldSitePathDepth = (int32_t)tag->m_data[0];
 	// if older than 30 days, we need to redo it
 	if ( age > 30*24*60*60 ) age = -1;
 	// if age is valid, skip it
 	if ( age >= 0 ) {
 		// just use what we had, it is not expired
-		m_sitePathDepth = (long)tag->m_data[0];
+		m_sitePathDepth = (int32_t)tag->m_data[0];
 		// all done, we did not block
 		return true;
 	}
@@ -127,11 +127,11 @@ rename msgaa to Site.
 	char *p = m_qbuf;
 	strcpy ( p , "site:" );
 	p += 5;
-	memcpy ( p , m_url->getHost() , m_url->getHostLen() );
+	gbmemcpy ( p , m_url->getHost() , m_url->getHostLen() );
 	p += m_url->getHostLen();
 	// sort them by the random score term, gbrandscore (see XmlDoc.cpp)
 	p += sprintf (p ,
-		      " gbpathdepth:%li"
+		      " gbpathdepth:%"INT32""
 		      " gbiscgi:0"
 		      " gbhasfilename:0"
 		      // www.xyz.com/viacom-extends-brad-greys-contract/ not!
@@ -180,21 +180,21 @@ void gotResultsAAWrapper ( Msg40 *msg40 , void *state ) {
 // . returns true and sets g_errno on error
 bool Msgaa::gotResults ( ) {
 	// loop over each one
-	long n = m_msg40->m_numMsg20s;
+	int32_t n = m_msg40->m_numMsg20s;
 	// we need at least half of requested to make a good estimation
 	if ( n <= SAMPLESIZE/2 ) return true;
 	// make a hashtable
 	HashTable ht;
 	// get the url
-	for ( long i = 0 ; i < n ; i++ ) {
+	for ( int32_t i = 0 ; i < n ; i++ ) {
 		// get the ith result
 		Msg20Reply *r = m_msg40->m_msg20[i]->m_r;
 		// get the url string
 		char *us    = r->ptr_ubuf;
-		long  uslen = r->size_ubuf - 1;
+		int32_t  uslen = r->size_ubuf - 1;
 		Url u; u.set ( us , uslen );
 		// get path component # m_pathDepth
-		long clen;
+		int32_t clen;
 		char *c = u.getPathComponent ( i - 1 , &clen );
 		// must be there
 		if ( ! c || clen <= 0 ) {
@@ -202,11 +202,11 @@ bool Msgaa::gotResults ( ) {
 			continue;
 		}
 		// now hash it
-		long h = hash32 ( c , clen );
+		int32_t h = hash32 ( c , clen );
 		// count in table
-		long slot = ht.getSlot ( h );
+		int32_t slot = ht.getSlot ( h );
 		// how many times has this occurred in a result's url?
-		long count = 0;
+		int32_t count = 0;
 		// inc if there
 		if ( slot >= 0 ) count = ht.getValueFromSlot ( slot );
 		// inc it
@@ -217,28 +217,28 @@ bool Msgaa::gotResults ( ) {
 		else if ( ! ht.addKey ( h , count ) ) return true;
 	}
 	// now scan the hash table and see how many unique path components
-	long unique = 0;
-	long ns = ht.getNumSlots();
-	for ( long i = 0 ;i < ns ; i++ ) {
+	int32_t unique = 0;
+	int32_t ns = ht.getNumSlots();
+	for ( int32_t i = 0 ;i < ns ; i++ ) {
 		// is empty
-		long val = ht.getValueFromSlot ( i );
+		int32_t val = ht.getValueFromSlot ( i );
 		// count if non-empty
 		if ( val > 0 ) unique++;
 	}
 	// i'd say 50% of the SAMPLESIZE+ search results are required to have 
 	// unique path components in order for us to consider this to be a 
 	// subsite with a path depth of m_pathDepth.
-	long required = n / 2;
+	int32_t required = n / 2;
 	if ( unique < required ) {
 		// ok, do not set m_sitePathDepth, leave it -1
-		log("msgaa: only have %li unique path components at path "
-		    "depth %li out of %li results. %s does not have subsites.",
+		log("msgaa: only have %"INT32" unique path components at path "
+		    "depth %"INT32" out of %"INT32" results. %s does not have subsites.",
 		    unique,m_pathDepth,n,m_url->getUrl());
 		return true;
 	}
 	// i guess we got it
-	log("msgaa: have %li unique path components at path "
-	    "depth %li out of %li results. Enough to declare this as a "
+	log("msgaa: have %"INT32" unique path components at path "
+	    "depth %"INT32" out of %"INT32" results. Enough to declare this as a "
 	    "subsite for %s .",unique,m_pathDepth,n,m_url->getUrl());
 	// ok set it
 	m_sitePathDepth = m_pathDepth;

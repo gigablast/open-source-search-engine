@@ -46,13 +46,13 @@ class User{
 public:
 	User();
 	uint16_t    getPermissions ( ){ return m_permissions; }
-	long     *  getTags ( ){ return &m_tagId[0]; }
-	bool        verifyIp ( long ip );
+	int32_t     *  getTags ( ){ return &m_tagId[0]; }
+	bool        verifyIp ( int32_t ip );
 	bool        verifyPassword (char *pass);
-	bool        verifyColl ( long collNum);
-	bool        verifyTagId ( long tagId );
+	bool        verifyColl ( int32_t collNum);
+	bool        verifyTagId ( int32_t tagId );
 	bool        verifyPageNum ( uint16_t pageNum );
-	long        firstPage ( );
+	int32_t        firstPage ( );
 
 	//username is max of 50 chars
 	//password is maximum of 50 chars
@@ -62,7 +62,7 @@ public:
 	// user permissions
 	uint16_t    m_permissions; 
 	// tagdb tags
-	long        m_tagId[MAX_TAGS_PER_USER];
+	int32_t        m_tagId[MAX_TAGS_PER_USER];
         uint16_t    m_numTagIds;
 
 	// collection user is allowed to access
@@ -71,7 +71,7 @@ public:
 	bool        m_allColls; // true if user can access all collections
 
 	// allowed ips
-	long        m_ip[MAX_IPS_PER_USER];
+	int32_t        m_ip[MAX_IPS_PER_USER];
 	uint16_t    m_numIps; // number of allowed ips (max 255)
 	// . ipmasks helps to allow part of ip match
 	// . points to the locations of stars
@@ -116,8 +116,8 @@ public:
 	User * getUser (char *username );
 	
 	// add login
-	bool   loginUser ( char *username, long m_ip );
-	bool   logoffUser ( char *username, long m_ip );
+	bool   loginUser ( char *username, int32_t m_ip );
+	bool   logoffUser ( char *username, int32_t m_ip );
 	
 	// verify if user is valid
 	bool verifyUser ( TcpSocket *s, HttpRequest *r );
@@ -125,17 +125,17 @@ public:
 	char *getUsername ( HttpRequest *r );
 	
 	bool hasPermission ( HttpRequest *r,
-			     long        page ,
+			     int32_t        page ,
 			     TcpSocket   *s = NULL );
 
-	bool hasPermission ( char *username, long page );
+	bool hasPermission ( char *username, int32_t page );
 	
 	//. check is user if logged by checking
 	// the login table
 	//. also checks for session timeout
 	//. returns null is session timeout or user not
 	//  logged in
-	User * isUserLogged ( char *username, long m_ip );
+	User * isUserLogged ( char *username, int32_t m_ip );
 
 	// load turk test results into tree
 	bool   loadTestResults ( );
@@ -146,7 +146,7 @@ public:
 	//   period 
 	// . return -1 if not enough data points to compute
 	//   accuracy
-	long   getAccuracy ( char *username, time_t timestamp);
+	int32_t   getAccuracy ( char *username, time_t timestamp);
 
 	void   makeCacheKey( char *username, key_t *cacheKey );
 	// true if database is initialized correctly
@@ -158,22 +158,22 @@ public:
 	bool   loadHashTable ( );
 	
 	// parse a row in users.dat file
-	bool   parseRow ( char *row, long rowLen, User *user );
+	bool   parseRow ( char *row, int32_t rowLen, User *user );
 	// . parse a datum or field from a user row and store it
 	//   in the User
 	// . Used by parseUserRow to parse and store a user field
-	void   setDatum (char *data, long colNum, User *user, bool hasStar ); 
+	void   setDatum (char *data, int32_t colNum, User *user, bool hasStar ); 
 	
 	//RdbCache      m_userCache; // database of user information
-	//unsigned long m_userCacheAge;
-	//unsigned long m_userCacheSize;
+	//uint32_t m_userCacheAge;
+	//uint32_t m_userCacheSize;
 
 	// each slot is a key/User pair
 	HashTableX m_ht;
 
 	//File     m_userFile; // not used right now
-	//unsigned long m_oldBufSize;
-	//unsigned long m_oldBufReadTime;
+	//uint32_t m_oldBufSize;
+	//uint32_t m_oldBufReadTime;
 
 	bool m_needsSave;
 	
@@ -185,7 +185,7 @@ extern Users g_users;
 // . Results tree consists of the user results
 // . key is the result
 // . format: key.n1 = 32 bit hash of username
-//           key.n0 = ((long)timestamp << 8 )|(isResultCorrect & 0xff );
+//           key.n0 = ((int32_t)timestamp << 8 )|(isResultCorrect & 0xff );
 // . using the above key we can easily find out the 
 //   user's accuracy during a particular time period
 extern RdbTree g_testResultsTree;

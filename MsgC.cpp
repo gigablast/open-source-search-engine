@@ -11,8 +11,8 @@ MsgC::~MsgC ( ) {
 }
 
 static void gotReplyWrapper ( void *state , void *state2 ) ;
-static void handleRequest   ( UdpSlot *slot , long niceness  ) ;
-static void gotMsgCIpWrapper( void *state, long ip);
+static void handleRequest   ( UdpSlot *slot , int32_t niceness  ) ;
+static void gotMsgCIpWrapper( void *state, int32_t ip);
 	
 bool MsgC::registerHandler ( ) {
 	// . register ourselves with the high priority udp server
@@ -26,11 +26,11 @@ bool MsgC::registerHandler ( ) {
 
 
 // returns false if blocked, true otherwise
-bool MsgC::getIp(char  *hostname    , long   hostnameLen ,
-		 long  *ip ,
+bool MsgC::getIp(char  *hostname    , int32_t   hostnameLen ,
+		 int32_t  *ip ,
 		 void  *state ,
-		 void (* callback) ( void *state , long ip ),
-		 long  niceness ,
+		 void (* callback) ( void *state , int32_t ip ),
+		 int32_t  niceness ,
 		 bool  forwardToProxy ){
 	m_mcast.reset();
 	m_callback=callback;
@@ -59,8 +59,8 @@ bool MsgC::getIp(char  *hostname    , long   hostnameLen ,
 	// debug
 	//char c = hostname[hostnameLen];
 	//if ( c != 0 ) hostname[hostnameLen] = 0;
-	log(LOG_DEBUG,"dns: msgc: getting ip (sendtoproxy=%li) for %s.",
-	    (long)forwardToProxy,hostname);
+	log(LOG_DEBUG,"dns: msgc: getting ip (sendtoproxy=%"INT32") for %s.",
+	    (int32_t)forwardToProxy,hostname);
 	//if ( c != 0 ) hostname[hostnameLen] = c;
 	// if url is already in a.b.c.d format return that
 	if ( is_digit(hostname[0]) ) {
@@ -78,7 +78,7 @@ bool MsgC::getIp(char  *hostname    , long   hostnameLen ,
 	if ( g_conf.m_useEtcHosts && g_dns.isInFile ( key , ip ))return 1;
 	// debug msg
 	//char tmp[2048];
-	//memcpy ( tmp , hostname , hostnameLen );
+	//gbmemcpy ( tmp , hostname , hostnameLen );
 	//tmp [ hostnameLen ] = '\0';
 	// . try getting from the cache first
 	// . this returns true if was in the cache and sets *ip to the ip
@@ -88,7 +88,7 @@ bool MsgC::getIp(char  *hostname    , long   hostnameLen ,
 	if ( g_dns.isInCache ( key , ip ) ) {
 		if ( *ip == 3 ) { char *xx=NULL;*xx=0; }
 		// debug msg
-		//log("dns::getIp: %s (key=%llu) has ip=%s in cache!!!",
+		//log("dns::getIp: %s (key=%"UINT64") has ip=%s in cache!!!",
 		//     tmp,key.n0,iptoa(*ip));
 		return true;
 	}
@@ -126,12 +126,12 @@ bool MsgC::getIp(char  *hostname    , long   hostnameLen ,
 	// cache) once delivered to the responsible host.
 	// We have to send hostname, and the size is hostnameLen
 	strncpy(m_request,hostname,hostnameLen);	
-	long requestSize = hostnameLen;
+	int32_t requestSize = hostnameLen;
 	// null end it
 	m_request[requestSize]='\0';
 	requestSize++;
-	//unsigned long groupNum=key.n0 % g_hostdb.m_numShards;
-	//unsigned long groupId=g_hostdb.getGroupId(groupNum);
+	//uint32_t groupNum=key.n0 % g_hostdb.m_numShards;
+	//uint32_t groupId=g_hostdb.getGroupId(groupNum);
 	// get a hostid that should house this ip in its local cache
 	Host *host = NULL; // g_dns.getResponsibleHost ( key );
 	Host *firstHost;
@@ -163,7 +163,7 @@ bool MsgC::getIp(char  *hostname    , long   hostnameLen ,
 	//   request to an scproxy, but send it to a grunt with a cache.
 	//if ( g_conf.m_useCompressionProxy && g_conf.m_askRootNameservers ) {
 	if ( forwardToProxy ) {
-		host = g_hostdb.getBestSpiderCompressionProxy((long *)&key.n1);
+		host = g_hostdb.getBestSpiderCompressionProxy((int32_t *)&key.n1);
 		if ( ! host && ! g_errno ) {
 			log("msgc: using compression proxy and asking root "
 			    "name servers, but no compression proxy was "
@@ -179,7 +179,7 @@ bool MsgC::getIp(char  *hostname    , long   hostnameLen ,
 	}
 
 	if ( g_conf.m_logDebugDns ) {
-		long fip = 0;
+		int32_t fip = 0;
 		if ( host ) fip = host->m_ip;
 		log(LOG_DEBUG,"dns: msgc: multicasting for ip for %s to %s.",
 		    hostname,iptoa(fip));
@@ -191,14 +191,14 @@ bool MsgC::getIp(char  *hostname    , long   hostnameLen ,
 		if ( ! g_errno ) { char *xx=NULL;*xx=0; }
 		return true;
 	}
-	//unsigned long groupId     = host->m_groupId;
-	long          firstHostId = host->m_hostId;
+	//uint32_t groupId     = host->m_groupId;
+	int32_t          firstHostId = host->m_hostId;
 	// the handling server will timeout its dns algorithm and send us
 	// back an EDNSTIMEDOUT error, so we do not need to have any timeout
 	// here unless we are niceness 0, which we need in case the handling
 	// servers goes down, we do not want to wait for it and would rather
 	// call the callback with an EUDPTIMEDOUT error after 60 seconds.
-	long timeout = 60;
+	int32_t timeout = 60;
 	// make it virtual infinite
 	if ( niceness > 0 ) timeout = 999999999;
 	if ( !m_mcast.send (m_request    , // sets mcast->m_msg to this
@@ -241,45 +241,45 @@ void gotReplyWrapper ( void *state , void *state2 ) {
 	MsgC *THIS = (MsgC *)state;
 	// this can set g_errno. sets to ETRYAGAIN if checksum is wrong
 	// so XmlDoc.cpp should try again! maybe later...
-	long ip = THIS->gotReply();
+	int32_t ip = THIS->gotReply();
 	// debug
 	if ( g_conf.m_logDebugDns ) {
 		char *s ="";
 		if ( THIS->m_forwardToProxy ) s = "from proxy ";
 		logf(LOG_DEBUG,"dns: msgc: got reply %sof %s for %s. "
-		     "state=0x%lx mcast=0x%lx",
-		     s,iptoa(*THIS->m_ipPtr),THIS->m_u.getUrl(),(long)state2,
-		     (long)&THIS->m_mcast);
+		     "state=0x%"PTRFMT" mcast=0x%"PTRFMT"",
+		     s,iptoa(*THIS->m_ipPtr),THIS->m_u.getUrl(),(PTRTYPE)state2,
+		     (PTRTYPE)&THIS->m_mcast);
 	}
 	THIS->m_callback(state2,ip);
 }
 
-long MsgC::gotReply(){
-	long replySize,maxSize;
+int32_t MsgC::gotReply(){
+	int32_t replySize,maxSize;
 	bool freeIt;
 	char *reply = m_mcast.getBestReply (&replySize, &maxSize, &freeIt);
 	*m_ipPtr = 0;
-	long ip2 = 0;
+	int32_t ip2 = 0;
 
 	// sanity check
 	if (replySize != 12 || !reply ){
 		g_errno = EBADREPLYSIZE;
-		log( "dns: msgc: Bad reply size of %li",
-		     (unsigned long)reply );
+		log( "dns: msgc: Bad reply size of %"PTRFMT"",
+		     (PTRTYPE)reply );
 	}
         else {
-		*m_ipPtr = *(long *)reply;
+		*m_ipPtr = *(int32_t *)reply;
 		// repeated ip
-		ip2 = *(long *)(reply + 4);
+		ip2 = *(int32_t *)(reply + 4);
 		// an actual checksum
-		//long crc = *(long *)(reply + 8);
+		//int32_t crc = *(int32_t *)(reply + 8);
 	}
 	// debug
 	log(LOG_DEBUG,"dns: msgc: got reply of %s for %s.",
 	    iptoa(*m_ipPtr),m_u.getUrl());
 	// test checkusm
 	if ( *m_ipPtr != ip2 ) {
-		log("dns: ip checksum is incorrect. %lu != %lu. "
+		log("dns: ip checksum is incorrect. %"UINT32" != %"UINT32". "
 		    "setting to -1.",  *m_ipPtr,ip2);
 		g_errno = ETRYAGAIN;
 		*m_ipPtr = -1;
@@ -296,9 +296,9 @@ long MsgC::gotReply(){
 		mfree(reply,maxSize,"MulticastMsgC");
 	}
 	// sanity check
-	if ( (unsigned long)*m_ipPtr <= 255 &&
-	     (unsigned long)*m_ipPtr >  0      ) {
-		log("dns: msgc: got msgc ip reply of %lu for %s. wtf? trying "
+	if ( (uint32_t)*m_ipPtr <= 255 &&
+	     (uint32_t)*m_ipPtr >  0      ) {
+		log("dns: msgc: got msgc ip reply of %"UINT32" for %s. wtf? trying "
 		    "again.", *m_ipPtr,m_u.m_url);
 		g_errno = ETRYAGAIN;
 		*m_ipPtr = 0;
@@ -323,11 +323,11 @@ long MsgC::gotReply(){
 
 // like gotReply() but it is a reply from the proxy, so we gotta free our
 // msgc before sending back a reply to the first guy's msgc
-void gotProxyReplyWrapper ( void *state , long ipArg ) {
+void gotProxyReplyWrapper ( void *state , int32_t ipArg ) {
 	// get the msgc we used to send to proxy
 	MsgC *THIS = (MsgC *)state;
 	// get ip from the proxy reply
-	long ip = THIS->gotReply();
+	int32_t ip = THIS->gotReply();
 	// debug
 	log(LOG_DEBUG,"dns: msgc: got reply from proxy of %s for %s.",
 	    iptoa(*THIS->m_ipPtr),THIS->m_u.getUrl());
@@ -341,19 +341,19 @@ void gotProxyReplyWrapper ( void *state , long ipArg ) {
 	
 // . only return false if you want slot to be nuked w/o replying
 // . MUST always call g_udpServer::sendReply() or sendErrorReply()
-void handleRequest ( UdpSlot *slot , long niceness  ) {
+void handleRequest ( UdpSlot *slot , int32_t niceness  ) {
 
 	// get the request, should be the hostname
 	char *hostname     = slot->m_readBuf;
 	// do not include the \0 at the end in the length
-	long  hostnameLen = slot->m_readBufSize - 1;
+	int32_t  hostnameLen = slot->m_readBufSize - 1;
 
-	long ip=0;
+	int32_t ip=0;
 
 	//char c = hostname[hostnameLen];
 	//if ( c != 0 ) hostname[hostnameLen] = 0;
-	log(LOG_DEBUG,"dns: msgc: handle request called for %s state=%lu",
-	    hostname,(long)slot);
+	log(LOG_DEBUG,"dns: msgc: handle request called for %s state=%"PTRFMT"",
+	    hostname,(PTRTYPE)slot);
 	//if ( c != 0 ) hostname[hostnameLen] = c;
 
 
@@ -413,21 +413,21 @@ void handleRequest ( UdpSlot *slot , long niceness  ) {
 	
 
 
-void gotMsgCIpWrapper( void *state, long ip){
+void gotMsgCIpWrapper( void *state, int32_t ip){
 	UdpSlot *slot=(UdpSlot *) state;
 
-	log(LOG_DEBUG,"dns: msgc sending reply for state=%lu.",(long)state);
+	log(LOG_DEBUG,"dns: msgc sending reply for state=%"PTRFMT".",(PTRTYPE)state);
 
 	//to fit the ip address
 	char reply[12];
-	long replySize=12;
+	int32_t replySize=12;
 	//	reply=(char*) mmalloc(replySize,"MsgC");
 	char *p = reply;
-	*(long *)p = ip; p += 4;
+	*(int32_t *)p = ip; p += 4;
 	// repeat it as a checksum
-	*(long *)p = ip; p += 4;
+	*(int32_t *)p = ip; p += 4;
 	// an actual checksum
-	*(long *)p = hash32h ( ip , 0 ); p += 4;
+	*(int32_t *)p = hash32h ( ip , 0 ); p += 4;
 
 	g_udpServer.sendReply_ass ( reply    ,
 				    replySize       ,

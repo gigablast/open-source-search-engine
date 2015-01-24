@@ -41,8 +41,8 @@ bool Wiki::load() {
 	if ( fd2 < 0 ) log(LOG_INFO,"wiki: open %s: %s",ff2,mstrerror(errno));
 	struct stat stats1;
 	struct stat stats2;
-	long errno1 = 0;
-	long errno2 = 0;
+	int32_t errno1 = 0;
+	int32_t errno2 = 0;
 	if ( fstat ( fd1 , &stats1 ) == -1 ) errno1 = errno;
 	if ( fstat ( fd2 , &stats2 ) == -1 ) errno2 = errno;
 	// close all
@@ -70,12 +70,12 @@ bool Wiki::load() {
 			    mstrerror(g_errno));
 	}
 	// get the size of it
-	long size = stats1.st_size;
+	int32_t size = stats1.st_size;
 	// now we have to load the text file
 	return loadText( size );
 }
 
-bool Wiki::loadText ( long fileSize ) {
+bool Wiki::loadText ( int32_t fileSize ) {
 
 	log(LOG_INFO,"wiki: generating wikititles2.dat file");
 
@@ -95,7 +95,7 @@ bool Wiki::loadText ( long fileSize ) {
 	// read in whole thing
 	//char *buf = (char *)mmalloc ( size + 1 , "wiki" );
 	//if ( ! buf ) return false;
-	//long n = read ( fd1 , buf , size );
+	//int32_t n = read ( fd1 , buf , size );
 	//close ( fd1 );
 	//if ( n != size ) { g_errno = EBADENGINEER; return false; }
 	// null terminate
@@ -105,7 +105,7 @@ bool Wiki::loadText ( long fileSize ) {
 	if ( sb.length() + 100 < sb.m_capacity ) { char *xx=NULL;*xx=0; }
 
 	char *buf = sb.getBufStart();
-	long size = sb.length() - 1;
+	int32_t size = sb.length() - 1;
 
 	// scan each line
 	char *p    = buf;
@@ -126,12 +126,12 @@ bool Wiki::loadText ( long fileSize ) {
 			       true         , // computeIds?
 			       MAX_NICENESS ) ) 
 			return false;
-		long nw = w.getNumWords();
+		int32_t nw = w.getNumWords();
 
 		// skip if it begins with 'the', like 'the uk' because it
 		// is causing uk to get a low score in 'boots in the uk'.
 		// same for all stop words i guess...
-		long start = 0;
+		int32_t start = 0;
 
 		//if ( nw >= 2 && w.m_wordIds[0] == 3522767639246570644LL &&
 		//     w.m_wordIds[1] == -943426581783550057LL )
@@ -181,13 +181,13 @@ bool Wiki::loadText ( long fileSize ) {
 		*eol = c;
 		if ( pp ) continue;
 		// get these
-		long long *wids = w.getWordIds();
+		int64_t *wids = w.getWordIds();
 		// reset hash
 		uint32_t h = 0;
 		// count the words in the phrase
-		long count = 0;
+		int32_t count = 0;
 		// hash the word ids together
-		for ( long i = start ; i < nw ; i++ ) {
+		for ( int32_t i = start ; i < nw ; i++ ) {
 			// skip if not a proper word
 			if ( ! w.isAlnum(i) ) continue;
 			// add into hash quickly
@@ -228,12 +228,12 @@ bool Wiki::loadText ( long fileSize ) {
 			       true         , // computeIds?
 			       MAX_NICENESS ) ) 
 			return false;
-		long nw = w.getNumWords();
+		int32_t nw = w.getNumWords();
 
 		// skip if it begins with 'the', like 'the uk' because it
 		// is causing uk to get a low score in 'boots in the uk'.
 		// same for all stop words i guess...
-		long start = 0;
+		int32_t start = 0;
 
 		//if ( nw >= 2 && w.m_wordIds[0] == 3522767639246570644LL &&
 		//     w.m_wordIds[1] == -943426581783550057LL )
@@ -262,12 +262,12 @@ bool Wiki::loadText ( long fileSize ) {
 		if ( ! w.isCapitalized(start) && ! w.isCapitalized(nw-1)) continue;
 
 		char **wptrs = w.getWords();
-		long  *wlens = w.getWordLens();
+		int32_t  *wlens = w.getWordLens();
 		uint64_t h64 = 0;
-		long conti = 0;
-		long count = 0;
+		int32_t conti = 0;
+		int32_t count = 0;
 		// hash the word ids together
-		for ( long i = start ; i < nw ; i++ ) {
+		for ( int32_t i = start ; i < nw ; i++ ) {
 			// skip if not a proper word
 			if ( ! w.isAlnum(i) ) continue;
 			// no digits starting "08-Hillary" "08Hillary"
@@ -291,10 +291,10 @@ bool Wiki::loadText ( long fileSize ) {
 
 		uint32_t hf32 = 0;
 		count = 0;
-		long long *wids = w.getWordIds();
+		int64_t *wids = w.getWordIds();
 		// hash the word ids together to make a new hash that takes the
 		// space into account.
-		for ( long i = start ; i < nw ; i++ ) {
+		for ( int32_t i = start ; i < nw ; i++ ) {
 			// skip if not a proper word
 			if ( ! w.isAlnum(i) ) continue;
 			// add into hash quickly
@@ -330,21 +330,21 @@ bool Wiki::loadText ( long fileSize ) {
 
 // if a phrase in a query is in a wikipedia title, then increase
 // its affWeights beyond the normal 1.0
-long Wiki::getNumWordsInWikiPhrase ( long i , Words *w ) {
-	long long *wids = w->m_wordIds;
+int32_t Wiki::getNumWordsInWikiPhrase ( int32_t i , Words *w ) {
+	int64_t *wids = w->m_wordIds;
 	if ( ! wids[i] ) return 0;
-	long nw = w->m_numWords;
+	int32_t nw = w->m_numWords;
 	char **wptrs = w->getWords();
-	long  *wlens = w->getWordLens();
+	int32_t  *wlens = w->getWordLens();
 	// how many in the phrase
-	long max = -1;
-	long maxCount = 0;
+	int32_t max = -1;
+	int32_t maxCount = 0;
 	// accumulate a hash of the word ids
-	//long long h      = 0LL;
+	//int64_t h      = 0LL;
 	uint32_t h = 0;
-	long      wcount = 0;
+	int32_t      wcount = 0;
 	// otherwise, increase affinity high for included words
-	for ( long j = i ; j < nw && j < i + 12 ; j++ ) {
+	for ( int32_t j = i ; j < nw && j < i + 12 ; j++ ) {
 		// count all words
 		wcount++;
 		// skip if not alnum
@@ -369,7 +369,7 @@ long Wiki::getNumWordsInWikiPhrase ( long i , Words *w ) {
 			if ( wlens[i+2] <= 2 ) continue;
 			// special hash
 			uint64_t h64 = 0;
-			long conti = 0;
+			int32_t conti = 0;
 			// add into hash quickly
 			h64 = hash64Lower_utf8_cont(wptrs[i], 
 						    wlens[i],
@@ -404,15 +404,15 @@ bool Wiki::setPhraseAffinityWeights ( Query *q , float *affWeights ,
 				      bool *oneTitle ) {
 
 	// reset all terms wiki affinities to 1.0
-	for ( long i = 0 ; i < q->m_numTerms ; i++ )
+	for ( int32_t i = 0 ; i < q->m_numTerms ; i++ )
 		q->m_qterms[i].m_wikiAff = 1.0;
 
-	long loopCount = 0;
-	long lasti;
+	int32_t loopCount = 0;
+	int32_t lasti;
 	// loop over query words
 	QueryWord *qw = q->m_qwords;
-	long       nw = q->m_numWords;
-	for ( long i = 0 ; i < nw ; i++ ) {
+	int32_t       nw = q->m_numWords;
+	for ( int32_t i = 0 ; i < nw ; i++ ) {
 		// skip if not alnum
 		if ( qw[i].m_rawWordId == 0LL ) continue;
 		// loop count
@@ -420,13 +420,13 @@ bool Wiki::setPhraseAffinityWeights ( Query *q , float *affWeights ,
 		// no longer one title?
 		if ( loopCount > 1 && oneTitle && i >lasti ) *oneTitle = false;
 		// count it
-		long count = 0;
+		int32_t count = 0;
 		// how many in the phrase
-		long max = -1;
+		int32_t max = -1;
 		// accumulate a hash of the word ids
-		long long h = 0LL;
+		int64_t h = 0LL;
 		// otherwise, increase affinity high for included words
-		for ( long j = i ; j < nw && count < 12 ; j++ ) {
+		for ( int32_t j = i ; j < nw && count < 12 ; j++ ) {
 			// skip if not alnum
 			if ( qw[j].m_rawWordId == 0LL ) continue;
 			// add to hash
@@ -443,7 +443,7 @@ bool Wiki::setPhraseAffinityWeights ( Query *q , float *affWeights ,
 			max = j;
 		}
 		// set all up to max to affinity of 10.0
-		for ( long j = i ; j <= max ; j++ ) {
+		for ( int32_t j = i ; j <= max ; j++ ) {
 			// skip if not alnum
 			if ( qw[j].m_rawWordId == 0LL ) continue;
 			// get term
@@ -462,7 +462,7 @@ bool Wiki::setPhraseAffinityWeights ( Query *q , float *affWeights ,
 	}
 
 	// store into array
-	for ( long i = 0 ; i < q->m_numTerms ; i++ )
+	for ( int32_t i = 0 ; i < q->m_numTerms ; i++ )
 		affWeights[i] = q->m_qterms[i].m_wikiAff;
 
 	return true;
@@ -479,7 +479,7 @@ bool Wiki::getRandomPhrase ( void *state , void (*callback)(void *state)) {
 	// this will be set on error
 	m_errno = 0;
 	// just get it from the file...
-	long r = rand() % m_txtSize;
+	int32_t r = rand() % m_txtSize;
 	// read in 5k
 	r -= 5000;
 	// prevent negatives
@@ -563,7 +563,7 @@ void Wiki::doneReadingWiki ( ) {
 			m_errno = g_errno;
 			return;
 		}
-		long nw = w.getNumWords();
+		int32_t nw = w.getNumWords();
 		// remove last words if not alnum
 		if ( nw > 0 && !w.isAlnum(nw-1) ) nw--;
 		// skip this line if no words
@@ -585,15 +585,15 @@ void Wiki::doneReadingWiki ( ) {
 		if ( pp ) continue;
 		//
 		// BUT here we skip if too long!
-		// we don't want to send insanely long queries to goog/yhoo
+		// we don't want to send insanely int32_t queries to goog/yhoo
 		//
-		long size =  w.getWord(nw-1) - w.getWord(0);
+		int32_t size =  w.getWord(nw-1) - w.getWord(0);
 		size      += w.getWordLen(nw-1);
 		if ( size >= 128 ) continue;
 		// get ptr to it
 		char *wptr = w.getWord ( 0 );
 		// copy that
-		memcpy ( m_randPhrase , wptr , size );
+		gbmemcpy ( m_randPhrase , wptr , size );
 		// NULL terminate
 		m_randPhrase[size] = '\0';
 		// all done

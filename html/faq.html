@@ -44,6 +44,15 @@ A work-in-progress <a href=/compare.html>comparison to SOLR</a>.
 <br>
 <br>
 
+<a href=#trouble>Cleaning Up after a Crash</a> - how do i make sure my data is in tact after a host crashes?
+<br>
+<br>
+
+
+<a href=#spider>The Spider</a> - how does the spider work?
+<br>
+<br>
+
 
 <!--<a href=#files>List of Files</a> - the necessary files to run Gigablast
 <br>
@@ -203,17 +212,32 @@ For RedHat do a <b>yum install gcc-c++</b>
 </ul>
 -->
 
-<b>1.</b> For <u>Ubuntu</u> do <b>sudo apt-get update ; apt-get install make g++ gcc-multilib <!--lib32stdc++6--></b>
+<b>1.0</b> For <u>64-bit Ubuntu 14.04</u>: do <b>sudo apt-get update ; apt-get install make g++ libssl-dev</b>
+
 <br><br>
-<b>1.1</b> For Ubuntu 14.04 LTS (released in Apr 17, 2014) you also need to do 
-an <b>apt-get install g++-multilib</b>
+
+<b>1.1</b> For <u>64-bit Ubuntu 12.02</u>: do <b>sudo apt-get update ; apt-get install make g++ libssl-dev</b>
+
 <br><br>
-<b>1.2.</b> For <u>RedHat</u> do <b>sudo yum install gcc-c++</b>
+
+<b>1.2</b> For <u>32-bit Ubuntu 14.04</u>: do <b>sudo apt-get update ; apt-get install make g++ gcc-multilib g++-multilib <!--lib32stdc++6--></b>
+
+<br><br>
+
+<b>1.3</b> For <u>32-bit Ubuntu 12.02</u>: do <b>sudo apt-get update ; apt-get install make g++ gcc-multilib <!--lib32stdc++6--></b>
+
+<br><br>
+<b>1.4.</b> For <u>RedHat</u> do <b>sudo yum install gcc-c++</b>
 <br><br>
 <b>2.</b> Download the <a href=https://github.com/gigablast/open-source-search-engine>Gigablast source code</a> using <b>wget --no-check-certificate "https://github.com/gigablast/open-source-search-engine/archive/master.zip"</b>, unzip it and cd into it. (optionally use <b>git clone https://github.com/gigablast/open-source-search-engine.git ./github</b> if you have <i>git</i> installed.)
 <br><br>
-<b>3.</b> Run <b>make</b> to compile. (e.g. use 'make -j 4' to compile on four cores)
+<b>3.0</b> Run <b>make</b> to compile. (e.g. use 'make -j 4' to compile on four cores)
 <br><br>
+
+<b>3.1</b> Run <b>make clean ; make gb32</b> 
+to compile the 32-bit version of gb.
+<br><br>
+
 <b>4.</b> Run <b>./gb -d</b>  to start a single gigablast node which listens on port 8000 running in daemon mode (-d).
 <br><br>
 <b>5.</b> The first time you run gb, wait about 30 seconds for it to build some files. Check the log file to see when it completes.
@@ -225,15 +249,16 @@ an <b>apt-get install g++-multilib</b>
 <br><br><a name=features></a>
 <h1>Features</h1>
 
-&lt;<i>Last Updated May 2014</i>&gt;
+&lt;<i>Last Updated Dec 2014</i>&gt;
 <br>
 
 <ul>
 <li> <b>The ONLY open source WEB search engine.</b> 
+<li> 64-bit architecture.
 <li> Scalable to thousands of servers. 
 <li> Has scaled to over 12 billion web pages on over 200 servers.
 <li> A dual quad core, with 32GB ram, and two 160GB Intel SSDs, running 8 Gigablast instances, can do about 8 qps (queries per second) on an index of 10 million pages. Drives will be close to maximum storage capacity. Doubling index size will more or less halve qps rate. (Performance metrics can be made about ten times faster but I have not got around to it yet. Drive space usage will probably remain about the same because it is already pretty efficient.)
-<li> 1 million web pages requires 28.6GB of drive space. That includes the index, meta information and the compressed HTML of all the web pages.
+<li> 1 million web pages requires 28.6GB of drive space. That includes the index, meta information and the compressed HTML of all the web pages. That is 28.6K of disk per HTML web page.
 <li>Spider rate is around 1 page per second per core. So a dual quad core can spider and index 8 pages per second which is 691,200 pages per day.
 <li> 4GB of RAM required per Gigablast instance. (instance = process)
 <li> Live demo at <a href=http://www.gigablast.com/>http://www.gigablast.com/</a>
@@ -271,7 +296,7 @@ an <b>apt-get install g++-multilib</b>
 <li> Plug-ins. For indexing any file format by calling Plug-ins to convert that format to HTML. Provided binary plug-ins: pdftohtml (PDF), ppthtml (PowerPoint), antiword (MS Word), pstotext (PostScript).
 <li> Indexes JSON and XML natively. Provides ability to search individual structured fields.
 <li> Sorting. Sort the search results by meta tags or JSON fields that contain numbers, simply by adding something like gbsortby:price or gbrevsortby:price as a query term, assuming you have meta price tags.
-<li> Easy Scaling. Add new servers to the hosts.conf file then click 'rebalance shards' to automatically rebalance the sharded data.
+<li> Easy Scaling. Add new servers to the <a href=/hosts.conf.txt>hosts.conf</a> file then click 'rebalance shards' to automatically rebalance the sharded data.
 <li> Using &stream=1 can stream back millions of search results for a query without running out of memory.
 <li> Makes and displays thumbnail images in the search results.
 <li> Nested boolean queries using AND, OR, NOT operators.
@@ -382,12 +407,12 @@ Each directory should have the following files and subdirectories:<br><br>
 &lt;<i>Last Updated July 2014</i>&gt;
 <br>
 <br>
-1. Locate the hosts.conf file. If installing from binaries it should be in the /var/gigablast/data0/ directory. If it does not exist yet then run <b>gb</b> or <b>./gb</b> which will create one. You will then have to exit gb after it does.
+1. Locate the <a href=/hosts.conf.txt>hosts.conf</a> file. If installing from binaries it should be in the /var/gigablast/data0/ directory. If it does not exist yet then run <b>gb</b> or <b>./gb</b> which will create one. You will then have to exit gb after it does.
 <br><br>
-2. Update the <b>num-mirrors</b> in the hosts.conf file. Leave it as 0 if you do not want redundancy. If you want each shard to be mirrored by one other gb instance, then set this to 1. I find that 1 is typically good enough, provided that the mirror is on a different physical server. So if one server gets trashed there is another to serve that shard. The sole advantage in not mirroring your cluster is that you will have twice the disk space for storing documents. Query speed should be unaffected because Gigablast is smart enough to split the load evenly between mirrors when processing queries. You can send your queries to any shard and it will communicate with all the other shards to aggregate the results. If one shard fails and you are not mirroring then you will lose that part of the index, unfortunately.
+2. Update the <b>num-mirrors</b> in the <a href=/hosts.conf.txt>hosts.conf</a> file. Leave it as 0 if you do not want redundancy. If you want each shard to be mirrored by one other gb instance, then set this to 1. I find that 1 is typically good enough, provided that the mirror is on a different physical server. So if one server gets trashed there is another to serve that shard. The sole advantage in not mirroring your cluster is that you will have twice the disk space for storing documents. Query speed should be unaffected because Gigablast is smart enough to split the load evenly between mirrors when processing queries. You can send your queries to any shard and it will communicate with all the other shards to aggregate the results. If one shard fails and you are not mirroring then you will lose that part of the index, unfortunately.
 
 <br><br>
-3. Make one entry in the hosts.conf per physical core you have on your server.  If an entry is on the same server as another, then it will need a completely different set of ports.  Each gb instance also requires 4GB of ram, so you may be limited by your RAM before being limited by your cores. You can of course run multiple gb instances on a single core if you have the RAM, but performance will not be optimal.
+3. Make one entry in the <a href=/hosts.conf.txt>hosts.conf</a> per physical core you have on your server.  If an entry is on the same server as another, then it will need a completely different set of ports.  Each gb instance also requires 4GB of ram, so you may be limited by your RAM before being limited by your cores. You can of course run multiple gb instances on a single core if you have the RAM, but performance will not be optimal.
 
 <br><br>
 4. Continue following the instructions for <a href=#scaling>Scaling the Cluster</a> below in order to get the other shards set up and running.
@@ -409,7 +434,7 @@ Each directory should have the following files and subdirectories:<br><br>
 <br><br>
 2. If your cluster is running, shut down the clustering by doing a <b>gb stop</b> command on the command line OR by clicking on "save & exit" in the <a href=/admin/master>master controls</a>
 <br><br>
-3. Edit the hosts.conf file in the working directory of host #0 (the first host entry in the hosts.conf file) to add the new hosts. (<a href=/hosts.conf.txt>sample hosts.conf</a>)
+3. Edit the <a href=/hosts.conf.txt>hosts.conf</a> file in the working directory of host #0 (the first host entry in the hosts.conf file) to add the new hosts.
 <br><br>
 4. Ensure you can do passwordless ssh from host #0 to each new IP address you added. This generally requires running <b>ssh-keygen -t dsa</b> on host #0 to create the files <i>~/.ssh/id_dsa</i> and <i>~/.ssh/id_dsa.pub</i>. Then you need to insert the key in <i>~/.ssh/id_dsa.pub</i> into the <i>~/.ssh/authorized_keys2</i> file on every host, including host #0, in your cluster. Furthermore, you must do a <b>chmod 700 ~/.ssh/authorized_keys2</b> on each one otherwise the passwordless ssh will not work.
 <br><br>
@@ -485,29 +510,39 @@ For the purposes of this section, we assume the name of the cluster is gf and al
 
 <a name=trouble></a>
 <table cellpadding=1 border=0 width=100% bgcolor=#0079ba>
-<tr><td><center><b><font color=#ffffff size=+1>Troubleshooting</td></tr></table>
+<tr><td><center><b><font color=#ffffff size=+1>Cleaning Up After a Crash</td></tr></table>
 <br>
-&lt;<i>Caution: Old Documentation</i>&gt;
+&lt;<i>Last Updated Sep 2014</i>&gt;
 <br>
 <!--
 <br>
 <a name=disaster></a>
 <b>A host in the network crashed. How do I temporarily decrease query latency on the network until I get it up again?</b><br>You can go to the <i>Search Controls</i> page and cut all nine tier sizes in half. This will reduce search result recall, but should cut query latency times in half for slower queries until the crashed host is recovered.<br>-->
 
-<br><b>A host in the network crashed. What is the recovery procedure?</b><br>First determine if the host's crash was clean or unclean. It was clean if the host was able to save all data in memory before it crashed. If the log ended with <i>allExit: dumping core after saving</i> then the crash was clean, otherwise it was not.<br><br>If the crash was clean then you can simply restart the crashed host by typing <b>gb start <i>i</i></b> where <i>i</i> is the hostId of the crashed host. However, if the crash was not clean, like in the case of a sudden power outtage, then in order to ensure no data gets lost, you must copy the data of the crashed host's twin. If it does not have a twin then there may be some data loss and/or corruption. In that case try reading the section below, <i>How do I minimize the damage after an unclean crash with no twin?</i>, but you may be better off starting the index build from scratch. To recover from an unclean crash using the twin, follow the steps below: <br><br>a. Click on 'all spiders off' in the 'master controls' of host #0, or host #1 if host #0 was the host that crashed.<br>b. If you were injecting content directly into Gigablast, stop.<br>c. Click on 'all just save' in the 'master controls' of host #0 or host #1 if host #0 was the one that crashed.<br>d. Determine the twin of the crashed host by looking in the <a href="#hosts">hosts.conf</a> file. The twin will have the same group (shard) number as the crashed host.<br>e. Recursively copy the working directory of the twin to a spare host  using rcp since it is much faster than scp.<br>f. Restart the crashed host by typing <b>gb start <i>i</i></b> where <i>i</i> is the hostId of the crashed host. If it is not restartable, then skip this step.<br>g. If the crashed host was restarted, wait for it to come back up. Monitor another host's <i>hosts</i> table to see when it is up, or watch the log of the crashed host.<br>h. If the crashed host was restarted, wait a minute for it to absorb all of the data add requests that may still be lingering. Wait for all hosts' <i>spider queues</i> of urls currently being spidered to be empty of urls.<br>i. Perform another <i>all just save</i> command to relegate any new data to disk.<br>j. After the copy completes edit the hosts.conf on host #0 and replace the ip address of the crashed host with that of the spare host.<br>k. Do a <b>gb stop</b> to safely shut down all hosts in the network.<br>l. Do a <b>gb installconf</b> to propagate the hosts.conf file from host #0 to all other hosts in the network (including the spare host, but not the crashed host)<br>m. Do a <b>gb start</b> to bring up all hosts under the new hosts.conf file.<br>n. Monitor all logs for a little bit by doing <i>dsh -c -f all 'tail -f /a/log? /a/log??'</i><br>o. Check the <i>hosts</i> table to ensure all hosts are up and running.<br><br><br><b>How do I minimize the damage after an unclean crash with no twin?</b><br>You may never be able to get the index 100% back into shape right now, but in the near future there may be some technology that allows gigablast to easily recover from these situations. For now though, 2. Try to determine the last url that was indexed and *fully* saved to disk. Every time you index a url some data is added to all of these databases: checksumdb, indexdb, spiderdb, titledb and tfndb. These databases all have in-memory data that is periodically dumped to disk. So you must determine the last time each of these databases dumped to disk by looking at the timestamp on the corresponding files in the appropriate collection subdirectories contained in the working directory. If tfndb was dumped to disk the longest time ago, then use its timestamp to indicate when the last url was successfully added or injected. You might want to subtract thirty minutes from that timestamp to make sure because it is really the time that that file <b>started</b> being dumped to disk that you are after, and that timestamp represents the time of the last write to that file. Now you can re-add the potentially missing urls from that time forward and get a semi-decent recovery.<br><br><b>Gigablast is slow to respond to queries. How do I speed it up?</b><br>a. If you see long purple lines in the Performance graph when Gigablast is slow then that means Gigablast is operating on a slow network OR your tier sizes, adjustable on the Search Controls page, are way too high so that too much data is clogging the network. If your tier sizes are at the default values or lower, then the problem may be that the bandwidth between one gigablast host and another is below the required 1000Mbps. Try doing a 'dmesg | grep Mbps' to see what speed your card is operating at. Also try testing the bandwidth between hosts using the thunder program or try copying a large file using rcp and timing it. Do not use scp since it is often bottlenecked on the CPU due to the encryption that it does. If your gigabit card is operating at 100Mbps that can sometimes be fixed by rebooting. I've found that there is about a 20% chance that the reboot will make the card come back to 1000Mbps.<br><br>b. If you see lots of long black lines on the Performance graph then that means your disk is slowing everything down. Make sure that if you are doing realtime queries that you do not have too many big indexdb files. If you tight merge everything it should fix that problem. Otherwise, consider getting a raid level 0 and faster disks. Perhaps the filesystem is severly fragmented.Or maybe your query traffic is repetetive. If the queries are sorted alphabetically, or you have many duplicate queries, then most of the workload might be falling on one particular host in the network, thus bottle-necking everything.
+<br><b>A host in the network crashed. What is the recovery procedure?</b><br>First determine if the host's crash was clean or unclean. It was clean if the host was able to save all data in memory before it crashed. If the log ended with <i>allExit: dumping core after saving</i> then the crash was clean, otherwise it was not.<br><br>If the crash was clean then you can simply restart the crashed host by typing <b>gb start <i>i</i></b> where <i>i</i> is the hostId of the crashed host. However, if the crash was not clean, like in the case of a sudden power outtage, then in order to ensure no data gets lost, you must copy the data of the crashed host's twin. If it does not have a twin then there may be some data loss and/or corruption. In that case try reading the section below, <i>How do I minimize the damage after an unclean crash with no twin?</i>, but you may be better off starting the index build from scratch. To recover from an unclean crash using the twin, follow the steps below: <br><br>a. Click on 'all spiders off' in the 'master controls' of host #0, or host #1 if host #0 was the host that crashed.<br>b. If you were injecting content directly into Gigablast, stop.<br>c. Click on 'all just save' in the 'master controls' of host #0 or host #1 if host #0 was the one that crashed.<br>d. Determine the twin of the crashed host by looking in the <a href=/hosts.conf.txt>hosts.conf</a> file or on the <a href=/admin/hosts>hosts</a> page. The twin will have the same shard number as the crashed host.<br>e. Recursively copy the working directory of the twin to the crashed host  using rcp since it is much faster than scp.<br>f. Restart the crashed host by typing <b>gb start <i>i</i></b> where <i>i</i> is the hostId of the crashed host. If it is not restartable, then skip this step.
+
+<!--
+<br>g. If the crashed host was restarted, wait for it to come back up. Monitor another host's <i>hosts</i> table to see when it is up, or watch the log of the crashed host.<br>h. If the crashed host was restarted, wait a minute for it to absorb all of the data add requests that may still be lingering. Wait for all hosts' <i>spider queues</i> of urls currently being spidered to be empty of urls.<br>i. Perform another <i>all just save</i> command to relegate any new data to disk.<br>j. After the copy completes edit the hosts.conf on host #0 and replace the ip address of the crashed host with that of the spare host.<br>k. Do a <b>gb stop</b> to safely shut down all hosts in the network.<br>l. Do a <b>gb installconf</b> to propagate the hosts.conf file from host #0 to all other hosts in the network (including the spare host, but not the crashed host)<br>m. Do a <b>gb start</b> to bring up all hosts under the new hosts.conf file.<br>n. Monitor all logs for a little bit by doing <i>dsh -c -f all 'tail -f /a/log? /a/log??'</i><br>o. Check the <i>hosts</i> table to ensure all hosts are up and running.
+-->
+
+<br><br><br><b>How do I minimize the damage after an unclean crash with no twin?</b><br>You may never be able to get the index 100% back into shape right now, but in the near future there may be some technology that allows gigablast to easily recover from these situations. For now though, 2. Try to determine the last url that was indexed and *fully* saved to disk. Every time you index a url some data is added to all of these databases: checksumdb, posdb (index), spiderdb, titledb and clusterdb. These databases all have in-memory data that is periodically dumped to disk. So you must determine the last time each of these databases dumped to disk by looking at the timestamp on the corresponding files in the appropriate collection subdirectories contained in the working directory. If clusterdb was dumped to disk the longest time ago, then use its timestamp to indicate when the last url was successfully added or injected. You might want to subtract thirty minutes from that timestamp to make sure because it is really the time that that file <b>started</b> being dumped to disk that you are after, and that timestamp represents the time of the last write to that file. Now you can re-add the potentially missing urls from that time forward using the <a href=/admin/addurl>AddUrl page</a> and get a semi-decent recovery.
+<br>
+
 
 <!--
 <br><br><b>I get different results for the XML feed (raw=X) as compared to the HTML feed. What is going on?</b><br>           Try adding the &rt=1 cgi parameter to the search string to tell Gigablast to return real time results.rt is set to 0 by default for the XML feed, but not for the HTML feed.  That means Gigablast will only look at the root indexdb file when looking up queries.  Any newly added pages will be indexed outside of the root file until a merge is done.  This is done for performance reasons.  You can enable real time look ups by adding &rt=1 to the search string.  Also, in your search controls there are options to enable or disable real time lookups for regular queries and XML feeds, labeled as "restrict indexdb for queries" and "restrict indexdb for xml feed".  Make sure both regular queries and xml queries are doing the same thing when comparing results.<br><br>Also, you need to look at the tier sizes at the top of the Search Controls page. The tier sizes  (tierStage0, tierStage1, ...) listed for the raw (XML feed) queries needs to match non-raw in order to get exactly the same results. Smaller tier sizes yield better performance but yield less search results.
 -->
-
+<!--
 <br><br><b>The spider is on but no urls are showing up in the Spider Queue table as being spidered. What is wrong?</b><br><table width=100%><tr><td>1. Set <i>log spidered urls</i> to YES on the <i>log</i> page. Then check the log to see if something is being logged.</td></tr><tr><td>2. Check the <a href=/admin/master>master controls</a> page for the following:<br> &nbsp; a. the <i>spider enabled</i> switch is set to YES.
 
-<br> &nbsp; b. the <i>max total spiders</i> is not too LOW.
+-->
+
 
 <!--<br> &nbsp; c. the <i>spider max kbps</i> control is set high enough.</td></tr></td></tr><tr><td>3. Check the <i>spider controls</i> page for the following:-->
 
 <!--<br> &nbsp; c. the <i>spider delay</i> control is not TOO HIGH.-->
 
+<!--
 </td></tr></td></tr><tr><td>
 
 3. Check the <a href=/admin/spider>spider controls</a> page for the following:
@@ -522,28 +557,21 @@ For the purposes of this section, we assume the name of the cluster is gf and al
 <br> &nbsp; c. the <i>spider delay in milliseconds</i> control is not TOO HIGH.
 
 <br> &nbsp; b. the appropriate <i>spidering enabled</i> checkboxes in the URL Filters page are checked.
+-->
 
 <!--<br> &nbsp; c. the <i>spider start</i> and <i>end times</i> are set appropriately.-->
 
 <!--<br> &nbsp; d. the <i>use current time</i> control is set correctly.-->
 
 <!--</td></tr><tr><td>4. Make sure you have urls to spider by running 'gb dump s <collname>' on the command line to dump out spiderdb. See 'gb -h' for the help menu and more options.-->
-
+<!--
 </td></tr>
 </table>
-
-<br><b>The spider is slow.</b><br><table width=100%><tr><td>In the current <a href=/admin/spiderdb>spider queue</a>, what are the statuses of each url?
+-->
 
 <!-- If they are mostly "getting cached web page" and the IP address column is mostly empty, then Gigablast may be bogged down looking up the cached web pages of each url in the spider queue only to discover it is from a domain that was just spidered. This is a wasted lookup, and it can bog things down pretty quickly when you are spidering a lot of old urls from the same domain. Try setting <i>same domain wait</i> and <i>same ip wait</i> both to 0. This will pound those domain's server, though, so be careful. Maybe set it to 1000ms or so instead. We plan to fix this in the future.
 -->
 
-<br>
-<br><b>The spider is always bottlenecking on <i>adding links</i>.</b>
-
-<table width=100%>
-<tr><td>It often does a dns lookup on each link if it has not encountered that subdomain before. Otherwise, the subdomain IP when first encountered is stored in tagdb in the <i>firstIp</i> field. You might try using more DNSesor disabling link spidering.
-</td></tr>
-</table>
 <!--
 <br><br><a name=security></a>
 <table cellpadding=1 border=0 width=100% bgcolor=#0079ba>
@@ -627,15 +655,25 @@ these hosts by clicking on the host numbers at the top of the page.
 <tr><td><center><b><font color=#ffffff size=+1>The Spider
 </td></tr></table>
 <br>
-&lt;<i>Caution: Old Documentation</i>&gt;
+&lt;<i>Last Updated Sep 2014</i>&gt;
 <br>
 <br>
 <b>Robots.txt</b>
 <br><br>
-The name of Gigablast's spider is Gigabot. 
-Gigabot/1.0 is used for the User-Agent field of all HTTP mime headers that Gigablast transmits. 
+The name of Gigablast's spider is Gigabot, but it by default uses GigablastOpenSource as the name of the User-Agent when downloading web pages.
+
 Gigabot respects the <a href=/spider.html>robots.txt convention</a> (robot exclusion) as well as supporting the meta noindex, noarchive and nofollow meta tags. You can tell Gigabot to ignore robots.txt files on the <a href="/admin/spider">Spider Controls</a> page.
 <br><br>
+
+<a name="spiderqueue">
+<b>Spider Queues</b>
+<br><br>
+
+You can tell Gigabot what to spider by using the <i>site list</i> on the <a href=/admin/settings>Settings</a> page. You can have very precise control over the spider by also employing the use of the <a href=/admin/filters>URL Filters</a> page which allows you to prioritize and schedule the spiders based on the individual URL and many of its associated attributes, such as hop count, language, parent language, whether is is indexed already and number of inlinks to its site, to name just a smidgen.
+<br><br>
+<br>
+
+<!--
 <b><a name=classifying>Classifying URLs</a></b> 
 <br><br>
 You can specify different indexing and spider parameters on a per URL basis by one or more of the following methods:
@@ -648,17 +686,23 @@ If you add a site which is just a canonical domain name with no explicit host na
 Sites may also use IP addresses instead of domain names. If the least significant byte of an IP address that you submit to tagdb is 0 then any URL with the same top 3 IP bytes as that IP will be considered a match.
 <li>You can specify a regular expression to describe a set of URLs using the interface on the <a href="/admin/filters"></a>URL filters</a> page. You can then assign a <a href=#ruleset>ruleset</a> that describes how to spider those URLs and how to index their content. Currently, you can also explicitly assign a spider frequency and spider queue to matching URLs. If these are specified they will override any values in the ruleset.</ul>
 If the URL being spidered matches a site in tagdb then Gigablast will use the corresponding ruleset from that and will not bother searching the regular expressions on the <a href="/admin/filters"></a>URL filters</a> page.
+-->
+
+<!--
 <br><br>
-<a name="spiderqueue">
-<b>Spider Queues</b>
-<br><br>
-Gigablast uses spider queues to hold and partition URLs. Each spider queue has an associated priority which ranges from 0 to 7. Furthermore, each queue is either denoted as <i>old</i> or <i>new</i>. Old spider queues hold URLs whose content is currently in the index. New spider queues hold URLs whose content is not in the index. The priority of a URL is the same as the priority of the spider queue to which it belongs. You can explicitly assign the priority of a URL by specifying it in a <a href=#ruleset>ruleset</a> to which that URL has been assigned or by assigning it on the <a href="/admin/filters"></a>URL filters</a> page.
+Gigablast uses spider queues to hold and partition URLs. Each spider queue has an associated priority which ranges from 0 to 127.
+ Furthermore, each queue is either denoted as <i>old</i> or <i>new</i>. Old spider queues hold URLs whose content is currently in the index. New spider queues hold URLs whose content is not in the index. The priority of a URL is the same as the priority of the spider queue to which it belongs. You can explicitly assign the priority of a URL by specifying it in a <a href=#ruleset>ruleset</a> to which that URL has been assigned or by assigning it on the <a href="/admin/filters"></a>URL filters</a> page.
 <br><br>
 On the <a href="/admin/spider">Spider Controls</a> page you can toggle the spidering of individual spider queues as well as link harvesting. More control on a per queue basis will be available soon, perhaps including the ability to assign a ruleset to a spider queue.
 <br><br>
 The general idea behind spider queues is that it allows Gigablast to prioritize its spidering. If two URLs are overdue to be spidered, Gigabot will download the one in the spider queue with the highest priority before downloading the other. If the two URLs have the same spider priority then Gigabot will prefer the one in the new spider queue. If they are both in the new queue or both in the old queue, then Gigabot will spider them based on their scheduled spider time.
+
 <br><br>
 Another aspect of the spider queues is that they allow Gigabot to perform depth-first spidering. When no priority is explicitly given for a URL then Gigabot will assign the URL the priority of the "linker from which it was found" minus one.
+-->
+
+
+<!--
 <br><br>
 <b>Custom Filters</b>
 <br><br>
@@ -671,6 +715,8 @@ You can specify the name of your filter (an executable program) on the <a href="
 <br><br>
 You can use multiple filters by using the pipe operator and entering a filter like "./filter1 | ./filter2 | ./filter3". In this case, only "filter1" would receive the temporary filename as its argument, the others would read from stdin.
 <br><br>
+-->
+
 <!--
 <a name=quotas></>
 <b>Document Quotas</b>
@@ -811,7 +857,7 @@ You can delete documents from the index two ways:<ul>
 <li>To delete a single document you can use the <a href="/admin/inject">Inject URL</a> page.
 </ul>
 -->
-
+<!--
 <br>
 <a name=metas></a>
 <table cellpadding=1 border=0 width=100% bgcolor=#0079ba>
@@ -830,6 +876,8 @@ Why use user-defined metas? Because it is very powerful. It allows you to embed 
 You can also explicitly specify how to index certain meta tags by making an &lt;index&gt; tag in the <a href="#ruleset">ruleset</a> as shown <a href="#rsmetas">here</a>. The specified meta tags will be indexed in the user-defined meta tag fashion as described above, in addition to any method described in the ruleset.<br>
 <br>
 <br>
+-->
+
 <!--
 <a name=bigdocs></a>
 <table cellpadding=1 border=0 width=100% bgcolor=#0079ba>
@@ -865,45 +913,82 @@ Now if you are <a href=#input>interfacing to Gigablast</a> from another program 
 <table cellpadding=1 border=0 width=100% bgcolor=#0079ba>
 <tr><td><center><b><font color=#ffffff size=+1>Building a DMOZ Based Directory</td></tr></table>
 <br>
-&lt;<i>Last Updated July 2014</i>&gt;
+&lt;<i>Last Updated Nov 18, 2014</i>&gt; 
+<br>
+&lt;<i>Procedure tested on 32-bit Gigablast on Ubuntu 14.04 on Nov 18, 2014</i>&gt;
+<br>
+&lt;<i>Procedure tested on 64-bit Gigablast on Ubuntu 14.04 on Nov 18, 2014</i>&gt;
+
 <br>
 <br>
 
 <b>Building the DMOZ Directory:</b>
 
 <br><ul><li>Create the <i>dmozparse</i> program.<br>        <b>$ make dmozparse</b><br>    
-
-<li>Download the latest content.rdf.u8 and  structure.rdf.u8 files from http://rdf.dmoz.org/rdf into the <i>catdb/</i> directory onto host 0, the first host listed in the hosts.conf file.
-<br>        <b>$ wget http://rdf.dmoz.org/rdf/content.rdf.u8.gz
+<br>
+<li>Download the latest content.rdf.u8 and  structure.rdf.u8 files from http://rdf.dmoz.org/rdf into the <i>catdb/</i> directory onto host 0, the first host listed in the <a href=/hosts.conf.txt>hosts.conf</a> file.
+<b>
+<br> $ mkdir catdb
+<br> $ cd catdb
+<br>           $ wget http://rdf.dmoz.org/rdf/content.rdf.u8.gz
 <br>           $ gunzip content.rdf.u8.gz
 <br>           $ wget http://rdf.dmoz.org/rdf/structure.rdf.u8.gz
 <br>           $ gunzip structure.rdf.u8.gz</b>
 <br>    
-<li>Execute <i>dmozparse</i> in its directory with the <i>new</i> option to generate the catdb dat files.<br>        <b>$ ./dmozparse new</b><br>    
+<br>
+<li>Execute <i>dmozparse</i> in its directory with the <i>new</i> option to generate the catdb .dat files. These .dat files are in Gigablast's special format so Gigablast can quickly get all the associated DMOZ entries given a url. Having several <i>Missing parent for catid ...</i> messages are normal. Ultimately, it should put two files into the <i>catdb/</i> subdirectory: <i>gbdmoz.structure.dat</i> and <i>gbdmoz.content.dat</i>.
+<br>        <b>$ cd ..</b>
+<br>        <b>$ ./dmozparse new</b>
+<br>    
 
-<li>Execute the installcat script command on host 0 to distribute the catdb files to all the hosts.<br>This just does an scp/rcp from host 0 to the other hosts listed in <a href=#hosts>hosts.conf</a>.<br>        <b>$ ./gb installcat</b><br>
+<br>
+<li>Execute the installcat script command on host 0 to distribute the catdb files to all the hosts.<br>This just does an scp from host 0 to the other hosts listed in <a href=/hosts.conf.txt>hosts.conf</a>.<br>        <b>$ ./gb installcat</b><br>
 
-    <li>Make sure all spiders are stopped and inactive.<br>
+<br>
+<li>Make sure all spiders are stopped and inactive.<br>
 
-    <li>Goto <i>catdb</i> in the admin section of Gigablast and click "Generate Catdb". This will make a huge list of <i>catdb</i> records<br>and then add them to all the hosts in the network in a sharded manner.<br>
+<br>
+<li>Click the <a href=/admin/catdb>catdb</a> in the admin section of Gigablast and click "<b>Generate Catdb</b>" (NOT <i>Update Catdb</i>). This will make a huge list of <i>catdb</i> records and then add them to all the hosts in the network in a sharded manner.<br>
+
+<br>
+<li>Once the command returns, typically in 3-4 minutes, Catdb will be ready for use and spidering. It will have created some ./catdb/catdb*.dat files which are Gigablast's database of DMOZ entry records. Any documents added that are from a site in DMOZ will show up in the search results with their appropriate DMOZ categories listed beneath. This will affect all collections.<br></ul>
 
 
-    <li>Once the command returns, typically in 3-4 minutes, Catdb will be ready for use and spidering. Any documents added that are from a site in DMOZ will show up in the search results with their appropriate DMOZ categories listed beneath.<br></ul>
+<br><b>Testing DMOZ:</b>
+<ul> Go to the <a href=/admin/catdb>catdb</a> page and enter a url into the <i>Lookup Category Url</a> box and hit enter to see the associated DMOZ records for that url. So if you enter <a href=/admin/catdb?caturl=http%3A%2F%2Fwww.ibm.com%2F>http://www.ibm.com/</a></i> you should see a few entries.
+</ul>
+
 
 <br><b>Searching DMOZ:</b>
 <ul>
-<li>Gigablast provides the unique ability to search the content of the pages in the DMOZ directory. But in order to search the pages in DMOZ we have to index them. 
-So execute <i>dmozparse</i> with the <i>urldump -s</i> option to create the html/gbdmoz.urls.txt.* files which contain all the URLs in DMOZ. (Excluding URLs that contained hashtags, '#'.)
+<li>Gigablast provides the unique ability to search the content of the pages in the DMOZ directory. But in order to search the pages in DMOZ we have to index them. You can't search what is not indexed. 
+So execute <i>dmozparse</i> with the <i>urldump -s</i> option to create the html/gbdmoz.urls.txt.* files which contain all the URLs in DMOZ. (Excluding URLs that contained hashtags, '#'.) It will create several large files. Each file it creates is basically a VERY LARGE page of links and each link is a url in dmoz. Each of these files has a <i>&lt;meta name=spiderlinkslinks content=0&gt;</i> special Gigablast meta tag that says NOT to follow the links OF THE LINKS. So it will just spider the outlinks on this massive page and then stop. Furthermore, the massive page also has a &lt;meta name=noindex content=1&gt; tag that tells Gigablast to not index this massive page itself, but only spider the outlinks.
 
 <br><b>$ ./dmozparse urldump -s</b>
 
-<br><li>Now tell Gigablast to index each URL listed in each gbdmoz.urls.txt.* file. Make sure you specify the collection you are using for DMOZ, in the example below it uses <i>main</i>. You can use the <a href=/addurl>add url</a> page to add the gbdmoz.urls.txt.* files or you can use curl (or wget) like:
 <br>
-<b>$ curl "http://127.0.0.1:8000/addurl?id=1&spiderlinks=1&c=main&u=http://127.0.0.1:8000/gbdmoz.urls.txt.0"</b>
+<br><li>Now tell Gigablast to index each URL listed in each gbdmoz.urls.txt.* file. Make sure you specify the collection you are using for DMOZ, in the example below it uses <i>main</i>. You can use the <a href=/admin/addurl>add url</a> page to add the gbdmoz.urls.txt.* files or you can use curl (or wget) like:
+<br>
+<b>
+$ curl "http://127.0.0.1:8000/addurl?id=1&spiderlinks=1&c=main&u=http://127.0.0.1:8000/gbdmoz.urls.txt.0"
+<br>
+$ curl "http://127.0.0.1:8000/addurl?id=1&spiderlinks=1&c=main&u=http://127.0.0.1:8000/gbdmoz.urls.txt.1"
+<br>
+$ curl "http://127.0.0.1:8000/addurl?id=1&spiderlinks=1&c=main&u=http://127.0.0.1:8000/gbdmoz.urls.txt.2"
+<br>
+$ curl "http://127.0.0.1:8000/addurl?id=1&spiderlinks=1&c=main&u=http://127.0.0.1:8000/gbdmoz.urls.txt.3"
+<br>
+$ curl "http://127.0.0.1:8000/addurl?id=1&spiderlinks=1&c=main&u=http://127.0.0.1:8000/gbdmoz.urls.txt.4"
+<br>
+$ curl "http://127.0.0.1:8000/addurl?id=1&spiderlinks=1&c=main&u=http://127.0.0.1:8000/gbdmoz.urls.txt.5"
+<br>
+$ curl "http://127.0.0.1:8000/addurl?id=1&spiderlinks=1&c=main&u=http://127.0.0.1:8000/gbdmoz.urls.txt.6"
+<br>
+</b>
 
-<br><li>Each gbdmoz.urls.txt.* file contains a special meta tag which instructs Gigablast to NOT follow the links of each DMOZ URL.
 <br><li>Each gbdmoz.urls.txt.* file contains a special meta tag which instructs Gigablast to index each DMOZ URL even if there was some external error, like a DNS or TCP timeout. If the error is internal, like an Out of Memory error, then the document will, of course, not be indexed, but it should be reported in the log. This is essential for making our version of DMOZ exactly like the official version.
-<br><li>Finally, ensure spiders are enabled for your collection. In the above example, <i>main</i>. And ALSO ensure that spiders are enabled in the Master Controls for all collections. Then the URLs you added above should be spidered and indexed. Hit reload on the <i>Spider Queue</i> tab to ensure you see some spider activity for your collection.
+<br>
+<br><li>Finally, ensure spiders are enabled for your collection. In the above example, <i>main</i>. And ALSO ensure that spiders are enabled in the Master Controls for all collections. Then the URLs you added above should be spidered and indexed. Hit reload on the <a href=/admin/spiderdb>Spider Queue</a> tab to ensure you see some spider activity for your collection.
 
 <!--
 <br>    <li>Move the gbdmoz.urls.txt.* files to the <i>html</i> directory under the main Gigablast directory of host 0.<br>    
@@ -926,7 +1011,7 @@ So execute <i>dmozparse</i> with the <i>urldump -s</i> option to create the html
 <br>        <b>$ dmozparse update</b><br>    <li><b>NOTE:</b> If you wish to spider the new, changed, and removed urls from this update, execute <i>dmozparse</i> with the <i>diffurldump -s</i> option to generate the gbdmoz.diffurls.txt file (See below).<br>        <b>$ dmozparse diffurldump -s</b><br>    <li>Execute the installnewcat script command on host 0 to distribute the catdb files to all the hosts.<br>        <b>$ gb installnewcat</b><br>    <li>Make sure all spiders are stopped and inactive.<br>    <li>Go to "catdb" in the admin section of Gigablast and click "Update Catdb."<br>    <li>Once the command returns, Catdb will be ready for use and spidering.<br></ul><br><b>Spidering Urls For Updated Catdb:</b><ul><li>Execute <i>dmozparse</i> in the <i>cat</i> directory with the <i>diffurldump -s</i> option to create the gbdmoz.diffurls.txt.# files which contain all the new, changed, or removed urls in DMOZ.<br>        <b>$ dmozparse diffurldump -s</b><br>    <li>Move the gbdmoz.diffurls.txt.# files to the <i>html</i> directory under the main Gigablast directory of host 0.<br>    <li>Go to "add url" under the admin section of Gigablast.<br>    <li><b>IMPORTANT:</b> Uncheck the strip session ids option.<br>    <li>In the "url of a file of urls to add" box, insert the hostname/ip and http port of host 0 followed by one of the gbdmoz.diffurls.txt.# files. Example: http://10.0.0.1:8000/gbdmoz.diffurls.txt.0<br>    <li>Press the "add file" button and allow the urls to be added to the spider.<br>    <li>Repeat for all the gbdmoz.diffurls.txt.# files.<br></ul><br>-->
 
 
-<b>Deleting Catdb:</b><ul><li>Shutdown Gigablast.<br>    <li>Delete <i>catdb-saved.dat</i> and all <i>catdb/catdb*.dat</i> and <i>catdb/catdb*.map</i> files from all hosts.<br>    <li>Start Gigablast.<br></ul><br><b>Troubleshooting:</b><ul><li><b>Dmozparse prints an error saying it could not open a file:</b><br>           Be sure you are running dmozparse in the cat directory and that the steps above have been followed correctly so that all the necessary files have been downloaded or created.<br>    <li><b>Dmozparse prints an Out of Memory error:</b><br>           Some modes of dmozparse can require several hundred megabytes of system memory.  Systems with insufficient memory, under heavy load, or lacking a correctly working swap may have problems running dmozparse.  Attempt to free up as much memory as possible if this occcurs.<br>    <li><b>How to tell if pages are being added with correct directory data:</b><br>           All pages with directory data are indexed with special terms utilizing a prefix and sufix. The prefixes are listed below and represent a specific feature under which the page was indexed. The sufix is always a numerical category ID.  To search for one of these terms, simply performa a query with "prefix:sufix", i.e. "gbpcat:2" will list all pages under the Top category (or all pages in the entire directory).<br>    <ul><li>gbcatid  - The page is listed directly under this base category.<br>        <li>gbpcatid - The page is listed under this category or any child of this category.<br>        <li>gbicatid  - The page is listed indirectly under this base category, meaning it is a page found under a site listed in the base category.<br>        <li>gbipcatid - The page is listed indirectly under this category, meaning it is a page found under a site listed under this category or any child of this category.<br>    </ul>    <li><b>Pages are not being indexed with directory data:</b><br>        First check to make sure that sites that are actually in DMOZ are those being added by the spiders.  Next check to see if the sites return category information when looked up under the Catdb admin section.  If they come back with directory information, the site may just need to be respidered. If the lookup does not return category information and all hosts are properly running, Catdb may need to be rebuilt from scratch.<br>    <li><b>The Directory shows results but does not show sub-category listings or a page error is returned and no results are shown:</b><br>        Make sure the gbdmoz.structure.dat and structure.rdf.u8 files are in the <i>cat</i> directory on every host.  Also be sure the current dat files were built from the current rdf.u8 files. Check the log to see if Categories was properly loaded from file at startup (grep log# Categories).<br></ul><br><a name=logs></a>
+<b>Deleting Catdb:</b><ul><li>Shutdown Gigablast.<br>    <li>Delete <i>catdb-saved.dat</i> and all <i>catdb/catdb*.dat</i> and <i>catdb/catdb*.map</i> files from all hosts.<br>    <li>Start Gigablast. <li>You will have to run <i>./dmozparsenew new</i> again to undelete.<br></ul><br><b>Troubleshooting:</b><ul><li><b>Dmozparse prints an error saying it could not open a file:</b><br>           Be sure you are running dmozparse in the cat directory and that the steps above have been followed correctly so that all the necessary files have been downloaded or created.<br>    <li><b>Dmozparse prints an Out of Memory error:</b><br>           Some modes of dmozparse can require several hundred megabytes of system memory.  Systems with insufficient memory, under heavy load, or lacking a correctly working swap may have problems running dmozparse.  Attempt to free up as much memory as possible if this occcurs.<br>    <li><b>How to tell if pages are being added with correct directory data:</b><br>           All pages with directory data are indexed with special terms utilizing a prefix and sufix. The prefixes are listed below and represent a specific feature under which the page was indexed. The sufix is always a numerical category ID.  To search for one of these terms, simply performa a query with "prefix:sufix", i.e. "gbpcat:2" will list all pages under the Top category (or all pages in the entire directory).<br>    <ul><li>gbcatid  - The page is listed directly under this base category.<br>        <li>gbpcatid - The page is listed under this category or any child of this category.<br>        <li>gbicatid  - The page is listed indirectly under this base category, meaning it is a page found under a site listed in the base category.<br>        <li>gbipcatid - The page is listed indirectly under this category, meaning it is a page found under a site listed under this category or any child of this category.<br>    </ul>    <li><b>Pages are not being indexed with directory data:</b><br>        First check to make sure that sites that are actually in DMOZ are those being added by the spiders.  Next check to see if the sites return category information when looked up under the Catdb admin section.  If they come back with directory information, the site may just need to be respidered. If the lookup does not return category information and all hosts are properly running, Catdb may need to be rebuilt from scratch.<br>    <li><b>The Directory shows results but does not show sub-category listings or a page error is returned and no results are shown:</b><br>        Make sure the gbdmoz.structure.dat and structure.rdf.u8 files are in the <i>cat</i> directory on every host.  Also be sure the current dat files were built from the current rdf.u8 files. Check the log to see if Categories was properly loaded from file at startup (grep log# Categories).<br></ul><br><a name=logs></a>
 <table cellpadding=1 border=0 width=100% bgcolor=#0079ba>
 <tr><td><center><b><font color=#ffffff size=+1>The Log System</td></tr></table>
 <br>
@@ -949,7 +1034,7 @@ So execute <i>dmozparse</i> with the <i>urldump -s</i> option to create the html
 </pre>
 The first field, a large number, is the time in milliseconds since the epoch. This timestamp is useful for evaluating performance.<br>
 <br>
-The second field, a 0 in the above example, is the hostId (from hosts.conf) of the host that logged the message.<br>
+The second field, a 0 in the above example, is the hostId (from <a href=/hosts.conf.txt>hosts.conf</a>) of the host that logged the message.<br>
 
 <!--
 <br>
@@ -1072,7 +1157,7 @@ The same parameters on the Log Controls page can be adjusted in the gb.conf file
 <tr><td><center><b><font color=#ffffff size=+1>Optimizing
 </td></tr></table>
 <br>
-&lt;<i>Last Updated August 2014</i>&gt;
+&lt;<i>Last Updated Sep 2014</i>&gt;
 <br>
 <br>
 Gigablast is a fairly sophisticated database that has a few things you can tweak to increase query performance or indexing performance.
@@ -1088,7 +1173,7 @@ to turn off swap you can increase performance, but if the computer runs out
 of memory it will start killing processes withouth giving them a chance
 to save their data.
 
-<li> Consider adding more servers to your architecture. You can add the new servers to the hosts.conf file and Gigablast can rebalance the shards while still serving queries.
+<li> Consider adding more servers to your architecture. You can add the new servers to the <a href=/hosts.conf.txt>hosts.conf</a> file and Gigablast can rebalance the shards while still serving queries.
 
 <li> Run one gb process per physical core, not including hyperthreaded cores. Hypthreaded cores are not that good.
 
@@ -1147,13 +1232,29 @@ specifies <i>&sc=1</i> or <i>&dr=1</i> in their query URL then they will
 override that switch.
 
 <li> Disable gigabit generation. If accessing from the API set &amp;dsrt=0 otherwise set <i>results to scan for gigabits generation by dfefault</i> to 0 in the search controls page for your collection.
+
+<li> If you see lots of long black lines on the <a href=/admin/perf>Performance graph</a> then that means your disk is slowing everything down. Make sure that if you are doing realtime queries that you do not have too many big posdb (index) files. If you tight merge everything it should fix that problem. Otherwise, consider getting a raid level 0 and faster disks. Get SSDs. Perhaps the filesystem is severly fragmented. Or maybe your query traffic is repetetive. If the queries are sorted alphabetically, or you have many duplicate queries, then most of the workload might be falling on one particular host in the network, thus bottle-necking everything.
+
+<li> If you see long purple lines in the <a href=/admin/perf>Performance graph</a> when Gigablast is doing slow query handling then that means Gigablast is distributed over a slow network.
+
+<!-- OR your tier sizes, adjustable on the Search Controls page, are way too high so that too much data is clogging the network. If your tier sizes are at the default values or lower, then the problem may be that the bandwidth between one gigablast host and another is below the required 1000Mbps. Try doing a 'dmesg | grep Mbps' to see what speed your card is operating at. Also try testing the bandwidth between hosts using the thunder program or try copying a large file using rcp and timing it. Do not use scp since it is often bottlenecked on the CPU due to the encryption that it does. If your gigabit card is operating at 100Mbps that can sometimes be fixed by rebooting. I've found that there is about a 20% chance that the reboot will make the card come back to 1000Mbps.-->
+
+
+
+
 </ul>
+
+
+
+
+
 
 <br>
 
-<b>Spider Optimizations:</b>
+<b>Spidering and Indexing Optimizations:</b>
 <ul>
 <!--<li> Set <b>restrict indexdb for spidering</b> on the -->
+<li> Disable <b>link voting</b> or <b>link spam checking</b> in the spider controls if you do not care about it. This is also useful when doing millions of injections and doing an indexdb rebuild using the rebuild tool later to pick up the link text.
 <li> Disable dup checking. Gigablast will not allow any duplicate pages
 from the same domain into the index when this is enabled. This means that
 Gigablast must do about one disk seek for every URL indexed to verify it is
@@ -1175,6 +1276,12 @@ changed. This backup method is not quite as efficient as the first,
 but it can still save ample disk resources.
 
 <li> Disable <i>make image thumbnails</i> in the <a href=/admin/spider>spider controls</a> if you have not already.
+
+
+<li> In the current <a href=/admin/spiderdb>spider queue</a>, what are the statuses of each url? If the spider is always bottlenecking on <i>adding links</i> 
+ that is because it does a dns lookup on each link if it has not previously encountered that subdomain. Otherwise, the subdomain IP when first encountered is stored in tagdb in the <i>firstIp</i> field. You might try using more DNSes (add more in the <a href=/admin/master>Master Controls</a>).
+
+<li> Ensure that the maximum spiders in the <a href=/admin/master>Master Controls</a> and in your collection's <a href=/admin/spider>Spider Controls</a> is high enough.
 
 </ul>
 

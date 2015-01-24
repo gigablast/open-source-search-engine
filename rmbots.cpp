@@ -15,27 +15,27 @@
 
 #define MAX_HASHES 100000
 
-unsigned long long g_hashtab[256][256];
+uint64_t g_hashtab[256][256];
 
-unsigned long hash32 ( char *s, long len ) {
-	unsigned long h = 0;
-	long i = 0;
+uint32_t hash32 ( char *s, int32_t len ) {
+	uint32_t h = 0;
+	int32_t i = 0;
 	while ( i < len ) {
-		h ^= (unsigned long) g_hashtab [(unsigned char)i]
+		h ^= (uint32_t) g_hashtab [(unsigned char)i]
 			[(unsigned char)s[i]];
 		i++;
 	}
 	return h;
 }
 
-long atoip ( char *s , long slen ) {
+int32_t atoip ( char *s , int32_t slen ) {
 	// point to it
 	char *p = s;
 	if ( s[slen] ) {
 		// copy into buffer and NULL terminate
 		char buf[1024];
 		if ( slen >= 1024 ) slen = 1023;
-		memcpy ( buf , s , slen );
+		gbmemcpy ( buf , s , slen );
 		buf [ slen ] = '\0';
 		// point to that
 		p = buf;
@@ -44,7 +44,7 @@ long atoip ( char *s , long slen ) {
 	struct in_addr in;
 	in.s_addr = 0;
 	inet_aton ( p , &in );
-	// ensure this really is a long before returning ip
+	// ensure this really is a int32_t before returning ip
 	if ( sizeof(in_addr) == 4 ) return in.s_addr;
 	// otherwise bitch and return 0
 	//log("ip:bad inet_aton"); 
@@ -68,21 +68,21 @@ int main ( int argc , char *argv[] ) {
 	char *buf = (char *)malloc ( MAX_READ_SIZE );
 	if ( ! buf ) {
 		fprintf(stderr,"fql:malloc:li: %s: %s\n",
-			(long)MAX_READ_SIZE,strerror(errno)); 
+			(int32_t)MAX_READ_SIZE,strerror(errno)); 
 		return -1;
 	}
 
 
 	// seed with same value so we get same rand sequence for all
 	srand ( 1945687 );
-	for ( long i = 0 ; i < 256 ; i++ )
-		for ( long j = 0 ; j < 256 ; j++ ) {
-			g_hashtab [i][j]  = (unsigned long long)rand();
+	for ( int32_t i = 0 ; i < 256 ; i++ )
+		for ( int32_t j = 0 ; j < 256 ; j++ ) {
+			g_hashtab [i][j]  = (uint64_t)rand();
 			// the top bit never gets set, so fix
 			if ( rand() > (0x7fffffff / 2) ) 
 				g_hashtab[i][j] |= 0x80000000;
 			g_hashtab [i][j] <<= 32;
-			g_hashtab [i][j] |= (unsigned long long)rand();
+			g_hashtab [i][j] |= (uint64_t)rand();
 			// the top bit never gets set, so fix
 			if ( rand() > (0x7fffffff / 2) ) 
 				g_hashtab[i][j] |= 0x80000000;
@@ -111,16 +111,16 @@ int main ( int argc , char *argv[] ) {
 	}
 
 	// warn if the doc was bigger than expected
-	if ( n >= (long)MAX_READ_SIZE ) 
+	if ( n >= (int32_t)MAX_READ_SIZE ) 
 		fprintf(stderr,"rmbots: WARNING: MAX_READ_SIZE "
 			"needs boost\n");
 	// if nothing came in then nothing goes out, we're done
 	if ( n == 0 ) { free ( buf ) ; return 0; }
 
 	// store last 1000 hashes in a ring
-	long hashes[MAX_HASHES];
+	int32_t hashes[MAX_HASHES];
 	memset ( hashes, 0 , MAX_HASHES * 4 );
-	long nh = 0;
+	int32_t nh = 0;
 
 	// parse out query from each url
 	char *p = buf;
@@ -133,16 +133,16 @@ int main ( int argc , char *argv[] ) {
 		// advance p for next call
 		if ( *end == '\n' ) p = end;
 		// should be ip now!
-		long iplen = end - ip;
-		//long uip = atoip(ips,ipend-ips);
+		int32_t iplen = end - ip;
+		//int32_t uip = atoip(ips,ipend-ips);
 		//if ( ! uip ) continue;
 		// must be ip #
 		if ( !isdigit(ip[0]) ) continue;
 		// skip empty ip lines
 		if ( iplen == 0 ) continue;
 		// hash it up
-		unsigned long h = hash32(ip,iplen);
-		unsigned long n = h % MAX_HASHES;
+		uint32_t h = hash32(ip,iplen);
+		uint32_t n = h % MAX_HASHES;
 		for ( ; ; ) {
 			if ( hashes[n] == h ) break;
 			if ( hashes[n] == 0 ) break;
@@ -169,10 +169,10 @@ int main ( int argc , char *argv[] ) {
 			char *end = ip;
 			for ( ; *end &&*end!='\n'&&*end!='&'; end++);
 			// get len
-			long iplen = end - ip;
+			int32_t iplen = end - ip;
 			// hash it now
-			unsigned long h = hash32(ip,iplen);
-			unsigned long n = h % MAX_HASHES;
+			uint32_t h = hash32(ip,iplen);
+			uint32_t n = h % MAX_HASHES;
 			// skip if none
 			//if (iplen == 0 ) goto printit;
 			// find it in has htable

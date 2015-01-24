@@ -11,7 +11,7 @@
 typedef struct {
     char *name;
     char *mime;
-    short mib_enum;
+    int16_t mib_enum;
     char supported;
 } IANACharset;
 
@@ -840,7 +840,7 @@ void reset_iana_charset ( ) {
 }
 
 // Slightly modified from getTextEntity
-short get_iana_charset(char *cs, int len)
+int16_t get_iana_charset(char *cs, int len)
 {
     if (!s_isInitialized){
 	// set up the hash table
@@ -848,12 +848,12 @@ short get_iana_charset(char *cs, int len)
 	    return log("build: Could not init table of "
 		       "IANA Charsets.");
 	// now add in all the charset entries
-	long n = (long)sizeof(s_charsets) / (long)sizeof(IANACharset);
+	int32_t n = (int32_t)sizeof(s_charsets) / (int32_t)sizeof(IANACharset);
 	// turn off quickpolling
 	char saved = g_conf.m_useQuickpoll;
 	g_conf.m_useQuickpoll = false;
-	for ( long i = 0 ; i < n ; i++ ) {
-	    long long h = hash64Lower_a ( s_charsets[i].name, strlen(s_charsets[i].name) );
+	for ( int32_t i = 0 ; i < n ; i++ ) {
+	    int64_t h = hash64Lower_a ( s_charsets[i].name, strlen(s_charsets[i].name) );
 	    // store the charset index in the hash table as score
 		if ( ! s_table.addTerm(&h, i+1) ) 
 		return log("build: add term failed");
@@ -861,16 +861,16 @@ short get_iana_charset(char *cs, int len)
 	g_conf.m_useQuickpoll = saved;
 	s_isInitialized = true;
     }
-    long long h = hash64Lower_a ( cs , len );
+    int64_t h = hash64Lower_a ( cs , len );
     // get the entity index from table (stored in the score field)
-    long i = (long) s_table.getScore ( &h );
+    int32_t i = (int32_t) s_table.getScore ( &h );
     // return 0 if no match
     if ( i == 0 ) return csUnknown;
     // return the iso character
-    return (short)s_charsets[i-1].mib_enum;
+    return (int16_t)s_charsets[i-1].mib_enum;
 }
 
-char *get_charset_str(short cs)
+char *get_charset_str(int16_t cs)
 {
     int s=0;
     int e=sizeof(s_charsets)/sizeof(IANACharset)-2;
@@ -899,7 +899,7 @@ char *get_charset_str(short cs)
 }
 
 // is this charset supported?
-bool supportedCharset(short cs) {
+bool supportedCharset(int16_t cs) {
     int s=0;
     int e=sizeof(s_charsets)/sizeof(IANACharset)-2;
     int i;

@@ -8,11 +8,11 @@ typedef int16_t nodeid_t;
 
 // . get how many xml/html tags we have classified in our g_nodes[] array
 // . used by Weights.cpp
-long getNumXmlNodes ( ) ;
+int32_t getNumXmlNodes ( ) ;
 bool isBreakingTagId ( nodeid_t tagId ) ;
 bool hasBackTag ( nodeid_t tagId ) ;
-long getTagLen ( char *node ) ;
-bool isTagStart ( char *s );//, long i, long version ) ;
+int32_t getTagLen ( char *node ) ;
+bool isTagStart ( char *s );//, int32_t i, int32_t version ) ;
 // s points to tag name - first char
 nodeid_t getTagId ( char *s , class NodeType **retp = NULL ); 
 
@@ -28,11 +28,11 @@ class XmlNode {
 	bool  isHtmlTag    () { return m_nodeId >  1; };
 	bool  isXmlTag     () { return m_nodeId == 1; };
 	nodeid_t getNodeId    () { return m_nodeId; };
-	long long getNodeHash() { return m_hash; };
+	int64_t getNodeHash() { return m_hash; };
 	char *getNode      () { return m_node; };
 	// m_nodeLen is in bytes
-	long  getNodeLen   () { return m_nodeLen; };
-	//long  getXmlParent () { return m_xmlParentTagNum; };
+	int32_t  getNodeLen   () { return m_nodeLen; };
+	//int32_t  getXmlParent () { return m_xmlParentTagNum; };
 	bool  isBreaking   () { return m_isBreaking; };
 	bool  isVisible    () { return m_isVisible; };
 	bool  hasBackTag   () { return m_hasBackTag; };
@@ -43,62 +43,63 @@ class XmlNode {
 			m_nodeId != 68 && m_nodeId != 109; };
 
 	// . get the value of a field like "href" in the <a href="blah"> tag
-	char *getFieldValue ( char *fieldName , long *valueLen );
+	char *getFieldValue ( char *fieldName , int32_t *valueLen );
 
 	// . used exclusively by Xml class which contains an array of XmlNodes
 	// . "node" points to the beginning of the node, the '<' if it's a tag
 	// . sets m_node,m_nodeLen,m_hash,m_isBreaking,m_nodeId
 	// . returns the length of the node
 	// . pureXml is true if node cannot be an html tag, except comment
-	//long set ( char *node , bool pureXml );
-	long set ( char *node , bool pureXml , long version );
+	//int32_t set ( char *node , bool pureXml );
+	int32_t set ( char *node , bool pureXml , int32_t version );
 
 	// private:
 
 	// . called by set() to get the length of a tag node
-	//long getTagLen      ( char *node , long version);
-	//long getTagLen      ( UChar *node , long version );
+	//int32_t getTagLen      ( char *node , int32_t version);
+	//int32_t getTagLen      ( UChar *node , int32_t version );
 
 	// . called by set() to get the length of a TEXT node (and set it)
-	//long setTextNode    ( char *node );
+	//int32_t setTextNode    ( char *node );
 
 	// . called by set() to get the length of a COMMENT node (and set it)
-	long setCommentNode ( char *node );
-	//long setCommentNode ( UChar *node );
+	int32_t setCommentNode ( char *node );
+	//int32_t setCommentNode ( UChar *node );
 
-	long setCommentNode2 ( char *node );
+	int32_t setCommentNode2 ( char *node );
 
 	// . called by set() to get the length of a CDATA node (and set it)
-	long setCDATANode ( char *node );
-	//long setCDATANode ( UChar *node );
+	int32_t setCDATANode ( char *node );
+	//int32_t setCDATANode ( UChar *node );
 
 	// . called by set() to get nodeId and isBreaking of a tag node
 	// . returns the nodeId
-	nodeid_t setNodeInfo    ( long long  nodeHash );
+	nodeid_t setNodeInfo    ( int64_t  nodeHash );
 
 	char      *m_node;             // tag data, or text data if not a tag
-	long       m_nodeLen;          // m_nodeLen is in bytes
+	int32_t       m_nodeLen;          // m_nodeLen is in bytes
 	char      *m_tagName;          // iff this node is a tag
-	long       m_tagNameLen;
-	long long  m_hash;             // iff this node is a tag
-	//long long  m_compoundHash;     // set by Xml class
-	//long       m_parentTagNum;     // set by Xml class
-	//long       m_xmlParentTagNum;  // set by Xml class
-	short      m_depth;            // set by Xml class (xml depth only)
+	int32_t       m_tagNameLen;
+	int64_t  m_hash;             // iff this node is a tag
+	//int64_t  m_compoundHash;     // set by Xml class
+	//int32_t       m_parentTagNum;     // set by Xml class
+	//int32_t       m_xmlParentTagNum;  // set by Xml class
+	int16_t      m_depth;            // set by Xml class (xml depth only)
 	nodeid_t   m_nodeId;           // 0 for text,1 for xml tag, 1+ for html
 	char       m_hasBackTag:1;
 	char       m_isBreaking:1;     // does tag (if it is) line break?
 	char       m_isVisible:1;
 	char       m_isSelfLink:1;  // an a href tag link to self?
-	long       m_pairTagNum;    // paired opening or closing tag
+	int32_t       m_pairTagNum;    // paired opening or closing tag
 	// . "m_linkNum" references a link in Links.cpp
 	// . use for <a href> xml nodes only right now
 	// . used so XmlDoc.cpp::getContactUsLink() works better
-	//long       m_linkNum;        
+	//int32_t       m_linkNum;        
+	class XmlNode *m_parent;
 };
 
 // . does "s" start a tag? (regular tag , back tag or comment tag)
-inline bool isTagStart ( char *s ) { // , long i, long version ) {
+inline bool isTagStart ( char *s ) { // , int32_t i, int32_t version ) {
 	// it must start with < to be a tag
 	if ( *s != '<' ) return false;
 	// a <gb is a fake tag because we now decode all html entites

@@ -1,6 +1,6 @@
 #include "gb-include.h"
 
-#include "Indexdb.h"     // makeKey(long long docId)
+#include "Indexdb.h"     // makeKey(int64_t docId)
 #include "Msg0.h"
 #include "Msg1.h"
 #include "IndexList.h"
@@ -31,9 +31,9 @@ public:
 	//IndexList m_list2;
 	collnum_t m_collnum;
 	char      m_query[MAX_QUERY_LEN+1];
-	long      m_queryLen;
+	int32_t      m_queryLen;
 	//char      m_coll[MAX_COLL_LEN+1];
-	//long      m_collLen;
+	//int32_t      m_collLen;
 	char     *m_coll;
 	char      m_pwd[32];
 	bool      m_useTree;
@@ -41,20 +41,20 @@ public:
 	bool      m_useCache;
 	bool      m_add;
 	bool      m_del;
-	long long m_termId;
-	long      m_numRecs;
+	int64_t m_termId;
+	int32_t      m_numRecs;
 	TcpSocket *m_socket;
 	HttpRequest m_r;
-	bool      m_isRootAdmin;
+	bool      m_isMasterAdmin;
 	bool      m_isLocal;
 	Msg36     m_msg36;    // term freqs (term popularity)
-	long long m_termFreq;
-	long long m_docId;
+	int64_t m_termFreq;
+	int64_t m_docId;
 	unsigned char m_score;
 	key_t         m_key;
 	RdbList       m_keyList;
 	bool          m_useDatedb;
-	long          m_i;
+	int32_t          m_i;
 	SafeBuf       m_pbuf;
 };
 
@@ -65,7 +65,7 @@ public:
 bool sendPageIndexdb ( TcpSocket *s , HttpRequest *r ) {
 	// . get fields from cgi field of the requested url
 	// . get the search query
-	long  queryLen = 0;
+	int32_t  queryLen = 0;
 	char *query = r->getString ( "q" , &queryLen , NULL /*default*/);
 	// ensure query not too big
 	if ( queryLen >= MAX_QUERY_LEN ) { 
@@ -73,7 +73,7 @@ bool sendPageIndexdb ( TcpSocket *s , HttpRequest *r ) {
 		return g_httpServer.sendErrorReply(s,500,mstrerror(g_errno));
 	}
 	// get the collection
-	long  collLen = 0;
+	int32_t  collLen = 0;
 	char *coll    = r->getString("c",&collLen);
 	if ( ! coll || ! coll[0] ) {
 		//coll    = g_conf.m_defaultColl;
@@ -99,7 +99,7 @@ bool sendPageIndexdb ( TcpSocket *s , HttpRequest *r ) {
 		return g_httpServer.sendErrorReply(s,500,mstrerror(g_errno));}
 	mnew ( st , sizeof(State10) , "PageIndexdb" );
 	// password, too
-	long pwdLen = 0 ;
+	int32_t pwdLen = 0 ;
 	char *pwd = r->getString ( "pwd" , &pwdLen );
 	if ( pwdLen > 31 ) pwdLen = 31;
 	if ( pwdLen > 0 ) strncpy ( st->m_pwd , pwd , pwdLen );
@@ -119,10 +119,10 @@ bool sendPageIndexdb ( TcpSocket *s , HttpRequest *r ) {
 	st->m_docId  = r->getLongLong ("d", 0LL );
 	st->m_score  = r->getLong ("score", 0 );
 	// copy query/collection
-	memcpy ( st->m_query , query , queryLen );
+	gbmemcpy ( st->m_query , query , queryLen );
 	st->m_queryLen = queryLen;
 	st->m_query [ queryLen ] ='\0';
-	//memcpy ( st->m_coll , coll , collLen );
+	//gbmemcpy ( st->m_coll , coll , collLen );
 	//st->m_collLen  = collLen;
 	//st->m_coll [ collLen ] ='\0';
 	st->m_coll = coll;
@@ -130,7 +130,7 @@ bool sendPageIndexdb ( TcpSocket *s , HttpRequest *r ) {
 	// save the TcpSocket
 	st->m_socket = s;
 	// and if the request is local/internal or not
-	st->m_isRootAdmin = g_conf.isCollAdmin ( s , r );
+	st->m_isMasterAdmin = g_conf.isCollAdmin ( s , r );
 	st->m_isLocal = r->isLocal();
 	st->m_r.copy ( r );
 	// . check for add/delete request
@@ -153,7 +153,8 @@ bool sendPageIndexdb ( TcpSocket *s , HttpRequest *r ) {
 				    false,
 				    true  );
 		log ( LOG_INFO, "build: adding indexdb key to indexdb: "
-				"%lx %llx", st->m_key.n1, st->m_key.n0 );
+				"%"XINT32" %"XINT64"", 
+		      st->m_key.n1, st->m_key.n0 );
 		// call msg1 to add/delete key
 		if ( ! st->m_msg1.addList ( &st->m_keyList,
 					     RDB_INDEXDB,
@@ -211,17 +212,17 @@ bool launchRequests ( State10 *st ) {
 	// all done if add request only
 	if ( st->m_add || st->m_del ) return true;
 loop:
-	long split = st->m_i;
+	int32_t split = st->m_i;
 	// all done?
 	if ( split >= g_hostdb.getNumShards() ) return true;
 	// get group id
-	//unsigned long gid = g_hostdb.getGroupId ( split );
+	//uint32_t gid = g_hostdb.getGroupId ( split );
 	// get group
 	//Host *hosts = g_hostdb.getGroup ( gid );
 	// get host from that group, just pick the first one, assume not dead!!!
 	//Host *h = &hosts[0];
-	//fprintf(stderr,"termId now=%lli\n",st->m_termId);
-	//fprintf(stderr,"should be=%lli\n",(st->m_termId & TERMID_MASK));
+	//fprintf(stderr,"termId now=%"INT64"\n",st->m_termId);
+	//fprintf(stderr,"should be=%"INT64"\n",(st->m_termId & TERMID_MASK));
 	// now get the indexList for this termId
 	char startKey[16];
 	char endKey  [16];
@@ -233,17 +234,17 @@ loop:
 	key128_t e16 = g_datedb.makeEndKey   ( st->m_termId ,0x0);
 
 	char rdbId;
-	long ks;
+	int32_t ks;
 
 	if ( st->m_useDatedb ) {
-		memcpy ( startKey , &s16 , 16 );
-		memcpy ( endKey   , &e16 , 16 );
+		gbmemcpy ( startKey , &s16 , 16 );
+		gbmemcpy ( endKey   , &e16 , 16 );
 		rdbId = RDB_DATEDB;
 		ks = 16;
 	}
 	else {
-		memcpy ( startKey , &s12 , 12 );
-		memcpy ( endKey   , &e12 , 12 );
+		gbmemcpy ( startKey , &s12 , 12 );
+		gbmemcpy ( endKey   , &e12 , 12 );
 		rdbId = RDB_INDEXDB;
 		ks = 12;
 	}
@@ -251,7 +252,7 @@ loop:
 	// get the rdb ptr to titledb's rdb
 	//Rdb *rdb = g_indexdb.getRdb();
 	// -1 means read from all files in Indexdb
-	long numFiles = -1;
+	int32_t numFiles = -1;
 	// make it zero if caller doesn't want to hit the disk
 	if ( ! st->m_useDisk ) numFiles = 0;
 	// inc to next
@@ -320,8 +321,8 @@ bool gotIndexList ( void *state ) {
 	if ( ! launchRequests ( st ) ) return false;
 	/*
 	// get the date list
-	//fprintf(stderr,"termId now=%lli\n",st->m_termId);
-	//fprintf(stderr,"should be=%lli\n",(st->m_termId & TERMID_MASK));
+	//fprintf(stderr,"termId now=%"INT64"\n",st->m_termId);
+	//fprintf(stderr,"should be=%"INT64"\n",(st->m_termId & TERMID_MASK));
 	// . now get the indexList for this termId
 	// . date is complemented, so start with bigger one first
 	key128_t startKey = g_datedb.makeStartKey ( st->m_termId ,0xffffffff);
@@ -329,7 +330,7 @@ bool gotIndexList ( void *state ) {
 	// get the rdb ptr to titledb's rdb
 	//Rdb *rdb = g_indexdb.getRdb();
 	// -1 means read from all files in Indexdb
-	long numFiles = -1;
+	int32_t numFiles = -1;
 	// make it zero if caller doesn't want to hit the disk
 	if ( ! st->m_useDisk ) numFiles = 0;
 	// get the title rec at or after this docId
@@ -385,11 +386,11 @@ bool gotIndexList2 ( void *state , RdbList *list ) {
 	/*
 	// get termId
 	key_t k = *(key_t *)st->m_list.getStartKey();
-	long long termId = g_indexdb.getTermId ( k );
+	int64_t termId = g_indexdb.getTermId ( k );
 	// get groupId from termId
-	//unsigned long groupId = k.n1 & g_hostdb.m_groupMask;
-	unsigned long groupId = g_indexdb.getGroupIdFromKey ( &k );
-	long hostnum = g_hostdb.makeHostId ( groupId );
+	//uint32_t groupId = k.n1 & g_hostdb.m_groupMask;
+	uint32_t groupId = g_indexdb.getGroupIdFromKey ( &k );
+	int32_t hostnum = g_hostdb.makeHostId ( groupId );
 	*/
 	// check box " checked" strings
 	char *ubs = "";
@@ -434,36 +435,36 @@ bool gotIndexList2 ( void *state , RdbList *list ) {
 		  "</td></tr><tr><td>"
 		  "termId:"
 		  "</td><td>"
-		  "<input type=text name=t value=%lli size=20>"
+		  "<input type=text name=t value=%"INT64" size=20>"
 		  "</td><td>"
 		  "numRecs:"
 		  "</td><td>"
-		  "<input type=text name=numRecs value=%li size=10> "
+		  "<input type=text name=numRecs value=%"INT32" size=10> "
 		  "</td></tr><tr><td>"
 		  "docId:"
 		  "</td><td>"
-		  "<input type=text name=d value=%lli size=20> "
+		  "<input type=text name=d value=%"INT64" size=20> "
 		  "</td><td>"
 		  "score:"
 		  "</td><td>"
-		  "<input type=text name=score value=%li size=10> "
+		  "<input type=text name=score value=%"INT32" size=10> "
 		  "</td><td>"
 		  "<input type=submit value=ok border=0>"
 		  "</td></tr>"
 		  "<tr><td colspan=2>"
-		  "term appears in about %lli docs +/- %li"
+		  "term appears in about %"INT64" docs +/- %"INT32""
 		  "</td></tr>"
 		  //"<tr><td colspan=2>"
-		  //"this indexlist held by host #%li and twins"
+		  //"this indexlist held by host #%"INT32" and twins"
 		  //"</td></tr>"
 		  "</table>"
 		  "</form><br><br>" ,
 		  ubs, uts, uds, ucs, add, del,
 		  st->m_query , st->m_coll , st->m_termId  , 
 		  st->m_numRecs  ,
-		  st->m_docId , (long)st->m_score ,
+		  st->m_docId , (int32_t)st->m_score ,
 		  st->m_termFreq ,
-		  2 * (long)GB_INDEXDB_PAGE_SIZE / 6 * 
+		  2 * (int32_t)GB_INDEXDB_PAGE_SIZE / 6 * 
 		  base->getNumFiles() );
 		  //hostnum );
 
@@ -491,7 +492,7 @@ bool gotIndexList2 ( void *state , RdbList *list ) {
 	//if ( searchingEvents
 
 	// now print the score/docId of indexlist
-	long i = 0;
+	int32_t i = 0;
 	for (   st->m_list.resetListPtr () ;
 	      ! st->m_list.isExhausted  () ;
 		st->m_list.skipCurrentRecord () ) {
@@ -499,9 +500,9 @@ bool gotIndexList2 ( void *state , RdbList *list ) {
 		//if ( p + 1024 >= pend ) break;
 		// but set the ip/port to a host that has this titleRec
 		// stored locally!
-		long long     docId   = st->m_list.getCurrentDocId () ;
-		//unsigned long groupId = getGroupIdFromDocId ( docId );
-		long shardNum = getShardNumFromDocId ( docId );
+		int64_t     docId   = st->m_list.getCurrentDocId () ;
+		//uint32_t groupId = getGroupIdFromDocId ( docId );
+		int32_t shardNum = getShardNumFromDocId ( docId );
 		// get the first host's hostId in this groupId
 		//Host *h = g_hostdb.getFastestHostInGroup ( groupId );
 		Host *hosts = g_hostdb.getShard ( shardNum );
@@ -511,37 +512,37 @@ bool gotIndexList2 ( void *state , RdbList *list ) {
 		// . we assume it has the best time and is up!! TODO: fix!
 		// . use local ip though if it was an internal request
 		// . otherwise, use the external ip
-		//unsigned long  ip   = h->m_externalIp;
-		unsigned long  ip   = h->m_ip;
+		//uint32_t  ip   = h->m_externalIp;
+		uint32_t  ip   = h->m_ip;
 		// use the NAT mapped port
-		unsigned short port = h->m_externalHttpPort;
+		uint16_t port = h->m_externalHttpPort;
 		// log the first docid so we can blaster url: queries
 		// to PageIndexdb and see if they are in indexdb
 		if ( i == 0 ) 
-			logf(LOG_INFO,"indexdb: %llu %s",docId,st->m_query);
+			logf(LOG_INFO,"indexdb: %"UINT64" %s",docId,st->m_query);
 		// adjust ip/port if local
 		if ( st->m_isLocal ) {
 			ip   = h->m_ip;
 			port = h->m_httpPort;
 		}
-		unsigned long date = 0;
+		uint32_t date = 0;
 		if ( st->m_useDatedb )
-			date = (unsigned long)st->m_list.getCurrentDate();
+			date = (uint32_t)st->m_list.getCurrentDate();
 		uint8_t dh = g_titledb.getDomHash8FromDocId ( docId );
 		char ds[32];
 		ds[0]=0;
-		if ( st->m_useDatedb ) sprintf (ds,"%lu/",date);
+		if ( st->m_useDatedb ) sprintf (ds,"%"UINT32"/",date);
 		pbuf->safePrintf ( 
-			  "<tr><td>%li.</td>"
+			  "<tr><td>%"INT32".</td>"
 			  "<td>%s%i</td>"
 			  "<td>"
-			  //"<a href=http://%s:%hu/admin/titledb?d=%llu>"
-			  "<a href=/admin/titledb?c=%s&d=%llu>"
-			  "%llu"
-			  //"<td><a href=/cgi/4.cgi?d=%llu>%llu"
+			  //"<a href=http://%s:%hu/admin/titledb?d=%"UINT64">"
+			  "<a href=/admin/titledb?c=%s&d=%"UINT64">"
+			  "%"UINT64""
+			  //"<td><a href=/cgi/4.cgi?d=%"UINT64">%"UINT64""
 			  "</td>"
 			  "<td>"
-			  "0x%02lx"
+			  "0x%02"XINT32""
 			  "</td>"
 			  "</tr>\n" ,
 			  i++,
@@ -550,7 +551,7 @@ bool gotIndexList2 ( void *state , RdbList *list ) {
 			  st->m_coll,
 			  docId , 
 			  docId ,
-			  (long)dh );
+			  (int32_t)dh );
 	}	
 	pbuf->safePrintf ( "</table>" );
 
@@ -573,18 +574,18 @@ bool gotIndexList2 ( void *state , RdbList *list ) {
 		if ( p + 1024 >= pend ) break;
 		// but set the ip/port to a host that has this titleRec
 		// stored locally!
-		long long     docId   = st->m_list2.getCurrentDocId () ;
-		unsigned long groupId = g_titledb.getGroupId ( docId );
+		int64_t     docId   = st->m_list2.getCurrentDocId () ;
+		uint32_t groupId = g_titledb.getGroupId ( docId );
 		// get the first host's hostId in this groupId
 		Host *h = g_hostdb.getFastestHostInGroup ( groupId );
 		// . pick the first host to handle the cached titleRec request
 		// . we assume it has the best time and is up!! TODO: fix!
 		// . use local ip though if it was an internal request
 		// . otherwise, use the external ip
-		//unsigned long  ip   = h->m_externalIp;
-		unsigned long  ip   = h->m_ip;
+		//uint32_t  ip   = h->m_externalIp;
+		uint32_t  ip   = h->m_ip;
 		// use the NAT mapped port
-		unsigned short port = h->m_externalHttpPort;
+		uint16_t port = h->m_externalHttpPort;
 		// adjust ip/port if local
 		if ( st->m_isLocal ) {
 			ip   = h->m_ip;
@@ -593,23 +594,23 @@ bool gotIndexList2 ( void *state , RdbList *list ) {
 		// debug
 		char kb[16];
 		st->m_list2.getCurrentKey(kb);
-		//log(LOG_INFO,"debug: n1=%016llx n0=%016llx",
-		//    *(long long *)(kb+8),*(long long *)(kb+0));
-		//if ( (unsigned long)st->m_list2.getCurrentDate() == 0 )
+		//log(LOG_INFO,"debug: n1=%016"XINT64" n0=%016"XINT64"",
+		//    *(int64_t *)(kb+8),*(int64_t *)(kb+0));
+		//if ( (uint32_t)st->m_list2.getCurrentDate() == 0 )
 		//	log("STOP");
 		sprintf ( p , 
-			  "<tr><td>%li.</td>"
-			  "<td>%llu</td>"
-			  "<td>%lu</td><td>%i</td>"
+			  "<tr><td>%"INT32".</td>"
+			  "<td>%"UINT64"</td>"
+			  "<td>%"UINT32"</td><td>%i</td>"
 			  "<td>"
-			  //"<a href=http://%s:%hu/admin/titledb?d=%llu>"
-			  "<a href=/admin/titledb?c=%s&d=%llu>"
-			  "%llu"
-			  //"<td><a href=/cgi/4.cgi?d=%llu>%llu"
+			  //"<a href=http://%s:%hu/admin/titledb?d=%"UINT64">"
+			  "<a href=/admin/titledb?c=%s&d=%"UINT64">"
+			  "%"UINT64""
+			  //"<td><a href=/cgi/4.cgi?d=%"UINT64">%"UINT64""
 			  "</td></tr>\n" ,
 			  i++,
 			  st->m_list2.getTermId16(kb) ,
-			  (unsigned long)st->m_list2.getCurrentDate() ,
+			  (uint32_t)st->m_list2.getCurrentDate() ,
 			  (int)st->m_list2.getCurrentScore() ,
 			  //iptoa(ip) , port ,
 			  st->m_coll,

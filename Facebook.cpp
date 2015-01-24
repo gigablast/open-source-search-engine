@@ -14,7 +14,7 @@ Likedb     g_likedb;
 
 static void queueSleepWrapper ( int fd, void *state );
 
-bool base64Decode ( char *dst, char *src, long dstSize ) ;
+bool base64Decode ( char *dst, char *src, int32_t dstSize ) ;
 
 ///////////////////////////
 //
@@ -45,12 +45,12 @@ bool Facebookdb::init ( ) {
 	// . what's max # of tree nodes?
 	// . assume avg facebookdb rec size of about 1000 bytes
 	// . NOTE: 32 bytes of the 1000 are overhead
-	long maxMem = 5000000;
-	long maxTreeNodes = maxMem / 1000;//82;
+	int32_t maxMem = 5000000;
+	int32_t maxTreeNodes = maxMem / 1000;//82;
 	// each entry in the cache is usually just a single record, no lists,
 	// unless a hostname has multiple sites in it. has 24 bytes more 
 	// overhead in cache.
-	//long maxCacheNodes = g_conf.m_tagdbMaxCacheMem / 106;
+	//int32_t maxCacheNodes = g_conf.m_tagdbMaxCacheMem / 106;
 	// we now use a page cache for the banned turks table which
 	// gets hit all the time
 	//if(! m_pc.init ("facebookdb",RDB_TAGDB,10000000,GB_TFNDB_PAGE_SIZE))
@@ -175,7 +175,7 @@ static void gotFBAccessTokenWrapper ( void *state , TcpSocket *s ) {
 }
 
 // format like strncpy()
-bool base64Decode ( char *dst, char *src, long dstSize ) {
+bool base64Decode ( char *dst, char *src, int32_t dstSize ) {
 
 	// make the map
 	static unsigned char s_bmap[256];
@@ -244,7 +244,7 @@ bool Msgfb::getFacebookUserInfo ( HttpRequest *hr,
 				  void *state ,
 				  char *redirPath,
 				  void (* callback)(void *state) ,
-				  long niceness ) {
+				  int32_t niceness ) {
 
 	reset();
 	m_state      = state;
@@ -271,14 +271,14 @@ bool Msgfb::getFacebookUserInfo ( HttpRequest *hr,
 	char *useFbid = m_hr.getString("usefbid",NULL);
 	// that overrides
 	if ( useFbid ) {
-		long long used = strtoull(useFbid,NULL,10);
-		long h32a = hash32 ( (char *)&used, 8 );
-		// this has to be a long long because fh is printed as
-		// an unsigned long and atol() will croak
-		long h32b = m_hr.getLongLong("fh",0);
+		int64_t used = strtoull(useFbid,NULL,10);
+		int32_t h32a = hash32 ( (char *)&used, 8 );
+		// this has to be a int64_t because fh is printed as
+		// an uint32_t and atol() will croak
+		int32_t h32b = m_hr.getLongLong("fh",0);
 		if ( h32a != h32b ) {
 			useFbid = NULL;
-			log("facebook: bad usefbid=%lli h32=%lu fh=%lu",
+			log("facebook: bad usefbid=%"INT64" h32=%"UINT32" fh=%"UINT32"",
 			    used,h32a,h32b);
 		}
 		else 
@@ -296,7 +296,7 @@ bool Msgfb::getFacebookUserInfo ( HttpRequest *hr,
 	//   at some point in time and we should try to get their list
 	//   of friends from the facebookdb rec so if they click 
 	//   to show all the events their friends are going to we can do that
-	long long fbId = strtoull ( fbidStr , NULL, 10 );
+	int64_t fbId = strtoull ( fbidStr , NULL, 10 );
 
 	// if they come into the canvas page we receive an encoded access
 	// token and fbid from facebook. so get that and do the lookup.
@@ -375,8 +375,8 @@ bool Msgfb::gotFBUserRec ( ) {
 	// save that ptr
 	m_fbrecPtr = fbrec;
 	// get timestamp on that
-	//long now     = getTimeGlobal();
-	//long elapsed = now - fbrec->m_accessTokenCreated;
+	//int32_t now     = getTimeGlobal();
+	//int32_t elapsed = now - fbrec->m_accessTokenCreated;
 	// if stale, re-get it all from facebook.
 	//if ( elapsed >= 60*60 ) return downloadAccessToken ( );
 	// if still fresh, don't bother hitting facebook again, but we
@@ -389,13 +389,13 @@ bool Msgfb::gotFBUserRec ( ) {
 	// need to set this for printBlackBar()
 	m_fbId = fbrec->m_fbId;
 
-	log("facebook: loaded fbrec for fbid=%llu",fbrec->m_fbId);
-	log("facebook: loaded emailfreq=%li",(long)fbrec->m_emailFrequency);
-	log("facebook: loaded myradius=%li",(long)fbrec->m_myRadius);
+	log("facebook: loaded fbrec for fbid=%"UINT64"",fbrec->m_fbId);
+	log("facebook: loaded emailfreq=%"INT32"",(int32_t)fbrec->m_emailFrequency);
+	log("facebook: loaded myradius=%"INT32"",(int32_t)fbrec->m_myRadius);
 
 
 	// or if its an hour old i guess, get another token
-	//long expires = fbrec->m_accessTokenCreated + 3600;
+	//int32_t expires = fbrec->m_accessTokenCreated + 3600;
 	// debug 
 	//expires = 0;
 	//if ( getTimeGlobal() > expires ) {
@@ -411,7 +411,7 @@ bool Msgfb::downloadAccessToken ( ) {
 	//
 	// ok, no cookie, so see if user just pushed the login button
 	//
-	long  fbcodeLen = 0;
+	int32_t  fbcodeLen = 0;
 	char *fbcode = m_hr.getString("code", &fbcodeLen, NULL);
 	// no they did not, no user info is available?
 	if ( ! fbcode ) return true;
@@ -491,16 +491,16 @@ bool Msgfb::gotFBAccessToken ( TcpSocket *s ) {
 
 	// the access token should be in the reply
 	char *reply     = s->m_readBuf;
-	long  replySize = s->m_readOffset;
+	int32_t  replySize = s->m_readOffset;
 
 	// mime error?
 	HttpMime mime;
 	// exclude the \0 i guess. use NULL for url.
 	mime.set ( reply, replySize - 1, NULL );
 	// not good?
-	long httpStatus = mime.getHttpStatus();
+	int32_t httpStatus = mime.getHttpStatus();
 	if ( httpStatus != 200 ) {
-		log("facebook: bad access request http status = %li. "
+		log("facebook: bad access request http status = %"INT32". "
 		    "reply=%s",
 		    httpStatus ,
 		    reply );
@@ -514,19 +514,19 @@ bool Msgfb::gotFBAccessToken ( TcpSocket *s ) {
 	char *content = reply + mime.getMimeLen();
 
 	// assume no accesstoken provided
-	//long expires = 0;
+	//int32_t expires = 0;
 	m_accessToken[0] = '\0';
 
 	// look for access token
-	//sscanf(content,"access_token=%s&expires=%li",m_accessToken,&expires);
+	//sscanf(content,"access_token=%s&expires=%"INT32"",m_accessToken,&expires);
 	char *at = strstr(content,"access_token=");
 	if ( at ) {
 		char *p = at + 13;
 		char *start = p;
 		for ( ; *p && *p != '&' ;p++ );
-		long len = p - start;
+		int32_t len = p - start;
 		if ( len > MAX_TOKEN_LEN ) { char *xx=NULL;*xx=0; }
-		memcpy ( m_accessToken , start , len );
+		gbmemcpy ( m_accessToken , start , len );
 		m_accessToken [ len ] = '\0';
 	}
 
@@ -642,16 +642,16 @@ bool Msgfb::gotFBUserToUserRequest ( TcpSocket *s ) {
 
 	// the access token should be in the reply
 	char *reply     = s->m_readBuf;
-	long  replySize = s->m_readOffset;
+	int32_t  replySize = s->m_readOffset;
 
 	// mime error?
 	HttpMime mime;
 	// exclude the \0 i guess. use NULL for url.
 	mime.set ( reply, replySize - 1, NULL );
 	// not good?
-	long httpStatus = mime.getHttpStatus();
+	int32_t httpStatus = mime.getHttpStatus();
 	if ( httpStatus != 200 ) {
-		log("facebook: bad fb request reply http status = %li. "
+		log("facebook: bad fb request reply http status = %"INT32". "
 		    "reply=%s",
 		    httpStatus ,
 		    reply );
@@ -696,7 +696,7 @@ bool Msgfb::gotFBUserToUserRequest ( TcpSocket *s ) {
 
 	// mine out who sent it
 	char *from = strstr ( content , "\"from\":" );
-	long long id1 = 0LL;
+	int64_t id1 = 0LL;
 	if ( from ) {
 		char *ids = strstr ( from , "\"id\":" );
 		for ( ; ids && *ids && ! is_digit(*ids) ; ids++ );
@@ -708,7 +708,7 @@ bool Msgfb::gotFBUserToUserRequest ( TcpSocket *s ) {
 	char *data = NULL;
 	// start mining AFTER "from" because there is a top "data" field!!
 	if ( from ) data = strstr ( from , "\"data\":" );
-	long long id2 = 0LL;
+	int64_t id2 = 0LL;
 	if ( data ) {
 		char *ids = strstr ( data , "\"id\":" );
 		for ( ; ids && *ids && ! is_digit(*ids) ; ids++ );
@@ -733,7 +733,7 @@ bool Msgfb::gotFBUserToUserRequest ( TcpSocket *s ) {
 
 
 
-//long long mdw = 100003532411011LL; // my uid for Matt Wells
+//int64_t mdw = 100003532411011LL; // my uid for Matt Wells
 // 100003316058818 // uid for flurbit
 // http://graph.facebook.com/502303355/picture shows pics for a uid
 bool Msgfb::downloadFBUserInfo ( ) {
@@ -785,7 +785,7 @@ bool Msgfb::downloadFBUserInfo ( ) {
 	return true;
 }
 
-static bool queueFBId ( long long fbId , collnum_t collnum );
+static bool queueFBId ( int64_t fbId , collnum_t collnum );
 
 static void savedFBRecWrapper1 ( void *state ) {
 	Msgfb *mfb = (Msgfb *)state;
@@ -812,7 +812,7 @@ bool Msgfb::gotFQLUserInfo ( TcpSocket *s ) {
 
 	// get reply
 	char *reply     = s->m_readBuf;
-	long  replySize = s->m_readOffset;
+	int32_t  replySize = s->m_readOffset;
 
 	// we reference into this, so do not free it!!
 	m_facebookReply     = s->m_readBuf;
@@ -827,9 +827,9 @@ bool Msgfb::gotFQLUserInfo ( TcpSocket *s ) {
 	// exclude the \0 i guess. use NULL for url.
 	mime.set ( reply, replySize - 1, NULL );
 	// not good?
-	long httpStatus = mime.getHttpStatus();
+	int32_t httpStatus = mime.getHttpStatus();
 	if ( httpStatus != 200 ) {
-		log("facebook: bad fql request http status = %li",
+		log("facebook: bad fql request http status = %"INT32"",
 		    httpStatus );
 		g_errno = EBADREPLY;
 		m_errno = g_errno;
@@ -839,7 +839,7 @@ bool Msgfb::gotFQLUserInfo ( TcpSocket *s ) {
 
 	// point to content
 	char *content    = reply + mime.getMimeLen();
-	long  contentLen = reply + replySize - content;
+	int32_t  contentLen = reply + replySize - content;
 
 	// check for error
 	char *errMsg = strstr(content,"<error_msg>");
@@ -872,13 +872,13 @@ bool Msgfb::gotFQLUserInfo ( TcpSocket *s ) {
 	}
 
 	// sanity
-	log("facebook: got initial facebook reply. fbid=%lli",m_fbId);
+	log("facebook: got initial facebook reply. fbid=%"INT64"",m_fbId);
 
 	// point to it!
 	m_fbrecPtr = &m_fbrecGen;
 
 	// now that we got the fbid see if its in facebookdb again
-	long long fbId = m_fbrecGen.m_fbId;
+	int64_t fbId = m_fbrecGen.m_fbId;
 	key96_t startKey;
 	key96_t endKey;
 	startKey.n1 = 0;
@@ -951,16 +951,16 @@ void mergeFBRec ( FBRec *dst , FBRec *src ) {
 // returns false if blocked, true otherwise
 bool Msgfb::saveFBRec ( FBRec *fbrec ) {
 
-	log("facebook: saving fbrec for fbid=%lli",m_fbId);
+	log("facebook: saving fbrec for fbid=%"INT64"",m_fbId);
 
-	log("facebook: saving myradius=%li",fbrec->m_myRadius);
+	log("facebook: saving myradius=%"INT32"",fbrec->m_myRadius);
 	log("facebook: saving mylocation=%s",fbrec->ptr_myLocation);
-	log("facebook: saving emailfreq=%li",(long)fbrec->m_emailFrequency);
+	log("facebook: saving emailfreq=%"INT32"",(int32_t)fbrec->m_emailFrequency);
 
 	// . returns NULL and sets g_errno on error
 	// . "true" means we should make mr.ptr_* reference into the newly
 	//   serialized buffer
-	long replySize;
+	int32_t replySize;
 	char *reply = serializeMsg ( sizeof(FBRec) ,
 				     &fbrec->size_accessToken,//1stsizeparm
 				     &fbrec->size_friendIds,// lastsizeparm
@@ -978,7 +978,7 @@ bool Msgfb::saveFBRec ( FBRec *fbrec ) {
 	
 	// make the binary tag then for this facebook user
 	//char *rec     = (char *)&m_key;//fbId;
-	//long  recSize = (char *)&m_ids[m_numIds] - rec;
+	//int32_t  recSize = (char *)&m_ids[m_numIds] - rec;
 
 	FBRec *serializedRec = (FBRec *)reply;
 
@@ -1042,9 +1042,9 @@ bool Msgfb::doneRechecking ( ) {
 				 m_oldFbrec->m_buf );
 		// sanity
 		if ( m_fbId != m_oldFbrec->m_fbId ) 
-			log("facebook: fbid mismatch 3 %llu != %llu",
+			log("facebook: fbid mismatch 3 %"UINT64" != %"UINT64"",
 			    m_fbId,m_oldFbrec->m_fbId);
-		// shortcuts
+		// int16_tcuts
 		FBRec *src = m_oldFbrec;
 		FBRec *dst = &m_fbrecGen;
 		// merge src into dst. merge the old into the new.
@@ -1065,12 +1065,12 @@ bool Msgfb::doneRechecking ( ) {
 		// . if it was a facebook user_to_user app request we
 		//   should have called downloadUserToUserRequestInfo() to
 		//   set m_widgetId if it was not already set.
-		long long widgetId = m_widgetId;
+		int64_t widgetId = m_widgetId;
 		if ( ! widgetId ) widgetId = 1;
 		m_fbrecGen.m_originatingWidgetId = widgetId;
 		m_fbrecGen.m_lastLoginIP = m_socket->m_ip;
 		// avoid a core
-		long now ;
+		int32_t now ;
 		if ( isClockInSync() ) now = getTimeGlobal();
 		else                   now = getTimeLocal();
 		m_fbrecGen.m_firstFacebookLogin = now;
@@ -1085,7 +1085,7 @@ bool Msgfb::doneRechecking ( ) {
 	// here and save them back to facebookdb.
 	m_afterSaveCallback = savedFBRecWrapper1;
 
-	log("facebook: saving rec for fbid=%lli",m_fbId);
+	log("facebook: saving rec for fbid=%"INT64"",m_fbId);
 
 	// . queue it up. it returns true if added to the queue.
 	// . it won't add it if no room or its already in the queue.
@@ -1105,16 +1105,16 @@ bool Msgfb::doneRechecking ( ) {
 
 class LikedbTableSlot {
 public:
-	long long m_uid;
-	long m_start_time;
-	long m_rsvp;
+	int64_t m_uid;
+	int32_t m_start_time;
+	int32_t m_rsvp;
 };
 
 bool Msgfb::setFBRecFromFQLReply ( char *content,
-				   long contentLen,
+				   int32_t contentLen,
 				   FBRec *fbrec ) {
 
-	// shortcut
+	// int16_tcut
 	char *reply = content;
 	// i've seen crappy facebook return essentially an empty
 	// reply here, so make sure we have all the fields!!
@@ -1127,7 +1127,7 @@ bool Msgfb::setFBRecFromFQLReply ( char *content,
 		SafeBuf eb;
 		eb.safeMemcpy ( content,contentLen);
 		char fname[128];
-		sprintf(fname,"error.%llu",m_fbId);
+		sprintf(fname,"error.%"UINT64"",m_fbId);
 		eb.save("/tmp/",fname);
 		g_errno = EBADREPLY;
 		return false;
@@ -1141,7 +1141,7 @@ bool Msgfb::setFBRecFromFQLReply ( char *content,
 		  true ,  // purexml
 		  TITLEREC_CURRENT_VERSION );
 
-	// shortcut
+	// int16_tcut
 	FBRec *f = fbrec;
 	// clear the entire rec
 	f->reset();
@@ -1155,7 +1155,7 @@ bool Msgfb::setFBRecFromFQLReply ( char *content,
 	// scan for friend ids first since we add \0s below
 	char *p = strstr ( content , "<uid2>" );
 	for ( ; p ; p = strstr (p+1,"<uid2>") ) {
-		long long uid2 = strtoull(p+6,NULL,10);
+		int64_t uid2 = strtoull(p+6,NULL,10);
 		if ( uid2 <= 0 ) continue;
 		// add it
 		if ( m_fidBuf.getAvail() < 8 && ! m_fidBuf.reserve(5000) ) 
@@ -1173,7 +1173,7 @@ bool Msgfb::setFBRecFromFQLReply ( char *content,
 	f->ptr_lastName = xml.getString("last_name",&f->size_lastName);
 	// get the <name> tag right AFTER <last_name>, otherwise we
 	// get the multi query name tag "query1"
-	long n0 = xml.getNodeNum ("last_name");
+	int32_t n0 = xml.getNodeNum ("last_name");
 	if ( n0 >= 0 ) 
 		f->ptr_name = xml.getString(n0,n0+5,"name",&f->size_name);
 	f->ptr_pic_square = xml.getString("pic_square",&f->size_pic_square);
@@ -1267,7 +1267,7 @@ bool Msgfb::setFBRecFromFQLReply ( char *content,
 	bool hadError = false;
 	char *line = NULL;
 	// scan the xmlnodes, looking for event_member
-	long i; for ( i = 0 ; i < xml.m_numNodes ; i++ ) {
+	int32_t i; for ( i = 0 ; i < xml.m_numNodes ; i++ ) {
 
 		// get an <event_member> tag
 		XmlNode *node = &xml.m_nodes[i];
@@ -1292,8 +1292,8 @@ bool Msgfb::setFBRecFromFQLReply ( char *content,
 		if ( strncmp ( s, "<uid>" , 5 ) ) break;
 		// skip that
 		s += 5;
-		// long long
-		long long uid = strtoull ( s , NULL, 10 );
+		// int64_t
+		int64_t uid = strtoull ( s , NULL, 10 );
 		// skip til next tag
 		for ( ; *s && *s != '<' ; s++ ) ;		
 		// must be /uid
@@ -1307,8 +1307,8 @@ bool Msgfb::setFBRecFromFQLReply ( char *content,
 		if ( strncmp ( s, "<eid>" , 5 ) ) break;
 		// skip that
 		s += 5;
-		// long long
-		long long eid = strtoull ( s , NULL, 10 );
+		// int64_t
+		int64_t eid = strtoull ( s , NULL, 10 );
 		// skip til next tag
 		for ( ; *s && *s != '<' ; s++ ) ;		
 		// must be /uid
@@ -1324,7 +1324,7 @@ bool Msgfb::setFBRecFromFQLReply ( char *content,
 		s += 13;
 		// skip whitespace
 		for ( ; *s && is_wspace_a(*s) ; s++ );
-		// long long
+		// int64_t
 		char *rsvp_status = s;
 		// skip til next tag
 		for ( ; *s && *s != '<' ; s++ ) ;
@@ -1342,8 +1342,8 @@ bool Msgfb::setFBRecFromFQLReply ( char *content,
 		if ( strncmp ( s, "<start_time>" , 12 ) ) break;
 		// skip that
 		s += 12;
-		// long long
-		long start_time = (unsigned long)(atoll ( s ));
+		// int64_t
+		int32_t start_time = (uint32_t)(atoll ( s ));
 		// skip til next tag
 		for ( ; *s && *s != '<' ; s++ ) ;		
 		// must be /uid
@@ -1358,10 +1358,10 @@ bool Msgfb::setFBRecFromFQLReply ( char *content,
 			char c = rsvp_status[6];
 			rsvp_status[6] = '\0';
 			log("facebook: got event "
-			    "eid=%llu "
-			    "uid=%llu "
+			    "eid=%"UINT64" "
+			    "uid=%"UINT64" "
 			    "rsvp_status=%s "
-			    "start_time=%lu"
+			    "start_time=%"UINT32""
 			    , eid
 			    , uid
 			    , rsvp_status
@@ -1385,7 +1385,7 @@ bool Msgfb::setFBRecFromFQLReply ( char *content,
 		// TODO: what about uid/rsvp_status/start_time ???
 		// we need that info for adding to likedb so make a likedb
 		// key here and we'll add that if the inject goes through
-		//long recSize;
+		//int32_t recSize;
 		//char *rec = g_likedb.makeRec ( uid         ,
 		//			       docId       ,
 		//			       gbeventId   ,
@@ -1397,7 +1397,7 @@ bool Msgfb::setFBRecFromFQLReply ( char *content,
 		//	continue;
 
 		// convert rsvpstatus to a value
-		long rsvp = 0;
+		int32_t rsvp = 0;
 		if      ( ! strncmp(rsvp_status,"not_replied",11) ) 
 			rsvp = LF_INVITED;
 		else if ( ! strncmp(rsvp_status,"attending",9  ) ) 
@@ -1453,34 +1453,34 @@ bool Msgfb::setFBRecFromFQLReply ( char *content,
 /////////////////////////////////////
 
 // high priority queue for ppl that login
-long long g_fbq1   [100];
+int64_t g_fbq1   [100];
 collnum_t g_colls1 [100];
-long      g_n1 = 0;
+int32_t      g_n1 = 0;
 // low priority queue for passive facebookdb scanning
-//long long g_fbq2   [100];
+//int64_t g_fbq2   [100];
 //collnum_t g_colls2 [100];
-//long      g_n2 = 0;
+//int32_t      g_n2 = 0;
 // used for queue
 Msgfb g_msgfb;
 
-bool isInQueue ( long long fbId , collnum_t collnum ) {
-	for ( long i = 0 ; i < g_n1 ; i++ ) 
+bool isInQueue ( int64_t fbId , collnum_t collnum ) {
+	for ( int32_t i = 0 ; i < g_n1 ; i++ ) 
 		if ( g_fbq1 [ i ] == fbId ) return true;
 	return false;
 }
 
-bool queueFBId ( long long fbId , collnum_t collnum ) {
+bool queueFBId ( int64_t fbId , collnum_t collnum ) {
 	// skip matt wells for now
 	//if ( fbId == 100003532411011LL ) {
 	//	log("facebook: skipping matt wells in queue");
 	//	return true;
 	//}
 	if ( g_n1 >= 100 )
-		return log("facebook: could not add fbid=%lli to queue",fbId);
+		return log("facebook: could not add fbid=%"INT64" to queue",fbId);
 
 	// make sure not already in
 	if ( isInQueue ( fbId , collnum ) ) return false;
-	log("facebook: queueing fbid=%lli",fbId);
+	log("facebook: queueing fbid=%"INT64"",fbId);
 	g_fbq1   [ g_n1 ] = fbId;
 	g_colls1 [ g_n1 ] = collnum;
 	g_n1++;
@@ -1489,21 +1489,21 @@ bool queueFBId ( long long fbId , collnum_t collnum ) {
 
 /*
 static void doneProcessingWrapper ( void *state ) {
-	// shortcut
-	long err = g_msgfb.m_errno;
+	// int16_tcut
+	int32_t err = g_msgfb.m_errno;
 	// or inherit this. we might have forgotten to set m_errno
 	if ( ! err && g_errno ) err = g_errno;
 	// no longer in progress
 	g_msgfb.m_inProgress = false;
 	g_msgfb.reset();
 	// note it
-	log("facebook: done with queue for fbid=%llu. error=%s",
+	log("facebook: done with queue for fbid=%"UINT64". error=%s",
 	    g_fbq1[0],mstrerror(err));
 	// save it for potential re-add
-	//long long fsaved = g_fbq1  [0];
+	//int64_t fsaved = g_fbq1  [0];
 	//collnum_t csaved = g_colls1[0];
 	// shift queue down
-	for ( long i = 1 ; i < g_n1 ; i++ ) {
+	for ( int32_t i = 1 ; i < g_n1 ; i++ ) {
 		g_fbq1  [i-1] = g_fbq1  [i];
 		g_colls1[i-1] = g_colls1[i];
 	}
@@ -1519,7 +1519,7 @@ static void doneProcessingWrapper ( void *state ) {
 
 #define NUM_MSGFBS 3
 Msgfb g_msgfbs[NUM_MSGFBS];
-long  g_numOut = 0;
+int32_t  g_numOut = 0;
 
 // evaluate events associated with the fbuserids in the queue
 void queueSleepWrapper ( int fd, void *state ) {
@@ -1536,14 +1536,14 @@ void queueSleepWrapper ( int fd, void *state ) {
 	if ( g_repair.isRepairActive() ) 
 		return;
 	// get an fbid
-	if ( g_numOut >= (long)NUM_MSGFBS ) return;
+	if ( g_numOut >= (int32_t)NUM_MSGFBS ) return;
 	// return if all out and no more to put out
 	if ( g_n1 <= g_numOut ) return;
 	// get the next fbid
-	long long fbId = g_fbq1[g_numOut];
+	int64_t fbId = g_fbq1[g_numOut];
 	// get one not in use
 	Msgfb *mfb = NULL;
-	for ( long i = 0 ; i < NUM_MSGFBS ; i++ ) {
+	for ( int32_t i = 0 ; i < NUM_MSGFBS ; i++ ) {
 		if ( g_msgfbs[i].m_inProgress ) continue;
 		mfb = &g_msgfbs[i];
 		break;
@@ -1551,7 +1551,7 @@ void queueSleepWrapper ( int fd, void *state ) {
 	// return if all in progress. how can this be?
 	if ( ! mfb ) return;
 	// get the fbid
-	//long long fbId    = g_fbq1[0];
+	//int64_t fbId    = g_fbq1[0];
 	//collnum_t collnum = g_colls1[0];
 	// inc this now!
 	g_numOut++;
@@ -1576,18 +1576,18 @@ void queueSleepWrapper ( int fd, void *state ) {
 ////////////
 
 static bool s_init = false;
-static long s_flip = 0;
+static int32_t s_flip = 0;
 static SafeBuf s_tbuf1;
 static SafeBuf s_tbuf2;
-static long s_ptr1 = 0; // facebook dictionary query cursor
-static long s_ptr2 = 0; // facebook location query cursor
-static long s_ptr3 = 0; // stubhub cursor
-static long long s_ptr4 = 0; // eventbrite cursor
-static long long s_ptr5 = 0; // local facebookdb scanner cursor
-static long      s_holdOffStubHubTill = 0;
-static long long s_lastEventBriteEventId = 0;
-static long      s_eventBriteWaitUntil = 0;
-static long      s_localWaitUntil = 0;
+static int32_t s_ptr1 = 0; // facebook dictionary query cursor
+static int32_t s_ptr2 = 0; // facebook location query cursor
+static int32_t s_ptr3 = 0; // stubhub cursor
+static int64_t s_ptr4 = 0; // eventbrite cursor
+static int64_t s_ptr5 = 0; // local facebookdb scanner cursor
+static int32_t      s_holdOffStubHubTill = 0;
+static int64_t s_lastEventBriteEventId = 0;
+static int32_t      s_eventBriteWaitUntil = 0;
+static int32_t      s_localWaitUntil = 0;
 
 static char *getNextQuery ();
 
@@ -1617,7 +1617,7 @@ void Msgfb::queueLoop ( ) {
 
 	if ( m_phase == 0 ) {
 		// do not reset this!
-		long long saved = m_fbId;
+		int64_t saved = m_fbId;
 		// make sure this is empty and ready to go
 		reset();
 		// re-establish this
@@ -1670,7 +1670,7 @@ void Msgfb::queueLoop ( ) {
 		// empty is means done
 		if ( m_list33.getListSize() <= 0 ) {
 			// set this
-			long now = getTimeGlobal();
+			int32_t now = getTimeGlobal();
 			// wait for a day then
 			s_localWaitUntil = now + 86400;
 			// reset the scan for the scan tomorrow
@@ -1684,7 +1684,7 @@ void Msgfb::queueLoop ( ) {
 		m_oldFbrec = (FBRec *)m_list33.getList();
 		// get is fbid and queue that
 		if ( m_oldFbrec->m_fbId < 0 ) {
-			log("fbqueue: bad fbid in local scan: %lli",
+			log("fbqueue: bad fbid in local scan: %"INT64"",
 			    m_oldFbrec->m_fbId);
 			g_errno = EBADREPLY;
 			goto error;
@@ -1715,7 +1715,7 @@ void Msgfb::queueLoop ( ) {
 				 // ask for 100 results
 				 "max=100&"
 				 "sort_by=id&"
-				 "since_id=%lli"
+				 "since_id=%"INT64""
 				 // no need to add 1 to s_ptr4, just make
 				 // sure that it exactly equals the LAST
 				 // id we injected because it is EXCLUDED
@@ -1758,7 +1758,7 @@ void Msgfb::queueLoop ( ) {
 	// if an fbid of -1 means to close our eyes and suck down some stubhub
 	if ( m_fbId == -1LL && m_phase == 0 ) {
 
-		long now = getTimeGlobal();
+		int32_t now = getTimeGlobal();
 		// now subtract 12 so that gmtime() call below will
 		// return current time in hawaii or right before that...
 		now -= 12*3600;
@@ -1788,7 +1788,7 @@ void Msgfb::queueLoop ( ) {
 		cmd9.safePrintf("+TO+");
 
 		// add the half day here
-		long delta = 12*3600;
+		int32_t delta = 12*3600;
 
 		// 3+ months out use a full day
 		if ( s_ptr3 - now > 90*86400 ) delta = 24*3600;
@@ -1967,7 +1967,7 @@ void Msgfb::queueLoop ( ) {
 		}
 		// empty is bad
 		if ( m_list1.getListSize() <= 0 ) {
-			log("fbqueue: facebookdb rec is empty. wtf? fbid=%lli",
+			log("fbqueue: facebookdb rec is empty. wtf? fbid=%"INT64"",
 			    m_fbId);
 			g_errno = EBADREPLY;
 			goto error;
@@ -1976,7 +1976,7 @@ void Msgfb::queueLoop ( ) {
 		m_oldFbrec = (FBRec *)m_list1.getList();
 		// sanity
 		if ( m_oldFbrec->m_fbId != m_fbId ) {
-			log("fbqueue: fbid mismatch. fbid=%lli", m_fbId);
+			log("fbqueue: fbid mismatch. fbid=%"INT64"", m_fbId);
 			g_errno = EBADREPLY;
 			goto error;
 		}
@@ -2044,7 +2044,7 @@ void Msgfb::queueLoop ( ) {
 		m_phase = 3;
 		// a quick sanity check
 		char *reply = m_socket->m_readBuf;
-		long  replyLen = m_socket->m_readOffset;
+		int32_t  replyLen = m_socket->m_readOffset;
 		// i've seen crappy facebook return essentially an empty
 		// reply here, so make sure we have all the fields!!
 		if ( ! strstr(reply,"<uid>") ||
@@ -2056,11 +2056,11 @@ void Msgfb::queueLoop ( ) {
 			SafeBuf eb;
 			eb.safeMemcpy ( reply,replyLen);
 			char fname[128];
-			sprintf(fname,"error1.%llu",m_fbId);
+			sprintf(fname,"error1.%"UINT64"",m_fbId);
 			eb.save("/tmp/",fname);
 			// do a retry
 			if ( m_retryCount++ < 5 ) {
-				log("facebook: retrying %li.",m_retryCount);
+				log("facebook: retrying %"INT32".",m_retryCount);
 				goto retryDownload;
 			}
 			// otherwise abandon ship
@@ -2074,7 +2074,7 @@ void Msgfb::queueLoop ( ) {
 	// download friend list
 	if ( m_phase == 3 ) {
 		// note it
-		log("facebook: downloading friend list fbid=%lli",m_fbId);
+		log("facebook: downloading friend list fbid=%"INT64"",m_fbId);
 		// get your facebook user info again in case it changed
 		SafeBuf cmd;
 		cmd.safePrintf ( "SELECT uid2 from friend WHERE uid1=me()");
@@ -2123,11 +2123,11 @@ void Msgfb::queueLoop ( ) {
 		// exclude the \0 i guess. use NULL for url.
 		mime.set ( m_socket->m_readBuf, m_socket->m_readOffset-1,NULL);
 		// not good?
-		long httpStatus = mime.getHttpStatus();
+		int32_t httpStatus = mime.getHttpStatus();
 		if ( httpStatus != 200 ) g_errno = EBADREPLY;
 		// bail on http reply error
 		if ( g_errno ) {
-			log("fbqueue: error getting friend list fbid=%lli: "
+			log("fbqueue: error getting friend list fbid=%"INT64": "
 			    "%s", m_fbId,   mstrerror(g_errno));
 			goto error;
 		}
@@ -2142,8 +2142,8 @@ void Msgfb::queueLoop ( ) {
 	if ( m_phase == 5 ) {
 	recallMembers:
 		// note it
-		log("facebook: downloading event members #%li-#%li "
-		    "fbid=%lli",
+		log("facebook: downloading event members #%"INT32"-#%"INT32" "
+		    "fbid=%"INT64"",
 		    m_chunkStart,m_chunkStart+m_chunkSize,m_fbId);
 		// get status of each friend attending an event & what eventid
 		SafeBuf cmd;
@@ -2151,7 +2151,7 @@ void Msgfb::queueLoop ( ) {
 		cmd.safePrintf ( "SELECT uid, eid, rsvp_status, start_time "
 				 "FROM event_member where uid IN "
 				 "( SELECT uid2 from friend WHERE uid1=me() "
-				 "LIMIT %li,%li) "
+				 "LIMIT %"INT32",%"INT32") "
 				 , m_chunkStart , m_chunkSize 
 				 // this start_time from the event_member table
 				 // is not accurate. it is often in the past! 
@@ -2201,11 +2201,11 @@ void Msgfb::queueLoop ( ) {
 		// exclude the \0 i guess. use NULL for url.
 		mime.set ( m_socket->m_readBuf, m_socket->m_readOffset-1,NULL);
 		// not good?
-		long httpStatus = mime.getHttpStatus();
+		int32_t httpStatus = mime.getHttpStatus();
 		if ( httpStatus != 200 ) g_errno = EBADREPLY;
 		// bail on http reply error
 		if ( g_errno ) {
-			log("fbqueue: error getting event members fbid=%lli: "
+			log("fbqueue: error getting event members fbid=%"INT64": "
 			    "%s", m_fbId,   mstrerror(g_errno));
 			// count it
 			m_errorCount++;
@@ -2233,15 +2233,15 @@ void Msgfb::queueLoop ( ) {
 		// get MY events
 	recallMyEvents:
 		// note it
-		log("facebook: downloading my event ids #%li-#%li "
-		    "fbid=%lli",
+		log("facebook: downloading my event ids #%"INT32"-#%"INT32" "
+		    "fbid=%"INT64"",
 		    m_myChunkStart,m_myChunkStart+m_myChunkSize,m_fbId);
 		// get status of each friend attending an event & what eventid
 		SafeBuf cmd;
 		// if this fails then chunk down to 50 instead of 300
 		cmd.safePrintf ( "SELECT uid, eid, rsvp_status, start_time "
 				 "FROM event_member where uid=me() "
-				 "LIMIT %li,%li"
+				 "LIMIT %"INT32",%"INT32""
 				 , m_myChunkStart , m_myChunkSize 
 				 // this start_time from the event_member table
 				 // is not accurate. it is often in the past! 
@@ -2291,11 +2291,11 @@ void Msgfb::queueLoop ( ) {
 		// exclude the \0 i guess. use NULL for url.
 		mime.set ( m_socket->m_readBuf, m_socket->m_readOffset-1,NULL);
 		// not good?
-		long httpStatus = mime.getHttpStatus();
+		int32_t httpStatus = mime.getHttpStatus();
 		if ( httpStatus != 200 ) g_errno = EBADREPLY;
 		// bail on http reply error
 		if ( g_errno ) {
-			log("fbqueue: error getting my events fbid=%lli: "
+			log("fbqueue: error getting my events fbid=%"INT64": "
 			    "%s", m_fbId,   mstrerror(g_errno));
 			// count it
 			m_errorCount++;
@@ -2324,13 +2324,13 @@ void Msgfb::queueLoop ( ) {
 	if ( m_phase == 9 ) {
 		// save to disk for debug
 		char fname[64];
-		sprintf(fname,"%lli.txt",m_fbId);
+		sprintf(fname,"%"INT64".txt",m_fbId);
 		m_fullReply.save("/tmp/",fname);
 		// compile into a new facebook rec
 		char *content    = m_fullReply.getBufStart();
-		long  contentLen = m_fullReply.length();
+		int32_t  contentLen = m_fullReply.length();
 		// sanity
-		long long origFbId = m_fbId;
+		int64_t origFbId = m_fbId;
 		// is this messing up our Msgfb::m_fbId???
 		if ( ! setFBRecFromFQLReply(content,contentLen,&m_fbrecGen)) {
 			log("fql: error setting fb rec from fql");
@@ -2374,7 +2374,7 @@ void Msgfb::queueLoop ( ) {
 			//goto skipdown;
 		}
 		// note it
-		log("facebook: downloading events #%li-#%li fbid=%lli",
+		log("facebook: downloading events #%"INT32"-#%"INT32" fbid=%"INT64"",
 		    m_eventStartNum,m_eventStartNum+m_eventStep,m_fbId);
 		SafeBuf cmd;
 		cmd.safePrintf ( "SELECT eid, "
@@ -2405,18 +2405,18 @@ void Msgfb::queueLoop ( ) {
 				 //"start_time > now() AND "
 				 "eid IN (" );
 		// from buf
-		long max = m_eidBuf.length() / 8;
+		int32_t max = m_eidBuf.length() / 8;
 		// did we add any?
 		bool printed = false;
-		// shortcut
-		long long *eids = (long long *)m_eidBuf.getBufStart();
+		// int16_tcut
+		int64_t *eids = (int64_t *)m_eidBuf.getBufStart();
 		// list some eids here
-		for ( long i = m_eventStartNum ; 
+		for ( int32_t i = m_eventStartNum ; 
 		      i < max &&
 		      i < m_eventStartNum + m_eventStep ; i++ ) {
 			if ( printed ) cmd.pushChar(',');
 			printed = true;
-			cmd.safePrintf("%lli",eids[i]);
+			cmd.safePrintf("%"INT64"",eids[i]);
 		}
 		// end it
 		cmd.safePrintf(")");
@@ -2466,7 +2466,7 @@ void Msgfb::queueLoop ( ) {
 			mime.set ( m_socket->m_readBuf, 
 				   m_socket->m_readOffset-1,NULL);
 			// not good?
-			long httpStatus = mime.getHttpStatus();
+			int32_t httpStatus = mime.getHttpStatus();
 			if ( httpStatus != 200 ) g_errno = EBADREPLY;
 		}
 		// bail on http reply error
@@ -2474,7 +2474,7 @@ void Msgfb::queueLoop ( ) {
 			char *reply = "";
 			if ( m_socket && m_socket->m_readBuf )
 				reply = m_socket->m_readBuf;
-			log("fbqueue: error getting events fbid=%lli: "
+			log("fbqueue: error getting events fbid=%"INT64": "
 			    "%s : %s", m_fbId,   mstrerror(g_errno),reply);
 			// bail right away if doing spider
 			if ( m_fbId <= 0 ) goto error;
@@ -2506,7 +2506,7 @@ void Msgfb::queueLoop ( ) {
 
 		// show it
 		if ( type )
-			log("facebook: got %s reply (%li bytes)"
+			log("facebook: got %s reply (%"INT32" bytes)"
 			    , type , m_rbuf.length() );
 
 		//fprintf(stderr,"full raw reply=%s",m_rbuf.getBufStart());
@@ -2514,7 +2514,7 @@ void Msgfb::queueLoop ( ) {
 		// do not do jsontoxml on the mime header!
 		char *rb = m_rbuf.getBufStart();
 		char *rc = strstr(rb,"\r\n\r\n");
-		long  pos = 0;
+		int32_t  pos = 0;
 		if ( rc ) pos = (rc+4) - rb;
 
 		// convert json to xml if it is in json. only for facebook
@@ -2596,7 +2596,7 @@ void Msgfb::queueLoop ( ) {
 			}
 
 			if ( ! ep ) continue;
-			long long eid = strtoull ( ep , NULL , 10 );
+			int64_t eid = strtoull ( ep , NULL , 10 );
 			if ( eid == 0 ) continue;
 			if ( eid < 0 ) log("facebook: wtf? eid is 0");
 
@@ -2606,18 +2606,18 @@ void Msgfb::queueLoop ( ) {
 				s_lastEventBriteEventId = eid;
 
 			// store it
-			if ( ! m_evPtrBuf.pushLong ( (long)start)) goto error;
+			if ( ! m_evPtrBuf.pushLong ( (int32_t)start)) goto error;
 			if ( ! m_evIdsBuf.pushLongLong ( eid)) goto error;
 			// count them
 			m_numEvents++;
 		}
-		log("facebook: got %li events from %s",m_numEvents,type);
+		log("facebook: got %"INT32" events from %s",m_numEvents,type);
 
 		// if we got 0 events from an eventbrite request, then
 		// wait for an hour before retrying
 		if ( m_numEvents == 0 && m_fbId == -2 ) {
 			log("facebook: pausing eventbrite feed for 1 hour");
-			long now = getTimeGlobal();
+			int32_t now = getTimeGlobal();
 			s_eventBriteWaitUntil = now + 3600;
 		}
 
@@ -2648,22 +2648,22 @@ void Msgfb::queueLoop ( ) {
 	recallInject:
 		char *coll = g_collectiondb.getColl ( m_collnum );
 		char      **eventPtrs = (char **)m_evPtrBuf.getBufStart();
-		long long  *eventIds  = (long long *)m_evIdsBuf.getBufStart();
+		int64_t  *eventIds  = (int64_t *)m_evIdsBuf.getBufStart();
 		// get ptr to it
 		char *content    = eventPtrs[m_i];
-		long  contentLen = gbstrlen(content);
+		int32_t  contentLen = gbstrlen(content);
 		// debug thing
 		//if ( eventIds[m_i] != 314901535212815LL ) {m_i++; continue;}
 		// make a fake url
 		char url[128];
-		sprintf(url,"http://www.facebook.com/events/%llu",
+		sprintf(url,"http://www.facebook.com/events/%"UINT64"",
 			eventIds[m_i]);
 		// is it a stubhub event? <str name="event_id">2659223</str>
 		if ( m_fbId == -1 )
-			sprintf(url,"http://www.stubhub.com/%llu",
+			sprintf(url,"http://www.stubhub.com/%"UINT64"",
 				eventIds[m_i]);
 		if ( m_fbId == -2 )
-			sprintf(url,"http://www.eventbrite.com/%llu",
+			sprintf(url,"http://www.eventbrite.com/%"UINT64"",
 				eventIds[m_i]);
 
 		// test debug (on for eventbrite now)
@@ -2699,7 +2699,7 @@ void Msgfb::queueLoop ( ) {
 		
 		// use a forced ip for speed! otherwise it takes 
 		// forever lookup up www.facebook.com for some reason!
-		long forcedIp = atoip("69.171.224.39");
+		int32_t forcedIp = atoip("69.171.224.39");
 		// advance up here
 		m_i++;
 		// and the phase too
@@ -2803,7 +2803,7 @@ void Msgfb::queueLoop ( ) {
 		if ( m_fbId > 0 ) {
 			// final save of rec to clear the FB_INQUEUE bit
 			m_afterSaveCallback = queueLoopWrapper;
-			log("facebook: saving final rec for fbid=%lli",m_fbId);
+			log("facebook: saving final rec for fbid=%"INT64"",m_fbId);
 			m_fbrecGen.m_flags &= ~FB_INQUEUE;
 			m_fbrecGen.m_eventsDownloaded = getTimeGlobal();
 			// this calls serializeMsg() which mallocs a 
@@ -2815,8 +2815,8 @@ void Msgfb::queueLoop ( ) {
 	// . remove from queue
 	// . all done!
 	if ( m_phase == 16 ) {
-		// shortcut
-		long err = m_errno;
+		// int16_tcut
+		int32_t err = m_errno;
 		// or inherit this. we might have forgotten to set m_errno
 		if ( ! err && g_errno ) err = g_errno;
 		// no longer in progress
@@ -2824,7 +2824,7 @@ void Msgfb::queueLoop ( ) {
 		// this will purge fullreply
 		reset();
 		// note it
-		log("facebook: done with queue for fbid=%lli. error=%s",
+		log("facebook: done with queue for fbid=%"INT64". error=%s",
 		    g_fbq1[0],mstrerror(err));
 
 		// if we are eventbrite, update s_ptr4 to the last eventid
@@ -2832,10 +2832,10 @@ void Msgfb::queueLoop ( ) {
 		s_ptr4 = s_lastEventBriteEventId;
 
 		// save it for potential re-add
-		//long long fsaved = g_fbq1  [0];
+		//int64_t fsaved = g_fbq1  [0];
 		//collnum_t csaved = g_colls1[0];
 		// shift queue down
-		for ( long i = 1 ; i < g_n1 ; i++ ) {
+		for ( int32_t i = 1 ; i < g_n1 ; i++ ) {
 			g_fbq1  [i-1] = g_fbq1  [i];
 			g_colls1[i-1] = g_colls1[i];
 		}
@@ -2846,17 +2846,17 @@ void Msgfb::queueLoop ( ) {
 	}
 
  error:
-	log("facebook: queue fbid %lli had error: %s",
+	log("facebook: queue fbid %"INT64" had error: %s",
 	    m_fbId,mstrerror(g_errno));
 	// no longer in progress
 	m_inProgress = false;
 	// this will purge fullreply
 	reset();
 	// save it for potential re-add
-	long long fsaved = g_fbq1  [0];
+	int64_t fsaved = g_fbq1  [0];
 	collnum_t csaved = g_colls1[0];
 	// shift queue down
-	for ( long i = 1 ; i < g_n1 ; i++ ) {
+	for ( int32_t i = 1 ; i < g_n1 ; i++ ) {
 		g_fbq1  [i-1] = g_fbq1  [i];
 		g_colls1[i-1] = g_colls1[i];
 	}
@@ -2865,15 +2865,15 @@ void Msgfb::queueLoop ( ) {
 	g_numOut--;
 	// re-add on certain errors
 	if ( g_errno == ETIMEDOUT || g_errno == ESOCKETCLOSED ) {
-		log("facebook: re-queue fbid %lli from error: %s",
+		log("facebook: re-queue fbid %"INT64" from error: %s",
 		    m_fbId,mstrerror(g_errno));
 		queueFBId ( fsaved , csaved );
 	}
 }
 
 // . these are ptrs to likedb records
-// . these first long long is the least significant
-// . the 2nd long long is more
+// . these first int64_t is the least significant
+// . the 2nd int64_t is more
 int likedbCmp ( const void *a , const void *b ) {
 	const key192_t *k1 = (key192_t *)a;
 	const key192_t *k2 = (key192_t *)b;
@@ -2897,9 +2897,9 @@ bool Msgfb::makeLikedbKeyList ( Msg7 *msg7 , RdbList *list ) {
 	list->reset();
 	// sanity
 	if ( m_i-1 < 0 ) { char *xx=NULL;*xx=0; }
-	// shortcuts
+	// int16_tcuts
 	XmlDoc *xd = &msg7->m_xd;
-	long long docId = xd->m_docId;
+	int64_t docId = xd->m_docId;
 	// none if no events!
 	if ( ! xd->size_eventData ) return true;
 	if ( ! xd->m_eventDataValid ) return true;
@@ -2912,15 +2912,15 @@ bool Msgfb::makeLikedbKeyList ( Msg7 *msg7 , RdbList *list ) {
 		log("facebook: eventdisplay is null! wtf?");
 		return true;
 	}
-	long gbeventId = ed->m_indexedEventId;
-	//long gbeventHash32 = (long)((unsigned long)ed->m_eventHash64);
-	unsigned long long evh64 = ed->m_eventHash64;
-	// shortcuts
+	int32_t gbeventId = ed->m_indexedEventId;
+	//int32_t gbeventHash32 = (int32_t)((uint32_t)ed->m_eventHash64);
+	uint64_t evh64 = ed->m_eventHash64;
+	// int16_tcuts
 	//char      **eventPtrs = (char **)m_evPtrBuf.getBufStart();
-	long long  *eventIds  = (long long *)m_evIdsBuf.getBufStart();
+	int64_t  *eventIds  = (int64_t *)m_evIdsBuf.getBufStart();
 	// what facebook eventid did we just inject?
-	long long eid = eventIds[m_i-1];
-	long count = 0;
+	int64_t eid = eventIds[m_i-1];
+	int32_t count = 0;
 	SafeBuf tmpBuf;
 	if ( ! tmpBuf.reserve ( 50 ) ) return false;
 
@@ -2932,14 +2932,14 @@ bool Msgfb::makeLikedbKeyList ( Msg7 *msg7 , RdbList *list ) {
 		log("facebook: wtf? no intervals!");
 		return true;
 	}
-	long start_time = ii->m_a;
+	int32_t start_time = ii->m_a;
 		
 	// scan the table to see what users had an rsvp_status for this event
-	for ( long i = 0 ; i < m_likedbTable.m_numSlots ; i++ ) {
+	for ( int32_t i = 0 ; i < m_likedbTable.m_numSlots ; i++ ) {
 		// skip empties
 		if ( ! m_likedbTable.m_flags[i] ) continue;
 		// get the record in there
-		long long *eid2 = (long long *)m_likedbTable.getKeyFromSlot(i);
+		int64_t *eid2 = (int64_t *)m_likedbTable.getKeyFromSlot(i);
 		// skip if not a match
 		if ( *eid2 != eid ) continue;
 		// the data is a key that we made above
@@ -2947,13 +2947,13 @@ bool Msgfb::makeLikedbKeyList ( Msg7 *msg7 , RdbList *list ) {
 		lts = (LikedbTableSlot *)m_likedbTable.getDataFromSlot(i);
 		// debug note
 		if ( g_conf.m_logDebugFacebook )
-			log("facebook: makerec uid=%lli",lts->m_uid);
+			log("facebook: makerec uid=%"INT64"",lts->m_uid);
 		// assume they "like" it
-		long long value = 1LL;
+		int64_t value = 1LL;
 		// unless it is "negative"
 		//if ( negative ) value = 0LL;
 		// make the flags
-		long flag = lts->m_rsvp;
+		int32_t flag = lts->m_rsvp;
 		// indicate from facebook so we do not upload it
 		flag |= LF_FROMFACEBOOK;
 		// . this makes two recs to add to likedb
@@ -2973,7 +2973,7 @@ bool Msgfb::makeLikedbKeyList ( Msg7 *msg7 , RdbList *list ) {
 						 value             );
 		//continue;
 		// add to list otherwise
-		tmpBuf.safeMemcpy ( recs , (long)LIKEDB_RECSIZE*2 );
+		tmpBuf.safeMemcpy ( recs , (int32_t)LIKEDB_RECSIZE*2 );
 		count++;
 	}
 	// add a separate rec for LF_PRIVATE if we need to because we can't
@@ -2994,12 +2994,12 @@ bool Msgfb::makeLikedbKeyList ( Msg7 *msg7 , RdbList *list ) {
 					 1LL               );
 	// point to the 2nd key
 	char *rec2 = recs + LIKEDB_RECSIZE;
-	long recSize = (long)LIKEDB_RECSIZE;
+	int32_t recSize = (int32_t)LIKEDB_RECSIZE;
 	// make it a del/negative key by clearing the lowest bit
 	if ( ! m_privacy ) { 
 		rec2[0] &= 0xfe;
 		// negative keys are keys only - no data!!!
-		recSize = (long)LIKEDB_KEYSIZE;
+		recSize = (int32_t)LIKEDB_KEYSIZE;
 	}
 	// add to list otherwise
 	tmpBuf.safeMemcpy ( rec2 , recSize );
@@ -3007,13 +3007,13 @@ bool Msgfb::makeLikedbKeyList ( Msg7 *msg7 , RdbList *list ) {
 
 	// debug
 	//key192_t *k2 = (key192_t *)rec2;
-	//log("key: 0x%llx 0x%llx 0x%llx",k2->n2,k2->n1,k2->n0);
+	//log("key: 0x%"XINT64" 0x%"XINT64" 0x%"XINT64"",k2->n2,k2->n1,k2->n0);
 	// all done if nothing
 	if ( count == 0 ) return true;
 	// sort the records in tmp now
 	char *buf = tmpBuf.getBufStart();
 	// sort for rdblist
-	gbqsort ( buf , count , (long)LIKEDB_RECSIZE, likedbCmp );
+	gbqsort ( buf , count , (int32_t)LIKEDB_RECSIZE, likedbCmp );
 	// use the list we got
 	key192_t startKey;
 	key192_t endKey;
@@ -3048,7 +3048,7 @@ static void gotRecWrapper ( void *state ) {
 }
 
 // get it from facebookdb
-bool Msgfb::processFBId ( long long fbId , 
+bool Msgfb::processFBId ( int64_t fbId , 
 			  collnum_t collnum,
 			  void *state , 
 			  void (* callback) (void *) ) {
@@ -3064,7 +3064,7 @@ bool Msgfb::processFBId ( long long fbId ,
 	// sanity
 	if  ( ! m_fbId ) { char *xx=NULL;*xx=0; }
 
-	long niceness = 0;
+	int32_t niceness = 0;
 	key96_t startKey;
 	key96_t endKey;
 	startKey.n1 = 0;
@@ -3107,7 +3107,7 @@ static void gotFQLReplyWrapper ( void *state , TcpSocket *s ) {
 // fql console: http://developers.facebook.com/docs/reference/rest/fql.query/
 bool Msgfb::hitFacebook ( ) {
 
-	log("facebook: downloading event_members for %llu",m_fbId);
+	log("facebook: downloading event_members for %"UINT64"",m_fbId);
 
 	if ( g_errno ) {
 		log("fbqueue: error getting facebookdb rec: %s", 
@@ -3117,7 +3117,7 @@ bool Msgfb::hitFacebook ( ) {
 
 	// empty is bad
 	if ( m_list1.getListSize() <= 0 ) {
-		log("fbqueue: facebookdb rec is empty. wtf? fbid=%lli",
+		log("fbqueue: facebookdb rec is empty. wtf? fbid=%"INT64"",
 		    m_fbId);
 		g_errno = EBADREPLY;
 		return true;
@@ -3128,7 +3128,7 @@ bool Msgfb::hitFacebook ( ) {
 
 	// sanity
 	if ( m_fbrecPtr->m_fbId != m_fbId ) {
-		log("fbqueue: fbid mismatch. fbid=%lli", m_fbId);
+		log("fbqueue: fbid mismatch. fbid=%"INT64"", m_fbId);
 		g_errno = EBADREPLY;
 		return true;
 	}
@@ -3235,7 +3235,7 @@ bool Msgfb::gotFQLReply ( TcpSocket *s ) {
 
 	// get reply
 	char *reply     = s->m_readBuf;
-	long  replySize = s->m_readOffset;
+	int32_t  replySize = s->m_readOffset;
 
 	// we reference into this, so do not free it!!
 	m_facebookReply     = s->m_readBuf;
@@ -3250,14 +3250,14 @@ bool Msgfb::gotFQLReply ( TcpSocket *s ) {
 	// exclude the \0 i guess. use NULL for url.
 	mime.set ( reply, replySize - 1, NULL );
 	// not good?
-	long httpStatus = mime.getHttpStatus();
+	int32_t httpStatus = mime.getHttpStatus();
 	if ( httpStatus != 200 ) {
-		log("facebook: bad fql request 2 http status = %li. reply=%s"
+		log("facebook: bad fql request 2 http status = %"INT32". reply=%s"
 		    , httpStatus 
 		    , reply
 		    );
 		log("facebook: resuming despite error to download friends "
-		    "for fbid=%lli",m_fbId);
+		    "for fbid=%"INT64"",m_fbId);
 		//g_errno = EBADREPLY;
 		m_errno = EBADREPLY;
 		//m_errorCount++;
@@ -3266,14 +3266,14 @@ bool Msgfb::gotFQLReply ( TcpSocket *s ) {
 
 	// point to content
 	char *content    = reply + mime.getMimeLen();
-	long  contentLen = reply + replySize - content;
+	int32_t  contentLen = reply + replySize - content;
 
 	// check for error
 	char *errMsg = strstr(content,"<error_msg>");
 	if ( errMsg ) {
 		log("facebook: error in fql reply: %s", content );
 		log("facebook: resuming despite error to download friends "
-		    "for fbid=%lli",m_fbId);
+		    "for fbid=%"INT64"",m_fbId);
 		//g_errno = EBADREPLY;
 		m_errno = EBADREPLY;
 		//m_errorCount++;
@@ -3342,7 +3342,7 @@ bool Msgfb::downloadEvents ( ) {
 	// reset this since we check for it in injectFBEventsWrapper
 	m_errno = 0;
 
-	log("facebook: downloading events for %llu (#%li-#%li)",
+	log("facebook: downloading events for %"UINT64" (#%"INT32"-#%"INT32")",
 	    m_fbId,m_eventStartNum,m_eventStartNum+m_eventStep);
 
 	// skip matt wells for now
@@ -3355,7 +3355,7 @@ bool Msgfb::downloadEvents ( ) {
 	// save some mem
 	//m_list1.freeList();
 
-	//long now = getTimeGlobal();
+	//int32_t now = getTimeGlobal();
 
 	// sanity checks
 	if ( m_eventStartNum <  0 ) { char *xx=NULL; *xx=0; }
@@ -3366,7 +3366,7 @@ bool Msgfb::downloadEvents ( ) {
 	     m_eventStartNum < 130 &&
 	     m_errorCount >= 10 ) {
 		log("facebook: too many errors in event downloads. "
-		    "fbid=%lli . giving up. start=%li errcount=%li",
+		    "fbid=%"INT64" . giving up. start=%"INT32" errcount=%"INT32"",
 		    m_fbId,m_eventStartNum,m_errorCount);
 		return doFinalFBRecSave();
 	}
@@ -3401,19 +3401,19 @@ bool Msgfb::downloadEvents ( ) {
 			  " SELECT eid FROM event_member WHERE "
 			  "uid IN "
 			  "( SELECT uid2 from friend WHERE uid1=me()) ) "
-			  "LIMIT %li,%li"
+			  "LIMIT %"INT32",%"INT32""
 			  , m_eventStartNum
 			  , m_eventStep
 			  );
 
 	// list all the new event ids here
-	//long long *newIds = (long long *)m_eidBuf.getBufStart();
-	//long       n      = m_eidBuf.length() / 8;
+	//int64_t *newIds = (int64_t *)m_eidBuf.getBufStart();
+	//int32_t       n      = m_eidBuf.length() / 8;
 	//bool firstOne = true;
-	//for ( long i = 0 ; i < n ; i++ ) {
+	//for ( int32_t i = 0 ; i < n ; i++ ) {
 	//	if ( ! firstOne ) cmd4.pushChar(',');
 	//	firstOne = false;
-	//	cmd4.safePrintf("%llu",newIds[i]);
+	//	cmd4.safePrintf("%"UINT64"",newIds[i]);
 	//}
 	//cmd4.safePrintf ( ")" // ORDER by start_time ASC "
 	//		  // LIMIT 1001,100 etc. 
@@ -3492,16 +3492,16 @@ bool Msgfb::injectFBEvents ( TcpSocket *s ) {
 
 	// get reply
 	char *reply     = s->m_readBuf;
-	long  replySize = s->m_readOffset;
+	int32_t  replySize = s->m_readOffset;
 
 	// mime error?
 	HttpMime mime;
 	// exclude the \0 i guess. use NULL for url.
 	mime.set ( reply, replySize - 1, NULL );
 	// not good?
-	long httpStatus = mime.getHttpStatus();
+	int32_t httpStatus = mime.getHttpStatus();
 	if ( httpStatus != 200 ) {
-		log("facebook: bad fql request 3 http status = %li. reply=%s",
+		log("facebook: bad fql request 3 http status = %"INT32". reply=%s",
 		    httpStatus ,reply );
 		g_errno = EBADREPLY;
 		m_errno = g_errno;
@@ -3557,19 +3557,19 @@ bool Msgfb::injectFBEvents ( TcpSocket *s ) {
 		// try to get event id
 		char *ep = strstr ( start, "<eid>");
 		if ( ! ep ) continue;
-		long long eid = strtoull ( ep + 5 , NULL , 10 );
+		int64_t eid = strtoull ( ep + 5 , NULL , 10 );
 		if ( eid == 0 ) continue;
 		if ( eid < 0 ) log("facebook: wtf? eid is 0");
 		// store it
-		if ( ! m_evPtrBuf.pushLong     ( (long)start ) ) return false;
+		if ( ! m_evPtrBuf.pushLong     ( (int32_t)start ) ) return false;
 		if ( ! m_evIdsBuf.pushLongLong ( eid         ) ) return false;
 		// count them
 		m_numEvents++;
 	}
 
-	long askedFor = m_eidBuf.length() / 8;
+	int32_t askedFor = m_eidBuf.length() / 8;
 	if ( askedFor != m_numEvents )
-		log("facebook: asked for %li events but got %li",
+		log("facebook: asked for %"INT32" events but got %"INT32"",
 		    askedFor,m_numEvents );
 
 	// bail if none!
@@ -3598,12 +3598,12 @@ bool Msgfb::doInjectionLoop ( ) {
 	char *coll = g_collectiondb.getColl ( m_collnum );
 
 	char      **eventPtrs = (char **)m_evPtrBuf.getBufStart();
-	long long  *eventIds  = (long long *)m_evIdsBuf.getBufStart();
+	int64_t  *eventIds  = (int64_t *)m_evIdsBuf.getBufStart();
 
 	for ( ; m_i < m_numEvents ;) {
 		// get ptr to it
 		char *content    = eventPtrs[m_i];
-		long  contentLen = gbstrlen(content);
+		int32_t  contentLen = gbstrlen(content);
 		// debug thing
 		//if ( eventIds[m_i] != 314901535212815LL ) {m_i++; continue; }
 		// yoyo tuesdays:
@@ -3616,7 +3616,7 @@ bool Msgfb::doInjectionLoop ( ) {
 		//content[contentLen] = '\0';
 		// make a fake url
 		char url[128];
-		sprintf(url,"http://www.facebook.com/events/%llu",
+		sprintf(url,"http://www.facebook.com/events/%"UINT64"",
 			eventIds[m_i]);
 		// test debug
 		if ( g_conf.m_logDebugFacebook )
@@ -3648,7 +3648,7 @@ bool Msgfb::doInjectionLoop ( ) {
 
 		// use a forced ip for speed! otherwise it takes forever
 		// lookup up www.facebook.com for some reason!!!
-		long forcedIp = atoip("69.171.224.39");
+		int32_t forcedIp = atoip("69.171.224.39");
 
 		// advance to next event to inject
 		m_i++;
@@ -3696,7 +3696,7 @@ bool Msgfb::addLikes ( ) { // doneInjecting ( ) {
 
 	// get ptr to it so we can revert the character
 	//char *content    = m_eventPtrs[m_i-1];
-	//long  contentLen = m_eventLens[m_i-1];
+	//int32_t  contentLen = m_eventLens[m_i-1];
 	//content[contentLen] = m_c;
 
 	XmlDoc *xd = &m_msg7->m_xd;
@@ -3745,8 +3745,8 @@ bool Msgfb::addLikes ( ) { // doneInjecting ( ) {
 
 	// extract info from state
 	//TcpSocket *s = m_msg7->m_socket;
-	//long long docId  = xd->m_docId;
-	//long      hostId = 0;//msg7->m_msg7.m_hostId;
+	//int64_t docId  = xd->m_docId;
+	//int32_t      hostId = 0;//msg7->m_msg7.m_hostId;
 
 	char *coll = g_collectiondb.getColl ( m_collnum );
 
@@ -3778,7 +3778,7 @@ static void savedFinalFBRecWrapper3 ( void *state ) {
 // final save of rec to clear the FB_INQUEUE bit
 bool Msgfb::doFinalFBRecSave ( ) {
 	m_afterSaveCallback = savedFinalFBRecWrapper3;
-	log("facebook: saving final rec for fbid=%lli",m_fbId);
+	log("facebook: saving final rec for fbid=%"INT64"",m_fbId);
 	m_fbrecGen.m_flags &= ~FB_INQUEUE;
 	m_fbrecGen.m_eventsDownloaded = getTimeGlobal();
 	// this calls serializeMsg() which mallocs a new reply to add
@@ -3800,14 +3800,14 @@ void Likedb::reset() {
 
 bool Likedb::init ( ) {
 
-	long long uid = 123456789123LL;
-	long long docId = 999888777666LL;
-	long eventId = 12345;
-	long rsvp_status = LF_GOING;//|LF_HIDE;
-	long start_time = 6543210;
-	unsigned long long eventHash64 = 9999997398453LL;
-	unsigned long eventHash32 = (unsigned long)eventHash64;
-	long value = 999888;
+	int64_t uid = 123456789123LL;
+	int64_t docId = 999888777666LL;
+	int32_t eventId = 12345;
+	int32_t rsvp_status = LF_GOING;//|LF_HIDE;
+	int32_t start_time = 6543210;
+	uint64_t eventHash64 = 9999997398453LL;
+	uint32_t eventHash32 = (uint32_t)eventHash64;
+	int32_t value = 999888;
 	char *recs = g_likedb.makeRecs ( uid         ,
 					 docId       ,
 					 eventId   ,
@@ -3816,11 +3816,11 @@ bool Likedb::init ( ) {
 					 eventHash64 ,
 					 value );
 	char *p = recs;
-	long long uid2 = g_likedb.getUserIdFromRec ( p );
+	int64_t uid2 = g_likedb.getUserIdFromRec ( p );
 	if ( uid2 != uid ) { char *xx=NULL;*xx=0; }
-	long flags = g_likedb.getFlagsFromRec ( p );
+	int32_t flags = g_likedb.getFlagsFromRec ( p );
 	if ( flags != rsvp_status ) { char *xx=NULL;*xx=0; }
-	unsigned long eh = g_likedb.getEventHash32FromRec ( p );
+	uint32_t eh = g_likedb.getEventHash32FromRec ( p );
 	if ( eh != eventHash32 ) { char *xx=NULL;*xx=0; }
 	if ( g_likedb.getValueFromRec ( p ) != value ) { char *xx=NULL;*xx=0;}
 
@@ -3835,8 +3835,8 @@ bool Likedb::init ( ) {
 
 	// . what's max # of tree nodes?
 	// . NOTE: 32 bytes of the 82 are overhead
-	long maxMem = 50000000;
-	long maxTreeNodes = maxMem / 48;
+	int32_t maxMem = 50000000;
+	int32_t maxTreeNodes = maxMem / 48;
 	// initialize our own internal rdb
 	return m_rdb.init ( g_hostdb.m_dir               ,
 			    "likedb"                     ,
@@ -3893,14 +3893,14 @@ bool Likedb::addColl ( char *coll, bool doVerify ) {
 //
 
 
-long Likedb::getEventIdFromRec ( void *rec ) {
+int32_t Likedb::getEventIdFromRec ( void *rec ) {
 	key192_t *k = (key192_t *)rec;
 	if ( k->n0 & LF_TYPEBIT )
 		return k->n2 & 0xffff;
 	return k->n1 & 0xffff;
 }
 
-void Likedb::setEventId ( char *rec , long eventId ) {
+void Likedb::setEventId ( char *rec , int32_t eventId ) {
 	key192_t *k = (key192_t *)rec;
 	// sanbity
 	if ( eventId & 0xffff0000 ) { char *xx=NULL;*xx=0;}
@@ -3922,18 +3922,18 @@ void Likedb::setEventId ( char *rec , long eventId ) {
 // use our docid/eventid because that is what we use in datedb when
 // doing a search. the docid and eventid should be returned by the msg7
 // inject reply.
-char *Likedb::makeRecs ( long long  uid         ,
-			 long long  docId       ,
-			 long       eventId     ,
-			 long       start_time  ,
-			 long       rsvp_status ,
-			 unsigned long long eventHash64 ,
-			 long long  value       ) {
+char *Likedb::makeRecs ( int64_t  uid         ,
+			 int64_t  docId       ,
+			 int32_t       eventId     ,
+			 int32_t       start_time  ,
+			 int32_t       rsvp_status ,
+			 uint64_t eventHash64 ,
+			 int64_t  value       ) {
 	// sanity
 	if ( rsvp_status & LF_TYPEBIT ) { char *xx=NULL;*xx=0; }
 	if ( rsvp_status & LF_DELBIT  ) { char *xx=NULL;*xx=0; }
 	// only one flag can be set!!!
-	long ignore = 0;
+	int32_t ignore = 0;
 	ignore |= LF_DELBIT;
 	ignore |= LF_TYPEBIT;
 	ignore |= LF_ISEVENTGURUID;
@@ -3950,10 +3950,10 @@ char *Likedb::makeRecs ( long long  uid         ,
 	// the destination ptr
 	char *p = s_buf;
 
-	unsigned long eventHash32 = (unsigned long)eventHash64;
+	uint32_t eventHash32 = (uint32_t)eventHash64;
 
-	//log("facebook: adding eventhash64 = %llu",eventHash64 );
-	//log("facebook: adding eventhash32 = %lu",eventHash32 );
+	//log("facebook: adding eventhash64 = %"UINT64"",eventHash64 );
+	//log("facebook: adding eventhash32 = %"UINT32"",eventHash32 );
 
 	//
 	// make the first type of rec
@@ -3982,10 +3982,10 @@ char *Likedb::makeRecs ( long long  uid         ,
 	// skip key
 	p += sizeof(key192_t);
 	// then 4 byte data
-	*(long *)p = eventHash32;
+	*(int32_t *)p = eventHash32;
 	p += 4;
 	// then the value
-	*(long long *)p = value;
+	*(int64_t *)p = value;
 	p += 8;
 
 
@@ -4001,17 +4001,17 @@ char *Likedb::makeRecs ( long long  uid         ,
 	// skip second key
 	p += sizeof(key192_t);
 	// now this
-	*(long *)p = eventHash32;
+	*(int32_t *)p = eventHash32;
 	p += 4;
 	// then the value
-	*(long long *)p = value;
+	*(int64_t *)p = value;
 	p += 8;
 	
 	return s_buf;
 }
 
 // make a "type 2" key (docid leads)
-key192_t Likedb::makeStartKey ( long long docId, long eventId ) {
+key192_t Likedb::makeStartKey ( int64_t docId, int32_t eventId ) {
 	key192_t k;
 	// reset
 	k.n2 = docId;
@@ -4028,7 +4028,7 @@ key192_t Likedb::makeStartKey ( long long docId, long eventId ) {
 }
 
 // make a "type 2" key (docid leads)
-key192_t Likedb::makeEndKey ( long long docId, long eventId ) {
+key192_t Likedb::makeEndKey ( int64_t docId, int32_t eventId ) {
 	key192_t k;
 	// reset
 	k.n2 = docId;
@@ -4044,19 +4044,19 @@ key192_t Likedb::makeEndKey ( long long docId, long eventId ) {
 	return k;
 }
 
-long long Likedb::getUserIdFromRec ( void *rec ) {
+int64_t Likedb::getUserIdFromRec ( void *rec ) {
 	key192_t *k = (key192_t *)rec;
 	if ( k->n0 & LF_TYPEBIT ) return k->n1;
 	return k->n2;
 }
 
-long long Likedb::getDocIdFromRec ( char *rec ) {
+int64_t Likedb::getDocIdFromRec ( char *rec ) {
 	key192_t *k = (key192_t *)rec;
 	if ( k->n0 & LF_TYPEBIT ) return k->n2 >> 26;
 	return k->n1 >> 26;
 }
 
-key192_t Likedb::makeStartKey2 ( long long uid ) {
+key192_t Likedb::makeStartKey2 ( int64_t uid ) {
 	key192_t k;
 	k.n2 = uid;
 	k.n1 = 0;
@@ -4068,12 +4068,12 @@ key192_t Likedb::makeStartKey2 ( long long uid ) {
 // . similar to facebook's event_members table, but uses our technology
 // . use Rdb, but prohibit from dumping to disk! must always be in tree.
 // . add this to likedb (or remove if "neg" is true.
-bool Msgfc::addLikedbTag ( long long userId ,
-			   long long docId,
-			   long      gbeventId,
-			   unsigned long long eventHash64 ,
-			   long start_time,
-			   long rsvp , // LF_* #define's above
+bool Msgfc::addLikedbTag ( int64_t userId ,
+			   int64_t docId,
+			   int32_t      gbeventId,
+			   uint64_t eventHash64 ,
+			   int32_t start_time,
+			   int32_t rsvp , // LF_* #define's above
 			   bool negative , // turn off that flag?
 			   char *coll,
 			   void *state ,
@@ -4084,16 +4084,16 @@ bool Msgfc::addLikedbTag ( long long userId ,
 	
 
 	char *p = m_recs;
-	long size = (long)LIKEDB_RECSIZE*2;
-	long count = 0;
-	//long eventHash32 = (long)((unsigned long long)eventHash64);
-	long long value = 1LL;
+	int32_t size = (int32_t)LIKEDB_RECSIZE*2;
+	int32_t count = 0;
+	//int32_t eventHash32 = (int32_t)((uint64_t)eventHash64);
+	int64_t value = 1LL;
 	if ( negative ) value = 0LL;
 
 	//if ( eventHash == 0 || eventHash32 == -1 ) { char *xx=NULL;*xx=0;}
 
 	// sanity
-	long ignore;
+	int32_t ignore;
 	ignore |= LF_DELBIT;
 	ignore |= LF_TYPEBIT;
 	ignore |= LF_ISEVENTGURUID;
@@ -4120,12 +4120,12 @@ bool Msgfc::addLikedbTag ( long long userId ,
 					 eventHash64     ,
 					 value );
 	// add to list otherwise
-	memcpy ( p , recs , size );
+	gbmemcpy ( p , recs , size );
 	p += size;
 	count += 2;
 	
 	// sort for rdblist
-	gbqsort ( m_recs , count , (long)LIKEDB_RECSIZE, likedbCmp );
+	gbqsort ( m_recs , count , (int32_t)LIKEDB_RECSIZE, likedbCmp );
 
 	// use the list we got
 	key192_t startKey;
@@ -4156,29 +4156,29 @@ bool Msgfc::addLikedbTag ( long long userId ,
 	return true;
 }
 
-long Likedb::getUserFlags ( long long userId , 
-			    long start_time ,
+int32_t Likedb::getUserFlags ( int64_t userId , 
+			    int32_t start_time ,
 			    char *list, 
-			    long listSize ) {
+			    int32_t listSize ) {
 	// bail if not valid user id
 	if ( userId == 0LL ) return 0;
 	// scan
 	char *p     = list;
 	char *pend  = list + listSize;
-	long  flags = 0;
+	int32_t  flags = 0;
 	for ( ; p < pend ; p += LIKEDB_RECSIZE ) {
 		// check for matching userid
-		long long uid = g_likedb.getUserIdFromRec ( p );
+		int64_t uid = g_likedb.getUserIdFromRec ( p );
 		if ( uid != userId ) continue;
 		// got it
-		long ff = g_likedb.getFlagsFromRec ( p );
+		int32_t ff = g_likedb.getFlagsFromRec ( p );
 		// get value
-		long long val = g_likedb.getValueFromRec ( p );
+		int64_t val = g_likedb.getValueFromRec ( p );
 		// skip if 0, that means unset!
 		if ( ! val ) continue;
 		// restrict to just this instance of its a "GOING" flag
 		if ( ff & LF_GOING ) {
-			long start = g_likedb.getStartTimeFromRec ( p );
+			int32_t start = g_likedb.getStartTimeFromRec ( p );
 			if ( start&&start_time && start!=start_time) continue;
 		}
 		// keep tabs
@@ -4187,17 +4187,17 @@ long Likedb::getUserFlags ( long long userId ,
 	return flags;
 }
 
-long Likedb::getPositiveFlagsFromRec  ( char *rec ) {
+int32_t Likedb::getPositiveFlagsFromRec  ( char *rec ) {
 	if ( ! g_likedb.getValueFromRec ( rec ) ) return 0;
-	long flags = (*(long *)rec) & ~(LF_DELBIT|LF_TYPEBIT);
+	int32_t flags = (*(int32_t *)rec) & ~(LF_DELBIT|LF_TYPEBIT);
 	return flags;
 }
 
-char *Likedb::getRecFromLikedbList ( long long userId ,
-				     long start_time ,
-				     long flags , 
+char *Likedb::getRecFromLikedbList ( int64_t userId ,
+				     int32_t start_time ,
+				     int32_t flags , 
 				     char *list ,
-				     long  listSize ) {
+				     int32_t  listSize ) {
 	// bail if not valid user id
 	if ( userId == 0LL ) return NULL;
 	// scan
@@ -4205,19 +4205,19 @@ char *Likedb::getRecFromLikedbList ( long long userId ,
 	char *pend  = list + listSize;
 	for ( ; p < pend ; p += LIKEDB_RECSIZE ) {
 		// check for matching userid
-		long long uid = g_likedb.getUserIdFromRec ( p );
+		int64_t uid = g_likedb.getUserIdFromRec ( p );
 		if ( uid != userId ) continue;
 		// got it
-		long ff = g_likedb.getFlagsFromRec ( p );
+		int32_t ff = g_likedb.getFlagsFromRec ( p );
 		// must match
 		if ( ! ( ff & flags) ) continue;
 		// get value
-		long long val = g_likedb.getValueFromRec ( p );
+		int64_t val = g_likedb.getValueFromRec ( p );
 		// skip if 0, that means unset!
 		if ( ! val ) continue;
 		// restrict to just this instance of its a "GOING" flag
 		if ( flags & LF_GOING ) {
-			long start = g_likedb.getStartTimeFromRec ( p );
+			int32_t start = g_likedb.getStartTimeFromRec ( p );
 			if ( start&&start_time && start!=start_time) continue;
 		}
 		return p;
@@ -4256,11 +4256,11 @@ char *Likedb::getRecFromLikedbList ( long long userId ,
 
 bool Msgfb::addEventToFacebook ( char *title ,
 				 char *desc  ,
-				 long  start_time ,
-				 long  end_time ,
+				 int32_t  start_time ,
+				 int32_t  end_time ,
 				 void *state ,
 				 void (* callback)(void *state) ,
-				 long niceness ) {
+				 int32_t niceness ) {
 
 	// how do we get the accesstoken for the app? must have to pass
 	// in our secret somehow.
@@ -4282,8 +4282,8 @@ bool Msgfb::gotAppAccessToken ( ) {
 	args.urlEncode( title );
 	args.safePrintf("&description=");
 	args.urlEncode( description );
-	args.safePrintf("&start_time=%lu"
-			"&end_time=%lu"
+	args.safePrintf("&start_time=%"UINT32""
+			"&end_time=%"UINT32""
 			"&latitude=%.07f"
 			"&longitude=%.07f"
 			, start_time
@@ -4332,7 +4332,7 @@ bool Msgfb::addedFBEvent ( TcpSocket *s ) {
 
 	// get the event id from reply
 	char *reply     = s->m_readBuf;
-	long  replySize = s->m_readOffset;
+	int32_t  replySize = s->m_readOffset;
 
 	char *s = strstr ( reply , "id" );
 	if ( ! s ) {
@@ -4350,7 +4350,7 @@ bool Msgfb::addedFBEvent ( TcpSocket *s ) {
 		return true;
 	}
 
-	long long eid = strtoull(p,NULL,10);
+	int64_t eid = strtoull(p,NULL,10);
 
 	// add it to likedb as being in facebook now!
 	char flags = LF_ADDEDTOFACEBOOK;
@@ -4458,16 +4458,16 @@ bool Msgfb::gotAppAccessToken ( TcpSocket *s ) {
 
 	// the access token should be in the reply
 	char *reply     = s->m_readBuf;
-	long  replySize = s->m_readOffset;
+	int32_t  replySize = s->m_readOffset;
 
 	// mime error?
 	HttpMime mime;
 	// exclude the \0 i guess. use NULL for url.
 	mime.set ( reply, replySize - 1, NULL );
 	// not good?
-	long httpStatus = mime.getHttpStatus();
+	int32_t httpStatus = mime.getHttpStatus();
 	if ( httpStatus != 200 ) {
-		log("facebook: bad app access request http status = %li",
+		log("facebook: bad app access request http status = %"INT32"",
 		    httpStatus );
 		g_errno = EBADREPLY;
 		return;
@@ -4480,15 +4480,15 @@ bool Msgfb::gotAppAccessToken ( TcpSocket *s ) {
 	s_appAccessToken[0] = '\0';
 
 	// look for access token
-	//sscanf(content,"access_token=%s&expires=%li",m_accessToken,&expires);
+	//sscanf(content,"access_token=%s&expires=%"INT32"",m_accessToken,&expires);
 	char *at = strstr(content,"access_token=");
 	if ( at ) {
 		char *p = at + 13;
 		char *start = p;
 		for ( ; *p && *p != '&' ;p++ );
-		long len = p - start;
+		int32_t len = p - start;
 		if ( len > MAX_TOKEN_LEN ) { char *xx=NULL;*xx=0; }
-		memcpy ( s_appAccessToken , start , len );
+		gbmemcpy ( s_appAccessToken , start , len );
 		s_appAccessToken [ len ] = '\0';
 	}
 
@@ -4543,12 +4543,12 @@ bool Emailer::emailEntryLoop ( ) {
 	// wait for clock to be in sync
 	if ( ! isClockInSync() ) return true;
 
-	long now = getTimeGlobal();
+	int32_t now = getTimeGlobal();
 	if ( m_lastEmailLoop && now - m_lastEmailLoop < 60 ) return true;
 
 	// just use first event collection
 	CollectionRec *cr = NULL;
-	for ( long i = 0 ; i < g_collectiondb.m_numRecs ; i++ ) {
+	for ( int32_t i = 0 ; i < g_collectiondb.m_numRecs ; i++ ) {
 		cr = g_collectiondb.m_recs[i];
 		if ( ! cr ) continue;
 		if ( ! cr->m_indexEventsOnly ) { cr = NULL; continue; }
@@ -4587,14 +4587,14 @@ bool Emailer::emailScan ( EmailState *es ) {
 	log("emailer: scanning fbids");
 
  loop:
-	long now = getTimeGlobal();
+	int32_t now = getTimeGlobal();
 	// scan for the fbids in the email tree
-	long n = m_emailTree.getFirstNode();
+	int32_t n = m_emailTree.getFirstNode();
 	// get the key if n is good
 	key96_t *kp = NULL;
 	if ( n >= 0 ) kp = (key96_t *)m_emailTree.getKey(n);
 	// check time. stop scanning if in the future!
-	if ( kp && kp->n1 > (unsigned long)now ) n = -1;
+	if ( kp && kp->n1 > (uint32_t)now ) n = -1;
 	// none remain?
 	if ( n < 0 ) {
 		// return false if waiting for email replies
@@ -4602,12 +4602,12 @@ bool Emailer::emailScan ( EmailState *es ) {
 		// clear this so we can run again later
 		m_emailInProgress = false;
 		// i guess update this to the completion time
-		long now = getTimeGlobal();
+		int32_t now = getTimeGlobal();
 		m_lastEmailLoop = now;
 		return true;
 	}
 	// save id
-	long long fbId = kp->n0;
+	int64_t fbId = kp->n0;
 	// nuke that node
 	m_emailTree.deleteNode ( n , true );
 	// . ok launch an email. pass in the facebook id
@@ -4647,11 +4647,11 @@ static void gotPageToEmailWrapper ( void *state ) {
 	em->emailScan( es );
 }
 
-bool Emailer::launchEmail ( long long fbId ) {
+bool Emailer::launchEmail ( int64_t fbId ) {
 
 	// we need an email state now!
 	EmailState *es = NULL;
-	for ( long i = 0 ; i < MAX_OUTSTANDING_EMAILS ; i++ ) {
+	for ( int32_t i = 0 ; i < MAX_OUTSTANDING_EMAILS ; i++ ) {
 		if ( m_emailStates[i].m_inUse ) continue;
 		es = &m_emailStates[i];
 		break;
@@ -4671,8 +4671,8 @@ bool Emailer::launchEmail ( long long fbId ) {
 			      "showpersonal=1&"
 			      //"where=anywhere&"
 			      // this should override the fbid in the cookie
-			      "usefbid=%lli&"
-			      "fh=%lu&"
+			      "usefbid=%"INT64"&"
+			      "fh=%"UINT32"&"
 			      "usecookie=0&"
 			      "map=0&"
 			      "n=25&"
@@ -4728,7 +4728,7 @@ bool Emailer::launchEmail ( long long fbId ) {
 	return getMailServerIP ( es );
 }
 
-static void gotMXIpWrapper ( void *state , long ip ) {
+static void gotMXIpWrapper ( void *state , int32_t ip ) {
 	EmailState *es = (EmailState *)state;
 	Emailer *em = es->m_emailer;
 	if ( ! em->gotMXIp ( es ) ) return;
@@ -4745,7 +4745,7 @@ bool Emailer::getMailServerIP ( EmailState *es ) {
 	// if no results, skip it the next couple functions
 	//
 	if ( es->m_emailResultsBuf.length() == 0 ) {
-		log("emailer: no results for user %llu",es->m_fbId);
+		log("emailer: no results for user %"UINT64"",es->m_fbId);
 		return gotEmailReply ( es , NULL );
 	}
 
@@ -4756,7 +4756,7 @@ bool Emailer::getMailServerIP ( EmailState *es ) {
 	if ( rb ) emailTo = strstr(rb,"RCPT To:<");
 	// bail on error
 	if ( ! emailTo ) {
-		log("emailer: no email address for %llu",es->m_fbId);
+		log("emailer: no email address for %"UINT64"",es->m_fbId);
 		es->m_emailResultsBuf.purge();
 		es->m_emailLikedbListBuf.purge();
 		es->m_inUse = false;
@@ -4770,7 +4770,7 @@ bool Emailer::getMailServerIP ( EmailState *es ) {
 	for ( ; *p && *p != '@' && p < pend ; p++ ) ;
 	if ( p >= pend || ! *p ) {
 		log("emailer: no at sign in email address "
-		    "for %llu",es->m_fbId);
+		    "for %"UINT64"",es->m_fbId);
 		es->m_emailResultsBuf.purge();
 		es->m_emailLikedbListBuf.purge();
 		es->m_inUse = false;
@@ -4784,10 +4784,10 @@ bool Emailer::getMailServerIP ( EmailState *es ) {
 	char *dom = p;
 	// scan domain length
 	for ( ; *p && *p != '>' && p < pend ; p++ ) ;
-	long domLen = p - dom;
+	int32_t domLen = p - dom;
 	if ( p >= pend || ! *p || domLen > 80 ) {
 		log("emailer: no valid subdomain in email address "
-		    "for %llu",es->m_fbId);
+		    "for %"UINT64"",es->m_fbId);
 		es->m_emailResultsBuf.purge();
 		es->m_emailLikedbListBuf.purge();
 		es->m_inUse = false;
@@ -4799,9 +4799,9 @@ bool Emailer::getMailServerIP ( EmailState *es ) {
 	// get the ip. use kinda a fake hostname to pass into MsgC
 	// so that it understands its a special MX record lookup
 	char *dst = es->m_emailSubdomain;
-	memcpy ( dst , "gbmxrec-" , 8 );
+	gbmemcpy ( dst , "gbmxrec-" , 8 );
 	dst += 8;
-	memcpy ( dst , dom , domLen );
+	gbmemcpy ( dst , dom , domLen );
 	dst += domLen;
 	*dst = '\0';
 
@@ -4839,11 +4839,11 @@ bool Emailer::gotMXIp ( EmailState *es ) {
 		return gotEmailReply ( es , NULL );
 	}
 
-	// shortcut
-	long ip = es->m_ip;//msgc.getIp();
+	// int16_tcut
+	int32_t ip = es->m_ip;//msgc.getIp();
 	// problem?
 	if ( ip == 0 || ip == -1 ) {
-		log("emailer: bad ip of %li for %s for %llu",
+		log("emailer: bad ip of %"INT32" for %s for %"UINT64"",
 		    ip,
 		    es->m_emailSubdomain,
 		    es->m_fbId);
@@ -4855,7 +4855,7 @@ bool Emailer::gotMXIp ( EmailState *es ) {
 	// send the message
 	TcpServer *ts = g_httpServer.getTcp();
 	// log it
-	log ( LOG_WARN, "emailer: Sending email to %llu size=%li", 
+	log ( LOG_WARN, "emailer: Sending email to %"UINT64" size=%"INT32"", 
 	      es->m_fbId , es->m_emailResultsBuf.length());
 
 	/*
@@ -4887,8 +4887,8 @@ bool Emailer::gotMXIp ( EmailState *es ) {
 	// debug by dumping to file!!!
 	//
 	char filename[512];
-	long now = getTimeLocal();
-	sprintf ( filename,"html/email/email.%llu.%lu"
+	int32_t now = getTimeLocal();
+	sprintf ( filename,"html/email/email.%"UINT64".%"UINT32""
 		  , es->m_fbId
 		  , now
 		  );
@@ -4896,7 +4896,7 @@ bool Emailer::gotMXIp ( EmailState *es ) {
 	log("facebook: saving email %s", filename);
 	SafeBuf embuf;
 	embuf.load(g_hostdb.m_dir,"html/email/email.html");
-	embuf.safePrintf("<a href=/email/email.%llu.%lu>email.%llu.%lu</a><br>"
+	embuf.safePrintf("<a href=/email/email.%"UINT64".%"UINT32">email.%"UINT64".%"UINT32"</a><br>"
 			 , es->m_fbId
 			 , now
 			 , es->m_fbId
@@ -4904,7 +4904,7 @@ bool Emailer::gotMXIp ( EmailState *es ) {
 			 );
 	embuf.save(g_hostdb.m_dir,"html/email/email.html");
 
-	log("facebook: emailing %li bytes",
+	log("facebook: emailing %"INT32" bytes",
 	    es->m_emailResultsBuf.length() );
 
 
@@ -4950,7 +4950,7 @@ bool Emailer::gotEmailReply ( EmailState *es , TcpSocket *s ) {
 	es->m_emailResultsBuf.purge();
 
 	if ( g_errno ) { 
-		log("emailer: got error sending to fbid=%lli: %s",es->m_fbId,
+		log("emailer: got error sending to fbid=%"INT64": %s",es->m_fbId,
 		    mstrerror(g_errno));
 		es->m_errno = g_errno;
 		// reset these errors just in case
@@ -4964,7 +4964,7 @@ bool Emailer::gotEmailReply ( EmailState *es , TcpSocket *s ) {
 		log("emailer: missing email server reply!");
 
 
-	log("emailer: getting fbrec for fbid=%lli",es->m_fbId);
+	log("emailer: getting fbrec for fbid=%"INT64"",es->m_fbId);
 
 	// load the facebookdb rec so we can update it and save it then
 	key96_t startKey;
@@ -5008,7 +5008,7 @@ bool Emailer::gotRec3 ( EmailState *es ) {
 
 	// error loading?
 	if ( g_errno ) {
-		log("emailer: error loading facebookdb rec for %llu",
+		log("emailer: error loading facebookdb rec for %"UINT64"",
 		    es->m_fbId );
 		es->m_errno = g_errno;
 	}
@@ -5016,7 +5016,7 @@ bool Emailer::gotRec3 ( EmailState *es ) {
 
 	// empty is bad
 	if ( es->m_list9.getListSize() <= 0 ) {
-		log("emailer: facebookdb rec is empty. wtf? fbid=%lli",
+		log("emailer: facebookdb rec is empty. wtf? fbid=%"INT64"",
 		    es->m_fbId);
 		es->m_errno = EBADREPLY;
 	}
@@ -5027,16 +5027,16 @@ bool Emailer::gotRec3 ( EmailState *es ) {
 	// assume no error
 	if ( ! es->m_errno ) rec->m_nextRetry = 0;
 
-	long now = getTimeGlobal();
+	int32_t now = getTimeGlobal();
 
 	// on error...
 	if ( es->m_errno ) {
 		// did we have a previous attempt?
-		long elapsed = now - rec->m_lastEmailAttempt ;
+		int32_t elapsed = now - rec->m_lastEmailAttempt ;
 		// our first time? set to 6 hours retry then.
 		if ( rec->m_nextRetry == 0 ) elapsed = 0;
 		// ok, add 3 hours and double that
-		long wait = 2 * (elapsed + 3*3600);
+		int32_t wait = 2 * (elapsed + 3*3600);
 		// store that then
 		rec->m_nextRetry = now + wait;
 	}
@@ -5077,11 +5077,11 @@ bool Emailer::savedUpdatedRec ( EmailState *es ) {
 	SafeBuf *eb = &es->m_emailLikedbListBuf;
 	// sort the records in tmp now
 	char *buf     = eb->getBufStart();
-	long  bufSize = eb->length();
+	int32_t  bufSize = eb->length();
 	// how many?
-	long count = bufSize / (long)LIKEDB_RECSIZE;
+	int32_t count = bufSize / (int32_t)LIKEDB_RECSIZE;
 	// sort for rdblist
-	gbqsort ( buf , count , (long)LIKEDB_RECSIZE, likedbCmp );
+	gbqsort ( buf , count , (int32_t)LIKEDB_RECSIZE, likedbCmp );
 	// use the list we got
 	key192_t startKey;
 	key192_t endKey;
@@ -5102,7 +5102,7 @@ bool Emailer::savedUpdatedRec ( EmailState *es ) {
 	eb->detachBuf();
 	// note it
 	log("facebook: adding events to likedb to prevent re-emailing. "
-	    "listsize=%li",es->m_list5.getListSize());
+	    "listsize=%"INT32"",es->m_list5.getListSize());
 	// add that
 	if ( ! es->m_msg1.addList ( &es->m_list5 ,
 				    RDB_LIKEDB ,
@@ -5131,7 +5131,7 @@ bool Emailer::doneAddingEmailedLikes ( EmailState *es ) {
 ////////////
 
 // need to set EmailState::m_fbId, m_emailResultsBuf
-bool Emailer::sendSingleEmail (  EmailState *es , long long fbId ) {
+bool Emailer::sendSingleEmail (  EmailState *es , int64_t fbId ) {
 
 	es->m_sendSingleEmail = true;
 	// claim it
@@ -5167,7 +5167,7 @@ bool Emailer::populateEmailTree ( ) {
 	// stop if emailing now, it needs the tree
 	//if ( m_emailInProgress ) return true;
 	// re-scan only once per hour
-	long now = getTimeGlobal();
+	int32_t now = getTimeGlobal();
 	if ( m_lastScan && now - m_lastScan < 3600 ) return true;
 	// update that
 	m_lastScan = now;
@@ -5179,8 +5179,8 @@ bool Emailer::populateEmailTree ( ) {
 		// . what's max # of tree nodes?
 		// . assume avg facebookdb rec size of about 1000 bytes
 		// . NOTE: 32 bytes overhead?
-		long maxMem = 10000000;
-		long maxTreeNodes = maxMem / 32;
+		int32_t maxMem = 10000000;
+		int32_t maxTreeNodes = maxMem / 32;
 		if ( ! m_emailTree.set ( 0 ,
 					 maxTreeNodes ,
 					 true , // balance?
@@ -5232,7 +5232,7 @@ bool Emailer::scanLoop ( ) {
 	key96_t endKey   ;
 	endKey.setMax();
 	// get a meg at a time
-	long minRecSizes = 1024*1024;
+	int32_t minRecSizes = 1024*1024;
 	key96_t oldk; oldk.setMin();
 
  loop:
@@ -5266,8 +5266,8 @@ bool Emailer::scanLoop ( ) {
 
 void Emailer::gotScanList ( ) {
 
-	long now = getTimeGlobal();
-	long dayStart = now  - ( now % 86400 );
+	int32_t now = getTimeGlobal();
+	int32_t dayStart = now  - ( now % 86400 );
 
 	if ( m_list7.isEmpty() ) return;
 
@@ -5290,16 +5290,16 @@ void Emailer::gotScanList ( ) {
 		if ( ef == 3 ) continue;
 		// strange?
 		if ( ef != 1 && ef != 2 ) {
-			log("email: strange freq = %li",(long)ef);
+			log("email: strange freq = %"INT32"",(int32_t)ef);
 			continue;
 		}
-		// shortcut
-		unsigned long long fbId = fr->m_fbId;
+		// int16_tcut
+		uint64_t fbId = fr->m_fbId;
 
 		// is assigned to us for emailing?
 		Host *group = g_hostdb.getMyGroup();
-		long hpg = g_hostdb.getNumHostsPerShard();
-		long i = fbId % hpg;
+		int32_t hpg = g_hostdb.getNumHostsPerShard();
+		int32_t i = fbId % hpg;
 		Host *h = &group[i];
 		// skip if not assigned to us
 		if ( h->m_hostId != g_hostdb.m_hostId ) continue;
@@ -5310,9 +5310,9 @@ void Emailer::gotScanList ( ) {
 		k.n0 = fr->m_fbId;
 		k.n1 = fr->m_nextRetry;
 		// at what time of day to email ( in minutes)? UTC
-		long tte = dayStart + fr->m_timeToEmail * 60;
+		int32_t tte = dayStart + fr->m_timeToEmail * 60;
 		// when was the last attempt to email?
-		long success = fr->m_lastEmailAttempt;
+		int32_t success = fr->m_lastEmailAttempt;
 
 		// reset this for debug
 		//success = 0;
@@ -5342,7 +5342,7 @@ void Emailer::gotScanList ( ) {
 		log("email: email tree add error: %s",mstrerror(g_errno));
 	}
 	m_startKey = *(key96_t *)m_list7.getLastKey();
-	m_startKey += (unsigned long) 1;
+	m_startKey += (uint32_t) 1;
 	// watch out for wrap around
 	//if ( startKey < *(key96_t *)list.getLastKey() ) return;
 }
@@ -5375,7 +5375,7 @@ void facebookSpiderSleepWrapper ( int fd , void *state ) {
 	bool gotIt = false;
 	collnum_t collnum;
 	// get event collection
-	for ( long i = 0 ; i < g_collectiondb.m_numRecs ; i++ ) {
+	for ( int32_t i = 0 ; i < g_collectiondb.m_numRecs ; i++ ) {
 		// get it
 		CollectionRec *cr = g_collectiondb.m_recs[i];
 		// skip if empty
@@ -5395,7 +5395,7 @@ void facebookSpiderSleepWrapper ( int fd , void *state ) {
 	bool hasEventBrite = false;
 	bool hasStubHub    = false;
 	bool hasFacebook   = false;
-	for ( long i = 0 ; i < g_n1 ; i++ ) {
+	for ( int32_t i = 0 ; i < g_n1 ; i++ ) {
 		if ( g_fbq1[i] == -3 ) hasLocalFBId  = true;
 		if ( g_fbq1[i] == -2 ) hasEventBrite = true;
 		if ( g_fbq1[i] == -1 ) hasStubHub    = true;
@@ -5403,7 +5403,7 @@ void facebookSpiderSleepWrapper ( int fd , void *state ) {
 	}
 
 	// need this
-	long now = getTimeGlobal();
+	int32_t now = getTimeGlobal();
 
 	// ok, it's empty! 0 fbid has special meaning. it means to
 	// do a spider round on facebook
@@ -5513,10 +5513,10 @@ char *getNextQuery ( ) {
 			    NULL, // dbname
 			    12 ); // keysize
 		// for keeping keys unique
-		long count = 0;
+		int32_t count = 0;
 		// scan the unified dictionary 
-		long n1 = ud->m_numSlots;
-		for ( long i = 0 ; i < n1 ; i++ ) {
+		int32_t n1 = ud->m_numSlots;
+		for ( int32_t i = 0 ; i < n1 ; i++ ) {
 			// skip if empty
 			if ( ! ud->m_flags[i] ) continue;
 			// . get the ptr into m_unifiedBuf
@@ -5546,8 +5546,8 @@ char *getNextQuery ( ) {
 			// skip if its a phrase
 			if ( hadSpace ) continue;
 			// get the max pop from all the language/pop tuples
-			long maxPop = -2;
-			long pop;
+			int32_t maxPop = -2;
+			int32_t pop;
 		subloop:
 			// skip over langid
 			for ( ; *p && *p !='\t';p++ );
@@ -5575,10 +5575,10 @@ char *getNextQuery ( ) {
 			if ( maxPop < 0 ) continue;
 			// make the key
 			key_t k;
-			k.n1 = ~((unsigned long)maxPop);
+			k.n1 = ~((uint32_t)maxPop);
 			k.n0 = count++;
 			// store offset
-			long woff = w - g_speller.m_unifiedBuf;
+			int32_t woff = w - g_speller.m_unifiedBuf;
 			// . add to b-tree to sort by pop
 			// . data is the word/phrase ptr
 			tree1.addNode(0,k,(char *)woff,4);
@@ -5587,16 +5587,16 @@ char *getNextQuery ( ) {
 		// . now add the cities in there too!
 		// . scan the cities
 		// . g_nameTable is from Address.cpp
-		long n2 = g_nameTable.m_numSlots;
-		for ( long i = 0 ; i < n2 ; i++ ) {
+		int32_t n2 = g_nameTable.m_numSlots;
+		for ( int32_t i = 0 ; i < n2 ; i++ ) {
 			// skip if empty
 			if ( ! g_nameTable.m_flags[i] ) continue;
 			// get it
-			long offset = *(long *)g_nameTable.getValueFromSlot(i);
+			int32_t offset = *(int32_t *)g_nameTable.getValueFromSlot(i);
 			// get the ptr into g_pbuf for it
 			PlaceDesc *pd = (PlaceDesc *)(g_pbuf+offset);
 			// get the pop
-			unsigned long pop = pd->m_population;
+			uint32_t pop = pd->m_population;
 			// make the key
 			key_t k;
 			k.n1 = ~pop;
@@ -5604,24 +5604,24 @@ char *getNextQuery ( ) {
 			// entry in the g_nameTable BUT they hash to the
 			// same PlaceDesc ptr, so use that as part of they
 			// key for making sure we have no dups in tree2.
-			k.n0 = (unsigned long long)pd;
+			k.n0 = (uint64_t)pd;
 			//note it
-			//log("adding pop=%lu",pop);
+			//log("adding pop=%"UINT32"",pop);
 			// add to b-tree to sort by pop
 			tree2.addNode(0,k,(char *)offset,4);
 		}
 		// serialize tree1
-		for (long n=tree1.getLowestNode();n>=0;n=tree1.getNextNode(n)){
+		for (int32_t n=tree1.getLowestNode();n>=0;n=tree1.getNextNode(n)){
 			// get data. this one is a slot # in m_unifiedDict
-			long woff = (long)tree1.getData(n);
+			int32_t woff = (int32_t)tree1.getData(n);
 			// store it
 			s_tbuf1.pushLong(woff);
 		}
-		long reps = 0;
+		int32_t reps = 0;
 		// serialize tree2
-		for (long n=tree2.getLowestNode();n>=0;n=tree2.getNextNode(n)){
+		for (int32_t n=tree2.getLowestNode();n>=0;n=tree2.getNextNode(n)){
 			// get data. this one is an offset into g_pbuf
-			long i = (long)tree2.getData(n);
+			int32_t i = (int32_t)tree2.getData(n);
 			// sample
 			PlaceDesc *pd = (PlaceDesc *)(g_pbuf+i);
 			// print it
@@ -5653,7 +5653,7 @@ char *getNextQuery ( ) {
 
 	// get the next word or location
 	if ( s_flip == 0 ) {
-		long woff = ((long *)(s_tbuf1.getBufStart())) [s_ptr1];
+		int32_t woff = ((int32_t *)(s_tbuf1.getBufStart())) [s_ptr1];
 		s_ptr1++;
 		if ( s_ptr1 * 4 > s_tbuf1.length() ) s_ptr1 = 0;
 
@@ -5669,7 +5669,7 @@ char *getNextQuery ( ) {
 	}
 
 	if ( s_flip == 1 ) {
-		long poff = s_ptr2 * 4;
+		int32_t poff = s_ptr2 * 4;
 		s_ptr2++;
 		if ( s_ptr2 * 4 > s_tbuf2.length() ) s_ptr2 = 0;
 
@@ -5680,7 +5680,7 @@ char *getNextQuery ( ) {
 		// seems to not be rate-limited so far
 		if ( s_ptr2 > 15000 ) s_ptr2 = 0;
 
-		long offset = *(long *)(s_tbuf2.getBufStart() + poff);
+		int32_t offset = *(int32_t *)(s_tbuf2.getBufStart() + poff);
 		// get the ptr into g_pbuf for it
 		PlaceDesc *pd = (PlaceDesc *)(g_pbuf+offset);
 
@@ -5720,15 +5720,15 @@ bool saveQueryLoopState ( ) {
 	ss.pushLongLong(s_ptr5);
 	ss.pushLong    (s_localWaitUntil);
 	log("facebook: saving fbloop.dat. "
-	    "s_ptr1=%li "
-	    "s_ptr2=%li "
-	    "s_ptr3=%li "
-	    "s_ptr4=%lli "
-	    "s_ptr5=%lli "
-	    "s_holdOffStubHubTill=%lu "
-	    "s_eventBriteWaitUntil=%lu "
-	    "s_localWaitUntil=%lu "
-	    "g_n1=%li",
+	    "s_ptr1=%"INT32" "
+	    "s_ptr2=%"INT32" "
+	    "s_ptr3=%"INT32" "
+	    "s_ptr4=%"INT64" "
+	    "s_ptr5=%"INT64" "
+	    "s_holdOffStubHubTill=%"UINT32" "
+	    "s_eventBriteWaitUntil=%"UINT32" "
+	    "s_localWaitUntil=%"UINT32" "
+	    "g_n1=%"INT32"",
 	    s_ptr1,
 	    s_ptr2,
 	    s_ptr3,
@@ -5747,34 +5747,34 @@ bool loadQueryLoopState ( ) {
 	// assign
 	char *p = ss.getBufStart();
 	char *pend = p + ss.length();
-	s_flip = *(long *)p; p += 4;
-	s_ptr1 = *(long *)p; p += 4;
-	s_ptr2 = *(long *)p; p += 4;
-	g_n1   = *(long *)p; p += 4;
-	memcpy ( g_fbq1   , p , g_n1 * 4 ); p += g_n1 * 4;
-	memcpy ( g_colls1 , p , g_n1 * 4 ); p += g_n1 * 4;
+	s_flip = *(int32_t *)p; p += 4;
+	s_ptr1 = *(int32_t *)p; p += 4;
+	s_ptr2 = *(int32_t *)p; p += 4;
+	g_n1   = *(int32_t *)p; p += 4;
+	gbmemcpy ( g_fbq1   , p , g_n1 * 4 ); p += g_n1 * 4;
+	gbmemcpy ( g_colls1 , p , g_n1 * 4 ); p += g_n1 * 4;
 	if ( p >= pend ) goto done;
-	s_ptr3 = *(long *)p; p += 4;
+	s_ptr3 = *(int32_t *)p; p += 4;
 	if ( p >= pend ) goto done;
-	s_holdOffStubHubTill = *(long *)p; p += 4;
+	s_holdOffStubHubTill = *(int32_t *)p; p += 4;
 	if ( p >= pend ) goto done;
-	s_ptr4 = *(long long *)p; p += 8;
-	s_eventBriteWaitUntil = *(long *)p; p += 4;
+	s_ptr4 = *(int64_t *)p; p += 8;
+	s_eventBriteWaitUntil = *(int32_t *)p; p += 4;
 	// local scan
 	if ( p >= pend ) goto done;
-	s_ptr5           = *(long long *)p; p += 8;
-	s_localWaitUntil = *(long      *)p; p += 4;
+	s_ptr5           = *(int64_t *)p; p += 8;
+	s_localWaitUntil = *(int32_t      *)p; p += 4;
  done:
 	log("facebook: loaded fbloop.dat. "
-	    "s_ptr1=%li "
-	    "s_ptr2=%li "
-	    "s_ptr3=%li "
-	    "s_ptr4=%lli "
-	    "s_ptr5=%lli "
-	    "s_holdOffStubHubTill=%lu "
-	    "s_eventBriteWaitUntil=%lu "
-	    "s_localWaitUntil=%lu "
-	    "g_n1=%li",
+	    "s_ptr1=%"INT32" "
+	    "s_ptr2=%"INT32" "
+	    "s_ptr3=%"INT32" "
+	    "s_ptr4=%"INT64" "
+	    "s_ptr5=%"INT64" "
+	    "s_holdOffStubHubTill=%"UINT32" "
+	    "s_eventBriteWaitUntil=%"UINT32" "
+	    "s_localWaitUntil=%"UINT32" "
+	    "g_n1=%"INT32"",
 	    s_ptr1,
 	    s_ptr2,
 	    s_ptr3,

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<OpenSearchDescription xmlns="http://a9.com/-/spec/opensearch/1.1/" xmlns:moz="http://www.mozilla.org/2006/browser/search/">
+	<ShortName>GigaBlast</ShortName>
+	<Description>The Search Engine</Description>
+	<Language>en-us</Language>
+	<OutputEncoding>UTF-8</OutputEncoding>
+	<InputEncoding>UTF-8</InputEncoding>
+	<Image width="16" height="16" type="image/png">http://www.gigablast.com/rocket16.png</Image>
+	<Url type="text/html" method="GET" template="http://www.gigablast.com/search?q={searchTerms}&amp;"></Url>
+	<Url type="application/xhtml+xml" indexOffset="0" template="http://www.gigablast.com/search?q={searchTerms}&amp;"></Url>
+	<moz:SearchForm>www.gigablast.com</moz:SearchForm>
+</OpenSearchDescription>
+

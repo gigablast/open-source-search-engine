@@ -23,12 +23,12 @@ bool Thesaurus::load () {
 	File f;
 	f.open ( filename );
 	// read it all in
-	long fsize = f.getFileSize();
+	int32_t fsize = f.getFileSize();
 	// alloc space
 	char *buf = mmalloc(fsize,"thesaurusinit");
 	if ( ! buf ) return false;
 	// read it in
-	long n = f.read ( buf , fsize );
+	int32_t n = f.read ( buf , fsize );
 	// g_errno should be set in this case
 	if ( n != fsize ) return false;
 	
@@ -65,13 +65,13 @@ static char *s_affFile = "thesaurus-affinity.txt";
 #define MAX_STIDS 8
 
 // quick and dirty
-static long findTermIds(char *s, int64_t *tids, 
-			bool hasSpace, long slen = 0) {
-	static long long pid = 0;//getPrefixHash(NULL, 0, "", 0);
+static int32_t findTermIds(char *s, int64_t *tids, 
+			bool hasSpace, int32_t slen = 0) {
+	static int64_t pid = 0;//getPrefixHash(NULL, 0, "", 0);
 	char buf[256];
 	if (!slen) slen = gbstrlen(s);
 	if (slen > 255) return 0;
-	memcpy(buf, s, slen);
+	gbmemcpy(buf, s, slen);
 	buf[slen] = '\0';
 	Words words;
 	Bits bits;
@@ -83,8 +83,8 @@ static long findTermIds(char *s, int64_t *tids,
 		//spam.reset(words.getNumWords());
 		phrases.set(&words, &bits, true, false, 
 			TITLEREC_CURRENT_VERSION, 0);
-		long i = 0, j = 0;
-		long long tid;
+		int32_t i = 0, j = 0;
+		int64_t tid;
 		while (i < words.getNumWords() && j < MAX_STIDS) {
 			tid = phrases.getPhraseId2(i++);
 			if (!tid) continue;
@@ -111,11 +111,11 @@ SynonymInfo::SynonymInfo() {
 	reset();
 }
 
-// m_syn (char *), m_affinity, m_offset, m_len, m_firstId, m_numIds (long),
+// m_syn (char *), m_affinity, m_offset, m_len, m_firstId, m_numIds (int32_t),
 // 	m_type, m_sort (char), m_hasSpace (bool), 
 // 	m_leftSynHash, m_rightSynHash, m_synHash ((u)int64_t)
 // m_termId is stored in a separate array due to it not necessarily being 1:1
-static long s_synSize = sizeof(char *) + sizeof(long) * 5 + 
+static int32_t s_synSize = sizeof(char *) + sizeof(int32_t) * 5 + 
 		      sizeof(char) * 2 + sizeof(int64_t) * 3 +
 		      sizeof(bool);
 
@@ -153,16 +153,16 @@ SynonymInfo::~SynonymInfo() {
 }
 
 bool SynonymInfo::growSyns() {
-	long newSize = 0;
+	int32_t newSize = 0;
 	char *newBuf;
 	char **newSyn;
-	long *newAffinity, *newOffset, *newLen, *newFirstId, *newLastId;
+	int32_t *newAffinity, *newOffset, *newLen, *newFirstId, *newLastId;
 	char *newType, *newSort;
 	bool *newHasSpace;
 	int64_t *newLeftId, *newRightId;
 	uint64_t *newSynHash;
 	char *p;
-	long newSlots;
+	int32_t newSlots;
 	if (!m_ballocSize) newSize = sizeof(m_buf) * 2;
 	else               newSize = m_ballocSize + sizeof(m_buf);
 	newBuf = (char *)mmalloc(newSize, "SynonymB");
@@ -170,29 +170,29 @@ bool SynonymInfo::growSyns() {
 	newSlots = newSize / s_synSize;
 	p = newBuf;
 	newSyn      = (char **)  p; p += newSlots * sizeof(char *);
-	newAffinity = (long *)   p; p += newSlots * sizeof(long);
-	newOffset   = (long *)   p; p += newSlots * sizeof(long);
-	newLen      = (long *)   p; p += newSlots * sizeof(long);
-	newFirstId  = (long *)   p; p += newSlots * sizeof(long);
-	newLastId   = (long *)   p; p += newSlots * sizeof(long);
+	newAffinity = (int32_t *)   p; p += newSlots * sizeof(int32_t);
+	newOffset   = (int32_t *)   p; p += newSlots * sizeof(int32_t);
+	newLen      = (int32_t *)   p; p += newSlots * sizeof(int32_t);
+	newFirstId  = (int32_t *)   p; p += newSlots * sizeof(int32_t);
+	newLastId   = (int32_t *)   p; p += newSlots * sizeof(int32_t);
 	newType     =            p; p += newSlots * sizeof(char);
 	newSort     =            p; p += newSlots * sizeof(char);
 	newHasSpace = (bool *)   p; p += newSlots * sizeof(bool);
 	newLeftId   = (int64_t *)p; p += newSlots * sizeof(int64_t);
 	newRightId  = (int64_t *)p; p += newSlots * sizeof(int64_t);
 	newSynHash  = (uint64_t*)p; p += newSlots * sizeof(uint64_t);
-	memcpy(newSyn     , m_syn     , m_numSyns * sizeof(char *));
-	memcpy(newAffinity, m_affinity, m_numSyns * sizeof(long));
-	memcpy(newOffset  , m_offset  , m_numSyns * sizeof(long));
-	memcpy(newLen     , m_len     , m_numSyns * sizeof(long));
-	memcpy(newFirstId , m_firstId , m_numSyns * sizeof(long));
-	memcpy(newLastId  , m_lastId  , m_numSyns * sizeof(long));
-	memcpy(newType    , m_type    , m_numSyns * sizeof(char));
-	memcpy(newSort    , m_sort    , m_numSyns * sizeof(char));
-	memcpy(newHasSpace, m_hasSpace, m_numSyns * sizeof(bool));
-	memcpy(newLeftId  , m_leftSynHash  , m_numSyns * sizeof(int64_t));
-	memcpy(newRightId , m_rightSynHash , m_numSyns * sizeof(int64_t));
-	memcpy(newSynHash , m_synHash , m_numSyns * sizeof(uint64_t));
+	gbmemcpy(newSyn     , m_syn     , m_numSyns * sizeof(char *));
+	gbmemcpy(newAffinity, m_affinity, m_numSyns * sizeof(int32_t));
+	gbmemcpy(newOffset  , m_offset  , m_numSyns * sizeof(int32_t));
+	gbmemcpy(newLen     , m_len     , m_numSyns * sizeof(int32_t));
+	gbmemcpy(newFirstId , m_firstId , m_numSyns * sizeof(int32_t));
+	gbmemcpy(newLastId  , m_lastId  , m_numSyns * sizeof(int32_t));
+	gbmemcpy(newType    , m_type    , m_numSyns * sizeof(char));
+	gbmemcpy(newSort    , m_sort    , m_numSyns * sizeof(char));
+	gbmemcpy(newHasSpace, m_hasSpace, m_numSyns * sizeof(bool));
+	gbmemcpy(newLeftId  , m_leftSynHash  , m_numSyns * sizeof(int64_t));
+	gbmemcpy(newRightId , m_rightSynHash , m_numSyns * sizeof(int64_t));
+	gbmemcpy(newSynHash , m_synHash , m_numSyns * sizeof(uint64_t));
 	m_syn = newSyn;
 	m_affinity = newAffinity;
 	m_offset = newOffset;
@@ -212,14 +212,14 @@ bool SynonymInfo::growSyns() {
 }
 
 bool SynonymInfo::growText() {
-	long newSize = m_tallocSize + sizeof(m_tbuf) * 2;
+	int32_t newSize = m_tallocSize + sizeof(m_tbuf) * 2;
 	char *newBuf;
 	newBuf = (char *)mmalloc(newSize, "SynonymT");
 	if (!newBuf) return false;
-	for (long i = 0; i < m_numSyns; i++) {
+	for (int32_t i = 0; i < m_numSyns; i++) {
 		m_syn[i] = newBuf + (m_syn[i] - m_talloc);
 	}
-	memcpy(newBuf, m_talloc, m_tbufLen);
+	gbmemcpy(newBuf, m_talloc, m_tbufLen);
 	if (m_tallocSize) mfree(m_talloc, m_tallocSize, "SynonymT");
 	m_talloc = newBuf;
 	m_tallocSize = newSize;
@@ -227,7 +227,7 @@ bool SynonymInfo::growText() {
 }
 
 bool SynonymInfo::growTids() {
-	long newSize;
+	int32_t newSize;
 	if (!m_tidSize) {
 		newSize = sizeof(m_tidBuf) + sizeof(int64_t) * MAX_STIDS;
 	} else {
@@ -236,8 +236,8 @@ bool SynonymInfo::growTids() {
 	int64_t *newBuf;
 	newBuf = (int64_t *)mcalloc(newSize, "SynonymTID");
 	if (!newBuf) return false;
-	memcpy(newBuf, m_termId, m_tidSize);//newSize);
-	if (m_tidSize > (long)sizeof(m_tidBuf)) {
+	gbmemcpy(newBuf, m_termId, m_tidSize);//newSize);
+	if (m_tidSize > (int32_t)sizeof(m_tidBuf)) {
 		mfree(m_termId, m_tidSize, "SynonymTID");
 	}
 	m_termId = newBuf;
@@ -245,38 +245,38 @@ bool SynonymInfo::growTids() {
 	return true;
 }
 
-bool SynonymInfo::setWord(char *s, long len, uint64_t h) {
+bool SynonymInfo::setWord(char *s, int32_t len, uint64_t h) {
 	// theoretically we shouldn't need this, but it's safer
-	long tbufSize = m_tallocSize;
+	int32_t tbufSize = m_tallocSize;
 	if (!tbufSize) tbufSize = sizeof(m_tbuf);
 	if ((len + m_tbufLen > tbufSize) && !growText()) {
 		return log("query: ran out of memory producing synonyms");
 	}
-	memcpy(m_talloc, s, len);
+	gbmemcpy(m_talloc, s, len);
 	m_h = h;
 	return true;
 }
 
-bool SynonymInfo::addSynonym(char *syn, long affinity,
-			     long offset, long len,
+bool SynonymInfo::addSynonym(char *syn, int32_t affinity,
+			     int32_t offset, int32_t len,
 			     char type, char sort, bool hasSpace,
 			     int64_t leftSynHash, int64_t rightSynHash) {
-	long bufSize = m_ballocSize;
-	long tbufSize = m_tallocSize;
-	long tidSize = m_tidSize;
-	long bufNeed = (m_numSyns + 1) * s_synSize;
+	int32_t bufSize = m_ballocSize;
+	int32_t tbufSize = m_tallocSize;
+	int32_t tidSize = m_tidSize;
+	int32_t bufNeed = (m_numSyns + 1) * s_synSize;
 
 	// check for duplicates
 	uint64_t h = hash64Lower_utf8(syn, len);
 	if (h == m_h) {
-		return log(LOG_DEBUG, "query: Synonym dup hash %016llx", m_h);
+		return log(LOG_DEBUG, "query: Synonym dup hash %016"XINT64"", m_h);
 	}
 
 	int64_t tids[MAX_STIDS];
-	long addIds = findTermIds(syn, tids, hasSpace, len);
-	long tidNeed = (m_numIds + addIds) * sizeof(int64_t);
+	int32_t addIds = findTermIds(syn, tids, hasSpace, len);
+	int32_t tidNeed = (m_numIds + addIds) * sizeof(int64_t);
 
-	long i, j;
+	int32_t i, j;
 	
 
 	// check for duplicates
@@ -289,7 +289,7 @@ bool SynonymInfo::addSynonym(char *syn, long affinity,
 			if (m_termId[j] != tids[k]) break; // mismatch
 		}
 		if (j <= m_lastId[i]) continue; // mismatch, check next one
-		return log(LOG_DEBUG, "query: Synonym dup by tids %ld", i);
+		return log(LOG_DEBUG, "query: Synonym dup by tids %"INT32"", i);
 	}
 
 	// grow the buffers if need be
@@ -304,14 +304,14 @@ bool SynonymInfo::addSynonym(char *syn, long affinity,
 	
 	// assign pointers if necessary
 	if (!m_syn) {
-		long slots = bufSize / s_synSize;
+		int32_t slots = bufSize / s_synSize;
 		char *p = m_buf;
 		m_syn      = (char **)  p; p += slots * sizeof(char *);
-		m_affinity = (long *)   p; p += slots * sizeof(long);
-		m_offset   = (long *)   p; p += slots * sizeof(long);
-		m_len      = (long *)   p; p += slots * sizeof(long);
-		m_firstId  = (long *)   p; p += slots * sizeof(long);
-		m_lastId   = (long *)   p; p += slots * sizeof(long);
+		m_affinity = (int32_t *)   p; p += slots * sizeof(int32_t);
+		m_offset   = (int32_t *)   p; p += slots * sizeof(int32_t);
+		m_len      = (int32_t *)   p; p += slots * sizeof(int32_t);
+		m_firstId  = (int32_t *)   p; p += slots * sizeof(int32_t);
+		m_lastId   = (int32_t *)   p; p += slots * sizeof(int32_t);
 		m_type     =            p; p += slots * sizeof(char);
 		m_sort     =            p; p += slots * sizeof(char);
 		m_hasSpace = (bool *)   p; p += slots * sizeof(bool);
@@ -326,7 +326,7 @@ bool SynonymInfo::addSynonym(char *syn, long affinity,
 	}
 
 	// and finally, load all the info into the structure
-	memcpy(m_talloc + m_tbufLen, syn, len);
+	gbmemcpy(m_talloc + m_tbufLen, syn, len);
 	m_syn[m_numSyns] = m_talloc + m_tbufLen;
 	m_tbufLen += len;
 	m_affinity[m_numSyns] = affinity;
@@ -369,7 +369,7 @@ void Thesaurus::reset() {
 		mfree(m_reps, sizeof(char *) * m_numReps, "stemmer");
 	}
 	if (m_repLens) {
-		mfree(m_repLens, sizeof(long) * m_numReps, "stemmer");
+		mfree(m_repLens, sizeof(int32_t) * m_numReps, "stemmer");
 	}
 	m_reps = NULL;
 	m_repLens = NULL;
@@ -416,12 +416,12 @@ void Thesaurus::cancelRebuild() {
 	m_rebuilding = false;
 }
 
-char *Thesaurus::getSynonymFromOffset(long offset) {
+char *Thesaurus::getSynonymFromOffset(int32_t offset) {
 	// corner cases first
 	if (offset == 0) return m_synonymText;
 	if (offset >= m_synonymLen || offset < 0) return NULL;
 	// if the character just before the offset is a null byte, we're at
-	//  the beginning of a word, so as long as the rest of the code is
+	//  the beginning of a word, so as int32_t as the rest of the code is
 	//  sane this is valid
 	if (m_synonymText[offset-1] == '\0') return m_synonymText + offset;
 	// otherwise, no, we're in the middle of a word and this isn't valid
@@ -429,13 +429,13 @@ char *Thesaurus::getSynonymFromOffset(long offset) {
 }
 
 
-bool Thesaurus::getAllInfo(char *s, SynonymInfo *info, long slen,
-			   long bits) {
+bool Thesaurus::getAllInfo(char *s, SynonymInfo *info, int32_t slen,
+			   int32_t bits) {
 	bool r = false;
 	if (!slen) slen = gbstrlen(s);
 	if (slen > 256) return false;
 	if (!bits) return false;
-	log(LOG_DEBUG, "query: getAllInfo(%32s, %ld, %p, %lx)", 
+	log(LOG_DEBUG, "query: getAllInfo(%32s, %"INT32", %p, %"XINT32")", 
 		s, slen, info, bits);
 	// do stems first so SYN_STEM overrides
 	if (bits & SYNBIT_STEM) r |= getStems(s, slen, info);
@@ -444,7 +444,7 @@ bool Thesaurus::getAllInfo(char *s, SynonymInfo *info, long slen,
 	  MDW: take this out until it works!
 	if (bits & SYNBIT_SPELLING) {
 		bool found;
-		long score, popularity;
+		int32_t score, popularity;
 		char buf[256];
 		if (g_speller.m_language[langEnglish].getRecommendation(
 			s, slen, buf, 256, 
@@ -463,7 +463,7 @@ bool Thesaurus::getAllInfo(char *s, SynonymInfo *info, long slen,
 }
 
 bool Thesaurus::getSynonymInfo(char *s, SynonymInfo *info, 
-			       long slen, long bits) {
+			       int32_t slen, int32_t bits) {
 	if (!slen) slen = gbstrlen(s);
 	uint64_t h = hash64Lower_utf8(s, slen);
 	// debug
@@ -476,23 +476,23 @@ bool Thesaurus::getSynonymInfo(char *s, SynonymInfo *info,
 	return r;
 }
 
-bool Thesaurus::getSynonymInfo(uint64_t h, SynonymInfo *info, long bits) {
-	long slot = m_synonymTable.getSlot(h);
+bool Thesaurus::getSynonymInfo(uint64_t h, SynonymInfo *info, int32_t bits) {
+	int32_t slot = m_synonymTable.getSlot(h);
 	if (slot < 0) return false;
-	log(LOG_DEBUG, "query: getSynonymInfo(%llx, %p, %lx)", h, info, bits);
+	log(LOG_DEBUG, "query: getSynonymInfo(%"XINT64", %p, %"XINT32")", h, info, bits);
 	// this is NOW the first synonym
 	//char *p = m_synonymText + OFFSET(m_synonymTable.
 	//				    getValueFromSlot(slot));
-	//long len = gbstrlen(p);
+	//int32_t len = gbstrlen(p);
 	//info->setWord(p, len, h);
 	info->setWord(NULL,0,h);
 	do {
 		if (m_synonymTable.getKey(slot) == h) {
 			int64_t v = m_synonymTable.getValueFromSlot(slot);
-			long o = OFFSET(v);
+			int32_t o = OFFSET(v);
 			char *p = m_synonymText + o;
-			long a = AFFINITY(v);
-			long t = TYPE(v);
+			int32_t a = AFFINITY(v);
+			int32_t t = TYPE(v);
 			bool sp = strchr(p, ' ') != NULL;
 			char sr;
 			//if (!a) continue;
@@ -509,15 +509,15 @@ bool Thesaurus::getSynonymInfo(uint64_t h, SynonymInfo *info, long bits) {
 	return true;
 }
 
-long Thesaurus::getAffinity(char *s1, char *s2, long l1, long l2) {
+int32_t Thesaurus::getAffinity(char *s1, char *s2, int32_t l1, int32_t l2) {
 	if (!l1) l1 = gbstrlen(s1);
 	if (!l2) l2 = gbstrlen(s2);
 	return getAffinity(hash64Lower_utf8(s1, l1), hash64Lower_utf8(s2, l2));
 }
 
-long Thesaurus::getAffinity(uint64_t h1, uint64_t h2) {
+int32_t Thesaurus::getAffinity(uint64_t h1, uint64_t h2) {
 	if (h1 == h2) return MAX_AFFINITY;
-	long slot = m_synonymTable.getSlot(h1);
+	int32_t slot = m_synonymTable.getSlot(h1);
 	if (slot < 0) return -1;
 	while (m_synonymTable.getKey(slot)) {
 		if (m_synonymTable.getKey(slot) == h1) {
@@ -531,13 +531,13 @@ long Thesaurus::getAffinity(uint64_t h1, uint64_t h2) {
 	return -1;
 }
 
-long Thesaurus::getAffinityN(char *s, long n, long l) {
+int32_t Thesaurus::getAffinityN(char *s, int32_t n, int32_t l) {
 	if (!l) l = gbstrlen(s);
 	return getAffinityN(hash64Lower_utf8(s, l), n);
 }
 
-long Thesaurus::getAffinityN(uint64_t h, long n) {
-	long slot = m_synonymTable.getSlot(h);
+int32_t Thesaurus::getAffinityN(uint64_t h, int32_t n) {
+	int32_t slot = m_synonymTable.getSlot(h);
 	if (slot < 0) return -1;
 	while (m_synonymTable.getKey(slot)) {
 		if (m_synonymTable.getKey(slot) == h && !n--)  
@@ -547,13 +547,13 @@ long Thesaurus::getAffinityN(uint64_t h, long n) {
 	return -1;
 }
 
-char *Thesaurus::getSynonymN(char *s, long n, long l) {
+char *Thesaurus::getSynonymN(char *s, int32_t n, int32_t l) {
 	if (!l) l = gbstrlen(s);
 	return getSynonymN(hash64Lower_utf8(s, l), n);
 }
 
-char *Thesaurus::getSynonymN(uint64_t h, long n) {
-	long slot = m_synonymTable.getSlot(h);
+char *Thesaurus::getSynonymN(uint64_t h, int32_t n) {
+	int32_t slot = m_synonymTable.getSlot(h);
 	if (slot < 0) return NULL;
 	while(m_synonymTable.getKey(slot)) {
 		if (m_synonymTable.getKey(slot) == h && !n--)
@@ -564,16 +564,16 @@ char *Thesaurus::getSynonymN(uint64_t h, long n) {
 	return NULL;
 }
 
-long Thesaurus::getNumSyns(char *s, long l) {
+int32_t Thesaurus::getNumSyns(char *s, int32_t l) {
 	if (!l) l = gbstrlen(s);
 	return getNumSyns(hash64Lower_utf8(s, gbstrlen(s)));
 }
 
-long Thesaurus::getNumSyns(uint64_t h) {
-	long slot = m_synonymTable.getSlot(h);
+int32_t Thesaurus::getNumSyns(uint64_t h) {
+	int32_t slot = m_synonymTable.getSlot(h);
 	if (slot < 0) return 0;
 	++slot;		// skip the first slot
-	long r = 0;
+	int32_t r = 0;
 	while(m_synonymTable.getKey(slot)) { 
 		if (m_synonymTable.getKey(slot) == h) r++;
 		if (++slot >= m_synonymTable.getNumSlots()) slot = 0;
@@ -581,14 +581,14 @@ long Thesaurus::getNumSyns(uint64_t h) {
 	return r;
 }
 
-long Thesaurus::getSlot(char *s1, char *s2, long l1, long l2) {
+int32_t Thesaurus::getSlot(char *s1, char *s2, int32_t l1, int32_t l2) {
 	if (!l1) l1 = gbstrlen(s1);
 	if (!l2) l2 = gbstrlen(s2);
 	return getSlot(hash64Lower_utf8(s1, l1), hash64Lower_utf8(s2, l2));
 }
 
-long Thesaurus::getSlot(uint64_t h1, uint64_t h2) {
-	long slot = m_synonymTable.getSlot(h1);
+int32_t Thesaurus::getSlot(uint64_t h1, uint64_t h2) {
+	int32_t slot = m_synonymTable.getSlot(h1);
 	if (slot < 0) return -1;
 	if (h1 == h2) return slot;
 	while(m_synonymTable.getKey(slot)) {
@@ -602,13 +602,13 @@ long Thesaurus::getSlot(uint64_t h1, uint64_t h2) {
 	return -1;
 }
 
-long Thesaurus::getSlotN(char *s, long n, long l) {
+int32_t Thesaurus::getSlotN(char *s, int32_t n, int32_t l) {
 	if (!l) l = gbstrlen(s);
 	return getSlotN(hash64Lower_utf8(s, l), n);
 }
 
-long Thesaurus::getSlotN(uint64_t h, long n) {
-	long slot = m_synonymTable.getSlot(h);
+int32_t Thesaurus::getSlotN(uint64_t h, int32_t n) {
+	int32_t slot = m_synonymTable.getSlot(h);
 	if (slot < 0) return -1;
 	while(m_synonymTable.getKey(slot)) {
 		if (m_synonymTable.getKey(slot) == h && !n--) return slot;
@@ -617,25 +617,25 @@ long Thesaurus::getSlotN(uint64_t h, long n) {
 	return -1;
 }
 
-long Thesaurus::getOffset(char *s, long l) {
+int32_t Thesaurus::getOffset(char *s, int32_t l) {
 	if (!l) l = gbstrlen(s);
 	return getOffset(hash64Lower_utf8(s));
 }
 
-long Thesaurus::getOffset(uint64_t h) {
-	long slot = m_synonymTable.getSlot(h);
+int32_t Thesaurus::getOffset(uint64_t h) {
+	int32_t slot = m_synonymTable.getSlot(h);
 	if (slot < 0) return -1;
 	return OFFSET(m_synonymTable.getValueFromSlot(slot));
 }
 
-char Thesaurus::getFlag(char *s1, char *s2, long l1, long l2) {
+char Thesaurus::getFlag(char *s1, char *s2, int32_t l1, int32_t l2) {
 	if (!l1) l1 = gbstrlen(s1);
 	if (!l2) l2 = gbstrlen(s2);
 	return getFlag(hash64Lower_utf8(s1, l1), hash64Lower_utf8(s2, l2));
 }
 
 char Thesaurus::getFlag(uint64_t h1, uint64_t h2) {
-	long slot = m_synonymTable.getSlot(h1);
+	int32_t slot = m_synonymTable.getSlot(h1);
 	if (slot < 0) return SYN_INVALID;
 	while(m_synonymTable.getKey(slot)) {
 		if (m_synonymTable.getKey(slot) == h1) {
@@ -648,13 +648,13 @@ char Thesaurus::getFlag(uint64_t h1, uint64_t h2) {
 	return SYN_INVALID;
 }
 
-char Thesaurus::getFlagN(char *s, long n, long l) {
+char Thesaurus::getFlagN(char *s, int32_t n, int32_t l) {
 	if (!l) l = gbstrlen(s);
 	return getFlagN(hash64Lower_utf8(s, l), n);
 }
 
-char Thesaurus::getFlagN(uint64_t h, long n) {
-	long slot = m_synonymTable.getSlot(h);
+char Thesaurus::getFlagN(uint64_t h, int32_t n) {
+	int32_t slot = m_synonymTable.getSlot(h);
 	if (slot < 0) return SYN_INVALID;
 	while(m_synonymTable.getKey(slot)) {
 		if (m_synonymTable.getKey(slot) == h && !n--)
@@ -664,14 +664,14 @@ char Thesaurus::getFlagN(uint64_t h, long n) {
 	return SYN_INVALID;
 }
 
-int64_t Thesaurus::getValue(char *s1, char *s2, long l1, long l2) {
+int64_t Thesaurus::getValue(char *s1, char *s2, int32_t l1, int32_t l2) {
 	if (!l1) l1 = gbstrlen(s1);
 	if (!l2) l2 = gbstrlen(s2);
 	return getValue(hash64Lower_utf8(s1, l1), hash64Lower_utf8(s2, l2));
 }
 
 int64_t Thesaurus::getValue(uint64_t h1, uint64_t h2) {
-	long slot = m_synonymTable.getSlot(h1);
+	int32_t slot = m_synonymTable.getSlot(h1);
 	if (slot < 0) return -1LL;
 	while(m_synonymTable.getKey(slot)) {
 		if (m_synonymTable.getKey(slot) == h1) {
@@ -684,13 +684,13 @@ int64_t Thesaurus::getValue(uint64_t h1, uint64_t h2) {
 	return -1LL;
 }
 
-int64_t Thesaurus::getValueN(char *s, long n, long l) {
+int64_t Thesaurus::getValueN(char *s, int32_t n, int32_t l) {
 	if (!l) l = gbstrlen(s);
 	return getValueN(hash64Lower_utf8(s, l), n);
 }
 
-int64_t Thesaurus::getValueN(uint64_t h, long n) {
-	long slot = m_synonymTable.getSlot(h);
+int64_t Thesaurus::getValueN(uint64_t h, int32_t n) {
+	int32_t slot = m_synonymTable.getSlot(h);
 	if (slot < 0) return -1LL;
 	while(m_synonymTable.getKey(slot)) {
 		if (m_synonymTable.getKey(slot) == h && !n--)
@@ -710,8 +710,8 @@ static int removePunctuation(char *src, int srcLen) {
 	return j;
 }
 
-bool Thesaurus::getStems(char *s, long slen, SynonymInfo *info) {
-	long lang = 1;		// FIXME: add support for other languages
+bool Thesaurus::getStems(char *s, int32_t slen, SynonymInfo *info) {
+	int32_t lang = 1;		// FIXME: add support for other languages
 	if (slen > 255) return false;
 	if (!m_suffixes) return false;
 	bool r = false;
@@ -730,11 +730,11 @@ bool Thesaurus::getStems(char *s, long slen, SynonymInfo *info) {
 	if ( isStopWord ( s , slen , h ) )
 		return false;
 
-	long slot = m_stemTable.getSlot(h);
+	int32_t slot = m_stemTable.getSlot(h);
 	// check for exceptions
 	if (slot >= 0) {
 		char *p = m_stemTable.getValueFromSlot(slot);
-		long plen = gbstrlen(p);
+		int32_t plen = gbstrlen(p);
 		if (p[0] != '.') {
 			r |= info->addSynonym(p, -1, -1, plen,
 					      SYN_STEM, 1, false, 
@@ -754,9 +754,9 @@ bool Thesaurus::getStems(char *s, long slen, SynonymInfo *info) {
 	}
 
 	char buf[256], buf2[256];
-	long bufLen = 0, buf2Len = 0;
+	int32_t bufLen = 0, buf2Len = 0;
 	// see if we can remove punctuation first
-	memcpy(buf, s2, slen);
+	gbmemcpy(buf, s2, slen);
 	bufLen = removePunctuation(buf, slen);
 	if (bufLen != slen) {
 		r |= info->addSynonym(buf, -1, -1, bufLen, 
@@ -765,10 +765,10 @@ bool Thesaurus::getStems(char *s, long slen, SynonymInfo *info) {
 
 	Suffix *suf = m_suffixes;
 	Suffix *sufend = m_suffixes + m_numSuffixes;
-	long sufLen;
+	int32_t sufLen;
 	for (; suf < sufend; suf++) {
 		sufLen = suf->m_len;
-		// if replacing the suffix would shorten the word below 3,
+		// if replacing the suffix would int16_ten the word below 3,
 		// skip it
 		if (sufLen >= slen - 1) continue;
 		if (!memcmp(s2 + slen - sufLen, suf->m_suffix, sufLen)) break;
@@ -776,8 +776,8 @@ bool Thesaurus::getStems(char *s, long slen, SynonymInfo *info) {
 
 	char **rep;
 	char **repend;
-	long *repLenp, repLen;
-	long best = -1;
+	int32_t *repLenp, repLen;
+	int32_t best = -1;
 
 	// found a usable suffix, so try to stem it
 	if (suf != sufend) {
@@ -787,26 +787,26 @@ bool Thesaurus::getStems(char *s, long slen, SynonymInfo *info) {
 		// find the most likely word
 
 		while (rep < repend) {
-			memcpy(buf, s2, slen);
+			gbmemcpy(buf, s2, slen);
 			repLen = *repLenp;
-			long stemLen = slen - sufLen;
+			int32_t stemLen = slen - sufLen;
 			bool mdbl = false;
 			bufLen = stemLen + repLen;
 			if (bufLen <= 1) continue;
 			// attach the replacement
-			memcpy(buf + stemLen, *rep, repLen + 1);
+			gbmemcpy(buf + stemLen, *rep, repLen + 1);
 			rep++;
 			repLenp++;
 			// needs to be hash64d because that's what the speller
 			//  is expecting
 			uint64_t h2 = hash64d(buf, bufLen);
-			long pop = g_speller.getPhrasePopularity(buf, h2, 
+			int32_t pop = g_speller.getPhrasePopularity(buf, h2, 
 								 false, lang);
 			if (g_conf.m_logDebugQuery) {
 				char buf3[256];
-				memcpy(buf3, buf, bufLen);
+				gbmemcpy(buf3, buf, bufLen);
 				buf3[bufLen] = '\0';
-				log(LOG_DEBUG, "query: maybe stem %s (%ld)", 
+				log(LOG_DEBUG, "query: maybe stem %s (%"INT32")", 
 					buf3, pop);
 			}
 			// if the replacement is empty, see if removing a
@@ -818,17 +818,17 @@ bool Thesaurus::getStems(char *s, long slen, SynonymInfo *info) {
 			if (!repLen && stemLen > 1 && 
 				buf[stemLen-1] == buf[stemLen-2]) {
 				char buf3[256];
-				memcpy(buf3, buf, bufLen - 1);
+				gbmemcpy(buf3, buf, bufLen - 1);
 				buf3[bufLen - 1] = '\0';
 				h2 = hash64d(buf3, bufLen - 1);
-				long pop2 = g_speller.getPhrasePopularity(
+				int32_t pop2 = g_speller.getPhrasePopularity(
 						buf3, h2, false, lang);
 				if (pop2 > pop) {
 					log(LOG_DEBUG, "query: Double "
 						"consonant removed \"%s\""
-						" (%ld)",
+						" (%"INT32")",
 						buf3, pop2);
-					memcpy(buf, buf3, bufLen);
+					gbmemcpy(buf, buf3, bufLen);
 					pop = pop2;
 					bufLen--;
 					mdbl = true;
@@ -837,7 +837,7 @@ bool Thesaurus::getStems(char *s, long slen, SynonymInfo *info) {
 			if (!pop) continue;
 			if (best < pop) {
 				best = pop;
-				memcpy(buf2, buf, bufLen + 1);
+				gbmemcpy(buf2, buf, bufLen + 1);
 				buf2Len = bufLen;
 				dbl = mdbl;
 			}
@@ -846,13 +846,13 @@ bool Thesaurus::getStems(char *s, long slen, SynonymInfo *info) {
 
 	// if we found something, add it in
 	if (best >= 0) {
-		log(LOG_DEBUG, "query: Stemming %s to %s (%li)", 
+		log(LOG_DEBUG, "query: Stemming %s to %s (%"INT32")", 
 			s, buf2, best);
 		r |= info->addSynonym(buf2, -1, -1, buf2Len, 
 				      SYN_STEM, 1, false, 0, 0);
 	} else {
 		// else just copy this in to make the next section simpler
-		memcpy(buf2, s2, slen);
+		gbmemcpy(buf2, s2, slen);
 		buf2Len = slen;
 	}
 	
@@ -868,30 +868,30 @@ bool Thesaurus::getStems(char *s, long slen, SynonymInfo *info) {
 			repLen = *repLenp;
 			char *rep2 = *rep;
 			char buf3[256];
-			long buf3Len;
-			long pop2 = 0;
+			int32_t buf3Len;
+			int32_t pop2 = 0;
 			rep++;
 			repLenp++;
 			if (memcmp(buf2 + buf2Len - repLen, rep2, repLen))
 				continue;
 			// found a possible replacement, so add the
 			//  suffix to it and see what we get
-			memcpy(buf, buf2, buf2Len);
+			gbmemcpy(buf, buf2, buf2Len);
 			bufLen = buf2Len - repLen;
-			memcpy(buf + bufLen, suf->m_suffix, suf->m_len + 1);
+			gbmemcpy(buf + bufLen, suf->m_suffix, suf->m_len + 1);
 			bufLen += suf->m_len;
 			// needs to be hash64d because that's what the speller
 			//  is expecting
 			uint64_t h2 = hash64d(buf, bufLen);
-			long pop = g_speller.getPhrasePopularity(buf, h2, 
+			int32_t pop = g_speller.getPhrasePopularity(buf, h2, 
 								 false, lang);
 			// if we removed a double consonant, add it back and
 			//  evaluate it with the new suffix
 			if (dbl) {
 				// if we reached here, repLen is always 0
-				memcpy(buf3, buf2, bufLen);
+				gbmemcpy(buf3, buf2, bufLen);
 				buf3[buf2Len] = buf3[buf2Len - 1];
-				memcpy(buf3 + buf2Len + 1, suf->m_suffix,
+				gbmemcpy(buf3 + buf2Len + 1, suf->m_suffix,
 					suf->m_len + 1);
 				buf3Len = buf2Len + 1 + suf->m_len;
 				h2 = hash64d(buf3, buf3Len);
@@ -900,13 +900,13 @@ bool Thesaurus::getStems(char *s, long slen, SynonymInfo *info) {
 			}
 			if (pop) { // got a potential suffix
 				log(LOG_DEBUG, "query: adding unstem \"%s\" "
-					"%ld", buf, pop);
+					"%"INT32"", buf, pop);
 				r |= info->addSynonym(buf, -1, -1, bufLen,
 					         SYN_STEM, 1, false, 0, 0);
 			}
 			if (pop2) {
 				log(LOG_DEBUG, "query: adding unstem \"%s\" "
-					"%ld", buf3, pop);
+					"%"INT32"", buf3, pop);
 				r |= info->addSynonym(buf3, -1, -1, bufLen + 1,
 						 SYN_STEM, 1, false, 0, 0);
 			}
@@ -919,9 +919,9 @@ bool Thesaurus::getStems(char *s, long slen, SynonymInfo *info) {
 
 struct Number {
 	char *m_word;
-	long long m_number;
-	long m_len;
-	unsigned long m_h;
+	int64_t m_number;
+	int32_t m_len;
+	uint32_t m_h;
 };
 
 static Number s_smallNumbers[] = {
@@ -976,20 +976,20 @@ static Number s_bigNumbers[] = {
 void testNumber() {
 	SynonymInfo info;
 	for(int i = 0; i < 10000; i++) {
-		long long n1 = (long long)rand() << 32 + rand();
+		int64_t n1 = (int64_t)rand() << 32 + rand();
 		bool r1 = g_thesaurus.parseNumbers(n1, &info);
 		if (!r1) log(LOG_INFO, "query: %lld failure", n1);
 		bool r2 = g_thesaurus.parseNumbers(info.m_syn[0], 
 						   info.m_len[0], 
 						   &info);
-		long long n2 = strtoll(info.m_, 0, 0);
+		int64_t n2 = strtoll(info.m_, 0, 0);
 		if (n1 != n2 && n1 >= 0) 
 			log(LOG_INFO, "query: %lld %lld %s", n1, n2, buf1);
 	}
 }
 #endif
 
-bool Thesaurus::parseNumbers(long long n, SynonymInfo *info) {
+bool Thesaurus::parseNumbers(int64_t n, SynonymInfo *info) {
 	SafeBuf buf(256);
 	bool sp = false, r = true;
 	// break it down until there's nothing left
@@ -1002,11 +1002,11 @@ bool Thesaurus::parseNumbers(long long n, SynonymInfo *info) {
 				break;
 			}
 		}
-		long long base = n;
+		int64_t base = n;
 		if (mult) base /= mult->m_number;
-		long hundred = base / 100;
-		long tens;
-		long small;
+		int32_t hundred = base / 100;
+		int32_t tens;
+		int32_t small;
 		if (base % 100 < s_tens[0].m_number) {
 			tens = 0;
 			small = base % 100;
@@ -1048,7 +1048,7 @@ bool Thesaurus::parseNumbers(long long n, SynonymInfo *info) {
 	return r;
 }
 
-bool Thesaurus::parseNumbers(char *s, long slen, SynonymInfo *info) {
+bool Thesaurus::parseNumbers(char *s, int32_t slen, SynonymInfo *info) {
 	// TODO: Make this language specific
 	// init the hashes if they don't exist yet
 	if (!s_smallNumbers[0].m_len)
@@ -1073,13 +1073,13 @@ bool Thesaurus::parseNumbers(char *s, long slen, SynonymInfo *info) {
 	// first check to see if we have digits
 	char *p = s, *pend = s + slen;
 	char *send;
-	long long n = strtoll(s, &send, 10);
+	int64_t n = strtoll(s, &send, 10);
 	if (s != send && send == pend) {
 		return parseNumbers(n, info);
 	}
 	SafeBuf buf(256);
 	n = 0;
-	long long m = 0;
+	int64_t m = 0;
 	Number *sm = NULL, *tn = NULL, *hn = NULL, *md = NULL;
 	while (p < pend) {
 		while ((isspace(*p) || *p == ',') && p < pend) p++;
@@ -1089,7 +1089,7 @@ bool Thesaurus::parseNumbers(char *s, long slen, SynonymInfo *info) {
 			p = sp;
 			continue;
 		}
-		unsigned long h = hash32(p, sp - p);
+		uint32_t h = hash32(p, sp - p);
 		bool match = false;
 		if (!md) for (Number *number = s_bigNumbers; 
 			number->m_word; number++) {
@@ -1158,13 +1158,13 @@ static char *s_articlesEng[] = { "the",
 // MDW: "some is not a stop word and should be ommitted
 //				 "some"};
 
-static long s_numArticlesEng = 3;
+static int32_t s_numArticlesEng = 3;
 
-bool Thesaurus::generatePhrases(char *s, long slen, 
-				SynonymInfo *info, long bits) {
+bool Thesaurus::generatePhrases(char *s, int32_t slen, 
+				SynonymInfo *info, int32_t bits) {
 	char *w1, *w2, *p1, *p2, *end, *mid = NULL;
-	long w1Len, w2Len, midLen;
-	long long leftSynHash, rightSynHash;
+	int32_t w1Len, w2Len, midLen;
+	int64_t leftSynHash, rightSynHash;
 	// disable this lest we get into an infinite recursive loop
 	bits &= ~SYNBIT_PHRASE;
 	p1 = s;
@@ -1172,7 +1172,7 @@ bool Thesaurus::generatePhrases(char *s, long slen,
 	bool isStop;
 	end = s + slen;
 	char **articles = s_articlesEng;
-	long numArticles = s_numArticlesEng;
+	int32_t numArticles = s_numArticlesEng;
 	do {
 		while (*p1 &&  isspace(*p1) && p1 < end) p1++;
 		w1 = p1;
@@ -1209,12 +1209,12 @@ bool Thesaurus::generatePhrases(char *s, long slen,
 	// check to see if there is an article for the first stop word
 	p1 = mid;
 	char *stop;
-	long stopLen;
+	int32_t stopLen;
 	while(*p1 &&  isspace(*p1) && p1 < w2) p1++;
 	stop = p1;
 	while(*p1 && !isspace(*p1) && p1 < w2) p1++;
 	stopLen = p1 - stop;
-	long artIndex = -1;
+	int32_t artIndex = -1;
 	if (stopLen > 0) {
 		artIndex = numArticles - 1;
 		while (artIndex >= 0) {
@@ -1248,22 +1248,22 @@ bool Thesaurus::generatePhrases(char *s, long slen,
 				char sort = 0;
 				p1 = s;
 				p2 = buf;
-				long n1, n2;
+				int32_t n1, n2;
 				// copy the fragment before w1
 				n1 = w1 - p1;
 				n2 = n1;
-				memcpy(p2, p1, n2);
+				gbmemcpy(p2, p1, n2);
 				p1 += n1;
 				p2 += n2;
 				// copy the w1 synonym
 				n1 = w1Len;
 				if (i < 0) {
 					n2 = n1;
-					memcpy(p2, w1, n1);
+					gbmemcpy(p2, w1, n1);
 					leftSynHash = 0;
 				} else {
 					n2 = syn1.m_len[i];
-					memcpy(p2, syn1.m_syn[i], n2);
+					gbmemcpy(p2, syn1.m_syn[i], n2);
 					//lid = syn1.m_termId[i];
 					leftSynHash = syn1.m_synHash[i];
 					sort += syn1.m_sort[i];
@@ -1277,7 +1277,7 @@ bool Thesaurus::generatePhrases(char *s, long slen,
 					} else {
 						*p2++ = ' ';
 						n2 = gbstrlen(articles[k]);
-						memcpy(p2, articles[k], n2);
+						gbmemcpy(p2, articles[k], n2);
 					}
 					p1 += n1 + 2;
 					p2 += n2;
@@ -1285,7 +1285,7 @@ bool Thesaurus::generatePhrases(char *s, long slen,
 					if (midLen > stopLen) {
 						n1 = midLen - stopLen;
 						n2 = n1;
-						memcpy(p2, p1, n2);
+						gbmemcpy(p2, p1, n2);
 						p1 += n1 + 1;
 						*p2++ = ' ';
 					}
@@ -1293,7 +1293,7 @@ bool Thesaurus::generatePhrases(char *s, long slen,
 					// copy the fragment between w1 and 2
 					n1 = w2 - (w1 + w1Len);
 					n2 = n1;
-					memcpy(p2, p1, n2);
+					gbmemcpy(p2, p1, n2);
 					p1 += n1;
 					p2 += n2;
 				}
@@ -1301,11 +1301,11 @@ bool Thesaurus::generatePhrases(char *s, long slen,
 				n1 = w2Len;
 				if (j < 0) {
 					n2 = n1;
-					memcpy(p2, w2, n1);
+					gbmemcpy(p2, w2, n1);
 					rightSynHash = 0;
 				} else {
 					n2 = syn2.m_len[j];
-					memcpy(p2, syn2.m_syn[j], n2);
+					gbmemcpy(p2, syn2.m_syn[j], n2);
 					//rid = syn2.m_termId[j];
 					rightSynHash = syn2.m_synHash[j];
 					sort += syn2.m_sort[j];
@@ -1315,7 +1315,7 @@ bool Thesaurus::generatePhrases(char *s, long slen,
 				// copy the fragment after w2
 				n1 = (s + slen) - (w2 + w2Len);
 				n2 = n1;
-				memcpy(p2, p1, n2);
+				gbmemcpy(p2, p1, n2);
 				p1 += n1;
 				p2 += n2;
 				*p2 = '\0';
@@ -1363,7 +1363,7 @@ bool Thesaurus::rebuildSynonyms() {
 	char *synFile;
 
 	SafeBuf addBuffer;
-	long unknown = 0;	// number of missing synonym types
+	int32_t unknown = 0;	// number of missing synonym types
 
 	while((synFile = dir.getNextFilename("thesaurus-*"))) {
 		// don't read this, the format is different
@@ -1405,9 +1405,9 @@ bool Thesaurus::rebuildSynonyms() {
 			}
 			SynonymLinkGroup w, *wp1, *wp2;
 			uint64_t h1, h2;
-			long alen = gbstrlen(a), blen = gbstrlen(b);
+			int32_t alen = gbstrlen(a), blen = gbstrlen(b);
 			char type = SYN_UNKNOWN;
-			long aff = -1;
+			int32_t aff = -1;
 			// if we have both but the third field is a number,
 			//  assign it to d for affinity
 			if (c && d && isdigit(*c)) {
@@ -1440,7 +1440,7 @@ bool Thesaurus::rebuildSynonyms() {
 				"affinity: %s", e);
 			h1 = hash64Lower_utf8(a, alen);
 			h2 = hash64Lower_utf8(b, blen);
-			long slot1 = linkTable.getSlot(h1);
+			int32_t slot1 = linkTable.getSlot(h1);
 			bool x = true;
 			if (slot1 < 0) {
 				w.m_n = 0;
@@ -1449,7 +1449,7 @@ bool Thesaurus::rebuildSynonyms() {
 				addBuffer.safeMemcpy(a, alen+1);
 				x &= linkTable.addKey(h1, w, &slot1);
 			}
-			long slot2 = linkTable.getSlot(h2);
+			int32_t slot2 = linkTable.getSlot(h2);
 			if (slot2 < 0) {
 				w.m_n = 0;
 				w.m_h[0] = h2;
@@ -1510,29 +1510,29 @@ bool Thesaurus::rebuildSynonyms() {
 	if (*(addBuffer.getBuf()-1) != '\0')
 		addBuffer.pushChar('\0');
 
-	long numSynonyms = 0;
-	long totalPairs = 0;
+	int32_t numSynonyms = 0;
+	int32_t totalPairs = 0;
 	// count up groups that have at least 2 members
-	for (long slot = 0; slot < linkTable.getNumSlots(); slot++) {
+	for (int32_t slot = 0; slot < linkTable.getNumSlots(); slot++) {
 		SynonymLinkGroup w;
 		w = linkTable.getValueFromSlot(slot);
 		if (w.m_n) numSynonyms++;
 		totalPairs += w.m_n;
 	}
 
-	log(LOG_INFO, "build: Built %li synonym groups and %li pairs", 
+	log(LOG_INFO, "build: Built %"INT32" synonym groups and %"INT32" pairs", 
 		numSynonyms, totalPairs);
-	if (unknown) log(LOG_WARN, "build: %li synonyms pairs were missing "
+	if (unknown) log(LOG_WARN, "build: %"INT32" synonyms pairs were missing "
 		"valid types, check your input files", unknown);
 
 	SafeBuf thesFile;
 
-	thesFile.safePrintf("|lastRebuild|%li\n", m_lastRebuild);
-	thesFile.safePrintf("|numSynonyms|%li\n", numSynonyms);
-	thesFile.safePrintf("|totalPairs|%li\n", totalPairs);
+	thesFile.safePrintf("|lastRebuild|%"INT32"\n", m_lastRebuild);
+	thesFile.safePrintf("|numSynonyms|%"INT32"\n", numSynonyms);
+	thesFile.safePrintf("|totalPairs|%"INT32"\n", totalPairs);
 	thesFile.safePrintf("|totalSlots|0\n");
 
-	for (long slot = 0; slot < linkTable.getNumSlots(); slot++) {
+	for (int32_t slot = 0; slot < linkTable.getNumSlots(); slot++) {
 		if (!linkTable.getKey(slot)) continue;
 		SynonymLinkGroup w;
 		w = linkTable.getValueFromSlot(slot);
@@ -1542,15 +1542,15 @@ bool Thesaurus::rebuildSynonyms() {
 			if (w.m_h[0] == w.m_h[j]) continue;
 			s1 = addBuffer.getBufStart() + w.m_syn[0];
 			s2 = addBuffer.getBufStart() + w.m_syn[j];
-			long aff;
+			int32_t aff;
 			if (w.m_aff[j] >= 0) aff = w.m_aff[j];
 			else                 aff = getAffinity(s1, s2);
 			if (aff >= 0) {
-				thesFile.safePrintf("%s|%s|0x%08lx|%ld\n", 
-					s1, s2, aff, (long)w.m_type[j]);
+				thesFile.safePrintf("%s|%s|0x%08"XINT32"|%"INT32"\n", 
+					s1, s2, aff, (int32_t)w.m_type[j]);
 			} else {
-				thesFile.safePrintf("%s|%s|%ld|%ld\n",
-					s1, s2, aff, (long)w.m_type[j]);
+				thesFile.safePrintf("%s|%s|%"INT32"|%"INT32"\n",
+					s1, s2, aff, (int32_t)w.m_type[j]);
 			}
 		}
 	}
@@ -1558,7 +1558,7 @@ bool Thesaurus::rebuildSynonyms() {
 	snprintf(ff, PATH_MAX, "%s%sthesaurus.txt", g_hostdb.m_dir, s_dictDir);
 	if (!thesFile.dumpToFile(ff)) return log("build: Couldn't save %s", ff);
 
-	log(LOG_TIMING, "build: took %llims to rebuild synonyms",
+	log(LOG_TIMING, "build: took %"INT64"ms to rebuild synonyms",
 		gettimeofdayInMilliseconds() - startTime);
 	return true;
 }
@@ -1569,10 +1569,10 @@ public:
 	StateAffinity *m_aff;
 	SynonymInfo m_info;
 	char *m_syn;
-	long m_i;
-	long m_sent;
-	long m_cache;
-	long m_recv;
+	int32_t m_i;
+	int32_t m_sent;
+	int32_t m_cache;
+	int32_t m_recv;
 	bool m_next;
 };
 
@@ -1593,7 +1593,7 @@ static StateAffinityGroup *buildAffinityGroup(StateAffinityGroup *group);
 static void gotAffinityDoc(void *state, TcpSocket *socket);
 static void affinityRetry(StateAffinityGroup *group, TcpSocket *socket);
 static void affinityAbort(StateAffinityGroup *group);
-static void gotAffinityIP(void *state, long ip);
+static void gotAffinityIP(void *state, int32_t ip);
 static void gotAllAffinityPairs(void *state);
 static void gotGroupAffinityPairs(StateAffinityGroup *group);
 
@@ -1603,7 +1603,7 @@ static void buildAffinity(StateAffinity *aff) {
 	StateAffinityGroup *group = getNextAffinityGroup(aff);
 	do {
 		if (aff->m_n >= aff->m_next) {
-			log(LOG_INFO, "build: %li out of %li pairs built",
+			log(LOG_INFO, "build: %"INT32" out of %"INT32" pairs built",
 				aff->m_n, aff->m_oldTable->getNumSlotsUsed());
 			aff->m_next = aff->m_n + 1000;
 			QUICKPOLL(1);	// just in case we're hogging the cpu 
@@ -1660,12 +1660,12 @@ static StateAffinityGroup *buildAffinityGroup(StateAffinityGroup *group) {
 			aff->m_callback(aff);
 		return group2;
 	}
-	long i = group->m_i;
+	int32_t i = group->m_i;
 	uint64_t hh;
 	char *s1 = group->m_syn;
 	char *s2 = "";
-	long  h1 = hash32n(group->m_syn);
-	long  h2;
+	int32_t  h1 = hash32n(group->m_syn);
+	int32_t  h2;
 	SafeBuf b;
 	b.safePrintf("http://%s/search?q=", aff->m_server);
 	if (strchr(s1, ' ')) {
@@ -1699,7 +1699,7 @@ static StateAffinityGroup *buildAffinityGroup(StateAffinityGroup *group) {
 	b.safeMemcpy(g_conf.m_affinityParms, gbstrlen(g_conf.m_affinityParms)+1);
 	uint64_t *llp;
 	if (!aff->m_fullRebuild && i >= 0 && info->m_affinity[i] >= 0) {
-		log(LOG_DEBUG, "build: old value: (%s, %s, %08lx)",
+		log(LOG_DEBUG, "build: old value: (%s, %s, %08"XINT32")",
 			s1, s2, info->m_affinity[i]);
 		aff->m_old++;
 	} else if (i == -1 && !group->m_sent && !group->m_cache) {
@@ -1727,10 +1727,10 @@ static StateAffinityGroup *buildAffinityGroup(StateAffinityGroup *group) {
 		}
 	} else {
 		if (i >= 0) {
-			log(LOG_DEBUG, "build: cache hit (%s, %s, %lli)", 
+			log(LOG_DEBUG, "build: cache hit (%s, %s, %"INT64")", 
 				s1, s2, *llp);
 		} else {
-			log(LOG_DEBUG, "build: cache hit (%s, %lli)", 
+			log(LOG_DEBUG, "build: cache hit (%s, %"INT64")", 
 				s1, *llp);
 		}
 		aff->m_cache++;
@@ -1745,7 +1745,7 @@ static void gotAffinityDoc(void *state, TcpSocket *socket) {
 	StateAffinityGroup *group = (StateAffinityGroup *)state;
 	StateAffinity *aff = group->m_aff;
 	SynonymInfo *info = &group->m_info;
-	long i = -1;
+	int32_t i = -1;
 	char *q = strstr(socket->m_sendBuf, "q=") + 2;
 	Xml xml;
 	group->m_recv++;
@@ -1758,16 +1758,16 @@ static void gotAffinityDoc(void *state, TcpSocket *socket) {
 	}
 	char *qend = strchr(q, '&');
 	char buf[1024];
-	long qlen = urlDecode(buf, q, qend - q);
+	int32_t qlen = urlDecode(buf, q, qend - q);
 	buf[qlen] = '\0';
 	char *sep = buf + gbstrlen(group->m_syn);
 	if (buf[0] == '\"') sep += 2;
 	if (!strncmp(sep, " .. ", 4)) { // are we a pair?
 		char *syn = sep + 4;    // step over the " .. " in the middle
-		for (long j = 0; j < info->m_numSyns; j++) {
+		for (int32_t j = 0; j < info->m_numSyns; j++) {
 			uint32_t h1 = hash32n(info->m_syn[j]);
 			uint32_t h2;
-			long slen = buf - syn + qlen;
+			int32_t slen = buf - syn + qlen;
 			if (syn[0] == '\"') {
 				h2 = hash32(syn + 1, slen - 2);
 			} else {
@@ -1806,7 +1806,7 @@ static void gotAffinityDoc(void *state, TcpSocket *socket) {
 		return;
 	}
 	s += 4;
-	long len;
+	int32_t len;
 	len = socket->m_readOffset - (s - socket->m_readBuf);
 	if (strncmp(s, "<?xml", 5)) {
 		log("build: Non-XML response during affinity rebuild");
@@ -1815,7 +1815,7 @@ static void gotAffinityDoc(void *state, TcpSocket *socket) {
 		return;
 	} 
 	if (!xml.set(s, len, false, 0, false, 0)) {
-		log("build: len = %li", len);
+		log("build: len = %"INT32"", len);
 		log("build: s = %32s", s);
 		affinityRetry(group, socket);
 		return;
@@ -1829,13 +1829,13 @@ static void gotAffinityDoc(void *state, TcpSocket *socket) {
 		return;
 	}
 	uint64_t hh;
-	unsigned long h1 = hash32n(group->m_syn);
+	uint32_t h1 = hash32n(group->m_syn);
 	if (i == -1) {
 		hh = (uint64_t)h1;
 	} else {
 		char *s1 = group->m_syn;
 		char *s2 = info->m_syn[i];
-		unsigned long h2 = hash32n(s2);
+		uint32_t h2 = hash32n(s2);
 		if (strcmp(s1, s2) < 0) {
 			hh = h1 + ((uint64_t)h2 << 32);
 		} else {
@@ -1852,7 +1852,7 @@ static void gotAffinityDoc(void *state, TcpSocket *socket) {
 	// send the next request and/or do cleanup
 	do {
 		if (aff->m_n >= aff->m_next) {
-			log(LOG_INFO, "build: %li out of %li pairs built",
+			log(LOG_INFO, "build: %"INT32" out of %"INT32" pairs built",
 				aff->m_n, aff->m_oldTable->getNumSlotsUsed());
 			aff->m_next = aff->m_n + 1000;
 			QUICKPOLL(1);	// just in case we're hogging the cpu 
@@ -1871,7 +1871,7 @@ static void affinityRetry(StateAffinityGroup *group, TcpSocket *socket) {
 		return;
 	}
 	aff->m_errors++;
-	log(LOG_DEBUG, "build: affinity error #%li", aff->m_errors);
+	log(LOG_DEBUG, "build: affinity error #%"INT32"", aff->m_errors);
 	// rebuild the url from the sendBuf
 	char buf[1024], *p; 
 	p = buf; 
@@ -1912,7 +1912,7 @@ static void affinityAbort(StateAffinityGroup *group) {
 	buildAffinityGroup(group);
 }
 
-static void gotAffinityIP(void *state, long ip) {
+static void gotAffinityIP(void *state, int32_t ip) {
 	StateAffinity *aff = (StateAffinity *)state;
 	if (!ip) {
 		log("build: Couldn't resolve %s for affinity rebuild",
@@ -1932,16 +1932,16 @@ static void gotGroupAffinityPairs(StateAffinityGroup *group) {
 	StateAffinity *aff = group->m_aff;
 	SynonymInfo *info = &group->m_info;
 	char *s1 = group->m_syn;
-	//long s1len = gbstrlen(s1);
+	//int32_t s1len = gbstrlen(s1);
 	uint64_t key = hash64Lower_utf8(s1);
 	 int64_t v = aff->m_thes->getValueN(key, 0);
-	long numSyns = info->m_numSyns;
+	int32_t numSyns = info->m_numSyns;
 	log(LOG_DEBUG, "build: gotGroupAffinityPairs(%p)", group);
 	aff->m_newTable->addKey(key, v);
-	for(long i = 0; i < numSyns; i++) { 
+	for(int32_t i = 0; i < numSyns; i++) { 
 		if (!aff->m_thes->m_rebuilding) continue;
 		char *s2 = info->m_syn[i];
-		//long s2len = gbstrlen(s2);
+		//int32_t s2len = gbstrlen(s2);
 		uint64_t hh;
 		uint32_t hh1 = hash32n(s1), hh2 = hash32n(s2);
 		if (info->m_affinity[i] >= 0 &&	!aff->m_fullRebuild) {
@@ -1964,22 +1964,22 @@ static void gotGroupAffinityPairs(StateAffinityGroup *group) {
 		pl = aff->m_hitsTable.getValuePointer(hh);
 		if (pk) k = *pk;
 		if (pl) l = *pl;
-		long a = -1;
+		int32_t a = -1;
 		if (k && l) {
 			double f = (double)l / (double)k;
 			// we never want synonym affinity to be 100%
 			if (f > 0.99) f = 0.99;
-			a = (long)(f * MAX_AFFINITY);
+			a = (int32_t)(f * MAX_AFFINITY);
 		} else if (pk && pl) {
 			a = 0;
 		} else {
-			log(LOG_WARN, "build: hits=%s,%08lx,%p,%lli,"
-				"%s,%016llx,%p,%lli", 
-				s1, (unsigned long) hh1, pk, k, 
+			log(LOG_WARN, "build: hits=%s,%08"XINT32",%p,%"INT64","
+				"%s,%016"XINT64",%p,%"INT64"", 
+				s1, (uint32_t) hh1, pk, k, 
 				s2, hh, pl, l);
 			continue;
 		}
-		log(LOG_DEBUG, "build: affinity(%s,%s)=%li(%lli,%lli)",
+		log(LOG_DEBUG, "build: affinity(%s,%s)=%"INT32"(%"INT64",%"INT64")",
 			s1, s2, a, k, l);
 //		if (a < MAX_AFFINITY * 0.01) {
 //			aff->m_skip++;
@@ -2009,7 +2009,7 @@ static int slotCmp(const void *p1, const void *p2) {
 	else if (v1 < v2) return  1;	// v2 has higher affinity, push it up
 	else {
 		// if this happens the code elsewhere is borked
-		log(LOG_LOGIC, "build: duplicate entry (%016llx,%016llx)",
+		log(LOG_LOGIC, "build: duplicate entry (%016"XINT64",%016"XINT64")",
 			s_cmpKey, v1);
 		return  0;
 	}
@@ -2017,19 +2017,19 @@ static int slotCmp(const void *p1, const void *p2) {
 
 /*
 static void sortTable(HashTableT<uint64_t, int64_t> *table) {
-	long n1 = table->getNumSlots();
+	int32_t n1 = table->getNumSlots();
 	// this is a bit ugly but it's the best way to get the synonyms sorted
 	//  as far as I can figure out
 	
-	for (long i = 0; i < n1; i++) {
+	for (int32_t i = 0; i < n1; i++) {
 		uint64_t key = table->getKey(i);
 		// check for an empty slot or if we're at the first slot for 
 		//  this key, if we're not we already sorted this key set
 		if (!key || (table->getSlot(key) != i)) continue;
 		// if not, count up all the slots that use this key and store
 		//  them in a temporary array
-		long n2 = 0, j = i;
-		long slots[MAX_SYNS];
+		int32_t n2 = 0, j = i;
+		int32_t slots[MAX_SYNS];
 		int64_t vals[MAX_SYNS];
 		while(table->getKey(j)) {
 			if (table->getKey(j) == key) {
@@ -2043,7 +2043,7 @@ static void sortTable(HashTableT<uint64_t, int64_t> *table) {
 		s_cmpKey = key;
 		gbmergesort(vals, n2, sizeof(int64_t), slotCmp);
 		// and then throw them back in the table
-		for (long j = 0; j < n2; j++) {
+		for (int32_t j = 0; j < n2; j++) {
 			table->setValue(slots[j], vals[j]);
 		} 
 	}
@@ -2054,11 +2054,11 @@ static void gotAllAffinityPairs(void *state) {
 	StateAffinity *aff = (StateAffinity *)state;
 	log(LOG_DEBUG, "build: gotAllAffinityPairs(%p)", state);
 	if (aff->m_thes->m_rebuilding) {
-		log(LOG_INFO, "build: Rebuilt %li affinity pairs, sent "
-			"%li total requests, hit cache %li times, used %li "
-//			"old values, had %li errors, dropped %li pairs for "
-//			"values below the threshold, and took %lli seconds"
-			"old values, had %li errors, and took %lli seconds"
+		log(LOG_INFO, "build: Rebuilt %"INT32" affinity pairs, sent "
+			"%"INT32" total requests, hit cache %"INT32" times, used %"INT32" "
+//			"old values, had %"INT32" errors, dropped %"INT32" pairs for "
+//			"values below the threshold, and took %"INT64" seconds"
+			"old values, had %"INT32" errors, and took %"INT64" seconds"
 			"(%s rebuild)", 
 			aff->m_built, aff->m_sent, aff->m_cache,
 			aff->m_old, aff->m_errors, //aff->m_skip,
@@ -2098,7 +2098,7 @@ static void gotAllAffinityPairs(void *state) {
 				*b++ = '\0';
 				*c++ = '\0';
 			}
-			long val;
+			int32_t val;
 			char *d = NULL;
 			if (strcmp(c, "max") == 0) {
 				val = MAX_AFFINITY;
@@ -2106,15 +2106,15 @@ static void gotAllAffinityPairs(void *state) {
 				float f = strtod(c, &d);
 				if (f > 0.99) f = 0.99;
 				if (f < 0.0 ) f = 0.0;
-				val = (long)(f * MAX_AFFINITY);
+				val = (int32_t)(f * MAX_AFFINITY);
 			} else {
 				val = strtol(c, &d, 0);
 			}
 			if (d && *d) log(LOG_DEBUG, "build: Extra characters "
 				"in affinity value: %s", d);
 			uint64_t h = hash64Lower_utf8(a);
-			long slot = aff->m_newTable->getSlot(h);
-			long offset = aff->m_thes->getOffset(b);
+			int32_t slot = aff->m_newTable->getSlot(h);
+			int32_t offset = aff->m_thes->getOffset(b);
 			if (slot < 0) {
 				log("build: Couldn't find synonym slot for "
 					"(%s)", a);
@@ -2153,7 +2153,7 @@ static void gotAllAffinityPairs(void *state) {
 			log(LOG_INFO, "build: propogating thesaurus data to "
 				"all hosts");
 			char cmd[512];
-			for ( long i = 0; i < g_hostdb.getNumHosts() ; i++ ) {
+			for ( int32_t i = 0; i < g_hostdb.getNumHosts() ; i++ ) {
 				Host *h = g_hostdb.getHost(i);
 				snprintf(cmd, 512,
 					"rcp -r "
@@ -2231,8 +2231,8 @@ bool Thesaurus::rebuildAffinity(char *server, bool fullRebuild) {
 	aff->m_fullRebuild = fullRebuild;
 	aff->m_callback = gotAllAffinityPairs;
 	char *c = strchr(server, ':');
-	long len;
-	long ip;
+	int32_t len;
+	int32_t ip;
 	if (c) 
 		len = c - server;
 	else
@@ -2250,24 +2250,24 @@ bool Thesaurus::save() {
 	
 	bool x = true;
 
-	//x &= b.safePrintf("|lastRebuild|%li\n", m_lastRebuild);
-	//x &= b.safePrintf("|numSynonyms|%li\n", m_numSynonyms);
-	//x &= b.safePrintf("|totalPairs|%li\n", m_totalPairs);
-	//x &= b.safePrintf("|totalSlots|%li\n", m_synonymTable.getNumSlots());
+	//x &= b.safePrintf("|lastRebuild|%"INT32"\n", m_lastRebuild);
+	//x &= b.safePrintf("|numSynonyms|%"INT32"\n", m_numSynonyms);
+	//x &= b.safePrintf("|totalPairs|%"INT32"\n", m_totalPairs);
+	//x &= b.safePrintf("|totalSlots|%"INT32"\n", m_synonymTable.getNumSlots());
 
 	while (p1 < p1end && x) {
 		SynonymInfo syn;
 		getSynonymInfo(p1, &syn);
-		for (long i = 0; i < syn.m_numSyns; i++) {
+		for (int32_t i = 0; i < syn.m_numSyns; i++) {
 			char *p2 = syn.m_syn[i];
-			long a = syn.m_affinity[i];
+			int32_t a = syn.m_affinity[i];
 			float af = a / (float)MAX_AFFINITY;
-			long f = syn.m_type[i];
+			int32_t f = syn.m_type[i];
 			if (a >= 0) {
-				x &= b.safePrintf("%s|%s|%f|%ld\n", 
+				x &= b.safePrintf("%s|%s|%f|%"INT32"\n", 
 					p1, p2, af, f);
 			} else {
-				x &= b.safePrintf("%s|%s|%ld|%ld\n", 
+				x &= b.safePrintf("%s|%s|%"INT32"|%"INT32"\n", 
 					p1, p2, a, f);
 			}
 		}
@@ -2356,7 +2356,7 @@ bool Thesaurus::initStems() {
 			break;
 		}
 		*a = '\0';
-		unsigned long h1 = hash32n(p), h2 = hash32n(a+1);
+		uint32_t h1 = hash32n(p), h2 = hash32n(a+1);
 		// add it in both ways now
 		m_stemTable.addKey(h1, a+1);
 		m_stemTable.addKey(h2, p);
@@ -2364,8 +2364,8 @@ bool Thesaurus::initStems() {
 		else   p = pend;
 	}
 
-	long used = m_stemTable.getNumSlotsUsed();
-	if (used) log(LOG_INIT, "query: Loaded %li stem exceptions", used);
+	int32_t used = m_stemTable.getNumSlotsUsed();
+	if (used) log(LOG_INIT, "query: Loaded %"INT32" stem exceptions", used);
 	else      log(LOG_INIT, "query: Couldn't load stem exceptions");
 
 	m_suffixBuffer.reset();
@@ -2386,14 +2386,14 @@ bool Thesaurus::initStems() {
 			"stemmer");
 		m_reps = (char **)mmalloc(sizeof(char *) * m_numReps, 
 			"stemmer");
-		m_repLens = (long *)mmalloc(sizeof (long) * m_numReps, 
+		m_repLens = (int32_t *)mmalloc(sizeof (int32_t) * m_numReps, 
 			"stemmer");
 		if (!m_suffixes || !m_reps || !m_repLens) {
 			if (m_suffixes) mfree(m_suffixes, sizeof(Suffix) * 
 						m_numSuffixes, "stemmer");
 			if (m_reps)     mfree(m_reps, sizeof(char *) * 
 						m_numReps, "stemmer");
-			if (m_repLens)	mfree(m_repLens, sizeof(long) * 
+			if (m_repLens)	mfree(m_repLens, sizeof(int32_t) * 
 				m_numReps, "stemmer");
 			m_suffixes = NULL;
 			m_reps = NULL;
@@ -2405,11 +2405,11 @@ bool Thesaurus::initStems() {
 	p = m_suffixBuffer.getBufStart();
 	Suffix *suf = m_suffixes;
 	char **rep = m_reps;
-	long *repLenp = m_repLens;
+	int32_t *repLenp = m_repLens;
 	while (p < pend) {
 		// first entry in a line is the suffix
 		suf->m_suffix = p;
-		long len = gbstrlen(p);
+		int32_t len = gbstrlen(p);
 		p += len;
 		char *p2 = p + 1, *p2end;
 		suf->m_numReps = 0;
@@ -2433,9 +2433,9 @@ bool Thesaurus::initStems() {
 			continue;
 		}
 		char **rep2 = suf->m_reps;
-		long *repLenp2 = suf->m_repLens;
+		int32_t *repLenp2 = suf->m_repLens;
 		while (p2 < p2end) {
-			long len = gbstrlen(p2);
+			int32_t len = gbstrlen(p2);
 		 	if (*p2 == '.') {
 				*rep2 = "";
 				*repLenp2 = 0;
@@ -2497,8 +2497,8 @@ bool Thesaurus::load() {
 
 	
 	SafeBuf synonymTextB;
-	long warn = 0;
-	long unknown = 0;
+	int32_t warn = 0;
+	int32_t unknown = 0;
 
 	// allow dups in this table
 	m_synonymTable.setAllowDupKeys(true);
@@ -2523,8 +2523,8 @@ bool Thesaurus::load() {
 			if (w4) *w4++ = '\0';
 		}
 
-		//long w2len;
-		long a, b;
+		//int32_t w2len;
+		int32_t a, b;
 		//w1len = gbstrlen(w1);
 		//w2len = gbstrlen(w2);
 		a = strtol(w3, &e, 0);
@@ -2549,8 +2549,8 @@ bool Thesaurus::load() {
 		// we are not adding it as a "synonym entry" per se. so this table
 		// is really storing two different types of things.
 		h2 ^= 0x987fce44;
-		long slot2 = m_synonymTable.getSlot(h2);
-		long offset2;
+		int32_t slot2 = m_synonymTable.getSlot(h2);
+		int32_t offset2;
 		if (slot2 < 0) {
 			// point into our word buffer
 			offset2 = synonymTextB.length();
@@ -2569,7 +2569,7 @@ bool Thesaurus::load() {
 			offset2 = OFFSET(v);
 			// sanity check, affinity better be 0x7fffffff, otherwise
 			// there might have been a collision?
-			long a2 = AFFINITY(v);
+			int32_t a2 = AFFINITY(v);
 			if ( a2 != 0x7fffffff ) { char *xx = NULL; *xx = 0; }
 		}
 		// add the actual synonym info for the hash of word1, "h1"
@@ -2584,10 +2584,10 @@ bool Thesaurus::load() {
 	if (!x) return log("build: Thesaurus loading failure, memory low?");
 
 	if (warn)
-		log(LOG_INIT, "build: %li invalid/missing affinity "
+		log(LOG_INIT, "build: %"INT32" invalid/missing affinity "
 		    "values, recommend rebuild", warn);
 	if (unknown) 
-		log(LOG_INIT, "build: %li synonyms with missing/"
+		log(LOG_INIT, "build: %"INT32" synonyms with missing/"
 		    "invalid type", unknown);
 	// this no longer resets m_synonymTable, why did we
 	// want to do that anyway??? MDW
@@ -2600,7 +2600,7 @@ bool Thesaurus::load() {
 	synonymTextB.detachBuf();	// we own this now
 	relabel(m_synonymText, m_synonymSize, "thesaurus");
 
-	log(LOG_INIT,"build: Loaded %li synonym pairs.",
+	log(LOG_INIT,"build: Loaded %"INT32" synonym pairs.",
 	    m_synonymTable.m_numSlotsUsed);
 
 	// save it as "thesaurus.dat", and include the text buffer,

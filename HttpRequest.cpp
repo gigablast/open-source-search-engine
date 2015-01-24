@@ -92,7 +92,7 @@ void HttpRequest::reset() {
 
 // returns false with g_errno set on error
 bool HttpRequest::copy ( class HttpRequest *r , bool stealBuf ) {
-	memcpy ( this , r , sizeof(HttpRequest) );
+	gbmemcpy ( this , r , sizeof(HttpRequest) );
 	// do not copy this over though in that way
 	m_reqBuf.m_capacity = 0;
 	m_reqBuf.m_length = 0;
@@ -104,7 +104,7 @@ bool HttpRequest::copy ( class HttpRequest *r , bool stealBuf ) {
 		// if he's on the stack, that's a problem!
 		if ( r->m_reqBuf.m_usingStack ) { char *xx=NULL;*xx=0; }
 		// copy the safebuf member var directly
-		memcpy ( &m_reqBuf , &r->m_reqBuf , sizeof(SafeBuf) );
+		gbmemcpy ( &m_reqBuf , &r->m_reqBuf , sizeof(SafeBuf) );
 		// do not let it free anything
 	        r->m_reqBuf.m_usingStack = true;
 		// that's it!
@@ -118,7 +118,7 @@ bool HttpRequest::copy ( class HttpRequest *r , bool stealBuf ) {
 	// fix ptrs
 	char *sbuf = r->m_reqBuf.getBufStart();
 	char *dbuf =    m_reqBuf.getBufStart();
-	for ( long i = 0 ; i < m_numFields ; i++ ) {
+	for ( int32_t i = 0 ; i < m_numFields ; i++ ) {
 		m_fields     [i] = dbuf + (r->m_fields     [i] - sbuf);
 		m_fieldValues[i] = NULL;
 		if ( r->m_fieldValues[i] )
@@ -148,19 +148,19 @@ bool HttpRequest::copy ( class HttpRequest *r , bool stealBuf ) {
 // . fill in your own offset/size for partial GET requests
 // . returns false and sets g_errno on error
 // . NOTE: http 1.1 uses Keep-Alive by default (use Connection: close to not)
-bool HttpRequest::set (char *url,long offset,long size,time_t ifModifiedSince,
+bool HttpRequest::set (char *url,int32_t offset,int32_t size,time_t ifModifiedSince,
 		       char *userAgent , char *proto , bool doPost ,
 		       char *cookie , char *additionalHeader ,
 		       // if posting something, how many bytes is it?
-		       long postContentLen ,
+		       int32_t postContentLen ,
 		       // are we sending the request through an http proxy?
 		       // if so this will be non-zero
-		       long proxyIp ) {
+		       int32_t proxyIp ) {
 
 	m_reqBufValid = false;
 
-	long hlen ;
-	long port = 80;
+	int32_t hlen ;
+	int32_t port = 80;
 	char *hptr = getHostFast ( url , &hlen , &port );
 	char *path = getPathFast ( url );
 
@@ -183,7 +183,7 @@ bool HttpRequest::set (char *url,long offset,long size,time_t ifModifiedSince,
 	// if no legit host
 	if ( hlen <= 0 || ! hptr ) { g_errno = EBADURL; return false; }
 	// sanity check. port is only 16 bits
-	if ( port > (long)0xffff ) { g_errno = EBADURL; return false; }
+	if ( port > (int32_t)0xffff ) { g_errno = EBADURL; return false; }
 	// return false and set g_errno if url too big
 	//if ( url->getUrlLen() + 400 >= MAX_REQ_LEN ) { 
 	//	g_errno = EURLTOOBIG; return false;}
@@ -191,13 +191,13 @@ bool HttpRequest::set (char *url,long offset,long size,time_t ifModifiedSince,
 	m_requestType = RT_GET;//0;
 	// get the host NULL terminated
 	char host[1024+8];
-	//long hlen = url->getHostLen();
+	//int32_t hlen = url->getHostLen();
 	strncpy ( host , hptr , hlen );
 	host [ hlen ] = '\0';
 	// then port
-	//unsigned short port = url->getPort();
+	//uint16_t port = url->getPort();
 	if ( port != 80 ) {
-		sprintf ( host + hlen , ":%lu" , port );
+		sprintf ( host + hlen , ":%"UINT32"" , (uint32_t)port );
 		hlen += gbstrlen ( host + hlen );
 	}
 	// the if-modified-since field
@@ -208,7 +208,7 @@ bool HttpRequest::set (char *url,long offset,long size,time_t ifModifiedSince,
 		sprintf(ibuf,"If-Modified-Since: %s UTC",
 			asctime(gmtime(&ifModifiedSince)));
 		// get the length
-		long ilen = gbstrlen(ibuf);
+		int32_t ilen = gbstrlen(ibuf);
 		// hack off \n from ctime - replace with \r\n\0
 		ibuf [ ilen - 1 ] = '\r';
 		ibuf [ ilen     ] = '\n';
@@ -295,7 +295,7 @@ bool HttpRequest::set (char *url,long offset,long size,time_t ifModifiedSince,
 			   "Accept-Language: en\r\n"
 			   //"Accept: */*\r\n"
 			   "Accept: %s\r\n"
-			   "Range: bytes=%li-%li\r\n" ,
+			   "Range: bytes=%"INT32"-%"INT32"\r\n" ,
 				cmd,
 			   path ,
 			   proto ,
@@ -316,7 +316,7 @@ bool HttpRequest::set (char *url,long offset,long size,time_t ifModifiedSince,
 			   "Accept-Language: en\r\n"
 			   //"Accept: */*\r\n"
 			   "Accept: %s\r\n"
-			   "Range: bytes=%li-\r\n" ,
+			   "Range: bytes=%"INT32"-\r\n" ,
 				cmd,
 			   path ,
 			   proto ,
@@ -374,11 +374,11 @@ bool HttpRequest::set (char *url,long offset,long size,time_t ifModifiedSince,
 
 	 // we need this if doing a post even if postData is NULL
 	 if ( doPost ) {
-		 long contentLen = 0;
+		 int32_t contentLen = 0;
 		 if ( postData ) contentLen = strlen(postData);
 		 // this overrides if provided. -1 is default
 		 if ( postContentLen >= 0 ) contentLen = postContentLen;
-		 m_reqBuf.safePrintf ("Content-Length: %li\r\n", contentLen );
+		 m_reqBuf.safePrintf ("Content-Length: %"INT32"\r\n", contentLen );
 		 m_reqBuf.safePrintf("\r\n");
 		 if ( postData ) m_reqBuf.safePrintf("%s",postData);
 		 // log it for debug
@@ -407,7 +407,7 @@ bool HttpRequest::set (char *url,long offset,long size,time_t ifModifiedSince,
 // . return false and set g_errno on error
 // . CAUTION: we destroy "req" by replacing it's last char with a \0
 // . last char must be \n or \r for it to be a proper request anyway
-bool HttpRequest::set ( char *origReq , long origReqLen , TcpSocket *sock ) {
+bool HttpRequest::set ( char *origReq , int32_t origReqLen , TcpSocket *sock ) {
 	// reset number of cgi field terms
 	reset();
 
@@ -425,7 +425,7 @@ bool HttpRequest::set ( char *origReq , long origReqLen , TcpSocket *sock ) {
 
 	 // and point to that
 	 char *req    = m_reqBuf.getBufStart();
-	 long  reqLen = m_reqBuf.length() - 1;
+	 int32_t  reqLen = m_reqBuf.length() - 1;
 
 	 // save this
 	 m_userIP = 0; if ( sock ) m_userIP = sock->m_ip;
@@ -435,7 +435,7 @@ bool HttpRequest::set ( char *origReq , long origReqLen , TcpSocket *sock ) {
 	 if ( req[reqLen] != '\0' ) { char *xx = NULL; *xx = 0; }
 	 
 	 // how long is the first line, the primary request
-	 // long i;
+	 // int32_t i;
 	 // for ( i = 0 ; i<reqLen && i<MAX_REQ_LEN && 
 	 //	       req[i]!='\n' && req[i]!='\r'; i++);
 	 // . now fill up m_buf, used to log the request
@@ -450,12 +450,12 @@ bool HttpRequest::set ( char *origReq , long origReqLen , TcpSocket *sock ) {
 	 // m_bufLen = urlNormCode ( m_buf , MAX_REQ_LEN - 1 , req , i );
 	 // ensure it's big enough to be a valid request
 	 if ( reqLen < 5 ) { 
-		 log("http: got reqlen %li<5 = %s",reqLen,req);
+		 log("http: got reqlen %"INT32"<5 = %s",reqLen,req);
 		 g_errno = EBADREQUEST; 
 		 return false; 
 	 }
 
-	 long cmdLen = 0;
+	 int32_t cmdLen = 0;
 
 	 // or if first line too long
 	 //if ( i >= 1024 )  { g_errno = EBADREQUEST; return false; }
@@ -479,14 +479,17 @@ bool HttpRequest::set ( char *origReq , long origReqLen , TcpSocket *sock ) {
 		 cmdLen = 4;
 	 }
 	 else if ( strncmp ( req , "CONNECT " , 8 ) == 0 ) {
+		 // take this out until it stops losing descriptors and works
 		 //m_requestType = RT_CONNECT;
 		 //cmdLen = 7;
+		 // we no longer insert section info. emmanuel gets section
+		 // info when injecting a doc now i think in PageInject.cpp.
 		 // we do not proxy https requests because we can't
 		 // decrypt the page contents to cache them or to insert
 		 // the sectiondb voting markup, so it's kinda pointless...
 		 // and i'm not aiming to be a full-fledge squid proxy.
 		 log("http: CONNECT request not supported because we "
-		     "can't insert section markup and we can't cache: %s",req);
+		   "can't insert section markup and we can't cache: %s",req);
 		 g_errno = EBADREQUEST; 
 		 return false; 
 	 }
@@ -604,22 +607,23 @@ bool HttpRequest::set ( char *origReq , long origReqLen , TcpSocket *sock ) {
 
 	 bool multipart = false;
 	 if ( m_requestType == 2 ) { // is POST?
-		 char *cd =strcasestr(req,"Content-Type: multipart/form-data");
+		 char *cd ;
+		 cd = gb_strcasestr(req,"Content-Type: multipart/form-data");
 		 if ( cd ) multipart = true;
 	 }
 
 	 // . point to the file path 
 	 // . skip over the "GET "
-	 long filenameStart = 4 ;
+	 int32_t filenameStart = 4 ;
 	 // skip over extra char if it's a "HEAD " request
 	 if ( m_requestType == RT_HEAD || m_requestType == RT_POST ) 
 		 filenameStart++;
 
 	 // are we a redirect?
-	 long i = filenameStart;
+	 int32_t i = filenameStart;
 	 m_redirLen = 0;
 	 if ( strncmp ( &req[i] , "/?redir=" , 8 ) == 0 ) {
-		 for ( long k = i+8; k<reqLen && m_redirLen<126 ; k++) {
+		 for ( int32_t k = i+8; k<reqLen && m_redirLen<126 ; k++) {
 			 if ( req[k] == '\r' ) break;
 			 if ( req[k] == '\n' ) break;
 			 if ( req[k] == '\t' ) break;
@@ -657,7 +661,7 @@ bool HttpRequest::set ( char *origReq , long origReqLen , TcpSocket *sock ) {
 	 m_filename [ m_filenameLen ] = '\0';
 	 // does it have a file extension AFTER the last / in the filename?
 	 bool hasExtension = false;
-	 for ( long j = m_filenameLen-1 ; j >= 0 ; j-- ) {
+	 for ( int32_t j = m_filenameLen-1 ; j >= 0 ; j-- ) {
 		 if ( m_filename[j] == '.' ) { hasExtension = true; break; }
 		 if ( m_filename[j] == '/' ) break;
 	 }
@@ -690,8 +694,8 @@ bool HttpRequest::set ( char *origReq , long origReqLen , TcpSocket *sock ) {
 	 //if ( ! s ) { s = strstr ( req ,"Range: "       ); e = s +  7; }
 	 // parse out the range if we got one
 	 //if ( s ) {
-	 //	long x = 0;
-	 //	sscanf ( e ,"%li-%li" , &m_fileOffset , &x );
+	 //	int32_t x = 0;
+	 //	sscanf ( e ,"%"INT32"-%"INT32"" , &m_fileOffset , &x );
 	 //	// get all file if range's 2nd number is non-existant
 	 //	if ( x == 0 ) m_fileSize = -1;
 	 //	else          m_fileSize = x - m_fileOffset;
@@ -701,7 +705,7 @@ bool HttpRequest::set ( char *origReq , long origReqLen , TcpSocket *sock ) {
 	 // reset our hostname
 	 m_hostLen = 0;
 	 // assume request is NOT from local network
-	 //m_isRootAdmin = false;
+	 //m_isMasterAdmin = false;
 	 m_isLocal = false;
 	 // get the virtual hostname they want to use
 	 char *s = strstr ( req ,"Host:" );
@@ -724,7 +728,7 @@ bool HttpRequest::set ( char *origReq , long origReqLen , TcpSocket *sock ) {
 		 // truncate if too big
 		 if ( m_hostLen >= 255 ) m_hostLen = 254;
 		 // copy into hostname
-		 memcpy ( m_host , s , m_hostLen );
+		 gbmemcpy ( m_host , s , m_hostLen );
 	 }
 	 // NULL terminate it
 	 m_host [ m_hostLen ] = '\0';
@@ -752,7 +756,7 @@ bool HttpRequest::set ( char *origReq , long origReqLen , TcpSocket *sock ) {
 		 // truncate if too big
 		 if ( m_refLen >= 255 ) m_refLen = 254;
 		 // copy into m_ref
-		 memcpy ( m_ref , s , m_refLen );
+		 gbmemcpy ( m_ref , s , m_refLen );
 	 }
 	 // NULL terminate it
 	 m_ref [ m_refLen ] = '\0';
@@ -764,7 +768,7 @@ bool HttpRequest::set ( char *origReq , long origReqLen , TcpSocket *sock ) {
 	 // must be on its own line, otherwise it's not valid
 	 if ( s && s > req && *(s-1) !='\n' ) s = NULL;
 	 // assume empty
-	 long len = 0;
+	 int32_t len = 0;
 	 // parse out the referer if we got one
 	 if ( s ) {
 		 // skip field name, referer:
@@ -780,7 +784,7 @@ bool HttpRequest::set ( char *origReq , long origReqLen , TcpSocket *sock ) {
 		 // truncate if too big
 		 if ( len > 127 ) len = 127;
 		 // copy into m_userAgent
-		 memcpy ( m_userAgent , s , len );
+		 gbmemcpy ( m_userAgent , s , len );
 	 }
 	 // NULL terminate it
 	 m_userAgent [ len ] = '\0';
@@ -814,13 +818,13 @@ bool HttpRequest::set ( char *origReq , long origReqLen , TcpSocket *sock ) {
 		 // trunc if too big
 		 //if (m_cookieBufLen > 1023) m_cookieBufLen = 1023;
 		 // copy into m_cookieBuf
-		 //memcpy(m_cookieBuf, s, m_cookieBufLen);
+		 //gbmemcpy(m_cookieBuf, s, m_cookieBufLen);
 	 }
 	 // NULL terminate it
 	 if ( m_cookiePtr ) m_cookiePtr[m_cookieLen] = '\0';
 	 //m_cookieBuf[m_cookieBufLen] = '\0';
 	 // convert every '&' in cookie to a \0 for parsing the fields
-	 // for ( long j = 0 ; j < m_cookieBufLen ; j++ ) 
+	 // for ( int32_t j = 0 ; j < m_cookieBufLen ; j++ ) 
 	 //	 if ( m_cookieBuf[j] == '&' ) m_cookieBuf[j] = '\0';
 
 	 // mark it as cgi if it has a ?
@@ -830,7 +834,7 @@ bool HttpRequest::set ( char *origReq , long origReqLen , TcpSocket *sock ) {
 		 // skip over the '?'
 		 i++;
 		 // find a space the delmits end of cgi
-		 long j;
+		 int32_t j;
 		 for ( j = i; j < reqLen; j++) if (is_wspace_a(req[j])) break;
 		 // now add it
 		 if ( ! addCgi ( &req[i] , j-i ) ) return false;
@@ -844,9 +848,9 @@ bool HttpRequest::set ( char *origReq , long origReqLen , TcpSocket *sock ) {
 	 m_plen = i - filenameStart;
 	 // we're local if hostname is 192.168.[0|1].y
 	 //if ( strncmp(iptoa(sock->m_ip),"192.168.1.",10) == 0) {
-	 //	m_isRootAdmin = true; m_isLocal = true; }
+	 //	m_isMasterAdmin = true; m_isLocal = true; }
 	 //if ( strncmp(iptoa(sock->m_ip),"192.168.0.",10) == 0) {
-	 //	m_isRootAdmin = true; m_isLocal = true; }
+	 //	m_isMasterAdmin = true; m_isLocal = true; }
 	 //if(strncmp(iptoa(sock->m_ip),"192.168.1.",10) == 0) m_isLocal = true;
 	 //if(strncmp(iptoa(sock->m_ip),"192.168.0.",10) == 0) m_isLocal = true;
 	 if ( sock && strncmp(iptoa(sock->m_ip),"192.168.",8) == 0) 
@@ -876,15 +880,15 @@ bool HttpRequest::set ( char *origReq , long origReqLen , TcpSocket *sock ) {
 	 // gotta scan all ips in hosts.conf as well...
 	 // if we are coming from any of our own hosts.conf c blocks
 	 // consider ourselves local
-	 unsigned long last = 0;
-	 for ( long i = 0 ; i < g_hostdb.m_numHosts ; i++ ) {
+	 uint32_t last = 0;
+	 for ( int32_t i = 0 ; i < g_hostdb.m_numHosts ; i++ ) {
 		 Host *h = g_hostdb.getHost(i);
 		 // save time with this check
 		 if ( h->m_ip == last ) continue;
 		 // update it
 		 last = h->m_ip;
 		 // returns number of top bytes in comon
-		 long nt = ipCmp ( sock->m_ip , h->m_ip );
+		 int32_t nt = ipCmp ( sock->m_ip , h->m_ip );
 		 // at least be in the same c-block as a host in hosts.conf
 		 if ( nt < 3 ) continue;
 		 m_isLocal = true;
@@ -893,11 +897,11 @@ bool HttpRequest::set ( char *origReq , long origReqLen , TcpSocket *sock ) {
 		 
 
 	 // connectips/adminips
-	 for ( long i = 0 ; i < g_conf.m_numConnectIps ; i++ ) {
-		 if ( sock->m_ip != g_conf.m_connectIps[i] ) continue;
-		 m_isLocal = true;
-		 break;
-	 }
+	 // for ( int32_t i = 0 ; i < g_conf.m_numConnectIps ; i++ ) {
+	 // 	 if ( sock->m_ip != g_conf.m_connectIps[i] ) continue;
+	 // 	 m_isLocal = true;
+	 // 	 break;
+	 // }
 
 	 // roadrunner ip
 	 // if ( sock && strncmp(iptoa(sock->m_ip),"66.162.42.131",13) == 0) 
@@ -921,7 +925,7 @@ bool HttpRequest::set ( char *origReq , long origReqLen , TcpSocket *sock ) {
 
 	 // . also if we're coming from lenny at my house consider it local
 	 // . this is a security risk, however... TODO: FIX!!!
-	 //if ( sock->m_ip == atoip ("68.35.105.199" , 13 ) ) m_isRootAdmin = true;
+	 //if ( sock->m_ip == atoip ("68.35.105.199" , 13 ) ) m_isMasterAdmin = true;
 	 // . TODO: now add any cgi data from a POST.....
 	 // . look after the mime
 	 //char *d = NULL;
@@ -934,14 +938,14 @@ bool HttpRequest::set ( char *origReq , long origReqLen , TcpSocket *sock ) {
 	 // return true now if no cgi stuff to parse
 	 if ( d ) {
 		 char *post    = d + 4;
-		 long  postLen = reqLen-(d+4-req) ;
+		 int32_t  postLen = reqLen-(d+4-req) ;
 		 // post sometimes has a \r or\n after it
 		 while ( postLen > 0 && post[postLen-1]=='\r' ) postLen--;
 		 // add it to m_cgiBuf, filter and everything
 		 if ( ! addCgi ( post , postLen ) ) return false;
 	 }
 	 // sometimes i don't want to be admin
-	 //if ( getLong ( "admin" , 1 ) == 0 ) m_isRootAdmin = false;
+	 //if ( getLong ( "admin" , 1 ) == 0 ) m_isMasterAdmin = false;
 	 // success
 	 
 	 /////
@@ -951,11 +955,11 @@ bool HttpRequest::set ( char *origReq , long origReqLen , TcpSocket *sock ) {
 	 char *epend = g_conf.m_extraParms + g_conf.m_extraParmsLen;
 
 	 char *qstr = m_cgiBuf;
-	 long qlen = m_cgiBufLen;
+	 int32_t qlen = m_cgiBufLen;
 
 	 while (ep < epend){
 		 char buf[AUTOBAN_TEXT_SIZE];
-		 long bufLen = 0;
+		 int32_t bufLen = 0;
 		 // get next substring
 		 while (*ep && ep < epend && *ep != ' ' && *ep != '\n'){
 			 buf[bufLen++] = *ep++;
@@ -991,21 +995,21 @@ bool HttpRequest::set ( char *origReq , long origReqLen , TcpSocket *sock ) {
 
 		 logf(LOG_DEBUG, "query: appending \"%s\" to query", buf);
 		
-		 long newSize = m_cgiBuf2Size + bufLen+1;
+		 int32_t newSize = m_cgiBuf2Size + bufLen+1;
 		 char *newBuf = (char*)mmalloc(newSize, "extraParms");
 		 if (!newBuf){
-			 return log("query: unable to allocate %ld bytes "
+			 return log("query: unable to allocate %"INT32" bytes "
 				    "for extraParms", newSize);
 		 }
 		 char *p = newBuf;
 		 if (m_cgiBuf2Size) {
-			 memcpy(newBuf, m_cgiBuf2, m_cgiBuf2Size);
+			 gbmemcpy(newBuf, m_cgiBuf2, m_cgiBuf2Size);
 			 p += m_cgiBuf2Size-1;
 			 mfree(m_cgiBuf2, m_cgiBuf2Size, "extraParms");
 			 m_cgiBuf2 = NULL;
 			 m_cgiBuf2Size = 0;
 		 }
-		 memcpy(p, buf, bufLen);
+		 gbmemcpy(p, buf, bufLen);
 		 m_cgiBuf2 = newBuf;
 		 m_cgiBuf2Size = newSize;
 		 p += bufLen;
@@ -1016,17 +1020,17 @@ bool HttpRequest::set ( char *origReq , long origReqLen , TcpSocket *sock ) {
 	 // crap, not if we are multi-part unencoded stuff...
 	 if ( m_cgiBuf && ! multipart ) {
 		 // do not mangle the "ucontent"!
-		 long cgiBufLen = m_cgiBufLen;
+		 int32_t cgiBufLen = m_cgiBufLen;
 		 cgiBufLen -= m_ucontentLen;
 		 char *buf = m_cgiBuf;
-		 for (long i = 0; i < cgiBufLen ; i++) 
+		 for (int32_t i = 0; i < cgiBufLen ; i++) 
 			 if (buf[i] == '&') buf[i] = '\0';
 		 // don't decode the ucontent= field!
-		 long decodeLen = m_cgiBufLen;
+		 int32_t decodeLen = m_cgiBufLen;
 		 // so subtract that
 		 if ( m_ucontent ) decodeLen -= m_ucontentLen;
 		 // decode everything
-		 long len = urlDecode ( m_cgiBuf , m_cgiBuf , decodeLen );
+		 int32_t len = urlDecode ( m_cgiBuf , m_cgiBuf , decodeLen );
 		 // we're parsing crap after the null if the last parm 
 		 // has no value
 		 //memset(m_cgiBuf+len, '\0', m_cgiBufLen-len);
@@ -1037,9 +1041,9 @@ bool HttpRequest::set ( char *origReq , long origReqLen , TcpSocket *sock ) {
 	
 	 if (m_cgiBuf2){
 		 char *buf = m_cgiBuf2;
-		 for (long i = 0; i < m_cgiBuf2Size-1 ; i++) 
+		 for (int32_t i = 0; i < m_cgiBuf2Size-1 ; i++) 
 			 if (buf[i] == '&') buf[i] = '\0';
-		 long len = urlDecode ( m_cgiBuf2 , m_cgiBuf2 , m_cgiBuf2Size);
+		 int32_t len = urlDecode ( m_cgiBuf2 , m_cgiBuf2 , m_cgiBuf2Size);
 		 memset(m_cgiBuf2+len, '\0', m_cgiBuf2Size-len);
 	 }
 	 // . parse the fields after the ? in a cgi filename
@@ -1054,7 +1058,7 @@ bool HttpRequest::set ( char *origReq , long origReqLen , TcpSocket *sock ) {
 	 // urldecode the cookie buf too!!
 	 if ( m_cookiePtr ) {
 		 char *p = m_cookiePtr;
-		 for (long i = 0; i < m_cookieLen ; i++) {
+		 for (int32_t i = 0; i < m_cookieLen ; i++) {
 			 //if (p[i] == '&') p[i] = '\0';
 			 // cookies are separated with ';' in the request only
 			 if (p[i] == ';') p[i] = '\0';
@@ -1067,7 +1071,7 @@ bool HttpRequest::set ( char *origReq , long origReqLen , TcpSocket *sock ) {
 			      strncmp(p,"metacookie",10) == 0 )
 				 m_metaCookie = p;
 		 }
-		 long len = urlDecode ( m_cookiePtr , 
+		 int32_t len = urlDecode ( m_cookiePtr , 
 					m_cookiePtr,
 					m_cookieLen );
 		 // we're parsing crap after the null if the last parm 
@@ -1080,7 +1084,7 @@ bool HttpRequest::set ( char *origReq , long origReqLen , TcpSocket *sock ) {
  }
 
  // s must be NULL terminated
- bool HttpRequest::addCgi ( char *s , long slen ) {
+ bool HttpRequest::addCgi ( char *s , int32_t slen ) {
 	 // calculate the length of the cgi data w/o the ?
 	 //m_cgiBufMaxLen = slen + 1;
 	 // alloc space for it, including a \0 at the end
@@ -1092,7 +1096,7 @@ bool HttpRequest::set ( char *origReq , long origReqLen , TcpSocket *sock ) {
 	 // ensure no overflow (add 1 cuz we NULL terminate it)
 	 //if ( m_cgiBufLen>=1023) { g_errno = EBUFTOOSMALL;return false;}
 	 // copy cgi string into m_cgiBuf
-	 //memcpy ( m_cgiBuf , s , slen );
+	 //gbmemcpy ( m_cgiBuf , s , slen );
 	 // NULL terminate and include it in the length
 	 //m_cgiBuf [ m_cgiBufLen++ ] = '\0';
 	 m_cgiBuf [ slen ] = '\0';
@@ -1132,32 +1136,32 @@ bool HttpRequest::set ( char *origReq , long origReqLen , TcpSocket *sock ) {
  }
 
 float HttpRequest::getFloatFromCookie    ( char *field, float def ) {
-	long flen;
+	int32_t flen;
 	char *cs = getStringFromCookie ( field , &flen , NULL );
 	if ( ! cs ) return def;
 	float cv = atof(cs);
 	return cv;
 }
 
-long HttpRequest::getLongFromCookie    ( char *field, long def ) {
-	long flen;
+int32_t HttpRequest::getLongFromCookie    ( char *field, int32_t def ) {
+	int32_t flen;
 	char *cs = getStringFromCookie ( field , &flen , NULL );
 	if ( ! cs ) return def;
-	long long cv = atoll(cs);
+	int64_t cv = atoll(cs);
 	// convert
-	return (long)cv;
+	return (int32_t)cv;
 }
 
-long long HttpRequest::getLongLongFromCookie ( char *field, long long def ) {
-	long flen;
+int64_t HttpRequest::getLongLongFromCookie ( char *field, int64_t def ) {
+	int32_t flen;
 	char *cs = getStringFromCookie ( field , &flen , NULL );
 	if ( ! cs ) return def;
-	long long cv = strtoull(cs,NULL,10);
+	int64_t cv = strtoull(cs,NULL,10);
 	return cv;
 }
 
 bool HttpRequest::getBoolFromCookie    ( char *field, bool def ) {
-	long flen;
+	int32_t flen;
 	char *cs = getStringFromCookie ( field , &flen , NULL );
 	if ( ! cs ) return def;
 	if ( cs[0] == '0' ) return false;
@@ -1168,11 +1172,11 @@ bool HttpRequest::getBoolFromCookie    ( char *field, bool def ) {
 // getString with the SAME "field" will start at *next. that way you
 // can use the same cgi parameter multiple times. (like strstr kind of)
 char *HttpRequest::getStringFromCookie ( char *field      ,
-					 long *len        ,
+					 int32_t *len        ,
 					 char *defaultStr ,
-					 long *next       ) {
+					 int32_t *next       ) {
 	// get field len
-	long flen = gbstrlen(field);
+	int32_t flen = gbstrlen(field);
 	// assume none
 	if ( len ) *len = 0;
 	// if no cookie, forget it
@@ -1267,8 +1271,8 @@ char *HttpRequest::getStringFromCookie ( char *field      ,
 // *next is set to ptr into m_cgiBuf so that the next successive call to
 // getString with the SAME "field" will start at *next. that way you
 // can use the same cgi parameter multiple times. (like strstr kind of)
-char *HttpRequest::getString ( char *field , long *len , char *defaultStr ,
-				long *next ) {
+char *HttpRequest::getString ( char *field , int32_t *len , char *defaultStr ,
+				int32_t *next ) {
 	 char *value = getValue ( field , len, next );
 	 // return default if no match
 	 if ( ! value ) { 
@@ -1283,26 +1287,26 @@ char *HttpRequest::getString ( char *field , long *len , char *defaultStr ,
  }
 
 bool HttpRequest::getBool ( char *field , bool defaultBool ) {
-	long flen;
+	int32_t flen;
 	char *cs = getString ( field , &flen , NULL );
 	if ( ! cs ) return defaultBool;
 	if ( cs[0] == '0' ) return false;
 	return true;
 }
 
-long HttpRequest::getLong ( char *field , long defaultLong ) {
-	 long len;
+int32_t HttpRequest::getLong ( char *field , int32_t defaultLong ) {
+	 int32_t len;
 	 char *value = getValue ( field, &len, NULL );
 	 // return default if no match
 	 if ( ! value || len == 0 ) return defaultLong;
 	 // otherwise, it's a match
 	 char c = value[len];
 	 value[len] = '\0';
-	 long res = atol ( value );
+	 int32_t res = atol ( value );
 	 value[len] = c;
 	 if ( res == 0 ) {
 		 // may be an error. if so return the default
-		 long i = 0;
+		 int32_t i = 0;
 		 while ( i < len && is_wspace_a(value[i]) ) i++;
 		 if ( i < len && (value[i] == '-' || value[i] == '+') ) i++;
 		 if ( i >= len || !is_digit(value[i]) ) return defaultLong;
@@ -1310,20 +1314,20 @@ long HttpRequest::getLong ( char *field , long defaultLong ) {
 	 return res;
 }
 
-long long HttpRequest::getLongLong   ( char *field , 
-					long long defaultLongLong ) {
-	 long len;
+int64_t HttpRequest::getLongLong   ( char *field , 
+					int64_t defaultLongLong ) {
+	 int32_t len;
 	 char *value = getValue ( field, &len, NULL );
 	 // return default if no match
 	 if ( ! value || len == 0 ) return defaultLongLong;
 	 // otherwise, it's a match
 	 char c = value[len];
 	 value[len] = '\0';
-	 long long res = strtoull ( value , NULL, 10 );
+	 int64_t res = strtoull ( value , NULL, 10 );
 	 value[len] = c;
 	 if ( res == 0 ) {
 		 // may be an error. if so return the default
-		 long i = 0;
+		 int32_t i = 0;
 		 while ( i < len && is_wspace_a(value[i]) ) i++;
 		 if ( i < len && (value[i] == '-' || value[i] == '+') ) i++;
 		 if ( i >= len || !is_digit(value[i]) ) return defaultLongLong;
@@ -1332,7 +1336,7 @@ long long HttpRequest::getLongLong   ( char *field ,
 }
 
 float HttpRequest::getFloat   ( char *field , double defaultFloat ) {
-	 long len;
+	 int32_t len;
 	 char *value = getValue ( field, &len, NULL );
 	 // return default if no match
 	 if ( ! value || len == 0 ) return defaultFloat;
@@ -1343,7 +1347,7 @@ float HttpRequest::getFloat   ( char *field , double defaultFloat ) {
 	 value[len] = c;
 	 if ( res == +0.0 ) {
 		 // may be an error. if so return the default
-		 long i = 0;
+		 int32_t i = 0;
 		 while ( i < len && is_wspace_a(value[i]) ) i++;
 		 if ( i < len && 
 		      (value[i] == '-' || 
@@ -1355,7 +1359,7 @@ float HttpRequest::getFloat   ( char *field , double defaultFloat ) {
 }
 
 double HttpRequest::getDouble ( char *field , double defaultDouble ) {
-	 long len;
+	 int32_t len;
 	 char *value = getValue ( field, &len, NULL );
 	 // return default if no match
 	 if ( ! value || len == 0 ) return defaultDouble;
@@ -1366,7 +1370,7 @@ double HttpRequest::getDouble ( char *field , double defaultDouble ) {
 	 value[len] = c;
 	 if ( res == +0.0 ) {
 		 // may be an error. if so return the default
-		 long i = 0;
+		 int32_t i = 0;
 		 while ( i < len && is_wspace_a(value[i]) ) i++;
 		 if ( i < len && 
 		      (value[i] == '-' || 
@@ -1380,9 +1384,9 @@ double HttpRequest::getDouble ( char *field , double defaultDouble ) {
 
 bool HttpRequest::hasField ( char *field ) {
 	// how long is it?
-	long fieldLen = gbstrlen ( field );
+	int32_t fieldLen = gbstrlen ( field );
 	// scan the field table directly
-	long i = 0;
+	int32_t i = 0;
 	for (  ; i < m_numFields ; i++ ) {
 		if ( fieldLen != m_fieldLens[i]                    ) continue; 
 		if ( strncmp ( field, m_fields[i], fieldLen ) != 0 ) continue;
@@ -1393,11 +1397,11 @@ bool HttpRequest::hasField ( char *field ) {
 }
 
 
-char *HttpRequest::getValue ( char *field , long *len, long *next ) {
+char *HttpRequest::getValue ( char *field , int32_t *len, int32_t *next ) {
 	// how long is it?
-	long fieldLen = gbstrlen ( field );
+	int32_t fieldLen = gbstrlen ( field );
 	// scan the field table directly
-	long i = 0;
+	int32_t i = 0;
 	if ( next ) i = *next ;
 	for (  ; i < m_numFields ; i++ ) {
 		if ( fieldLen != m_fieldLens[i]                    ) continue; 
@@ -1412,7 +1416,7 @@ char *HttpRequest::getValue ( char *field , long *len, long *next ) {
 	return NULL;
 }
 
-char *HttpRequest::getValue ( long i, long *len ) {
+char *HttpRequest::getValue ( int32_t i, int32_t *len ) {
 	if ( i >= m_numFields ) return NULL;
 	if (len) *len = gbstrlen(m_fieldValues[i]);
 	return m_fieldValues[i];
@@ -1422,7 +1426,7 @@ char *HttpRequest::getValue ( long i, long *len ) {
 // . s points to the stuff immediately after the ?
 // . we should have already replaced all &'s in s with /0's
 // . we also replace the last \r with a \0
-void HttpRequest::parseFields ( char *s , long slen ) {
+void HttpRequest::parseFields ( char *s , int32_t slen ) {
 
 	// . are we a multipart/form-data?
 	// . many of form tags for event submission forms are this
@@ -1436,12 +1440,12 @@ void HttpRequest::parseFields ( char *s , long slen ) {
 	// should be NULL terminated since we replaced &'s w/ 0's in set()
 	char *send   = s + slen ;
 	// reset field count
-	long n = m_numFields;
+	int32_t n = m_numFields;
 	while ( s && s < send ) {
 		// watch out for overflow
 		if ( n >= MAX_CGI_PARMS ) {
-			log("http: Received more than %li CGI parms. "
-			    "Truncating.",(long)MAX_CGI_PARMS);
+			log("http: Received more than %"INT32" CGI parms. "
+			    "Truncating.",(int32_t)MAX_CGI_PARMS);
 			break;
 		}
 		// set the nth field name in this cgi string
@@ -1455,7 +1459,7 @@ void HttpRequest::parseFields ( char *s , long slen ) {
 		if ( ! equal ) { 
 			// just set value to NULL
 			char *end = strchr(s,'&');
-			long len = end - s;
+			int32_t len = end - s;
 			if ( ! end ) len = gbstrlen(s);
 			m_fieldLens[n] = len;
 			s[len] = '\0';
@@ -1480,18 +1484,18 @@ void HttpRequest::parseFields ( char *s , long slen ) {
 	m_numFields = n;
 }
 
-void HttpRequest::parseFieldsMultipart ( char *s , long slen ) {
+void HttpRequest::parseFieldsMultipart ( char *s , int32_t slen ) {
 
 	// should be NULL terminated since we replaced &'s w/ 0's in set()
 	char *send   = s + slen ;
 	// reset field count
-	long n = m_numFields;
+	int32_t n = m_numFields;
 
  loop:
 	// watch out for overflow
 	if ( n >= MAX_CGI_PARMS ) {
-		log("http: Received more than %li CGI parms. "
-		    "Truncating.",(long)MAX_CGI_PARMS);
+		log("http: Received more than %"INT32" CGI parms. "
+		    "Truncating.",(int32_t)MAX_CGI_PARMS);
 		return;
 	}
 	
@@ -1570,7 +1574,7 @@ bool HttpRequest::getCurrentUrl ( SafeBuf &cu ) {
 	if ( m_isSSL ) cu.pushChar('s');
 	cu.safePrintf("://%s",host);
 	char *path = m_path;
-	long  plen = m_plen;
+	int32_t  plen = m_plen;
 	if ( ! path ) {
 		path = "/";
 		plen = 1;
@@ -1608,7 +1612,7 @@ bool HttpRequest::getCurrentUrlPath ( SafeBuf &cup ) {
 	// makre sure we got enough room
 	if ( ! cup.reserve ( m_plen + 1 + 1 ) ) return false;
 	char *path = m_path;
-	long  plen = m_plen;
+	int32_t  plen = m_plen;
 	if ( ! path ) {
 		path = "/";
 		plen = 1;
@@ -1630,7 +1634,7 @@ bool HttpRequest::getCurrentUrlPath ( SafeBuf &cup ) {
 
 int getVersionFromRequest ( HttpRequest *r ) {
     char *path    = r->getFilename();
-    long  pathLen = r->getFilenameLen();
+    int32_t  pathLen = r->getFilenameLen();
     bool requestHasVersion = pathLen > 2 && strncmp( path, "/v", 2 ) == 0;
     if (!requestHasVersion)
         return HTTP_REQUEST_DEFAULT_REQUEST_VERSION;

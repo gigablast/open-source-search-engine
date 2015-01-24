@@ -12,7 +12,7 @@ MemPool::MemPool() {
 }
 
 MemPool::~MemPool ( ) {
-	log("MemPool::~MemPool: mem alloced now: %li\n", m_memUsedByData );
+	log("MemPool::~MemPool: mem alloced now: %"INT32"\n", m_memUsedByData );
 	reset();
 }
 
@@ -22,7 +22,7 @@ void MemPool::reset ( ) {
 	m_memSize = 0;
 }
 
-bool MemPool::init ( long maxMem  ) {
+bool MemPool::init ( int32_t maxMem  ) {
 	// get a hunk of mem
 	m_mem = (char *) ::malloc ( maxMem );
 	if ( ! m_mem ) return log("MemPool::init: %s",mstrerror(g_errno));
@@ -39,7 +39,7 @@ bool MemPool::init ( long maxMem  ) {
 		return log ("MemPool::init: tree: %s",mstrerror(g_errno));
 	}
 	// adjust memory chunk size to hold our initial MemNodes at the top
-	long size = m_memSize - sizeof(MemNode) * 2;
+	int32_t size = m_memSize - sizeof(MemNode) * 2;
 	// make size-ranked key of offset m_mem and size m_memSize to 
 	// christian this chunk of memory
 	if ( ! m_tree.addSizeNode ( size , m_mem , false ) )
@@ -50,22 +50,22 @@ bool MemPool::init ( long maxMem  ) {
 	return true;
 }
 
-void *MemPool::dup ( void *data , long dataSize ) {
+void *MemPool::dup ( void *data , int32_t dataSize ) {
 	char *p = (char *)malloc ( dataSize );
 	// async signal safe copy
 	if ( p ) memcpy_ass ( p , (char *)data , dataSize );
 	return p;
 }
 
-void *MemPool::gbcalloc ( long size ) {
+void *MemPool::gbcalloc ( int32_t size ) {
 	char *p = (char *)malloc ( size );
 	if ( ! p ) return NULL;
-	for ( long i = 0 ; i < size ; i++ ) p[i] = 0;
+	for ( int32_t i = 0 ; i < size ; i++ ) p[i] = 0;
 	return p;
 
 }
 
-void *MemPool::gbrealloc ( void *ptr , long newSize ) {
+void *MemPool::gbrealloc ( void *ptr , int32_t newSize ) {
 	// find this node in our tree
 	MemKey k;
 	k.setOffsetKey ( ptr , newSize , true );
@@ -77,12 +77,12 @@ void *MemPool::gbrealloc ( void *ptr , long newSize ) {
 		return NULL; 
 	}
 	// what's the original size and ptr?
-	long  size = node->m_key.getSize   ();
+	int32_t  size = node->m_key.getSize   ();
 	// just use malloc for now
 	char *mem = (char *)malloc ( newSize );
 	if ( ! mem ) return NULL;
 	// how much to copy?
-	long toCopy = size;
+	int32_t toCopy = size;
 	// shrink if too much
 	if ( toCopy > newSize ) toCopy = newSize;
 	// async signal safe copy
@@ -92,7 +92,7 @@ void *MemPool::gbrealloc ( void *ptr , long newSize ) {
 	return mem;
 }
 
-void *MemPool::gbmalloc ( long need ) {
+void *MemPool::gbmalloc ( int32_t need ) {
 	// make size key
 	MemKey k;  
 	k.setSizeKey ( need , NULL , false );
@@ -108,17 +108,17 @@ void *MemPool::gbmalloc ( long need ) {
 		return NULL; 
 	}
 	// get the size of this slot
-	long oldSize = node->m_key.getSize() ;
+	int32_t oldSize = node->m_key.getSize() ;
 	// get the mem offset into m_mem
 	char *ptr = node->m_key.getOffset();
 	// the new size
-	long size = oldSize;
+	int32_t size = oldSize;
 	// . get the memory floor
 	// . the memory above the floor is storing MemNodes
 	// . we may lower the floor by 2 MemNodes on success
 	char *floor = m_tree.getFloor();
 	// how many nodes we have to add that will require lowering m_floor?
-	long extra = 4 - m_tree.getNumEmptyNodesAboveFloor ();
+	int32_t extra = 4 - m_tree.getNumEmptyNodesAboveFloor ();
 	// if size just right that's nice
 	//if ( size == need ) goto exactFit;
 	// lower it to accomodate up to 4 new MemNodes if we're maxed out now
@@ -132,7 +132,7 @@ void *MemPool::gbmalloc ( long need ) {
 	// does the node we are splitting come up to the floor?
 	if ( ptr + size >= floor ) {
 		// how much do we have to decrease the slotSize?
-		long dec = ptr + size - floor;
+		int32_t dec = ptr + size - floor;
 		// remove some if it's memory
 		size -= dec;
 		// if too much, we fail
@@ -143,11 +143,11 @@ void *MemPool::gbmalloc ( long need ) {
 		}
 	}
 	// split node into 2 halves, each half has 2 nodes actually
-	//log("addOffset/Size ptr=%li size=%li",(long)ptr,need);
+	//log("addOffset/Size ptr=%"INT32" size=%"INT32"",(int32_t)ptr,need);
 	MemNode *n0 = m_tree.addOffsetNode ( ptr  , need , true  );
 	MemNode *n1 = m_tree.addSizeNode   ( need , ptr  , true  );
 	// add upper, unused half
-	//log("addOffset/Size ptr=%li size=%li",(long)ptr+need,size-need);
+	//log("addOffset/Size ptr=%"INT32" size=%"INT32"",(int32_t)ptr+need,size-need);
 	MemNode *n2 = m_tree.addOffsetNode ( ptr + need , size - need, false );
 	MemNode *n3 = m_tree.addSizeNode   ( size - need, ptr + need , false );
 	// remove all on any errors
@@ -169,7 +169,7 @@ void *MemPool::gbmalloc ( long need ) {
 	// keep track
 	m_memUsedByData += need;
 	// remove old node from size-sorted tree
-	//log("removeSize/Offset ptr=%li size=%li",(long)ptr, oldSize);
+	//log("removeSize/Offset ptr=%"INT32" size=%"INT32"",(int32_t)ptr, oldSize);
 	m_tree.deleteNode ( node );
 	// remove old node from offset-sorted tree
 	k.setOffsetKey ( ptr , oldSize , false );
@@ -191,7 +191,7 @@ bool MemPool::gbfree ( void *data ) {
 	k = n->m_key;
 	// get our data ptr offset
 	char *ptr  = k.getOffset ( );
-	long  size = k.getSize   ( );
+	int32_t  size = k.getSize   ( );
 	// must equal
 	if ( ptr != data )
 		return log("MemPool::free: illegal free");
@@ -204,7 +204,7 @@ bool MemPool::gbfree ( void *data ) {
 	// keep track
 	m_memUsedByData -= size;
 	// get the node before us in the offset-sorted subtree that is in use
-	k -= (unsigned long) 1;
+	k -= (uint32_t) 1;
 	MemNode *n0a = m_tree.getPrevNode ( k );
 	// watch out for wrap around
 	if ( n0a && ! n0a->m_key.inUse() ) n0a = NULL;
@@ -223,20 +223,20 @@ bool MemPool::gbfree ( void *data ) {
 	else if ( n0a ) n0 = n0a;
 	else            n0 = n0b;
 	// get info from n0, if not null
-	long     size0 ;
+	int32_t     size0 ;
 	char    *ptr0 ;
 	bool     occupied0 = true ;
 	if ( n0 ) {
 		size0     = n0->m_key.getSize    ( );
 		ptr0      = n0->m_key.getOffset  ( );
  		occupied0 = n0->m_key.inUse      ( );
-		//log("prev node ptr=%li size=%li occ=%li",
-		//    (long)ptr0,size0,(long)occupied0);
+		//log("prev node ptr=%"INT32" size=%"INT32" occ=%"INT32"",
+		//    (int32_t)ptr0,size0,(int32_t)occupied0);
 	}
 
 	// get the node after us in the offset-sorted subtree that is NOT used
-	k += (unsigned long) 1;
-	k += (unsigned long) 1;
+	k += (uint32_t) 1;
+	k += (uint32_t) 1;
 	MemNode *n1a = m_tree.getNextNode ( k );
 	// watch out for wrap around
 	if ( n1a && n1a->m_key.inUse() ) n1a = NULL;
@@ -256,25 +256,25 @@ bool MemPool::gbfree ( void *data ) {
 	else            n1 = n1b;
 
 	// extract info from the smallest ptr'ed node
-	long     size1 ;
+	int32_t     size1 ;
 	char    *ptr1;
 	bool     occupied1 = true;
 	if ( n1 ) {
 		size1     = n1->m_key.getSize   ( );
 		ptr1      = n1->m_key.getOffset ( );
 		occupied1 = n1->m_key.inUse     ( );
-		//log("post node ptr=%li size=%li occ=%li",
-		//    (long)ptr1,size1,(long)occupied1);
+		//log("post node ptr=%"INT32" size=%"INT32" occ=%"INT32"",
+		//    (int32_t)ptr1,size1,(int32_t)occupied1);
 	}
 	// debug msg
-	//log ("free rm ptr=%li size=%li", (long)ptr , size );
+	//log ("free rm ptr=%"INT32" size=%"INT32"", (int32_t)ptr , size );
 
 	// remove node from both subtrees
 	m_tree.deleteNode     ( n );
 	m_tree.deleteSizeNode ( size , ptr , true );
 
 	char *newPtr ;
-	long  newSize ;
+	int32_t  newSize ;
 
 	// if nodes before and after us were not occupied, join altogether
 	if ( ! occupied0 && ! occupied1 ) {
@@ -312,7 +312,7 @@ bool MemPool::gbfree ( void *data ) {
 	if ( newPtr + newSize == m_top ) m_top = newPtr;
 
 	// debug msg
-	//log("combined node ptr=%li size=%li",(long)newPtr,newSize);
+	//log("combined node ptr=%"INT32" size=%"INT32"",(int32_t)newPtr,newSize);
 
 	// add the new combined offset node
 	if ( ! m_tree.addOffsetNode ( newPtr , newSize , false ) )

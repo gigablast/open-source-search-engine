@@ -14,7 +14,7 @@ DataFeed::~DataFeed() {
 }
 
 void DataFeed::setUrl ( char *name,
-			long  nameLen ) {
+			int32_t  nameLen ) {
 	if (!name || nameLen == 0)
 		return;
 	if (nameLen < 11 ||
@@ -26,18 +26,18 @@ void DataFeed::setUrl ( char *name,
 	else
 		m_urlLen = setstr(m_url, MAX_USERNAMELEN, name, nameLen);
 	// base name
-	long i;
+	int32_t i;
 	for (i = 0; m_url[i+11] != '/'; i++)
 		m_baseName[i] = m_url[i+11];
 	m_baseName[i] = '\0';
 	m_baseNameLen = i;
 }
 
-void DataFeed::set ( long  creationTime,
+void DataFeed::set ( int32_t  creationTime,
 		     char *dataFeedUrl,
-		     long  dataFeedUrlLen,
+		     int32_t  dataFeedUrlLen,
 		     char *passcode,
-		     long  passcodeLen,
+		     int32_t  passcodeLen,
 		     bool  isActive,
 		     bool  isLocked ) {
 	setUrl(dataFeedUrl, dataFeedUrlLen);
@@ -51,39 +51,39 @@ void DataFeed::set ( long  creationTime,
 }
 
 void DataFeed::parse ( char *dataFeedPage,
-		       long  dataFeedPageLen ) {
+		       int32_t  dataFeedPageLen ) {
 	// use Xml Class to parse up the page
 	Xml xml;
 	xml.set ( csUTF8, dataFeedPage, dataFeedPageLen, false, 0, false,
 		  TITLEREC_CURRENT_VERSION );
 	// get the nodes
-	long numNodes  = xml.getNumNodes();
+	int32_t numNodes  = xml.getNumNodes();
 	XmlNode *nodes = xml.getNodes();
 	// to count the tiers, result levels, and level costs
-	long currTier = 0;
-	long currResultLevel = 0;
-	long currLevelCost = 0;
+	int32_t currTier = 0;
+	int32_t currResultLevel = 0;
+	int32_t currLevelCost = 0;
 	// pull out the keywords for the data feed
-	for (long i = 0; i < numNodes; i++) {
+	for (int32_t i = 0; i < numNodes; i++) {
 		// skip if this isn't a meta tag, shouldn't happen
 		if (nodes[i].m_nodeId != 68)
 			continue;
 		// get the meta tag name
-		//long tagLen;
+		//int32_t tagLen;
 		//char *tag = xml.getString(i, "name", &tagLen);
-		long  ucTagLen;
+		int32_t  ucTagLen;
 		char *ucTag = xml.getString(i, "name", &ucTagLen);
 		char tag[256];
-		long tagLen = utf16ToLatin1 ( tag, 256,
+		int32_t tagLen = utf16ToLatin1 ( tag, 256,
 					      (UChar*)ucTag, ucTagLen>>1 );
 		// skip if empty
 		if (!tag || tagLen <= 0)
 			continue;
 		// get the content
-		long ucConLen;
+		int32_t ucConLen;
 		char *ucCon = xml.getString(i, "content", &ucConLen);
 		char con[1024];
-		long conLen = utf16ToLatin1 ( con, 1024,
+		int32_t conLen = utf16ToLatin1 ( con, 1024,
 					      (UChar*)ucCon, ucConLen>>1 );
 		if (!con || conLen <= 0)
 			continue;
@@ -108,32 +108,32 @@ void DataFeed::parse ( char *dataFeedPage,
 		else if (tagLen == 10 && strncasecmp(tag, "monthlyfee", 10) == 0)
 			m_priceTable.m_monthlyFee = atol(con);
 		else if (tagLen == 7 && strncasecmp(tag, "tiermax", 7) == 0) {
-			m_priceTable.m_tierMax[currTier] = (unsigned long)atol(con);
+			m_priceTable.m_tierMax[currTier] = (uint32_t)atol(con);
 			currTier++;
 		}
 		else if (tagLen == 11 && strncasecmp(tag, "resultlevel", 11) == 0) {
-			m_priceTable.m_resultLevels[currResultLevel] = (unsigned long)atol(con);
+			m_priceTable.m_resultLevels[currResultLevel] = (uint32_t)atol(con);
 			currResultLevel++;
 		}
 		else if (tagLen == 9 && strncasecmp(tag, "levelcost", 9) == 0) {
-			m_priceTable.m_levelCosts[currLevelCost] = (unsigned long)atol(con);
+			m_priceTable.m_levelCosts[currLevelCost] = (uint32_t)atol(con);
 			currLevelCost++;
 		}
 		else
-			log(LOG_INFO, "datafeed: Invalid Meta Tag Parsed [%li]:"
+			log(LOG_INFO, "datafeed: Invalid Meta Tag Parsed [%"INT32"]:"
 			    " %s", tagLen, tag);
 	}
 }
 
-long DataFeed::buildPage ( char *page ) {
+int32_t DataFeed::buildPage ( char *page ) {
 	// fill the page buffer with the data feed page
 	char *p = page;
-	p += sprintf(p, "<meta name=customerid content=\"%lli\">\n"
+	p += sprintf(p, "<meta name=customerid content=\"%"INT64"\">\n"
 			"<meta name=datafeedurl content=\"%s\">\n"
 			"<meta name=passcode content=\"%s\">\n"
 			"<meta name=status content=\"%d\">\n"
 			"<meta name=locked content=\"%d\">\n"
-			"<meta name=dfcreationtime content=\"%li\">\n",
+			"<meta name=dfcreationtime content=\"%"INT32"\">\n",
 			m_customerId,
 			m_url,
 			m_passcode,
@@ -141,36 +141,36 @@ long DataFeed::buildPage ( char *page ) {
 			m_isLocked,
 			m_creationTime );
 	// write the pricetable
-	p += sprintf(p, "<meta name=numtiers content=\"%li\">\n"
-			"<meta name=numresultlevels content=\"%li\">\n"
-			"<meta name=monthlyfee content=\"%li\">\n",
+	p += sprintf(p, "<meta name=numtiers content=\"%"INT32"\">\n"
+			"<meta name=numresultlevels content=\"%"INT32"\">\n"
+			"<meta name=monthlyfee content=\"%"INT32"\">\n",
 			m_priceTable.m_numTiers,
 			m_priceTable.m_numResultLevels,
 			m_priceTable.m_monthlyFee );
 	// write the tiers
-	for (long i = 0; i < m_priceTable.m_numTiers; i++)
-		p += sprintf(p, "<meta name=tiermax content=\"%lu\">\n",
+	for (int32_t i = 0; i < m_priceTable.m_numTiers; i++)
+		p += sprintf(p, "<meta name=tiermax content=\"%"UINT32"\">\n",
 				m_priceTable.m_tierMax[i] );
 	// write the result levels
-	for (long i = 0; i < m_priceTable.m_numResultLevels; i++)
-		p += sprintf(p, "<meta name=resultlevel content=\"%lu\">\n",
+	for (int32_t i = 0; i < m_priceTable.m_numResultLevels; i++)
+		p += sprintf(p, "<meta name=resultlevel content=\"%"UINT32"\">\n",
 				m_priceTable.m_resultLevels[i] );
 	// write the costs
-	long numCosts = m_priceTable.m_numTiers * m_priceTable.m_numResultLevels * 2;
-	for (long i = 0; i < numCosts; i++)
-		p += sprintf(p, "<meta name=levelcost content=\"%lu\">\n",
+	int32_t numCosts = m_priceTable.m_numTiers * m_priceTable.m_numResultLevels * 2;
+	for (int32_t i = 0; i < numCosts; i++)
+		p += sprintf(p, "<meta name=levelcost content=\"%"UINT32"\">\n",
 				m_priceTable.m_levelCosts[i] );
 	// return the length
 	return (p - page);
 }
 
 void DataFeed::buildPage ( SafeBuf *sb ) {
-	sb->safePrintf("<meta name=customerid content=\"%lli\">\n"
+	sb->safePrintf("<meta name=customerid content=\"%"INT64"\">\n"
 		       "<meta name=datafeedurl content=\"%s\">\n"
 		       "<meta name=passcode content=\"%s\">\n"
 		       "<meta name=status content=\"%d\">\n"
 		       "<meta name=locked content=\"%d\">\n"
-		       "<meta name=dfcreationtime content=\"%li\">\n",
+		       "<meta name=dfcreationtime content=\"%"INT32"\">\n",
 		       m_customerId,
 		       m_url,
 		       m_passcode,
@@ -178,23 +178,23 @@ void DataFeed::buildPage ( SafeBuf *sb ) {
 		       m_isLocked,
 		       m_creationTime );
 	// write the pricetable
-	sb->safePrintf("<meta name=numtiers content=\"%li\">\n"
-		       "<meta name=numresultlevels content=\"%li\">\n"
-		       "<meta name=monthlyfee content=\"%li\">\n",
+	sb->safePrintf("<meta name=numtiers content=\"%"INT32"\">\n"
+		       "<meta name=numresultlevels content=\"%"INT32"\">\n"
+		       "<meta name=monthlyfee content=\"%"INT32"\">\n",
 		       m_priceTable.m_numTiers,
 		       m_priceTable.m_numResultLevels,
 		       m_priceTable.m_monthlyFee );
 	// write the tiers
-	for (long i = 0; i < m_priceTable.m_numTiers; i++)
-		sb->safePrintf("<meta name=tiermax content=\"%lu\">\n",
+	for (int32_t i = 0; i < m_priceTable.m_numTiers; i++)
+		sb->safePrintf("<meta name=tiermax content=\"%"UINT32"\">\n",
 			       m_priceTable.m_tierMax[i] );
 	// write the result levels
-	for (long i = 0; i < m_priceTable.m_numResultLevels; i++)
-		sb->safePrintf("<meta name=resultlevel content=\"%lu\">\n",
+	for (int32_t i = 0; i < m_priceTable.m_numResultLevels; i++)
+		sb->safePrintf("<meta name=resultlevel content=\"%"UINT32"\">\n",
 			       m_priceTable.m_resultLevels[i] );
 	// write the costs
-	long numCosts = m_priceTable.m_numTiers*m_priceTable.m_numResultLevels*2;
-	for (long i = 0; i < numCosts; i++)
-		sb->safePrintf("<meta name=levelcost content=\"%lu\">\n",
+	int32_t numCosts = m_priceTable.m_numTiers*m_priceTable.m_numResultLevels*2;
+	for (int32_t i = 0; i < numCosts; i++)
+		sb->safePrintf("<meta name=levelcost content=\"%"UINT32"\">\n",
 			       m_priceTable.m_levelCosts[i] );
 }

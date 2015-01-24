@@ -11,13 +11,13 @@ class HashTableX {
 
  public:
 
-	bool set ( long  keySize         ,
-		   long  dataSize        ,
-		   long  initialNumSlots , // = 0    ,
+	bool set ( int32_t  keySize         ,
+		   int32_t  dataSize        ,
+		   int32_t  initialNumSlots , // = 0    ,
 		   char *buf             , // = NULL ,
-		   long  bufSize         , // = 0    ,
+		   int32_t  bufSize         , // = 0    ,
 		   bool  allowDups       , // = false ,
-		   long  niceness        , // = MAX_NICENESS ,
+		   int32_t  niceness        , // = MAX_NICENESS ,
 		   char *allocName       ,
 		   bool  useKeyMagic = false );
 
@@ -32,7 +32,7 @@ class HashTableX {
 	// . add key/value entry to hash table
 	// . will grow hash table if it needs to
 	// . returns false and sets g_errno on error, returns true otherwise
-	bool addKey ( void *key , void *value , long *slot = NULL );
+	bool addKey ( void *key , void *value , int32_t *slot = NULL );
 
 	// for value-less hashtables
 	bool addKey ( void *key );
@@ -42,23 +42,23 @@ class HashTableX {
 	bool removeKey  ( void *key );
 
 	// same as remove
-	bool deleteSlot ( long n ) { return removeSlot(n); };
+	bool deleteSlot ( int32_t n ) { return removeSlot(n); };
 
 	// like removeKey. returns false and sets g_errno on error.
-	bool removeSlot ( long n );
+	bool removeSlot ( int32_t n );
 
 	// see how optimal the hashtable is
-	long getLongestString ();
+	int32_t getLongestString ();
 
 	// how many keys are dups
-	long getNumDups();
+	int32_t getNumDups();
 
 	// if in a thread to dont allow it to grow
 	void setNonGrow() { m_allowGrowth = false; }
 	bool m_allowGrowth;
 
-	bool addFloat ( long *wid , float score ) {
-		long slot = getSlot ( wid );
+	bool addFloat ( int32_t *wid , float score ) {
+		int32_t slot = getSlot ( wid );
                 if ( slot<0 ) return addKey( wid ,&score,&slot);
                 float *val = (float *)getValueFromSlot ( slot );
 		*val = *val + score;
@@ -67,8 +67,8 @@ class HashTableX {
 
 
 	// a replacement for TermTable.cpp
-	bool addTerm ( long long *wid , long score = 1 ) {
-		long slot = getSlot ( wid );
+	bool addTerm ( int64_t *wid , int32_t score = 1 ) {
+		int32_t slot = getSlot ( wid );
                 if ( slot<0 ) return addKey( wid ,&score,&slot);
                 uint32_t *val = (uint32_t *)getValueFromSlot ( slot );
 		// overflow check
@@ -78,20 +78,20 @@ class HashTableX {
 	};
 	bool addTerm64 ( char *str ) {
 		uint64_t wid64 = hash64n ( str );
-		return addTerm64 ( (long long *)&wid64 );
+		return addTerm64 ( (int64_t *)&wid64 );
 	};
-	bool addTerm64 ( long long *wid , long score = 1 ) {
+	bool addTerm64 ( int64_t *wid , int32_t score = 1 ) {
 		return addTerm(wid,score); }
 	// a replacement for TermTable.cpp
-	uint32_t getScore ( long long *wid ) {
-		long slot = getSlot ( wid );
+	uint32_t getScore ( int64_t *wid ) {
+		int32_t slot = getSlot ( wid );
 		if ( slot < 0 ) return 0;
 		return *(uint32_t *)getValueFromSlot ( slot );
 	};
 	// a replacement for TermTable.cpp
-	uint32_t getScoreFromSlot ( long slot ) {
+	uint32_t getScoreFromSlot ( int32_t slot ) {
 		return *(uint32_t *)getValueFromSlot ( slot ); };
-	uint64_t getScore64FromSlot ( long slot ) {
+	uint64_t getScore64FromSlot ( int32_t slot ) {
 		return *(uint64_t *)getValueFromSlot ( slot ); };
 
 
@@ -100,8 +100,8 @@ class HashTableX {
 		return addTerm32 ( &wid32 );
 	};
 
-	bool addTerm32 ( long *wid , long score = 1 ) {
-		long slot = getSlot ( wid );
+	bool addTerm32 ( int32_t *wid , int32_t score = 1 ) {
+		int32_t slot = getSlot ( wid );
                 if ( slot<0 ) return addKey( wid ,&score,&slot);
                 uint32_t *val = (uint32_t *)getValueFromSlot ( slot );
 		// overflow check
@@ -109,8 +109,17 @@ class HashTableX {
 		else                                 *val = *val + score;
 		return true;
 	};
-	bool addTerm32 ( uint32_t *wid , long score = 1 ) {
-		long slot = getSlot ( wid );
+	//bool addTerm32 ( uint32_t *wid , int32_t score = 1 ) {
+	//	int32_t slot = getSlot ( wid );
+	//      if ( slot<0 ) return addKey( wid ,&score,&slot);
+        //      uint32_t *val = (uint32_t *)getValueFromSlot ( slot );
+	//	// overflow check
+	//	if ( *val + (uint32_t)score < *val ) *val = 0xffffffff;
+	//	else                                 *val = *val + score;
+	//	return true;
+	//};
+	bool addTerm32 ( uint32_t *wid , int32_t score = 1 ) {
+		int32_t slot = getSlot ( wid );
                 if ( slot<0 ) return addKey( wid ,&score,&slot);
                 uint32_t *val = (uint32_t *)getValueFromSlot ( slot );
 		// overflow check
@@ -118,49 +127,48 @@ class HashTableX {
 		else                                 *val = *val + score;
 		return true;
 	};
-	bool addTerm32 ( unsigned long *wid , long score = 1 ) {
-		long slot = getSlot ( wid );
-                if ( slot<0 ) return addKey( wid ,&score,&slot);
-                uint32_t *val = (uint32_t *)getValueFromSlot ( slot );
-		// overflow check
-		if ( *val + (uint32_t)score < *val ) *val = 0xffffffff;
-		else                                 *val = *val + score;
-		return true;
-	};
-	bool addScore ( long *key , long score = 1 ) {
+	bool addScore ( int32_t *key , int32_t score = 1 ) {
 		return addTerm32 ( key , score ); 
 	};
-	uint32_t getScore32 ( long *wid ) {
-		long slot = getSlot ( wid );
+	uint32_t getScore32 ( int32_t *wid ) {
+		int32_t slot = getSlot ( wid );
 		if ( slot < 0 ) return 0;
 		return *(uint32_t *)getValueFromSlot ( slot );
 	};
-	uint32_t getScore32 ( unsigned long *wid ) {
-		long slot = getSlot ( wid );
+	uint32_t getScore32 ( uint32_t *wid ) {
+		int32_t slot = getSlot ( wid );
 		if ( slot < 0 ) return 0;
 		return *(uint32_t *)getValueFromSlot ( slot );
 	};
 
 
-	bool addTerm144 ( key144_t *kp , long score = 1 ) {
+	bool addTerm144 ( key144_t *kp , int32_t score = 1 ) {
+
+		// debug XmlDoc.cpp's hash table
+		//int64_t termId = ((key144_t *)kp)->n2 >> 16;
+		//if ( termId == 59194288760543LL ) {
+		//	log("got it");
+		//	char *xx=NULL;*xx=0;
+		//}
+
 		// grow it!
 		if ( (m_numSlots < 20 || 4 * m_numSlotsUsed >= m_numSlots) &&
 		     m_numSlots < m_maxSlots ) {
-			long long growTo ;
-			growTo = ((long long)m_numSlots * 150LL )/100LL+20LL;
+			int64_t growTo ;
+			growTo = ((int64_t)m_numSlots * 150LL )/100LL+20LL;
 			if ( growTo > m_maxSlots ) growTo = m_maxSlots;
-			if ( ! setTableSize ( (long)growTo , NULL , 0 ) ) 
+			if ( ! setTableSize ( (int32_t)growTo , NULL , 0 ) ) 
 				return false;
 		}
 		// hash it up
-		long n = hash32 ( (char *)kp, 18 );
+		int32_t n = hash32 ( (char *)kp, 18 );
 		// then mask it
 		n &= m_mask;
-		long count = 0;
+		int32_t count = 0;
 		while ( count++ < m_numSlots ) {
 			// this is set to 0x01 if non-empty
 			if ( m_flags [ n ] == 0 ) {
-				memcpy( &((key144_t *)m_keys)[n] ,kp,18);
+				gbmemcpy( &((key144_t *)m_keys)[n] ,kp,18);
 				m_vals[n*m_ds] = score;
 				m_flags[n] = 1;
 				m_numSlotsUsed++;
@@ -186,21 +194,21 @@ class HashTableX {
 	};
 
 	// return 32-bit checksum of keys in table
-	long getKeyChecksum32 ();
+	int32_t getKeyChecksum32 ();
 
-	long getSlot144 ( key144_t *kp ) {
+	int32_t getSlot144 ( key144_t *kp ) {
 		// return NULL if completely empty
 		if ( m_numSlots <= 0 ) return -1;
 		// sanity check
 		if ( m_ks != 18 ) { char *xx=NULL;*xx=0; }
 		// mask on termid bits i guess
-		//long n = *((unsigned long *)(((char *)kp)+12));
+		//int32_t n = *((uint32_t *)(((char *)kp)+12));
 		// xor with word posand hashgroup ,etc
-		//n ^= *((unsigned long *)(((char *)kp)+2));
-		long n = hash32 ( (char *)kp, 18 );
+		//n ^= *((uint32_t *)(((char *)kp)+2));
+		int32_t n = hash32 ( (char *)kp, 18 );
 		// then mask it
 		n &= m_mask;
-		long count = 0;
+		int32_t count = 0;
 		while ( count++ < m_numSlots ) {
 			// this is set to 0x01 if non-empty
 			if ( m_flags [ n ] == 0 ) return -1;
@@ -218,38 +226,38 @@ class HashTableX {
 	// . return 0 if key not in hash table
 	void *getValue ( void *key ) {
 		// make it fast
-		if ( m_ks == 4 ) return getValue32 ( *(long *)key );
-		if ( m_ks == 8 ) return getValue64 ( *(long long *)key );
+		if ( m_ks == 4 ) return getValue32 ( *(int32_t *)key );
+		if ( m_ks == 8 ) return getValue64 ( *(int64_t *)key );
 		// returns -1 if key not in hash table
-		long n = getOccupiedSlotNum ( key );
+		int32_t n = getOccupiedSlotNum ( key );
 		if ( n < 0 ) return NULL;
 		return &m_vals[n*m_ds];
 	};
 
-	long getSlot32 ( long key ) {
+	int32_t getSlot32 ( int32_t key ) {
 		// return NULL if completely empty
 		if ( m_numSlots <= 0 ) return -1;
 		// sanity check
 		if ( m_ks != 4 ) { char *xx=NULL;*xx=0; }
-		long n;
+		int32_t n;
 		if ( ! m_useKeyMagic ) {
 			// mask on the lower 32 bits i guess
 			n = key & m_mask;
 		}
 		else {
 			// get lower 32 bits of key
-			n = (unsigned long)key;
+			n =*(uint32_t *)(((char *)&key) +m_maskKeyOffset);
 			// use magic to "randomize" key a little
-			n^=g_hashtab[(unsigned char)((char *)&key)[0]][0];
+			n^=g_hashtab[(unsigned char)((char *)&key)[m_maskKeyOffset]][0];
 			// mask on the lower 32 bits i guess
 			n &= m_mask;
 		}
-		long count = 0;
+		int32_t count = 0;
 		while ( count++ < m_numSlots ) {
 			// this is set to 0x01 if non-empty
 			if ( m_flags [ n ] == 0 ) return -1;
 			// get the key there
-			if (((long *)m_keys)[n] == key) 
+			if (((int32_t *)m_keys)[n] == key) 
 				return n;
 			// advance otherwise
 			if ( ++n == m_numSlots ) n = 0;
@@ -259,30 +267,31 @@ class HashTableX {
 
 	// . specialized for 32-bit keys for speed
 	// . returns NULL if not in table
-	void *getValue32 ( long key ) {
+	void *getValue32 ( int32_t key ) {
 		// return NULL if completely empty
 		if ( m_numSlots <= 0 ) return NULL;
 		// sanity check
 		if ( m_ks != 4 ) { char *xx=NULL;*xx=0; }
-		long n;
+		int32_t n;
 		if ( ! m_useKeyMagic ) {
 			// mask on the lower 32 bits i guess
 			n = key & m_mask;
 		}
 		else {
 			// get lower 32 bits of key
-			n = (unsigned long)key;
+			//n = (uint32_t)key;
+			n =*(uint32_t *)(((char *)&key) +m_maskKeyOffset);
 			// use magic to "randomize" key a little
-			n^=g_hashtab[(unsigned char)((char *)&key)[0]][0];
+			n^=g_hashtab[(unsigned char)((char *)&key)[m_maskKeyOffset]][0];
 			// mask on the lower 32 bits i guess
 			n &= m_mask;
 		}
-		long count = 0;
+		int32_t count = 0;
 		while ( count++ < m_numSlots ) {
 			// this is set to 0x01 if non-empty
 			if ( m_flags [ n ] == 0 ) return NULL;
 			// get the key there
-			if (((long *)m_keys)[n] == key) 
+			if (((int32_t *)m_keys)[n] == key) 
 				return &m_vals[n*m_ds]; 
 			// advance otherwise
 			if ( ++n == m_numSlots ) n = 0;
@@ -292,12 +301,12 @@ class HashTableX {
 
 	// . specialized for 64-bit keys for speed
 	// . returns NULL if not in table
-	void *getValue64 ( long long key ) {
+	void *getValue64 ( int64_t key ) {
 		// return NULL if completely empty
 		if ( m_numSlots <= 0 ) return NULL;
 		// sanity check
 		if ( m_ks != 8 ) { char *xx=NULL;*xx=0; }
-		long n;
+		int32_t n;
 		if ( ! m_useKeyMagic ) {
 			// mask on the lower 32 bits i guess
 			// get lower 32 bits of key
@@ -305,17 +314,17 @@ class HashTableX {
 		}
 		else {
 			// use magic to "randomize" key a little
-			n = *(unsigned long *)((char *)&key);
-			n ^= g_hashtab[(unsigned char)((char *)&key)[0]][0];
+			n =*(uint32_t *)(((char *)&key) +m_maskKeyOffset);
+			n ^= g_hashtab[(unsigned char)((char *)&key)[m_maskKeyOffset]][0];
 			// mask on the lower 32 bits i guess
 			n &= m_mask;
 		}
-		long count = 0;
+		int32_t count = 0;
 		while ( count++ < m_numSlots ) {
 			// this is set to 0x01 if non-empty
 			if ( m_flags [ n ] == 0 ) return NULL;
 			// get the key there
-			if (((long long *)m_keys)[n] == key) 
+			if (((int64_t *)m_keys)[n] == key) 
 				return &m_vals[n*m_ds]; 
 			// advance otherwise
 			if ( ++n == m_numSlots ) n = 0;
@@ -328,46 +337,46 @@ class HashTableX {
 
 	bool isInTable ( void *key ) { return (getSlot(key) >= 0); };
 
-	bool isEmpty ( long n ) { return (m_flags[n] == 0); };
+	bool isEmpty ( int32_t n ) { return (m_flags[n] == 0); };
 
 	bool isTableEmpty ( ) { return (m_numSlotsUsed == 0); };
 
-	void *getKey ( long n ) { return m_keys + n * m_ks; };
-	void *getKeyFromSlot ( long n ) { return m_keys + n * m_ks; };
+	void *getKey ( int32_t n ) { return m_keys + n * m_ks; };
+	void *getKeyFromSlot ( int32_t n ) { return m_keys + n * m_ks; };
 
-	long long getKey64FromSlot ( long n ) {
-		return *(long long *)(m_keys+n*m_ks); }
+	int64_t getKey64FromSlot ( int32_t n ) {
+		return *(int64_t *)(m_keys+n*m_ks); }
 
-	long getKey32FromSlot ( long n ) {
-		return *(long *)(m_keys+n*m_ks); }
+	int32_t getKey32FromSlot ( int32_t n ) {
+		return *(int32_t *)(m_keys+n*m_ks); }
 
-	long getSlot ( void *key ) { return getOccupiedSlotNum ( key ); };
+	int32_t getSlot ( void *key ) { return getOccupiedSlotNum ( key ); };
 
 	// . specialized for 64-bit keys for speed
 	// . returns -1 if not in table
-	long getSlot64 ( long long *key ) {
+	int32_t getSlot64 ( int64_t *key ) {
 		// return NULL if completely empty
 		if ( m_numSlots <= 0 ) return -1;
 		// sanity check
 		if ( m_ks != 8 ) { char *xx=NULL;*xx=0; }
-		long n;
+		int32_t n;
 		if ( ! m_useKeyMagic ) {
 			// mask on the lower 32 bits i guess
 			n = *key & m_mask;
 		}
 		else {
 			// use magic to "randomize" key a little
-			n = *(unsigned long *)((char *)key);
-			n ^= g_hashtab[(unsigned char)((char *)key)[0]][0];
+			n =*(uint32_t *)(((char *)&key) +m_maskKeyOffset);
+			n ^= g_hashtab[(unsigned char)((char *)key)[m_maskKeyOffset]][0];
 			// mask on the lower 32 bits i guess
 			n &= m_mask;
 		}
-		long count = 0;
+		int32_t count = 0;
 		while ( count++ < m_numSlots ) {
 			// this is set to 0x01 if non-empty
 			if ( m_flags [ n ] == 0 ) return -1;
 			// get the key there
-			if (((long long *)m_keys)[n] == *key) 
+			if (((int64_t *)m_keys)[n] == *key) 
 				return n;
 			// advance otherwise
 			if ( ++n == m_numSlots ) n = 0;
@@ -375,23 +384,23 @@ class HashTableX {
 		return -1;
 	};
 
-	long getNextSlot ( long slot , void *key );
+	int32_t getNextSlot ( int32_t slot , void *key );
 
 	// count how many slots have this key
-	long getCount ( void *key );
+	int32_t getCount ( void *key );
 
-	void setValue ( long n , void *val ) { 
+	void setValue ( int32_t n , void *val ) { 
 		if      (m_ds == 4) ((int32_t *)m_vals)[n] = *(int32_t *)val;
 		else if (m_ds == 8) ((int64_t *)m_vals)[n] = *(int64_t *)val;
-		else                memcpy(m_vals+n*m_ds,val,m_ds);
+		else                gbmemcpy(m_vals+n*m_ds,val,m_ds);
 	};
 
-	void *getValueFromSlot ( long n ) { return m_vals + n * m_ds; };
-	void *getValFromSlot   ( long n ) { return m_vals + n * m_ds; };
-	void *getDataFromSlot  ( long n ) { return m_vals + n * m_ds; };
+	void *getValueFromSlot ( int32_t n ) { return m_vals + n * m_ds; };
+	void *getValFromSlot   ( int32_t n ) { return m_vals + n * m_ds; };
+	void *getDataFromSlot  ( int32_t n ) { return m_vals + n * m_ds; };
 
-	long getVal32FromSlot ( long n ){return *(long *)(m_vals+n*m_ds);};
-	long getValue32FromSlot ( long n ){return *(long *)(m_vals+n*m_ds);};
+	int32_t getVal32FromSlot ( int32_t n ){return *(int32_t *)(m_vals+n*m_ds);};
+	int32_t getValue32FromSlot ( int32_t n ){return *(int32_t *)(m_vals+n*m_ds);};
 
 	// frees the used memory, etc.
 	void  reset  ( );
@@ -400,34 +409,34 @@ class HashTableX {
 	void  clear  ( );
 
 	// how many are occupied?
-	long getNumSlotsUsed ( ) { return m_numSlotsUsed; };
-	long getNumUsedSlots ( ) { return m_numSlotsUsed; };
+	int32_t getNumSlotsUsed ( ) { return m_numSlotsUsed; };
+	int32_t getNumUsedSlots ( ) { return m_numSlotsUsed; };
 
 	bool isEmpty() { 
 		if ( m_numSlotsUsed == 0 ) return true;
 		return false; };
 
 	// how many are there total? used and unused.
-	long getNumSlots ( ) { return m_numSlots; };
+	int32_t getNumSlots ( ) { return m_numSlots; };
 
 	// how many bytes are required to serialize this hash table?
-	long getStoredSize();
+	int32_t getStoredSize();
 	// return buffer we allocated and stored into. return -1 on error
 	// with g_errno set.
-	char *serialize ( long *bufSize ) ;
-	// shortcut
-	long serialize ( class SafeBuf *sb );
+	char *serialize ( int32_t *bufSize ) ;
+	// int16_tcut
+	int32_t serialize ( class SafeBuf *sb );
 	// returns # bytes written into "buf"
-	long serialize ( char *buf , long bufSize );
+	int32_t serialize ( char *buf , int32_t bufSize );
 	// inflate it. returns false with g_errno set on error
-	bool deserialize ( char *buf , long bufSize , long niceness );
+	bool deserialize ( char *buf , int32_t bufSize , int32_t niceness );
 
 	// both return false and set g_errno on error, true otherwise
 	bool load ( char *dir , char *filename , 
-		    char **tbuf = NULL , long *tsize = NULL );
+		    char **tbuf = NULL , int32_t *tsize = NULL );
 
 	bool save ( char *dir , char *filename , 
-		    char  *tbuf = NULL , long  tsize = 0);
+		    char  *tbuf = NULL , int32_t  tsize = 0);
 
 	bool save ( char *dir , char *filename , SafeBuf *tbuf ) {
 		return save ( dir,
@@ -443,11 +452,11 @@ class HashTableX {
 			char *dir , 
 			char *filename , 
 			char *tbuf ,
-			long tsize ,
+			int32_t tsize ,
 			void *state ,
 			void (* callback)(void *state) );
 
-	bool setTableSize ( long numSlots , char *buf , long bufSize );
+	bool setTableSize ( int32_t numSlots , char *buf , int32_t bufSize );
 
 	void disableWrites () { m_isWritable = false; };
 	void enableWrites  () { m_isWritable = true ; };
@@ -455,7 +464,7 @@ class HashTableX {
 
  private:
 
-	long getOccupiedSlotNum ( void *key ) ;
+	int32_t getOccupiedSlotNum ( void *key ) ;
 
  public:
 
@@ -465,20 +474,20 @@ class HashTableX {
 	char  *m_vals;
 	char  *m_flags;
 
-	long     m_numSlots;
-	long     m_numSlotsUsed;
+	int32_t     m_numSlots;
+	int32_t     m_numSlotsUsed;
 	uint32_t m_mask;
 
 	char  m_doFree;
 	char *m_buf;
-	long  m_bufSize;
+	int32_t  m_bufSize;
 
 	char m_useKeyMagic;
 
-	long m_ks;
-	long m_ds;
+	int32_t m_ks;
+	int32_t m_ds;
 	char m_allowDups;
-	long m_niceness;
+	int32_t m_niceness;
 
 	// a flag used by XmlDoc.cpp
 	bool m_addIffNotUnique;
@@ -491,19 +500,19 @@ class HashTableX {
 	void *m_state    ;
 	void (* m_callback) ( void *state);
 	char *m_tbuf     ;
-	long  m_tsize    ;
+	int32_t  m_tsize    ;
 
 	// limits growing to this # of slots total
-	long long  m_maxSlots;
+	int64_t  m_maxSlots;
 
 	char *m_allocName;
 	
-	long m_maskKeyOffset;
+	int32_t m_maskKeyOffset;
 
 	// the addon buf used by SOME hashtables. data that the ptrs
 	// in the table itself reference.
 	char *m_txtBuf;
-	long  m_txtBufSize;
+	int32_t  m_txtBufSize;
 };
 
 #endif

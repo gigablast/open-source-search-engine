@@ -19,7 +19,7 @@ UCPropTable::~UCPropTable() {
 
 void UCPropTable::reset() {
 	if (m_data) {
-		for (u_long i=0;i<m_numTables;i++) {
+		for (u_int32_t i=0;i<m_numTables;i++) {
 			if (m_data[i])
 				mfree(m_data[i], m_tableSize , "UCPropTable");
 		}
@@ -30,18 +30,18 @@ void UCPropTable::reset() {
 }
 
 /*
-void *UCPropTable::getValue(unsigned long c){
-	unsigned long prefix = c >> m_tableBits;
-	unsigned long key = c & m_tableMask;
+void *UCPropTable::getValue(uint32_t c){
+	uint32_t prefix = c >> m_tableBits;
+	uint32_t key = c & m_tableMask;
 	if (prefix >= m_numTables) return NULL;
 	if (m_data[prefix] == NULL) return NULL;
 	return (void*) (m_data[prefix] + key*m_valueSize);
 }
 */
 
-bool UCPropTable::setValue(u_long c, void* value) {
-	u_long prefix = c >> m_tableBits;
-	unsigned short key = c & m_tableMask;
+bool UCPropTable::setValue(u_int32_t c, void* value) {
+	u_int32_t prefix = c >> m_tableBits;
+	uint16_t key = c & m_tableMask;
 	if (prefix >= m_numTables) return false; // invalid plane
 	if (m_data == NULL){
 		m_data = (u_char**)
@@ -59,59 +59,59 @@ bool UCPropTable::setValue(u_long c, void* value) {
 		
 		memset(m_data[prefix], '\0', m_tableSize);
 	}
-	memcpy(m_data[prefix] +key*m_valueSize, value, m_valueSize);
+	gbmemcpy(m_data[prefix] +key*m_valueSize, value, m_valueSize);
 	return true;
 	
 }
 
 size_t UCPropTable::getStoredSize() {
 	// Header
-	u_long size = sizeof(u_long) // record size
+	u_int32_t size = sizeof(u_int32_t) // record size
 		+ sizeof(u_char) // value size
 		+ sizeof(u_char);  // number of table bits
 
 	if (m_data)
-		for (u_long i=0 ; i < m_numTables ; i++) {
+		for (u_int32_t i=0 ; i < m_numTables ; i++) {
 			if (m_data[i]) {
-				size += sizeof(long) + // table #
+				size += sizeof(int32_t) + // table #
 					m_tableSize;
 				
 			}
 		}
-	size += sizeof (u_long);
+	size += sizeof (u_int32_t);
 	return size;
 }
-#define RECORD_END (u_long)0xdeadbeef
+#define RECORD_END (u_int32_t)0xdeadbeef
 
 size_t UCPropTable::serialize(char *buf, size_t bufSize) {
-	u_long size = getStoredSize();
+	uint32_t size = getStoredSize();
 	if (bufSize < size) return 0;
 	char *p = buf;
 	// Header
-	*(u_long*)p = size; p += sizeof(u_long);
+	*(uint32_t*)p = size; p += sizeof(u_int32_t);
 	*(u_char*)p = m_valueSize; p += sizeof(u_char);
 	*(u_char*)p = m_tableBits; p += sizeof(u_char);
 	if (m_data)
-		for (u_long i=0; i<m_numTables ; i++) {
+		for (u_int32_t i=0; i<m_numTables ; i++) {
 			if (m_data[i]) {
-				*(u_long*)p = i; p += sizeof(u_long);
-				memcpy(p, m_data[i], m_tableSize);
+				*(u_int32_t*)p = i; p += sizeof(u_int32_t);
+				gbmemcpy(p, m_data[i], m_tableSize);
 				p += m_tableSize;
 			}
 		}
-	*(u_long*)p = RECORD_END; p += sizeof(u_long);
+	*(uint32_t*)p = RECORD_END; p += sizeof(u_int32_t);
 	// sanity check
 	if (p != buf + size)
 		return log(LOG_WARN,
-			   "UCPropTable: size mismatch: expected %ld bytes, "
-			   "but wrote %d instead", size, p-buf);
+			   "UCPropTable: size mismatch: expected %"INT32" bytes, "
+			   "but wrote %"INT32" instead", (int32_t)size, (int32_t)(p-buf));
 	return p-buf;
 }
 
 size_t UCPropTable::deserialize(char *buf, size_t bufSize) {
 	reset();
 	char *p = buf;
-	u_long size = *(u_long*)p; p+=sizeof(u_long);
+	u_int32_t size = *(u_int32_t*)p; p+=sizeof(u_int32_t);
 	//printf("Expecting %d bytes (buffer size: %d)\n", size, bufSize);
 	if (bufSize < size) return 0;
 
@@ -132,7 +132,7 @@ size_t UCPropTable::deserialize(char *buf, size_t bufSize) {
 	
 	//load tables
 	while (p < buf+size) {
-		u_long prefix = *(u_long*)p; p += sizeof(u_long);
+		u_int32_t prefix = *(u_int32_t*)p; p += sizeof(u_int32_t);
 		if ( prefix == RECORD_END ){
 			if (p != buf+size )
 				return log(LOG_WARN, 
@@ -146,10 +146,10 @@ size_t UCPropTable::deserialize(char *buf, size_t bufSize) {
 			mmalloc(m_tableSize, "UCPropTable");
 		if (m_data[prefix] == NULL) 
 			return log(LOG_WARN, "UCPropTable: out of memory");
-		memcpy(m_data[prefix], p, m_tableSize); p += m_tableSize;
+		gbmemcpy(m_data[prefix], p, m_tableSize); p += m_tableSize;
 		//printf ("Read %d bytes after table %d\n", p-buf, prefix);
 	}
 	// shouldn't get here
-	log("UCPropTable: read %d too many bytes\n", p-(buf+size));
+	log("UCPropTable: read %"INT32" too many bytes\n", (int32_t)(p-(buf+size)));
 	return 0;
 }

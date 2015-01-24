@@ -52,26 +52,26 @@ class Process {
 	double getLoadAvg	( );
 	void resetLoadAvg	( );
 
-	long long getTotalDocsIndexed();
-	long long m_totalDocsIndexed;
+	int64_t getTotalDocsIndexed();
+	int64_t m_totalDocsIndexed;
 
 	class Rdb *m_rdbs[32];
-	long       m_numRdbs;
+	int32_t       m_numRdbs;
 	bool       m_urgent;
 	char       m_mode;
-	long long  m_lastSaveTime;
-	long long  m_processStartTime;
+	int64_t  m_lastSaveTime;
+	int64_t  m_processStartTime;
 	bool       m_sentShutdownNote;
 	bool       m_blockersNeedSave;
 	bool       m_repairNeedsSave;
-	long       m_try;
-	long long  m_firstShutdownTime;
+	int32_t       m_try;
+	int64_t  m_firstShutdownTime;
 
 	void        *m_callbackState;
 	void       (*m_callback) (void *state);
 
 	// a timestamp for the sig alarm handler in Loop.cpp
-	long long m_lastHeartbeatApprox;
+	int64_t m_lastHeartbeatApprox;
 
 	void callHeartbeat ();
 
@@ -82,7 +82,7 @@ class Process {
 	bool gotPower ( TcpSocket *s );
 	bool        m_powerReqOut;
 	bool        m_powerIsOn;
-	long long   m_powerOffTime;
+	int64_t   m_powerOffTime;
 	HttpRequest m_r;
 	//Msg28       m_msg28;
 	bool        m_exiting;
@@ -93,10 +93,10 @@ class Process {
 	bool m_fanReqOut;
 	float m_dataCtrTemp;
 	float m_roofTemp;
-	long  m_currentFanState;
-	long  m_desiredFanState;
+	int32_t  m_currentFanState;
+	int32_t  m_desiredFanState;
 	float m_diskUsage;
-	long long m_diskAvail;
+	int64_t m_diskAvail;
 	char m_swapEnabled;
 };
 

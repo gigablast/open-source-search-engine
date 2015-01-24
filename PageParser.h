@@ -19,9 +19,9 @@ bool sendPageAnalyze ( TcpSocket *s , HttpRequest *r ) ;
 bool sendPageParser2 ( TcpSocket    *s , 
 		       HttpRequest  *r ,
 		       class State8 *st ,
-		       long long     docId ,
+		       int64_t     docId ,
 		       Query        *q ,
-		       long long    *termFreqs       ,
+		       int64_t    *termFreqs       ,
 		       float        *termFreqWeights ,
 		       float        *affWeights ,
 		       void         *state ,
@@ -39,30 +39,30 @@ public:
 	//Url   m_url;
 	//Url   m_rootUrl;
 	char *m_u;
-	long  m_ulen;
+	int32_t  m_ulen;
 	bool  m_applyRulesetToRoot;
 	char  m_rootQuality;
-	long  m_reparseRootRetries;
+	int32_t  m_reparseRootRetries;
 	char  m_coll[MAX_COLL_LEN];
-	long  m_collLen;
-	//long  m_sfn;
-	//long  m_urlLen;
+	int32_t  m_collLen;
+	//int32_t  m_sfn;
+	//int32_t  m_urlLen;
 	TcpSocket  *m_s;
 	bool       m_isLocal;
 	char  m_pwd[32];
 	HttpRequest m_r;
-	long m_old;
+	int32_t m_old;
 	// recyle the link info from the title rec?
-	long m_recycle;
+	int32_t m_recycle;
 	// recycle the link info that was imported from another coll?
-	long m_recycle2;
-	long m_render;
+	int32_t m_recycle2;
+	int32_t m_render;
 	char m_recompute;
-	long m_oips;
+	int32_t m_oips;
 	char m_linkInfoColl[11];
 	//	char m_buf[16384 * 1024];
 
-	//long m_page;
+	//int32_t m_page;
 	// m_pbuf now points to m_sbuf if we are showing the parsing junk
 	SafeBuf  m_xbuf;
 	SafeBuf  m_wbuf;
@@ -72,12 +72,12 @@ public:
 	//SafeBuf  m_sbuf2;
 
 	// new state vars for Msg3b.cpp
-	long long  m_docId;
+	int64_t  m_docId;
 	void      *m_state ;
 	void    (* m_callback) (void *state);
 	Query      m_tq;
 	Query     *m_q;
-	long long *m_termFreqs;
+	int64_t *m_termFreqs;
 	float     *m_termFreqWeights;
 	float     *m_affWeights;
 	//score_t    m_total;
@@ -85,19 +85,19 @@ public:
 	bool       m_blocked;
 
 	// these are from rearranging the code
-	long      m_indexCode;
-	//unsigned long long m_chksum1;
-	long long m_took1;
-	long long m_took1b;
-	long long m_took2;
-	long long m_took3;
+	int32_t      m_indexCode;
+	//uint64_t m_chksum1;
+	int64_t m_took1;
+	int64_t m_took1b;
+	int64_t m_took2;
+	int64_t m_took3;
 
 	char m_didRootDom;
 	char m_didRootWWW;
 	char m_wasRootDom;
 
 	// call Msg16 with a versino of title rec to do
-	long m_titleRecVersion;
+	int32_t m_titleRecVersion;
 	
 	char m_hopCount;
 

@@ -35,7 +35,7 @@ Scraper::~Scraper ( ) {
 bool Scraper::init ( ) {
 	// . set the sleep callback for once per 10 minutes
 	// . this is in milliseconds. 1000 ms = 1 second
-	long wait = 1000; // 1000*60*10;
+	int32_t wait = 1000; // 1000*60*10;
 	if ( ! g_loop.registerSleepCallback(wait,NULL,scraperSleepWrapper))
 		return false;
 	m_registered = true;
@@ -64,7 +64,7 @@ void Scraper::wakeUp ( ) {
 	// . we are only allowed one collection scraping at a time
 	// . find the collection, if any
 	CollectionRec *cr = NULL;
-	for ( long i = 0 ; i < g_collectiondb.m_numRecs ; i++ ) {
+	for ( int32_t i = 0 ; i < g_collectiondb.m_numRecs ; i++ ) {
 		cr = g_collectiondb.m_recs[i];
 		if ( cr ) break;
 	}
@@ -180,7 +180,7 @@ void Scraper::gotPhrase ( ) {
 	// . xd will not reschedule the scraped url into spiderdb either
 	sreq.m_isScraping = 1;
 	sreq.m_fakeFirstIp = 1;
-	long firstIp = hash32n(uf);
+	int32_t firstIp = hash32n(uf);
 	if ( firstIp == 0 || firstIp == -1 ) firstIp = 1;
 	sreq.m_firstIp = firstIp;
 	// parent docid is 0
@@ -298,7 +298,7 @@ bool Scraper::scrapeProCog ( ) {
 	m_r.m_language                  = langEnglish;
 	m_r.ptr_query                   = m_currentQuery;
 	m_r.size_query                  = gbstrlen(m_currentQuery)+1;
-	m_r.m_timeout                   = 9999; // wait a long time, in secs
+	m_r.m_timeout                   = 9999; // wait a int32_t time, in secs
 
 	// callback hack
 	m_msg39->m_callback = gotDocIdsWrapper;
@@ -320,10 +320,10 @@ bool Scraper::scrapeProCog ( ) {
 // . sets g_errno on error
 bool Scraper::gotDocIds ( ) {
 	// cache the top result
-	//long long docId = m_msg39->m_topDocId;
+	//int64_t docId = m_msg39->m_topDocId;
 	//float     score = m_msg39->m_topScore;
 	// store in local cache
-	long key32 = m_msg39->m_queryHash32;
+	int32_t key32 = m_msg39->m_queryHash32;
 	// make the record
 	char rec[128];
 	char *p = rec;
@@ -335,7 +335,7 @@ bool Scraper::gotDocIds ( ) {
 	*(float *)p = m_msg39->m_topScore2;
 	p += sizeof(float);
 	// how big is that?
-	long recSize = p - rec;
+	int32_t recSize = p - rec;
 	// cache it
 	g_queryLogResultCache.addRec ( &key32 , rec , recSize );
 }

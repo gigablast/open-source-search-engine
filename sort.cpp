@@ -80,7 +80,7 @@ static __inline void	 swapfunc(char *, char *, int, int);
  * Qsort routine from Bentley & McIlroy's "Engineering a Sort Function".
  */
 #define swapcode(TYPE, parmi, parmj, n) { 		\
-	long i = (n) / sizeof (TYPE); 			\
+	int32_t i = (n) / sizeof (TYPE); 			\
 	TYPE *pi = (TYPE *) (parmi); 			\
 	TYPE *pj = (TYPE *) (parmj); 			\
 	do { 						\
@@ -90,14 +90,14 @@ static __inline void	 swapfunc(char *, char *, int, int);
         } while (--i > 0);				\
 }
 
-#define SWAPINIT(a, es) swaptype = ((char *)a - (char *)0) % sizeof(long) || \
-	es % sizeof(long) ? 2 : es == sizeof(long)? 0 : 1;
+#define SWAPINIT(a, es) swaptype = ((char *)a - (char *)0) % sizeof(int32_t) || \
+	es % sizeof(int32_t) ? 2 : es == sizeof(int32_t)? 0 : 1;
 
 static __inline void
 swapfunc(char *a, char *b, int n, int swaptype)
 {
 	if (swaptype <= 1) 
-		swapcode(long, a, b, n)
+		swapcode(int32_t, a, b, n)
 	else
 		swapcode(char, a, b, n)
 }
@@ -106,9 +106,9 @@ swapfunc(char *a, char *b, int n, int swaptype)
 //#define swap(a, b)
 #define qsort_swap(a, b)				\
 	if (swaptype == 0) {				\
-		long t = *(long *)(a);			\
-		*(long *)(a) = *(long *)(b);		\
-		*(long *)(b) = t;			\
+		int32_t t = *(int32_t *)(a);			\
+		*(int32_t *)(a) = *(int32_t *)(b);		\
+		*(int32_t *)(b) = t;			\
 	} else						\
 		swapfunc(a, b, es, swaptype)
 
@@ -141,7 +141,7 @@ gbqsort(	void*	aa,
 	//char *a = aa;
 	char *a = (char*) aa;
 
-	// JAB: short-circuit if no action required
+	// JAB: int16_t-circuit if no action required
 	if (n < 1) {
 		return;
 	}
@@ -339,7 +339,7 @@ gbmergesort(	void*	base,
 		size_t	size,
 		int	(*cmp)(const void *, const void *),
 		int	niceness,
-		char*   bufSpace, long bufSpaceSize) {
+		char*   bufSpace, int32_t bufSpaceSize) {
 	// JAB: quickpoll
 	//int qp_count = 0;
 	int i, sense;
@@ -684,8 +684,8 @@ int main(int argc, char* argv[])
 			exit(2);
 		}
 		//fprintf(stderr, "%d: read block\n", i);
-		memcpy(block2, block1, sizeof(block2));
-		memcpy(block3, block1, sizeof(block3));
+		gbmemcpy(block2, block1, sizeof(block2));
+		gbmemcpy(block3, block1, sizeof(block3));
 		p1 = block1;
 		p2 = block2;
 		p3 = block3;

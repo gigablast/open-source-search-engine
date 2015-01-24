@@ -81,9 +81,9 @@ enum {
 extern char *g_crStrings[];
 
 bool setClusterLevels ( key_t     *clusterRecs          ,
-			long long *docIds               ,
-			long       numRecs              ,
-			long       maxDocIdsPerHostname ,
+			int64_t *docIds               ,
+			int32_t       numRecs              ,
+			int32_t       maxDocIdsPerHostname ,
 			bool       doHostnameClustering ,
 			bool       familyFilter         ,
 			char       langFilter           ,
@@ -103,18 +103,18 @@ class Msg51 {
 
 	// . returns false if blocked, true otherwise
 	// . sets g_errno on error
-	// . we just store the "long" part of the cluster rec
-	bool getClusterRecs ( long long     *docIds                   ,
+	// . we just store the "int32_t" part of the cluster rec
+	bool getClusterRecs ( int64_t     *docIds                   ,
 			      char          *clusterLevels            ,
 			      key_t         *clusterRecs              ,
-			      long           numDocIds                ,
+			      int32_t           numDocIds                ,
 			      //char          *coll                     ,
 			      collnum_t collnum ,
-			      long           maxCacheAge              ,
+			      int32_t           maxCacheAge              ,
 			      bool           addToCache               ,
 			      void          *state                    ,
 			      void        (* callback)( void *state ) ,
-			      long           niceness                 ,
+			      int32_t           niceness                 ,
 			      // output to clusterRecs[]
 			      bool           isDebug                  ) ;
 
@@ -124,58 +124,58 @@ class Msg51 {
 		return g_clusterdb.hasAdultContent((char *)&clusterRec); };
 	char     getLangId     ( uint64_t clusterRec ) {
 		return g_clusterdb.getLanguage((char *)&clusterRec); };
-	unsigned long getSiteHash26   ( uint64_t clusterRec ) {
+	uint32_t getSiteHash26   ( uint64_t clusterRec ) {
 		return g_clusterdb.getSiteHash26((char *)&clusterRec); };
 
 
         key_t getClusterRec ( int32_t i ) { return m_clusterRecs[i]; };
 
 	/*
-	bool isDocIdVisible ( long i ) {
+	bool isDocIdVisible ( int32_t i ) {
 		if ( m_clusterRecs[i] == 0     ) return false;
 		if ( m_clusterRecs[i] <= CR_OK ) return true;
 		return false;
 	};
 	*/
 
-	bool sendRequests   ( long k );
-	bool sendRequest    ( long i );
+	bool sendRequests   ( int32_t k );
+	bool sendRequest    ( int32_t i );
 
 	void gotClusterRec  ( class Msg0 *msg0 );
 
 	// docIds we're getting clusterRecs for
-	long long   *m_docIds;
-	long         m_numDocIds;
+	int64_t   *m_docIds;
+	int32_t         m_numDocIds;
 
 	// the lower 64 bits of each cluster rec
 	key_t      *m_clusterRecs;
 	char       *m_clusterLevels;
-	long        m_clusterRecsSize;
+	int32_t        m_clusterRecsSize;
 
 	void     (*m_callback ) ( void *state );
 	void      *m_state;
 
 	// next cluster rec # to get (for m_docIds[m_nexti])
-	long      m_nexti;
+	int32_t      m_nexti;
 	// so we don't re-get cluster recs we got last call
-	long      m_firsti;
+	int32_t      m_firsti;
 
 	// use to get the cluster recs
-	long       m_numRequests;
-	long       m_numReplies;
-	long       m_errno;
+	int32_t       m_numRequests;
+	int32_t       m_numReplies;
+	int32_t       m_errno;
 
-	long       m_niceness;
+	int32_t       m_niceness;
 
-	long       m_firstNode;
-	long       m_nextNode;
+	int32_t       m_firstNode;
+	int32_t       m_nextNode;
 
 	//char      *m_coll;
-	//long       m_collLen;
+	//int32_t       m_collLen;
 	collnum_t m_collnum;
 	
 	// cache info
-	long       m_maxCacheAge;
+	int32_t       m_maxCacheAge;
 	bool       m_addToCache;
 
 	bool       m_isDebug;

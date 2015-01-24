@@ -63,15 +63,15 @@
 #define POP_BOOST_4          0.1
 
 
-//static bool onSamePages(long i,long j,long *slots,long *heads,long *pages);
+//static bool onSamePages(int32_t i,int32_t j,int32_t *slots,int32_t *heads,int32_t *pages);
 
-static void handleRequest24 ( UdpSlot *slot , long netnice ) ;
+static void handleRequest24 ( UdpSlot *slot , int32_t netnice ) ;
 
 static void setRepeatScores ( char      *repeatScores        ,
-			      long long *wids                ,
-			      long       nw                  ,
+			      int64_t *wids                ,
+			      int32_t       nw                  ,
 			      char      *repeatTable         ,
-			      long       repeatTableNumSlots ,
+			      int32_t       repeatTableNumSlots ,
 			      Words     *words               ) ;
 
 Msg24::Msg24 ( ) {
@@ -114,28 +114,28 @@ bool Msg24::registerHandler ( ) {
 static void gotReplyWrapper24 ( void *state1 , void *state2 ) ;
 
 bool Msg24::generateTopics ( char       *coll                ,
-			     long        collLen             ,
+			     int32_t        collLen             ,
 			     char       *query               ,
-			     long        queryLen            ,
+			     int32_t        queryLen            ,
 			     //float     termFreqWeights     ,
 			     //float     phraseAffWeights    ,
-			     long long  *docIds              ,
+			     int64_t  *docIds              ,
 			     char       *clusterLevels       ,
-			     long        numDocIds           ,
+			     int32_t        numDocIds           ,
 			     TopicGroup  *topicGroups        ,
-			     long         numTopicGroups     ,
-			     //long        docsToScanForTopics ,
-			     //long        minTopicScore       ,
-			     //long        maxTopics           ,
-			     //long        maxWordsPerPhrase   ,
-			     long        maxCacheAge         ,
+			     int32_t         numTopicGroups     ,
+			     //int32_t        docsToScanForTopics ,
+			     //int32_t        minTopicScore       ,
+			     //int32_t        maxTopics           ,
+			     //int32_t        maxWordsPerPhrase   ,
+			     int32_t        maxCacheAge         ,
 			     bool        addToCache          ,
 			     bool        returnDocIdCount    ,
 			     bool        returnDocIds        ,
 			     bool        returnPops          ,
 			     void       *state               ,
 			     void     (* callback) (void *state ),
-			     long        niceness) {
+			     int32_t        niceness) {
 	// force it to be true, since hi bit is set in pops if topic is unicode
 	returnPops       = true;
 	// warning
@@ -160,12 +160,12 @@ bool Msg24::generateTopics ( char       *coll                ,
 	if ( numTopicGroups <= 0 ) return true;
 	if ( numDocIds      <= 0 ) return true;
 
-	long numTopicsToGen = topicGroups->m_numTopics;
+	int32_t numTopicsToGen = topicGroups->m_numTopics;
 	// get the min we have to scan
-	long docsToScanForTopics = topicGroups[0].m_docsToScanForTopics;
+	int32_t docsToScanForTopics = topicGroups[0].m_docsToScanForTopics;
 
-	for ( long i = 1 ; i < numTopicGroups ; i++ ) {
-		long x = topicGroups[i].m_docsToScanForTopics ;
+	for ( int32_t i = 1 ; i < numTopicGroups ; i++ ) {
+		int32_t x = topicGroups[i].m_docsToScanForTopics ;
 		if ( x > docsToScanForTopics ) docsToScanForTopics = x;
 
 		if ( topicGroups[i].m_numTopics > numTopicsToGen )
@@ -191,11 +191,11 @@ bool Msg24::generateTopics ( char       *coll                ,
 	if ( numDocIds > docsToScanForTopics )
 		numDocIds = docsToScanForTopics ;
 
-	long size = sizeof(TopicGroup) * numTopicGroups ;
+	int32_t size = sizeof(TopicGroup) * numTopicGroups ;
 	if ( queryLen > MAX_QUERY_LEN ) queryLen = MAX_QUERY_LEN;
 
 	// how much space do we need?
-	long need = 4+4+4+size+
+	int32_t need = 4+4+4+size+
 		queryLen+1+ 
 		numDocIds*8 + 
 		numDocIds +collLen+1 + sizeof(niceness);
@@ -206,36 +206,36 @@ bool Msg24::generateTopics ( char       *coll                ,
 	else {
 		m_request = (char *)mmalloc ( need , "Msg24a" );
 		if ( ! m_request ) {
-			log("topics: Failed to allocate %li bytes.",need);
+			log("topics: Failed to allocate %"INT32" bytes.",need);
 			return true;
 		}
 	}
 
 	char *p = m_request;
 	// store the cache parms
-	*(long *)p = maxCacheAge        ; p += 4;
+	*(int32_t *)p = maxCacheAge        ; p += 4;
 	*(char *)p = addToCache         ; p += 1;
 	*(char *)p = returnDocIdCount   ; p += 1;
 	*(char *)p = returnDocIds       ; p += 1;
 	*(char *)p = returnPops         ; p += 1;
-	*(long *)p = niceness           ; p += sizeof(long);
+	*(int32_t *)p = niceness           ; p += sizeof(int32_t);
 	// store minTopicScore
-	//*(long *)p = minTopicScore     ; p += 4;
-	//*(long *)p = maxTopics         ; p += 4;
-	//*(long *)p = maxWordsPerPhrase ; p += 4;
+	//*(int32_t *)p = minTopicScore     ; p += 4;
+	//*(int32_t *)p = maxTopics         ; p += 4;
+	//*(int32_t *)p = maxWordsPerPhrase ; p += 4;
 	// store topic group information
-	*(long *)p = numTopicGroups; p += 4;
-	memcpy ( p , topicGroups , size ); p += size;
+	*(int32_t *)p = numTopicGroups; p += 4;
+	gbmemcpy ( p , topicGroups , size ); p += size;
 	// then coll
-	memcpy ( p , coll , collLen ); p += collLen ;
+	gbmemcpy ( p , coll , collLen ); p += collLen ;
 	*p++ = '\0';
 	// then query
-	memcpy ( p , query , queryLen ); p += queryLen;
+	gbmemcpy ( p , query , queryLen ); p += queryLen;
 	*p++ = '\0';
 	// then docids
-	memcpy ( p , docIds , numDocIds * 8 ); p += numDocIds * 8;
+	gbmemcpy ( p , docIds , numDocIds * 8 ); p += numDocIds * 8;
 	// then cluster levels
-	memcpy ( p , clusterLevels , numDocIds ); p += numDocIds ;
+	gbmemcpy ( p , clusterLevels , numDocIds ); p += numDocIds ;
 	// how big is it?
 	//m_requestSize = p - m_request;
 	// sanity check
@@ -246,7 +246,7 @@ bool Msg24::generateTopics ( char       *coll                ,
 		char *xx = NULL ; *xx = 0; 
 	}
 	// . the groupId to handle... just pick randomly
-	long groupId = ((unsigned long)docIds[0]) & g_hostdb.m_groupMask;
+	int32_t groupId = ((uint32_t)docIds[0]) & g_hostdb.m_groupMask;
 	// . returns false and sets g_errno on error
 	// . reply should be stored in UdpSlot::m_tmpBuf
         if ( ! m_mcast.send ( m_request       , 
@@ -255,7 +255,7 @@ bool Msg24::generateTopics ( char       *coll                ,
 			      false           , // m_mcast own m_request?
 			      groupId         , // send to group (groupKey)
 			      false           , // send to whole group?
-			      (long)docIds[0] , // key is lower bits of docId
+			      (int32_t)docIds[0] , // key is lower bits of docId
 			      this            , // state data
 			      NULL            , // state data
 			      gotReplyWrapper24 ,
@@ -272,7 +272,7 @@ bool Msg24::generateTopics ( char       *coll                ,
 			      RDB_NONE        , // TITLEDB // rdbId of titledb
 			      0             ) ){// minRecSizes avg
 		log("topics: Had error sending request for topics to host in "
-		    "group #%li: %s.",groupId,mstrerror(g_errno));
+		    "group #%"INT32": %s.",groupId,mstrerror(g_errno));
 		return true;	
 	}
 	// otherwise, we blocked and gotReplyWrapper will be called
@@ -293,7 +293,7 @@ void Msg24::gotReply ( ) {
 		return;
 	}
 	// get the reply
-	long  maxSize   ;
+	int32_t  maxSize   ;
 	bool  freeIt    ;
 	m_reply = m_mcast.getBestReply (&m_replySize, &maxSize, &freeIt);	
 	relabel( m_reply, m_replySize, "Msg24-GBR" );
@@ -303,7 +303,7 @@ void Msg24::gotReply ( ) {
 	// . topics are NULL terminated
 	deserialize ( m_reply , m_replySize );
 
-	long long now  = gettimeofdayInMilliseconds();
+	int64_t now  = gettimeofdayInMilliseconds();
 	g_stats.addStat_r ( 0           ,
 			    m_startTime , 
 			    now,
@@ -311,10 +311,10 @@ void Msg24::gotReply ( ) {
 			    0x00d1e1ff ,
 			    STAT_QUERY );
 	/*
-	long  i = 0;
+	int32_t  i = 0;
 	while ( p < pend && i < MAX_TOPICS ) {
-		m_topicScores[i] = *(long *)p ; p += 4;
-		m_topicLens  [i] = *(long *)p ; p += 4;
+		m_topicScores[i] = *(int32_t *)p ; p += 4;
+		m_topicLens  [i] = *(int32_t *)p ; p += 4;
 		m_topicGids  [i] = *(char *)p ; p += 1;
 		m_topicPtrs  [i] = p          ; p += m_topicLens[i] + 1;
 		i++;
@@ -335,7 +335,7 @@ State24::State24 ( ) {
 }
 State24::~State24 ( ) {
 	if ( m_msg20 == m_buf20 ) return;
-	for ( long i = 0 ; i < m_numDocIds ; i++ ) m_msg20[i].destructor();
+	for ( int32_t i = 0 ; i < m_numDocIds ; i++ ) m_msg20[i].destructor();
 	mfree ( m_msg20 , sizeof(Msg20) * m_numDocIds , "Msg24" );
 	m_msg20 = NULL;
 	if ( m_mem ) {
@@ -347,10 +347,10 @@ State24::~State24 ( ) {
 }
 
 
-static void launchMsg20s     ( State24 *st, bool callsample, long sampleSize );
+static void launchMsg20s     ( State24 *st, bool callsample, int32_t sampleSize );
 static void gotSampleWrapper ( void *state ) ;
 
-void handleRequest24 ( UdpSlot *slot , long netnice ) {
+void handleRequest24 ( UdpSlot *slot , int32_t netnice ) {
 	// if niceness is 0, use the higher priority udpServer
 	UdpServer *us = &g_udpServer;
 	//if ( niceness == 0 ) us = &g_udpServer2;
@@ -367,50 +367,50 @@ void handleRequest24 ( UdpSlot *slot , long netnice ) {
 	mnew ( st , sizeof(State24) , "Msg24b" );
 	// get the request
 	char *request     = slot->m_readBuf;
-	long  requestSize = slot->m_readBufSize;
+	int32_t  requestSize = slot->m_readBufSize;
 	char *requestEnd  = request + requestSize;
 	// parse the request
 	char *p = request;
 	// get cache parms
-	//long maxCacheAge = *(long *)p ; p += 4;
+	//int32_t maxCacheAge = *(int32_t *)p ; p += 4;
 	//char addToCache  = *(char *)p ; p += 1;
-	st->m_maxCacheAge        = *(long *)p ; p += 4;
+	st->m_maxCacheAge        = *(int32_t *)p ; p += 4;
 	st->m_addToCache         = *(char *)p ; p += 1;
 	st->m_returnDocIdCount   = *(char *)p ; p += 1;
 	st->m_returnDocIds       = *(char *)p ; p += 1;
 	st->m_returnPops         = *(char *)p ; p += 1;
-	st->m_niceness           = *(long *)p ; p += sizeof(long);
+	st->m_niceness           = *(int32_t *)p ; p += sizeof(int32_t);
 	// first is minTopicScore
-	//long minTopicScore     = *(long *)p ; p += 4;
+	//int32_t minTopicScore     = *(int32_t *)p ; p += 4;
 	// until we roll to all hosts, lets keep the protocol standard
-	//long maxTopics         = *(long *)p ; p += 4;
-	//long maxWordsPerPhrase = *(long *)p ; p += 4;
-	//long maxTopics         = 100;
-	//long maxWordsPerPhrase = 6;
+	//int32_t maxTopics         = *(int32_t *)p ; p += 4;
+	//int32_t maxWordsPerPhrase = *(int32_t *)p ; p += 4;
+	//int32_t maxTopics         = 100;
+	//int32_t maxWordsPerPhrase = 6;
 	//st->m_minTopicScore     = minTopicScore;
 	//st->m_maxTopics         = maxTopics;
 	//st->m_maxWordsPerPhrase = maxWordsPerPhrase;
 	// get topic group information
-	st->m_numTopicGroups = *(long *)p ; p += 4;
-	long size = sizeof(TopicGroup) * st->m_numTopicGroups ;
-	memcpy ( st->m_topicGroups , p , size ); p += size;
+	st->m_numTopicGroups = *(int32_t *)p ; p += 4;
+	int32_t size = sizeof(TopicGroup) * st->m_numTopicGroups ;
+	gbmemcpy ( st->m_topicGroups , p , size ); p += size;
 	// then coll
 	st->m_coll = p; p += strlen(p) + 1;
 	// . then the query, a NULL terminated string
 	// . store it in state
-	long qlen = strlen ( p );
+	int32_t qlen = strlen ( p );
 	if ( qlen > MAX_QUERY_LEN ) qlen = MAX_QUERY_LEN;
-	memcpy ( st->m_query , p , qlen );
+	gbmemcpy ( st->m_query , p , qlen );
 	st->m_query [ qlen ] = '\0';
 	st->m_queryLen = qlen;
 	p += qlen + 1;
 	// then the docids
-	//long long *docIds    = (long long *)p;
-	//long       numDocIds = (requestEnd - p) / 9;
+	//int64_t *docIds    = (int64_t *)p;
+	//int32_t       numDocIds = (requestEnd - p) / 9;
 	//p += numDocIds * 8;
 	// cluster levels
 	//char *clusterLevels = p;
-	st->m_docIds    = (long long *)p;
+	st->m_docIds    = (int64_t *)p;
 	st->m_numDocIds = (requestEnd - p) / 9;
 	p += st->m_numDocIds * 8;
 	// cluster levels
@@ -434,7 +434,7 @@ void handleRequest24 ( UdpSlot *slot , long netnice ) {
 		st->m_msg20=(Msg20 *)mmalloc(sizeof(Msg20)*
 					     st->m_numDocIds,"Msg24c");
 		if ( ! st->m_msg20 ) {
-			log("Msg24: alloc of msg20s for %li bytes failed",
+			log("Msg24: alloc of msg20s for %"INT32" bytes failed",
 			    sizeof(Msg20)*st->m_numDocIds);
 			// prevent a core dump in Msg24::~Msg24
 			st->m_numDocIds = 0;
@@ -443,7 +443,7 @@ void handleRequest24 ( UdpSlot *slot , long netnice ) {
 			us->sendErrorReply ( slot , g_errno );
 			return;
 		}
-		for ( long i = 0 ; i < st->m_numDocIds ; i++ ) 
+		for ( int32_t i = 0 ; i < st->m_numDocIds ; i++ ) 
 			st->m_msg20[i].constructor();
 	}
 
@@ -454,15 +454,15 @@ void handleRequest24 ( UdpSlot *slot , long netnice ) {
 	//char dbuf[1024];
 	p    = st->m_dbuf;
 	char *pend = st->m_dbuf + 1024;
-	for ( long i = 0 ; i < st->m_numTopicGroups ; i++ ) {
+	for ( int32_t i = 0 ; i < st->m_numTopicGroups ; i++ ) {
 		TopicGroup *t = &st->m_topicGroups [ i ];
-		long tlen = strlen ( t->m_meta );
+		int32_t tlen = strlen ( t->m_meta );
 		if ( p + tlen + 1 >= pend ) break;
 		if ( i > 0 ) *p++ = ' ';
-		memcpy ( p , t->m_meta , tlen );
+		gbmemcpy ( p , t->m_meta , tlen );
 		p += tlen;
 	}
-	//long dbufLen = p - dbuf;
+	//int32_t dbufLen = p - dbuf;
 	st->m_dbufLen = p - st->m_dbuf;
 	*p = '\0';
 	st->m_n = 0;
@@ -470,9 +470,9 @@ void handleRequest24 ( UdpSlot *slot , long netnice ) {
 	launchMsg20s ( st , true ,st->m_topicGroups[0].m_topicSampleSize );
 }
 
-void launchMsg20s ( State24 *st , bool callsample , long sampleSize ) {
+void launchMsg20s ( State24 *st , bool callsample , int32_t sampleSize ) {
 	// launch all the msg20 to get big samples of each doc
-	//long n = 0;
+	//int32_t n = 0;
 	for ( ; st->m_i < st->m_numDocIds ; st->m_i++ ) {
 		// skip if clustered out
 		if ( st->m_clusterLevels[st->m_i] != CR_OK ) 
@@ -494,7 +494,7 @@ void launchMsg20s ( State24 *st , bool callsample , long sampleSize ) {
 		// set the summary request then get it!
 		Msg20Request req;
 		Query *q = &st->m_qq;
-		//long nt                = q->m_numTerms;
+		//int32_t nt                = q->m_numTerms;
 		req.ptr_qbuf             = q->getQuery();
 		req.size_qbuf            = q->getQueryLen()+1;
 		//req.ptr_termFreqs      = (char *)m_msg3a.m_termFreqs;
@@ -554,7 +554,7 @@ void launchMsg20s ( State24 *st , bool callsample , long sampleSize ) {
 		if ( g_errno ) {
 			// log it
 			log("topics: Received error when getting "
-			    "document with docId %lli: %s. Document will not "
+			    "document with docId %"INT64": %s. Document will not "
 			    "contribute to the topics generation.",
 			    st->m_docIds[st->m_i],mstrerror(g_errno));
 			// reset g_errno
@@ -576,15 +576,15 @@ void launchMsg20s ( State24 *st , bool callsample , long sampleSize ) {
 	if ( callsample ) gotSampleWrapper ( st );
 }
 
-static bool hashSample ( Query *q, char *sample , long sampleLen , 
-			 TermTable *master, long *nqiPtr , 
+static bool hashSample ( Query *q, char *sample , int32_t sampleLen , 
+			 TermTable *master, int32_t *nqiPtr , 
 			 TopicGroup *t , 
 			 State24* st,
-			 long long docId ,
-			 char *vecs , long *numVecs ,
+			 int64_t docId ,
+			 char *vecs , int32_t *numVecs ,
 			 class Words *wordsPtr , class Scores *scoresPtr ,
 			 bool isUnicode ,
-			 char *repeatTable , long repeatTableNumSlots ,
+			 char *repeatTable , int32_t repeatTableNumSlots ,
 			 char language );
 
 void gotSampleWrapper ( void *state ) {
@@ -610,7 +610,7 @@ void gotSampleWrapper ( void *state ) {
 	// wait for all replies to get here
 	if ( st->m_numReplies < st->m_numRequests ) return;
 	// get time now
-	//long long now = gettimeofdayInMilliseconds();
+	//int64_t now = gettimeofdayInMilliseconds();
 	// . add the stat
 	// . use purple for tie to get all summaries
 	//g_stats.addStat_r ( 0           , 
@@ -618,8 +618,8 @@ void gotSampleWrapper ( void *state ) {
 	//		    now         ,
 	//		    0x008220ff  );
 	// timestamp log
-	//long long startTime = gettimeofdayInMilliseconds();
-	log(LOG_DEBUG,"topics: msg24: Got %li titleRecs.",// in %lli ms",
+	//int64_t startTime = gettimeofdayInMilliseconds();
+	log(LOG_DEBUG,"topics: msg24: Got %"INT32" titleRecs.",// in %"INT64" ms",
 	    st->m_numReplies );//, now - m_startTime );
 
 	// set query
@@ -641,11 +641,11 @@ void gotSampleWrapper ( void *state ) {
 	}
 
 	// timestamp log
-	long long startTime = gettimeofdayInMilliseconds();
+	int64_t startTime = gettimeofdayInMilliseconds();
 
 	// debug
 	//char *pp = (char *)mmalloc ( 4 , "foo");
-	//*(long *)pp = 0;
+	//*(int32_t *)pp = 0;
 	//us->sendReply_ass ( pp , 4 , pp , 4 , slot );
 	//delete(st);
 	//return;
@@ -655,10 +655,10 @@ void gotSampleWrapper ( void *state ) {
 	//char *p    = buf;
 	//char *pend = buf + 128*1024;
 	char *buf     = NULL;
-	long  bufSize = 0;
-	//for ( long yyy = 0 ; yyy < 100 ; yyy++ ) {	master.clear();//mdw
+	int32_t  bufSize = 0;
+	//for ( int32_t yyy = 0 ; yyy < 100 ; yyy++ ) {	master.clear();//mdw
 	// loop over all topic groups
-	for ( long i = 0 ; i < st->m_numTopicGroups ; i++ ) {
+	for ( int32_t i = 0 ; i < st->m_numTopicGroups ; i++ ) {
 		// get ith topic group descriptor
 		TopicGroup *t = &st->m_topicGroups[i];
 		// . generate topics for this topic group
@@ -678,7 +678,7 @@ void gotSampleWrapper ( void *state ) {
 
 	// if small enough, copy into slot's tmp buffer
 	char *reply     = buf;
-	long  replySize = bufSize;
+	int32_t  replySize = bufSize;
 	// launch it
 	us->sendReply_ass ( reply , replySize , reply , replySize , slot );
 	mdelete ( st , sizeof(State24) , "Msg24" );
@@ -689,18 +689,18 @@ void gotSampleWrapper ( void *state ) {
 	// . now time with our new 6 word phrase maximum:
 	//   sum = 1294.0  avg = 16.0 sdev = 10.8 ... our rewrite was faster!!
 	//if ( g_conf.m_timingDebugEnabled )
-	long long took = gettimeofdayInMilliseconds() - startTime ;
+	int64_t took = gettimeofdayInMilliseconds() - startTime ;
 	if ( took > 1 ) 
-		log(LOG_TIMING,"topics: Took %lli ms to parse out topics.", 
+		log(LOG_TIMING,"topics: Took %"INT64" ms to parse out topics.", 
 		     took );
 	// timing debug
-	else log(LOG_TIMING,"topics: Took %lli ms to parse out topics.", took);
+	else log(LOG_TIMING,"topics: Took %"INT64" ms to parse out topics.", took);
 }
 
 class DocIdLink {
 public:
-	long long  m_docId;
-	long       m_next; // offset into st->m_mem to DocIdLink
+	int64_t  m_docId;
+	int32_t       m_next; // offset into st->m_mem to DocIdLink
 };
 
 
@@ -711,14 +711,14 @@ bool getTopics ( State24       *st        ,
 		 Query         *q         ,
 		 char           gid       , 
 		 char         **buf       , 
-		 long          *bufSize   ,
+		 int32_t          *bufSize   ,
 		 // these ptrs are supplied by the spider when trying to 
 		 // generate the gigabit vector for a document it is indexing
 		 class Words   *wordsPtr  , 
 		 class Scores  *scoresPtr ,
-		 long          *hashes    ,
+		 int32_t          *hashes    ,
 		 unsigned char  language  ,
-		 long           niceness  ,
+		 int32_t           niceness  ,
 		 LinkInfo*      linkInfo,
 		 LinkInfo*      linkInfo2) {
 	
@@ -729,7 +729,7 @@ bool getTopics ( State24       *st        ,
 	////////////////////////////////////////////
 	
 	
-	//long long start = gettimeofdayInMilliseconds();
+	//int64_t start = gettimeofdayInMilliseconds();
 	
 	// only allow one vote per ip
 	HashTable iptable;
@@ -740,8 +740,8 @@ bool getTopics ( State24       *st        ,
 	// space for all vectors for deduping samples that are 80% similar
 	char  vbuf [ 64*1024 ];
 	char *vecs    = vbuf;
-	long  numVecs = 0;
-	long  vneed   = st->m_numRequests * SAMPLE_VECTOR_SIZE;
+	int32_t  numVecs = 0;
+	int32_t  vneed   = st->m_numRequests * SAMPLE_VECTOR_SIZE;
 	if ( t->m_dedupSamplePercent >= 0 && vneed > 64*1024 ) 
 		vecs = (char *)mmalloc ( vneed , "Msg24d" );
 	if ( ! vecs ) return false;
@@ -758,13 +758,13 @@ bool getTopics ( State24       *st        ,
 
 	// for every sample estimate the number of words so we know how big
 	// to make our repeat hash table
-	long maxWords = 0;
+	int32_t maxWords = 0;
 	Words tmpw;
 	// if getting a gigabit vector for a single doc, we know the # of words
 	if ( wordsPtr ) maxWords += wordsPtr->getNumWords();
 	// otherwise, get max # of words for each big sample via Msg20
-	long numMsg20Used = 0;
-	for ( long i = 0 ; ! wordsPtr && i < st->m_numRequests ; i++ ) {
+	int32_t numMsg20Used = 0;
+	for ( int32_t i = 0 ; ! wordsPtr && i < st->m_numRequests ; i++ ) {
 		Msg20* thisMsg20 = NULL;
 		if(wordsPtr) {}
 		else if(st->m_msg20) thisMsg20 = &st->m_msg20[i];
@@ -784,7 +784,7 @@ bool getTopics ( State24       *st        ,
 		};
 		// get the ith big sample
 		char *sample = NULL;
-		long  slen   = 0;
+		int32_t  slen   = 0;
 		// but if doing metas, get the display content
 		char  *next = NULL;
 		if(thisMsg20) next = thisMsg20->getDisplayBuf();
@@ -802,12 +802,12 @@ bool getTopics ( State24       *st        ,
 		char *p    = sample;
 		char *pend = sample + slen;
 		// each sample consists of multiple \0 terminated excerpts
-		long sampleWords = 0;
+		int32_t sampleWords = 0;
 #ifdef DEBUG_MSG24
-		long numExcerpts = 0;
+		int32_t numExcerpts = 0;
 #endif
 		while ( p < pend ) {
-			long plen ;
+			int32_t plen ;
 			if ( isUnicode ) plen = ucStrNLen    (p,pend-p);
 			else             plen = strlen       (p);
 			if ( isUnicode ) sampleWords += countWords((UChar *)p,plen);
@@ -821,8 +821,8 @@ bool getTopics ( State24       *st        ,
 #ifdef DEBUG_MSG24
 		if ( sampleWords > 2048 ) {
 		    char *dbgBuf = NULL;
-		    log("topics: Unusually long sample in Msg24: " 
-			"sampleWords=%li numExcerpts=%li", 
+		    log("topics: Unusually int32_t sample in Msg24: " 
+			"sampleWords=%"INT32" numExcerpts=%"INT32"", 
 			sampleWords, numExcerpts);
 		    if ( (dbgBuf = (char *)mmalloc(slen+1, "DEBUG_MSG24")) ) {
 			int jjStep = 1;
@@ -842,14 +842,14 @@ bool getTopics ( State24       *st        ,
 		}
 		else {
 		    log("topics: Reasonable sample in Msg24: "
-			"sampleWords=%li numExcerpts=%li", 
+			"sampleWords=%"INT32" numExcerpts=%"INT32"", 
 			sampleWords, numExcerpts);
 		};
 #endif
 		if (maxWords + sampleWords > 0x08000000) {
 		    log("topics: too many words in samples. "
 			"Discarding the remaining samples "
-			"(maxWords=%li)", maxWords);
+			"(maxWords=%"INT32")", maxWords);
 		    break;
 		}
 		else {
@@ -858,17 +858,17 @@ bool getTopics ( State24       *st        ,
 		};
 	}
 	// make it big enough so there are gaps, so chains are not too long
-	long  minBuckets = (long)(maxWords * 1.5);
+	int32_t  minBuckets = (int32_t)(maxWords * 1.5);
 	if(minBuckets < 512) minBuckets = 512;
-	long  numSlots   = 2 * getHighestLitBitValue ( minBuckets ) ;
-	long  need2      = numSlots * (8+4);
+	int32_t  numSlots   = 2 * getHighestLitBitValue ( minBuckets ) ;
+	int32_t  need2      = numSlots * (8+4);
 	char *rbuf       = NULL;
 	char  tmpBuf2[13000];
 	// sanity check 
 	if ( need2 < 0 ) {
 		g_errno = EBADENGINEER;
-		return log("query: bad engineer in Msg24.cpp. need2=%li "
-			   "numSlots=%li maxWords=%li q=%s", need2,numSlots,maxWords,q->m_orig);
+		return log("query: bad engineer in Msg24.cpp. need2=%"INT32" "
+			   "numSlots=%"INT32" maxWords=%"INT32" q=%s", need2,numSlots,maxWords,q->m_orig);
 	}
 	if ( need2 < 13000 ) rbuf = tmpBuf2;
 	else                  rbuf = (char *)mmalloc ( need2 , "WeightsSet3");
@@ -876,14 +876,14 @@ bool getTopics ( State24       *st        ,
 	// sanity check 
 	if ( numSlots * 8 > need2 || numSlots * 8 < 0 ) {
 		g_errno = EBADENGINEER;
-		return log("query: bad engineer in Msg24.cpp. need2=%li "
-			   "numSlots=%li q=%s", need2,numSlots,q->m_orig);
+		return log("query: bad engineer in Msg24.cpp. need2=%"INT32" "
+			   "numSlots=%"INT32" q=%s", need2,numSlots,q->m_orig);
 	}
 	// clear the keys in the hash table (empty it out)
 	memset ( rbuf , 0 , numSlots * 8 );
 	// set the member var to this
 	char *repeatTable         = rbuf;
-	long  repeatTableNumSlots = numSlots;
+	int32_t  repeatTableNumSlots = numSlots;
 
 	//
 	//
@@ -894,11 +894,11 @@ bool getTopics ( State24       *st        ,
 	
 	// now combine all the pronouns and pronoun phrases into one big hash 
 	// table and collect the top 10 topics
-	long nqi = 0;   // how many query terms actually used? for normalizing.
-	long tcount = 0; // how many title recs did we process?
+	int32_t nqi = 0;   // how many query terms actually used? for normalizing.
+	int32_t tcount = 0; // how many title recs did we process?
 	QUICKPOLL(niceness);
 
-	for ( long i = 0 ; i < numMsg20Used ; i++ ) {
+	for ( int32_t i = 0 ; i < numMsg20Used ; i++ ) {
 		Msg20* thisMsg20 = NULL;
 		if(wordsPtr) {}
 		else if(st->m_msg20) thisMsg20 = &st->m_msg20[i];
@@ -918,7 +918,7 @@ bool getTopics ( State24       *st        ,
 			continue;
 		// skip if from an ip we already did
 		if ( t->m_ipRestrict ) {
-			long ipd = ipdom (thisMsg20->getIp() );
+			int32_t ipd = ipdom (thisMsg20->getIp() );
 			// zero is invalid!
 			if ( ! ipd ) continue;
 			//log("url=%s",thisMsg20->getUrl()); 
@@ -932,9 +932,9 @@ bool getTopics ( State24       *st        ,
 				 thisMsg20->getUrlLen() );
 			// "mid dom" is the "ibm" part of ibm.com or ibm.de
 			char *dom  = uu.getMidDomain();
-			long  dlen = uu.getMidDomainLen();
+			int32_t  dlen = uu.getMidDomainLen();
 			if ( dom && dlen > 0 ) {
-				long  h = hash32 ( dom , dlen );
+				int32_t  h = hash32 ( dom , dlen );
 				if ( iptable.getValue(h) ) continue; 
 				iptable.addKey (h,1);
 			}
@@ -943,7 +943,7 @@ bool getTopics ( State24       *st        ,
 		}
 		// get the ith big sample
 		char *bigSampleBuf = NULL;
-		long  bigSampleLen = 0;
+		int32_t  bigSampleLen = 0;
 		// but if doing metas, get the display content
 		char  *next = NULL;
 		if(thisMsg20) next = thisMsg20->getDisplayBuf();
@@ -963,7 +963,7 @@ bool getTopics ( State24       *st        ,
 		// otherwise count it
 		tcount++;
 		// the docid
-		long long docId = 0;
+		int64_t docId = 0;
 		if ( ! wordsPtr ) docId = thisMsg20->getDocId();
 		// are we unicode?
 		bool isUnicode;
@@ -986,7 +986,7 @@ bool getTopics ( State24       *st        ,
 		// hash the inlink texts and neighborhoods
 		for(Inlink *k=NULL;linkInfo&&(k=linkInfo->getNextInlink(k));){
 			char *s = k->ptr_linkText;
-			long len = k->size_linkText - 1;
+			int32_t len = k->size_linkText - 1;
 			hashSample ( q, s, len, master, &nqi , t ,
 				     st,     docId , // 0
 				     vecs , &numVecs , 
@@ -1005,7 +1005,7 @@ bool getTopics ( State24       *st        ,
 		}
 		for(Inlink*k=NULL;linkInfo2&&(k=linkInfo2->getNextInlink(k));){
 			char *s = k->ptr_linkText;
-			long len = k->size_linkText - 1;
+			int32_t len = k->size_linkText - 1;
 			hashSample ( q, s, len, master, &nqi, t ,
 				     st,   docId , // docId
 				     vecs , &numVecs , 
@@ -1027,62 +1027,62 @@ bool getTopics ( State24       *st        ,
 			     repeatTable , repeatTableNumSlots , language );
 	}
 
-	//log("did samples in %lli ",gettimeofdayInMilliseconds()-start);
+	//log("did samples in %"INT64" ",gettimeofdayInMilliseconds()-start);
 
-	long  nt = master->getNumTerms();
+	int32_t  nt = master->getNumTerms();
 
 	// debug msg
 	/*
-	for ( long i = 0 ; i < nt ; i++ ) {
-		long score = master->getScoreFromTermNum(i) ;
+	for ( int32_t i = 0 ; i < nt ; i++ ) {
+		int32_t score = master->getScoreFromTermNum(i) ;
 		if ( ! score ) continue;
 		char *ptr  = master->getTermPtr(i) ;
-		long len   = master->getTermLen(i);
+		int32_t len   = master->getTermLen(i);
 		char ff[1024];
 		if ( len > 1020 ) len = 1020;
-		memcpy ( ff , ptr , len );
+		gbmemcpy ( ff , ptr , len );
 		ff[len] = '\0';
 		// we can have html entities in here now
 		//if ( ! is_alnum(ff[0]) ) { char *xx = NULL; *xx = 0; }
-		log("%08li %s",score,ff);
+		log("%08"INT32" %s",score,ff);
 	}
 	*/
 
 	// how many do we need?
-	long need = t->m_maxTopics ;
+	int32_t need = t->m_maxTopics ;
 	// get this many winners
-	long maxWinners = need;
+	int32_t maxWinners = need;
 	// double it in case some get deduped
 	if ( t->m_dedup ) maxWinners *= 2; // mdw
 	// count how many get removed, might have to recompute
-	long removed ;
-	long got = 0;
+	int32_t removed ;
+	int32_t got = 0;
 
 	// now get the top MAX_TOPICS or maxWinners pronouns or pronoun phrases
-	//long           scores [ MAX_TOPICS ];
+	//int32_t           scores [ MAX_TOPICS ];
 	//char          *ptrs   [ MAX_TOPICS ];
 	//unsigned char  lens   [ MAX_TOPICS ];
-	long  *scores  = NULL;
+	int32_t  *scores  = NULL;
 	char **ptrs    = NULL;
-	long  *lens    = NULL;
+	int32_t  *lens    = NULL;
 	char  *isunis  = NULL;
-	long  *slots   = NULL;
-	long  *pages   = NULL;
+	int32_t  *slots   = NULL;
+	int32_t  *pages   = NULL;
 	// these vars are used below
 	//char *ptrs2 [ MAX_TOPICS ];
-	//long  lens2 [ MAX_TOPICS ];
+	//int32_t  lens2 [ MAX_TOPICS ];
 	char **ptrs2 = NULL;
-	long  *lens2 = NULL;
+	int32_t  *lens2 = NULL;
 
 	char  *tmpBuf  = NULL;
-	long   tmpSize = 0;
+	int32_t   tmpSize = 0;
 	//bool   triedLinkInfo = false;
  redo:
 	// ensure maxWinners not too big
 	//if ( maxWinners > MAX_TOPICS ) maxWinners = MAX_TOPICS;
 
 	// allocate enough space
-	long  newSize = maxWinners*(sizeof(char *)+4+4+4+4+sizeof(char *)+4+1);
+	int32_t  newSize = maxWinners*(sizeof(char *)+4+4+4+4+sizeof(char *)+4+1);
 	char *newBuf  = (char *)mrealloc(tmpBuf,tmpSize , newSize , "Msg24e" );
 	if ( ! newBuf ) {
 		if ( tmpBuf ) mfree ( tmpBuf , tmpSize , "Msg24" );
@@ -1094,45 +1094,45 @@ bool getTopics ( State24       *st        ,
 			st->m_memPtr = NULL;
 		}
 		if ( vecs != vbuf ) mfree ( vecs , vneed , "Msg24" );
-		return log("topics: realloc to %li failed.",newSize);
+		return log("topics: realloc to %"INT32" failed.",newSize);
 	}
 	tmpBuf   = newBuf;
 	tmpSize  = newSize;
 	char *pp = tmpBuf;
 	ptrs     = (char **)pp ; pp += sizeof(char *) * maxWinners;
-	scores   = (long  *)pp ; pp += 4 * maxWinners;
-	lens     = (long  *)pp ; pp += 4 * maxWinners;
+	scores   = (int32_t  *)pp ; pp += 4 * maxWinners;
+	lens     = (int32_t  *)pp ; pp += 4 * maxWinners;
 	isunis   =          pp ; pp += maxWinners;
-	slots    = (long  *)pp ; pp += 4 * maxWinners;
-	pages    = (long  *)pp ; pp += 4 * maxWinners;
+	slots    = (int32_t  *)pp ; pp += 4 * maxWinners;
+	pages    = (int32_t  *)pp ; pp += 4 * maxWinners;
 	ptrs2    = (char **)pp ; pp += sizeof(char *) * maxWinners;
-	lens2    = (long  *)pp ; pp += 4 * maxWinners;
+	lens2    = (int32_t  *)pp ; pp += 4 * maxWinners;
 
-	long *pops = master->m_pops;
+	int32_t *pops = master->m_pops;
 
 	QUICKPOLL(niceness);
 
-	long  np = 0;
-	long  minScore = 0x7fffffff;
-	long  minj = -1;
-	long  i ;
- 	long *heads = master->getHeads();
+	int32_t  np = 0;
+	int32_t  minScore = 0x7fffffff;
+	int32_t  minj = -1;
+	int32_t  i ;
+ 	int32_t *heads = master->getHeads();
 	bool  callRedo = true;
 	// total # of pages sampled
-	long  sampled = numMsg20Used;
+	int32_t  sampled = numMsg20Used;
 	for ( i = 0 ; i < nt && np < maxWinners ; i++ ) {
 		// skip term #i from "table" if it has 0 score
-		long score = master->m_scores[i]; // getScoreFromTermNum(i) ;
+		int32_t score = master->m_scores[i]; // getScoreFromTermNum(i) ;
 		if ( ! score ) continue;
 
 		// . make it higher the more popular a term is
 		// . these are based on a MAXPOP of 10000
-		long mdc = (long)((((double)sampled * 3.0 * 
+		int32_t mdc = (int32_t)((((double)sampled * 3.0 * 
 				    (double)(pops[i]&0x7fffffff))+0.5)/MAXPOP);
 		if ( mdc < t->m_minDocCount ) mdc = t->m_minDocCount;
 
 		// skip if does not meet the min doc count
-		long count = 0;
+		int32_t count = 0;
 		//if ( mdc > 1 || st->m_returnDocIds ) {
 		if ( t->m_minDocCount > 1 || st->m_returnDocIds ) {
 			DocIdLink *link = (DocIdLink *)(st->m_mem+heads[i]);
@@ -1159,7 +1159,7 @@ bool getTopics ( State24       *st        ,
 		// recalc the score
 		//double frac1 = ((MAXPOP-(pops[i]&0x7fffffff))*100.0)/MAXPOP;
 		//double frac2 = ((double)count * 100.0) / (double)sampled;
-		//score = (long)((frac1 * frac2) / 100.0);
+		//score = (int32_t)((frac1 * frac2) / 100.0);
 		// we got a winner
 		scores [ np ] = score;
 		ptrs   [ np ] = master->m_termPtrs[i]; // getTermPtr(i) ;
@@ -1176,19 +1176,19 @@ bool getTopics ( State24       *st        ,
 	// now do the rest
 	for ( ; i < nt ; i++ ) {
 		// skip term #i from "table" if it has 0 score
-		long score = master->m_scores[i]; // getScoreFromTermNum(i) ;
+		int32_t score = master->m_scores[i]; // getScoreFromTermNum(i) ;
 		// bail if empty
 		if ( score <= 0 ) continue;
 		// ignore if not a winner
 		if ( score <= minScore ) continue;
 		// . make it higher the more popular a term is
 		// . these are based on a MAXPOP of 10000
-		long mdc = (long)((((double)sampled * 3.0 * 
+		int32_t mdc = (int32_t)((((double)sampled * 3.0 * 
 				    (double)(pops[i]&0x7fffffff))+0.5)/MAXPOP);
 		if ( mdc < t->m_minDocCount ) mdc = t->m_minDocCount;
 
 		// skip if does not meet the min doc count
-		long count = 0;
+		int32_t count = 0;
 		if ( t->m_minDocCount > 1 || st->m_returnDocIds ) {
 			DocIdLink *link = (DocIdLink *)(st->m_mem+heads[i]);
 			// m_next is -1 to indicate end
@@ -1199,7 +1199,7 @@ bool getTopics ( State24       *st        ,
 			if ( count < mdc ) continue;
 		}
 		// find the score it will replace, the min one
-		//long j ;
+		//int32_t j ;
 		//for ( j = 0 ; j < np ; j++ )
 		//	if ( scores [ j ] == minScore ) break;
 		// bad engineer?
@@ -1207,8 +1207,8 @@ bool getTopics ( State24       *st        ,
 		// recalc the score
 		//double frac1 = ((MAXPOP-(pops[i]&0x7fffffff))*100.0)/MAXPOP;
 		//double frac2 = ((double)count * 100.0) / (double)sampled;
-		//long   newScore = (long)((frac1 * frac2) / 100.0);
-		//long   oldminj  = minj;
+		//int32_t   newScore = (int32_t)((frac1 * frac2) / 100.0);
+		//int32_t   oldminj  = minj;
 		// replace jth guy
 		scores [ minj ] = score;
 		ptrs   [ minj ] = master->m_termPtrs[i]; // getTermPtr(i) ;
@@ -1216,10 +1216,10 @@ bool getTopics ( State24       *st        ,
 		isunis [ minj ] = master->m_isunis[i];
 		pages  [ minj ] = count;
 		slots  [ minj ] = i;
-		//log("ptrs[%li]=%lx",j,ptrs[j]);
+		//log("ptrs[%"INT32"]=%"XINT32"",j,ptrs[j]);
 		// hopefully we increased the min score in our top set now
 		minScore = 0x7fffffff;
-		for ( long j = 0 ; j < np ; j++ ) {
+		for ( int32_t j = 0 ; j < np ; j++ ) {
 			if ( scores[j] < minScore ) {
 				minScore = scores[j];
 				minj     = j;
@@ -1231,14 +1231,14 @@ bool getTopics ( State24       *st        ,
 	// bubble sort the top winners
  again:
 	bool flag = 0;
-	for ( long i = 1 ; i < np ; i++ ) {
+	for ( int32_t i = 1 ; i < np ; i++ ) {
 		if ( scores[i-1] >= scores[i] ) continue;
-		long   ts = scores[i];
+		int32_t   ts = scores[i];
 		char  *tp = ptrs  [i];
-		long   tl = lens  [i];
+		int32_t   tl = lens  [i];
 		char   tu = isunis[i];
-		long   tc = pages [i];
-		long   tt = slots [i];
+		int32_t   tc = pages [i];
+		int32_t   tt = slots [i];
 		scores [i  ] = scores[i-1];
 		ptrs   [i  ] = ptrs  [i-1];
 		lens   [i  ] = lens  [i-1];
@@ -1261,7 +1261,7 @@ bool getTopics ( State24       *st        ,
 	// . assume 20000 pointer per query term per page
 	// . an topic term will get 20000 points for each query term it is
 	//   close to
-	long max = nqi * tcount * MAX_SCORE_MULTIPLIER ; //10000;
+	int32_t max = nqi * tcount * MAX_SCORE_MULTIPLIER ; //10000;
         if ( nqi == 0 ) max = tcount * ALT_MAX_SCORE;
 	if ( max == 0 ) max = 1;
 	for ( i = 0 ; i < np ; i++ ) {
@@ -1278,12 +1278,12 @@ bool getTopics ( State24       *st        ,
 	//   words when comparing, they don't add much beyond repetition
 	// . "super bowl" + "the super bowl" --> "super bowl"
 	//char *ptrs2 [ MAX_TOPICS ];
-	//long  lens2 [ MAX_TOPICS ];
+	//int32_t  lens2 [ MAX_TOPICS ];
 	for ( i = 0 ; i < np ; i++ ) {
 		/*
 		Words w;
 		w.set ( false , ptrs[i] , lens[i] , false );
-		long nw = w.getNumWords();
+		int32_t nw = w.getNumWords();
 		// skip if none
 		if ( nw <= 0 ) continue;
 		*/
@@ -1294,12 +1294,12 @@ bool getTopics ( State24       *st        ,
 		//----> not if capitalized!! leave those in tact. like 
 		//      Michael Jackson's "Beat It"
 		/*
-		long h;
-		long j = 0;
+		int32_t h;
+		int32_t j = 0;
 		if ( w.isPunct(j) ) j++;
 		for (  ; j < nw ; j += 2 ) {
 			char *ww    = w.getWord   (j);
-			long  wwlen = w.getWordLen(j);
+			int32_t  wwlen = w.getWordLen(j);
 			// if capitlized, leave it
 			if ( is_upper(ww[0]) ) break;
 			// single letter lower case is common word
@@ -1312,11 +1312,11 @@ bool getTopics ( State24       *st        ,
 			ptrs2 [i] = w.getWord(j+2);
 		}
 		// skip trailing common words
-		long k = nw - 1 ;
+		int32_t k = nw - 1 ;
 		if ( w.isPunct(k) ) k--;
 		for (  ; k >= j ; k -= 2 ) {
 			char *ww    = w.getWord   (k);
-			long  wwlen = w.getWordLen(k);
+			int32_t  wwlen = w.getWordLen(k);
 			// if capitlized, leave it
 			if ( is_upper(ww[k]) ) break;
 			// single letter lower case is common word
@@ -1338,17 +1338,17 @@ bool getTopics ( State24       *st        ,
 
 	removed = 0;
 	// now remove similar terms from the top topics
-	for ( long i = 0 ; i < np - 1 ; i++ ) {
+	for ( int32_t i = 0 ; i < np - 1 ; i++ ) {
 		// skip if nuked already
 		if ( lens[i] == 0 ) continue;
 		// scan down to this score, but not below
-		//long minScore = (scores[i] * 75) / 100 ;
-		long minScore = scores[i] - 25;
+		//int32_t minScore = (scores[i] * 75) / 100 ;
+		int32_t minScore = scores[i] - 25;
 		// if we get replaced by a longer guy, remember him
-		long replacerj = -1;
+		int32_t replacerj = -1;
 		// . a longer term than encapsulates us can eliminate us
-		// . or, if we're the longer, we eliminate the shorter
-		for ( long j = i + 1 ; j < np ; j++ ) {
+		// . or, if we're the longer, we eliminate the int16_ter
+		for ( int32_t j = i + 1 ; j < np ; j++ ) {
 			// skip if nuked already
 			if ( lens[j] == 0 ) continue;
 			// null term both
@@ -1356,10 +1356,10 @@ bool getTopics ( State24       *st        ,
 			char c2 = ptrs2[j][lens2[j]];
 			ptrs2[i][lens2[i]] = '\0';
 			ptrs2[j][lens2[j]] = '\0';
-			// if we are the shorter, and longer contains us
+			// if we are the int16_ter, and longer contains us
 			// then it nukes us... unless his score is too low
 			if ( lens2[i] < lens2[j] ) {
-				// if shorter is contained
+				// if int16_ter is contained
 				char *s;
 				if (isunis[j] == 0 && isunis[i] == 0)
 					s = gb_strcasestr (ptrs2[j],ptrs2[i]) ;
@@ -1386,14 +1386,14 @@ bool getTopics ( State24       *st        ,
 				// he's gotta be on all of our pages, too
 				//if ( ! onSamePages(i,j,slots,heads,pages) )
 				//	continue;
-				// shorter gets our score (we need to sort)
+				// int16_ter gets our score (we need to sort)
 				// not yet! let him finish, then replace him!!
 				replacerj = j;
 				// see if we can nuke other guys at least
 				continue;
 			}
 			// . otherwise, we are the longer
-			// . we can nuke any shorter below us, all scores
+			// . we can nuke any int16_ter below us, all scores
 			char *s;
 			if (isunis[i] == 0 && isunis[j] == 0)
 				s = gb_strcasestr (ptrs2[i],ptrs2[j]) ;
@@ -1456,18 +1456,18 @@ bool getTopics ( State24       *st        ,
 	// again2:
 	//char rflag = 0;
 	// if two terms are close in score, and one is a longer version
-	// of the other, choose it and remove the shorter
-	for ( long i = 0 ; i < np - 1 ; i++ ) {
+	// of the other, choose it and remove the int16_ter
+	for ( int32_t i = 0 ; i < np - 1 ; i++ ) {
 		// skip if nuked already
 		if ( lens[i] == 0 ) continue;
 		// scan down to this score, but not below
-		//long minScore = (scores[i] * 75) / 100 ;
-		long minScore = scores[i] - 15;
+		//int32_t minScore = (scores[i] * 75) / 100 ;
+		int32_t minScore = scores[i] - 15;
 		// if we get replaced by a longer guy, remember him
-		long replacerj = -1;
+		int32_t replacerj = -1;
 		// . a longer term than encapsulates us can eliminate us
-		// . or, if we're the longer, we eliminate the shorter
-		for ( long j = i + 1 ; j < np ; j++ ) {
+		// . or, if we're the longer, we eliminate the int16_ter
+		for ( int32_t j = i + 1 ; j < np ; j++ ) {
 			// skip if nuked already
 			if ( lens[j] == 0 ) continue;
 			// null term both
@@ -1475,10 +1475,10 @@ bool getTopics ( State24       *st        ,
 			char c2 = ptrs[j][lens[j]];
 			ptrs[i][lens[i]] = '\0';
 			ptrs[j][lens[j]] = '\0';
-			// if we are the shorter, and longer contains us
+			// if we are the int16_ter, and longer contains us
 			// then it nukes us... unless his score is too low
 			if ( lens[i] < lens[j] ) {
-				// if shorter is contained
+				// if int16_ter is contained
 				char *s;
 				if (isunis[j] == 0 && isunis[i] == 0)
 					s = gb_strcasestr (ptrs2[j],ptrs2[i]) ;
@@ -1503,17 +1503,17 @@ bool getTopics ( State24       *st        ,
 				// if we were NOT contained by someone below...
 				if ( ! s ) continue;
 				// if we are not on the same pages as the
-				// shorter one, then we cannot absorb him
+				// int16_ter one, then we cannot absorb him
 				//if ( ! onSamePages(i,j,slots,heads,pages)) 
 				//	continue;
-				// shorter gets our score (we need to sort)
+				// int16_ter gets our score (we need to sort)
 				// not yet! let him finish, then replace him!!
 				replacerj = j;
 				// see if we can nuke other guys at least
 				continue;
 			}
 			// . otherwise, we are the longer
-			// . we can nuke any shorter below us, all scores
+			// . we can nuke any int16_ter below us, all scores
 			char *s;
 			if (isunis[i] == 0 && isunis[j] == 0)
 				s = gb_strcasestr (ptrs2[i],ptrs2[j]) ;
@@ -1538,7 +1538,7 @@ bool getTopics ( State24       *st        ,
 			// keep going if no match
 			if ( ! s ) continue;
 			// if we are not on the same pages as the
-			// shorter one, then we cannot absorb him
+			// int16_ter one, then we cannot absorb him
 			//if ( ! onSamePages(i,j,slots,heads,pages))
 			//	continue;
 			// remove him if we contain him
@@ -1569,7 +1569,7 @@ bool getTopics ( State24       *st        ,
 	//if ( rflag ) goto again2;
 
 	// remove common phrases
-	for ( long i = 0 ; i < np ; i++ ) {
+	for ( int32_t i = 0 ; i < np ; i++ ) {
 		// skip if nuked already
 		if ( lens[i] == 0 ) continue;
 		// compare
@@ -1624,10 +1624,10 @@ bool getTopics ( State24       *st        ,
 		}
 	}
 	QUICKPOLL(niceness);
-	// now after longer topics replaced the shorter topics which they
+	// now after longer topics replaced the int16_ter topics which they
 	// contained, remove the longer topics if they have too many words
 	// remove common phrases
-	for ( long i = 0 ; i < np ; i++ ) {
+	for ( int32_t i = 0 ; i < np ; i++ ) {
 		// skip if nuked already
 		if ( lens[i] == 0 ) continue;
 		if ( ! ptrs[i]    ) continue;
@@ -1635,18 +1635,18 @@ bool getTopics ( State24       *st        ,
 		Words w;
 		w.set ( false , false, ptrs[i] , lens[i] , TITLEREC_CURRENT_VERSION,
 			false, false, niceness );
-		long nw = w.getNumWords();
+		int32_t nw = w.getNumWords();
 		// . does it have comma? or other punct besides an apostrophe?
-		// . we allow gigabit phrases to incorporate a long stretch
+		// . we allow gigabit phrases to incorporate a int32_t stretch
 		//   of punct... only before the LAST word in the phrase,
 		//   that way our overlap removal still works well.
 		bool hasPunct = false;
-		for ( long k = 0 ; k < lens[i] ; k++ ) {
+		for ( int32_t k = 0 ; k < lens[i] ; k++ ) {
 			if ( ! is_punct(ptrs[i][k]) ) continue;
-			// apostrophe is ok as long as alnum follows
+			// apostrophe is ok as int32_t as alnum follows
 			if ( ptrs[i][k] == '\'' &&
 			     is_alnum(ptrs[i][k+1]) ) continue;
-			// . period ok, as long as space or alnum follows
+			// . period ok, as int32_t as space or alnum follows
 			// . if space follows, then an alnum must follow that
 			// . same goes for colon
 			QUICKPOLL(niceness);
@@ -1692,9 +1692,9 @@ bool getTopics ( State24       *st        ,
 	// or if already hit MAX_TOPICS
 	//if ( maxWinners >= MAX_TOPICS ) goto skipdedup; mdw
 	if ( got == 0 ) maxWinners = maxWinners*2;
-	else            maxWinners = ((long long)maxWinners * 
-				      (long long)need * 110LL) / 
-				((long long)got * 100LL) + 10;
+	else            maxWinners = ((int64_t)maxWinners * 
+				      (int64_t)need * 110LL) / 
+				((int64_t)got * 100LL) + 10;
 	goto redo; // mdw
 
  skipdedup:
@@ -1707,11 +1707,11 @@ bool getTopics ( State24       *st        ,
 
 
 	// how much space do we need for reply?
-	long size = 0;
+	int32_t size = 0;
 	// 4 bytes for number of topics
 	size += 4;
 	// then how much for each topic?
-	long ntp  = 0;
+	int32_t ntp  = 0;
 	for ( i = 0 ; i < np ; i++ ) {
 		// cutoff at min score
 		if ( scores[i] < t->m_minTopicScore ) continue;
@@ -1719,7 +1719,7 @@ bool getTopics ( State24       *st        ,
 		if ( lens[i] <= 0 ) continue;
 		// we always get the count now
 		if ( st->m_returnDocIds ) {
-			long count = 0;
+			int32_t count = 0;
 			DocIdLink *link = (DocIdLink *)(st->m_mem+heads[slots[i]]);
 			while ( (char *)link >= st->m_mem ) { 
 				count++; 
@@ -1761,7 +1761,7 @@ bool getTopics ( State24       *st        ,
 			st->m_memPtr = NULL;
 		}
 		if ( vecs != vbuf ) mfree ( vecs , vneed , "Msg24" );
-		return log("topics: Realloc reply buf to %li failed.",newSize);
+		return log("topics: Realloc reply buf to %"INT32" failed.",newSize);
 	}
 	// we realloc'd successfully, use it
 	*buf = s;
@@ -1770,17 +1770,17 @@ bool getTopics ( State24       *st        ,
 	// serialize ourselves into the buffer
 	//serialize2 ( p , ptrs , scores , lens , gids );
 	// store number of topics first
-	*(long *)p = ntp; p += 4;
+	*(int32_t *)p = ntp; p += 4;
 	// arrays first
 	char      **pptrs   = (char      **)p; p += ntp * 4;
-	long       *pscores = (long       *)p; p += ntp * 4;
-	long       *plens   = (long       *)p; p += ntp * 4;
-	long       *ndocids = (long       *)p; p += ntp * 4;
-	long long **dptrs   = (long long **)p; p += ntp * 4; // place holder
-	long       *ppops   = (long       *)p; p += ntp * 4;
+	int32_t       *pscores = (int32_t       *)p; p += ntp * 4;
+	int32_t       *plens   = (int32_t       *)p; p += ntp * 4;
+	int32_t       *ndocids = (int32_t       *)p; p += ntp * 4;
+	int64_t **dptrs   = (int64_t **)p; p += ntp * 4; // place holder
+	int32_t       *ppops   = (int32_t       *)p; p += ntp * 4;
 	char       *pgids   = (char       *)p; p += ntp ;
 	char       *ptext   = p;
-	long        j       = 0;
+	int32_t        j       = 0;
 	for ( i = 0 ; i < np ; i++ ) {
 		// cutoff at min score
 		if ( scores[i] < t->m_minTopicScore ) continue;
@@ -1795,7 +1795,7 @@ bool getTopics ( State24       *st        ,
 		else        ppops [j] = 0;
 		ndocids [j] = 0;
 		dptrs   [j] = NULL; // dummy placeholder
-		memcpy ( ptext , ptrs[i] , lens[i] ); ptext += lens[i];
+		gbmemcpy ( ptext , ptrs[i] , lens[i] ); ptext += lens[i];
 		//if ( hashes && j < GIGABITS_IN_VECTOR )
 		//	hashes[j] = hash32Lower (ptrs[i],lens[i]);
 		*ptext++ = '\0';
@@ -1815,12 +1815,12 @@ bool getTopics ( State24       *st        ,
 			// skip if length is 0, it was a dup from above
 			if ( lens[i] <= 0 ) continue;
 			// count em
-			long count = 0;
+			int32_t count = 0;
 			DocIdLink *link = (DocIdLink *)(st->m_mem+heads[slots[i]]);
 			while ( (char *)link >= st->m_mem ) { 
 				count++; 
 				if ( st->m_returnDocIds ) {
-					*(long long *)ptext = link->m_docId;
+					*(int64_t *)ptext = link->m_docId;
 					ptext += 8;
 				}
 				link = (DocIdLink *)(st->m_mem + link->m_next);
@@ -1854,10 +1854,10 @@ bool getTopics ( State24       *st        ,
 		// skip if length is 0, it was a dup from above
 		if ( lens[i] <= 0 ) continue;
 		if ( p + lens[i] + 9 >= pend ) break;
-		*(long *)p = scores[i]; p += 4;
-		*(long *)p = lens  [i]; p += 4;
+		*(int32_t *)p = scores[i]; p += 4;
+		*(int32_t *)p = lens  [i]; p += 4;
 		*(char *)p = gid      ; p += 1;
-		memcpy ( p , ptrs[i] , lens[i] ); p += lens[i];
+		gbmemcpy ( p , ptrs[i] , lens[i] ); p += lens[i];
 		*p++ = '\0';
 	}
 	*/
@@ -1865,7 +1865,7 @@ bool getTopics ( State24       *st        ,
 }
 
 /*
-bool onSamePages ( long i, long j, long *slots, long *heads, long *pages ) {
+bool onSamePages ( int32_t i, int32_t j, int32_t *slots, int32_t *heads, int32_t *pages ) {
 	if ( pages[i] != pages[j] ) return false;
 	DocIdLink *link1 = (DocIdLink *)(st->m_mem+heads[slots[i]]);
 	DocIdLink *link2 = (DocIdLink *)(st->m_mem+heads[slots[j]]);
@@ -1878,21 +1878,21 @@ bool onSamePages ( long i, long j, long *slots, long *heads, long *pages ) {
 }
 */
 
-void hashExcerpt ( Query *q , unsigned long long *qids , long *qpops , 
-		   long nqi , TermTable *tt , char *buf , long bufLen , 
+void hashExcerpt ( Query *q , uint64_t *qids , int32_t *qpops , 
+		   int32_t nqi , TermTable *tt , char *buf , int32_t bufLen , 
 		   Words *w , TopicGroup *t , Scores *scoresPtr , 
 		   bool isUnicode , char *repeatTable , 
-		   long repeatTableNumSlots , char language );
+		   int32_t repeatTableNumSlots , char language );
 
 // . returns false and sets g_errno on error
 // . here's the tricky part
 // . *nqiPtr is how many query terms we used - so caller can normalize scores
-bool hashSample ( Query *q, char *bigSampleBuf , long bigSampleLen ,
-		  TermTable *master, long *nqiPtr , TopicGroup *t ,
-		  State24 *st, long long docId ,
-		  char *vecs , long *numVecs ,
+bool hashSample ( Query *q, char *bigSampleBuf , int32_t bigSampleLen ,
+		  TermTable *master, int32_t *nqiPtr , TopicGroup *t ,
+		  State24 *st, int64_t docId ,
+		  char *vecs , int32_t *numVecs ,
 		  Words *wordsPtr , Scores *scoresPtr , bool isUnicode ,
-		  char *repeatTable , long repeatTableNumSlots ,
+		  char *repeatTable , int32_t repeatTableNumSlots ,
 		  char language ) {
 	// numTerms must be less than this
 	//if ( q && q->getNumTerms() > MAX_QUERY_TERMS ) (aac)
@@ -1907,7 +1907,7 @@ bool hashSample ( Query *q, char *bigSampleBuf , long bigSampleLen ,
 
 	// this is the pure content now
 	char *content     = bigSampleBuf;
-	long  contentLen  = bigSampleLen;
+	int32_t  contentLen  = bigSampleLen;
 	// truncate it to 40k, that's enough
 	//if ( contentLen > 50*1024 ) contentLen = 50*1024;
 	// bail if empty!
@@ -1918,17 +1918,17 @@ bool hashSample ( Query *q, char *bigSampleBuf , long bigSampleLen ,
 	// make buf point to the available space
 	char *buf = content;
 	// get length of the buffer
-	long bufLen = contentLen;
+	int32_t bufLen = contentLen;
 
 #ifdef DEBUG_MSG24
 	if (q) {
 	    log("topics: Query stats in hashSample");
-	    long numQT = q->getNumTerms();
-	    long numQW = q->m_numWords;
-	    log("topics: \tnumQueryTerms = %li", numQT);
-	    log("topics: \tnumQueryWords = %li", numQW);
+	    int32_t numQT = q->getNumTerms();
+	    int32_t numQW = q->m_numWords;
+	    log("topics: \tnumQueryTerms = %"INT32"", numQT);
+	    log("topics: \tnumQueryWords = %"INT32"", numQW);
 	    char *thisQT, *thisQW, iCode, tmpBuf[1024];
-	    long qtLen, qwLen, i, j, k;
+	    int32_t qtLen, qwLen, i, j, k;
 	    for (i = 0; i < numQT; i++) {
 		thisQT = q->getTerm(i);
 		qtLen  = q->getTermLen(i);
@@ -1937,7 +1937,7 @@ bool hashSample ( Query *q, char *bigSampleBuf , long bigSampleLen ,
 		    if (thisQT[j]) tmpBuf[k++] = thisQT[j];
 		};
 		tmpBuf[k] = '\0';
-		log ("topics: \tQT[%li] = %s", i, &tmpBuf[0]); 
+		log ("topics: \tQT[%"INT32"] = %s", i, &tmpBuf[0]); 
 	    };	
 	    for (i = 0; i < numQW; i++) {
 		thisQW = q->m_qwords[i].m_word;
@@ -1948,25 +1948,25 @@ bool hashSample ( Query *q, char *bigSampleBuf , long bigSampleLen ,
 		    if (thisQW[j]) tmpBuf[k++] = thisQW[j];
 		};
 		tmpBuf[k] = '\0';
-		log ("topics: \tQW[%li] = %s,\tignore = %i", i, &tmpBuf[0], iCode); 
+		log ("topics: \tQW[%"INT32"] = %s,\tignore = %i", i, &tmpBuf[0], iCode); 
 	    };	
 	};
 #endif
 
 	// get query hashes/ids, 32 bit, skip phrases
-	unsigned long long qids [MAX_QUERY_TERMS];
-	long qpops[MAX_QUERY_TERMS];
-	long nqi = 0;
-	//for ( long i=0 ; q && i<q->getNumTerms() && nqi<MAX_QUERY_TERMS; i++){ (aac)
-	for ( long i=0 ; q && i < q->m_numWords && nqi<MAX_QUERY_TERMS; i++){
+	uint64_t qids [MAX_QUERY_TERMS];
+	int32_t qpops[MAX_QUERY_TERMS];
+	int32_t nqi = 0;
+	//for ( int32_t i=0 ; q && i<q->getNumTerms() && nqi<MAX_QUERY_TERMS; i++){ (aac)
+	for ( int32_t i=0 ; q && i < q->m_numWords && nqi<MAX_QUERY_TERMS; i++){
 		//if ( q->isPhrase       (i) ) continue; (aac)
 		//if ( q->isQueryStopWord(i) ) continue; (aac)
 		char ignCode = q->m_qwords[i].m_ignoreWord;
 		if ( ignCode && ignCode != 8 ) continue;
 		char *s    = q->m_qwords[i].m_word;    // q->getTerm(i);    (aac)
-		long  slen = q->m_qwords[i].m_wordLen; // q->getTermLen(i); (aac)
-		long qpop;
-		long encodeType = csISOLatin1;
+		int32_t  slen = q->m_qwords[i].m_wordLen; // q->getTermLen(i); (aac)
+		int32_t qpop;
+		int32_t encodeType = csISOLatin1;
 		if ( q->isUnicode() ) encodeType = csUTF16;
 		qids[nqi] = hash64d(s, slen, encodeType);
 		qpop = g_speller.getPhrasePopularity(s, qids[nqi], true,
@@ -1984,7 +1984,7 @@ bool hashSample ( Query *q, char *bigSampleBuf , long bigSampleLen ,
 	// tell caller how many query terms we used so he can normalize scores
 	*nqiPtr = nqi;
 
-	//long long start = gettimeofdayInMilliseconds();
+	//int64_t start = gettimeofdayInMilliseconds();
 
 	TermTable tt;
 	if ( ! tt.set(20000,true,true, false , returnPops, false, false,NULL)){
@@ -2008,8 +2008,8 @@ bool hashSample ( Query *q, char *bigSampleBuf , long bigSampleLen ,
 	char *pend = buf + bufLen;
 	while ( p < pend ) {
 		// debug
-		//log("docId=%lli EXCERPT=%s",docId,p);
-		long plen ;
+		//log("docId=%"INT64" EXCERPT=%s",docId,p);
+		int32_t plen ;
 		if ( isUnicode ) plen = ucStrNLen(p,pend-p);
 		else             plen = strlen(p);
 		// p is only non-NULL if we are doing it the old way
@@ -2037,7 +2037,7 @@ bool hashSample ( Query *q, char *bigSampleBuf , long bigSampleLen ,
 		g_clusterdb.getSampleVector ( v1 , &tt );
 		// compare to others done so far
 		char *v2 = vecs ;
-		for ( long i = 0 ; i < *numVecs ; i++,v2+=SAMPLE_VECTOR_SIZE){
+		for ( int32_t i = 0 ; i < *numVecs ; i++,v2+=SAMPLE_VECTOR_SIZE){
 			char ss = g_clusterdb.getSampleSimilarity(v1,v2, 
 							   SAMPLE_VECTOR_SIZE);
 			// return true if too similar to another sample we did
@@ -2050,31 +2050,31 @@ bool hashSample ( Query *q, char *bigSampleBuf , long bigSampleLen ,
 		*numVecs = *numVecs + 1;
 	}
 
-	//log("TOOK %lli ms plen=%li",gettimeofdayInMilliseconds()-start,
+	//log("TOOK %"INT64" ms plen=%"INT32"",gettimeofdayInMilliseconds()-start,
 	//    bufLen);
 
 	// . this termtable carries two special buckets per slot in order
 	//   to hold a linked list of docids with each termid in the hash table
 	// . heads is NULL if returnDocIdCount and returnDocIds are false
-	long *heads = master->getHeads();
+	int32_t *heads = master->getHeads();
 	// . now hash the entries of this table, tt, into the master
 	// . the master contains entries from all the other tables
-	//log("have %li terms in termtable. adding to master.",
+	//log("have %"INT32" terms in termtable. adding to master.",
 	//     tt.getNumTermsUsed());
-	long nt = tt.getNumTerms();
-	long pop = 0 ;
-	for ( long i = 0 ; i < nt ; i++ ) {
+	int32_t nt = tt.getNumTerms();
+	int32_t pop = 0 ;
+	for ( int32_t i = 0 ; i < nt ; i++ ) {
 		// this should be indented
 		//if ( ! tt.getScoreFromTermNum(i) ) continue;
 		if ( ! tt.m_scores[i] ) continue;
-		//long ii = (long)tt.getTermPtr(i);
+		//int32_t ii = (int32_t)tt.getTermPtr(i);
 		// then divide by that
-		long score = tt.getScoreFromTermNum(i) ;
+		int32_t score = tt.getScoreFromTermNum(i) ;
 		// watch out for 0
 		if ( score <= 0 ) continue;
 		// . get the bucket
 		// . may be or may not be full (score is 0 if empty)
-		long n = master->getTermNum ( tt.getTermId(i) );
+		int32_t n = master->getTermNum ( tt.getTermId(i) );
 		// skip if 0, i've seen this happen before
 		if ( tt.getTermId(i) == 0 ) continue;
 		// . but now we add one more things to the termtable,
@@ -2084,13 +2084,13 @@ bool hashSample ( Query *q, char *bigSampleBuf , long bigSampleLen ,
 		// . "heads" is NULL if we should not do this...
 		if ( heads ) {
 			if ( st->m_memPtr + sizeof(DocIdLink) > st->m_memEnd ) {
-				long oldSize = st->m_memEnd - st->m_mem;
-				long newSize = oldSize + 256*1024;
+				int32_t oldSize = st->m_memEnd - st->m_mem;
+				int32_t newSize = oldSize + 256*1024;
 				char *s = (char *)mrealloc(st->m_mem,oldSize,
 							   newSize,"Msg24g");
 				if ( !s )
 					return log("Msg24: realloc failed.");
-				long off = st->m_memPtr - st->m_mem;
+				int32_t off = st->m_memPtr - st->m_mem;
 				st->m_mem    = s;
 				st->m_memEnd = s + newSize;
 				st->m_memPtr = s + off;
@@ -2135,19 +2135,19 @@ bool hashSample ( Query *q, char *bigSampleBuf , long bigSampleLen ,
 		// debug msg
 		if ( g_conf.m_logDebugQuery ) {
 		        char *ww = tt.getTermPtr(i);
-			long  wwlen = tt.getTermLen(i);
+			int32_t  wwlen = tt.getTermLen(i);
 			char c     = ww[wwlen];
 			ww[wwlen]='\0';
-			log(LOG_DEBUG,"topics: master termId=%lu "
-			    "score=%li cumscore=%li len=%li term=%s\n",
-			    (long)tt.getTermId(i),
+			log(LOG_DEBUG,"topics: master termId=%"UINT32" "
+			    "score=%"INT32" cumscore=%"INT32" len=%"INT32" term=%s\n",
+			    (int32_t)tt.getTermId(i),
 			    score,master->getScoreFromTermId(tt.getTermId(i)),
 			    wwlen,ww);
 			ww[wwlen]=c;
 		}
 	}
 
-	//log("master has %li terms",master->getNumTermsUsed());
+	//log("master has %"INT32" terms",master->getNumTermsUsed());
 	// clear any error
 	if ( g_errno ) {
 		log("topics: Had error getting topic candidates from document: "
@@ -2159,11 +2159,11 @@ bool hashSample ( Query *q, char *bigSampleBuf , long bigSampleLen ,
 }
 
 
-void hashExcerpt ( Query *q , unsigned long long *qids , long *qpops, long nqi,
-		   TermTable *tt , char *buf , long bufLen , 
+void hashExcerpt ( Query *q , uint64_t *qids , int32_t *qpops, int32_t nqi,
+		   TermTable *tt , char *buf , int32_t bufLen , 
 		   Words *w , TopicGroup *t , Scores *scoresPtr ,
 		   bool isUnicode , char *repeatTable , 
-		   long repeatTableNumSlots , char language ) {
+		   int32_t repeatTableNumSlots , char language ) {
 	// . bring it out
 	// . allow one more word per gigabit, then remove gigabits that
 	//   are that length. this fixes the problem of having the same
@@ -2173,7 +2173,7 @@ void hashExcerpt ( Query *q , unsigned long long *qids , long *qpops, long nqi,
 	// . by only adding one, if the next word is a common word then
 	//   we would fail to make a larger gigabit, that's why i added
 	//   the maxjend code below this.
-	long maxWordsPerPhrase  = t->m_maxWordsPerTopic ;
+	int32_t maxWordsPerPhrase  = t->m_maxWordsPerTopic ;
 	if ( t->m_topicRemoveOverlaps ) maxWordsPerPhrase += 2;
 	char enforceQueryRadius = ! t->m_meta[0];
 	char delimeter          = t->m_delimeter; // 0 means none (default)
@@ -2192,66 +2192,66 @@ void hashExcerpt ( Query *q , unsigned long long *qids , long *qpops, long nqi,
 			    TITLEREC_CURRENT_VERSION,
 			    true      ,  // compute word ids?
 			    true      ); // has html entities?
-	long nw = w->getNumWords();
+	int32_t nw = w->getNumWords();
 	// don't breech our arrays man
 	if ( nw > 10000 ) nw = 10000;
 	void *lrgBuf;
-	long lrgBufSize = 0;
-       	lrgBufSize += 1002 * MAX_QUERY_TERMS * sizeof(long);
-	lrgBufSize += 2 * nw * sizeof(long);
+	int32_t lrgBufSize = 0;
+       	lrgBufSize += 1002 * MAX_QUERY_TERMS * sizeof(int32_t);
+	lrgBufSize += 2 * nw * sizeof(int32_t);
 	lrgBufSize += 3 * nw * sizeof(char);
-	lrgBufSize += nw * sizeof(unsigned long long);
+	lrgBufSize += nw * sizeof(uint64_t);
 	lrgBuf = (char *)mmalloc(lrgBufSize, "hashExcerpt (Msg24)");
 	if (! lrgBuf) {
 	    nw >>= 2;
 	    lrgBufSize = 0;
-	    lrgBufSize += 1002 * MAX_QUERY_TERMS * sizeof(long);
-	    lrgBufSize += 2 * nw * sizeof(long);
+	    lrgBufSize += 1002 * MAX_QUERY_TERMS * sizeof(int32_t);
+	    lrgBufSize += 2 * nw * sizeof(int32_t);
 	    lrgBufSize += 3 * nw * sizeof(char);
-	    lrgBufSize += nw * sizeof(unsigned long long);
+	    lrgBufSize += nw * sizeof(uint64_t);
 	    lrgBuf = (char *)mmalloc(lrgBufSize, "hashExcerpt (Msg24)");
 	};
 	if (! lrgBuf) {
 	    log("topics: could not allocate local buffer "
-		"(%li bytes required)", lrgBufSize);
+		"(%"INT32" bytes required)", lrgBufSize);
 	    return;
 	};
 	char *lrgBufPtr = (char *)lrgBuf;
 
 	// . the popularity of word #i is pops[i]
 	// . but we only set below if we need to
-	long *pops = (long *) lrgBufPtr; // popularity 1-1 with first 10000 words
-	lrgBufPtr += nw * sizeof(long);
+	int32_t *pops = (int32_t *) lrgBufPtr; // popularity 1-1 with first 10000 words
+	lrgBufPtr += nw * sizeof(int32_t);
 	char *iqt = lrgBufPtr; // is query term? 1-1 with words
 	lrgBufPtr += nw * sizeof(char);
 	char *icw = lrgBufPtr; // do not let frags end in these words
 	lrgBufPtr += nw * sizeof(char);
-	long *qtrs = (long *)lrgBufPtr; // the raw QTR scores (aac)
-	lrgBufPtr += nw * sizeof(long);
+	int32_t *qtrs = (int32_t *)lrgBufPtr; // the raw QTR scores (aac)
+	lrgBufPtr += nw * sizeof(int32_t);
 
 	// record list of word positions for each query term
-	long *pos = (long *)lrgBufPtr;
-	lrgBufPtr += MAX_QUERY_TERMS * 1000 * sizeof(long);
-	long *posLen = (long *)lrgBufPtr;
-	lrgBufPtr += MAX_QUERY_TERMS * sizeof(long);
-	long *posPtr = (long *)lrgBufPtr;
-        lrgBufPtr += MAX_QUERY_TERMS * sizeof(long);
-	//for ( long i = 0 ; q && i < q->getNumTerms() ; i++ ) { (aac)
-	for (long i = 0; q && i < q->m_numWords && i < MAX_QUERY_TERMS; i++) {
+	int32_t *pos = (int32_t *)lrgBufPtr;
+	lrgBufPtr += MAX_QUERY_TERMS * 1000 * sizeof(int32_t);
+	int32_t *posLen = (int32_t *)lrgBufPtr;
+	lrgBufPtr += MAX_QUERY_TERMS * sizeof(int32_t);
+	int32_t *posPtr = (int32_t *)lrgBufPtr;
+        lrgBufPtr += MAX_QUERY_TERMS * sizeof(int32_t);
+	//for ( int32_t i = 0 ; q && i < q->getNumTerms() ; i++ ) { (aac)
+	for (int32_t i = 0; q && i < q->m_numWords && i < MAX_QUERY_TERMS; i++) {
 		posLen[i] = 0; posPtr[i] = 0; }
 
 	// skip punct
-	long i  = 0;
+	int32_t i  = 0;
 	if ( i < nw && w->isPunct(i) ) i++;
 	qtrs[i] = 0;
-	unsigned long long *wids = (unsigned long long *)lrgBufPtr;
-	lrgBufPtr += nw * sizeof(unsigned long long);
+	uint64_t *wids = (uint64_t *)lrgBufPtr;
+	lrgBufPtr += nw * sizeof(uint64_t);
 	// record the positions of all query words
 	char **wp   = w->m_words;
-	long  *wlen = w->m_wordLens;
-	long   step = 2;
-	long long *rwids  = w->getWordIds();
-	long      *scores = NULL;
+	int32_t  *wlen = w->m_wordLens;
+	int32_t   step = 2;
+	int64_t *rwids  = w->getWordIds();
+	int32_t      *scores = NULL;
 
 	// . now we keep a hash table to zero out repeated fragments
 	// . it uses a sliding window of 5 words
@@ -2303,7 +2303,7 @@ void hashExcerpt ( Query *q , unsigned long long *qids , long *qpops, long nqi,
 		// reset "is query term" array
 		iqt[i] = 0;
 		// store the id
-		long encodeType = csISOLatin1;
+		int32_t encodeType = csISOLatin1;
 		if ( isUnicode ) encodeType = csUTF16;
 		wids[i] = hash64d(wp[i], wlen[i], encodeType);
 		// . is it a common word?
@@ -2319,25 +2319,25 @@ void hashExcerpt ( Query *q , unsigned long long *qids , long *qpops, long nqi,
 		//else if ( is_digit(w->getWord(i)[0]) ) 
 		//	icw[i] = 1;
 #ifndef _METALINCS_
-		else icw[i] = isCommonWord ( (long)rwids[i] );
+		else icw[i] = isCommonWord ( (int32_t)rwids[i] );
 #else
 		// always allow gigabits that start with numbers for metalincs
 		else if ( ! is_digit(wp[i][0])) 
-			icw[i] = isCommonWord ( (long)rwids[i] );
+			icw[i] = isCommonWord ( (int32_t)rwids[i] );
 		else                            
 			icw[i] = 0;
 #endif
 		// debug msg
 		/*
 		char *s    = w->getWord(i);
-		long  slen = w->getWordLen(i);
+		int32_t  slen = w->getWordLen(i);
 		char  c    = s[slen];
 		s[slen]='\0';
-		log("icw=%li %s",icw[i],s);
+		log("icw=%"INT32" %s",icw[i],s);
 		s[slen]=c;
 		*/
 		// is it a query term? if so, record its word # in "pos" arry
-		for ( long j = 0 ; j < nqi ; j++ ) {
+		for ( int32_t j = 0 ; j < nqi ; j++ ) {
 			if ( wids[i] != qids[j] ) continue;
 			if ( posLen[j] >= 1000  ) continue;
 			pos    [ 1000 * j + posLen[j] ] = i;
@@ -2351,7 +2351,7 @@ void hashExcerpt ( Query *q , unsigned long long *qids , long *qpops, long nqi,
 
 	QUICKPOLL(0);
 	// max score -- ONE max scoring hits per doc
-	long maxScore = nqi * MAX_SCORE_MULTIPLIER;
+	int32_t maxScore = nqi * MAX_SCORE_MULTIPLIER;
 	// this happens when generating the gigabit vector for a single doc
 	// so don't hamper it to such a small ceiling
 	if ( nqi == 0 ) maxScore = ALT_MAX_SCORE;
@@ -2360,7 +2360,7 @@ void hashExcerpt ( Query *q , unsigned long long *qids , long *qpops, long nqi,
 	i = 0;
 	if ( i < nw && w->isPunct(i) ) i++;
 	// score each word based on distance to query terms
-	long score;
+	int32_t score;
 	// loop through all the words
 	//for ( ; i < nw ; i += 2 ) {x
 	for ( ; i < nw ; i += step ) {
@@ -2392,19 +2392,19 @@ void hashExcerpt ( Query *q , unsigned long long *qids , long *qpops, long nqi,
 		// and query is not necessary
 		if   ( enforceQueryRadius ) score = 0;
 		else                        score = ALT_START_SCORE;
-		long j ;
-		long nm = 0; // number of matches
+		int32_t j ;
+		int32_t nm = 0; // number of matches
 		for ( j = 0 ; j < nqi ; j++ ) {
 			// skip if no query terms in doc for query term #j
 			if ( posLen[j] <= 0 ) continue;
 			// get distance in words
-			long d1 = i - pos[ 1000 * j + posPtr[j] ] ;
+			int32_t d1 = i - pos[ 1000 * j + posPtr[j] ] ;
 			if ( d1 < 0   ) d1 = d1 * -1;
 			if ( posPtr[j] + 1 >= posLen[j] ) {
 				if (d1 >= QTR_ZONE_3) continue;
 				if (iqt[i] || icw[i] || 
 				    wlen[i] <= threeChars) {
-				    // common word, query terms, short words
+				    // common word, query terms, int16_t words
 				    // are all second class citizens when it
 				    // comes to scoring: they get a small
 				    // bonus, to ensure that they are
@@ -2426,7 +2426,7 @@ void hashExcerpt ( Query *q , unsigned long long *qids , long *qpops, long nqi,
 				score *= qpops[j];
 				continue;
 			}
-			long d2 = pos[ 1000 * j + posPtr[j] + 1 ] - i ;
+			int32_t d2 = pos[ 1000 * j + posPtr[j] + 1 ] - i ;
 			if ( d2 < 0  ) d2 = d2 * -1;
 			if ( d2 > d1 ) {
 				// if      ( d1 >=20 ) continue;
@@ -2440,7 +2440,7 @@ void hashExcerpt ( Query *q , unsigned long long *qids , long *qpops, long nqi,
 				if (d1 >= QTR_ZONE_3) continue;
 				if (iqt[i] || icw[i] || 
 				    wlen[i] <= threeChars) {
-				    // common word, query terms, short words
+				    // common word, query terms, int16_t words
 				    // are all second class citizens when it
 				    // comes to scoring: they get a small
 				    // bonus, to ensure that they are
@@ -2471,7 +2471,7 @@ void hashExcerpt ( Query *q , unsigned long long *qids , long *qpops, long nqi,
 			// score  *= qpops[j];
 			if (d2 >= QTR_ZONE_3) { posPtr[j]++; continue; };
 			if (iqt[i] || icw[i] || wlen[i] <= threeChars) {
-			    // common word, query terms, short words
+			    // common word, query terms, int16_t words
 			    // are all second class citizens when it
 			    // comes to scoring: they get a small
 			    // bonus, to ensure that they are
@@ -2514,7 +2514,7 @@ void hashExcerpt ( Query *q , unsigned long long *qids , long *qpops, long nqi,
 		// give a boost for multiple hits 
 		// the more terms in range, the bigger the boost
 		if ( nm > 1 ) {
-			//log("nm=%li",nm);
+			//log("nm=%"INT32"",nm);
 			score += MULTIPLE_HIT_BOOST * nm;
 		};
 
@@ -2523,22 +2523,22 @@ void hashExcerpt ( Query *q , unsigned long long *qids , long *qpops, long nqi,
 	};
 
 	QUICKPOLL(0);
-	long mm = 0;
+	int32_t mm = 0;
 	// skip punct
 	i = 0;
 	if ( i < nw && w->isPunct(i) ) i++;
 	for ( ; i < nw ; i += step ) {
 	        float pop;
-		long score;
-		long bonus;
+		int32_t score;
+		int32_t bonus;
 		// must start with a QTR-scoring word
 	        if (qtrs[i] <= 0) continue;
 		// add it to table
 		// init for debug here
 		char *ww;
-		long  wwlen;
+		int32_t  wwlen;
 		//char  c;
-		long  ss;
+		int32_t  ss;
 		ww    = wp  [i]; // w->getWord(i);
 		wwlen = wlen[i]; // w->getWordLen(i);
 		if ( icw[i] ) {
@@ -2575,27 +2575,27 @@ void hashExcerpt ( Query *q , unsigned long long *qids , long *qpops, long nqi,
 		// set initial score and bonus
 		score = qtrs[i];
 		bonus = 0;
-		unsigned long long  h = wids[i]; // hash value
+		uint64_t  h = wids[i]; // hash value
 		// if first letter is upper case, double the score
 		//if ( is_upper (w->getWord(i)[0]) ) score <<= 1;
 
 		// . loop through all phrases that start with this word
 		// . up to 6 real words per phrase
 		// . 'j' counts our 'words' which counts a $ of puncts as word
-		long jend    = i + maxWordsPerPhrase * 2; // 12;
-		long maxjend = jend ;
+		int32_t jend    = i + maxWordsPerPhrase * 2; // 12;
+		int32_t maxjend = jend ;
 		if ( t->m_topicRemoveOverlaps ) maxjend += 8;
 		if ( jend    > nw ) jend    = nw;
 		if ( maxjend > nw ) maxjend = nw;
 
 		QUICKPOLL(0);
 
-		long count = 0;
-		long nqc   = 0; // # common/query words in our phrase
-		long nhw   = 0; // # of "hot words" (contribute to score)
+		int32_t count = 0;
+		int32_t nqc   = 0; // # common/query words in our phrase
+		int32_t nhw   = 0; // # of "hot words" (contribute to score)
 		if ( scores ) mm = scores[i];
-		//for ( long j = i ; j < jend ; j += 2 ) {
-		for ( long j = i ; j < jend ; j += step ) {
+		//for ( int32_t j = i ; j < jend ; j += 2 ) {
+		for ( int32_t j = i ; j < jend ; j += step ) {
 			// skip if not indexable
 			if ( ! rwids[j] ) continue;
 			// or if score is <= 0
@@ -2631,7 +2631,7 @@ void hashExcerpt ( Query *q , unsigned long long *qids , long *qpops, long nqi,
 			if ( j > i ) {
 				// advance phrase length
 				wwlen += wlen[j-1] + wlen[j];
-				// . cut phrase short if too much punct between
+				// . cut phrase int16_t if too much punct between
 				//   the current word, j, and the last one, j-2
 				// . but allow for abbreviations or initials
 				//   of single letters, like 'harry s. truman'.
@@ -2822,25 +2822,25 @@ void hashExcerpt ( Query *q , unsigned long long *qids , long *qpops, long nqi,
 			else if  ( pop < 50 ) ss = (score * 60) / 100;
 			else                  ss = (score * 40) / 100;
 			*/
-			//if ( tt->getScoreFromTermId((long long)h) > 0 )
+			//if ( tt->getScoreFromTermId((int64_t)h) > 0 )
 			//	continue;
 			// debug msg
 			//char c     = ww[wwlen];
 			//ww[wwlen]='\0';
-			//fprintf(stderr,"tid=%lu score=%li pop=%li len=%li "
-			// "repeat=%li term=%s\n",h,ss,pop,wwlen,
+			//fprintf(stderr,"tid=%"UINT32" score=%"INT32" pop=%"INT32" len=%"INT32" "
+			// "repeat=%"INT32" term=%s\n",h,ss,pop,wwlen,
 			//	repeatScores[i],ww);
 			//ww[wwlen]=c;
 			// include any ending or starting ( or )
 			if ( i > 0 && ww[-oneChar] == '(' ) { 
 				// ensure we got a ')' somwhere before adding (
-				for ( long r = 0 ; r <= wwlen ; r++ )
+				for ( int32_t r = 0 ; r <= wwlen ; r++ )
 					if ( ww[r]==')' ) {
 						ww--; wwlen++; break; }
 			}
 			if ( i < nw && ww[wwlen] == ')' ) { 
 				// we need a '(' somewhere before adding the )
-				for ( long r = 0 ; r <= wwlen ; r++ )
+				for ( int32_t r = 0 ; r <= wwlen ; r++ )
 					if ( ww[r]=='(' ) {
 						wwlen++; break; }
 			}
@@ -2862,16 +2862,16 @@ void hashExcerpt ( Query *q , unsigned long long *qids , long *qpops, long nqi,
 			//if ( scores && mm != NORM_WORD_SCORE )
 			//	ss = (ss * mm) / NORM_WORD_SCORE;
 			// only count the highest scoring guy once per page
-			//long tn = tt->getTermNum((long long)h);
+			//int32_t tn = tt->getTermNum((int64_t)h);
 			//maxScore = ss;
 			//if ( tn >= 0 ) {
-			//	long sc = tt->getScoreFromTermNum(tn);
+			//	int32_t sc = tt->getScoreFromTermNum(tn);
 			//	if ( sc > maxScore ) maxScore = sc;
 			//}
 			// . add it
 			// . now store the popularity, too, so we can display
 			//   it for the winning gigabits
-			//if ( ! tt->addTerm ((long long)h,ss,maxScore,false,
+			//if ( ! tt->addTerm ((int64_t)h,ss,maxScore,false,
 			//		    ww,wwlen,tn,NULL,pop) ) 
 			// . weight score by pop
 			// . lets try weighting more popular phrases more!
@@ -2886,18 +2886,18 @@ void hashExcerpt ( Query *q , unsigned long long *qids , long *qpops, long nqi,
 			else if (pop < POP_ZONE_2) boost = POP_BOOST_2;
 			else if (pop < POP_ZONE_3) boost = POP_BOOST_3;
 			else                       boost = POP_BOOST_4;	
-			ss = (long)(boost *ss);
+			ss = (int32_t)(boost *ss);
 			if ( ss <= 0 ) ss = 1;
 			// store it
-			long ipop = (long)(pop * MAXPOP);
-			if ( ! tt->addTerm ((long long)h,ss,maxScore,false,
+			int32_t ipop = (int32_t)(pop * MAXPOP);
+			if ( ! tt->addTerm ((int64_t)h,ss,maxScore,false,
 					    TITLEREC_CURRENT_VERSION    ,
 					    ww,wwlen,-1,NULL,ipop) ) {
 				log("topics: No memory to grow table.");
 				return;
 			}
 
-			// stop after indexing a word after a long string of
+			// stop after indexing a word after a int32_t string of
 			// punct, this is the overlap bug fix without taking
 			// a performance hit. hasPunct above will remove it.
 			if ( j > i && wlen[j-1] > twoChars ) break;
@@ -2914,37 +2914,37 @@ void hashExcerpt ( Query *q , unsigned long long *qids , long *qpops, long nqi,
 
 // taken from Weights.cpp's set3() function
 void setRepeatScores ( char      *repeatScores        ,
-		       long long *wids                ,
-		       long       nw                  ,
+		       int64_t *wids                ,
+		       int32_t       nw                  ,
 		       char      *repeatTable         ,
-		       long       repeatTableNumSlots ,
+		       int32_t       repeatTableNumSlots ,
 		       Words     *words               ) {
 	// if no words, nothing to do
 	if ( nw == 0 ) return;
 
 	char      *ptr      = repeatTable;
-	long       numSlots = repeatTableNumSlots;
-	long long *hashes   = (long long *)ptr; ptr += numSlots * 8;
-	long      *vals     = (long      *)ptr; ptr += numSlots * 4;
+	int32_t       numSlots = repeatTableNumSlots;
+	int64_t *hashes   = (int64_t *)ptr; ptr += numSlots * 8;
+	int32_t      *vals     = (int32_t      *)ptr; ptr += numSlots * 4;
 
-	long long   ringWids [ 5 ];
-	long        ringPos  [ 5 ];
-	long        ringi = 0;
-	long        count = 0;
-	long long   h     = 0;
+	int64_t   ringWids [ 5 ];
+	int32_t        ringPos  [ 5 ];
+	int32_t        ringi = 0;
+	int32_t        count = 0;
+	int64_t   h     = 0;
 
 	// make the mask
-	unsigned long mask = numSlots - 1;
+	uint32_t mask = numSlots - 1;
 
 	// clear ring of hashes
-	memset ( ringWids , 0 , 5 * sizeof(long long) );
+	memset ( ringWids , 0 , 5 * sizeof(int64_t) );
 
 	// for sanity check
-	//long lastStart = -1;
+	//int32_t lastStart = -1;
 
 	// count how many 5-word sequences we match in a row
-	long matched    = 0;
-	long matchStart = -1;
+	int32_t matched    = 0;
+	int32_t matchStart = -1;
 
 	// reset
 	memset ( repeatScores , 100 , nw );
@@ -2961,7 +2961,7 @@ void setRepeatScores ( char      *repeatScores        ,
 	// . get the max words that matched from all of the candidates
 	// . demote the word and phrase weights based on the total/max
 	//   number of words matching
-	for ( long i = 0 ; i < nw ; i++ ) {
+	for ( int32_t i = 0 ; i < nw ; i++ ) {
 		// skip if not alnum word
 		if ( ! wids[i] ) continue;
 		// reset
@@ -2978,13 +2978,13 @@ void setRepeatScores ( char      *repeatScores        ,
 		// wrap the ring ptr if we need to, that is why we are a ring
 		if ( ++ringi >= 5 ) ringi = 0;
 		// this 5-word sequence starts with word # "start"
-		long start = ringPos[ringi];
+		int32_t start = ringPos[ringi];
 		// need at least 5 words in the ring buffer to do analysis
 		if ( ++count < 5 ) continue;
 		// sanity check
 		//if ( start <= lastStart ) { char *xx = NULL; *xx = 0; }
 		// look up in the hash table
-		long n = h & mask;
+		int32_t n = h & mask;
 		// stop at new york times - debug
 		/*
 		if ( words->m_words[i][0] == 'A' &&
@@ -3014,7 +3014,7 @@ void setRepeatScores ( char      *repeatScores        ,
 			//if ( demote >= 1.0 ) continue;
 			//if ( demote <  0.0 ) demote = 0.0;
 			// demote the words involved
-			for ( long j = matchStart ; j < i ; j++ ) 
+			for ( int32_t j = matchStart ; j < i ; j++ ) 
 				repeatScores[j] = 0;
 			// get next word
 			continue;
@@ -3033,13 +3033,13 @@ void setRepeatScores ( char      *repeatScores        ,
 	}
 	// if we ended without nulling out some matches
 	if ( matched < 3 ) return;
-	for ( long j = matchStart ; j < nw ; j++ ) repeatScores[j] = 0;
+	for ( int32_t j = matchStart ; j < nw ; j++ ) repeatScores[j] = 0;
 
 }
 
 /*
 // is it a stop word?
-char isCommonPhrase ( long h ) {
+char isCommonPhrase ( int32_t h ) {
 	static TermTable  s_table;
 	static bool       s_isInitialized = false;
 	// . these have the stop words above plus some foreign stop words
@@ -3061,20 +3061,20 @@ char isCommonPhrase ( long h ) {
 		if ( ! s_table.set ( sizeof(s_stopPhrases) * 2 ) ) 
 			return log("Msg24::isCommonPhrase: error set table");
 		// now add in all the stop words
-		long n = (long)sizeof(s_stopPhrases)/ sizeof(char *); 
-		for ( long i = 0 ; i < n ; i++ ) {
+		int32_t n = (int32_t)sizeof(s_stopPhrases)/ sizeof(char *); 
+		for ( int32_t i = 0 ; i < n ; i++ ) {
 			// set the phrases
 			char *sw    = s_stopPhrases[i];
-			long  swlen = strlen ( sw );
+			int32_t  swlen = strlen ( sw );
 			Words w;
 			w->set ( false , sw , swlen );
-			long h = hash64d ( w->getWord   (0),
+			int32_t h = hash64d ( w->getWord   (0),
 						     w->getWordLen(0));
-			for ( long j = 1 ; j < w->getNumWords() ; j++ ) 
-				long h2 = 
+			for ( int32_t j = 1 ; j < w->getNumWords() ; j++ ) 
+				int32_t h2 = 
 
-			long  swh   = hash64d ( sw , swlen );
-			s_table.addTerm ((long)swh,i+1,0x7fffffff,true);
+			int32_t  swh   = hash64d ( sw , swlen );
+			s_table.addTerm ((int32_t)swh,i+1,0x7fffffff,true);
 		}
 		s_isInitialized = true;
 	} 
@@ -3088,12 +3088,12 @@ char isCommonPhrase ( long h ) {
 }
 */
 
-long Msg24::getStoredSize ( ) {
+int32_t Msg24::getStoredSize ( ) {
 	// store number of topics into 4 bytes
-	long size = 4;
+	int32_t size = 4;
 	// store number of topics we have
 	// all related topics that have scores >= m_minTopicScore
-	for ( long i = 0 ; i < m_numTopics ; i++ ) {
+	for ( int32_t i = 0 ; i < m_numTopics ; i++ ) {
 		// get group info
 		//TopicGroup *t = &m_topicGroups[m_topicGids[i]];
 		// break if buf is too small
@@ -3117,47 +3117,47 @@ long Msg24::getStoredSize ( ) {
 // . returns bytes written
 // . returns -1 and sets g_errno on error
 // . just like serializing the reply
-long Msg24::serialize ( char *buf , long bufLen ) { 
+int32_t Msg24::serialize ( char *buf , int32_t bufLen ) { 
 	char *p = buf;
 	// store number of topics
-	*(long *)p = m_numTopics; p += 4;
+	*(int32_t *)p = m_numTopics; p += 4;
 	// if no topics, bail
 	if ( m_numTopics <= 0 ) return 4;
 	// then the ptrs, with offset relative to m_topicPtrs[0] so
 	// deserialize works
 	char *base = m_topicPtrs[0];
-	for ( long i = 0 ; i < m_numTopics ; i++ ) {
-		*(long *)p = m_topicPtrs[i] - base; p += 4; }
+	for ( int32_t i = 0 ; i < m_numTopics ; i++ ) {
+		*(int32_t *)p = m_topicPtrs[i] - base; p += 4; }
 	// then the scores
-	memcpy ( p , m_topicScores   , m_numTopics * 4 ); p += m_numTopics * 4;
-	memcpy ( p , m_topicLens     , m_numTopics * 4 ); p += m_numTopics * 4;
-	memcpy ( p , m_topicNumDocIds, m_numTopics * 4 ); p += m_numTopics * 4;
+	gbmemcpy ( p , m_topicScores   , m_numTopics * 4 ); p += m_numTopics * 4;
+	gbmemcpy ( p , m_topicLens     , m_numTopics * 4 ); p += m_numTopics * 4;
+	gbmemcpy ( p , m_topicNumDocIds, m_numTopics * 4 ); p += m_numTopics * 4;
 	// these m_topicDocIds, are just essentially placeholders for ptrs
 	// to the docids, just like the topic ptrs above, but these call all
 	// be NULL if we didn't get back the list of docids for each gigabit
 	p += m_numTopics * 4;
 	// then the popularity rating of each topic
-	memcpy ( p , m_topicPops     , m_numTopics * 4 ); p += m_numTopics * 4;
-	memcpy ( p , m_topicGids     , m_numTopics     ); p += m_numTopics;
+	gbmemcpy ( p , m_topicPops     , m_numTopics * 4 ); p += m_numTopics * 4;
+	gbmemcpy ( p , m_topicGids     , m_numTopics     ); p += m_numTopics;
 	// then the text
-	for ( long i = 0 ; i < m_numTopics ; i++ ) {
-		memcpy ( p , m_topicPtrs[i] , m_topicLens[i] ) ;
+	for ( int32_t i = 0 ; i < m_numTopics ; i++ ) {
+		gbmemcpy ( p , m_topicPtrs[i] , m_topicLens[i] ) ;
 		p += m_topicLens[i];
 		*p++ = '\0';
 	}
 	// and one array of docids per topic
-	for ( long i = 0 ; i < m_numTopics ; i++ ) {
-		memcpy ( p , m_topicDocIds[i] , m_topicNumDocIds[i] * 8 );
+	for ( int32_t i = 0 ; i < m_numTopics ; i++ ) {
+		gbmemcpy ( p , m_topicDocIds[i] , m_topicNumDocIds[i] * 8 );
 		p += m_topicNumDocIds[i] * 8;
 		// sanity check
-		//for ( long k = 0 ; k < m_topicNumDocIds[i] ; k++ )
-		//	if ( m_topicDocIds[i][k] & ~((long long)DOCID_MASK) ) {
+		//for ( int32_t k = 0 ; k < m_topicNumDocIds[i] ; k++ )
+		//	if ( m_topicDocIds[i][k] & ~((int64_t)DOCID_MASK) ) {
 		//		log("query: Msg24 bad docid in serialize.");
 		//		char *xx = NULL; *xx = 0; 
 		//	}
 	}
 	// debug msg
-	//log("in nt=%li",*nt);
+	//log("in nt=%"INT32"",*nt);
 	if ( p - buf > bufLen ) {
 		log("query: Msg24 serialize overflow.");
 		char *xx = NULL; *xx = 0;
@@ -3169,7 +3169,7 @@ long Msg24::serialize ( char *buf , long bufLen ) {
 // . returns bytes written
 // . returns -1 and sets g_errno on error
 // . Msg40 owns the buffer, so we can reference it without having to copy
-long Msg24::deserialize ( char *buf , long bufLen ) {
+int32_t Msg24::deserialize ( char *buf , int32_t bufLen ) {
 	// sanity check, i've seen this happen before when the handle of
 	// the Msg24 runs out of memory at a certain plance and ends up 
 	// sending back a 0 length reply
@@ -3179,7 +3179,7 @@ long Msg24::deserialize ( char *buf , long bufLen ) {
 		return -1;
 	}
 	char *p = buf;
-	m_numTopics   = *(long *)p; p += 4;
+	m_numTopics   = *(int32_t *)p; p += 4;
 	// another sanity check, just in case
 	if ( bufLen < m_numTopics * (6*4+1) ) {
 		g_errno = EBADREPLY;
@@ -3187,26 +3187,26 @@ long Msg24::deserialize ( char *buf , long bufLen ) {
 		return -1;
 	}
 	m_topicPtrs      =  (char      **)p; p += m_numTopics * 4;
-	m_topicScores    =  (long       *)p; p += m_numTopics * 4;
-	m_topicLens      =  (long       *)p; p += m_numTopics * 4;
-	m_topicNumDocIds =  (long       *)p; p += m_numTopics * 4; //voters
-	m_topicDocIds    =  (long long **)p; p += m_numTopics * 4; //placehldrs
-	m_topicPops      =  (long       *)p; p += m_numTopics * 4;
+	m_topicScores    =  (int32_t       *)p; p += m_numTopics * 4;
+	m_topicLens      =  (int32_t       *)p; p += m_numTopics * 4;
+	m_topicNumDocIds =  (int32_t       *)p; p += m_numTopics * 4; //voters
+	m_topicDocIds    =  (int64_t **)p; p += m_numTopics * 4; //placehldrs
+	m_topicPops      =  (int32_t       *)p; p += m_numTopics * 4;
 	m_topicGids      =                p; p += m_numTopics;
 	// . make ptrs to topic text
 	// . we were just provided with offsets to make it portable
 	char *off = p;
-	for ( long i = 0 ; i < m_numTopics ; i++ ) {
-		m_topicPtrs[i] = (long)m_topicPtrs[i] + off;
+	for ( int32_t i = 0 ; i < m_numTopics ; i++ ) {
+		m_topicPtrs[i] = (int32_t)m_topicPtrs[i] + off;
 		p += m_topicLens[i] + 1;
 	}
 	// now for the array of docids per topic
-	for ( long i = 0 ; i < m_numTopics ; i++ ) {
-		m_topicDocIds[i] = (long long *)p;
+	for ( int32_t i = 0 ; i < m_numTopics ; i++ ) {
+		m_topicDocIds[i] = (int64_t *)p;
 		p += m_topicNumDocIds[i] * 8;
 		// sanity check
-		//for ( long k = 0 ; k < m_topicNumDocIds[i] ; k++ )
-		//	if ( m_topicDocIds[i][k] & ~((long long)DOCID_MASK) ) {
+		//for ( int32_t k = 0 ; k < m_topicNumDocIds[i] ; k++ )
+		//	if ( m_topicDocIds[i][k] & ~((int64_t)DOCID_MASK) ) {
 		//		log("query: Msg24 bad docid in deserialize.");
 		//		char *xx = NULL; *xx = 0; 
 		//	}
@@ -3221,14 +3221,14 @@ long Msg24::deserialize ( char *buf , long bufLen ) {
 
 //if we already have the msg20s, just generate the gigabits from those.
 bool Msg24::generateTopicsLocal ( char       *coll                ,
-				  long        collLen             ,
+				  int32_t        collLen             ,
 				  char       *query               ,
-				  long        queryLen            ,
+				  int32_t        queryLen            ,
 				  Msg20**     msg20Ptrs           ,
-				  long        numMsg20s           ,
+				  int32_t        numMsg20s           ,
 				  char       *clusterLevels       ,
 				  TopicGroup  *topicGroups        ,
-				  long         numTopicGroups     ,
+				  int32_t         numTopicGroups     ,
 				  unsigned char lang              ) { // (aac)
 	// force it to be true, since hi bit is set in pops if topic is unicode
 	m_returnPops       = true;
@@ -3249,12 +3249,12 @@ bool Msg24::generateTopicsLocal ( char       *coll                ,
 	m_collLen            = collLen;
 	// bail if no operations to do
 
-	long numTopicsToGen = topicGroups->m_numTopics;
+	int32_t numTopicsToGen = topicGroups->m_numTopics;
 	// get the min we have to scan
-	long docsToScanForTopics = topicGroups[0].m_docsToScanForTopics;
+	int32_t docsToScanForTopics = topicGroups[0].m_docsToScanForTopics;
 
-	for ( long i = 1 ; i < numTopicGroups ; i++ ) {
-		long x = topicGroups[i].m_docsToScanForTopics ;
+	for ( int32_t i = 1 ; i < numTopicGroups ; i++ ) {
+		int32_t x = topicGroups[i].m_docsToScanForTopics ;
 		if ( x > docsToScanForTopics ) docsToScanForTopics = x;
 
 		if ( topicGroups[i].m_numTopics > numTopicsToGen )
@@ -3284,13 +3284,13 @@ bool Msg24::generateTopicsLocal ( char       *coll                ,
 	st.m_numRequests      = numMsg20s;
 	st.m_numReplies       = numMsg20s;
 
-	memcpy ( st.m_query , query , queryLen );
+	gbmemcpy ( st.m_query , query , queryLen );
 	st.m_query [ queryLen ] = '\0';
 	st.m_queryLen = queryLen;
 	st.m_qq.set ( st.m_query , st.m_queryLen , NULL , 0, 2 , true );
 
 	st.m_numTopicGroups   = m_numTopicGroups;
-	memcpy(st.m_topicGroups, m_topicGroups, 
+	gbmemcpy(st.m_topicGroups, m_topicGroups, 
 	       sizeof(TopicGroup) * m_numTopicGroups);
 	st.m_maxCacheAge      = 0;
 	st.m_addToCache       = false;
@@ -3317,8 +3317,8 @@ bool Msg24::generateTopicsLocal ( char       *coll                ,
 
 
 	char *buf     = NULL;
-	long  bufSize = 0;
-	for ( long i = 0 ; i < st.m_numTopicGroups ; i++ ) {
+	int32_t  bufSize = 0;
+	for ( int32_t i = 0 ; i < st.m_numTopicGroups ; i++ ) {
 		// get ith topic group descriptor
 		TopicGroup *t = &st.m_topicGroups[i];
 		// . generate topics for this topic group

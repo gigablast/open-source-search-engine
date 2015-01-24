@@ -6,10 +6,10 @@
 #include <sys/time.h>
 
 
-long elapsed_usec(const timeval* tv1, const timeval *tv2)
+int32_t elapsed_usec(const timeval* tv1, const timeval *tv2)
 {
-	long sec_elapsed = (tv2->tv_sec - tv1->tv_sec);
-	long usec_elapsed = tv2->tv_usec - tv1->tv_usec;
+	int32_t sec_elapsed = (tv2->tv_sec - tv1->tv_sec);
+	int32_t usec_elapsed = tv2->tv_usec - tv1->tv_usec;
 	if (usec_elapsed<0){
 		usec_elapsed += 1000000;
 		sec_elapsed -=1;
@@ -71,7 +71,7 @@ int main(int argc, char**argv)
 
 		
 		// Extract text from (x)html
-		long textlen = xml.getText(text_buf, 
+		int32_t textlen = xml.getText(text_buf, 
 					   nread, 
 					   0,
 					   99999999,
@@ -91,9 +91,9 @@ int main(int argc, char**argv)
 				  false);
 		}
 		gettimeofday(&tv2, &tz2);
-		long usec_elapsed = elapsed_usec(&tv1, &tv2);
+		int32_t usec_elapsed = elapsed_usec(&tv1, &tv2);
 
-		printf("\nDocument parsed (iso-8851-1): %ld usec (%ld words)\n", 
+		printf("\nDocument parsed (iso-8851-1): %"INT32" usec (%"INT32" words)\n", 
 		       usec_elapsed,
 		       words.getNumWords());
 		
@@ -106,14 +106,14 @@ int main(int argc, char**argv)
 		for(foo=0;foo<NUM_RUNS;foo++){
 			tokens.set(text_buf, false);
 		}
-		//long count = utf8_count_words(file_buf);
+		//int32_t count = utf8_count_words(file_buf);
 		gettimeofday(&tv2, &tz2);
 		usec_elapsed = elapsed_usec(&tv1, &tv2);
 
-		printf("\nDocument parsed (Unicode): %ld usec (%ld words)\n", 
+		printf("\nDocument parsed (Unicode): %"INT32" usec (%"INT32" words)\n", 
 		       usec_elapsed,
 		       tokens.getNumTokens());
-		long max_words = words.getNumWords();
+		int32_t max_words = words.getNumWords();
 		if (tokens.getNumTokens() > max_words)
 			max_words = tokens.getNumTokens();
 		//
@@ -133,7 +133,7 @@ int main(int argc, char**argv)
 						printf("%4c", (unsigned char)c);
 					}
 					else{
-						printf("<%02lX>", (u_long)c);
+						printf("<%02lX>", (u_int32_t)c);
 					}
 				}
 				for(n=words.getWordLen(foo);n<15;n++)
@@ -149,8 +149,8 @@ int main(int argc, char**argv)
 				s = tokens.getToken(foo);
 				char *pp;
 				for(pp=s;(pp-s)<tokens.getTokenLen(foo);){
-					u_long c = utf8_read(pp,&pp);
-					if (c == (u_long)'\n') 
+					u_int32_t c = utf8_read(pp,&pp);
+					if (c == (u_int32_t)'\n') 
 						printf("\\n");
 					else
 						utf8_putchar(c);

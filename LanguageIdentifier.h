@@ -67,7 +67,7 @@ class LanguageIdentifier {
 		///
 		/// @return the language, or langUnknown
 		///
-		uint8_t guessLanguageFromInlinks(LinkInfo *linkInfo, long ip);
+		uint8_t guessLanguageFromInlinks(LinkInfo *linkInfo, int32_t ip);
 
 		/// Determine whether a given TLD is suitable for language detection.
 		/// @param tld the TLD in ascii
@@ -163,9 +163,9 @@ class LanguageIdentifier {
 
 	uint8_t getBestLangsFromVec(char* langCount,
 				    //SiteType* typeVec,
-				    long *langIds ,
+				    int32_t *langIds ,
 				    uint8_t *langScores ,
-				    long tagVecSize);
+				    int32_t tagVecSize);
 
 	uint8_t guessGBLanguageFromUrl(char *url);
 	uint8_t guessLanguageFromUrl(char *url);

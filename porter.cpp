@@ -106,7 +106,7 @@ static int doublec(int j)
 
 /* cvc(i) is TRUE <=> i-2,i-1,i has the form consonant - vowel - consonant
    and also if the second c is not w,x or y. this is used when trying to
-   restore an e at the end of a short word. e.g.
+   restore an e at the end of a int16_t word. e.g.
 
       cav(e), lov(e), hop(e), crim(e), but
       snow, box, tray.

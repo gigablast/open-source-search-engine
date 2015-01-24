@@ -17,8 +17,8 @@
 // types.h uses key_t type that shmget uses
 #undef key_t
 
-long g_dropped = 0;
-long g_corruptPackets = 0;
+int32_t g_dropped = 0;
+int32_t g_corruptPackets = 0;
 bool g_inHandler = false;
 
 // main process id
@@ -73,12 +73,12 @@ UdpServer g_udpServer2;
 // . the startTime of the slot that has the token 
 // . the last 4 bytes of the time of day in milliseconds
 //static UdpSlot       **s_token;
-//static unsigned long  *s_tokenTime;
+//static uint32_t  *s_tokenTime;
 
 // if we're doing a local transaction then keep our slot ptr here
 // since s_token is shared mem
 //static UdpSlot        *s_local;
-//static unsigned long   s_localTime;
+//static uint32_t   s_localTime;
 
 
 static void readPollWrapper_ass ( int fd , void *state ) ;
@@ -110,23 +110,23 @@ bool UdpServer::setupSharedMem() {
 	// . let's create shared memory segment to hold the token slot ptr
 	// . only do this if we're the lowest #'d host on this machine
 	// . get other hosts with this ip
-	for ( long i = 0 ; i < g_hostdb.getNumHosts() ; i++ ) {
+	for ( int32_t i = 0 ; i < g_hostdb.getNumHosts() ; i++ ) {
 		Host *h = g_hostdb.getHost (i);
 		if ( h->m_ip     != g_hostdb.getMyIp() ) continue;
 		if ( h->m_hostId <  g_hostdb.m_hostId    ) return true;
 	}
-	//for ( long i = 0; i < 20; ++i) signal(i, cleanup);
+	//for ( int32_t i = 0; i < 20; ++i) signal(i, cleanup);
 	// if we made it here, we should create the shared memory
 	//int shmid = shmget(SHMKEY,sizeof(UdpSlot *),0777|IPC_EXCL|IPC_CREAT);
 	shmid  = shmget(SHMKEY ,sizeof(UdpSlot *),0777|IPC_CREAT);
 	shmid2 = shmget(SHMKEY2,sizeof(UdpSlot *),0777|IPC_CREAT);
 	if ( shmid < 0 || shmid2 < 0 ) 
 		return log("udp:  setup: shmget: %s",mstrerror(errno));
-	//log("new shmid  is %li",shmid );
-	//log("new shmid2 is %li",shmid2);
+	//log("new shmid  is %"INT32"",shmid );
+	//log("new shmid2 is %"INT32"",shmid2);
 	// init to NULL
 	s_token     = (UdpSlot      **) shmat(shmid , 0, 0);
-	s_tokenTime = (unsigned long *) shmat(shmid2, 0, 0);
+	s_tokenTime = (uint32_t *) shmat(shmid2, 0, 0);
 	// ensure it's not NULL
 	if (!s_token    )return log("udp: setupSharedMem: ptr  is NULL");
 	if (!s_tokenTime)return log("udp: setupSharedMem: ptr2 is NULL");
@@ -149,11 +149,11 @@ bool UdpServer::useSharedMem() {
 		log("udp:  use: shmget: %s. sleeping.",mstrerror(errno));
 		sleep(1);
 	}
-	//log("shmid  is %li",shmid );
-	//log("shmid2 is %li",shmid2);
+	//log("shmid  is %"INT32"",shmid );
+	//log("shmid2 is %"INT32"",shmid2);
 	// success!
 	s_token     = (UdpSlot       **) shmat(shmid , 0, 0);
-	s_tokenTime = (unsigned long  *) shmat(shmid2, 0, 0);
+	s_tokenTime = (uint32_t  *) shmat(shmid2, 0, 0);
 	// ensure it's not NULL
 	if ( ! s_token ) return log("udp: useSharedMem: ptr is NULL");
 	return true;
@@ -183,7 +183,7 @@ void UdpServer::reset() {
 	// clear this
 	m_isShuttingDown = false;
 	// free send/read bufs 
-	for ( long i = 0 ; i <= m_topUsedSlot ; i++ ) {
+	for ( int32_t i = 0 ; i <= m_topUsedSlot ; i++ ) {
 		// skip empty nodes
 		if ( isEmpty(i) ) continue;
 		// get slot
@@ -214,7 +214,7 @@ UdpServer::~UdpServer() {
 	reset();
 }
 
-//static long s_udpMem    = 0;
+//static int32_t s_udpMem    = 0;
 
 // . returns false and sets g_errno on error
 // . port will be incremented if already in use
@@ -222,9 +222,9 @@ UdpServer::~UdpServer() {
 // . niceness typically goes from 0 to 2, 0 being the highest priority
 // . pollTime is how often to call timePollWrapper() (in milliseconds)
 // . it should be at least the minimal slot timeout
-bool UdpServer::init ( unsigned short port, UdpProtocol *proto, long niceness,
-		       long readBufSize , long writeBufSize , 
-		       long pollTime , long maxSlots , bool isDns ){
+bool UdpServer::init ( uint16_t port, UdpProtocol *proto, int32_t niceness,
+		       int32_t readBufSize , int32_t writeBufSize , 
+		       int32_t pollTime , int32_t maxSlots , bool isDns ){
 	// save this
 	m_isDns = isDns;
 	// we now alloc so we don't blow up stack
@@ -232,17 +232,17 @@ bool UdpServer::init ( unsigned short port, UdpProtocol *proto, long niceness,
 	//if ( maxSlots > MAX_UDP_SLOTS ) maxSlots = MAX_UDP_SLOTS;
 	if ( maxSlots < 100           ) maxSlots = 100;
 	m_slots =(UdpSlot *)mmalloc(maxSlots*sizeof(UdpSlot),"UdpServer");
-	if ( ! m_slots ) return log("udp: Failed to allocate %li bytes.",
-				    maxSlots*sizeof(UdpSlot));
-	log(LOG_DEBUG,"udp: Allocated %li bytes for %li sockets.",
-	     maxSlots*(long)sizeof(UdpSlot),maxSlots);
+	if ( ! m_slots ) return log("udp: Failed to allocate %"INT32" bytes.",
+				    maxSlots*(int32_t)sizeof(UdpSlot));
+	log(LOG_DEBUG,"udp: Allocated %"INT32" bytes for %"INT32" sockets.",
+	     maxSlots*(int32_t)sizeof(UdpSlot),maxSlots);
 	m_maxSlots = maxSlots;
 	// dgram size
-	log(LOG_DEBUG,"udp: Using dgram size of %li bytes.",
-	    (long)DGRAM_SIZE);
+	log(LOG_DEBUG,"udp: Using dgram size of %"INT32" bytes.",
+	    (int32_t)DGRAM_SIZE);
 	// set up linked list of available slots
 	m_head = &m_slots[0];
-	for ( long i = 0 ; i < m_maxSlots - 1 ; i++ )
+	for ( int32_t i = 0 ; i < m_maxSlots - 1 ; i++ )
 		m_slots[i].m_next = &m_slots[i+1];
 	m_slots [ m_maxSlots - 1].m_next = NULL;
 	// the linked list of slots in use
@@ -257,12 +257,12 @@ bool UdpServer::init ( unsigned short port, UdpProtocol *proto, long niceness,
 	// alloc space for hash table
 	m_bufSize = m_numBuckets * sizeof(UdpSlot *);
 	m_buf     = (char *)mmalloc ( m_bufSize , "UdpServer" );
-	if ( ! m_buf ) return log("udp: Failed to allocate %li bytes for "
+	if ( ! m_buf ) return log("udp: Failed to allocate %"INT32" bytes for "
 				  "table.",m_bufSize);
 	m_ptrs = (UdpSlot **)m_buf;
 	// clear
 	memset ( m_ptrs , 0 , sizeof(UdpSlot *)*m_numBuckets );
-	log(LOG_DEBUG,"udp: Allocated %li bytes for table.",m_bufSize);
+	log(LOG_DEBUG,"udp: Allocated %"INT32" bytes for table.",m_bufSize);
 
 	m_numUsedSlots   = 0;
 	// clear this
@@ -275,9 +275,9 @@ bool UdpServer::init ( unsigned short port, UdpProtocol *proto, long niceness,
 	// . NOTE: only need to fix if doing incremental sync/storage??
 	m_nextTransId = 0;
 	// clear handlers
-	memset ( m_handlers, 0 , sizeof(void(* )(UdpSlot *slot,long)) * 128);
-	//memset ( m_droppedNiceness0 , 0 , sizeof(long) * 128);
-	//memset ( m_droppedNiceness1 , 0 , sizeof(long) * 128);
+	memset ( m_handlers, 0 , sizeof(void(* )(UdpSlot *slot,int32_t)) * 128);
+	//memset ( m_droppedNiceness0 , 0 , sizeof(int32_t) * 128);
+	//memset ( m_droppedNiceness1 , 0 , sizeof(int32_t) * 128);
         // save the port in case we need it later
         m_port    = port;
 	// no requests waiting yet
@@ -416,18 +416,18 @@ bool UdpServer::init ( unsigned short port, UdpProtocol *proto, long niceness,
 	int fd = socket (AF_INET, SOCK_PACKET, htons (3050));
 	ioctl ( fd , SIOCGIFADDR, &ifr );
 	struct in_addr ip_source;	
-	memcpy (&ip_source, &((struct sockaddr_in *) &ifr.ifr_ifru.ifru_addr)->sin_addr, sizeof (struct sockaddr_in)); 
+	gbmemcpy (&ip_source, &((struct sockaddr_in *) &ifr.ifr_ifru.ifru_addr)->sin_addr, sizeof (struct sockaddr_in)); 
 	log ("My IP address: %s\n", inet_ntoa (ip_source)); 
         //struct sockaddr_in *me = (sockaddr_in *)&ifr.ifr_ifru.ifru_addr;
 	//struct in_addr *me = &((struct sockaddr_in *) 
 	//		       &ifr.ifr_ifru.ifru_addr)->sin_addr;
 	//log ("My IP address: %s", inet_ntoa (*me)); 
-	unsigned long myip1 = 0; //me->sin_addr.s_addr;
-	long myip2 = g_hostdb.getHost ( g_hostdb.m_hostId )->m_ip;
-	long myip3 = g_hostdb.getHost ( g_hostdb.m_hostId )->m_externalIp;
+	uint32_t myip1 = 0; //me->sin_addr.s_addr;
+	int32_t myip2 = g_hostdb.getHost ( g_hostdb.m_hostId )->m_ip;
+	int32_t myip3 = g_hostdb.getHost ( g_hostdb.m_hostId )->m_externalIp;
 	if ( myip1 != myip2 && myip1 != myip3 ) {
 		log("conf: Ip address of machine, %s, does not agree "
-		    "with ip address %s or %s in hosts.conf for hostId #%li.",
+		    "with ip address %s or %s in hosts.conf for hostId #%"INT32".",
 		    iptoa(myip1),"foo","boo",
 		    //iptoa(myip2),iptoa(myip3),
 		    g_hostdb.m_hostId);
@@ -455,13 +455,13 @@ bool UdpServer::init ( unsigned short port, UdpProtocol *proto, long niceness,
 	m_outsiderBytesOut   = 0LL;
 
 	// log an innocent msg
-	//log ( 0, "udp: listening on port %hu with sd=%li and "
-	//      "niceness=%li", m_port, m_sock, m_niceness );
-	log ( LOG_INIT, "udp: Listening on UDP port %hu with niceness=%li "
+	//log ( 0, "udp: listening on port %hu with sd=%"INT32" and "
+	//      "niceness=%"INT32"", m_port, m_sock, m_niceness );
+	log ( LOG_INIT, "udp: Listening on UDP port %hu with niceness=%"INT32" "
 	      "and fd=%i.", 
 	      m_port, niceness , m_sock );
 	// print dgram sizes
-	//log("udp:  using max dgram size of %li bytes", DGRAM_SIZE );
+	//log("udp:  using max dgram size of %"INT32" bytes", DGRAM_SIZE );
 	return true;
 }
 
@@ -471,21 +471,21 @@ bool UdpServer::init ( unsigned short port, UdpProtocol *proto, long niceness,
 // . returns true on success
 // . TODO: this is actually async signal safe... TODO: append _ass
 bool UdpServer::sendRequest ( char     *msg          ,
-			      long      msgSize      ,
+			      int32_t      msgSize      ,
 			      unsigned char    msgType      ,
-			      unsigned long      ip           ,
-			      unsigned short     port         ,
-			      long      hostId       ,
+			      uint32_t      ip           ,
+			      uint16_t     port         ,
+			      int32_t      hostId       ,
 			      UdpSlot **retslot      , // can be NULL
 			      void     *state        ,
 			      void    (* callback)(void *state,UdpSlot *slot),
-			      long      timeout      , // in seconds
-			      short     backoff      ,
-			      short     maxWait      ,
+			      int32_t      timeout      , // in seconds
+			      int16_t     backoff      ,
+			      int16_t     maxWait      ,
 			      char     *replyBuf     ,
-			      long      replyBufMaxSize ,
-			      long      niceness     ,
-			      long      maxResends   ) {
+			      int32_t      replyBufMaxSize ,
+			      int32_t      niceness     ,
+			      int32_t      maxResends   ) {
 	// sanity check
 	if ( ! m_handlers[msgType] && this == &g_udpServer &&
 	     // proxy forwards the msg10 to a host in the cluster
@@ -520,11 +520,11 @@ bool UdpServer::sendRequest ( char     *msg          ,
 	// . we don't want ::process_ass() processing our new, half ready slot
 	bool flipped = interruptsOff();
 	// get a new transId
-	long transId = getTransId();
+	int32_t transId = getTransId();
 
 	// set up shotgunning for this hostId
 	Host *h = NULL;
-	unsigned long ip2 = ip;
+	uint32_t ip2 = ip;
 	//if ( g_conf.m_useShotgun && hostId >= 0 ) {
 	// . now we always set UdpSlot::m_host
 	// . hostId is -1 when sending to a host in g_hostdb2 (hosts2.conf)
@@ -532,7 +532,7 @@ bool UdpServer::sendRequest ( char     *msg          ,
 	// get it from g_hostdb2 then via ip lookup if still NULL
 	if ( ! h ) h = g_hostdb.getHost ( ip , port );
 	// sanity check
-	if ( h && ip && ip != (unsigned long)-1 && h->m_ip != ip &&
+	if ( h && ip && ip != (uint32_t)-1 && h->m_ip != ip &&
 	     h->m_ipShotgun != ip && ip != 0x0100007f ) { // "127.0.0.1"
 		log(LOG_LOGIC,"udp: provided hostid does not match ip");
 		char *xx=NULL;*xx=0;
@@ -552,21 +552,24 @@ bool UdpServer::sendRequest ( char     *msg          ,
 	UdpSlot *slot = getEmptyUdpSlot_ass ( key );
 	if ( ! slot ) {
 		if ( flipped ) interruptsOn();
-		return log("udp: All %li slots are in use.",m_maxSlots);
+		return log("udp: All %"INT32" slots are in use.",m_maxSlots);
 	}
 	// announce it
 	if ( g_conf.m_logDebugUdp )
 		log(LOG_DEBUG,
-		    "udp: sendrequest: ip2=%s port=%li "
-		    "msgType=0x%hhx msgSize=%li "
-		    "transId=%li (niceness=%li) slot=%lu.",
-		    iptoa(ip2),(long)port,
-		    (unsigned char)msgType, (long)msgSize, (long)transId, 
-		    (long)niceness ,(long)slot );
+		    "udp: sendrequest: ip2=%s port=%"INT32" "
+		    "msgType=0x%hhx msgSize=%"INT32" "
+		    "transId=%"INT32" (niceness=%"INT32") slot=%"PTRFMT".",
+		    iptoa(ip2),(int32_t)port,
+		    (unsigned char)msgType, 
+		    (int32_t)msgSize, 
+		    (int32_t)transId, 
+		    (int32_t)niceness ,
+		    (PTRTYPE)slot );
 	
 	// . get time 
 	// . returns g_now if we're in a signal handler
-	long long now = gettimeofdayInMillisecondsLocal();
+	int64_t now = gettimeofdayInMillisecondsLocal();
 	// connect to the ip/port (udp-style: does not do much)
 	slot->connect ( m_proto, ip, port, h, hostId, transId, timeout, now ,
 			niceness );
@@ -604,13 +607,13 @@ bool UdpServer::sendRequest ( char     *msg          ,
 	//s_udpMem += msgSize;
 
 	// debug msg
-	//long long  now = gettimeofdayInMilliseconds();
-	//log("***added node #%li, isTimedOut=%li\n",node,
+	//int64_t  now = gettimeofdayInMilliseconds();
+	//log("***added node #%"INT32", isTimedOut=%"INT32"\n",node,
 	//slot->isTimedOut(now));
 	// let caller know the slot if he wants to
 	if ( retslot ) *retslot = slot;
 	// debug msg
-	//log("UdpServer added slot to send on, key={%li,%lli},"
+	//log("UdpServer added slot to send on, key={%"INT32",%"INT64"},"
 	//"msgType=0x%hhx\n",
 	//key.n1,key.n0, msgType );
 	// turn 'em back on
@@ -621,8 +624,8 @@ bool UdpServer::sendRequest ( char     *msg          ,
 
 // returns false and sets g_errno on error, true otherwise
 void UdpServer::sendErrorReply ( UdpSlot *slot     , 
-				 long     errnum   , 
-				 long     timeout  ) {
+				 int32_t     errnum   , 
+				 int32_t     timeout  ) {
 	// not in sig handler
 	//if ( g_inSigHandler ) return;
 	// bitch if it is 0
@@ -640,7 +643,7 @@ void UdpServer::sendErrorReply ( UdpSlot *slot     ,
 	//	destroySlot(slot); 
 	//	return; 
 	//}
-	*(long *)msg = htonl(errnum) ;
+	*(int32_t *)msg = htonl(errnum) ;
 	// set the m_localErrno in "slot" so it will set the dgrams error bit
 	slot->m_localErrno = errnum;
 	sendReply_ass ( msg , 4 , msg , 4 , slot , timeout );
@@ -649,15 +652,15 @@ void UdpServer::sendErrorReply ( UdpSlot *slot     ,
 // . destroys slot on error or completion (frees m_readBuf,m_sendBuf)
 // . use a backoff of -1 for the default
 void UdpServer::sendReply_ass ( char    *msg        ,
-				long     msgSize    ,
+				int32_t     msgSize    ,
 				char    *alloc      ,
-				long     allocSize  ,
+				int32_t     allocSize  ,
 				UdpSlot *slot       ,
-				long     timeout    , // in seconds
+				int32_t     timeout    , // in seconds
 				void    *state      ,
 				void (* callback2)(void *state, UdpSlot *slot),
-				short    backoff    ,
-				short    maxWait    ,
+				int16_t    backoff    ,
+				int16_t    maxWait    ,
 				bool     isCallback2Hot ,
 				bool     useSameSwitch  ) {
 	// the callback should be NULL
@@ -667,10 +670,10 @@ void UdpServer::sendReply_ass ( char    *msg        ,
 		return;
 	}
 	// record some statistics on how long these msg handlers are taking
-	long long now = gettimeofdayInMillisecondsLocal();
+	int64_t now = gettimeofdayInMillisecondsLocal();
 	// m_queuedTime should have been set before m_handlers[] was called
-	long delta = now - slot->m_queuedTime;
-	long n = slot->m_niceness;
+	int32_t delta = now - slot->m_queuedTime;
+	int32_t n = slot->m_niceness;
 	if ( n < 0 ) n = 0;
 	if ( n > 1 ) n = 1;
 	// add to average, this is now the reply GENERATION, not handler time
@@ -678,7 +681,7 @@ void UdpServer::sendReply_ass ( char    *msg        ,
 	g_stats.m_msgTotalHandlersCalled [slot->m_msgType][n]++;
 	// bucket number is log base 2 of the delta
 	if ( delta > 64000 ) delta = 64000;
-	long bucket = getHighestLitBit ( (unsigned short)delta );
+	int32_t bucket = getHighestLitBit ( (uint16_t)delta );
 	// MAX_BUCKETS is probably 16 and #define'd in Stats.h
 	if ( bucket >= MAX_BUCKETS ) bucket = MAX_BUCKETS-1;
 	g_stats.m_msgTotalHandlersByTime [slot->m_msgType][n][bucket]++;
@@ -701,7 +704,8 @@ void UdpServer::sendReply_ass ( char    *msg        ,
 	if ( slot->m_convertedNiceness == 1 && slot->m_niceness == 0 ) {
 		// note it
 		if ( g_conf.m_logDebugUdp )
-			log("udp: unconverting slot=%li",(long)slot);
+			log("udp: unconverting slot=%"PTRFMT"",
+			    (PTRTYPE)slot);
 		// go back to niceness 1 for sending back, otherwise their
 		// the callback will be called with niceness 0!!
 		//slot->m_niceness = 1;
@@ -717,7 +721,7 @@ void UdpServer::sendReply_ass ( char    *msg        ,
 	// use the msg type that's already in there
 	unsigned char msgType = slot->getMsgType();
 	// get time 
-	//long long now = gettimeofdayInMilliseconds();
+	//int64_t now = gettimeofdayInMilliseconds();
 	// . use a NULL callback since we're sending a reply
 	// . set up for a send
 	if ( ! slot->sendSetup ( msg        ,
@@ -748,9 +752,9 @@ void UdpServer::sendReply_ass ( char    *msg        ,
 	slot->m_maxResends = -1;
 	// log it
 	if ( g_conf.m_logDebugUdp )
-		log("udp: Sending reply transId=%li msgType=0x%hhx "
-		     "(niceness=%li).", slot->m_transId,msgType,
-		    (long)slot->m_niceness);
+		log("udp: Sending reply transId=%"INT32" msgType=0x%hhx "
+		     "(niceness=%"INT32").", slot->m_transId,msgType,
+		    (int32_t)slot->m_niceness);
 	// mark as used memory
 	//s_udpMem += msgMaxSize;
 	// keep sending dgrams until we have no more or hit ACK_WINDOW limit
@@ -784,7 +788,7 @@ void UdpServer::sendReply_ass ( char    *msg        ,
 // . that means we can be calling doSending() on a slot made in
 //   sendRequest() and then be interrupted by sendPollWrapper_ass()
 // . Fortunately, we have a lock around it in sendRequest()!
-bool UdpServer::doSending_ass (UdpSlot *slot,bool allowResends,long long now) {
+bool UdpServer::doSending_ass (UdpSlot *slot,bool allowResends,int64_t now) {
 
 	// if UdpServer::cancel() was called and this slot's callback was
 	// called, make sure to hault sending if we are in a quickpoll
@@ -798,19 +802,19 @@ bool UdpServer::doSending_ass (UdpSlot *slot,bool allowResends,long long now) {
 	// . unless we're in a sighandler or they're already off
 	bool flipped = interruptsOff();
 	// get time
-	//long long now = gettimeofdayInMilliseconds();
+	//int64_t now = gettimeofdayInMilliseconds();
 	// . TODO: why this bug?
 	// . before we had dead lock, I guess *s_tokenTime was fucked up
 	// . this will ensure that it doesn't happend again
 	/*
-	unsigned long now2 = (unsigned long) now;
+	uint32_t now2 = (uint32_t) now;
 	if ( *s_token && now2 < *s_tokenTime && *s_tokenTime - now2 > 5000 ) 
 		*s_token = NULL;
 	if ( *s_token && now2 > *s_tokenTime && now2 - *s_tokenTime > 5000 ) 
 		*s_token = NULL;
 	*/
  loop:
-	long status = 0;
+	int32_t status = 0;
 	// . don't do any sending until we leave the wait state
 	// . we may get suspended at ANY time since suspender is HOT
 	if ( m_isSuspended ) return true;
@@ -836,8 +840,8 @@ bool UdpServer::doSending_ass (UdpSlot *slot,bool allowResends,long long now) {
 			return true;
 	}
 	*/
-	//long score = slot->getScore(now);
-	//log("score is %li", score);
+	//int32_t score = slot->getScore(now);
+	//log("score is %"INT32"", score);
 	if ( slot->getScore(now) < 0 ) goto done;
 	//if ( score < 0 ) return true;
 	// . returns -2 if nothing to send, -1 on error, 0 if blocked, 
@@ -883,7 +887,7 @@ bool UdpServer::doSending_ass (UdpSlot *slot,bool allowResends,long long now) {
 // . tries to send msgs that are the "most caught up" to their ACKs first
 // . call the callback of slots that are TIMEDOUT or get an error!
 // . verified that this is not interruptible
-bool UdpServer::sendPoll_ass ( bool allowResends , long long now ) {
+bool UdpServer::sendPoll_ass ( bool allowResends , int64_t now ) {
 	// . turn off interrupts to be safe
 	// . unless we're in a sighandler or they're already off
 	bool flipped = interruptsOff();
@@ -891,7 +895,7 @@ bool UdpServer::sendPoll_ass ( bool allowResends , long long now ) {
 	m_needToSend = false;
 	// if we don'thave anything to send, or we're waiting on ACKS, then
 	// just return false, we didn't do anything.
-	//mdw long status;
+	//mdw int32_t status;
 	// assume we didn't process anything
 	bool something = false;
  getNextSlot:
@@ -956,16 +960,16 @@ bool UdpServer::sendPoll_ass ( bool allowResends , long long now ) {
 // . slot may have dgrams or ACKs to send
 // . sets g_errno to ETIMEDOUT if that slot is timed out as well as set
 //   that slot's m_doneSending to true
-// . let's send the shortest first, but weight by how long it's been waiting!
+// . let's send the int16_test first, but weight by how long it's been waiting!
 // . f(x) = a*(now - startTime) + b/msgSize
 // . verified that this is not interruptible
-UdpSlot *UdpServer::getBestSlotToSend ( long long now ) {
+UdpSlot *UdpServer::getBestSlotToSend ( int64_t now ) {
 	// . we send msgs that are mostly "caught up" with their acks first
 	// . the slot with the lowest score gets sent
 	// . re-sends have priority over NONre-sends(ACK was not recvd in time)
-	long     maxScore = -1;
+	int32_t     maxScore = -1;
 	UdpSlot *maxi     = NULL;
-	long     score;  
+	int32_t     score;  
 	//UdpSlot *slot;
 	// . we send dgrams with the lowest "score" first
 	// . the "score" is just number of ACKs you're waiting for
@@ -1017,7 +1021,7 @@ UdpSlot *UdpServer::getBestSlotToSend ( long long now ) {
 
 // . must give level of niceness for continuing the transaction at that lvl
 bool UdpServer::registerHandler ( unsigned char msgType , 
-				  void (* handler)(UdpSlot *, long niceness) ,
+				  void (* handler)(UdpSlot *, int32_t niceness) ,
 				  bool isHandlerHot ){
 	if ( m_handlers[msgType] ) 
 	   return log(LOG_LOGIC,"udp: msgType %02x already in use.",msgType);
@@ -1033,13 +1037,13 @@ bool UdpServer::registerHandler ( unsigned char msgType ,
 
 // . read and send as much as we can before calling any callbacks
 // . if forceCallbacks is true we call them regardless if we read/sent anything
-void UdpServer::process_ass ( long long now , long maxNiceness) {
+void UdpServer::process_ass ( int64_t now , int32_t maxNiceness) {
 	// bail if no main sock
 	if ( m_sock < 0 ) return ;
 
 	// if we call this while in the sighandler it crashes since
 	// gettimeofdayInMillisecondsLocal() is not async safe
-	long long startTimer;
+	int64_t startTimer;
 	if ( ! g_inSigHandler )
 		startTimer = gettimeofdayInMillisecondsLocal();
  bigloop:
@@ -1061,7 +1065,7 @@ void UdpServer::process_ass ( long long now , long maxNiceness) {
 	// . *slot will be NULL on some errors (read errors or alloc errors)
 	// . *slot will be NULL if we read and processed a slotless ACK
 	// . *slot will be NULL if we read nothing (0 bytes read & 0 returned)
-	long status = readSock_ass ( &slot , now ) ;
+	int32_t status = readSock_ass ( &slot , now ) ;
 	// if we read something
 	if ( status != 0 ) {
 		// if no slot was set, it was a slotless read so keep looping
@@ -1106,7 +1110,7 @@ void UdpServer::process_ass ( long long now , long maxNiceness) {
 	if(maxNiceness < 1) return;
 	// if we call this while in the sighandler it crashes since
 	// gettimeofdayInMillisecondsLocal() is not async safe
-	long long elapsed = 0;
+	int64_t elapsed = 0;
 	if ( ! g_inSigHandler )
 		elapsed = gettimeofdayInMillisecondsLocal() - startTimer;
 	if(elapsed < 10) {
@@ -1116,7 +1120,7 @@ void UdpServer::process_ass ( long long now , long maxNiceness) {
 		// if we did anything loop back up
 		// . but only if we haven't been looping forever,
 		// . if so we need to relinquish control to loop.
-		// 		log(LOG_WARN, "udp: give back control. after %lli", 
+		// 		log(LOG_WARN, "udp: give back control. after %"INT64"", 
 		// 		    elapsed);
 		goto bigloop;	
 	}
@@ -1141,7 +1145,7 @@ void readPollWrapper_ass ( int fd , void *state ) {
 // . should only be called from process_ass() since this is not re-entrant
 // . verified that this is not interruptible
 /*
-bool UdpServer::readPoll ( long long now ) {
+bool UdpServer::readPoll ( int64_t now ) {
 	// if m_sock shutdown, don't bother
 	if ( m_sock < 0 ) return false;
 	// a common var
@@ -1151,7 +1155,7 @@ bool UdpServer::readPoll ( long long now ) {
 	// . *slot will be NULL on some errors (read errors or alloc errors)
 	// . *slot will be NULL if we read and processed a slotless ACK
 	// . *slot will be NULL if we read nothing (0 bytes read & 0 returned)
-	long status ;
+	int32_t status ;
 	// assume we didn't process anything
 	bool something = false;
 	// do the main read loop
@@ -1175,13 +1179,13 @@ bool UdpServer::readPoll ( long long now ) {
 }
 */
 
-void UdpServer::dumpdgram ( char *dgram , long dgramSize ) {
-	for ( long i = 0 ; i < dgramSize ; i++ ) 
-		log(LOG_INFO,"%li) %li\n",i,(long)dgram[i]);
+void UdpServer::dumpdgram ( char *dgram , int32_t dgramSize ) {
+	for ( int32_t i = 0 ; i < dgramSize ; i++ ) 
+		log(LOG_INFO,"%"INT32") %"INT32"\n",i,(int32_t)dgram[i]);
 }
 	
 // . returns -1 on error, 0 if blocked, 1 if completed reading dgram
-long UdpServer::readSock_ass ( UdpSlot **slotPtr , long long now ) {
+int32_t UdpServer::readSock_ass ( UdpSlot **slotPtr , int64_t now ) {
 	// turn em off
 	bool flipped = interruptsOff();
 	// NULLify slot
@@ -1191,7 +1195,7 @@ long UdpServer::readSock_ass ( UdpSlot **slotPtr , long long now ) {
 	sockaddr_in from;
 	socklen_t fromLen = sizeof ( struct sockaddr );
 	// how many bytes should we peek at to get basic info about the msg
-	long maxPeekSize = m_proto->getMaxPeekSize();
+	int32_t maxPeekSize = m_proto->getMaxPeekSize();
 	// watch out for overflow
 	//if ( maxPeekSize > 32 ) maxPeekSize = 32;
 	// peak so we can read directly into the right slot, zero-copy
@@ -1221,26 +1225,26 @@ long UdpServer::readSock_ass ( UdpSlot **slotPtr , long long now ) {
 	}
 	// the discard buffer, for reading dgram into
 	char tmpbuf [DGRAM_SIZE_CEILING];
-	unsigned long ip2 ;
+	uint32_t ip2 ;
 	Host    *h        ;
 	key_t    key      ;
 	UdpSlot *slot     ;
-	long     dgramNum ;
+	int32_t     dgramNum ;
 	bool     wasAck   ;
-	long     transId  ;
+	int32_t     transId  ;
 	bool     discard  = true;
 	bool     status   ;
-	long     readSize ;
+	int32_t     readSize ;
 	unsigned char msgType  ;
-	long          niceness ;
+	int32_t          niceness ;
 
 	// get the ip
-	unsigned long ip = from.sin_addr.s_addr;
+	uint32_t ip = from.sin_addr.s_addr;
 	// if it's 127.0.0.1 then change it to our ip
 	if ( ip == g_hostdb.getLoopbackIp() ) ip = g_hostdb.getMyIp();
 	// is it local?
 	bool isLocal = false;
-	// shortcut
+	// int16_tcut
         uint8_t *p = (uint8_t *)&ip;
         // this is local
         if ( p[0] == 10 ) isLocal = true;
@@ -1254,17 +1258,17 @@ long UdpServer::readSock_ass ( UdpSlot **slotPtr , long long now ) {
 	else if ( m_proto->useAcks() &&
 		  ! isLocal &&
 		  ! g_hostdb.isIpInNetwork ( ip ) &&
-		  ! g_conf.isRootIp ( ip ) &&
+		  ! g_conf.isMasterIp ( ip ) &&
 		  ! g_hostdb2.isIpInNetwork ( ip ) &&
 		  ! g_conf.isConnectIp ( ip ) ) {
 		// bitch, wait at least 5 seconds though
-		static long s_lastTime = 0;
-		static long long s_count = 0LL;
+		static int32_t s_lastTime = 0;
+		static int64_t s_count = 0LL;
 		s_count++;
 		if ( getTime() - s_lastTime > 5 ) {
 			s_lastTime = getTime();
 			log("udp: Received unauthorized udp packet from %s. "
-			    "Count=%lli.",iptoa(ip),s_count);
+			    "Count=%"INT64".",iptoa(ip),s_count);
 		}
 		// make it return 1 cuz we did read something
 		status = true;
@@ -1294,7 +1298,7 @@ long UdpServer::readSock_ass ( UdpSlot **slotPtr , long long now ) {
 	// from either ip for the same transaction. h can be NULL if the packet
 	// is from a dns server.
 	if ( h ) ip2 = h->m_ip;
-	//logf(LOG_DEBUG,"net: got h=%lu",(long)h);
+	//logf(LOG_DEBUG,"net: got h=%"UINT32"",(int32_t)h);
 	// generate a unique KEY for this TRANSACTION 
 	key = m_proto->makeKey ( peek                  , 
 				 peekSize              ,
@@ -1336,18 +1340,18 @@ long UdpServer::readSock_ass ( UdpSlot **slotPtr , long long now ) {
 		if ( wasAck ) {
 			if ( g_conf.m_logDebugUdp )
 				log(LOG_DEBUG,
-				    "udp: Read stray ACK, transId=%li, "
+				    "udp: Read stray ACK, transId=%"INT32", "
 				    "ip2=%s "
-				    "port=%li "
-				    "dgram=%li "
+				    "port=%"INT32" "
+				    "dgram=%"INT32" "
 				    "dst=%s:%hu "
-				    "k.n1=%lu n0=%llu.",
+				    "k.n1=%"UINT32" n0=%"UINT64".",
 				    transId,
 				    iptoa(ip2),
-				    (long)ntohs(from.sin_port) ,
+				    (int32_t)ntohs(from.sin_port) ,
 				    dgramNum,
 				    iptoa(ip)+6,
-				    (unsigned short)ntohs(from.sin_port),
+				    (uint16_t)ntohs(from.sin_port),
 				    key.n1,key.n0);
 			// tmp debug
 			//char *xx = NULL; *xx = 0;
@@ -1385,10 +1389,10 @@ long UdpServer::readSock_ass ( UdpSlot **slotPtr , long long now ) {
 			if ( g_conf.m_logDebugUdp )
 				log(LOG_DEBUG,
 				    "udp: got dgram we acked, but we closed, "
-				    "transId=%li dgram=%li dgramSize=%i "
+				    "transId=%"INT32" dgram=%"INT32" dgramSize=%i "
 				    "fromIp=%s fromPort=%i msgType=0x%hhx",
 				    transId, dgramNum , peekSize,
-				    iptoa((long)from.sin_addr.s_addr) , 
+				    iptoa((int32_t)from.sin_addr.s_addr) , 
 				    ntohs(from.sin_port) , msgType );
 		cancelTrans:
 			// temporary slot for sending back bogus ack
@@ -1409,7 +1413,7 @@ long UdpServer::readSock_ass ( UdpSlot **slotPtr , long long now ) {
 		// . if we're shutting down do not accept new connections
 		// . just ignore
 		if ( m_isShuttingDown ) goto discard; // return 1;
-		// shortcut
+		// int16_tcut
 		bool isProxy = g_proxy.isProxy();
 		// do not read any incoming request if half the slots are
 		// being used for incoming requests right now. we don't want
@@ -1459,7 +1463,7 @@ long UdpServer::readSock_ass ( UdpSlot **slotPtr , long long now ) {
 		// a msg22 request to self but failing...
 		if ( msgType == 0x20 && m_msg20sInWaiting >= 50 && niceness )
 			getSlot = false;
-		// if running short on mem, do not accept any more requests
+		// if running int16_t on mem, do not accept any more requests
 		// because we can lock up from that, too
 		//if ( msgType == 0x23 && g_mem.m_memAvail < 10*1024*1024 )
 		//if ( g_mem.m_maxMem - g_mem.m_used < 20*1024*1024 &&
@@ -1519,7 +1523,7 @@ long UdpServer::readSock_ass ( UdpSlot **slotPtr , long long now ) {
 		// we always need to reserve some slots for sending our
 		// requests out on. do this regardless of msg23 or not.
 		//if ( m_numUsedSlots >= (m_maxSlots>>1) ) getSlot = false;
-		//long niceness = m_proto->isNice ( peek , peekSize );
+		//int32_t niceness = m_proto->isNice ( peek , peekSize );
 		// lower priorty slots are dropped first
 		if ( m_numUsedSlots >= 1300 && niceness > 0 && ! isProxy ) 
 			getSlot = false;
@@ -1558,7 +1562,7 @@ long UdpServer::readSock_ass ( UdpSlot **slotPtr , long long now ) {
 			// discard it!
 			// only log this message up to once per second to avoid
 			// flooding the log
-			static long long s_lastTime = 0LL;
+			static int64_t s_lastTime = 0LL;
 			g_dropped++;
 			// count each msgType we drop
 			if ( niceness == 0 ) g_stats.m_dropped[msgType][0]++;
@@ -1566,14 +1570,14 @@ long UdpServer::readSock_ass ( UdpSlot **slotPtr , long long now ) {
 			if ( now - s_lastTime >= 1000 ) {
 				s_lastTime = now;
 				log("udp: No udp slots to handle datagram.  "
-				    "(msgType=0x%x niceness=%li) "
+				    "(msgType=0x%x niceness=%"INT32") "
 				    "Discarding. It should be resent. Dropped "
-				    "dgrams=%li.", msgType,niceness,g_dropped);
+				    "dgrams=%"INT32".", msgType,niceness,g_dropped);
 			}
 			goto discard;
 		}
 		// default timeout, sender has 60 seconds to send request!
-		long timeout = 60;
+		int32_t timeout = 60;
 		// not if msg8e! they are huge requests!
 		if ( msgType == 0x8e ) timeout = 999999;
 		// connect this slot (callback should be NULL)
@@ -1610,8 +1614,8 @@ long UdpServer::readSock_ass ( UdpSlot **slotPtr , long long now ) {
 			if ( msgType == 0x0c ) m_msg0csInWaiting++;
 			if ( msgType == 0x00 ) m_msg0sInWaiting++;
 			// debug msg
-			//log("in waiting up to %li",m_requestsInWaiting );
-			//log("in waiting up to %li (0x%hhx) ",
+			//log("in waiting up to %"INT32"",m_requestsInWaiting );
+			//log("in waiting up to %"INT32" (0x%hhx) ",
 			//     m_requestsInWaiting, slot->m_msgType );
 			// suspend the low priority server
 			if ( this == &g_udpServer2 ) g_udpServer.suspend();
@@ -1656,7 +1660,7 @@ long UdpServer::readSock_ass ( UdpSlot **slotPtr , long long now ) {
 	//	if(g_conf.m_sequentialProfiling) {
 	// 		if(slot->isDoneReading()) 
 	// 			log(LOG_TIMING, "admin: read last dgram: "
-	//                           "%li %s", slot->getNiceness(),peek);
+	//                           "%"INT32" %s", slot->getNiceness(),peek);
 	//	}
 
  discard:
@@ -1718,10 +1722,10 @@ long UdpServer::readSock_ass ( UdpSlot **slotPtr , long long now ) {
 	bool canSteal = false;
 	if ( slot->m_niceness == 0 ) {
 		if ( *s_token && *s_token != slot && 
-		     (unsigned long)slot->m_startTime + 100 < *s_tokenTime )
+		     (uint32_t)slot->m_startTime + 100 < *s_tokenTime )
 			canSteal = true;
 		if ( s_local  &&  s_local != slot && 
-		     (unsigned long)slot->m_startTime + 100 <  s_localTime )
+		     (uint32_t)slot->m_startTime + 100 <  s_localTime )
 			canSteal = true;
 	}
 	// now try to claim the token for ourselves if we're a large reply
@@ -1734,20 +1738,20 @@ long UdpServer::readSock_ass ( UdpSlot **slotPtr , long long now ) {
 		// make a note of it
 		char *a = "Gave";
 		if ( *s_token || s_local ) a = "Stole";
-		log("%s token to transId=%li msgType=0x%hhx callback=%08lx"
-		    " slot=%lu", a,slot->m_transId , slot->m_msgType,
-		    (long)slot->m_callback, (unsigned long)slot);
+		log("%s token to transId=%"INT32" msgType=0x%hhx callback=%08"XINT32""
+		    " slot=%"UINT32"", a,slot->m_transId , slot->m_msgType,
+		    (int32_t)slot->m_callback, (uint32_t)slot);
 #endif
 		// . claim s_local if we're local
 		// . set the last 4 bytes of time in milliseconds
 		if ( g_hostdb.getMyIp() == slot->m_ip ) {
 			s_local     = slot;
-			s_localTime = (unsigned long)slot->m_startTime;
+			s_localTime = (uint32_t)slot->m_startTime;
 		}
 		// otherwise, claim s_token
 		else {
 			*s_token  = slot;
-			*s_tokenTime = (unsigned long) slot->m_startTime;
+			*s_tokenTime = (uint32_t) slot->m_startTime;
 		}
 	}
 	// if we read an ack we might be able to claim s_token so we can
@@ -1760,18 +1764,18 @@ long UdpServer::readSock_ass ( UdpSlot **slotPtr , long long now ) {
 		// make a note of it
 		char *a = "Gave";
 		if ( *s_token || s_local ) a = "Stole";
-		log("%s token to transId=%li msgType=0x%hhx slot=%lu",
-		    a,slot->m_transId , slot->m_msgType , (unsigned long)slot);
+		log("%s token to transId=%"INT32" msgType=0x%hhx slot=%"UINT32"",
+		    a,slot->m_transId , slot->m_msgType , (uint32_t)slot);
 		// . claim s_local if we're local
 		// . set the last 4 bytes of time in milliseconds
 		if ( g_hostdb.getMyIp() == slot->m_ip ) {
 			s_local     = slot;
-			s_localTime = (unsigned long)slot->m_startTime;
+			s_localTime = (uint32_t)slot->m_startTime;
 		}
 		// otherwise, claim s_token
 		else {
 			*s_token  = slot;
-			*s_tokenTime = (unsigned long) slot->m_startTime;
+			*s_tokenTime = (uint32_t) slot->m_startTime;
 		}
 	}
 	*/
@@ -1818,7 +1822,7 @@ void UdpServer::resume ( ) {
 	// we are no longer suspened
 	m_isSuspended = false;
 	// get time now
-	long long now = gettimeofdayInMillisecondsLocal();
+	int64_t now = gettimeofdayInMillisecondsLocal();
 	// send as much as we can now that m_isSuspended is false
 	sendPoll_ass ( true , now );
 	// resume any merge that was going on
@@ -1843,11 +1847,11 @@ void UdpServer::resume ( ) {
 //   linked list here, we make sure the parent adjusts.
 // . the problem is when we call this with niceness 1 and we convert
 //   a niceness 1 callback to 0...
-bool UdpServer::makeCallbacks_ass ( long niceness ) {
+bool UdpServer::makeCallbacks_ass ( int32_t niceness ) {
  	if ( g_conf.m_logDebugUdp )
-		log(LOG_DEBUG,"udp: makeCallbacks_ass: start. nice=%li "
-		    "inquickpoll=%li",
-		    niceness,(long)g_loop.m_inQuickPoll);
+		log(LOG_DEBUG,"udp: makeCallbacks_ass: start. nice=%"INT32" "
+		    "inquickpoll=%"INT32"",
+		    niceness,(int32_t)g_loop.m_inQuickPoll);
 	// bail if suspended
 	if ( m_isSuspended ) return false;
 
@@ -1857,14 +1861,14 @@ bool UdpServer::makeCallbacks_ass ( long niceness ) {
 	// . try again...
 	// . seems like it is hurting high niceness threads
 	//   from completing!!!
-	//long active = g_threads.getNumActiveHighPriorityThreads() ;
+	//int32_t active = g_threads.getNumActiveHighPriorityThreads() ;
 	//if ( active ) {
 	//	if ( niceness >=  1 ) return true;
 	//	if ( niceness == -1 ) niceness = 0;
 	//}
 
 	// assume noone called
-	long numCalled = 0;
+	int32_t numCalled = 0;
 	if(niceness > 0) m_needBottom = false;
 
 	// do not do niceness conversion if doing a qa.html run because it
@@ -1886,13 +1890,13 @@ bool UdpServer::makeCallbacks_ass ( long niceness ) {
 	if ( g_process.m_mode )
 		doNicenessConversion = false;
 
-	long long startTime = gettimeofdayInMillisecondsLocal();
+	int64_t startTime = gettimeofdayInMillisecondsLocal();
 
  fullRestart:
 
 	// take care of certain handlers/callbacks before any others
 	// regardless of niceness levels because these handlers are so fast
-	long pass = 0;
+	int32_t pass = 0;
 
  nextPass:
 
@@ -1965,7 +1969,8 @@ bool UdpServer::makeCallbacks_ass ( long niceness ) {
 			// note it
 			if ( g_conf.m_logDebugUdp )
 				log("udp: converting slot from niceness 1 to "
-				    "0. slot=%li mmsgtype=0x%hhx",(long)slot,
+				    "0. slot=%"PTRFMT" mmsgtype=0x%hhx",
+				    (PTRTYPE)slot,
 				    slot->m_msgType);
 			// convert the niceness
 			slot->m_niceness = 0;
@@ -1995,7 +2000,8 @@ bool UdpServer::makeCallbacks_ass ( long niceness ) {
 			// note it
 			if ( g_conf.m_logDebugUdp )
 				log("udp: converting slot2 from niceness 1 to "
-				    "0. slot=%li mmsgtype=0x%hhx",(long)slot,
+				    "0. slot=%"PTRFMT" mmsgtype=0x%hhx",
+				    (PTRTYPE)slot,
 				    slot->m_msgType);
 			// convert the niceness
 			slot->m_niceness = 0;
@@ -2020,22 +2026,24 @@ bool UdpServer::makeCallbacks_ass ( long niceness ) {
 			h = g_hostdb.getHost ( slot->m_hostId );
 		if ( h ) {
 			h->m_errorReplies++;
-			if ( g_errno == ETRYAGAIN ) h->m_etryagains++;
+			if ( g_errno == ETRYAGAIN ) 
+				h->m_pingInfo.m_etryagains++;
 		}
 
-		//long cbAddr = (long)slot->m_callback;
+		//int32_t cbAddr = (int32_t)slot->m_callback;
 		// try to call the callback for this slot
 		//g_loop.startBlockedCpuTimer();
 		// time it now
-		long long start2 = 0;
+		int64_t start2 = 0;
 		bool logIt = false;
 		if ( slot->m_niceness == 0 ) logIt = true;
 		if ( logIt ) start2 = gettimeofdayInMillisecondsLocal();
 		// log that
 		if ( g_conf.m_logDebugUdp )
 			log(LOG_DEBUG,"udp: calling callback/handler for "
-			    "slot=%li pass=%li nice=%li",(long)slot,
-			    (long)pass,(long)slot->m_niceness);
+			    "slot=%"PTRFMT" pass=%"INT32" nice=%"INT32"",
+			    (PTRTYPE)slot,
+			    (int32_t)pass,(int32_t)slot->m_niceness);
 
 		// save it
 		//UdpSlot *next3 = slot->m_next2;
@@ -2047,18 +2055,20 @@ bool UdpServer::makeCallbacks_ass ( long niceness ) {
 		// . skip to next slot if did not call callback/handler
 		if ( ! makeCallback_ass ( slot ) ) continue;
 
-		long long took = 0;
+		int64_t took = 0;
 		if ( logIt )
 			took = gettimeofdayInMillisecondsLocal()-start2;
 		if ( took > 1000 || (slot->m_niceness==0 && took>100))
-			logf(LOG_DEBUG,"udp: took %lli ms to call "
+			logf(LOG_DEBUG,"udp: took %"INT64" ms to call "
 			     "callback/handler for "
-			     "msgtype=0x%lx nice=%li callback=%lu",
+			     "msgtype=0x%"XINT32" "
+			     "nice=%"INT32" "
+			     "callback=%"PTRFMT"",
 			     took,
-			     (long)slot->m_msgType,
-			     (long)slot->m_niceness,
-			     (long)slot->m_callback);
-		long long elapsed;
+			     (int32_t)slot->m_msgType,
+			     (int32_t)slot->m_niceness,
+			     (PTRTYPE)slot->m_callback);
+		int64_t elapsed;
 		numCalled++;
 
 		// log how long callback took
@@ -2072,8 +2082,8 @@ bool UdpServer::makeCallbacks_ass ( long niceness ) {
 			//now we just tell loop to poll
 			//if(g_conf.m_sequentialProfiling) {
 			//	log(LOG_TIMING, "admin: UdpServer spent "
-			//	    "%lli ms doing"
-			//	    " %li low priority callbacks."
+			//	    "%"INT64" ms doing"
+			//	    " %"INT32" low priority callbacks."
 			//	    " last was:  %s", 
 			//	    elapsed, numCalled, 
 			//	    g_profiler.getFnName(cbAddr));
@@ -2108,7 +2118,7 @@ bool UdpServer::makeCallbacks_ass ( long niceness ) {
 	// . caution: sometimes callbacks really delay us! like msg 0x20
 	// . well, for now comment this out again
 	/*
-	for ( long i = 0 ; i <= m_topUsedSlot ; i++ ) {
+	for ( int32_t i = 0 ; i <= m_topUsedSlot ; i++ ) {
 		// skip if empty
 		if ( isEmpty(i) ) continue;
 		// save msg 0x20's for last
@@ -2120,7 +2130,7 @@ bool UdpServer::makeCallbacks_ass ( long niceness ) {
 		makeCallback_ass ( &m_slots[i] );
 	}
 	// pick up the msg 0x20's we saved for last
-	for ( long i = 0 ; i <= m_topUsedSlot ; i++ ) {
+	for ( int32_t i = 0 ; i <= m_topUsedSlot ; i++ ) {
 		// skip if empty
 		if ( isEmpty(i) ) continue;
 		// save msg 0x20's for last
@@ -2172,13 +2182,13 @@ bool UdpServer::makeCallback_ass ( UdpSlot *slot ) {
 	//g_loop.canQuickPoll(slot->m_niceness);
 
 	// for timing callbacks and handlers
-	long long start = 0;
-	long long took;
-	//long mt ;
-	long long now ;
-	long delta , n , bucket;
+	int64_t start = 0;
+	int64_t took;
+	//int32_t mt ;
+	int64_t now ;
+	int32_t delta , n , bucket;
 	float mem;
-	long saved;
+	int32_t saved;
 	bool saved2;
 	//bool incInt;
 
@@ -2195,10 +2205,10 @@ bool UdpServer::makeCallback_ass ( UdpSlot *slot ) {
 		// if we had the token, give it up so others can send with it
 		if ( *s_token == slot || s_local == slot ) 
 			log("s_token  released");
-		log("UdpServer doing callback for transId=%li "
-		"msgType=0x%hhx g_errno=%s callback=%08lx",
+		log("UdpServer doing callback for transId=%"INT32" "
+		"msgType=0x%hhx g_errno=%s callback=%08"XINT32"",
 		slot->m_transId , msgType, mstrerror(g_errno),
-		(long)slot->m_callback);
+		(int32_t)slot->m_callback);
 #endif
 		// free the token if we were occupying it
 		if ( *s_token == slot ) *s_token = NULL;
@@ -2206,20 +2216,21 @@ bool UdpServer::makeCallback_ass ( UdpSlot *slot ) {
 		*/
 		// debug msg
 		if ( g_conf.m_logDebugUdp ) {
-			long long now  = gettimeofdayInMillisecondsLocal();
-			long long took = now - slot->m_startTime;
+			int64_t now  = gettimeofdayInMillisecondsLocal();
+			int64_t took = now - slot->m_startTime;
 			//if ( took > 10 )
-			long Mbps = 0;
+			int32_t Mbps = 0;
 			if ( took > 0 ) Mbps = slot->m_readBufSize / took;
 			Mbps = (Mbps * 1000) / (1024*1024);
-			log(LOG_DEBUG,"udp: Got reply transId=%li "
+			log(LOG_DEBUG,"udp: Got reply transId=%"INT32" "
 			    "msgType=0x%hhx "
 			    "g_errno=%s "
-			    "niceness=%li "
-			    "callback=%08lx took %lli ms (%li Mbps).",
+			    "niceness=%"INT32" "
+			    "callback=%08"PTRFMT" "
+			    "took %"INT64" ms (%"INT32" Mbps).",
 			    slot->m_transId,msgType,mstrerror(g_errno),
 			    slot->m_niceness,
-			    (long)slot->m_callback ,
+			    (PTRTYPE)slot->m_callback ,
 			    took , Mbps );
 			start = now;
 		}
@@ -2241,14 +2252,14 @@ bool UdpServer::makeCallback_ass ( UdpSlot *slot ) {
 
 		// now we got a reply or an g_errno so call the callback
 		//if (g_conf.m_profilingEnabled){
-		//	address=(long)slot->m_callback;
+		//	address=(int32_t)slot->m_callback;
 		//	g_profiler.startTimer(address, __PRETTY_FUNCTION__);
 		//}
 		//g_loop.startBlockedCpuTimer();
 
 		if ( g_conf.m_logDebugLoop && slot->m_msgType != 0x11 )
-			log(LOG_DEBUG,"loop: enter callback for 0x%lx "
-			    "nice=%li",(long)slot->m_msgType,slot->m_niceness);
+			log(LOG_DEBUG,"loop: enter callback for 0x%"XINT32" "
+			    "nice=%"INT32"",(int32_t)slot->m_msgType,slot->m_niceness);
 
 		// sanity check -- avoid double calls
 		if ( slot->m_calledCallback ) { char *xx=NULL;*xx=0; }
@@ -2295,28 +2306,28 @@ bool UdpServer::makeCallback_ass ( UdpSlot *slot ) {
 		g_niceness = saved;
 
 		if ( g_conf.m_logDebugLoop && slot->m_msgType != 0x11 )
-			log(LOG_DEBUG,"loop: exit callback for 0x%lx "
-			    "nice=%li",(long)slot->m_msgType,slot->m_niceness);
+			log(LOG_DEBUG,"loop: exit callback for 0x%"XINT32" "
+			    "nice=%"INT32"",(int32_t)slot->m_msgType,slot->m_niceness);
 
 		if ( g_conf.m_maxCallbackDelay >= 0 ) {
-			long long elapsed = gettimeofdayInMillisecondsLocal()-
+			int64_t elapsed = gettimeofdayInMillisecondsLocal()-
 				start;
 			if ( slot->m_niceness == 0 &&
 			     elapsed >= g_conf.m_maxCallbackDelay )
-				log("udp: Took %lli ms to call "
-				    "callback for msgType=0x%hhx niceness=%li",
+				log("udp: Took %"INT64" ms to call "
+				    "callback for msgType=0x%hhx niceness=%"INT32"",
 				    elapsed,slot->m_msgType,
-				    (long)slot->m_niceness);
+				    (int32_t)slot->m_niceness);
 		}
 
 		//if (g_conf.m_profilingEnabled){
 		//	if(!g_profiler.endTimer(address, __PRETTY_FUNCTION__))
-		//		log(LOG_WARN,"admin: Couldn't add the fn %li",
-		//		    (long)address);
+		//		log(LOG_WARN,"admin: Couldn't add the fn %"INT32"",
+		//		    (int32_t)address);
 		//}
 		// time it
 		if ( g_conf.m_logDebugUdp )
-			log(LOG_DEBUG,"udp: Reply callback took %lli ms.",
+			log(LOG_DEBUG,"udp: Reply callback took %"INT64" ms.",
 			    gettimeofdayInMillisecondsLocal() - start );
 		// clear any g_errno that may have been set
 		g_errno = 0;
@@ -2346,7 +2357,7 @@ bool UdpServer::makeCallback_ass ( UdpSlot *slot ) {
 		if ( *s_token == slot || s_local == slot ) {
 			// debug msgs
 			log("udp: makeCallback_ass: done sending "
-			    "slot=%lu bytes=%li", (unsigned long)slot , 
+			    "slot=%"UINT32" bytes=%"INT32"", (uint32_t)slot , 
 			    slot->m_sendBufSize);
 			log("s_token released");
 		}
@@ -2376,29 +2387,29 @@ bool UdpServer::makeCallback_ass ( UdpSlot *slot ) {
 
 			if ( g_conf.m_logDebugLoop )
 				log(LOG_DEBUG,"loop: enter callback2 for "
-				    "0x%lx",(long)slot->m_msgType);
+				    "0x%"XINT32"",(int32_t)slot->m_msgType);
 
 			// call it
 			slot->m_callback2 ( slot->m_state , slot ); 
 
 			if ( g_conf.m_logDebugLoop )
-				log(LOG_DEBUG,"loop: exit callback2 for 0x%lx",
-				    (long)slot->m_msgType);
+				log(LOG_DEBUG,"loop: exit callback2 for 0x%"XINT32"",
+				    (int32_t)slot->m_msgType);
 
 			// debug msg
 			if ( g_conf.m_logDebugUdp ) {
-				long long now  = 
+				int64_t now  = 
 					gettimeofdayInMillisecondsLocal();
-				long long took = now - start ;
+				int64_t took = now - start ;
 				//if ( took > 10 )
 					log(LOG_DEBUG,
-					    "udp: Callback2 transId=%li "
+					    "udp: Callback2 transId=%"INT32" "
 					    "msgType=0x%hhx "
-					    "g_errno=%s callback2=%08lx"
-					    " took %lli ms.",
+					    "g_errno=%s callback2=%08"PTRFMT""
+					    " took %"INT64" ms.",
 					    slot->m_transId,msgType,
 					    mstrerror(g_errno),
-					    (long)slot->m_callback2,
+					    (PTRTYPE)slot->m_callback2,
 					    took );
 			}
 			// clear any g_errno that may have been set
@@ -2470,7 +2481,7 @@ bool UdpServer::makeCallback_ass ( UdpSlot *slot ) {
 	//slot->m_calledHandlerTime = gettimeofdayInMillisecondsLocal();
 	// debug msg
 	if ( g_conf.m_logDebugUdp )
-		log(LOG_DEBUG,"udp: Calling handler for transId=%li "
+		log(LOG_DEBUG,"udp: Calling handler for transId=%"INT32" "
 		    "msgType=0x%hhx.", slot->m_transId , msgType );
 
 
@@ -2487,7 +2498,7 @@ bool UdpServer::makeCallback_ass ( UdpSlot *slot ) {
 	g_stats.m_msgTotalQueued        [msgType][n]++;
 	// bucket number is log base 2 of the delta
 	if ( delta > 64000 ) delta = 64000;
-	bucket = getHighestLitBit ( (unsigned short)delta );
+	bucket = getHighestLitBit ( (uint16_t)delta );
 	// MAX_BUCKETS is probably 16 and #define'd in Stats.h
 	if ( bucket >= MAX_BUCKETS ) bucket = MAX_BUCKETS-1;
 	g_stats.m_msgTotalQueuedByTime [msgType][n][bucket]++;
@@ -2503,15 +2514,15 @@ bool UdpServer::makeCallback_ass ( UdpSlot *slot ) {
 	// . handler must call sendErrorReply() or sendReply()
 	// . send*Reply() will destroy slot on error or transaction completion
 	//if (g_conf.m_profilingEnabled){
-	//	address=(long)m_handlers [slot->m_msgType];
+	//	address=(int32_t)m_handlers [slot->m_msgType];
 	//	g_profiler.startTimer(address, __PRETTY_FUNCTION__);
 	//}
 	//	g_loop.startBlockedCpuTimer();
 
 	// log it now
 	if ( slot->m_msgType != 0x11 && g_conf.m_logDebugLoop )
-		log(LOG_DEBUG,"loop: enter handler for 0x%lx nice=%li",
-		    (long)slot->m_msgType,(long)slot->m_niceness);
+		log(LOG_DEBUG,"loop: enter handler for 0x%"XINT32" nice=%"INT32"",
+		    (int32_t)slot->m_msgType,(int32_t)slot->m_niceness);
 
 	// . sanity check - if in a high niceness callback, we should
 	//   only be calling niceness 0 callbacks here.
@@ -2536,7 +2547,7 @@ bool UdpServer::makeCallback_ass ( UdpSlot *slot ) {
 	     (mem = ((float)g_mem.getUsedMem())/(float)g_mem.getMaxMem()) >=
 	     .990 ) {
 		// log it
-		static long lcount = 0;
+		static int32_t lcount = 0;
 		if ( lcount == 0 )
 			log(LOG_DEBUG,"loop: sending back enomem for "
 			    "msg 0x%0hhx", slot->m_msgType);
@@ -2568,16 +2579,16 @@ bool UdpServer::makeCallback_ass ( UdpSlot *slot ) {
 	g_niceness = saved;
 
 	if ( slot->m_msgType != 0x11 && g_conf.m_logDebugLoop )
-		log(LOG_DEBUG,"loop: exit handler for 0x%lx nice=%li",
-		    (long)slot->m_msgType,(long)slot->m_niceness);
+		log(LOG_DEBUG,"loop: exit handler for 0x%"XINT32" nice=%"INT32"",
+		    (int32_t)slot->m_msgType,(int32_t)slot->m_niceness);
 
 	// we called the handler, don't call it again
 	slot->m_calledHandler = true;
 
 	//if (g_conf.m_profilingEnabled){
 	//	if(!g_profiler.endTimer(address, __PRETTY_FUNCTION__))
-	//		log(LOG_WARN,"admin: Couldn't add the fn %li",
-	//		    (long)address);
+	//		log(LOG_WARN,"admin: Couldn't add the fn %"INT32"",
+	//		    (int32_t)address);
 	//}
 
 	// i've seen a bunch of msg20 handlers called in a row take over 
@@ -2591,12 +2602,12 @@ bool UdpServer::makeCallback_ass ( UdpSlot *slot ) {
 	slot->m_errno = 0;
 
 	if ( g_conf.m_maxCallbackDelay >= 0 ) {
-		long long elapsed = gettimeofdayInMillisecondsLocal() - start;
+		int64_t elapsed = gettimeofdayInMillisecondsLocal() - start;
 		if ( elapsed >= g_conf.m_maxCallbackDelay &&
 		     slot->m_niceness == 0 )
-			log("udp: Took %lli ms to call "
-			    "HANDLER for msgType=0x%hhx niceness=%li",
-			    elapsed,slot->m_msgType,(long)slot->m_niceness);
+			log("udp: Took %"INT64" ms to call "
+			    "HANDLER for msgType=0x%hhx niceness=%"INT32"",
+			    elapsed,slot->m_msgType,(int32_t)slot->m_niceness);
 	}
 
 	// bitch if it blocked for too long
@@ -2604,18 +2615,19 @@ bool UdpServer::makeCallback_ass ( UdpSlot *slot ) {
 	//mt = LOG_INFO;
 	//if ( took <= 50 ) mt = LOG_TIMING;
 	//if ( took > 10 )
-	//	log(mt,"net: Handler transId=%li slot=%lu "
+	//	log(mt,"net: Handler transId=%"INT32" slot=%"UINT32" "
 	// this is kinda obsolete now that we have the stats above
 	if ( g_conf.m_logDebugNet ) {
 		took = gettimeofdayInMillisecondsLocal() - start;
-		log(LOG_DEBUG,"net: Handler transId=%li slot=%lu "
-		    "msgType=0x%hhx msgSize=%li g_errno=%s callback=%08lx "
-		    "niceness=%li "
-		    "took %lli ms.",
-		    (long)slot->m_transId , (long)slot,
-		    msgType, (long)slot->m_readBufSize , mstrerror(g_errno),
-		    (long)slot->m_callback,
-		    (long)slot->m_niceness,
+		log(LOG_DEBUG,"net: Handler transId=%"INT32" slot=%"PTRFMT" "
+		    "msgType=0x%hhx msgSize=%"INT32" "
+		    "g_errno=%s callback=%08"PTRFMT" "
+		    "niceness=%"INT32" "
+		    "took %"INT64" ms.",
+		    (int32_t)slot->m_transId , (PTRTYPE)slot,
+		    msgType, (int32_t)slot->m_readBufSize , mstrerror(g_errno),
+		    (PTRTYPE)slot->m_callback,
+		    (int32_t)slot->m_niceness,
 		    took );
 	}
 	// clear any g_errno that may have been set
@@ -2638,7 +2650,8 @@ bool UdpServer::makeCallback_ass ( UdpSlot *slot ) {
 	// debug msg
 	if ( g_conf.m_logDebugUdp ) 
 		log(LOG_DEBUG,"udp: Queuing makeCallbacks_ass() sig for "
-		    "msgType=0x%hhx slot=%lu", slot->m_msgType,(long)slot);
+		    "msgType=0x%hhx slot=%"PTRFMT"", 
+		    slot->m_msgType,(PTRTYPE)slot);
 	// . if this fails it normally sends a SIGIO but I guess that won't
 	//   happen since we're already in an interrupt handler, so we have
 	//   to let g_loop know to poll
@@ -2666,8 +2679,8 @@ void timePollWrapper ( int fd , void *state ) {
 void UdpServer::timePoll ( ) {
 	// debug msg
 	//if ( g_conf.m_logDebugUdp ) 
-	//	log(LOG_DEBUG,"udp: timepoll: inSigHandler=%li, m_head2=%li.",
-	//	    (long)g_inSigHandler,(long)m_head2);
+	//	log(LOG_DEBUG,"udp: timepoll: inSigHandler=%"INT32", m_head2=%"INT32".",
+	//	    (int32_t)g_inSigHandler,(int32_t)m_head2);
 	// we cannot be in a live signal handler because readTimeoutPoll()
 	// will return true in an infinite loop because process_ass() will not
 	// be able to make callbacks to fix the situation
@@ -2686,9 +2699,9 @@ void UdpServer::timePoll ( ) {
 	// only repeat once
 	//bool first = true;
 	// get time now
-	long long now = gettimeofdayInMillisecondsLocal();
+	int64_t now = gettimeofdayInMillisecondsLocal();
 	// before timing everyone out or starting resends, just to make
-	// sure we read everything. we have have just been blocking on a long
+	// sure we read everything. we have have just been blocking on a int32_t
 	// handler or callback or sequence of those things and have stuff
 	// waiting to be read.
 	process_ass ( now );
@@ -2713,26 +2726,26 @@ void UdpServer::timePoll ( ) {
 #ifdef _UDPDEBUG_
 	// some debug info
 	if ( *s_token ) 
-		log("s_token  occupied by slot=%lu age=%lu",
-		    (unsigned long)*s_token,
-		    (unsigned long)now - *s_tokenTime );
+		log("s_token  occupied by slot=%"UINT32" age=%"UINT32"",
+		    (uint32_t)*s_token,
+		    (uint32_t)now - *s_tokenTime );
 	if (  s_local ) 
-		log("s_local  occupied by slot=%lu age=%lu",
-		    (unsigned long)s_local,
-		    (unsigned long)now - s_localTime );
+		log("s_local  occupied by slot=%"UINT32" age=%"UINT32"",
+		    (uint32_t)s_local,
+		    (uint32_t)now - s_localTime );
 #endif
 	*/
 }
 
 // every half second we check to see if 
-//long long s_lastDeadCheck = 0LL;
+//int64_t s_lastDeadCheck = 0LL;
 
 // . this is called once per second
 // . return false and sets g_errno on error
 // . calls the callback of REPLY-reception slots that have timed out
 // . just nuke the REQUEST-reception slots that have timed out
 // . returns true if we timed one out OR reset one for resending
-bool UdpServer::readTimeoutPoll ( long long now ) {
+bool UdpServer::readTimeoutPoll ( int64_t now ) {
 	// bail if we are in a wait state
 	if ( m_isSuspended ) return false;
 	// did we do something? assume not.
@@ -2746,29 +2759,29 @@ bool UdpServer::readTimeoutPoll ( long long now ) {
 		// debug msg
 		if ( g_conf.m_logDebugUdp && 1 == 0 ) 
 			log(LOG_DEBUG,
-			    "udp: resend TRY tid=%li "
+			    "udp: resend TRY tid=%"INT32" "
 			    "dst=%s:%hu " 
-			    "doneReading=%li "
-			    "dgramsToSend=%li "
-			    "resendTime=%li "
-			    "lastReadTime=%llu "
-			    "delta=%llu "
-			    "lastSendTime=%llu "
-			    "delta=%llu "
-			    "timeout=%lu "
-			    "sentBitsOn=%li "
-			    "readAckBitsOn=%li ",
+			    "doneReading=%"INT32" "
+			    "dgramsToSend=%"INT32" "
+			    "resendTime=%"INT32" "
+			    "lastReadTime=%"UINT64" "
+			    "delta=%"UINT64" "
+			    "lastSendTime=%"UINT64" "
+			    "delta=%"UINT64" "
+			    "timeout=%"UINT32" "
+			    "sentBitsOn=%"INT32" "
+			    "readAckBitsOn=%"INT32" ",
 			    slot->m_transId,
 			    iptoa(slot->m_ip)+6,
-			    (unsigned short)slot->m_port,
-			    (long)slot->isDoneReading(),
+			    (uint16_t)slot->m_port,
+			    (int32_t)slot->isDoneReading(),
 			    slot->m_dgramsToSend,
 			    slot->m_resendTime,
-			    slot->m_lastReadTime,
-			    now - slot->m_lastReadTime ,
-			    slot->m_lastSendTime,
-			    now - slot->m_lastSendTime ,
-			    slot->m_timeout,
+			    (uint64_t)slot->m_lastReadTime,
+			    (uint64_t)(now - slot->m_lastReadTime) ,
+			    (uint64_t)slot->m_lastSendTime,
+			    (uint64_t)(now - slot->m_lastSendTime) ,
+			    (uint32_t)slot->m_timeout,
 			    slot->m_sentBitsOn ,
 			    slot->m_readAckBitsOn ) ;
 		// skip empties
@@ -2789,7 +2802,7 @@ bool UdpServer::readTimeoutPoll ( long long now ) {
 		if ( slot->m_lastReadTime > now ) slot->m_lastReadTime = now;
 		if ( slot->m_lastSendTime > now ) slot->m_lastSendTime = now;
 		// get time elapsed since last read
-		long long elapsed = now - slot->m_lastReadTime;
+		int64_t elapsed = now - slot->m_lastReadTime;
 		// set all timeouts to 4 secs if we are shutting down
 		if ( m_isShuttingDown && slot->m_timeout > 4 ) 
 			slot->m_timeout = 4;
@@ -2799,9 +2812,9 @@ bool UdpServer::readTimeoutPoll ( long long now ) {
 		if ( (slot == *s_token || slot == s_local) && elapsed >= 30 ) {
 			//  slot->getNumAcksRead() <= 1 ) {
 			log("Token freed up (no more acks/dgrams read) for "
-			    "transId=%li msgType=0x%hhx weInitiated=%08lx",
+			    "transId=%"INT32" msgType=0x%hhx weInitiated=%08"XINT32"",
 			    slot->m_transId , slot->m_msgType,
-			    (long)slot->m_callback);
+			    (int32_t)slot->m_callback);
 			// debug msg
 			log("s_token released");
 			// ok, release it so we can blast msgs to remote hosts
@@ -2816,7 +2829,7 @@ bool UdpServer::readTimeoutPoll ( long long now ) {
 		// . 3. they take too long to ACK our reply 
 		// . 4. they take too long to ACK our request
 		// . only flag it if we haven't already...
-		if ( elapsed >= ((long long)slot->m_timeout) * 1000LL &&
+		if ( elapsed >= ((int64_t)slot->m_timeout) * 1000LL &&
 		     slot->m_errno != EUDPTIMEDOUT ) {
 			// . set slot's m_errno field
 			// . makeCallbacks_ass() should call its callback
@@ -2827,7 +2840,7 @@ bool UdpServer::readTimeoutPoll ( long long now ) {
 			continue;
 		}
 		// how long since last send?
-		long long delta = now - slot->m_lastSendTime;
+		int64_t delta = now - slot->m_lastSendTime;
 		// if elapsed is negative, then someone changed the system
 		// clock on us, so it won't hurt to resend just to update
 		// otherwise, we could be waiting years to resend
@@ -2921,9 +2934,9 @@ bool UdpServer::readTimeoutPoll ( long long now ) {
 			// let caller know we did something
 			something = true;
 			// note it
-			log("udp: Timing out slot (msgType=0x%lx) "
-			    "after %li resends. hostid=%li (elapsed=%lli)" ,
-			    (long)slot->m_msgType, (long)slot->m_resendCount ,
+			log("udp: Timing out slot (msgType=0x%"XINT32") "
+			    "after %"INT32" resends. hostid=%"INT32" (elapsed=%"INT64")" ,
+			    (int32_t)slot->m_msgType, (int32_t)slot->m_resendCount ,
 			    slot->m_hostId,elapsed);
 			// keep going
 			continue;
@@ -2978,7 +2991,7 @@ void UdpServer::destroySlot ( UdpSlot *slot ) {
 		if ( slot->m_msgType == 0x0c ) m_msg0csInWaiting--;
 		if ( slot->m_msgType == 0x00 ) m_msg0sInWaiting--;
 		// debug msg, good for msg routing distribution, too
-		//log("in waiting down to %li (0x%hhx) ",
+		//log("in waiting down to %"INT32" (0x%hhx) ",
 		//     m_requestsInWaiting, slot->m_msgType );
 		// resume the low priority udp server
 		if ( m_requestsInWaiting <= 0 && this == &g_udpServer2 )
@@ -2989,9 +3002,9 @@ void UdpServer::destroySlot ( UdpSlot *slot ) {
 	bool flipped = interruptsOff();
 	// save buf ptrs so we can free them
 	char *rbuf     = slot->m_readBuf;
-	long  rbufSize = slot->m_readBufMaxSize;
+	int32_t  rbufSize = slot->m_readBufMaxSize;
 	char *sbuf     = slot->m_sendBufAlloc;
-	long  sbufSize = slot->m_sendBufAllocSize;
+	int32_t  sbufSize = slot->m_sendBufAllocSize;
 	// don't free our static buffer
 	if ( rbuf == slot->m_tmpBuf ) rbuf = NULL;
 	// sometimes handlers will use our slots m_tmpBuf to store the reply
@@ -3019,8 +3032,8 @@ void UdpServer::destroySlot ( UdpSlot *slot ) {
 	// get the key of this slot...
 	//key_t key = slot->getKey();
 	//#ifdef _UDPDEBUG_		
-	//log("destroy slot=%li state=%li transId=%li",
-	//    (long)slot,(long)slot->m_state,slot->m_transId);
+	//log("destroy slot=%"INT32" state=%"INT32" transId=%"INT32"",
+	//    (int32_t)slot,(int32_t)slot->m_state,slot->m_transId);
 	//#endif
 	// now that we have one less slot we may be able to shutdown
 	//if ( m_isShuttingDown ) tryShuttingDown ( true );
@@ -3053,7 +3066,7 @@ bool UdpServer::shutdown ( bool urgent ) {
 
 	// wait for all transactions to complete
 	time_t now = getTime();
-	long count = 0;
+	int32_t count = 0;
 	if(!urgent) {
 		//if ( m_head && m_head2->m_next2 ) return false;		
 		for ( UdpSlot *slot = m_head2 ; slot ; slot = slot->m_next2 ) {
@@ -3143,9 +3156,9 @@ UdpSlot *UdpServer::getEmptyUdpSlot_ass ( key_t k ) {
 	// return NULL if none left
 	if ( ! m_head ) { 
 		g_errno = ENOSLOTS;
-		log("udp: %li of %li udp slots occupied. None available to "
+		log("udp: %"INT32" of %"INT32" udp slots occupied. None available to "
 		    "handle this new transaction.",
-		    (long)m_numUsedSlots,(long)m_maxSlots);
+		    (int32_t)m_numUsedSlots,(int32_t)m_maxSlots);
 		if ( flipped ) interruptsOn();
 		return NULL;
 	}
@@ -3192,7 +3205,7 @@ void UdpServer::addKey ( key_t k , UdpSlot *ptr ) {
 
 	// we assume that k.n1 is the transId. if this changes we should
 	// change this to keep our hash lookups fast
-	long i = hashLong(k.n1) & m_bucketMask;
+	int32_t i = hashLong(k.n1) & m_bucketMask;
 	while ( m_ptrs[i] )
 		if ( ++i >= m_numBuckets ) i = 0;
 	m_ptrs[i] = ptr;
@@ -3203,7 +3216,7 @@ UdpSlot *UdpServer::getUdpSlot ( key_t k ) {
 	// . hash into table
 	// . transId is key.n1, use that as hash
 	// . m_numBuckets must be a power of 2
-	long i = hashLong(k.n1) & m_bucketMask;
+	int32_t i = hashLong(k.n1) & m_bucketMask;
 	while ( m_ptrs[i] && m_ptrs[i]->m_key != k ) 
 		if ( ++i >= m_numBuckets ) i = 0;
 	// if empty, return NULL
@@ -3233,7 +3246,7 @@ void UdpServer::freeUdpSlot_ass ( UdpSlot *slot ) {
 	// . get bucket number in hash table
 	// . may have change since table often gets rehashed
 	key_t k = slot->m_key;
-	long i = hashLong(k.n1) & m_bucketMask;
+	int32_t i = hashLong(k.n1) & m_bucketMask;
 	while ( m_ptrs[i] && m_ptrs[i]->m_key != k ) 
 		if ( ++i >= m_numBuckets ) i = 0;
 	// sanity check
@@ -3242,12 +3255,13 @@ void UdpServer::freeUdpSlot_ass ( UdpSlot *slot ) {
 		char *xx = NULL; *xx = 0;
 	}
 	if ( g_conf.m_logDebugUdp )
-		log(LOG_DEBUG,"udp: freeUdpSlot_ass: Freeing slot tid=%li "
-		    "dst=%s:%hu slot=%li",
+		log(LOG_DEBUG,"udp: freeUdpSlot_ass: Freeing slot "
+		    "tid=%"INT32" "
+		    "dst=%s:%"UINT32" slot=%"PTRFMT"",
 		    slot->m_transId,
 		    iptoa(slot->m_ip)+6,
-		    (unsigned short)slot->m_port,
-		    (unsigned long)slot);
+		    (uint32_t)slot->m_port,
+		    (PTRTYPE)slot);
 	// remove the bucket
 	m_ptrs [ i ] = NULL;
 	// rehash all buckets below
@@ -3290,9 +3304,11 @@ void UdpServer::cancel ( void *state , unsigned char msgType ) {
 
 void UdpServer::replaceHost ( Host *oldHost, Host *newHost ) {
 	bool flipped = interruptsOff();
-	log ( LOG_INFO, "udp: Replacing slots for ip: %lx/%lx port: %hu",
-	      oldHost->m_ip, oldHost->m_ipShotgun,
-	      oldHost->m_port );//, oldHost->m_port2 );
+	log ( LOG_INFO, "udp: Replacing slots for ip: "
+	      "%"UINT32"/%"UINT32" port: %"UINT32"",
+	      (uint32_t)oldHost->m_ip, 
+	      (uint32_t)oldHost->m_ipShotgun,
+	      (uint32_t)oldHost->m_port );//, oldHost->m_port2 );
 	// . loop over outstanding transactions looking for ones to oldHost
 	for ( UdpSlot *slot = m_head2; slot; slot = slot->m_next2 ) {
 		// ignore incoming
@@ -3311,7 +3327,7 @@ void UdpServer::replaceHost ( Host *oldHost, Host *newHost ) {
 		// . get bucket number in hash table
 		// . may have change since table often gets rehashed
 		key_t k = slot->m_key;
-		long i = hashLong(k.n1) & m_bucketMask;
+		int32_t i = hashLong(k.n1) & m_bucketMask;
 		while ( m_ptrs[i] && m_ptrs[i]->m_key != k ) 
 			if ( ++i >= m_numBuckets ) i = 0;
 		// sanity check
@@ -3321,12 +3337,14 @@ void UdpServer::replaceHost ( Host *oldHost, Host *newHost ) {
 			char *xx = NULL; *xx = 0;
 		}
 		if ( g_conf.m_logDebugUdp )
-			log(LOG_DEBUG,"udp: replaceHost: Rehashing slot "
-				      "tid=%li dst=%s:%hu slot=%li",
+			log(LOG_DEBUG,
+			    "udp: replaceHost: Rehashing slot "
+			    "tid=%"INT32" dst=%s:%"UINT32" "
+			    "slot=%"PTRFMT"",
 				      slot->m_transId,
 				      iptoa(slot->m_ip)+6,
-				      (unsigned short)slot->m_port,
-				      (unsigned long)slot);
+				      (uint32_t)slot->m_port,
+				      (PTRTYPE)slot);
 		// remove the bucket
 		m_ptrs [ i ] = NULL;
 		// rehash all buckets below
@@ -3363,7 +3381,7 @@ void UdpServer::replaceHost ( Host *oldHost, Host *newHost ) {
 		slot->resetConnect();
 		// log it
 		log ( LOG_INFO, "udp: Reset Slot For Replaced Host: "
-				"transId=%li msgType=%i",
+				"transId=%"INT32" msgType=%i",
 				slot->m_transId, slot->m_msgType );
 	}
 	if ( flipped ) interruptsOn();

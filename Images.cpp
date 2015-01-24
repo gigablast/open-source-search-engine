@@ -13,7 +13,7 @@
 //static void gotTermFreqWrapper ( void *state ) ;
 static void gotTermListWrapper ( void *state ) ;
 static void *thumbStartWrapper_r ( void *state , ThreadEntry *te );
-static void getImageInfo ( char *buf, long size, long *dx, long *dy, long *it);
+static void getImageInfo ( char *buf, int32_t size, int32_t *dx, int32_t *dy, int32_t *it);
 
 Images::Images ( ) {
 	reset();
@@ -33,17 +33,17 @@ void Images::reset() {
 }
 
 /*
-bool Images::hash ( long       titleRecVersion ,
+bool Images::hash ( int32_t       titleRecVersion ,
 		    Xml       *xml             ,
 		    Url       *pageUrl         ,
 		    TermTable *table           ,
-		    long       score           ) {
+		    int32_t       score           ) {
 
-	for ( long i = 0 ; i < m_numImages ; i++ ) {
+	for ( int32_t i = 0 ; i < m_numImages ; i++ ) {
 		// get the node number
-		long nn = m_imageNodes[i];
+		int32_t nn = m_imageNodes[i];
 		// get the url of the image
-		long  srcLen;
+		int32_t  srcLen;
 		char *src = xml->getString(nn,nn+1,"src",&srcLen);
 		// set it to the full url
 		Url iu;
@@ -96,8 +96,8 @@ void Images::setCandidates ( Url *pageUrl , Words *words , Xml *xml ,
 	// basically they page telling us the best image straight up.
 	//
 
-	long node2 = -1;
-	long startNode = 0;
+	int32_t node2 = -1;
+	int32_t startNode = 0;
 
 	// . field can be stuff like "summary","description","keywords",...
 	// . if "convertHtmlEntites" is true we change < to &lt; and > to &gt;
@@ -105,7 +105,7 @@ void Images::setCandidates ( Url *pageUrl , Words *words , Xml *xml ,
 	// . <meta property="og:image" content="http://example.com/rock3.jpg"/>
  ogimgloop:
 	char ubuf[2000];
-	long ulen = xml->getMetaContent ( ubuf , // store the val here
+	int32_t ulen = xml->getMetaContent ( ubuf , // store the val here
 					  1999 ,
 					  "og:image",
 					  8,
@@ -149,20 +149,20 @@ void Images::setCandidates ( Url *pageUrl , Words *words , Xml *xml ,
 
 	//m_pageSite  = pageSite;
 	// scan the words
-	long       nw     = words->getNumWords();
+	int32_t       nw     = words->getNumWords();
 	nodeid_t  *tids   = words->getTagIds();
-	long long *wids   = words->getWordIds();
-	//long      *scores = scoresArg->m_scores;
+	int64_t *wids   = words->getWordIds();
+	//int32_t      *scores = scoresArg->m_scores;
 	Section **sp = NULL; 
 	if ( sections ) sp = sections->m_sectionPtrs;
 	// not if we don't have any identified sections
 	if ( sections && sections->m_numSections <= 0 ) sp = NULL;
 	// the positive scored window
-	long firstPosScore = -1;
-	long lastPosScore  = -1;
-	long badFlags = SEC_SCRIPT|SEC_STYLE|SEC_SELECT|SEC_MARQUEE;
+	int32_t firstPosScore = -1;
+	int32_t lastPosScore  = -1;
+	int32_t badFlags = SEC_SCRIPT|SEC_STYLE|SEC_SELECT|SEC_MARQUEE;
 	// find positive scoring window
-	for ( long i = 0 ; i < nw ; i++ ) {
+	for ( int32_t i = 0 ; i < nw ; i++ ) {
 		// skip if in bad section
 		if ( sp && (sp[i]->m_flags & badFlags) ) continue;
 		if ( wids[i]   != 0 ) continue;
@@ -177,7 +177,7 @@ void Images::setCandidates ( Url *pageUrl , Words *words , Xml *xml ,
 	// . i.e. stop once we hit a front/back tag pair, like <div> and </div>
 	char tc[512];
 	memset ( tc , 0 , 512 );
-	long a = firstPosScore;
+	int32_t a = firstPosScore;
 	for ( ; a >= 0 ; a-- ) {
 		// get the tid
 		nodeid_t tid = tids[a];
@@ -204,19 +204,19 @@ void Images::setCandidates ( Url *pageUrl , Words *words , Xml *xml ,
 	if ( a < 0 ) a = 0;
 
 	// now look for the image urls within this window
-	for ( long i = a ; i < lastPosScore ; i++ ) {
+	for ( int32_t i = a ; i < lastPosScore ; i++ ) {
 		// skip if not <img> tag
 		if (tids[i] != TAG_IMG ) continue;
 		// get the node num into Xml.cpp::m_nodes[] array
-		long nn = words->m_nodes[i];
+		int32_t nn = words->m_nodes[i];
 		// check width to rule out small decorating imgs
-		long width = xml->getLong(nn,nn+1,"width", -1 );
+		int32_t width = xml->getLong(nn,nn+1,"width", -1 );
 		if ( width != -1 && width < 50 ) continue;
 		// same with height
-		long height = xml->getLong(nn,nn+1, "height", -1 );
+		int32_t height = xml->getLong(nn,nn+1, "height", -1 );
 		if ( height != -1 && height < 50 ) continue;
 		// get the url of the image
-		long  srcLen;
+		int32_t  srcLen;
 		char *src = xml->getString(nn,"src",&srcLen);
 		// skip if none
 		if ( srcLen <= 2 ) continue;
@@ -227,12 +227,12 @@ void Images::setCandidates ( Url *pageUrl , Words *words , Xml *xml ,
 		// skip if invalid domain or TLD
 		if ( iu.getDomainLen() <= 0 ) continue;
 		// skip if not from same domain as page url
-		//long dlen = pageUrl->getDomainLen();
+		//int32_t dlen = pageUrl->getDomainLen();
 		//if ( iu.getDomainLen() != dlen ) continue;
 		//if(strncmp(iu.getDomain(),pageUrl->getDomain(),dlen))continue
 		// get the full url
 		char *u    = iu.getUrl();
-		long  ulen = iu.getUrlLen();
+		int32_t  ulen = iu.getUrlLen();
 		// skip common crap
 		if ( strncasestr(u,ulen,"logo"           ) ) continue;
 		if ( strncasestr(u,ulen,"comment"        ) ) continue;
@@ -280,12 +280,12 @@ void Images::setCandidates ( Url *pageUrl , Words *words , Xml *xml ,
 // . returns false if blocked, returns true otherwise
 // . sets g_errno on error
 bool Images::getThumbnail ( char *pageSite ,
-			    long  siteLen  ,
-			    long long docId ,
+			    int32_t  siteLen  ,
+			    int64_t docId ,
 			    XmlDoc *xd ,
 			    collnum_t collnum,//char *coll ,
 			    //char **statusPtr ,
-			    long hopCount,
+			    int32_t hopCount,
 			    void *state ,
 			    void   (*callback)(void *state) ) {
 	// sanity check
@@ -340,7 +340,7 @@ bool Images::getThumbnail ( char *pageSite ,
 	// site MUST NOT start with "http://"
 	if ( strncmp ( pageSite , "http://", 7)==0){char*xx=NULL;*xx=0;}
 	// this must match what we hash in XmlDoc::hashNoSplit()
-	sprintf ( buf , "gbsitetemplate:%lu%s", (unsigned long)*tph,pageSite );
+	sprintf ( buf , "gbsitetemplate:%"UINT32"%s", (uint32_t)*tph,pageSite );
 	pageSite[siteLen]=c;
 	// TODO: make sure this is a no-split termid storage thingy
 	// in Msg14.cpp
@@ -349,7 +349,7 @@ bool Images::getThumbnail ( char *pageSite ,
 		// return true with g_errno set on error
 		return true;
 	// store the termid
-	long long termId = q.getTermId(0);
+	int64_t termId = q.getTermId(0);
 
 	key144_t startKey ;
 	key144_t endKey   ;
@@ -358,10 +358,10 @@ bool Images::getThumbnail ( char *pageSite ,
 
 	// get shard of that (this termlist is sharded by termid -
 	// see XmlDoc.cpp::hashNoSplit() where it hashes gbsitetemplate: term)
-	long shardNum = g_hostdb.getShardNumByTermId ( &startKey );
+	int32_t shardNum = g_hostdb.getShardNumByTermId ( &startKey );
 
 	if ( g_conf.m_logDebugImage )
-		log("image: image checking %s list on shard %li",buf,shardNum);
+		log("image: image checking %s list on shard %"INT32"",buf,shardNum);
 
 	// if ( ! m_msg36.getTermFreq ( m_collnum               ,
 	// 			     0                  , // maxAge
@@ -427,9 +427,9 @@ bool Images::gotTermFreq ( ) {
 	// error?
 	if ( g_errno ) return true;
 	// bail if less than 10
-	//long long nt = m_msg36.getTermFreq();
+	//int64_t nt = m_msg36.getTermFreq();
 	// each key but the first is 12 bytes (compressed)
-	long long nt = (m_list.getListSize() - 6)/ 12;
+	int64_t nt = (m_list.getListSize() - 6)/ 12;
 	// . return true, without g_errno set, we are done
 	// . if we do not have 10 or more webpages that share this same 
 	//   template then do not do image extraction at all, it is too risky
@@ -447,7 +447,7 @@ bool Images::gotTermFreq ( ) {
 // . see if other pages we've indexed have this same image url
 bool Images::launchRequests ( ) {
 	// loop over all images
-	for ( long i = m_i ; i < m_numImages ; i++ ) {
+	for ( int32_t i = m_i ; i < m_numImages ; i++ ) {
 		// advance
 		m_i++;
 		// assume no error
@@ -460,20 +460,20 @@ bool Images::launchRequests ( ) {
 		g_posdb.makeStartKey(&startKey,m_termIds[i]);
 		g_posdb.makeEndKey  (&endKey  ,m_termIds[i]);
 		// get our residing groupid
-		//unsigned long gid = g_indexdb.getNoSplitGroupId(&startKey);
+		//uint32_t gid = g_indexdb.getNoSplitGroupId(&startKey);
 		// no split is true for this one, so we do not split by docid
 		//uint32_t gid = getGroupId(RDB_INDEXDB,&startKey,false);
-		unsigned long shardNum;
+		uint32_t shardNum;
 		//shardNum = getShardNum(RDB_POSDB,&startKey);
 		//uint32_t getShardNum (char rdbId, void *key );
-		//uint32_t getShardNumFromDocId ( long long d ) ;
+		//uint32_t getShardNumFromDocId ( int64_t d ) ;
 		// assume to be for posdb here
 		shardNum = g_hostdb.getShardNumByTermId ( &startKey );
 
 		// debug msg
 		if ( g_conf.m_logDebugImage )
-			log("image: image checking shardnum %li (termid0=%llu)"
-			    " for image url #%li",
+			log("image: image checking shardnum %"INT32" (termid0=%"UINT64")"
+			    " for image url #%"INT32"",
 			    shardNum ,m_termIds[i],i);
 
 		// get the termlist
@@ -527,7 +527,7 @@ void gotTermListWrapper ( void *state ) {
 }
 
 void Images::gotTermList ( ) {
-	long i = m_i - 1;
+	int32_t i = m_i - 1;
 	// i guess get errors too
 	if ( g_errno ) m_errors[i] = g_errno;
 	// set a globalish flag
@@ -539,7 +539,7 @@ void Images::gotTermList ( ) {
 	// loop over it
 	for ( ; ! m_list.isExhausted() ; m_list.skipCurrentRecord() ) {
 		// get the first rec
-		long long d = m_list.getCurrentDocId();
+		int64_t d = m_list.getCurrentDocId();
 		// note it
 		//log("dup: image is dupped");
 		// is it us? if so ignore it
@@ -555,9 +555,9 @@ bool Images::downloadImages () {
 	// all done if we got a valid thumbnail
 	//if ( m_thumbnailValid ) return true;
 
-	long  srcLen;
+	int32_t  srcLen;
 	char *src = NULL;
-	long node;
+	int32_t node;
 
 	// downloading an image from diffbot json reply?
 	if ( m_xd->m_isDiffbotJSONObject ) {
@@ -611,7 +611,7 @@ bool Images::downloadImages () {
 			// skip if bad or not unique
 			if ( m_errors[m_j] ) continue;
 			// set status msg
-			sprintf ( m_statusBuf ,"downloading image %li",m_j);
+			sprintf ( m_statusBuf ,"downloading image %"INT32"",m_j);
 			// point to it
 			if ( m_xd ) m_xd->setStatus ( m_statusBuf );
 		}
@@ -657,9 +657,9 @@ bool Images::downloadImages () {
 		}
 
 		// it's a keeper
-		long urlSize = m_imageUrl.getUrlLen() + 1; // include \0
+		int32_t urlSize = m_imageUrl.getUrlLen() + 1; // include \0
 		// . make our ThumbnailArray out of it
-		long need = 0;
+		int32_t need = 0;
 		// the array itself
 		need += sizeof(ThumbnailArray);
 		// and each thumbnail it contains
@@ -686,10 +686,10 @@ bool Images::downloadImages () {
 		// now copy the data over sequentially
 		char *p = ti->m_buf;
 		// the image url
-		memcpy(p,m_imageUrl.getUrl(),urlSize);
+		gbmemcpy(p,m_imageUrl.getUrl(),urlSize);
 		p += urlSize;
 		// the image thumbnail data
-		memcpy(p,m_imgData,m_thumbnailSize);
+		gbmemcpy(p,m_imgData,m_thumbnailSize);
 		p += m_thumbnailSize;
 		// update buf length of course
 		m_imageBuf.setLength ( p - m_imageBuf.getBufStart() );
@@ -713,7 +713,7 @@ bool Images::downloadImages () {
 	return true;
 }
 
-static void gotImgIpWrapper ( void *state , long ip ) {
+static void gotImgIpWrapper ( void *state , int32_t ip ) {
 	Images *THIS = (Images *)state;
 	// control loop
 	if ( ! THIS->downloadImages() ) return;
@@ -743,7 +743,7 @@ static void downloadImageWrapper ( void *state ) {
 bool Images::downloadImage ( ) {
 	// error?
 	if ( m_latestIp == 0 || m_latestIp == -1 ) {
-		log(LOG_DEBUG,"images: ip of %s is %li (%s)",
+		log(LOG_DEBUG,"images: ip of %s is %"INT32" (%s)",
 		    m_imageUrl.getUrl(),m_latestIp,mstrerror(g_errno));
 		// ignore errors
 		g_errno = 0;
@@ -798,7 +798,7 @@ bool Images::makeThumb ( ) {
 		return true;
 	}
 	char *buf;
-	long  bufLen, bufMaxLen;
+	int32_t  bufLen, bufMaxLen;
 	HttpMime mime;
 	m_imgData     = NULL;
 	m_imgDataSize = 0;
@@ -822,10 +822,10 @@ bool Images::makeThumb ( ) {
 		return true;
 	}
 	// we are image candidate #i
-	//long i = m_j - 1;
+	//int32_t i = m_j - 1;
 	// get img tag node
 	// get the url of the image
-	long  srcLen;
+	int32_t  srcLen;
 	char *src = NULL;
 	if ( m_xd->m_isDiffbotJSONObject ) {
 		src = *m_xd->getDiffbotPrimaryImageUrl();
@@ -847,10 +847,10 @@ bool Images::makeThumb ( ) {
 		return true;
 	}
 	// set the status so caller can see
-	long httpStatus = mime.getHttpStatus();
+	int32_t httpStatus = mime.getHttpStatus();
 	// check the status
 	if ( httpStatus != 200 ) {
-		log( LOG_DEBUG, "image: http status of img download is %li.",
+		log( LOG_DEBUG, "image: http status of img download is %"INT32".",
 		     m_httpStatus);
 		// give up on the remaining images then
 		m_stopDownloading = true;
@@ -886,16 +886,16 @@ bool Images::makeThumb ( ) {
 	// get next if too small
 	if ( m_imgDataSize < 20 ) { g_errno = EBADIMG; return true; }
 
-	long imageType;
+	int32_t imageType;
 	getImageInfo ( m_imgData, m_imgDataSize, &m_dx, &m_dy, &imageType );
 
 	// log the image dimensions
 	log( LOG_DEBUG,"image: Image Link: %s", iu.getUrl() );
-	log( LOG_DEBUG,"image: Max Buffer Size: %lu bytes.",m_imgReplyMaxLen);
-	log( LOG_DEBUG,"image: Image Original Size: %lu bytes.",m_imgReplyLen);
-	log( LOG_DEBUG,"image: Image Buffer @ 0x%lx - 0x%lx",(long)m_imgReply, 
-	     (long)m_imgReply+m_imgReplyMaxLen );
-	log( LOG_DEBUG, "image: Size: %lupx x %lupx", m_dx, m_dy );
+	log( LOG_DEBUG,"image: Max Buffer Size: %"UINT32" bytes.",m_imgReplyMaxLen);
+	log( LOG_DEBUG,"image: Image Original Size: %"UINT32" bytes.",m_imgReplyLen);
+	log( LOG_DEBUG,"image: Image Buffer @ 0x%"PTRFMT" - 0x%"PTRFMT"",(PTRTYPE)m_imgReply, 
+	     (PTRTYPE)(m_imgReply+m_imgReplyMaxLen) );
+	log( LOG_DEBUG, "image: Size: %"UINT32"px x %"UINT32"px", m_dx, m_dy );
 
 	// what is this?
 	if ( m_dx <= 0 || m_dy <= 0 ) {
@@ -964,7 +964,7 @@ void *thumbStartWrapper_r ( void *state , ThreadEntry *t ) {
 
 void Images::thumbStart_r ( bool amThread ) {
 
-	long long start = gettimeofdayInMilliseconds();
+	int64_t start = gettimeofdayInMilliseconds();
 
 	//static char  scmd[200] = "%stopnm %s | "
 	//                         "pnmscale -xysize 100 100 - | "
@@ -979,14 +979,16 @@ void Images::thumbStart_r ( bool amThread ) {
 
 	makeTrashDir();
 
-	// get thread id
-	long id = getpidtid();
+	// get thread id. pthread_t is 64 bit and pid_t is 32 bit on
+	// 64 bit oses
+	pthread_t id = getpidtid();
 
 	// pass the input to the program through this file
 	// rather than a pipe, since popen() seems broken.
 	// m_dir ends in / so this should work.
 	char in[364];
-	snprintf ( in , 363,"%strash/in.%li", g_hostdb.m_dir, id );
+	snprintf ( in , 363,"%strash/in.%"INT64""
+		   , g_hostdb.m_dir, (int64_t)id );
 	unlink ( in );
 
 	log( LOG_DEBUG, "image: thumbStart_r create in file." );
@@ -994,7 +996,8 @@ void Images::thumbStart_r ( bool amThread ) {
 	// collect the output from the filter from this file
 	// m_dir ends in / so this should work.
 	char out[364];
-	snprintf ( out , 363,"%strash/out.%li", g_hostdb.m_dir, id );
+	snprintf ( out , 363,"%strash/out.%"INT64""
+		   , g_hostdb.m_dir, (int64_t)id );
         unlink ( out );
 
 	log( LOG_DEBUG, "image: thumbStart_r create out file." );
@@ -1032,7 +1035,7 @@ void Images::thumbStart_r ( bool amThread ) {
 	fhndl = 0;
 
         // Grab content type from mime
-	//long imgType = mime.getContentType();
+	//int32_t imgType = mime.getContentType();
         char  ext[5];
         switch( m_imgType ) {
                case CT_GIF:
@@ -1052,7 +1055,7 @@ void Images::thumbStart_r ( bool amThread ) {
 		       break;
         } 
 
-	//long xysize = 250;//100;
+	//int32_t xysize = 250;//100;
 	// make thumbnail a little bigger for diffbot for widget
 	//if ( m_xd->m_isDiffbotJSONObject ) xysize = 250;
 
@@ -1066,7 +1069,7 @@ void Images::thumbStart_r ( bool amThread ) {
 	// wdir ends in / so this should work.
 	snprintf( cmd, 2500 ,
 		 "LD_LIBRARY_PATH=%s %s%stopnm %s 2>> %s | "
-		 "LD_LIBRARY_PATH=%s %spnmscale -xysize %li %li - 2>> %s | "
+		 "LD_LIBRARY_PATH=%s %spnmscale -xysize %"INT32" %"INT32" - 2>> %s | "
 		  // put all its stderr msgs into /dev/null
 		  // so "jpegtopnm: WRITING PPM FILE" doesn't clog console
 		 "LD_LIBRARY_PATH=%s %sppmtojpeg - > %s 2>> %s"
@@ -1087,7 +1090,7 @@ void Images::thumbStart_r ( bool amThread ) {
 	if ( s_hasNetpbm )
 		snprintf( cmd, 2500 ,
 			  "%stopnm %s 2>> %s | "
-			  "pnmscale -xysize %li %li - 2>> %s | "
+			  "pnmscale -xysize %"INT32" %"INT32" - 2>> %s | "
 			  "ppmtojpeg - > %s 2>> %s"
 			  , ext , in , logFile
 			  , m_xysize , m_xysize , logFile
@@ -1130,7 +1133,7 @@ void Images::thumbStart_r ( bool amThread ) {
         }
 
 	if( (m_thumbnailSize = lseek( fhndl, 0, SEEK_END )) < 0 ) {
-		log( "image: Seek of file, %s, returned invalid size: %ld",
+		log( "image: Seek of file, %s, returned invalid size: %"INT32"",
 		     out, m_thumbnailSize );
 		m_stopDownloading = true;
 		close(fhndl);
@@ -1140,10 +1143,10 @@ void Images::thumbStart_r ( bool amThread ) {
 
 	if( m_thumbnailSize > m_imgReplyMaxLen ) {
 		log(LOG_DEBUG,"image: Image thumbnail larger than buffer!" );
-		log(LOG_DEBUG,"image: File Read Bytes: %ld", m_thumbnailSize);
-		log(LOG_DEBUG,"image: Buf Max Bytes  : %ld",m_imgReplyMaxLen );
+		log(LOG_DEBUG,"image: File Read Bytes: %"INT32"", m_thumbnailSize);
+		log(LOG_DEBUG,"image: Buf Max Bytes  : %"INT32"",m_imgReplyMaxLen );
 		log(LOG_DEBUG,"image: -----------------------" );
-		log(LOG_DEBUG,"image: Diff           : %ld", 
+		log(LOG_DEBUG,"image: Diff           : %"INT32"", 
 		     m_imgReplyMaxLen-m_thumbnailSize );
 		close(fhndl);
 		unlink ( out );
@@ -1180,7 +1183,7 @@ void Images::thumbStart_r ( bool amThread ) {
         }
 	fhndl = 0;
        	unlink( out );
-	long long stop = gettimeofdayInMilliseconds();
+	int64_t stop = gettimeofdayInMilliseconds();
 	// tell the loop above not to download anymore, we got one
 	m_thumbnailValid = true;
 
@@ -1192,14 +1195,14 @@ void Images::thumbStart_r ( bool amThread ) {
 	
 
 
-	log( LOG_DEBUG, "image: Thumbnail size: %li bytes.", m_imgDataSize );
-	log( LOG_DEBUG, "image: Thumbnail dx=%li dy=%li.", m_tdx,m_tdy );
-	log( LOG_DEBUG, "image: Thumbnail generated in %lldms.", stop-start );
+	log( LOG_DEBUG, "image: Thumbnail size: %"INT32" bytes.", m_imgDataSize );
+	log( LOG_DEBUG, "image: Thumbnail dx=%"INT32" dy=%"INT32".", m_tdx,m_tdy );
+	log( LOG_DEBUG, "image: Thumbnail generated in %"INT64"ms.", stop-start );
 }
 
 // . *it is the image type
-void getImageInfo ( char *buf , long bufSize , 
-		    long *dx , long *dy , long *it ) {
+void getImageInfo ( char *buf , int32_t bufSize , 
+		    int32_t *dx , int32_t *dy , int32_t *it ) {
 
 	// default to zeroes
 	*dx = 0;
@@ -1218,31 +1221,31 @@ void getImageInfo ( char *buf , long bufSize ,
 		if ( it ) *it = CT_GIF;
 		log( LOG_DEBUG, "image: GIF INFORMATION:" );
 		if( bufSize > 9 ) {
-			*dx = ((unsigned long)buf[7]) << 8;
+			*dx = ((uint32_t)buf[7]) << 8;
 			*dx += (unsigned char)buf[6];
-			*dy = ((unsigned long)buf[9]) << 8;
+			*dy = ((uint32_t)buf[9]) << 8;
 			*dy += (unsigned char)buf[8];
 		}
 	}
 	else if( (strPtr = strncasestr( buf, 20, "JFIF" )) ) {
 		if ( it ) *it = CT_JPG;
 		log( LOG_DEBUG, "image: JPEG INFORMATION:" );
-		long i;
+		int32_t i;
 		for( i = 0; i < bufSize; i++ ) {
 			if( bufSize < i+8 )
 				break;
 			if( (unsigned char)buf[i] != 0xFF ) continue;
 			if( (unsigned char)buf[i+1] == 0xC0 ){
-				*dy = ((unsigned long)buf[i+5]) << 8;
+				*dy = ((uint32_t)buf[i+5]) << 8;
 				*dy += (unsigned char)buf[i+6];
-				*dx = ((unsigned long)buf[i+7]) << 8;
+				*dx = ((uint32_t)buf[i+7]) << 8;
 				*dx += (unsigned char)buf[i+8];
 				break;
 			}
 			else if( (unsigned char) buf[i+1] == 0xC2 ) {
-				*dy = ((unsigned long)buf[i+5]) << 8;
+				*dy = ((uint32_t)buf[i+5]) << 8;
 				*dy += (unsigned char)buf[i+6];
-				*dx = ((unsigned long)buf[i+7]) << 8;
+				*dx = ((uint32_t)buf[i+7]) << 8;
 				*dx += (unsigned char)buf[i+8];
 				break;
 			}
@@ -1252,8 +1255,8 @@ void getImageInfo ( char *buf , long bufSize ,
 		if ( it ) *it = CT_PNG;
 		log( LOG_DEBUG, "image: PNG INFORMATION:" );
 		if( bufSize > 25 ) {
-			*dx=(unsigned long)(*(unsigned long *)&buf[16]);
-			*dy=(unsigned long)(*(unsigned long *)&buf[20]);
+			*dx=(uint32_t)(*(uint32_t *)&buf[16]);
+			*dy=(uint32_t)(*(uint32_t *)&buf[20]);
 			// these are in network order
 			*dx = ntohl(*dx);
 			*dy = ntohl(*dy);
@@ -1262,40 +1265,40 @@ void getImageInfo ( char *buf , long bufSize ,
 	else if( (strPtr = strncasestr( buf, 20, "MM" )) ) {
 		if ( it ) *it = CT_TIFF;
 		log( LOG_DEBUG, "image: TIFF INFORMATION:" );
-		long startCnt = (unsigned long)buf[7]+4;
-		for( long i = startCnt; i < bufSize; i += 12 ) {
+		int32_t startCnt = (uint32_t)buf[7]+4;
+		for( int32_t i = startCnt; i < bufSize; i += 12 ) {
 			if( bufSize < i+10 )
 				break;
 			if( buf[i] != 0x01 ) continue;
 			if( buf[i+1] == 0x01 )
-				*dy = (unsigned long)
-					(*(unsigned short *)&buf[i+8]);
+				*dy = (uint32_t)
+					(*(uint16_t *)&buf[i+8]);
 			else if( buf[i+1] == 0x00 )
-				*dx = (unsigned long)
-					(*(unsigned short *)&buf[i+8]);
+				*dx = (uint32_t)
+					(*(uint16_t *)&buf[i+8]);
 		}
 	}
 	else if( (strPtr = strncasestr( buf, 20, "II" )) ) {
 		if ( it ) *it = CT_TIFF;
 		log( LOG_DEBUG, "image: TIFF INFORMATION:" );
-		long startCnt = (unsigned long)buf[7]+4;
-		for( long i = startCnt; i < bufSize; i += 12 ) {
+		int32_t startCnt = (uint32_t)buf[7]+4;
+		for( int32_t i = startCnt; i < bufSize; i += 12 ) {
 			if( bufSize < i+10 )
 				break;
 			if( buf[i] == 0x01 && buf[i+1] == 0x01 )
-				*dy = (unsigned long)
-					(*(unsigned short *)&buf[i+8]);
+				*dy = (uint32_t)
+					(*(uint16_t *)&buf[i+8]);
 			if( buf[i] == 0x00 && buf[i+1] == 0x01 )
-				*dx = (unsigned long)
-					(*(unsigned short *)&buf[i+8]);
+				*dx = (uint32_t)
+					(*(uint16_t *)&buf[i+8]);
 		}
 	}
 	else if( (strPtr = strncasestr( buf, 20, "BM" )) ) {
 		if ( it ) *it = CT_BMP;
 		log( LOG_DEBUG, "image: BMP INFORMATION:" );
 		if( bufSize > 27 ) {
-			*dx=(unsigned long)(*(unsigned long *)&buf[18]);
-			*dy=(unsigned long)(*(unsigned long *)&buf[22]);
+			*dx=(uint32_t)(*(uint32_t *)&buf[18]);
+			*dy=(uint32_t)(*(uint32_t *)&buf[22]);
 		}
 	}
 	else 
@@ -1305,15 +1308,15 @@ void getImageInfo ( char *buf , long bufSize ,
 
 // container is maxWidth X maxHeight, so try to fix widget in there
 bool ThumbnailInfo::printThumbnailInHtml ( SafeBuf *sb , 
-					   long maxWidth ,
-					   long maxHeight,
+					   int32_t maxWidth ,
+					   int32_t maxHeight,
 					   bool printLink ,
-					   long *retNewdx ,
+					   int32_t *retNewdx ,
 					   char *style ,
 					   char format )  {
 	if ( ! style ) style = "";
 	// account for scrollbar on the right
-	//maxSide -= (long)SCROLLBAR_WIDTH;
+	//maxSide -= (int32_t)SCROLLBAR_WIDTH;
 	// avoid distortion.
 	// if image is wide, use that to scale
 	if ( m_dx <= 0 ) return true;
@@ -1326,15 +1329,15 @@ bool ThumbnailInfo::printThumbnailInHtml ( SafeBuf *sb ,
 		(float)m_dy;
 	float min = xscale;
 	if ( yscale < min ) min = yscale;
-	long newdx = (long)((float)m_dx * min);
-	long newdy = (long)((float)m_dy * min);
+	int32_t newdx = (int32_t)((float)m_dx * min);
+	int32_t newdy = (int32_t)((float)m_dy * min);
 
 	// might be FORMAT_AJAX!
 	if ( printLink && format !=FORMAT_XML && format != FORMAT_JSON )
 		sb->safePrintf("<a href=%s>", getUrl() );
 
 	if ( format !=FORMAT_XML && format != FORMAT_JSON )
-		sb->safePrintf("<img width=%li height=%li align=left "
+		sb->safePrintf("<img width=%"INT32" height=%"INT32" align=left "
 			       "%s"
 			       "src=\"data:image/"
 			       "jpg;base64,"
@@ -1369,10 +1372,10 @@ bool ThumbnailInfo::printThumbnailInHtml ( SafeBuf *sb ,
 }
 
 
-char *Images::getImageUrl ( long j , long *urlLen ) {
+char *Images::getImageUrl ( int32_t j , int32_t *urlLen ) {
 
-	long node = m_imageNodes[j];
-	long srcLen = 0;
+	int32_t node = m_imageNodes[j];
+	int32_t srcLen = 0;
 	char *src = m_xml->getString(node,"src",&srcLen);
 	// maybe it was an og:image meta tag
 	if ( ! src ) 
