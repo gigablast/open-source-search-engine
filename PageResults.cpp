@@ -5251,7 +5251,9 @@ bool printResult ( State0 *st, int32_t ix , int32_t *numPrintedSoFar ) {
 			un = "UN";
 			banVal = 0;
 		}
-		sb->safePrintf("<br>"
+		// don't put on a separate line because then it is too
+		// easy to mis-click on it
+		sb->safePrintf(//"<br>"
 			      " <a style=color:green; href=\"/admin/tagdb?"
 			      "user=admin&"
 			      "tagtype0=manualban&"
