@@ -3439,7 +3439,7 @@ bool Query::setQWords ( char boolFlag ,
 
 
 	// consider terms strongly connected like wikipedia title phrases
-	for ( int32_t i = 0 ; i < m_numWords ; i++ ) {
+	for ( int32_t i = 0 ; i + 2 < m_numWords ; i++ ) {
 		// get ith word
 		QueryWord *qw1 = &m_qwords[i];
 		// must not already be in a wikiphrase
