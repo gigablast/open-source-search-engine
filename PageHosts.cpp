@@ -556,7 +556,11 @@ skipReplaceHost:
 		if ( format == FORMAT_HTML ) {
 			char *f1 = "";
 			char *f2 = "";
-			if ( h->m_pingInfo.m_udpSlotsInUse > 200 ) {
+			if ( h->m_pingInfo.m_udpSlotsInUse >= 200 ) {
+				f1 = "<b>";
+				f2 = "</b>";
+			}
+			if ( h->m_pingInfo.m_udpSlotsInUse >= 400 ) {
 				f1 = "<b><font color=red>";
 				f2 = "</font></b>";
 			}
@@ -1465,7 +1469,7 @@ skipReplaceHost:
 		  "<tr class=poo>"
 		  "<td><nobr>U (status flag)</nobr></td>"
 		  "<td>Indicates the number of active UDP transactions "
-		  "the slot is either intiating or receiving."
+		  "which are either intiating or receiving."
 		  "</td>"
 		  "</tr>\n"
 
