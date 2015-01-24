@@ -713,7 +713,9 @@ int main2 ( int argc , char *argv[] ) {
 			"<ip:port> [collection]\n"
 			"\tInject all documents in <filename> into the gb "
 			"host at ip:port. File must be in WARC format. "
-			"Uses collection of 'main' if not specified."
+			"Uses collection of 'main' if not specified. If "
+			"ip:port is a hosts.conf file then a round-robin "
+			"approach will be used."
 			// "Each document listed in the file "
 			// "must be preceeded by a valid HTTP mime with "
 			// "a Content-Length: field. WARC files are also ok."
@@ -14247,7 +14249,7 @@ int injectFileTest ( int32_t reqLen , int32_t hid ) {
 	return injectFile ( filename , ips , "main");
 }
 
-#define MAX_INJECT_SOCKETS 10
+#define MAX_INJECT_SOCKETS 300
 //#define MAX_INJECT_SOCKETS 1
 static void doInject ( int fd , void *state ) ;
 static void doInjectWarc ( int64_t fsize );
@@ -14277,6 +14279,72 @@ int injectFile ( char *filename , char *ips ,
 		 //int64_t endDocId ,
 		 //bool isDelete ) {
 		 char *coll ) {
+
+
+
+	// or part of an itemlist.txt-N
+	int flen2 = gbstrlen(filename);
+	if ( flen2>=14 && strncmp(filename,"itemlist.txt",12)==0 ) {
+	        // must have -N
+		int split = atoi(filename+13);
+		log("inject: using part file of itemlist.txt of %i",split);
+		// open it
+		SafeBuf sb;
+		sb.load("./itemlist.txt");
+		// scan the lines
+		char *p = sb.getBufStart();
+		char *pend = p + sb.length();
+		int count = 0;
+		char *nextLine = NULL;
+		for (  ; p && p < pend ; p = nextLine ) {
+			nextLine = strstr(p,"\n");
+			if ( nextLine ) nextLine++;
+			if ( count >= 8 ) count = 0;
+			if ( count++ != split ) continue;
+			// get line
+			char *archiveDirName = p;
+			if ( nextLine ) nextLine[-1] = '\0';
+			// download the archive
+			SafeBuf cmd;
+			cmd.safePrintf("./ia-0.7.8-python2.7.pex download "
+				       "--format=\"Web ARChive GZ\" %s"
+				       ,archiveDirName);
+			gbsystem(cmd.getBufStart());
+			// now inject the warc gz files in there
+			Dir dir;
+			dir.set ( p );
+			dir.open();
+			log("setting dir to %s",p);
+		subloop:
+			char *warcFileName = dir.getNextFilename("*.warc.gz");
+			// get next archive
+			if ( ! warcFileName ) {
+				cmd.reset();
+				// remove the archive dir when done if
+				// no more warc.gz files in it
+				cmd.safePrintf("rm -rf %s",archiveDirName);
+				gbsystem(cmd.getBufStart());
+				// download the next archive using 'ia'
+				continue;
+			}
+			// inject the warc.gz files
+			cmd.reset();
+			cmd.safePrintf("gunzip -c %s/%s > ./foo%i.warc"
+				       ,archiveDirName,warcFileName,split);
+			gbsystem(cmd.getBufStart());
+			// now inject it
+			cmd.reset();
+			cmd.safePrintf("./gb inject ./foo%i.warc hosts.conf"
+				       ,split);
+			gbsystem(cmd.getBufStart());
+			goto subloop;
+		}
+		exit(0);
+		log("cmd: done injecting archives for split %i",split);
+	}
+
+
+
 
 	bool isDelete = false;
 	int64_t startDocId = 0LL;
@@ -14317,7 +14385,7 @@ int injectFile ( char *filename , char *ips ,
 	int32_t ip = 0;
 	// is ip field a hosts.conf instead? that means to round robin.
 	if ( strstr(ips,".conf") ) {
-		if ( ! s_hosts2.init ( 0 ) ) { // ips , 0 ) ) {
+		if ( ! s_hosts2.init ( -1 ) ) { // ips , 0 ) ) {
 			fprintf(stderr,"failed to load %s",ips);
 			exit(0);
 		}
@@ -14471,6 +14539,7 @@ int injectFile ( char *filename , char *ips ,
 		s_injectWarc = true;
 	}
 
+	
 	s_coll = coll;
 
 	// register sleep callback to get started
@@ -15151,8 +15220,6 @@ void doInjectWarc ( int64_t fsize ) {
 	// null term url
 	//char c = *urlEnd;
 	*urlEnd = '\0';
-	// log it
-	log("inject: injecting WARC url %s",url);
 
 
 	char *httpReply = warcContent;
@@ -15268,6 +15335,8 @@ void doInjectWarc ( int64_t fsize ) {
 		s_rrn++;
 	}
 
+	// log it
+	log("inject: injecting to %s:%i WARC url %s",iptoa(ip),(int)port,url);
 
 	// now inject it
 	bool status = s_tcp.sendMsg ( ip   ,
@@ -15281,6 +15350,11 @@ void doInjectWarc ( int64_t fsize ) {
 				      9999*60*1000      , // timeout, 60days
 				      -1              , // maxTextDocLen
 				      -1              );// maxOtherDocLen
+
+	int realMax = 10;
+	if ( s_hosts2.getNumHosts() > 1 )
+	  realMax = s_hosts2.getNumHosts() * 5;
+
 	// launch another if blocked
 	if ( ! status ) {
 		// let injectedWrapper() below free it
@@ -15292,7 +15366,10 @@ void doInjectWarc ( int64_t fsize ) {
 		//if ( nh < 5 ) nh = 5;
 		// limit to one socket right now
 		//if ( ++s_outstanding < 1 ) goto loop;
-		if ( ++s_outstanding < MAX_INJECT_SOCKETS ) goto loop;
+		s_outstanding++;
+		if ( s_outstanding < MAX_INJECT_SOCKETS &&
+		     s_outstanding < realMax ) 
+		  goto loop;
 		return;
 	}
 		
