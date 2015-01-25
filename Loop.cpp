@@ -979,19 +979,22 @@ void printStackTrace ( int signum , siginfo_t *info , void *ptr ) {
 	// right now only works for 32 bit
 	if ( arch != 32 ) return;
 
-	logf(LOG_DEBUG,"gb: seg fault. printing stack trace.");
+	logf(LOG_DEBUG,"gb: seg fault. printing stack trace. use "
+	     "addr2line to decode the hex below.");
 
 	static void *s_bt[200];
 	int sz = backtrace(s_bt, 200);
 	//char **strings = backtrace_symbols(s_bt, sz);
 	for( int i = 0; i < sz; ++i) {
-		unsigned long long ba;
-		ba = g_profiler.getFuncBaseAddr((PTRTYPE)s_bt[i]);
+		//unsigned long long ba;
+		//ba = g_profiler.getFuncBaseAddr((PTRTYPE)s_bt[i]);
 		//sigsegv_outp("%s", strings[i]);
-		logf(LOG_DEBUG,"[0x%llx->0x%llx] %s"
-		     ,(unsigned long long)s_bt[i]
-		     ,ba
-		     ,g_profiler.getFnName(ba,0));
+		//logf(LOG_DEBUG,"[0x%llx->0x%llx] %s"
+		logf(LOG_DEBUG,"[0x%"XINT64"]"
+		     ,(uint64_t)s_bt[i]
+		     //,ba
+		     //,g_profiler.getFnName(ba,0));
+		     );
 	}
 }
 

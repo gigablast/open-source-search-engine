@@ -1061,6 +1061,12 @@ bool Hostdb::init ( int32_t hostIdArg , char *netName ,
 	if ( ! localIps )
 		return log("conf: Failed to get local IP address. Exiting.");
 
+	// if no cwd, then probably calling 'gb inject foo.warc <hosts.conf>'
+	if ( ! cwd ) {
+		log("hosts: missing cwd");
+		return true;
+	}
+
 	// now get host based on cwd and ip
 	Host *host = getHost2 ( cwd , localIps );
 
