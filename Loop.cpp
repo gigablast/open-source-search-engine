@@ -973,14 +973,14 @@ void sigpwrHandler ( int x , siginfo_t *info , void *y ) {
 #include <execinfo.h>
 void printStackTrace ( int signum , siginfo_t *info , void *ptr ) {
 
-	int arch = 32;
-	if ( __WORDSIZE == 64 ) arch = 64;
-	if ( __WORDSIZE == 128 ) arch = 128;
+	// int arch = 32;
+	// if ( __WORDSIZE == 64 ) arch = 64;
+	// if ( __WORDSIZE == 128 ) arch = 128;
 	// right now only works for 32 bit
-	if ( arch != 32 ) return;
+	//if ( arch != 32 ) return;
 
 	logf(LOG_DEBUG,"gb: seg fault. printing stack trace. use "
-	     "addr2line to decode the hex below.");
+	     "'addr2line -e gb' to decode the hex below.");
 
 	static void *s_bt[200];
 	int sz = backtrace(s_bt, 200);
