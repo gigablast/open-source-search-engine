@@ -15642,37 +15642,44 @@ bool memTest() {
 	int numPtrs=0;
 	//int totalMem=0;
 	int i;
-	if ( ! g_log.init( g_hostdb.m_logFilename )        ) {
-		fprintf (stderr,"db: Log file init failed.\n" ); return 1; }
+	// if ( ! g_log.init( "./memlog" ) ) {//g_hostdb.m_logFilename )        ) {
+	// 	fprintf (stderr,"db: Log file init failed.\n" ); return 1; }
 	//g_mem.init(0xffffffff);
 	g_mem.m_maxMem = 0xffffffffLL;
+	g_mem.init( g_mem.m_maxMem );
 	
 
-	log(LOG_INIT, "memtest: Testing memory bus bandwidth.");
+	fprintf(stderr, "memtest: Testing memory bus bandwidth.\n");
 	// . read in 20MB 100 times (~2GB total)
 	// . tests main memory throughput
-	log(LOG_INIT, "memtest: Testing main memory.");
+	fprintf(stderr, "memtest: Testing main memory.\n");
 	membustest ( 20*1024*1024 , 100 , true );
 	// . read in 1MB 2,000 times (~2GB)
 	// . tests the L2 cache
-	log(LOG_INIT, "memtest: Testing 1MB L2 cache.");
+	fprintf(stderr, "memtest: Testing 1MB L2 cache.\n");
 	membustest ( 1024*1024 , 2000 , true );
 	// . read in 8000 200,000 times (~1.6GB)
 	// . tests the L1 cache
-	log(LOG_INIT, "memtest: Testing 8KB L1 cache.");
+	fprintf(stderr, "memtest: Testing 8KB L1 cache.\n");
 	membustest ( 8000 , 100000 , true );
 
-	log(LOG_INIT, "memtest: Allocating up to %"INT64" bytes",g_mem.m_maxMem);
+	fprintf(stderr, "memtest: Allocating up to %"INT64" bytes\n",
+		g_mem.m_maxMem);
 	for (i=0;i<4096;i++) {
 		ptrs[numPtrs] = mmalloc(1024*1024, "memtest");
 		if (!ptrs[numPtrs]) break;
 		numPtrs++;
 	}
-	
-	log(LOG_INIT, "memtest: Was able to allocate %"INT64" bytes of a total of "
-	    "%"INT64" bytes of memory attempted.",
+
+	fprintf(stderr, "memtest: Was able to allocate %"INT64" bytes of a "
+		"total of "
+	    "%"INT64" bytes of memory attempted.\n",
 	    g_mem.m_used,g_mem.m_maxMem);
-	log(LOG_INIT, "memtest: Dumping core to test max core file size.");
+
+	return true;
+
+
+	fprintf(stderr, "memtest: Dumping core to test max core file size.\n");
 	char *xx = NULL;
 	*xx = 0;
 	for (i=0;i<numPtrs;i++){
@@ -15691,7 +15698,7 @@ void membustest ( int32_t nb , int32_t loops , bool readf ) {
 
 	// don't exceed 50NB
 	if ( nb > 50*1024*1024 ) {
-		log(LOG_INIT,"memtest: truncating to 50 Megabytes.");
+		fprintf(stderr,"memtest: truncating to 50 Megabytes.\n");
 		nb = 50*1024*1024;
 	}
 
@@ -15715,8 +15722,12 @@ void membustest ( int32_t nb , int32_t loops , bool readf ) {
 	// pre-read it so sbrk() can do its thing
 	for ( int32_t i = 0 ; i < n ; i++ ) buf[i] = 1;
 
+	g_clockNeedsUpdate = true;
+
 	// time stamp
 	int64_t t = gettimeofdayInMilliseconds();
+
+	fprintf(stderr,"memtest: start = %llu\n",t);
 
 	// . time the read loop
 	// . each read should only be 2 assenbly movl instructions:
@@ -15769,17 +15780,20 @@ void membustest ( int32_t nb , int32_t loops , bool readf ) {
 		goto loop;
 	}
 
+	g_clockNeedsUpdate = true;
 	// completed
 	int64_t now = gettimeofdayInMilliseconds();
+	fprintf(stderr,"memtest: now = %llu\n",t);
 	// multiply by 4 since these are int32_ts
 	char *op = "read";
 	if ( ! readf ) op = "wrote";
-	log(LOG_INIT,"memtest: %s %"INT32" bytes (x%"INT32") in %"UINT64" ms.",
+	fprintf(stderr,"memtest: %s %"INT32" bytes (x%"INT32") in"
+		"%"UINT64" ms.\n",
 		 op , n , loops , now - t );
 	// stats
 	if ( now - t == 0 ) now++;
 	double d = (1000.0*(double)loops*(double)(n)) / ((double)(now - t));
-	log(LOG_INIT,"memtest: we did %.2f MB/sec." , d/(1024.0*1024.0));
+	fprintf(stderr,"memtest: we did %.2f MB/sec.\n" , d/(1024.0*1024.0));
 
 	mfree ( bufStart , bufSize , "main" );
 
