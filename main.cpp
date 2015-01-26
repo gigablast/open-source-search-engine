@@ -2835,6 +2835,9 @@ int main2 ( int argc , char *argv[] ) {
 		       dumpRevdb(coll,startFileNum,numFiles,includeTree);
 		else if ( argv[cmdarg+1][0] == 'S' )
 			dumpTagdb  (coll,startFileNum,numFiles,includeTree,0);
+		else if ( argv[cmdarg+1][0] == 'z' )
+			dumpTagdb  (coll,startFileNum,numFiles,includeTree,0,
+				    'z');
 		else if ( argv[cmdarg+1][0] == 'A' )
 			dumpTagdb  (coll,startFileNum,numFiles,includeTree,0,
 				     'A');
@@ -11924,7 +11927,8 @@ void dumpRevdb(char *coll,int32_t startFileNum,int32_t numFiles, bool includeTre
 }
 
 
-void dumpTagdb (char *coll,int32_t startFileNum,int32_t numFiles,bool includeTree, 
+void dumpTagdb (char *coll,int32_t startFileNum,int32_t numFiles,
+		bool includeTree, 
 		 int32_t c , char req, int32_t rdbId ) {
 	//g_conf.m_spiderdbMaxTreeMem = 1024*1024*30;
 	g_tagdb.init ();
@@ -11951,6 +11955,13 @@ void dumpTagdb (char *coll,int32_t startFileNum,int32_t numFiles,bool includeTre
 	sprintf(httpAddr,"127.0.0.1:%"INT32"", port );
 	if ( req == 'D') strcpy(action,"&deleterec=1&useNew=1");	
 	CollectionRec *cr = g_collectiondb.getRec(coll);
+
+	int64_t hostHash = -1;
+	int64_t lastHostHash = -2;
+	char *site = NULL;
+	int32_t siteNumInlinks = -1;
+	int32_t typeSite = hash64Lower_a("site",4);
+	int32_t typeInlinks = hash64Lower_a("sitenuminlinksuniquecblock",26);
 
  loop:
 	// use msg5 to get the list, should ALWAYS block since no threads
@@ -11984,7 +11995,9 @@ void dumpTagdb (char *coll,int32_t startFileNum,int32_t numFiles,bool includeTre
 		int32_t  size = list.getCurrentDataSize();
 		// is it a delete?
 		if ( (k.n0 & 0x01) == 0 ) {
-			printf("k.n1=%016"XINT64" k.n0=%016"XINT64" (delete)\n",
+			if ( req == 'z' ) continue;
+			printf("k.n1=%016"XINT64" "
+			       "k.n0=%016"XINT64" (delete)\n",
 			       k.n1  , k.n0   | 0x01  );  // fix it!
 			continue;
 		}
@@ -12005,7 +12018,8 @@ void dumpTagdb (char *coll,int32_t startFileNum,int32_t numFiles,bool includeTre
 				   size ,
 				   false);
 			fprintf(stdout,
-				"key=%s caturl=%s #catids=%"INT32" version=%"INT32"\n"
+				"key=%s caturl=%s #catids=%"INT32" "
+				"version=%"INT32"\n"
 			       ,KEYSTR(&k,12)
 			    ,crec.m_url
 			    ,(int32_t)crec.m_numCatids
@@ -12019,6 +12033,35 @@ void dumpTagdb (char *coll,int32_t startFileNum,int32_t numFiles,bool includeTre
 		// print the version and site
 		char tmpBuf[1024];
 		SafeBuf sb(tmpBuf, 1024);
+
+		// making sitelist.txt?
+		if ( tag->m_type == typeSite ) {
+			hostHash = tag->m_key.n1;
+			site = tag->getTagData();
+			if ( lastHostHash == hostHash && siteNumInlinks>=0) {
+				if ( siteNumInlinks > 0 )
+					printf("%i %s\n",siteNumInlinks,site);
+				siteNumInlinks = -1;
+			}
+			lastHostHash = hostHash;
+			continue;
+		}
+
+		if ( tag->m_type == typeInlinks ) {
+			hostHash = tag->m_key.n1;
+			siteNumInlinks = atoi(tag->getTagData());
+			if ( lastHostHash == hostHash && site ) {
+				if ( siteNumInlinks > 0 )
+					printf("%i %s\n",siteNumInlinks,site);
+				site = NULL;
+			}
+			lastHostHash = hostHash;
+			continue;
+		}
+
+		if ( req == 'z' )
+			continue;
+
 		// print as an add request or just normal
 		if ( req == 'A' ) tag->printToBufAsAddRequest ( &sb );
 		else              tag->printToBuf             ( &sb );
@@ -15804,7 +15847,7 @@ void membustest ( int32_t nb , int32_t loops , bool readf ) {
 	// time stamp
 	int64_t t = gettimeofdayInMilliseconds();
 
-	fprintf(stderr,"memtest: start = %llu\n",t);
+	fprintf(stderr,"memtest: start = %"INT64"\n",t);
 
 	// . time the read loop
 	// . each read should only be 2 assenbly movl instructions:
@@ -15860,7 +15903,7 @@ void membustest ( int32_t nb , int32_t loops , bool readf ) {
 	g_clockNeedsUpdate = true;
 	// completed
 	int64_t now = gettimeofdayInMilliseconds();
-	fprintf(stderr,"memtest: now = %llu\n",t);
+	fprintf(stderr,"memtest: now = %"INT64"\n",t);
 	// multiply by 4 since these are int32_ts
 	char *op = "read";
 	if ( ! readf ) op = "wrote";
