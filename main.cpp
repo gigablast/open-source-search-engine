@@ -12039,12 +12039,24 @@ void dumpTagdb (char *coll,int32_t startFileNum,int32_t numFiles,
 		if ( tag->m_type == typeSite ) {
 			hostHash = tag->m_key.n1;
 			site = tag->getTagData();
+			// make it null if too many .'s
+			if ( site ) {
+				char *p = site;
+				int count = 0;
+				// foo.bar.baz.com is ok
+				for ( ; *p ; p++ ) 
+					if ( *p == '.' ) count++;
+				if ( count >= 4 )
+					site = NULL;
+			}
 			if ( site && ! is_ascii2_a ( site, gbstrlen(site) ) ) {
 				site = NULL;
 				continue;
 			}
 			if ( lastHostHash == hostHash && siteNumInlinks>=0) {
-				if ( siteNumInlinks > 0 && site )
+				// if we ask for 1 or 2 we end up with 100M
+				// entries, but with 3+ we get 27M
+				if ( siteNumInlinks > 2 && site )
 					printf("%i %s\n",siteNumInlinks,site);
 				siteNumInlinks = -1;
 				site = NULL;
@@ -12059,7 +12071,9 @@ void dumpTagdb (char *coll,int32_t startFileNum,int32_t numFiles,
 			hostHash = tag->m_key.n1;
 			siteNumInlinks = atoi(tag->getTagData());
 			if ( lastHostHash == hostHash && site ) {
-				if ( siteNumInlinks > 0 )
+				// if we ask for 1 or 2 we end up with 100M
+				// entries, but with 3+ we get 27M
+				if ( siteNumInlinks > 2 )
 					printf("%i %s\n",siteNumInlinks,sbuf);
 				siteNumInlinks = -1;
 				site = NULL;
