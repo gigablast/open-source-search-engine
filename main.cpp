@@ -12039,9 +12039,10 @@ void dumpTagdb (char *coll,int32_t startFileNum,int32_t numFiles,
 			hostHash = tag->m_key.n1;
 			site = tag->getTagData();
 			if ( lastHostHash == hostHash && siteNumInlinks>=0) {
-				if ( siteNumInlinks > 0 )
+				if ( siteNumInlinks > 0 && site )
 					printf("%i %s\n",siteNumInlinks,site);
 				siteNumInlinks = -1;
+				site = NULL;
 			}
 			lastHostHash = hostHash;
 			continue;
@@ -12053,6 +12054,7 @@ void dumpTagdb (char *coll,int32_t startFileNum,int32_t numFiles,
 			if ( lastHostHash == hostHash && site ) {
 				if ( siteNumInlinks > 0 )
 					printf("%i %s\n",siteNumInlinks,site);
+				siteNumInlinks = -1;
 				site = NULL;
 			}
 			lastHostHash = hostHash;
