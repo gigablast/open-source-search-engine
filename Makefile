@@ -150,9 +150,14 @@ vclean:
 	@echo ""
 	@echo "*****"
 	@echo ""
-	@echo "If make fails then first run:"
+	@echo "If make fails on Ubuntu then first run:"
 	@echo ""
 	@echo "sudo apt-get update ; sudo apt-get install make g++ libssl-dev"
+	@echo ""
+	@echo ""
+	@echo "If make fails on RedHat then first run:"
+	@echo ""
+	@echo "sudo yum install gcc-c++"
 	@echo ""
 	@echo "*****"
 	@echo ""
@@ -612,10 +617,10 @@ master-rpm:
 # deb-master
 master-deb32:
 # need to change in changelog too!! dont' forget!!!
-	git archive --format=tar --prefix=gb32-1.17/ master > ../gb32_1.17.orig.tar
+	git archive --format=tar --prefix=gb-1.17/ master > ../gb_1.17.orig.tar
 	rm -rf debian
 # change "-p gb_1.0" to "-p gb_1.1" to update version for example
-	dh_make -s -e gigablast@mail.com -p gb32_1.17 -f ../gb32_1.17.orig.tar
+	dh_make -s -e gigablast@mail.com -p gb_1.17 -f ../gb_1.17.orig.tar
 # zero this out, it is just filed with the .txt files erroneously and it'll
 # try to automatiicaly install in /usr/docs/
 	rm debian/docs
@@ -636,21 +641,21 @@ master-deb32:
 # build the package now
 	dpkg-buildpackage -j6 -nc -ai386 -ti386 -b -uc -rfakeroot
 # move to current dur
-	mv ../gb32_*.deb .	
+	mv ../gb_*.deb .	
 # upload den
-	scp gb32*.deb gk268:/w/html/	
+	scp gb*.deb gk268:/w/html/	
 # alien it
-	sudo alien --to-rpm gb32_1.17-1_i386.deb
+	sudo alien --to-rpm gb_1.17-1_i386.deb
 # upload rpm
-	scp gb32*.rpm gk268:/w/html/	
+	scp gb*.rpm gk268:/w/html/	
 
 
 master-deb64:
 # need to change in changelog too!! dont' forget!!!
-	git archive --format=tar --prefix=gb64-1.17/ master > ../gb64_1.17.orig.tar
+	git archive --format=tar --prefix=gb-1.17/ master > ../gb_1.17.orig.tar
 	rm -rf debian
 # change "-p gb_1.0" to "-p gb_1.1" to update version for example
-	dh_make -s -e gigablast@mail.com -p gb64_1.17 -f ../gb64_1.17.orig.tar
+	dh_make -s -e gigablast@mail.com -p gb_1.17 -f ../gb_1.17.orig.tar
 # zero this out, it is just filed with the .txt files erroneously and it'll
 # try to automatiicaly install in /usr/docs/
 	rm debian/docs
@@ -669,15 +674,15 @@ master-deb64:
 # YOU HAVE TO RUN THIS before you run 'make'
 #	export LD_LIBRARY_PATH=./debian/gb/var/gigablast/data0
 # build the package now
-	dpkg-buildpackage -nc -ax86_64 -tx86_64 -b -uc -rfakeroot
+	dpkg-buildpackage -nc -aamd64 -tamd64 -b -uc -rfakeroot
 # move to current dur
-	mv ../gb64_*.deb .	
+	mv ../gb_*.deb .	
 # upload den
-	scp gb64*.deb gk268:/w/html/	
+	scp gb*.deb gk268:/w/html/	
 # alien it
-	sudo alien --to-rpm gb64_1.17-1_x86.deb
+	sudo alien --to-rpm gb_1.17-1_amd64.deb
 # upload rpm
-	scp gb64*.rpm gk268:/w/html/	
+	scp gb*.rpm gk268:/w/html/	
 
 
 #deb-testing

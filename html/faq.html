@@ -121,20 +121,26 @@ You will need an Intel or AMD system with at least 4GB of RAM for every gigablas
 <b><font color=red>For Linux:</font></b>
 <br><br>
 
-1. Download the <a href=http://www.gigablast.com/gb-1.14-2.i386.rpm>Gigablast package for <b>RedHat</b> Linux</a> or the <a href=http://www.gigablast.com/gb_1.14-1_i386.deb>Gigablast package for <b>Ubuntu</b>/Debian Linux</a>. 
+1. Download the <a href=http://www.gigablast.com/gb-1.17-2.x86_64.rpm>64-bit Gigablast package for <b>RedHat</b> Linux</a> or the <a href=http://www.gigablast.com/gb_1.17-1_amd64.deb>64-bit Gigablast package for <b>Ubuntu</b>/Debian Linux</a>. 
 
 <br><br>
 
 2. After downloading, install the package by entering <b>sudo dpkg -i <i>&lt;filename&gt;</i></b> where filename is the file you just downloaded.
 
 <br><br>
-3. Type <b>sudo gb -d</b> to run it in the background as a daemon.
+3. Type <b>sudo gb -d</b> to run it in the background as a daemon. It will log to /var/gigablast/data0/log000 initially.
 
 <br><br>
 4. If running for the first time, it could take up to 20 seconds to build some preliminary files.
 
 <br><br>
 5. Once running, visit <a href=http://127.0.0.1:8000/>port 8000</a> with your browser to access the Gigablast controls.
+
+<br><br>
+6. To list all packages you have installed do a <b>dpkg -l</b>.
+
+<br><br>
+7. If you ever want to remove the gb package type <b>sudo dpkg -r gb</b>.
 
 <br><br>
 
@@ -186,7 +192,7 @@ If you run into an bugs let me know so i can fix them right away: gigablast@mail
 <br>
 <a name=src></a>
 <h1>Build From Source</h1>
-&lt;<i>Last Updated September 2014</i>&gt;
+&lt;<i>Last Updated January 2015</i>&gt;
 <br>
 <br>
 
@@ -212,30 +218,31 @@ For RedHat do a <b>yum install gcc-c++</b>
 </ul>
 -->
 
-<b>1.0</b> For <u>64-bit Ubuntu 14.04</u>: do <b>sudo apt-get update ; apt-get install make g++ libssl-dev</b>
+<b>1.0</b> For <u>Ubuntu 12.02 or 14.04</u>: do <b>sudo apt-get update ; apt-get install make g++ libssl-dev</b>
 
 <br><br>
 
-<b>1.1</b> For <u>64-bit Ubuntu 12.02</u>: do <b>sudo apt-get update ; apt-get install make g++ libssl-dev</b>
+<!--<b>1.1</b> For <u>64-bit Ubuntu 12.02</u>: do <b>sudo apt-get update ; apt-get install make g++ libssl-dev</b>
 
 <br><br>
 
-<b>1.2</b> For <u>32-bit Ubuntu 14.04</u>: do <b>sudo apt-get update ; apt-get install make g++ gcc-multilib g++-multilib <!--lib32stdc++6--></b>
+<<b>1.1</b> For <u>32-bit Ubuntu 14.04</u>: do <b>sudo apt-get update ; apt-get install make g++ gcc-multilib g++-multilib</b>
 
 <br><br>
 
-<b>1.3</b> For <u>32-bit Ubuntu 12.02</u>: do <b>sudo apt-get update ; apt-get install make g++ gcc-multilib <!--lib32stdc++6--></b>
-
+<b>1.3</b> For <u>32-bit Ubuntu 12.02</u>: do <b>sudo apt-get update ; apt-get install make g++ gcc-multilib </b>
 <br><br>
-<b>1.4.</b> For <u>RedHat</u> do <b>sudo yum install gcc-c++</b>
+-->
+
+<b>1.1.</b> For <u>RedHat</u> do <b>sudo yum install gcc-c++</b>
 <br><br>
 <b>2.</b> Download the <a href=https://github.com/gigablast/open-source-search-engine>Gigablast source code</a> using <b>wget --no-check-certificate "https://github.com/gigablast/open-source-search-engine/archive/master.zip"</b>, unzip it and cd into it. (optionally use <b>git clone https://github.com/gigablast/open-source-search-engine.git ./github</b> if you have <i>git</i> installed.)
 <br><br>
 <b>3.0</b> Run <b>make</b> to compile. (e.g. use 'make -j 4' to compile on four cores)
 <br><br>
 
-<b>3.1</b> Run <b>make clean ; make gb32</b> 
-to compile the 32-bit version of gb.
+<b>3.1</b> If you want to compile a 32-bit version of gb for some reason,  
+run <b>make clean ; make gb32</b>.
 <br><br>
 
 <b>4.</b> Run <b>./gb -d</b>  to start a single gigablast node which listens on port 8000 running in daemon mode (-d).
