@@ -35,7 +35,9 @@ int32_t Tag::print ( ) {
 
 bool Tag::printToBuf ( SafeBuf *sb ) {
 
-	sb->safePrintf("k.hsthash=%016"XINT64" k.duphash=%08"XINT32" k.sitehash=%08"XINT32" ",
+	sb->safePrintf("k.hsthash=%016"XINT64" "
+		       "k.duphash=%08"XINT32" "
+		       "k.sitehash=%08"XINT32" ",
 		       m_key.n1,
 		       (int32_t)(m_key.n0>>32),
 		       (int32_t)(m_key.n0&0xffffffff));
