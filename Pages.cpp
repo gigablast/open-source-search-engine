@@ -3930,6 +3930,9 @@ bool printRedBox ( SafeBuf *mb , TcpSocket *sock , HttpRequest *hr ) {
 
 	CollectionRec *cr = g_collectiondb.getRec ( hr );
 
+	char *coll = "";
+	if ( cr ) coll = cr->m_coll;
+
 	if ( cr &&
 	     ! printedMaster &&
 	     g_conf.m_useCollectionPasswords &&
@@ -3966,7 +3969,7 @@ bool printRedBox ( SafeBuf *mb , TcpSocket *sock , HttpRequest *hr ) {
 		mb->safePrintf("%s",box);
 		mb->safePrintf("%"INT32" host%s over 98%% disk usage. "
 			       "See the <a href=/admin/hosts?c=%s>"
-			       "hosts</a> table.",out,s,cr->m_coll);
+			       "hosts</a> table.",out,s,coll);
 		mb->safePrintf("%s",boxEnd);
 	}
 
@@ -3988,7 +3991,7 @@ bool printRedBox ( SafeBuf *mb , TcpSocket *sock , HttpRequest *hr ) {
 		mb->safePrintf("%s",box);
 		mb->safePrintf("One or more hosts have different gb versions. "
 			       "See the <a href=/admin/hosts?c=%s>hosts</a> "
-			       "table.",cr->m_coll);
+			       "table.",coll);
 		mb->safePrintf("%s",boxEnd);
 	}
 
@@ -4009,7 +4012,7 @@ bool printRedBox ( SafeBuf *mb , TcpSocket *sock , HttpRequest *hr ) {
 			       "over %"INT32" outstanding "
 			       "udp transactions. "
 			       "See <a href=/admin/sockets?c=%s>sockets</a>"
-			       " table.",jammedHosts,s,400,cr->m_coll);
+			       " table.",jammedHosts,s,400,coll);
 		mb->safePrintf("%s",boxEnd);
 	}
 
@@ -4093,7 +4096,7 @@ bool printRedBox ( SafeBuf *mb , TcpSocket *sock , HttpRequest *hr ) {
 		mb->safePrintf("%"INT32" %s dead and not responding to "
 			      "pings. See the "
 			       "<a href=/admin/host?c=%s>hosts table</a>.",
-			       ps->m_numHostsDead ,s ,cr->m_coll);
+			       ps->m_numHostsDead ,s ,coll);
 		mb->safePrintf("%s",boxEnd);
 	}
 
