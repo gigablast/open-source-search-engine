@@ -194,6 +194,15 @@ bool sendReply ( State0 *st , char *reply ) {
 	}
 	*/
 
+	// if we had a broken pipe from the browser while sending
+	// them the search results, then we end up closing the socket fd
+	// in TcpServer::sendChunk() > sendMsg() > destroySocket()
+	if ( s->m_numDestroys ) {
+		log("results: not sending back error on destroyed socket "
+		    "sd=%"INT32"",s->m_sd);
+		return true;
+	}
+
 	int32_t status = 500;
 	if (savedErr == ETOOMANYOPERANDS ||
 	    savedErr == EBADREQUEST ||
@@ -3137,6 +3146,12 @@ bool printSearchResultsTail ( State0 *st ) {
 			msg40->printFacetTables ( sb );
 
 		if ( st->m_header ) sb->safePrintf("}\n");
+
+		//////////////////////
+		// for some reason if we take too long to write out this
+		// tail we get a SIGPIPE on a firefox browser.
+		//////////////////////
+
 		// all done for json
 		return true;
 	}

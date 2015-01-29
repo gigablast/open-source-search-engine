@@ -1393,8 +1393,8 @@ int32_t TcpServer::readSocket ( TcpSocket *s ) {
 	// }
 
 	if ( g_conf.m_logDebugTcp )
-		logf(LOG_DEBUG,"tcp: readSocket: reading on sd=%"INT32"",
-		     (int32_t)s->m_sd);
+	 	logf(LOG_DEBUG,"tcp: readSocket: reading on sd=%"INT32"",
+	 	     (int32_t)s->m_sd);
 
 	// do the read
 	int n;
@@ -1735,10 +1735,14 @@ int32_t TcpServer::writeSocket ( TcpSocket *s ) {
 	}
 
 
+	if ( toSend <= 0 ) return 0;
+
 	// debug msg
 	if ( g_conf.m_logDebugTcp )
-		logf(LOG_DEBUG,"tcp: writeSocket: writing %"INT32" bytes on %"INT32"",
-		     toSend,(int32_t)s->m_sd);
+		logf(LOG_DEBUG,"tcp: writeSocket: writing %"INT32" bytes "
+		     "(of %"INT32" bytes total) "
+		     "on %"INT32"",
+		     toSend,toSend,(int32_t)s->m_sd);
 
  retry10:
 
@@ -1764,9 +1768,14 @@ int32_t TcpServer::writeSocket ( TcpSocket *s ) {
 		// a core... so check g_errno here.
 		// actually for m_useSSL it does not set errno...
 		if ( ! g_errno && m_useSSL ) g_errno = ESSLERROR;
-		if ( g_errno != EAGAIN ) return -1;
-		g_errno = 0; 
 		// debug msg
+		if ( g_errno != EAGAIN ) {
+			//if ( g_conf.m_logDebugTcp )
+			log("tcp: ::send returned %"INT32" err=%s"
+			    ,n,mstrerror(g_errno));
+			return -1;
+		}
+		g_errno = 0; 
 		//log("........... TcpServer write blocked on %i\n",
 		//s->m_sd);
 		return 0; 

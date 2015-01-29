@@ -106,6 +106,7 @@ Msg40::Msg40() {
 	m_lastChunk     = false;
 	m_didSummarySkip = false;
 	m_omitCount      = 0;
+	m_printCount = 0;
 	//m_numGigabitInfos = 0;
 }
 
@@ -1961,8 +1962,12 @@ bool Msg40::gotSummary ( ) {
 
 		// do not print it if before the &s=X start position though
 		if ( m_si && m_numDisplayed <= m_si->m_firstResultNum ){
-			log("msg40: hiding #%"INT32" (%"UINT32")(d=%"INT64")",
-			    m_printi,mr->m_contentHash32,mr->m_docId);
+			if ( m_printCount == 0 ) 
+				log("msg40: hiding #%"INT32" (%"UINT32")"
+				    "(d=%"INT64")",
+				    m_printi,mr->m_contentHash32,mr->m_docId);
+		        m_printCount++;
+			if ( m_printCount == 100 ) m_printCount = 0;
 			m20->reset();
 			continue;
 		}
@@ -2063,6 +2068,8 @@ bool Msg40::gotSummary ( ) {
 		m_printedTail = true;
 		printSearchResultsTail ( st );
 		if ( m_sendsIn < m_sendsOut ) { char *xx=NULL;*xx=0; }
+		if ( g_conf.m_logDebugTcp )
+			log("tcp: disabling streamingMode now");
 		// this will be our final send
 		st->m_socket->m_streamingMode = false;
 	}
@@ -5657,9 +5664,12 @@ bool Msg40::printSearchResult9 ( int32_t ix , int32_t *numPrintedSoFar ,
 		// i guess we can print "Next 10" link
 		m_moreToCome = true;
 		// hide if above limit
-		log(LOG_INFO,"msg40: hiding above docsWanted "
-		    "#%"INT32" (%"UINT32")(d=%"INT64")",
-		    m_printi,mr->m_contentHash32,mr->m_docId);
+		if ( m_printCount == 0 )
+			log(LOG_INFO,"msg40: hiding above docsWanted "
+			    "#%"INT32" (%"UINT32")(d=%"INT64")",
+			    m_printi,mr->m_contentHash32,mr->m_docId);
+		m_printCount++;
+		if ( m_printCount == 100 ) m_printCount = 0;
 		// do not exceed what the user asked for
 		return true;
 	}
@@ -5678,8 +5688,8 @@ bool Msg40::printSearchResult9 ( int32_t ix , int32_t *numPrintedSoFar ,
 	}
 
 	
-	log(LOG_INFO,"msg40: printing #%"INT32" (%"UINT32")(d=%"INT64")",
-	    m_printi,mr->m_contentHash32,mr->m_docId);
+	// log(LOG_INFO,"msg40: printing #%"INT32" (%"UINT32")(d=%"INT64")",
+	//     m_printi,mr->m_contentHash32,mr->m_docId);
 
 	// count it
 	m_numPrinted++;
