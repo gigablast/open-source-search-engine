@@ -89,12 +89,10 @@ LIBS = ./libz.a ./libssl.a ./libcrypto.a ./libiconv.a ./libm.a
 
 # are we a 32-bit architecture? use different libraries then
 else ifeq ($(ARCH), i686)
-
 CPPFLAGS= -m32 -g -Wall -pipe -fno-stack-protector -Wno-write-strings -Wstrict-aliasing=0 -Wno-uninitialized -DPTHREADS -Wno-unused-but-set-variable -static
 LIBS= -L. ./libz.a ./libssl.a ./libcrypto.a ./libiconv.a ./libm.a ./libstdc++.a -lpthread
 
 else ifeq ($(ARCH), i386)
-
 CPPFLAGS= -m32 -g -Wall -pipe -fno-stack-protector -Wno-write-strings -Wstrict-aliasing=0 -Wno-uninitialized -DPTHREADS -Wno-unused-but-set-variable -static
 LIBS= -L. ./libz.a ./libssl.a ./libcrypto.a ./libiconv.a ./libm.a ./libstdc++.a -lpthread
 
@@ -104,10 +102,6 @@ else
 #
 CPPFLAGS = -g -Wall -pipe -fno-stack-protector -Wno-write-strings -Wstrict-aliasing=0 -Wno-uninitialized -DPTHREADS -Wno-unused-but-set-variable -static
 #LIBS= -L. ./libz.a ./libssl.a ./libcrypto.a ./libiconv.a ./libm.a ./libstdc++.a -lpthread
-# use this for compiling on CYGWIN: (only for 32bit cygwin right now and
-# you have to install the packages that have these libs.
-#LIBS= -lz -lm -lpthread -lssl -lcrypto -liconv
-
 # apt-get install libssl-dev (to provide libssl and libcrypto)
 # to build static libiconv.a do a './configure --enable-static' then 'make'
 # in the iconv directory
@@ -156,9 +150,14 @@ vclean:
 	@echo ""
 	@echo "*****"
 	@echo ""
-	@echo "If make fails then first run:"
+	@echo "If make fails on Ubuntu then first run:"
 	@echo ""
 	@echo "sudo apt-get update ; sudo apt-get install make g++ libssl-dev"
+	@echo ""
+	@echo ""
+	@echo "If make fails on RedHat then first run:"
+	@echo ""
+	@echo "sudo yum install gcc-c++"
 	@echo ""
 	@echo "*****"
 	@echo ""
@@ -166,8 +165,27 @@ vclean:
 gb: vclean $(OBJS) main.o $(LIBFILES)
 	$(CC) $(DEFS) $(CPPFLAGS) -o $@ main.o $(OBJS) $(LIBS)
 
+
+# use this for compiling on CYGWIN: 
+# only for 32bit cygwin right now and
+# you have to install the packages that have these libs.
+# you have to get these packages from cygwin:
+# 1. LIBS  > zlib-devel: Gzip de/compression library (development)
+# 2. LIBS  > libiconv: GNU character set conversion library and utlities
+
+# 3. DEVEL > openssl: cygwin32-openssl: OpenSSL for Cygwin 32bit toolchain
+
+# 3. NET   > openssl: A general purpose cryptographt toolkit with TLS impl...
+
+# 4. DEVEL > mingw-pthreads: Libpthread for MinGW.org Wind32 toolchain
+# 5. DEVEL > gcc-g++: GNU Compiler Collection (C++)
+# 6. DEVEL > make: The GNU version of the 'make' utility
+# 7. DEVEL > git: Distributed version control system
+# 8. EDITORS > emacs
 cygwin:
-	make DEFS="-DCYGWIN -D_REENTRANT_ $(CHECKFORMATSTRING) -I." gb
+	make DEFS="-DCYGWIN -D_REENTRANT_ $(CHECKFORMATSTRING) -I." LIBS=" -lz -lm -lpthread -lssl -lcrypto -liconv" gb
+
+
 
 gb32:
 	make CPPFLAGS="-m32 -g -Wall -pipe -fno-stack-protector -Wno-write-strings -Wstrict-aliasing=0 -Wno-uninitialized -DPTHREADS -Wno-unused-but-set-variable -static" LIBS=" -L. ./libz.a ./libssl.a ./libcrypto.a ./libiconv.a ./libm.a ./libstdc++.a -lpthread " gb
@@ -595,14 +613,14 @@ master-rpm:
 
 # DEBIAN PACKAGE SECTION BEGIN
 
-# need to do 'apt-get intall dh-make'
+# need to do 'apt-get install dh-make'
 # deb-master
-master-deb:
+master-deb32:
 # need to change in changelog too!! dont' forget!!!
-	git archive --format=tar --prefix=gb-1.16/ master > ../gb_1.16.orig.tar
+	git archive --format=tar --prefix=gb-1.17/ master > ../gb_1.17.orig.tar
 	rm -rf debian
 # change "-p gb_1.0" to "-p gb_1.1" to update version for example
-	dh_make -e gigablast@mail.com -p gb_1.16 -f ../gb_1.16.orig.tar
+	dh_make -s -e gigablast@mail.com -p gb_1.17 -f ../gb_1.17.orig.tar
 # zero this out, it is just filed with the .txt files erroneously and it'll
 # try to automatiicaly install in /usr/docs/
 	rm debian/docs
@@ -621,15 +639,51 @@ master-deb:
 # YOU HAVE TO RUN THIS before you run 'make'
 #	export LD_LIBRARY_PATH=./debian/gb/var/gigablast/data0
 # build the package now
-	dpkg-buildpackage -nc -ai386 -ti386 -b -uc -rfakeroot
+	dpkg-buildpackage -j6 -nc -ai386 -ti386 -b -uc -rfakeroot
 # move to current dur
 	mv ../gb_*.deb .	
 # upload den
 	scp gb*.deb gk268:/w/html/	
 # alien it
-	sudo alien --to-rpm gb_1.16-1_i386.deb
+	sudo alien --to-rpm gb_1.17-1_i386.deb
 # upload rpm
 	scp gb*.rpm gk268:/w/html/	
+
+
+master-deb64:
+# need to change in changelog too!! dont' forget!!!
+	git archive --format=tar --prefix=gb-1.17/ master > ../gb_1.17.orig.tar
+	rm -rf debian
+# change "-p gb_1.0" to "-p gb_1.1" to update version for example
+	dh_make -s -e gigablast@mail.com -p gb_1.17 -f ../gb_1.17.orig.tar
+# zero this out, it is just filed with the .txt files erroneously and it'll
+# try to automatiicaly install in /usr/docs/
+	rm debian/docs
+	touch debian/docs
+# make the debian/copyright file contain the license
+	cp copyright.head  debian/copyright
+#	cat LICENSE | awk -Fxvcty '{print " "$1}' >> debian/copyright
+	cat LICENSE >> debian/copyright
+	cat copyright.tail >> debian/copyright
+# the control file describes the package
+	cp control.deb debian/control
+# try to use our own rules so we can override dh_shlibdeps and others
+	cp gb.deb.rules debian/rules
+	cp changelog debian/changelog
+# fix dh_shlibdeps from bitching about dependencies on shared libs
+# YOU HAVE TO RUN THIS before you run 'make'
+#	export LD_LIBRARY_PATH=./debian/gb/var/gigablast/data0
+# build the package now
+	dpkg-buildpackage -nc -aamd64 -tamd64 -b -uc -rfakeroot
+# move to current dur
+	mv ../gb_*.deb .	
+# upload den
+	scp gb*.deb gk268:/w/html/	
+# alien it
+	sudo alien --to-rpm gb_1.17-1_amd64.deb
+# upload rpm
+	scp gb*.rpm gk268:/w/html/	
+
 
 #deb-testing
 testing-deb:

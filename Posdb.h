@@ -402,6 +402,11 @@ class FacetEntry {
  public:
 	int32_t m_count;
 	int64_t m_docId;
+
+	// cast as double/floats for floats:
+	int64_t m_sum;
+	int32_t m_max;
+	int32_t m_min;
 };
 
 
@@ -672,6 +677,10 @@ class PosdbTable {
 	// for gbsortby:item.price ...
 	int32_t m_sortByTermNum;
 	int32_t m_sortByTermNumInt;
+
+	// fix core with these two
+	int32_t m_sortByTermInfoNum;
+	int32_t m_sortByTermInfoNumInt;
 
 	// for gbmin:price:1.99
 	int32_t m_minScoreTermNum;

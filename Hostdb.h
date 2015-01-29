@@ -51,10 +51,11 @@ enum {
 #define PFLAG_REBALANCING    0x20
 #define PFLAG_FOREIGNRECS    0x40
 #define PFLAG_RECOVERYMODE   0x80
+#define PFLAG_OUTOFSYNC      0x100
 
 // added slow disk reads to it, 4 bytes (was 52)
 // 21 bytes for the gbversion (see getVersionSize())
-#define MAX_PING_SIZE (44+4+4+21)
+//#define MAX_PING_SIZE (44+4+4+21)
 
 #define HT_GRUNT   0x01
 #define HT_SPARE   0x02
@@ -78,6 +79,42 @@ public:
 	int32_t m_badGeocoder;
 
 	void clear ( ) { memset ( this , 0 , sizeof(EventStats) ); };
+};
+
+
+class PingInfo {
+ public:
+	// m_lastPing MUST be on top for now...
+	//int64_t m_lastPing;
+	// this timestamp MUST be on top because we set requestSize to 8
+	// and treat it like an old 8-byte ping in PingServer.cpp
+	int64_t m_localHostTimeMS;
+	int32_t m_hostId;
+	int32_t m_loadAvg;
+	float m_percentMemUsed;
+	float m_cpuUsage;
+	int32_t m_totalDocsIndexed;
+	int32_t m_slowDiskReads;
+	int32_t m_hostsConfCRC;
+	float m_diskUsage;
+	int32_t m_flags;
+	// some new stuff
+	int32_t m_numCorruptDiskReads;
+	int32_t m_numOutOfMems;
+	int32_t m_socketsClosedFromHittingLimit;
+
+	int32_t m_totalResends;
+	int32_t m_etryagains;
+
+	int32_t m_udpSlotsInUse;
+
+	int16_t m_currentSpiders;
+	collnum_t m_dailyMergeCollnum;
+	int16_t m_hdtemps[4];
+	char m_gbVersionStr[21];
+	char m_repairMode;
+	char m_kernelErrors;
+	
 };
 
 class Host {
@@ -117,7 +154,7 @@ class Host {
 
 	// his checksum of his hosts.conf so we can ensure we have the
 	// same hosts.conf file! 0 means not legit.
-	int32_t m_hostsConfCRC;
+	//int32_t m_hostsConfCRC;
 
 	// used by Process.cpp to do midnight stat dumps and emails
 	EventStats m_eventStats;
@@ -141,36 +178,39 @@ class Host {
 	// have we ever got a ping reply from him?
 	char           m_gotPingReply;
 	double         m_loadAvg;
-	float          m_percentMemUsed;
+	//float          m_percentMemUsed;
 	// the first time we went OOM (out of mem, i.e. >= 99% mem used)
 	int64_t      m_firstOOMTime;
 	// cpu usage
-	float          m_cpuUsage;
+	//float          m_cpuUsage;
 
-	float          m_diskUsage;
+	//float          m_diskUsage;
 
-	int32_t          m_slowDiskReads;
+	//int32_t          m_slowDiskReads;
 
 	// doc count
-	int32_t          m_docsIndexed;
+	//int32_t          m_docsIndexed;
 	int32_t          m_urlsIndexed;
 
 	int32_t          m_eventsIndexed;
 
 	// did gb log system errors that were given in g_conf.m_errstr ?
-	char           m_kernelErrors;
+	//char           m_kernelErrors;
 	bool           m_kernelErrorReported;
 
-	int32_t           m_flags;
+	//int32_t           m_flags;
 
 	// used be SEO pipeline in xmldoc.cpp
 	int32_t           m_numOutstandingRequests;
 
 	// used by DailyMerge.cpp exclusively
-	collnum_t      m_dailyMergeCollnum;
+	//collnum_t      m_dailyMergeCollnum;
 
 	// last time g_hostdb.ping(i) was called for this host in milliseconds.
 	int64_t      m_lastPing;
+
+	char m_tmpBuf[4];
+
 	// . first time we sent an unanswered ping request to this host
 	// . used so we can determine when to send an email alert
 	int64_t      m_startTime;
@@ -229,9 +269,9 @@ class Host {
 	// eth0 and eth1 of this host
 	char           m_shotgunBit;
 	// how many ETRYAGAINs we received as replies from this host
-	int32_t           m_etryagains;
+	//int32_t           m_etryagains;
 	// how many resends total we had to do to this host
-	int32_t           m_totalResends;
+	//int32_t           m_totalResends;
 	// how many total error replies we got from this host
 	int32_t           m_errorReplies;
 
@@ -273,10 +313,10 @@ class Host {
 
 	// . temps in celsius of the hard drives
 	// . set in Process.cpp
-	int16_t          m_hdtemps[4];
+	//int16_t          m_hdtemps[4];
 
 	// 24 bytes including ending \0
-	char m_gbVersionStrBuf[24];
+	//char m_gbVersionStrBuf[24];
 
 	// Syncdb.cpp uses these
 	char           m_inSync ;
@@ -296,7 +336,8 @@ class Host {
 	int32_t m_lastTryError;
 	int32_t m_lastTryTime;
 
-	char  m_requestBuf[MAX_PING_SIZE];
+	//char  m_requestBuf[MAX_PING_SIZE];
+	PingInfo m_pingInfo;//RequestBuf;
 };
 
 #define MAX_HOSTS 512
@@ -393,7 +434,7 @@ class Hostdb {
 
 	bool hasDeadHost ( );
 
-	bool kernelErrors (Host *h) { return h->m_kernelErrors; };
+	bool kernelErrors (Host *h) { return h->m_pingInfo.m_kernelErrors; };
 
 	int64_t getNumGlobalRecs ( );
 

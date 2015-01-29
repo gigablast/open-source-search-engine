@@ -416,7 +416,7 @@ bool UdpServer::init ( uint16_t port, UdpProtocol *proto, int32_t niceness,
 	int fd = socket (AF_INET, SOCK_PACKET, htons (3050));
 	ioctl ( fd , SIOCGIFADDR, &ifr );
 	struct in_addr ip_source;	
-	memcpy (&ip_source, &((struct sockaddr_in *) &ifr.ifr_ifru.ifru_addr)->sin_addr, sizeof (struct sockaddr_in)); 
+	gbmemcpy (&ip_source, &((struct sockaddr_in *) &ifr.ifr_ifru.ifru_addr)->sin_addr, sizeof (struct sockaddr_in)); 
 	log ("My IP address: %s\n", inet_ntoa (ip_source)); 
         //struct sockaddr_in *me = (sockaddr_in *)&ifr.ifr_ifru.ifru_addr;
 	//struct in_addr *me = &((struct sockaddr_in *) 
@@ -2026,7 +2026,8 @@ bool UdpServer::makeCallbacks_ass ( int32_t niceness ) {
 			h = g_hostdb.getHost ( slot->m_hostId );
 		if ( h ) {
 			h->m_errorReplies++;
-			if ( g_errno == ETRYAGAIN ) h->m_etryagains++;
+			if ( g_errno == ETRYAGAIN ) 
+				h->m_pingInfo.m_etryagains++;
 		}
 
 		//int32_t cbAddr = (int32_t)slot->m_callback;

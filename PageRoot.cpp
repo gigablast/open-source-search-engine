@@ -565,7 +565,7 @@ bool expandHtml (  SafeBuf& sb,
 				//p += gbstrlen ( p );	
 				sb.safePrintf("<input type=hidden name=c "
 					      "value=\"");
-				//memcpy ( p , coll , collLen );
+				//gbmemcpy ( p , coll , collLen );
 				//p += collLen;
 				sb.safeMemcpy(coll, collLen);
 				//sprintf ( p , "\">\n");
@@ -2155,7 +2155,7 @@ bool printTopDirectory ( SafeBuf& sb , char format ) {
 	//if (pend - p <= topListLen+1)
 	//	return p;
 	// copy it in
-	//memcpy(p, topList, topListLen);
+	//gbmemcpy(p, topList, topListLen);
 	//p += topListLen;
 	//*p = '\0';
 	//return p;
@@ -2394,7 +2394,7 @@ bool sendPageAddUrl ( TcpSocket *sock , HttpRequest *hr ) {
 	// save the "ufu" (url of file of urls)
 	st1->m_ufu[0] = '\0';
 	st1->m_ufuLen  = ufuLen;
-	memcpy ( st1->m_ufu , ufu , ufuLen );
+	gbmemcpy ( st1->m_ufu , ufu , ufuLen );
 	st1->m_ufu[ufuLen] = '\0';
 
 	st1->m_doTuringTest = cr->m_doTuringTest;
@@ -2942,6 +2942,11 @@ bool sendPageHelp ( TcpSocket *sock , HttpRequest *hr ) {
 	// 		      cr->m_coll);
 
 
+	char *qc = "demo";
+	char *host = "http://www.gigablast.com";
+	// for debug make it local on laptop
+	host = "";
+
 	sb.safePrintf(
 	"<br>"
 	"<table width=650px cellpadding=5 cellspacing=0 border=0>"
@@ -2962,30 +2967,30 @@ bool sendPageHelp ( TcpSocket *sock , HttpRequest *hr ) {
 	"<th><font color=33dcff>Description</font></th>"
 	"</tr>"
 	"<tr> "
-	"<td><a href=/search?q=cat+dog>cat dog</a></td>"
+	"<td><a href=%s/search?c=%s&q=cat+dog>cat dog</a></td>"
 	"            <td>Search results have the word <em>cat</em> and the word <em>dog</em> "
 	"              in them. They could also have <i>cats</i> and <i>dogs</i>.</td>"
 	"          </tr>"
 	""
 	""
 	"          <tr bgcolor=#E1FFFF> "
-	"            <td><a href=/search?q=%%2Bcat>+cat</a></td>"
+	"            <td><a href=%s/search?c=%s&q=%%2Bcat>+cat</a></td>"
 	"            <td>Search results have the word <em>cat</em> in them. If the search results has the word <i>cats</i> then it will not be included. The plus sign indicates an exact match and not to use synonyms, hypernyms or hyponyms or any other form of the word.</td>"
 	"          </tr>"
 	""
 	""
 	"          <tr> "
-	"            <td height=10><a href=/search?q=mp3+%%22take+five%%22>mp3&nbsp;\"take&nbsp;five\"</a></td>"
+	"            <td height=10><a href=%s/search?c=%s&q=mp3+%%22take+five%%22>mp3&nbsp;\"take&nbsp;five\"</a></td>"
 	"            <td>Search results have the word <em>mp3</em> and the exact phrase <em>take "
 	"              five</em> in them.</td>"
 	"          </tr>"
 	"          <tr bgcolor=#E1FFFF> "
-	"            <td><a href=/search?q=%%22john+smith%%22+-%%22bob+dole%%22>\"john&nbsp;smith\"&nbsp;-\"bob&nbsp;dole\"</a></td>"
+	"            <td><a href=%s/search?c=%s&q=%%22john+smith%%22+-%%22bob+dole%%22>\"john&nbsp;smith\"&nbsp;-\"bob&nbsp;dole\"</a></td>"
 	"            <td>Search results have the phrase <em>john smith</em> but NOT the "
 	"              phrase <em>bob dole</em> in them.</td>"
 	"          </tr>"
 	"          <tr> "
-	"            <td><a href=/search?q=bmx+-game>bmx&nbsp;-game</a></td>"
+	"            <td><a href=%s/search?c=%s&q=bmx+-game>bmx&nbsp;-game</a></td>"
 	"            <td>Search results have the word <em>bmx</em> but not <em>game</em>.</td>"
 	"          </tr>"
 	// "          <tr> "
@@ -3063,6 +3068,17 @@ bool sendPageHelp ( TcpSocket *sock , HttpRequest *hr ) {
 	// ""
 	// ""
 	, GOLD
+
+	, host
+	, qc
+	, host
+	, qc
+	, host
+	, qc
+	, host
+	, qc
+	, host
+	, qc
 		      );
 
 
@@ -3076,19 +3092,25 @@ bool sendPageHelp ( TcpSocket *sock , HttpRequest *hr ) {
 		      //"<td><font color=33dcff><b>Description</b></font></td>"
 		      // "</tr>"
 		      "<tr bgcolor=#E1FFFF>"
-		      "<td>cat | dog</td><td>"
+		      "<td><a href=%s/search?c=%s&q=cat|dog>cat | dog</a>"
+		      "</td><td>"
 		      "Match documents that have cat and dog in them, but "
 		      "do not allow cat to affect the ranking score, only "
 		      "dog. This is called a <i>query refinement</i>."
 		      "</td></tr>\n"
 
 		      "<tr bgcolor=#ffFFFF>"
-		      "<td>document.title:paper</td><td>"
+		      "<td><a href=%s/search?c=%s&q=document.title:paper>"
+		      "document.title:paper</a></td><td>"
 		      "That query will match a JSON document like "
 		      "<i>"
 		      "{ \"document\":{\"title\":\"This is a good paper.\" "
 		      "}}</i> or, alternatively, an XML document like <i>"
 
+		      , host
+		      , qc
+		      , host
+		      , qc
 
 		      );
 	sb.htmlEncode("<document><title>This is a good paper"
@@ -3141,8 +3163,11 @@ bool sendPageHelp ( TcpSocket *sock , HttpRequest *hr ) {
 		// fix table internal cell bordering
 		if ( ! d || d[0] == '\0' ) d = "&nbsp;";
 		sb.safePrintf("<tr bgcolor=%s>"
-			      "<td><nobr><a href=\"/search?q="
-			      , bgcolor );
+			      "<td><nobr><a href=\"%s/search?c=%s&q="
+			      , bgcolor
+			      , host
+			      , qc
+			      );
 		sb.urlEncode ( f->example );
 		sb.safePrintf("\">");
 		sb.safePrintf("%s</a></nobr></td>"
@@ -3194,17 +3219,17 @@ bool sendPageHelp ( TcpSocket *sock , HttpRequest *hr ) {
 	"              </td>"
 	"          </tr>"
 	"          <tr> "
-	"            <td><a href=/search?q=cat+AND+dog>cat&nbsp;AND&nbsp;dog</a></td>"
+	"            <td><a href=%s/search?c=%s&q=cat+AND+dog>cat&nbsp;AND&nbsp;dog</a></td>"
 	"            <td>Search results have the word <em>cat</em> AND the word <em>dog</em> "
 	"              in them.</td>"
 	"          </tr>"
 	"          <tr bgcolor=#E1FFFF> "
-	"            <td><a href=/search?q=cat+OR+dog>cat&nbsp;OR&nbsp;dog</a></td>"
+	"            <td><a href=%s/search?c=%s&q=cat+OR+dog>cat&nbsp;OR&nbsp;dog</a></td>"
 	"            <td>Search results have the word <em>cat</em> OR the word <em>dog</em> "
 	"              in them, but preference is given to results that have both words.</td>"
 	"          </tr>"
 	"          <tr> "
-	"            <td><a href=/search?q=cat+dog+OR+pig>cat&nbsp;dog&nbsp;OR&nbsp;pig</a></td>"
+	"            <td><a href=%s/search?c=%s&q=cat+dog+OR+pig>cat&nbsp;dog&nbsp;OR&nbsp;pig</a></td>"
 	"            <td>Search results have the two words <em>cat</em> and <em>dog</em> "
 	"              OR search results have the word <em>pig</em>, but preference is "
 	"              given to results that have all three words. This illustrates how "
@@ -3212,26 +3237,26 @@ bool sendPageHelp ( TcpSocket *sock , HttpRequest *hr ) {
 	"              to be true.</td>"
 	"          </tr>"
 	"          <tr bgcolor=#E1FFFF> "
-	"            <td><a href=/search?q=%%22cat+dog%%22+OR+pig>\"cat&nbsp;dog\"&nbsp;OR&nbsp;pig</a></td>"
+	"            <td><a href=%s/search?c=%s&q=%%22cat+dog%%22+OR+pig>\"cat&nbsp;dog\"&nbsp;OR&nbsp;pig</a></td>"
 	"            <td>Search results have the phrase <em>\"cat dog\"</em> in them OR they "
 	"              have the word <em>pig</em>, but preference is given to results that "
 	"              have both.</td>"
 	"          </tr>"
 	"          <tr> "
-	"            <td><a href=/search?q=title%%3A%%22cat+dog%%22+OR+pig>title</a><a href=/search?q=title%%3A%%22cat+dog%%22+OR+pig>:\"cat "
+	"            <td><a href=%s/search?c=%s&q=title%%3A%%22cat+dog%%22+OR+pig>title</a><a href=%s/search?c=%s&q=title%%3A%%22cat+dog%%22+OR+pig>:\"cat "
 	"              dog\" OR pig</a></td>"
 	"            <td>Search results have the phrase <em>\"cat dog\"</em> in their title "
 	"              OR they have the word <em>pig</em>, but preference is given to results "
 	"              that have both.</td>"
 	"          </tr>"
 	"          <tr bgcolor=#E1FFFF> "
-	"            <td><a href=/search?q=cat+OR+dog+OR+pig>cat&nbsp;OR&nbsp;dog&nbsp;OR&nbsp;pig</a></td>"
+	"            <td><a href=%s/search?c=%s&q=cat+OR+dog+OR+pig>cat&nbsp;OR&nbsp;dog&nbsp;OR&nbsp;pig</a></td>"
 	"            <td>Search results need only have one word, <em>cat</em> or <em>dog</em> "
 	"              or <em>pig</em>, but preference is given to results that have the "
 	"              most of the words.</td>"
 	"          </tr>"
 	"          <tr> "
-	"            <td><a href=/search?q=cat+OR+dog+AND+pig>cat&nbsp;OR&nbsp;dog&nbsp;AND&nbsp;pig</a></td>"
+	"            <td><a href=%s/search?c=%s&q=cat+OR+dog+AND+pig>cat&nbsp;OR&nbsp;dog&nbsp;AND&nbsp;pig</a></td>"
 	"            <td>Search results have <em>dog</em> and <em>pig</em>, but they may "
 	"              or may not have <em>cat</em>. Preference is given to results that "
 	"              have all three. To evaluate expressions with more than two operands, "
@@ -3245,11 +3270,11 @@ bool sendPageHelp ( TcpSocket *sock , HttpRequest *hr ) {
 	"              expressions with more than one boolean operator.</td>"
 	"          </tr>"
 	"          <tr bgcolor=#E1FFFF> "
-	"            <td><a href=/search?q=cat+AND+NOT+dog>cat&nbsp;AND&nbsp;NOT&nbsp;dog</a></td>"
+	"            <td><a href=%s/search?c=%s&q=cat+AND+NOT+dog>cat&nbsp;AND&nbsp;NOT&nbsp;dog</a></td>"
 	"            <td>Search results have <em>cat</em> but do not have <em>dog</em>.</td>"
 	"          </tr>"
 	"          <tr> "
-	"            <td><a href=/search?q=cat+AND+NOT+%%28dog+OR+pig%%29>cat&nbsp;AND&nbsp;NOT&nbsp;(dog&nbsp;OR&nbsp;pig)</a></td>"
+	"            <td><a href=%s/search?c=%s&q=cat+AND+NOT+%%28dog+OR+pig%%29>cat&nbsp;AND&nbsp;NOT&nbsp;(dog&nbsp;OR&nbsp;pig)</a></td>"
 	"            <td>Search results have <em>cat</em> but do not have <em>dog</em> "
 	"              and do not have <em>pig</em>. When evaluating a boolean expression "
 	"              that contains ()'s you can evaluate the sub-expression in the ()'s "
@@ -3260,7 +3285,7 @@ bool sendPageHelp ( TcpSocket *sock , HttpRequest *hr ) {
 	"              AND false = false</em>. Does anyone actually read this far?</td>"
 	"          </tr>"
 	"          <tr bgcolor=#E1FFFF> "
-	"            <td><a href=/search?q=%%28cat+OR+dog%%29+AND+NOT+%%28cat+AND+dog%%29>(cat&nbsp;OR&nbsp;dog)&nbsp;AND&nbsp;NOT&nbsp;(cat&nbsp;AND&nbsp;dog)</a></td>"
+	"            <td><a href=%s/search?c=%s&q=%%28cat+OR+dog%%29+AND+NOT+%%28cat+AND+dog%%29>(cat&nbsp;OR&nbsp;dog)&nbsp;AND&nbsp;NOT&nbsp;(cat&nbsp;AND&nbsp;dog)</a></td>"
 	"            <td>Search results have <em>cat</em> or <em>dog</em> but not both.</td>"
 	"          </tr>"
 	"          <tr> "
@@ -3279,6 +3304,28 @@ bool sendPageHelp ( TcpSocket *sock , HttpRequest *hr ) {
 	//"</table>"
 	//"<br>"
 		      , GOLD
+		      , host
+		      , qc
+		      , host
+		      , qc
+		      , host
+		      , qc
+		      , host
+		      , qc
+		      , host
+		      , qc
+		      , host
+		      , qc
+		      , host
+		      , qc
+		      , host
+		      , qc
+		      , host
+		      , qc
+		      , host
+		      , qc
+		      , host
+		      , qc
 		      );
 
 

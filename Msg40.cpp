@@ -106,6 +106,7 @@ Msg40::Msg40() {
 	m_lastChunk     = false;
 	m_didSummarySkip = false;
 	m_omitCount      = 0;
+	m_printCount = 0;
 	//m_numGigabitInfos = 0;
 }
 
@@ -241,7 +242,19 @@ bool Msg40::getResults ( SearchInput *si      ,
 	m_cachedResults  = false;
 
 	// bail now if 0 requested!
-	if ( m_si->m_docsWanted == 0 ) return true;
+	// crap then we don't stream anything if in streaming mode.
+	if ( m_si->m_docsWanted == 0 ) {
+		log("msg40: setting streamresults to false. n=0.");
+		m_si->m_streamResults = false;
+		return true;
+	}
+
+	// or if no query terms
+	if ( m_si->m_q.m_numTerms <= 0 ) {
+		log("msg40: setting streamresults to false. numTerms=0.");
+		m_si->m_streamResults = false;
+		return true;
+	}
 
 	// . do this now in case results were cached.
 	// . set SearchInput class instance, m_si
@@ -429,11 +442,27 @@ bool Msg40::getResults ( SearchInput *si      ,
 			return false;
 		// reset g_errno, we're just a cache
 		g_errno = 0;
-		return gotCacheReply();
+		bool status = gotCacheReply();
+
+		if ( status && m_si->m_streamResults ) {
+			log("msg40: setting streamresults to false. "
+			    "was in cache.");
+			m_si->m_streamResults = false;
+		}
+
+		return status;
 	}
 
 	// keep going
-	return prepareToGetDocIds ( );
+	bool status = prepareToGetDocIds ( );
+
+	if ( status && m_si->m_streamResults ) {
+		log("msg40: setting streamresults to false. "
+		    "prepare did not block.");
+		m_si->m_streamResults = false;
+	}
+
+	return status;
 }
 
 /*
@@ -704,7 +733,7 @@ bool Msg40::federatedLoop ( ) {
 		// assign it
 		m_msg3aPtrs[i] = mp;
 		// assign the request for it
-		memcpy ( &mp->m_rrr , &mr , sizeof(Msg39Request) );
+		gbmemcpy ( &mp->m_rrr , &mr , sizeof(Msg39Request) );
 		// then customize it to just search this collnum
 		mp->m_rrr.m_collnum = cp[i];
 
@@ -1508,8 +1537,8 @@ bool Msg40::launchMsg20s ( bool recalled ) {
 			req.size_hqbuf = gbstrlen(req.ptr_hqbuf)+1;
 		}
 
-		int32_t q3size = m_si->m_sbuf3.length()+1;
-		if ( q3size == 1 ) q3size = 0;
+		//int32_t q3size = m_si->m_sbuf3.length()+1;
+		//if ( q3size == 1 ) q3size = 0;
 		//req.ptr_q2buf             = m_si->m_sbuf3.getBufStart();
 		//req.size_q2buf            = q3size;
 		
@@ -1694,7 +1723,8 @@ bool gotSummaryWrapper ( void *state ) {
 	THIS->m_numReplies++;
 	// log every 1000 i guess
 	if ( (THIS->m_numReplies % 1000) == 0 )
-		log("msg40: got %"INT32" summaries out of %"INT32"",THIS->m_numReplies,
+		log("msg40: got %"INT32" summaries out of %"INT32"",
+		    THIS->m_numReplies,
 		    THIS->m_msg3a.m_numDocIds);
 	// it returns false if we're still awaiting replies
 	if ( ! THIS->gotSummary ( ) ) return false;
@@ -1712,6 +1742,11 @@ void doneSendingWrapper9 ( void *state , TcpSocket *sock ) {
 	Msg40 *THIS = (Msg40 *)state;
 	// the send completed, count it
 	THIS->m_sendsIn++;
+	// error?
+	if ( THIS->m_sendsIn > THIS->m_sendsOut )
+		log("msg40: sendsin > sendsout");
+	// debug
+	//g_errno = ETCPTIMEDOUT;
 	// socket error? if client closes the socket midstream we get one.
 	if ( g_errno ) {
 		THIS->m_socketHadError = g_errno;
@@ -1889,7 +1924,8 @@ bool Msg40::gotSummary ( ) {
 		     mr->m_contentType != CT_STATUS &&
 		     m_dedupTable.isInTable ( &mr->m_contentHash32 ) ) {
 			//if ( g_conf.m_logDebugQuery )
-			log("msg40: dup sum #%"INT32" (%"UINT32")(d=%"INT64")",m_printi,
+			log("msg40: dup sum #%"INT32" (%"UINT32")"
+			    "(d=%"INT64")",m_printi,
 			    mr->m_contentHash32,mr->m_docId);
 			// make it available to be reused
 			m20->reset();
@@ -1926,8 +1962,12 @@ bool Msg40::gotSummary ( ) {
 
 		// do not print it if before the &s=X start position though
 		if ( m_si && m_numDisplayed <= m_si->m_firstResultNum ){
-			log("msg40: hiding #%"INT32" (%"UINT32")(d=%"INT64")",
-			    m_printi,mr->m_contentHash32,mr->m_docId);
+			if ( m_printCount == 0 ) 
+				log("msg40: hiding #%"INT32" (%"UINT32")"
+				    "(d=%"INT64")",
+				    m_printi,mr->m_contentHash32,mr->m_docId);
+		        m_printCount++;
+			if ( m_printCount == 100 ) m_printCount = 0;
 			m20->reset();
 			continue;
 		}
@@ -2028,6 +2068,8 @@ bool Msg40::gotSummary ( ) {
 		m_printedTail = true;
 		printSearchResultsTail ( st );
 		if ( m_sendsIn < m_sendsOut ) { char *xx=NULL;*xx=0; }
+		if ( g_conf.m_logDebugTcp )
+			log("tcp: disabling streamingMode now");
 		// this will be our final send
 		st->m_socket->m_streamingMode = false;
 	}
@@ -2247,11 +2289,13 @@ bool Msg40::gotSummary ( ) {
 			logf( LOG_DEBUG, "query: result %"INT32" (docid=%"INT64") had "
 			     "an error (%s) and will not be shown.", i,
 			      m_msg3a.m_docIds[i],  mstrerror(m->m_errno));
-			*level = CR_ERROR_SUMMARY;
-			//m_visibleContiguous--; 
 			// update our m_errno while here
 			if ( ! m_errno ) m_errno = m->m_errno;
-			continue;
+			if ( ! m_si->m_showErrors ) {
+				*level = CR_ERROR_SUMMARY;
+				//m_visibleContiguous--; 
+				continue;
+			}
 		}
 		// a special case
 		if ( mr && mr->m_errno == CR_RULESET_FILTERED ) {
@@ -2265,9 +2309,10 @@ bool Msg40::gotSummary ( ) {
 			//m_visibleContiguous--;
 			continue;
 		}
-		if ( ! m_si->m_showBanned && mr->m_isBanned ) {
+		if ( ! m_si->m_showBanned && mr && mr->m_isBanned ) {
 			if ( m_si->m_debug || g_conf.m_logDebugQuery )
-			logf ( LOG_DEBUG, "query: result %"INT32" (docid=%"INT64") is "
+			logf ( LOG_DEBUG, "query: result %"INT32" "
+			       "(docid=%"INT64") is "
 			       "banned and will not be shown.", i, 
 			       m_msg3a.m_docIds[i] );
 			*level = CR_BANNED_URL;
@@ -2275,20 +2320,21 @@ bool Msg40::gotSummary ( ) {
 			continue;
 		}
 		// filter out urls with <![CDATA in them
-		if ( strstr(mr->ptr_ubuf, "<![CDATA[") ) {
+		if ( mr && strstr(mr->ptr_ubuf, "<![CDATA[") ) {
 			*level = CR_BAD_URL;
                         //m_visibleContiguous--;
 			continue;
 		}
 		// also filter urls with ]]> in them
-		if ( strstr(mr->ptr_ubuf, "]]>") ) {
+		if ( mr && strstr(mr->ptr_ubuf, "]]>") ) {
 			*level = CR_BAD_URL;
                         //m_visibleContiguous--;
 			continue;
 		}
-		if( ! mr->m_hasAllQueryTerms ) {
+		if( mr && ! mr->m_hasAllQueryTerms ) {
 			if ( m_si->m_debug || g_conf.m_logDebugQuery )
-			logf( LOG_DEBUG, "query: result %"INT32" (docid=%"INT64") is "
+			logf( LOG_DEBUG, "query: result %"INT32" "
+			      "(docid=%"INT64") is "
 			      "missing query terms and will not be"
 			      " shown.", i, m_msg3a.m_docIds[i] );
 			*level = CR_MISSING_TERMS;
@@ -3296,7 +3342,7 @@ bool isSubDom(char *s , int32_t len) {
 //////////////////////////////////
 
 
-bool hashSample ( Query *q, 
+bool hashGigabitSample ( Query *q, 
 		  HashTableX *master, 
 		  TopicGroup *tg ,
 		  SafeBuf *vecBuf,
@@ -3376,6 +3422,9 @@ bool Msg40::computeGigabits( TopicGroup *tg ) {
 		// . the sample is a bunch of text snippets surrounding the
 		//   query terms in the doc in the search results
 		Msg20Reply *reply = thisMsg20->getReply();
+		// if m_si->m_showErrors then reply can be NULL if the
+		// titleRec was not found
+		if ( ! reply ) continue;
 		char *sample = reply->ptr_gigabitSample;
 		int32_t  slen   = reply->size_gigabitSample;
 		// but if doing metas, get the display content as the sample
@@ -3500,9 +3549,12 @@ bool Msg40::computeGigabits( TopicGroup *tg ) {
 		numDocsProcessed++;
 		// . hash it into the master table
 		// . this may alloc st->m_mem, so be sure to free below
-		hashSample ( q,
+		hashGigabitSample ( q,
 			     &master, 
 			     tg ,
+				    // vecbuf is an ongoing accumulation
+				    // of wordid vectors from the samples
+				    // we let into the master hash table.
 			     &vecBuf,
 			     thisMsg20,
 			     &repeatTable,
@@ -3520,7 +3572,7 @@ bool Msg40::computeGigabits( TopicGroup *tg ) {
 		int32_t len   = master->getTermLen(i);
 		char ff[1024];
 		if ( len > 1020 ) len = 1020;
-		memcpy ( ff , ptr , len );
+		gbmemcpy ( ff , ptr , len );
 		ff[len] = '\0';
 		// we can have html entities in here now
 		//if ( ! is_alnum(ff[0]) ) { char *xx = NULL; *xx = 0; }
@@ -3863,7 +3915,10 @@ void hashExcerpt ( Query *q ,
 
 // . returns false and sets g_errno on error
 // . here's the tricky part
-bool hashSample ( Query *q, 
+// . this compates thisMsg20->getReply()->ptr_gigabitSample excerpts
+//   to all from other docids and this docids that we have accumulated
+//   because they are distinct enough.
+bool hashGigabitSample ( Query *q, 
 		  HashTableX *master, 
 		  TopicGroup *tg ,
 		  SafeBuf *vecBuf,
@@ -3877,6 +3932,9 @@ bool hashSample ( Query *q,
 	//		   "topic generation.");
 
 	Msg20Reply *reply = thisMsg20->getReply();
+	// if m_si->m_showErrors is true then reply can be NULL
+	// if titleRec was not found
+	if ( ! reply ) return true;
 	// get the ith big sample
 	char *bigSampleBuf = reply->ptr_gigabitSample;
 	int32_t  bigSampleLen = reply->size_gigabitSample;
@@ -3929,10 +3987,13 @@ bool hashSample ( Query *q,
 	//
 
 
-	// hash each excerpt
+	// hash each \0 separated excerpt in bigSampleBuf
 	char *p    = bigSampleBuf;
 	// most samples are under 5k, i've seend a 32k sample take 11ms!
 	char *pend = p + bigSampleLen;
+
+	// compile all \0 terminated excerpts into a single vector for this
+	// docid
 	while ( p < pend ) {
 		// debug
 		//log("docId=%"INT64" EXCERPT=%s",docId,p);
@@ -3940,9 +4001,14 @@ bool hashSample ( Query *q,
 		// parse into words
 		Words ww;
 		ww.setx ( p, plen, 0);// niceness
+		// save it
+		//log("gbits: getting sim for %s",p);
 		// advance to next excerpt
 		p += plen + 1;
 		// p is only non-NULL if we are doing it the old way
+		// 'tg' indicates where the gigabits came from, like the
+		// body, or a particular meta tag.
+		// 'repeatTable' is for counting the same word
 		hashExcerpt ( q, 
 			      &localGigabitTable, 
 			      ww,
@@ -3950,13 +4016,19 @@ bool hashSample ( Query *q,
 			      repeatTable , 
 			      thisMsg20 ,
 			      debugGigabits );
-		// skip if not deduping
+		// . skip if not deduping
+		// . if a sample is too similar to another sample then we
+		//   do not allow its gigabits to vote. its considered too
+		//   spammy.
 		if ( tg->m_dedupSamplePercent <= 0 ) continue;
 		// make a vector out of words
 		int64_t *wids = ww.getWordIds();
 		int32_t nw = ww.getNumWords();
+		// put all the words from this sample into simTable hash table
+		// and just make vbuf a list of the unique wordIds from all
+		// gigabit samples this docid provides.
 		for ( int32_t i = 0 ; i < nw ; i++ ) {
-			// make it this
+			// convert word to a number
 			uint32_t widu = (uint64_t)(wids[i]);
 			// donot allow this! zero is a vector terminator
 			if ( widu == 0 ) widu = 1;
@@ -3975,6 +4047,11 @@ bool hashSample ( Query *q,
 	vbuf.truncLen(((int32_t)SAMPLE_VECTOR_SIZE) - 4);
 	// make last int32_t a 0
 	vbuf.pushLong(0);
+	// now vbuf is a fairly decent vector of words that represent
+	// the gigabit sample for this docid. see if it is already
+	// too similar to ones we've stored in "vecBuf" which has all the
+	// saples from all the other docids that were considered 
+	// mutually distinct enough.
 
 	// . compute the fingerprint/similarirtyVector from this table
 	//   the same way we do for documents for deduping them at query time
@@ -3987,7 +4064,7 @@ bool hashSample ( Query *q,
 		// point to it
 		char *v1 = vbuf.getBufStart();
 		// get # stored so far
-		int32_t numVecs = vecBuf->length() / (int32_t)SAMPLE_VECTOR_SIZE;
+		int32_t numVecs = vecBuf->length()/(int32_t)SAMPLE_VECTOR_SIZE;
 		char *v2 = vecBuf->getBufStart();
 		// see if our vector is too similar
 		for ( int32_t i = 0 ; i < numVecs ; i++ ) {
@@ -3998,12 +4075,22 @@ bool hashSample ( Query *q,
 			// return true if too similar to another sample we did
 			if ( ss >= tg->m_dedupSamplePercent ) { // 80 ) {
 				localGigabitTable.reset();
-				log(LOG_DEBUG,"gbits: removed dup sample.");
+				// log(LOG_DEBUG,"gbits: removed dup sample "
+				//     "\"%s\" too similar to sample #%i"
+				//     , bigSampleBuf
+				//     , i
+				//     );
 				return true;
 			}
 		}
-		// add our vector to the array
+		// this docid sample as considered unique enough with respect
+		// to the other samples from other docids, so add the
+		// wordids to our list to dedup the next excerpts
 		vecBuf->safeMemcpy(v1,(int32_t)SAMPLE_VECTOR_SIZE);
+
+		// log(LOG_DEBUG,"gbits: adding unique sample #%i %s "
+		//     ,numVecs,bigSampleBuf);
+
 	}
 
 	//log("TOOK %"INT64" ms plen=%"INT32"",gettimeofdayInMilliseconds()-start,
@@ -4069,7 +4156,7 @@ bool hashSample ( Query *q,
 			// sanity
 			if ( gc->m_numWords > MAX_GIGABIT_WORDS ) { 
 				char*xx=NULL;*xx=0;}
-			memcpy((char *)gbit.m_wordIds,
+			gbmemcpy((char *)gbit.m_wordIds,
 			       (char *)gc->m_wordIds,
 			       gc->m_numWords * 8 );
 			if ( ! master->addKey ( &termId64, &gbit ) )
@@ -5325,6 +5412,9 @@ bool Msg40::computeFastFacts ( ) {
 		Msg20* thisMsg20 = m_msg20[i];
 		// must be there! wtf?
 		Msg20Reply *reply = thisMsg20->getReply();
+		// if m_si->m_showErrors is true then reply can be NULL
+		// if titleRec was not found
+		if ( ! reply ) return true;
 		// get sample. sample uses \0 as delimeters between excerpts
 		char *p    =     reply-> ptr_gigabitSample;
 		char *pend = p + reply->size_gigabitSample; // includes \0
@@ -5542,7 +5632,7 @@ bool Msg40::addFacts ( HashTableX *queryTable,
 	// make last int32_t a 0 so Clusterdb::getSimilarity() likes it
 	vbuf.pushLong(0);
 	// now store it in the Fact struct
-	memcpy ( fact.m_dedupVector , vbuf.getBufStart(), vbuf.length() );
+	gbmemcpy ( fact.m_dedupVector , vbuf.getBufStart(), vbuf.length() );
 
 
 	// otherwise, add it
@@ -5574,8 +5664,12 @@ bool Msg40::printSearchResult9 ( int32_t ix , int32_t *numPrintedSoFar ,
 		// i guess we can print "Next 10" link
 		m_moreToCome = true;
 		// hide if above limit
-		log("msg40: hiding above docsWanted #%"INT32" (%"UINT32")(d=%"INT64")",
-		    m_printi,mr->m_contentHash32,mr->m_docId);
+		if ( m_printCount == 0 )
+			log(LOG_INFO,"msg40: hiding above docsWanted "
+			    "#%"INT32" (%"UINT32")(d=%"INT64")",
+			    m_printi,mr->m_contentHash32,mr->m_docId);
+		m_printCount++;
+		if ( m_printCount == 100 ) m_printCount = 0;
 		// do not exceed what the user asked for
 		return true;
 	}
@@ -5593,9 +5687,9 @@ bool Msg40::printSearchResult9 ( int32_t ix , int32_t *numPrintedSoFar ,
 		m_hadPrintError = true;
 	}
 
-
-	log("msg40: printing #%"INT32" (%"UINT32")(d=%"INT64")",
-	    m_printi,mr->m_contentHash32,mr->m_docId);
+	
+	// log(LOG_INFO,"msg40: printing #%"INT32" (%"UINT32")(d=%"INT64")",
+	//     m_printi,mr->m_contentHash32,mr->m_docId);
 
 	// count it
 	m_numPrinted++;
@@ -5709,7 +5803,12 @@ bool Msg40::printCSVHeaderRow ( SafeBuf *sb ) {
 
 		Msg20 *m20 = getCompletedSummary(i);
 		if ( ! m20 ) break;
-		if ( m20->m_errno ) continue;
+
+		// unless they specified &showerrors=1 do not show
+		// doc not found errors from a bad title rec lookup
+		if ( m20->m_errno && ! m_si->m_showErrors ) 
+			continue;
+
 		if ( ! m20->m_r ) { char *xx=NULL;*xx=0; }
 
 		Msg20Reply *mr = m20->m_r;
@@ -6107,7 +6206,8 @@ void Msg40::lookupFacets2 ( ) {
 			// skip empty slots
 			if ( ! fht->m_flags[m_j] ) continue;
 			// get hash of the facet value
-			FacetValHash_t fvh = *(int32_t *)fht->getKeyFromSlot(m_j);
+			FacetValHash_t fvh ;
+			fvh = *(int32_t *)fht->getKeyFromSlot(m_j);
 			//int32_t count = *(int32_t *)fht->getValFromSlot(j);
 			// get the docid as well
 			FacetEntry *fe =(FacetEntry *)fht->getValFromSlot(m_j);
@@ -6259,7 +6359,11 @@ bool Msg40::printFacetsForTable ( SafeBuf *sb , QueryTerm *qt ) {
 	HttpRequest *hr = &m_si->m_hr;
 	bool firstTime = true;
 	bool isString = false;
+	bool isFloat  = false;
+	bool isInt = false;
 	if ( qt->m_fieldCode == FIELD_GBFACETSTR ) isString = true;
+	if ( qt->m_fieldCode == FIELD_GBFACETFLOAT ) isFloat = true;
+	if ( qt->m_fieldCode == FIELD_GBFACETINT   ) isInt = true;
 	char format = m_si->m_format;
 	// a new table for each facet query term
 	bool needTable = true;
@@ -6297,23 +6401,27 @@ bool Msg40::printFacetsForTable ( SafeBuf *sb , QueryTerm *qt ) {
 		termBuf.nullTerm();
 		char *term = termBuf.getBufStart();
 
-		char tmp[64];
+		char tmp9[128];
+		SafeBuf sb9(tmp9,128);
 
 		QueryWord *qw= qt->m_qword;
 
 			
-		if ( qt->m_fieldCode == FIELD_GBFACETINT ) {
-			sprintf(tmp,"%"INT32"",(int32_t)*fvh);
-			text = tmp;
+		if ( qt->m_fieldCode == FIELD_GBFACETINT && 
+		     qw->m_numFacetRanges == 0 ) {
+			sb9.safePrintf("%"INT32"",(int32_t)*fvh);
+			text = sb9.getBufStart();
 		}
 
-		if ( qt->m_fieldCode == FIELD_GBFACETFLOAT ) {
-			sprintf(tmp,"%f",*(float *)fvh);
-			text = tmp;
+		if ( qt->m_fieldCode == FIELD_GBFACETFLOAT 
+		     && qw->m_numFacetRanges == 0 ) {
+			sb9.printFloatPretty ( *(float *)fvh );
+			text = sb9.getBufStart();
 		}
 
 		int32_t k2 = -1;
 
+		// get the facet range that this FacetEntry represents (int)
 		for ( int32_t k = 0 ; k < qw->m_numFacetRanges; k++ ) {
 			if ( qt->m_fieldCode != FIELD_GBFACETINT )
 				break;
@@ -6321,14 +6429,15 @@ bool Msg40::printFacetsForTable ( SafeBuf *sb , QueryTerm *qt ) {
 				continue;
 			if ( *(int32_t *)fvh >= qw->m_facetRangeIntB[k])
 				continue;
-			sprintf(tmp,"[%"INT32"-%"INT32")"
-				,qw->m_facetRangeIntA[k]
-				,qw->m_facetRangeIntB[k]
-				);
-			text = tmp;
+			sb9.safePrintf("[%"INT32"-%"INT32")"
+				       ,qw->m_facetRangeIntA[k]
+				       ,qw->m_facetRangeIntB[k]
+				       );
+			text = sb9.getBufStart();
 			k2 = k;
 		}
 
+		// get the facet range that this FacetEntry represents (float)
 		for ( int32_t k = 0 ; k < qw->m_numFacetRanges; k++ ) {
 			if ( qt->m_fieldCode != FIELD_GBFACETFLOAT )
 				break;
@@ -6336,11 +6445,13 @@ bool Msg40::printFacetsForTable ( SafeBuf *sb , QueryTerm *qt ) {
 				continue;
 			if ( *(float *)fvh >= qw->m_facetRangeFloatB[k])
 				continue;
-			sprintf(tmp,"[%f-%f)"
-				,qw->m_facetRangeFloatA[k]
-				,qw->m_facetRangeFloatB[k]
-				);
-			text = tmp;
+			sb9.pushChar('[');
+			sb9.printFloatPretty(qw->m_facetRangeFloatA[k]);
+			sb9.pushChar('-');
+			sb9.printFloatPretty(qw->m_facetRangeFloatB[k]);
+			sb9.pushChar(')');
+			sb9.nullTerm();
+			text = sb9.getBufStart();
 			k2 = k;
 		}
 
@@ -6374,7 +6485,38 @@ bool Msg40::printFacetsForTable ( SafeBuf *sb , QueryTerm *qt ) {
 			sb->safePrintf("</value>\n"
 				       "\t\t<docCount>%"INT32""
 				       "</docCount>\n"
-				       "\t</facet>\n",count);
+				       ,count);
+			// some stats now for floats
+			if ( isFloat && fe->m_count ) {
+				sb->safePrintf("\t\t<average>");
+				double sum = *(double *)&fe->m_sum;
+				double avg = sum/(double)fe->m_count;
+				sb->printFloatPretty ( (float)avg );
+				sb->safePrintf("\t\t</average>\n");
+				sb->safePrintf("\t\t<min>");
+				float min = *(float *)&fe->m_min;
+				sb->printFloatPretty ( min );
+				sb->safePrintf("</min>\n");
+				sb->safePrintf("\t\t<max>");
+				float max = *(float *)&fe->m_max;
+				sb->printFloatPretty ( max );
+				sb->safePrintf("</max>\n");
+			}
+			// some stats now for ints
+			if ( isInt && fe->m_count ) {
+				sb->safePrintf("\t\t<average>");
+				int64_t sum = fe->m_sum;
+				double avg = (double)sum/(double)fe->m_count;
+				sb->printFloatPretty ( (float)avg );
+				sb->safePrintf("\t\t</average>\n");
+				sb->safePrintf("\t\t<min>");
+				int32_t min = fe->m_min;
+				sb->safePrintf("%"INT32"</min>\n",min);
+				sb->safePrintf("\t\t<max>");
+				int32_t max = fe->m_max;
+				sb->safePrintf("%"INT32"</max>\n",max);
+			}
+			sb->safePrintf("\t</facet>\n");
 			continue;
 		}
 
@@ -6444,8 +6586,49 @@ bool Msg40::printFacetsForTable ( SafeBuf *sb , QueryTerm *qt ) {
 			// just use quotes for ranges like "[1-3)" now
 			sb->safePrintf("\"");
 			sb->safePrintf(",\n"
-				       "\t\"docCount\":%"INT32"\n"
-				       "}\n,\n", count);
+				       "\t\"docCount\":%"INT32""
+				       , count );
+
+			// if it's a # then we print stats after
+			if ( isString || fe->m_count == 0 )
+				sb->safePrintf("\n");
+			else
+				sb->safePrintf(",\n");
+				
+
+			// some stats now for floats
+			if ( isFloat && fe->m_count ) {
+				sb->safePrintf("\t\"average\":");
+				double sum = *(double *)&fe->m_sum;
+				double avg = sum/(double)fe->m_count;
+				sb->printFloatPretty ( (float)avg );
+				sb->safePrintf(",\n");
+				sb->safePrintf("\t\"min\":");
+				float min = *(float *)&fe->m_min;
+				sb->printFloatPretty ( min );
+				sb->safePrintf(",\n");
+				sb->safePrintf("\t\"max\":");
+				float max = *(float *)&fe->m_max;
+				sb->printFloatPretty ( max );
+				sb->safePrintf("\n");
+			}
+			// some stats now for ints
+			if ( isInt && fe->m_count ) {
+				sb->safePrintf("\t\"average\":");
+				int64_t sum = fe->m_sum;
+				double avg = (double)sum/(double)fe->m_count;
+				sb->printFloatPretty ( (float)avg );
+				sb->safePrintf(",\n");
+				sb->safePrintf("\t\"min\":");
+				int32_t min = fe->m_min;
+				sb->safePrintf("%"INT32",\n",min);
+				sb->safePrintf("\t\"max\":");
+				int32_t max = fe->m_max;
+				sb->safePrintf("%"INT32"\n",max);
+			}
+
+			sb->safePrintf("}\n,\n" );
+
 			continue;
 		}
 
@@ -6479,22 +6662,22 @@ bool Msg40::printFacetsForTable ( SafeBuf *sb , QueryTerm *qt ) {
 		}
 		else if ( qt->m_fieldCode == FIELD_GBFACETFLOAT &&
 			  qw->m_numFacetRanges > 0 ) {
-			float min = qw->m_facetRangeIntA[k2];
-			float max = qw->m_facetRangeIntB[k2];
+			float min = qw->m_facetRangeFloatA[k2];
+			float max = qw->m_facetRangeFloatB[k2];
 			if ( min == max )
 				newStuff.safePrintf("prepend="
 						    "gbequalfloat%%3A%s%%3A%f+"
 						    ,term
 						    ,*(float *)fvh);
 			else
-				newStuff.safePrintf("prepend="
-						    "gbminfloat%%3A%s%%3A%f+"
-						    "gbmaxfloat%%3A%s%%3A%f+"
-						    ,term
-						    ,min
-						    ,term
-						    ,max
-						    );
+			newStuff.safePrintf("prepend="
+					    "gbminfloat%%3A%s%%3A%f+"
+					    "gbmaxfloat%%3A%s%%3A%f+"
+					    ,term
+					    ,min
+					    ,term
+					    ,max
+					    );
 		}
 		else if ( qt->m_fieldCode == FIELD_GBFACETFLOAT )
 			newStuff.safePrintf("prepend="

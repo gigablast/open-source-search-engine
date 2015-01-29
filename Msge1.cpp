@@ -701,7 +701,7 @@ bool addTestIp ( char *host , int32_t hostLen , int32_t ip ) {
 	s_last    = s_testBufPtr;
 	s_lastLen = hostLen;
 	// print it
-	memcpy ( s_testBufPtr , host , hostLen );
+	gbmemcpy ( s_testBufPtr , host , hostLen );
 	// skip it
 	s_testBufPtr += hostLen;
 	// then space and ip

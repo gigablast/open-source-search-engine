@@ -583,7 +583,7 @@ bool PageNetTest::controls( TcpSocket *s, HttpRequest *r ) {
 
 	int32_t len = 0;
 	char *coll = r->getString( "c", &len );
-	memcpy( m_coll, coll, len );
+	gbmemcpy( m_coll, coll, len );
 
 	//int32_t ntnd      = r->getLong( "ntnd", 0              );
 	//int32_t rcv       = r->getLong( "ntrs", 0              );

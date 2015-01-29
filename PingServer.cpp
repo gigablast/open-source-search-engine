@@ -177,7 +177,7 @@ void PingServer::initKernelErrorCheck(){
 
 	// clear the kernel Errors 
 	for ( int32_t i = 0; i < g_hostdb.m_numHosts; i++ ){
-		g_hostdb.m_hosts[i].m_kernelErrors = 0;
+		g_hostdb.m_hosts[i].m_pingInfo.m_kernelErrors = 0;
 		g_hostdb.m_hosts[i].m_kernelErrorReported = false;
 	}
 
@@ -271,15 +271,15 @@ void PingServer::sendPingsToAll ( ) {
 }
 
 
-class HostStatus {
-public:
-	int64_t m_lastPing;
-	char m_repairMode;
-	char m_kernelError;
-	char m_loadAvg;
-	char m_percentMemUsed;
+// class HostStatus {
+// public:
+// 	int64_t m_lastPing;
+// 	char m_repairMode;
+// 	char m_kernelError;
+// 	char m_loadAvg;
+// 	char m_percentMemUsed;
 
-};
+// };
 
 // ping host #i
 void PingServer::pingHost ( Host *h , uint32_t ip , uint16_t port ) {
@@ -352,6 +352,7 @@ void PingServer::pingHost ( Host *h , uint32_t ip , uint16_t port ) {
 	// only ping a host once every 5 seconds tops
 	//if ( now - h->m_lastPing < 5000 ) return;
 	// stamp it
+	//h->m_pingInfo.m_lastPing = nowmsLocal;
 	h->m_lastPing = nowmsLocal;
 	// count it
 	s_outstandingPings++;
@@ -397,32 +398,58 @@ void PingServer::pingHost ( Host *h , uint32_t ip , uint16_t port ) {
 	// use the tmp buf
 	//char request[14+4+4+1];
 	//char *p = m_request;
+
 	// we can have multiple outstanding pings, so keep request bufs
 	// independent...
-	char *request = h->m_requestBuf;
-	char *p       = h->m_requestBuf;
+	//char *request = h->m_requestBuf;
+	//char *p       = h->m_requestBuf;
+
+	// we send our stats to host "h"
+	PingInfo *pi = &me->m_pingInfo;//RequestBuf;
+
+	pi->m_numCorruptDiskReads = g_numCorrupt;
+	pi->m_numOutOfMems = g_mem.m_outOfMems;
+	pi->m_socketsClosedFromHittingLimit = g_stats.m_closedSockets;
+	pi->m_currentSpiders = g_spiderLoop.m_numSpidersOut;
+
 	// store the last ping we got from it first
-	*(int64_t *)p = h->m_lastPing; p += sizeof(int64_t);
+	//*(int64_t *)p = h->m_lastPing; p += sizeof(int64_t);
+
+	// i don't think this should be in pinginfo
+	//pi->m_lastPing = h->m_pingInfo.m_lastPing;
+
 	// let the receiver know our repair mode
-	*p = g_repairMode; p++;
+	//*p = g_repairMode; p++;
+	pi->m_repairMode = g_repairMode;
+
 	// problem is that we know when the error occurs, but don't know when 
 	// the error has been fixed. So just consider this host as dead unless
 	// gb is restarted and the problem is fixed
-	*p = me->m_kernelErrors; p++;
+	//*p = me->m_kernelErrors; p++;
+	//pi->m_kernelErrors = me->m_pingInfo.m_kernelErrors;
+
 	//if ( me->m_kernelErrors ){
 	//char *xx = NULL; *xx = 0;
 	//}
 	int32_t l_loadavg = (int32_t) (g_process.getLoadAvg() * 100.0);
-	memcpy(p, &l_loadavg, sizeof(int32_t));	p += sizeof(int32_t);
+	//gbmemcpy(p, &l_loadavg, sizeof(int32_t));	p += sizeof(int32_t);
+	pi->m_loadAvg = l_loadavg ;
+
 	// then our percent mem used
 	float mem = ((float)g_mem.getUsedMem()*100.0)/(float)g_mem.getMaxMem();
-	*(float *)p = mem ; p += sizeof(float); // 4 bytes
+	//*(float *)p = mem ; p += sizeof(float); // 4 bytes
+	pi->m_percentMemUsed = mem;
+
 	// our cpu usage
-	*(float *)p = me->m_cpuUsage ; p += sizeof(float); // 4 bytes
+	//*(float *)p = me->m_cpuUsage ; p += sizeof(float); // 4 bytes
+	//pi->m_cpuUsage = me->m_pingInfo.m_cpuUsage;
+
 	// our num recs, docsIndexed
 	//*(int32_t*)p = (int32_t)g_clusterdb.getRdb()->getNumTotalRecs();
-	*(int32_t*)p = (int32_t)g_process.getTotalDocsIndexed();
-	p += sizeof(int32_t);
+	// *(int32_t*)p = (int32_t)g_process.getTotalDocsIndexed();
+	// p += sizeof(int32_t);
+	pi->m_totalDocsIndexed = (int32_t)g_process.getTotalDocsIndexed();
+
 	// urls indexed since startup
 	//*(int32_t*)p = (int32_t)g_test.m_urlsIndexed;
 	//p += sizeof(int32_t);
@@ -431,16 +458,21 @@ void PingServer::pingHost ( Host *h , uint32_t ip , uint16_t port ) {
 	//*(int32_t *)p = 0;
 	//p += sizeof(int32_t);
 	// slow disk reads
-	*(int32_t*)p = g_stats.m_slowDiskReads;
-	p += sizeof(int32_t);
+	// *(int32_t*)p = g_stats.m_slowDiskReads;
+	// p += sizeof(int32_t);
+	pi->m_slowDiskReads = g_stats.m_slowDiskReads;
+
 
 	// and hosts.conf crc
-	*(int32_t *)p = g_hostdb.getCRC(); p += 4;
+	//*(int32_t *)p = g_hostdb.getCRC(); p += 4;
+	pi->m_hostsConfCRC = g_hostdb.getCRC();
+
 	// ensure crc is legit
 	if ( g_hostdb.getCRC() == 0 ) { char *xx=NULL;*xx=0; }
 
 	// disk usage (df -ka)
-	*(float *)p = g_process.m_diskUsage; p += 4;
+	//*(float *)p = g_process.m_diskUsage; p += 4;
+	pi->m_diskUsage = g_process.m_diskUsage;
 
 	// flags indicating our state
 	int32_t flags = 0;
@@ -457,34 +489,48 @@ void PingServer::pingHost ( Host *h , uint32_t ip , uint16_t port ) {
 	if ( g_dailyMerge.m_mergeMode    == 0 ) flags |= PFLAG_MERGEMODE0;
 	if ( g_dailyMerge.m_mergeMode ==0 || g_dailyMerge.m_mergeMode == 6 )
 		flags |= PFLAG_MERGEMODE0OR6;
+	if ( ! isClockInSync() ) flags |= PFLAG_OUTOFSYNC;
 
-	*(int32_t *)p = flags; p += 4; // 4 bytes
+	//*(int32_t *)p = flags; p += 4; // 4 bytes
+	pi->m_flags = flags;
 
 	// the collection number we are daily merging (currently 2 bytes)
 	collnum_t cn = -1;
 	if ( g_dailyMerge.m_cr ) cn = g_dailyMerge.m_cr->m_collnum;
-	*(collnum_t *)p = cn ; p += sizeof(collnum_t);
+	//*(collnum_t *)p = cn ; p += sizeof(collnum_t);
+	pi->m_dailyMergeCollnum = cn;
+
+	pi->m_hostId = me->m_hostId;
+
+	pi->m_localHostTimeMS = gettimeofdayInMillisecondsLocal();
+
+	pi->m_udpSlotsInUse = g_udpServer.getNumUsedSlots();
 
 	// store hd temps
-	memcpy ( p , me->m_hdtemps , 4 * 2 );
-	p += 4 * 2;
+	// gbmemcpy ( p , me->m_hdtemps , 4 * 2 );
+	// p += 4 * 2;
+	//gbmemcpy ( &pi->m_hdtemps , me->m_pingInfo.m_hdtemps , 4 * 2 );
 
 	// store the gbVersionStrBuf now, just a date with a \0 included
 	char *v = getVersion();
 	int32_t vsize = getVersionSize(); // 21 bytes
-	memcpy ( p , v , vsize );
-	p += vsize;
+	// gbmemcpy ( p , v , vsize );
+	// p += vsize;
+	if ( vsize != 21 ) { char *xx=NULL;*xx=0; }
+	gbmemcpy ( pi->m_gbVersionStr , v , vsize );
+
+	// int32_t requestSize = sizeof(PingRequest);//p - request;
+
+	// // sanity check
+	// if ( requestSize != sizeof(PingRequest) ) { 
+	// 	// (44+4+4+21) ) { // MAX_PING_SIZE ) { 
+	// 	log("ping: "
+	// 	    "YOU ARE MIXING MULTIPLE GB VERSIONS IN YOUR CLUSTER. "
+	// 	    "MAKE SURE THEY ARE ALL THE SAME GB BINARY");
+	// 	char *xx = NULL; *xx = 0; }
 
 
-	int32_t requestSize = p - request;
-
-	// sanity check
-	if ( requestSize != MAX_PING_SIZE ) { 
-		log("ping: "
-		    "YOU ARE MIXING MULTIPLE GB VERSIONS IN YOUR CLUSTER. "
-		    "MAKE SURE THEY ARE ALL THE SAME GB BINARY");
-		char *xx = NULL; *xx = 0; }
-
+	//char *request = (char *)pi;
 
 	// debug msg
 	//logf(LOG_DEBUG,"net: Sending ping request to hid=%"INT32" ip=%s.",
@@ -509,8 +555,8 @@ void PingServer::pingHost ( Host *h , uint32_t ip , uint16_t port ) {
 		port++;
 
         if ( h->m_isProxy ) hostId = -1;
-	if (  g_udpServer.sendRequest ( request       ,
-					requestSize   ,
+	if (  g_udpServer.sendRequest ( (char *)pi , //request       ,
+					sizeof(PingInfo),//requestSize   ,
 					0x11          ,
 					ip            ,//h->m_ip       ,
 					port          ,//h->m_port     ,
@@ -683,16 +729,16 @@ void gotReplyWrapperP ( void *state , UdpSlot *slot ) {
 		h->m_wasEverAlive = true;
 	}
 
-	if ( isAlive && h->m_percentMemUsed >= 99.0 &&
+	if ( isAlive && h->m_pingInfo.m_percentMemUsed >= 99.0 &&
 	     h->m_firstOOMTime == 0 )
 		h->m_firstOOMTime = nowms;
-	if ( isAlive && h->m_percentMemUsed < 99.0 )
+	if ( isAlive && h->m_pingInfo.m_percentMemUsed < 99.0 )
 		h->m_firstOOMTime = 0LL;
 	// if this host is alive and has been at 99% or more mem usage
 	// for the last X minutes, and we have got at least 10 ping replies
 	// from him, then send an email alert.
 	if ( isAlive &&
-	     h->m_percentMemUsed >= 99.0 &&
+	     h->m_pingInfo.m_percentMemUsed >= 99.0 &&
 	     nowms - h->m_firstOOMTime >= g_conf.m_sendEmailTimeout )
 		g_pingServer.sendEmail ( h , NULL , true , true );
 
@@ -703,9 +749,12 @@ void gotReplyWrapperP ( void *state , UdpSlot *slot ) {
 	if ( ! isAlive && nowms - h->m_startTime >= g_conf.m_sendEmailTimeout) 
 		g_pingServer.sendEmail ( h ) ;
 
+
+	PingInfo *pi = &h->m_pingInfo;
+
 	// if this host is alive but has some kernel error, then send an
 	// email alert.
-	if ( h->m_kernelErrors && !h->m_kernelErrorReported ){
+	if ( pi->m_kernelErrors && !h->m_kernelErrorReported ){
 		log("net: Host #%"INT32" is reporting kernel errors.",
 		    h->m_hostId);
 		// MDW: disable for now, so does not wake us up at 3am
@@ -714,7 +763,7 @@ void gotReplyWrapperP ( void *state , UdpSlot *slot ) {
 	}
 	
 	// reset if the machine has come back up
-	if ( !h->m_kernelErrors && h->m_kernelErrorReported )
+	if ( !pi->m_kernelErrors && h->m_kernelErrorReported )
 		h->m_kernelErrorReported = false;
 
 	// reset in case sendEmail() set it
@@ -767,9 +816,13 @@ void gotReplyWrapperP ( void *state , UdpSlot *slot ) {
         if ( h->m_isProxy ) hid = -1;
 
 	// send back what his ping was so he knows
-	*(int32_t *)h->m_requestBuf = *pingPtr;
+	//*(int32_t *)h->m_requestBuf = *pingPtr;
+	//h->m_pingInfo.m_lastPing = *pingPtr;
+	*(int32_t *)h->m_tmpBuf = *pingPtr;
 
-	if ( g_udpServer.sendRequest ( h->m_requestBuf ,
+
+	if ( g_udpServer.sendRequest (h->m_tmpBuf,//RequestBuf,
+				      //h->m_requestBuf ,
 				       4               , // 4 byte request
 				       0x11          ,
 				       slot->m_ip    , // h->m_ip       ,
@@ -885,10 +938,20 @@ void handleRequest11 ( UdpSlot *slot , int32_t niceness ) {
 	// . a request size of 10 means to set g_repairMode to 1
 	// . it can only be advanced to 2 when we receive ping replies from
 	//   everyone that they are not spidering or merging titledb...
-	if ( requestSize == MAX_PING_SIZE){//14+4+4+4+4+sizeof(collnum_t)+1 ) {
+	if ( requestSize == sizeof(PingInfo)){
+		//MAX_PING_SIZE
+		//14+4+4+4+4+sizeof(collnum_t)+1 ) {
 
+		// sanity
+		PingInfo *pi2 = (PingInfo *)request;
+		if ( pi2->m_hostId != h->m_hostId ) { 
+			char *xx=NULL;*xx=0; }
+
+		// now we just copy the class
+		gbmemcpy ( &h->m_pingInfo , request , requestSize );
+
+		/*
 		char* p = request + 10;
-
 		// fetch load avg...
 		h->m_loadAvg = ((double)(*((int32_t*)(p)))) / 100.0;
 		p += sizeof(int32_t);
@@ -902,6 +965,7 @@ void handleRequest11 ( UdpSlot *slot , int32_t niceness ) {
 		// the host's global doc count.
 		h->m_docsIndexed = *(int32_t*)(p);
 		p += sizeof(int32_t);
+		*/
 
 		// how many we indexed since startup
 		//h->m_urlsIndexed = *(int32_t*)(p);
@@ -911,6 +975,7 @@ void handleRequest11 ( UdpSlot *slot , int32_t niceness ) {
 		//h->m_eventsIndexed = *(int32_t*)(p);
 		//p += sizeof(int32_t);
 
+		/*
 		// slow disk reads is important
 		h->m_slowDiskReads = *(int32_t*)(p);
 		p += sizeof(int32_t);
@@ -933,18 +998,20 @@ void handleRequest11 ( UdpSlot *slot , int32_t niceness ) {
 		p += sizeof(collnum_t);
 		
 		// the 4 hd temps
-		memcpy ( h->m_hdtemps , p , 4 * 2 );
+		gbmemcpy ( h->m_hdtemps , p , 4 * 2 );
 		p += 4 * 2;
 
 		// at the end the gbverstionstrbuf
 		int32_t vsize = getVersionSize(); // 21
-		memcpy ( h->m_gbVersionStrBuf , p , vsize );
+		gbmemcpy ( h->m_gbVersionStrBuf , p , vsize );
 		p += vsize;
+		*/
 
 		// if any one of them is overheating, then turn off
 		// spiders on ourselves (and thus the full cluster)
 		for ( int32_t k = 0 ; k < 4 ; k++ )
-			if ( h->m_hdtemps[k] > g_conf.m_maxHardDriveTemp )
+			if ( h->m_pingInfo.m_hdtemps[k] > 
+			     g_conf.m_maxHardDriveTemp )
 				g_conf.m_spideringEnabled = 0;
 			
 
@@ -970,27 +1037,31 @@ void handleRequest11 ( UdpSlot *slot , int32_t niceness ) {
 		// . 4 means done repairing and ready to exit repair mode,
 		//   but waiting for other hosts to be mode 4 or 0 before
 		//   it can exit, too, and go back to mode 0
+		/*
 		char mode = request[8];
 		h->m_kernelErrors = request[9];
+		*/
+		char mode = h->m_pingInfo.m_repairMode;
+
 		//if ( h->m_kernelErrors ){
 		//char *xx = NULL; *xx = 0;
 		//}
 		
 		// set his repair mode in the hosts table
-		if ( h ) {
-			// if his mode is 2 he is ready to start repairing
-			// because he has stopped all spiders and titledb
-			// merges from happening. if he just entered mode
-			// 2 now, check to see if all hosts are in mode 2 now.
-			char oldMode = h->m_repairMode;
-			// update his repair mode
-			h->m_repairMode = mode;
-			// . get the MIN repair mode of all hosts
-			// . expensive, so only do if a host changes modes
-			if ( oldMode != mode                    || 
-			     g_pingServer.m_minRepairMode == -1   )
-				g_pingServer.setMinRepairMode ( h );
-		}
+		//if ( h ) {
+		// if his mode is 2 he is ready to start repairing
+		// because he has stopped all spiders and titledb
+		// merges from happening. if he just entered mode
+		// 2 now, check to see if all hosts are in mode 2 now.
+		char oldMode = h->m_repairMode;
+		// update his repair mode
+		h->m_repairMode = mode;
+		// . get the MIN repair mode of all hosts
+		// . expensive, so only do if a host changes modes
+		if ( oldMode != mode                    || 
+		     g_pingServer.m_minRepairMode == -1   )
+			g_pingServer.setMinRepairMode ( h );
+		//}
 		// make it a normal ping now
 		requestSize = 8;
 	}
@@ -1013,16 +1084,16 @@ void handleRequest11 ( UdpSlot *slot , int32_t niceness ) {
 	int32_t i; for ( i = 0 ; i < g_hostdb.getNumGrunts() ; i++ ) {
 		Host *h = &g_hostdb.m_hosts[i];			
 
-		if ( h->m_flags & PFLAG_FOREIGNRECS )
+		if ( h->m_pingInfo.m_flags & PFLAG_FOREIGNRECS )
 			ps->m_numHostsWithForeignRecs++;
 
 		if ( g_hostdb.isDead ( h ) )
 			ps->m_numHostsDead++;
 
 		// skip if not received yet
-		if ( ! h->m_hostsConfCRC ) continue;
+		if ( ! h->m_pingInfo.m_hostsConfCRC ) continue;
 		// badness?
-		if ( h->m_hostsConfCRC != g_hostdb.m_crc ) {
+		if ( h->m_pingInfo.m_hostsConfCRC != g_hostdb.m_crc ) {
 			ps->m_hostsConfInDisagreement = true;
 			break;
 		}
@@ -1495,13 +1566,13 @@ bool PingServer::sendEmail ( Host *h            ,
 		char hr[3],min[3];
 		hr[2] = '\0';
 		min[2] = '\0';
-		memcpy ( hr, g_conf.m_delayEmailsAfter, 2 );
+		gbmemcpy ( hr, g_conf.m_delayEmailsAfter, 2 );
 		deaHr = atoi(hr);
-		memcpy ( min, g_conf.m_delayEmailsAfter + 3, 2 );
+		gbmemcpy ( min, g_conf.m_delayEmailsAfter + 3, 2 );
 		deaMin = atoi(min);
-		memcpy ( hr, g_conf.m_delayEmailsBefore, 2 );
+		gbmemcpy ( hr, g_conf.m_delayEmailsBefore, 2 );
 		debHr = atoi(hr);
-		memcpy ( min, g_conf.m_delayEmailsBefore + 3, 2 );
+		gbmemcpy ( min, g_conf.m_delayEmailsBefore + 3, 2 );
 		debMin = atoi(min);
 		//get the current time. use getTime() because
 		//then it is sync'ed with host 0's time.
@@ -2175,8 +2246,8 @@ bool pageSprintPCS2 ( void *state , TcpSocket *s) {
 	if ( ! ss ) { char *xx = NULL; *xx = 0; }
 	ss += 8; // points to right after the space
 	// insert the cookie
-	memcpy ( ss+cookieLen , ss , pend - ss );
-	memcpy ( ss , cookie , cookieLen );
+	gbmemcpy ( ss+cookieLen , ss , pend - ss );
+	gbmemcpy ( ss , cookie , cookieLen );
 	pend += cookieLen;
 
 	// replace xxx
@@ -2403,7 +2474,7 @@ bool PingServer::broadcastShutdownNotes ( bool    sendEmailAlert          ,
 		// request will be freed by UdpServer
 		//char *r = (char *) mmalloc ( 4 , "PingServer" );
 		//if ( ! r ) return true;
-		//memcpy ( r , (char *)(&h->m_hostId) , 4 );
+		//gbmemcpy ( r , (char *)(&h->m_hostId) , 4 );
 		// send it right now
 		if ( g_udpServer.sendRequest ( s_buf         ,
 						5             , // rqstSz
@@ -2774,7 +2845,7 @@ void checkKernelErrors( int fd, void *state ){
 	// at the kernel ring buffer, keep returning until someone clicks
 	// 'clear kernel error message' control in Master Controls. 
 	// but don't return before copying over the new buffer
-	if ( me->m_kernelErrors > 0 ) return;
+	if ( me->m_pingInfo.m_kernelErrors > 0 ) return;
 
 	// check if we match any error strings in master controls
 	char *p = NULL;
@@ -2800,14 +2871,14 @@ void checkKernelErrors( int fd, void *state ){
 	
 		if ( strncasestr ( p, gbstrlen(p) , "scsi" ) &&
 		     g_numIOErrors > s_lastCount ) {
-			me->m_kernelErrors = ME_IOERR;
+			me->m_pingInfo.m_kernelErrors = ME_IOERR;
 			s_lastCount = g_numIOErrors;
 		}
 		else if ( strncasestr ( p, gbstrlen(p), "100 mbps" ) )
-			me->m_kernelErrors = ME_100MBPS;
+			me->m_pingInfo.m_kernelErrors = ME_100MBPS;
 		// assume an I/O IO error here otherwise
 		else if ( g_numIOErrors > s_lastCount ) {
-			me->m_kernelErrors = ME_UNKNWN;
+			me->m_pingInfo.m_kernelErrors = ME_UNKNWN;
 			s_lastCount = g_numIOErrors;
 		}
 		log ( LOG_DEBUG,"PingServer: error message in "
@@ -3226,6 +3297,7 @@ bool sendNotification ( EmailInfo *ei ) {
 				   , uu.getPath()
 				   );
 		fullReq.safeMemcpy ( uu.getHost() , uu.getHostLen() );
+		fullReq.safePrintf("\r\n");
 		// make custom headers
 		fullReq.safePrintf ("X-Crawl-Name: %s\r\n"
 				    // last \r\n is added in HttpRequest.cpp

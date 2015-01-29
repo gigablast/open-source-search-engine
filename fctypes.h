@@ -7,6 +7,8 @@
 #include <math.h>      // floor()
 #include "Unicode.h"
 
+extern bool g_clockNeedsUpdate;
+
 // we have to leave this as 32 bits for now because the termlists store
 // the hash value as 32 bits in posdb
 typedef uint32_t FacetValHash_t;
@@ -583,7 +585,7 @@ inline int32_t setstr ( char *dst,
         int32_t dstLen = srcLen;
         if ( srcLen > maxDstLen ) dstLen = maxDstLen;
         // copy the string
-        memcpy ( dst, src, dstLen );
+        gbmemcpy ( dst, src, dstLen );
         // NULL terminate
         dst[dstLen] = '\0';
         // return the proper length

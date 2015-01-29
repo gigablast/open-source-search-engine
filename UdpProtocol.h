@@ -190,9 +190,9 @@ class UdpProtocol {
 		//int32_t offset    = dgramNum * ( maxDgramSize - 12);
 		//int32_t size      = msgSize - offset;
 		//if ( size > maxDgramSize - 12 ) size = maxDgramSize - 12;
-		// memcpy is not async signal safe!! why not???
-		//memcpy ( dgram + 12 , msg + offset , size );
-		//memcpy_as ( dgram + 12 , msg + offset , size );
+		// gbmemcpy is not async signal safe!! why not???
+		//gbmemcpy ( dgram + 12 , msg + offset , size );
+		//gbmemcpy_as ( dgram + 12 , msg + offset , size );
 		// . bitmap of first 4 bytes in hi bit to low bit order:
 		// . WEmmmmdd dddddddd dddddddd dddddddd
 		// . ensure dgramNum doesn't invade reply/ack bits

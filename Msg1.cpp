@@ -143,13 +143,13 @@ bool Msg1::addList ( RdbList      *list              ,
 			goto skip; 
 		}
 		// steal the list, we don't want caller to free it
-		memcpy ( &Y->m_ourList , list , sizeof(RdbList) );
+		gbmemcpy ( &Y->m_ourList , list , sizeof(RdbList) );
 		
  		QUICKPOLL(niceness);
 		
 		// if list is small enough use our buf
 		if ( ! list->m_ownData && list->m_listSize <= MSG1_BUF_SIZE ) {
-			memcpy ( Y->m_buf , list->m_list , list->m_listSize );
+			gbmemcpy ( Y->m_buf , list->m_list , list->m_listSize );
 			Y->m_ourList.m_list    = Y->m_buf;
 			Y->m_ourList.m_listEnd = Y->m_buf + list->m_listSize;
 			Y->m_ourList.m_alloc   = NULL;
@@ -525,7 +525,7 @@ skip:
 	if ( m_injecting ) *p |= 0x80;
 	p++;
 	// then collection name
-	//memcpy ( p , m_coll , collLen );
+	//gbmemcpy ( p , m_coll , collLen );
 	//p += collLen;
 	//*p++ = '\0';
 	*(collnum_t *)p = m_collnum;
@@ -540,7 +540,7 @@ skip:
 	//if ( m_deleteRecs    ) request[1] |= 0x80;
 	//if ( m_overwriteRecs ) request[1] |= 0x40;
 	// store the list after coll
-	memcpy ( p , listData , listSize );
+	gbmemcpy ( p , listData , listSize );
  	QUICKPOLL(m_niceness);
 	// debug msg
 	//if ( ! m_waitForReply ) // (m_rdbId == RDB_SPIDERDB || 

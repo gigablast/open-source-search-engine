@@ -335,6 +335,7 @@ class Msg40 {
 	
 	int32_t m_tasksRemaining;
 
+	int32_t m_printCount;
 
 	// buffer we deserialize from, allocated by Msg17, but we free it
 	char *m_buf;

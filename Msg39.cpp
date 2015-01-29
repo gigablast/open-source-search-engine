@@ -275,6 +275,16 @@ void Msg39::getDocIds2 ( Msg39Request *req ) {
 
 	m_phase = 0;
 
+	// if ( m_r->m_docsToGet <= 0 ) {
+	// 	estimateHitsAndSendReply ( );
+	// 	return;
+	// }
+
+	// if ( m_tmpq.m_numTerms <= 0 ) {
+	// 	estimateHitsAndSendReply ( );
+	// 	return;
+	// }
+
 	// . otherwise, to prevent oom, split up docids into ranges
 	//   and get winners of each range.
 	//if ( ! doDocIdSplitLoop() ) return;
@@ -494,7 +504,7 @@ bool Msg39::doDocIdSplitLoop ( ) {
 	//   BUT only do this if we are in a "full split" config, because that
 	//   way we can guarantee all clusterdb recs are local (on this host)
 	//   and should be in the page cache. the page cache should do ultra
-	//   quick lookups and no memcpy()'s for this operation. it should
+	//   quick lookups and no gbmemcpy()'s for this operation. it should
 	//   be <<1ms to lookup thousands of docids.
 	// . when doing innerLoopSiteClustering we always use top tree now
 	//   because our number of "top docids" can be somewhat unpredictably 
@@ -645,7 +655,7 @@ bool Msg39::getLists () {
 			if ( ttlen > 254 ) ttlen = 254;
 			if ( ttlen < 0   ) ttlen = 0;
 			// old:painful: convert each term from unicode to ascii
-			memcpy ( tt , m_tmpq.getTerm(i) , ttlen );
+			gbmemcpy ( tt , m_tmpq.getTerm(i) , ttlen );
 			*/
 			int32_t isSynonym = 0;
 			QueryTerm *st = qt->m_synonymOf;
@@ -1132,7 +1142,7 @@ bool Msg39::addedLists ( ) {
 	//   BUT only do this if we are in a "full split" config, because that
 	//   way we can guarantee all clusterdb recs are local (on this host)
 	//   and should be in the page cache. the page cache should do ultra
-	//   quick lookups and no memcpy()'s for this operation. it should
+	//   quick lookups and no gbmemcpy()'s for this operation. it should
 	//   be <<1ms to lookup thousands of docids.
 	// . when doing innerLoopSiteClustering we always use top tree now
 	//   because our number of "top docids" can be somewhat unpredictably 
@@ -1468,7 +1478,8 @@ void Msg39::estimateHitsAndSendReply ( ) {
 			*(int64_t *)p = qt->m_termId;
 			p += 8;
 			int32_t used = ft->getNumSlotsUsed();
-			if ( used > (int32_t)MAX_FACETS ) used = (int32_t)MAX_FACETS;
+			if ( used > (int32_t)MAX_FACETS ) 
+				used = (int32_t)MAX_FACETS;
 			// store count
 			*(int32_t *)p = used;
 			p += 4;
@@ -1487,7 +1498,13 @@ void Msg39::estimateHitsAndSendReply ( ) {
 				// lookup the text of the facet in Msg40.cpp
 				FacetEntry *fe;
 				fe = (FacetEntry *)ft->getValFromSlot(k);
-				memcpy ( p , fe , sizeof(FacetEntry) );
+				// sanity
+				// no, count can be zero if its a range facet
+				// that was never added to. we add those
+				// empty FaceEntries only for range facets
+				// in Posdb.cpp
+				//if(fe->m_count == 0 ) { char *xx=NULL;*xx=0;}
+				gbmemcpy ( p , fe , sizeof(FacetEntry) );
 				p += sizeof(FacetEntry);
 				// do not breach
 				if ( ++count >= (int32_t)MAX_FACETS ) break;
@@ -1577,7 +1594,7 @@ void Msg39::estimateHitsAndSendReply ( ) {
 		if ( docCount <= 50 ) m_topScore50 = t->m_score;
 		
 		if ( m_debug ) {
-			log(LOG_DEBUG,"query: msg39: [%"PTRFMT"] "
+			logf(LOG_DEBUG,"query: msg39: [%"PTRFMT"] "
 			    "%03"INT32") docId=%012"UINT64" sum=%.02f",
 			    (PTRTYPE)this, docCount,
 			    t->m_docId,t->m_score);

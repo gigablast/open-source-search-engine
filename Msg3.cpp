@@ -578,7 +578,7 @@ bool Msg3::readList  ( char           rdbId         ,
 				maps[fn]->getKey ( pn , tmpKey );
 				if ( KEYCMP(tmpKey,lastTmpKey,m_ks) == 0 ) 
 					ccount++;
-				memcpy(lastTmpKey,tmpKey,m_ks);
+				gbmemcpy(lastTmpKey,tmpKey,m_ks);
 			}
 		}
 		if ( ccount > 10 ) {

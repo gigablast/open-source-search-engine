@@ -552,7 +552,7 @@ class CollectionRec {
 	float			m_languageUnknownWeight;
 	float			m_languageWeightFactor;
 	char			m_enableLanguageSorting;
-	char 			m_defaultSortLanguage[6];
+	char 			m_defaultSortLanguage2[6];
 	char 			m_languageMethodWeights[10];
 	int32_t 			m_languageBailout;
 	int32_t 			m_languageThreshold;
@@ -585,8 +585,8 @@ class CollectionRec {
 	//int32_t m_checksumdbMinFilesToMerge ;
 	//int32_t m_clusterdbMinFilesToMerge ;
 	//int32_t m_datedbMinFilesToMerge ;
-	//int32_t m_linkdbMinFilesToMerge ;
-	//int32_t m_tagdbMinFilesToMerge ;
+	int32_t m_linkdbMinFilesToMerge ;
+	int32_t m_tagdbMinFilesToMerge ;
 
 	//char  m_spiderdbRootUrlPriority   ; // 0-(MAX_SPIDER_PRIORITIES-1)
 	//char  m_spiderdbAddUrlPriority    ;

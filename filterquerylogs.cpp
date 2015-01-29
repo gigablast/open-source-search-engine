@@ -35,7 +35,7 @@ int32_t atoip ( char *s , int32_t slen ) {
 		// copy into buffer and NULL terminate
 		char buf[1024];
 		if ( slen >= 1024 ) slen = 1023;
-		memcpy ( buf , s , slen );
+		gbmemcpy ( buf , s , slen );
 		buf [ slen ] = '\0';
 		// point to that
 		p = buf;

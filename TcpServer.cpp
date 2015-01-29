@@ -445,7 +445,7 @@ bool TcpServer::sendMsg ( char  *hostname ,
 	// register this mem with g_mem
 	mnew ( tst , sizeof(TcpState) , "TcpServer" );
 	// fill up our temporary state structure
-	memcpy ( tst->m_hostname , h , hlen );
+	gbmemcpy ( tst->m_hostname , h , hlen );
 	// NULL terminate the hostname in tst
 	tst->m_hostname [ hlen ] = '\0';
 	// set the other members of tst
@@ -1109,8 +1109,23 @@ bool TcpServer::closeLeastUsed ( int32_t maxIdleTime ) {
 	if ( biggestHogNdx == -1 ) return false;
 	// get the socket we're closing
 	TcpSocket *s = m_tcpSockets[ indices[biggestHogNdx] ];
-	log(LOG_WARN, "tcp: closing least used! sd=%"INT32" idle=%"INT64"ms", 
-	    (int32_t)s->m_sd, nowms - s->m_lastActionTime);
+	// show a little req buffer
+	char *req = s->m_readBuf;
+	char tmp[128];
+	tmp[0] = '\0';
+	if ( req ) {
+		int reqLen = s->m_readOffset;
+		if ( reqLen > 120 ) reqLen = 120;
+		if ( reqLen < 0 ) reqLen = 0;
+		strncpy (tmp,req,reqLen);
+		tmp[reqLen] = '\0';
+	}
+	nowms = gettimeofdayInMilliseconds();
+	log(LOG_WARN, "tcp: closing least used! sd=%"INT32" idle=%"INT64"ms "
+	    "readbuf=%s" 
+	    , (int32_t)s->m_sd
+	    , nowms - s->m_lastActionTime
+	    , tmp );
 	// set g_errno? i guess to zero
 	g_errno = 0;
 	// call the callback of the socket we're destroying (if exists)
@@ -1378,8 +1393,8 @@ int32_t TcpServer::readSocket ( TcpSocket *s ) {
 	// }
 
 	if ( g_conf.m_logDebugTcp )
-		logf(LOG_DEBUG,"tcp: readSocket: reading on sd=%"INT32"",
-		     (int32_t)s->m_sd);
+	 	logf(LOG_DEBUG,"tcp: readSocket: reading on sd=%"INT32"",
+	 	     (int32_t)s->m_sd);
 
 	// do the read
 	int n;
@@ -1518,7 +1533,7 @@ bool TcpServer::setTotalToRead ( TcpSocket *s ) {
 		//s->m_readBuf = NULL;
 		newBuf = (char *)mmalloc(size,"TcpServerR2");
 		// copy over from tmpBuf if we have to
-		if ( newBuf ) memcpy (newBuf, s->m_readBuf, s->m_readBufSize);
+		if ( newBuf ) gbmemcpy (newBuf, s->m_readBuf, s->m_readBufSize);
 	}
 	// otherwise, it's bigger than our 10k buffer and we gotta realloc
 	else 
@@ -1720,10 +1735,14 @@ int32_t TcpServer::writeSocket ( TcpSocket *s ) {
 	}
 
 
+	if ( toSend <= 0 ) return 0;
+
 	// debug msg
 	if ( g_conf.m_logDebugTcp )
-		logf(LOG_DEBUG,"tcp: writeSocket: writing %"INT32" bytes on %"INT32"",
-		     toSend,(int32_t)s->m_sd);
+		logf(LOG_DEBUG,"tcp: writeSocket: writing %"INT32" bytes "
+		     "(of %"INT32" bytes total) "
+		     "on %"INT32"",
+		     toSend,toSend,(int32_t)s->m_sd);
 
  retry10:
 
@@ -1749,9 +1768,14 @@ int32_t TcpServer::writeSocket ( TcpSocket *s ) {
 		// a core... so check g_errno here.
 		// actually for m_useSSL it does not set errno...
 		if ( ! g_errno && m_useSSL ) g_errno = ESSLERROR;
-		if ( g_errno != EAGAIN ) return -1;
-		g_errno = 0; 
 		// debug msg
+		if ( g_errno != EAGAIN ) {
+			//if ( g_conf.m_logDebugTcp )
+			log("tcp: ::send returned %"INT32" err=%s"
+			    ,n,mstrerror(g_errno));
+			return -1;
+		}
+		g_errno = 0; 
 		//log("........... TcpServer write blocked on %i\n",
 		//s->m_sd);
 		return 0; 
@@ -2222,6 +2246,12 @@ void TcpServer::readTimeoutPoll ( ) {
 		// go back to top because delete might have shrunk table.
 		int64_t elapsed = now - s->m_lastActionTime;
 		if ( ! timeOut && elapsed < s->m_timeout) continue;
+
+		if ( s->m_streamingMode ) {
+			log("tcp: not timing out streaming socket fd=%"INT32"",
+			    s->m_sd);
+			continue;
+		}
 
 		//log("tcp: timeout=%"INT32" fd=%"INT32"",sockTimeout,s->m_sd);
 

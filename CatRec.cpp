@@ -55,7 +55,7 @@ bool CatRec::set ( Url *url , char *data , int32_t dataSize , bool gotByIp ) {
 	// assume url does not have a rec in tagdb
 	m_hadRec = false;
 	// set our collection
-	//if ( coll ) memcpy ( m_coll , coll , collLen );
+	//if ( coll ) gbmemcpy ( m_coll , coll , collLen );
 	//m_collLen = collLen;
 	// . if "data" is i guess the rec did not exist... so make a dummy rec
 	// . MDW: why?
@@ -80,7 +80,7 @@ bool CatRec::set ( Url *url , char *data , int32_t dataSize , bool gotByIp ) {
 		return false;
 	}
 	// copy the raw data
-	memcpy(m_data, data, dataSize);
+	gbmemcpy(m_data, data, dataSize);
 	m_dataSize = dataSize;
 	// set up a parsing ptr into "data"
 	//char *p = data;
@@ -304,11 +304,11 @@ bool CatRec::set ( Url *site ,
 	//if (catids) {
 	//if (rdbId == RDB_CATDB) {
 	// add the count
-	memcpy(p, &m_numCatids, 1);
+	gbmemcpy(p, &m_numCatids, 1);
 	p++;
 	// add the ids
 	m_catids = (int32_t*)p;
-	memcpy(p, catids, 4*m_numCatids);
+	gbmemcpy(p, catids, 4*m_numCatids);
 	// skip over "numCatids" NOT m_numCatids which is TRUNCATED
 	// to MAX_CATIDS
 	p += 4*numCatids;
@@ -318,13 +318,13 @@ bool CatRec::set ( Url *site ,
 	// store the filenum (3 bytes)
 	//*(int32_t  *) p = filenum  ;   p += 4;
 	//int32_t filenum = 0; // make this 0 for catdb rec: MDW
-	memcpy(p, &filenum, 3); p += 3;
+	gbmemcpy(p, &filenum, 3); p += 3;
 	// store the version (1 byte)
 	*p = m_version; p++;
 	// the site
 	m_url = p;
 	m_urlLen = site->getUrlLen();
-	memcpy ( p , site->getUrl() , site->getUrlLen() );
+	gbmemcpy ( p , site->getUrl() , site->getUrlLen() );
 	p += site->getUrlLen();
 	// NULL terminate the site
 	if ( m_version >= 1 ) {
@@ -335,7 +335,7 @@ bool CatRec::set ( Url *site ,
 	if ( m_version >= 2 && rdbId != RDB_CATDB ) {
 		// time stamp
 		m_timeStamp = timeStamp;
-		memcpy(p, &timeStamp, 4);
+		gbmemcpy(p, &timeStamp, 4);
 		p += 4;
 		// comment
 		m_comment = p;
@@ -424,7 +424,7 @@ bool CatRec::set ( Url *site ,
 	// steal ip from "site"
 	m_site.setIp ( site->getIp() );
 	// save the collection into m_coll
-	//memcpy ( m_coll , coll , collLen );
+	//gbmemcpy ( m_coll , coll , collLen );
 	//m_collLen = collLen;
 	// save the fileNum as well
 	//m_filenum = filenum;
@@ -509,7 +509,7 @@ void CatRec::setIndirectCatids ( int32_t *indCatids, int32_t numIndCatids ) {
 	if ( m_numIndCatids > MAX_IND_CATIDS )
 		m_numIndCatids = MAX_IND_CATIDS;
 	// store the ids
-	memcpy ( m_indCatids, indCatids, m_numIndCatids*4 );
+	gbmemcpy ( m_indCatids, indCatids, m_numIndCatids*4 );
 }
 
 /*
@@ -792,7 +792,7 @@ uint32_t CatRec::getScoreForType(uint8_t type) {
 void CatRec::setFilenum ( int32_t filenum ) {
 	m_filenum = filenum;
 	// gotta update the m_data[] buffer too!
-	memcpy(m_filenumPtr, &filenum, 3); 
+	gbmemcpy(m_filenumPtr, &filenum, 3); 
 }
 
 void CatRec::addSiteType ( uint8_t type, uint32_t score ) {
@@ -817,11 +817,11 @@ void CatRec::addSiteType ( uint8_t type, uint32_t score ) {
 	// how much to shift down 
 	int32_t toShift = m_data + m_dataSize - p;
 	// shift it
-	memcpy ( p + totalSize , p , toShift );
+	gbmemcpy ( p + totalSize , p , toShift );
 	// store new type
 	*(uint8_t *)p = type; p++;
 	// store new score
-	memcpy ( p , &score , scoreSize ); 
+	gbmemcpy ( p , &score , scoreSize ); 
 	// inc data size
 	m_dataSize += totalSize;
 	// inc this guy

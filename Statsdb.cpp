@@ -257,9 +257,9 @@ void Statsdb::addDocsIndexed ( ) {
 	for ( int32_t i = 0 ; i < g_hostdb.m_numHosts ; i++ ) {
 		Host *h = &g_hostdb.m_hosts[i];
 		// must have something
-		if ( h->m_docsIndexed <= 0 ) return;
+		if ( h->m_pingInfo.m_totalDocsIndexed <= 0 ) return;
 		// add it up
-		total += h->m_docsIndexed;
+		total += h->m_pingInfo.m_totalDocsIndexed;
 	}
 	// divide by # of groups
 	total /= g_hostdb.getNumShards();
@@ -398,7 +398,7 @@ bool Statsdb::addStat ( int32_t        niceness ,
 
 			// save this
 			int32_t saved = g_errno;
-			// need to add using rdb so it can memcpy the data
+			// need to add using rdb so it can gbmemcpy the data
 			if ( ! m_rdb.addRecord ( (collnum_t)0 ,
 						 (char *)&sk,
 						 (char *)&tmp,
@@ -1273,7 +1273,7 @@ bool Statsdb::addPointsFromList ( Label *label ) {
 		StatData *sd = (StatData *)m_list.getCurrentData();
 		// must be a "query" stat
 		if ( sk->m_labelHash != label->m_labelHash ) continue;
-		// add that
+		// add this record directly from statsdb
 		addPoint ( sk , sd , ss , label );
 	}
 	return true;
@@ -1297,10 +1297,10 @@ bool Statsdb::addPoint(StatKey *sk,StatData *sd,StatState *ss , Label *label){
 		 val = sd->m_totalQuantity / sd->m_totalOps;
 	 else { char *xx=NULL;*xx=0; }
 
-	 // remove tail
+	 // remove tail. this ringbuffer is used to make the moving average.
 	 int32_t k = ss->m_i;
 	 for ( ; ss->m_valid[k] ; ) {
-		 // remove from accumulated sum
+		 // remove from accumulated sum from moving avg calc
 		 ss->m_sumVal -= ss->m_ringBuf[k];
 		 // this too
 		 ss->m_numSamples--;
@@ -1309,7 +1309,9 @@ bool Statsdb::addPoint(StatKey *sk,StatData *sd,StatState *ss , Label *label){
 		 // stop if time within range
 		 if ( ss->m_ringBufTime[k] >= sk->m_time1 - m_samples )
 			 break;
-		 // otherwise, keep removing them
+		 // otherwise, keep removing samples from moving avg
+		 // if outside of time range. wrap around when k hits
+		 // m_samples. thus, the "ring" in "ring buffer"
 		 if ( ++k >= m_samples ) k = 0;
 	 }
 
@@ -1358,6 +1360,10 @@ bool Statsdb::addPoint(StatKey *sk,StatData *sd,StatState *ss , Label *label){
 	 // . plot that point
 	 // . should make a line between it and the last point added
 	 //if(! addPoint ( sp->getTime1() , val , colorRGB , weight ) )
+
+	 // now the moving average at time "sk->m_time1" is
+	 // ss->m_sumVal / (float)ss->m_numSamples, so add that point to
+	 // our graph.
 	 if ( ! addPoint ( sk->m_time1 , 
 			   ss->m_sumVal / (float)ss->m_numSamples ,
 			   label->m_graphHash , 
@@ -1379,6 +1385,11 @@ bool Statsdb::addPoint ( int32_t      x        ,
 	float xf = (float)DX2 * (float)(x - m_t1) / (float)(m_t2 - m_t1);
 	// round it to nearest pixel
 	int32_t  x2 = (int32_t)(xf + .5) ;//+ m_bx;
+	// gotta be >= 0 it's a pixel
+	if ( x2 < 0 ) {
+		log("statsdb: bad x2 of %"INT32"",x2);
+		return true;
+	}
 	// make this our y pos
 	float y2 = y;
 	// average values if tied

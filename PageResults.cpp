@@ -194,6 +194,15 @@ bool sendReply ( State0 *st , char *reply ) {
 	}
 	*/
 
+	// if we had a broken pipe from the browser while sending
+	// them the search results, then we end up closing the socket fd
+	// in TcpServer::sendChunk() > sendMsg() > destroySocket()
+	if ( s->m_numDestroys ) {
+		log("results: not sending back error on destroyed socket "
+		    "sd=%"INT32"",s->m_sd);
+		return true;
+	}
+
 	int32_t status = 500;
 	if (savedErr == ETOOMANYOPERANDS ||
 	    savedErr == EBADREQUEST ||
@@ -1137,7 +1146,20 @@ bool gotResults ( void *state ) {
 			log("res: socket still in streaming mode. wtf?");
 			st->m_socket->m_streamingMode = false;
 		}
-		log("msg40: done streaming. nuking state.");
+		log("msg40: done streaming. nuking state=%"PTRFMT" q=%s. "
+		    "msg20sin=%i msg20sout=%i sendsin=%i sendsout=%i "
+		    "numrequests=%i numreplies=%i "
+		    ,(PTRTYPE)st
+		    ,si->m_q.m_orig
+
+		    , msg40->m_numMsg20sIn
+		    , msg40->m_numMsg20sOut
+		    , msg40->m_sendsIn
+		    , msg40->m_sendsOut
+		    , msg40->m_numRequests
+		    , msg40->m_numReplies
+
+		    );
 		mdelete(st, sizeof(State0), "PageResults2");
 		delete st;
 		return true;
@@ -2407,7 +2429,9 @@ bool printSearchResultsHeader ( State0 *st ) {
 			char c = term[qt->m_termLen];
 			term[qt->m_termLen] = '\0';
 			sb->safePrintf("\t\t\t<termStr><![CDATA[");
-			sb->cdataEncode(qt->m_term);
+			char *printTerm = qt->m_term;
+			if ( is_wspace_a(term[0])) printTerm++;
+			sb->cdataEncode(printTerm);
 			sb->safePrintf("]]>"
 				       "</termStr>\n");
 			term[qt->m_termLen] = c;
@@ -2419,7 +2443,7 @@ bool printSearchResultsHeader ( State0 *st ) {
 				sb->safePrintf("\t\t\t<termLang>"
 					       "<![CDATA[");
 				bool first = true;
-				for ( int i = 0 ; i <= MAXLANGID ; i++ ) {
+				for ( int i = 0 ; i < langLast ; i++ ) {
 					uint64_t bit = (uint64_t)1 << i;
 					if ( ! (qt->m_langIdBits&bit))continue;
 					char *str = getLangAbbr(i);
@@ -2434,15 +2458,24 @@ bool printSearchResultsHeader ( State0 *st ) {
 				char *term = sq->m_term;
 				char c = term[sq->m_termLen];
 				term[sq->m_termLen] = '\0';
+				char *printTerm = term;
+				if ( is_wspace_a(term[0])) printTerm++;
 				sb->safePrintf("\t\t\t<synonymOf>"
 					       "<![CDATA[%s]]>"
 					       "</synonymOf>\n"
-					       ,sq->m_term);
+					       ,printTerm);
 				term[sq->m_termLen] = c;
 			}				
 			int64_t tf = msg40->m_msg3a.m_termFreqs[i];
 			sb->safePrintf("\t\t\t<termFreq>%"INT64"</termFreq>\n"
 				       ,tf);
+			sb->safePrintf("\t\t\t<termHash48>%"INT64"</termHash48>\n"
+				       ,qt->m_termId);
+			sb->safePrintf("\t\t\t<termHash64>%"UINT64"</termHash64>\n"
+				       ,qt->m_rawTermId);
+			QueryWord *qw = qt->m_qword;
+			sb->safePrintf("\t\t\t<prefixHash64>%"UINT64"</prefixHash64>\n"
+				       ,qw->m_prefixHash);
 			sb->safePrintf("\t\t</term>\n");
 		}
 		sb->safePrintf("\t</queryInfo>\n");
@@ -2480,7 +2513,7 @@ bool printSearchResultsHeader ( State0 *st ) {
 				// language map from wiktionary
 				sb->safePrintf("\t\t\"termLang\":\"");
 				bool first = true;
-				for ( int i = 0 ; i <= MAXLANGID ; i++ ) {
+				for ( int i = 0 ; i < langLast ; i++ ) {
 					uint64_t bit = (uint64_t)1 << i;
 					if ( ! (qt->m_langIdBits&bit))continue;
 					char *str = getLangAbbr(i);
@@ -2501,8 +2534,19 @@ bool printSearchResultsHeader ( State0 *st ) {
 				term[sq->m_termLen] = c;
 			}				
 			int64_t tf = msg40->m_msg3a.m_termFreqs[i];
-			sb->safePrintf("\t\t\"termFreq\":%"INT64"\n"
+			sb->safePrintf("\t\t\"termFreq\":%"INT64",\n"
 				       ,tf);
+
+			sb->safePrintf("\t\t\"termHash48\":%"INT64",\n"
+				       ,qt->m_termId);
+			sb->safePrintf("\t\t\"termHash64\":%"UINT64",\n"
+				       ,qt->m_rawTermId);
+
+			// don't end last query term attr on a omma
+			QueryWord *qw = qt->m_qword;
+			sb->safePrintf("\t\t\"prefixHash64\":%"UINT64"\n"
+				       ,qw->m_prefixHash);
+
 			sb->safePrintf("\t}");
 			if ( i + 1 < q->m_numTerms )
 				sb->pushChar(',');
@@ -3102,6 +3146,12 @@ bool printSearchResultsTail ( State0 *st ) {
 			msg40->printFacetTables ( sb );
 
 		if ( st->m_header ) sb->safePrintf("}\n");
+
+		//////////////////////
+		// for some reason if we take too long to write out this
+		// tail we get a SIGPIPE on a firefox browser.
+		//////////////////////
+
 		// all done for json
 		return true;
 	}
@@ -3188,11 +3238,19 @@ bool printSearchResultsTail ( State0 *st ) {
 		SafeBuf newUrl4;
 		replaceParm2 ( "s=0", &newUrl4 , newUrl3.getBufStart(),
 			     newUrl3.length());
+		// show errors
+		SafeBuf newUrl5;
+		replaceParm2 ( "showerrors=1", 
+			       &newUrl5 , 
+			       newUrl4.getBufStart(),
+			       newUrl4.length());
+		
 		
 		sb->safePrintf("<center>"
 			       "<i>"
 			       "%"INT32" results were omitted because they "
-			       "were considered duplicates, banned, <br>"
+			       "were considered duplicates, banned, errors "
+			       "<br>"
 			       "or "
 			       "from the same site as other results. "
 			       "<a href=%s>Click here to show all results</a>."
@@ -3200,7 +3258,7 @@ bool printSearchResultsTail ( State0 *st ) {
 			       "</center>"
 			       "<br><br>"
 			       , msg40->m_omitCount
-			       , newUrl4.getBufStart() );
+			       , newUrl5.getBufStart() );
 	}
 
 
@@ -3795,7 +3853,12 @@ bool printResult ( State0 *st, int32_t ix , int32_t *numPrintedSoFar ) {
 	// . sometimes the msg20reply is NULL so prevent it coring
 	// . i think this happens if all hosts in a shard are down or timeout
 	//   or something
-	if ( ! mr ) return false;
+	if ( ! mr ) {
+		sb->safePrintf("<i>getting summary for docid %"INT64" had "
+			       "error: %s</i><br><br>"
+			       ,d,mstrerror(m20->m_errno));
+		return true;
+	}
 
 	// . if section voting info was request, display now, it's in json
 	// . so if in csv it will mess things up!!!
@@ -5174,12 +5237,12 @@ bool printResult ( State0 *st, int32_t ix , int32_t *numPrintedSoFar ) {
 	char dbuf [ MAX_URL_LEN ];
 	int32_t dlen = uu.getDomainLen();
 	if ( si->m_format == FORMAT_HTML ) {
-		memcpy ( dbuf , uu.getDomain() , dlen );
+		gbmemcpy ( dbuf , uu.getDomain() , dlen );
 		dbuf [ dlen ] = '\0';
 		// newspaperarchive urls have no domain
 		if ( dlen == 0 ) {
 			dlen = uu.getHostLen();
-			memcpy ( dbuf , uu.getHost() , dlen );
+			gbmemcpy ( dbuf , uu.getHost() , dlen );
 			dbuf [ dlen ] = '\0';
 		}
 	}
@@ -5203,7 +5266,9 @@ bool printResult ( State0 *st, int32_t ix , int32_t *numPrintedSoFar ) {
 			un = "UN";
 			banVal = 0;
 		}
-		sb->safePrintf("<br>"
+		// don't put on a separate line because then it is too
+		// easy to mis-click on it
+		sb->safePrintf(//"<br>"
 			      " <a style=color:green; href=\"/admin/tagdb?"
 			      "user=admin&"
 			      "tagtype0=manualban&"
@@ -5218,7 +5283,7 @@ bool printResult ( State0 *st, int32_t ix , int32_t *numPrintedSoFar ) {
 			      , dbuf );
 		//banSites->safePrintf("%s+", dbuf);
 		dlen = uu.getHostLen();
-		memcpy ( dbuf , uu.getHost() , dlen );
+		gbmemcpy ( dbuf , uu.getHost() , dlen );
 		dbuf [ dlen ] = '\0';
 		sb->safePrintf(" - "
 			      " <a style=color:green; href=\"/admin/tagdb?"
@@ -5755,7 +5820,7 @@ bool printResult ( State0 *st, int32_t ix , int32_t *numPrintedSoFar ) {
 	else if ( si->m_format == FORMAT_HTML && si->m_doSiteClustering ) {
 		char hbuf [ MAX_URL_LEN ];
 		int32_t hlen = uu.getHostLen();
-		memcpy ( hbuf , uu.getHost() , hlen );
+		gbmemcpy ( hbuf , uu.getHost() , hlen );
 		hbuf [ hlen ] = '\0';
 		sb->safePrintf (" - <nobr><a href=\"/search?"
 			       "q=%%2Bsite%%3A%s+%s&sc=0&c=%s\">"
@@ -6326,9 +6391,9 @@ bool printPairScore ( SafeBuf *sb , SearchInput *si , PairScore *ps ,
 	sb->safePrintf("<td id=tf>%"INT64" <font color=magenta>"
 		      "%.02f</font></td>",
 		      tf1,tfw1);
-	// insamewikiphrase?
-	sb->safePrintf("<td>%s %"INT32"/%.01f</td>",
-		      wp,ps->m_qdist,wiw);
+	// inSamePhraseId distInQuery phraseWeight
+	sb->safePrintf("<td>%s</td><td>%"INT32"</td><td>%.01f</td>"
+		       ,wp,ps->m_qdist,wiw);
 	// end the row
 	sb->safePrintf("</tr>");
 	//
@@ -6407,9 +6472,9 @@ bool printPairScore ( SafeBuf *sb , SearchInput *si , PairScore *ps ,
 	sb->safePrintf("<td id=tf>%"INT64" <font color=magenta>"
 		      "%.02f</font></td>",
 		      tf2,tfw2);
-	// insamewikiphrase?
-	sb->safePrintf("<td>%s/%"INT32" %.01f</td>",
-		      wp,ps->m_qdist,wiw);
+	// inSamePhraseId distInQuery phraseWeight
+	sb->safePrintf("<td>%s</td><td>%"INT32"</td><td>%.01f</td>"
+		       ,wp,ps->m_qdist,wiw);
 	// end the row
 	sb->safePrintf("</tr>");
 	sb->safePrintf("<tr><td ");
@@ -6548,8 +6613,11 @@ bool printScoresHeader ( SafeBuf *sb ) {
 		      //"<td>diversityRank</td>"
 		      "<td>density</td>"
 		      "<td>spam</td>"
-		      "<td>inlnkPR</td>" // nlinkSiteRank</td>"
+		      "<td>inlinkPR</td>" // nlinkSiteRank</td>"
 		      "<td>termFreq</td>"
+		       "<td>inSamePhrase</td>"
+		       "<td>distInQuery</td>"
+		       "<td>phraseWeight</td>"
 		      "</tr>\n" 
 		      );
 	return true;
@@ -9258,6 +9326,13 @@ bool replaceParm2 ( char *cgi , SafeBuf *newUrl ,
 		goto tryagain;
 	}
 		
+	// fix &s= replaceing &sb=
+	if ( found && found[cgiLen] != '=' ) {
+		// try again
+		p = found + 1;
+		goto tryagain;
+	}
+
 
 	// if no collision, just append it
 	if ( ! found ) {

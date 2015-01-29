@@ -3029,6 +3029,12 @@ void SpiderColl::populateDoledbFromWaitingTree ( ) { // bool reentry ) {
 	if ( m_isPopulating ) return;
 	// skip if in repair mode
 	if ( g_repairMode ) return;
+
+	// let's skip if spiders off so we can inject/popoulate the index quick
+	// since addSpiderRequest() calls addToWaitingTree() which then calls
+	// this. 
+	if ( ! g_conf.m_spideringEnabled ) return;
+
 	// try skipping!!!!!!!!!!!
 	// yeah, this makes us scream. in addition to calling
 	// Doledb::m_rdb::addRecord() below
@@ -3791,7 +3797,7 @@ bool SpiderColl::scanListForWinners ( ) {
 		// count it
 		recCount++;
 		// sanity
-		memcpy ( (char *)&finalKey , rec , sizeof(key128_t) );
+		gbmemcpy ( (char *)&finalKey , rec , sizeof(key128_t) );
 		// skip to next guy
 		list->skipCurrentRecord();
 		// negative? wtf?
@@ -4447,7 +4453,7 @@ bool SpiderColl::scanListForWinners ( ) {
 		// sanity check
 		if ( rsize > (int32_t)MAX_BEST_REQUEST_SIZE){char *xx=NULL;*xx=0;}
 		// now store this SpiderRequest for adding to doledb
-		memcpy ( m_bestRequestBuf , winReq, rsize );
+		gbmemcpy ( m_bestRequestBuf , winReq, rsize );
 		// point to that
 		m_bestRequest = (SpiderRequest *)m_bestRequestBuf;
 		// set this
@@ -4498,7 +4504,7 @@ bool SpiderColl::scanListForWinners ( ) {
 	if ( srep ) { // && ! m_isReadDone ) {
 		int32_t rsize = srep->getRecSize();
 		if ( rsize > (int32_t)MAX_SP_REPLY_SIZE ) { char *xx=NULL;*xx=0; }
-		memcpy ( m_lastReplyBuf, srep, rsize );
+		gbmemcpy ( m_lastReplyBuf, srep, rsize );
 		m_lastReplyValid = true;
 	}
 
@@ -4843,7 +4849,7 @@ bool SpiderColl::addWinnersIntoDoledb ( ) {
 	int32_t recSize = m_bestRequest->getRecSize();
 	*(int32_t *)p = recSize;
 	p += 4;
-	memcpy ( p , m_bestRequest , recSize );
+	gbmemcpy ( p , m_bestRequest , recSize );
 	p += recSize;
 	// sanity check
 	if ( p - m_doleBuf > (int32_t)MAX_DOLEREC_SIZE ) { char *xx=NULL;*xx=0; }
@@ -5393,7 +5399,7 @@ void doneSendingNotification ( void *state ) {
 	CollectionRec *cr = g_collectiondb.m_recs[collnum];
 	char *coll = "lostcoll";
 	if ( cr ) coll = cr->m_coll;
-	log("spider: done sending notifications for coll=%s", coll);
+	log(LOG_INFO,"spider: done sending notifications for coll=%s", coll);
 
 	// all done if collection was deleted from under us
 	if ( ! cr ) return;
@@ -5538,7 +5544,9 @@ bool sendNotificationForCollRec ( CollectionRec *cr )  {
 	// wtf? caller must set this
 	if ( ! cr->m_spiderStatus ) { char *xx=NULL; *xx=0; }
 
-	log("spider: sending notification for crawl status %"INT32" in coll %s. "
+	log(LOG_INFO,
+	    "spider: sending notification for crawl status %"INT32" in "
+	    "coll %s. "
 	    //"current sent state is %"INT32""
 	    ,(int32_t)cr->m_spiderStatus
 	    ,cr->m_coll
@@ -12349,7 +12357,7 @@ void gotCrawlInfoReply ( void *state , UdpSlot *slot ) {
 		CrawlInfo *cia = (CrawlInfo *)cr->m_crawlInfoBuf.getBufStart();
 
 		if ( cia )
-			memcpy ( &cia[h->m_hostId] , ptr , sizeof(CrawlInfo));
+			gbmemcpy ( &cia[h->m_hostId] , ptr , sizeof(CrawlInfo));
 		
 		// debug
 		// log("spd: got ci from host %"INT32" downloads=%"INT64", replies=%"INT32"",
@@ -12485,7 +12493,9 @@ void gotCrawlInfoReply ( void *state , UdpSlot *slot ) {
 		if ( hadUrlsReady &&
 		     // and it no longer does now...
 		     ! cr->m_globalCrawlInfo.m_hasUrlsReadyToSpider ) {
-			log("spider: all %"INT32" hosts report %s (%"INT32") has no "
+			log(LOG_INFO,
+			    "spider: all %"INT32" hosts report "
+			    "%s (%"INT32") has no "
 			    "more urls ready to spider",
 			    s_replies,cr->m_coll,(int32_t)cr->m_collnum);
 			// set crawl end time
@@ -12496,7 +12506,7 @@ void gotCrawlInfoReply ( void *state , UdpSlot *slot ) {
 		// now copy over to global crawl info so things are not
 		// half ass should we try to read globalcrawlinfo
 		// in between packets received.
-		//memcpy ( &cr->m_globalCrawlInfo , 
+		//gbmemcpy ( &cr->m_globalCrawlInfo , 
 		//	 &cr->m_tmpCrawlInfo ,
 		//	 sizeof(CrawlInfo) );
 
@@ -12718,7 +12728,8 @@ void handleRequestc1 ( UdpSlot *slot , int32_t niceness ) {
 		     ci->m_lastSpiderAttempt - ci->m_lastSpiderCouldLaunch > 
 		     spiderDoneTimer ) {
 			// this is the MOST IMPORTANT variable so note it
-			log("spider: coll %s has no more urls to spider",
+			log(LOG_INFO,
+			    "spider: coll %s has no more urls to spider",
 			    cr->m_coll);
 			// assume our crawl on this host is completed i guess
 			ci->m_hasUrlsReadyToSpider = 0;
@@ -12871,23 +12882,6 @@ bool getSpiderStatusMsg ( CollectionRec *cx , SafeBuf *msg , int32_t *status ) {
 					       "in spider controls.");
 	}
 
-	if ( ! g_conf.m_spideringEnabled ) {
-		*status = SP_ADMIN_PAUSED;
-		return msg->safePrintf("All crawling temporarily paused "
-				       "by root administrator for "
-				       "maintenance.");
-	}
-
-	// out CollectionRec::m_globalCrawlInfo counts do not have a dead
-	// host's counts tallied into it, which could make a difference on
-	// whether we have exceed a maxtocrawl limit or some such, so wait...
-	if ( ! s_countsAreValid ) {
-		*status = SP_ADMIN_PAUSED;
-		return msg->safePrintf("All crawling temporarily paused "
-				       "because a shard is down.");
-	}
-
-
 	// if spiderdb is empty for this coll, then no url
 	// has been added to spiderdb yet.. either seed or spot
 	//CrawlInfo *cg = &cx->m_globalCrawlInfo;
@@ -12937,6 +12931,25 @@ bool getSpiderStatusMsg ( CollectionRec *cx , SafeBuf *msg , int32_t *status ) {
 		*status = SP_ROUNDDONE;
 		return msg->safePrintf ( "Job round completed.");
 	}
+
+
+	if ( ! g_conf.m_spideringEnabled ) {
+		*status = SP_ADMIN_PAUSED;
+		return msg->safePrintf("All crawling temporarily paused "
+				       "by root administrator for "
+				       "maintenance.");
+	}
+
+	// out CollectionRec::m_globalCrawlInfo counts do not have a dead
+	// host's counts tallied into it, which could make a difference on
+	// whether we have exceed a maxtocrawl limit or some such, so wait...
+	if ( ! s_countsAreValid ) {
+		*status = SP_ADMIN_PAUSED;
+		return msg->safePrintf("All crawling temporarily paused "
+				       "because a shard is down.");
+	}
+
+
 
 	// otherwise in progress?
 	*status = SP_INPROGRESS;

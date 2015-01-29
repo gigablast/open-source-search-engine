@@ -257,7 +257,7 @@ bool HashTableX::addKey ( void *key , void *val , int32_t *slot ) {
 		// and store the key
 		if ( m_ks == 4 ) ((int32_t *)m_keys)[n] = *(int32_t *)key;
 		else if ( m_ks == 8 ) ((int64_t *)m_keys)[n] = *(int64_t *)key;
-		else             memcpy ( m_keys + m_ks * n , key , m_ks );
+		else             gbmemcpy ( m_keys + m_ks * n , key , m_ks );
 	}
 	// insert the value for this key
 	if ( val ) setValue ( n , val );
@@ -743,7 +743,7 @@ int32_t HashTableX::serialize ( char *buf , int32_t bufSize ) {
 		// sanity check count
 		used++;
 		// store key
-		memcpy ( p , m_keys + i * m_ks , m_ks );
+		gbmemcpy ( p , m_keys + i * m_ks , m_ks );
 		// advance
 		p += m_ks;
 	}
@@ -754,7 +754,7 @@ int32_t HashTableX::serialize ( char *buf , int32_t bufSize ) {
 		// skip if empty
 		if ( m_flags[i] == 0 ) continue;
 		// store key
-		memcpy ( p , m_vals + i * m_ds , m_ds );
+		gbmemcpy ( p , m_vals + i * m_ds , m_ds );
 		// advance
 		p += m_ds;
 	}

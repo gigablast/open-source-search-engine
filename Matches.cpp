@@ -510,7 +510,7 @@ bool Matches::set ( XmlDoc   *xd         ,
 		//tmpLen = utf16ToUtf8( tmp, 512, qw, qwLen );
 		int32_t tmpLen = qwLen;
 		if ( tmpLen > 500 ) tmpLen = 500;
-		memcpy ( tmp , qw , tmpLen );
+		gbmemcpy ( tmp , qw , tmpLen );
 		tmp[tmpLen] = '\0';
 		log(LOG_DEBUG,"query: term#=%"INT32" fieldLen=%"INT32":%s",i,tmpLen,tmp);
 
@@ -1801,10 +1801,10 @@ int32_t MatchOffsets::serialize(char *buf, int32_t bufsize){
 	*(int32_t*) p = need; p += 4;
 	*(int32_t*) p = m_numMatches; p += 4;
 	*(int32_t*) p = m_numAlnums; p += 4;
-	memcpy(p, m_queryWords, m_numMatches); p += m_numMatches;
-	memcpy(p, m_matchOffsets, m_numMatches*4); p += m_numMatches*4;
+	gbmemcpy(p, m_queryWords, m_numMatches); p += m_numMatches;
+	gbmemcpy(p, m_matchOffsets, m_numMatches*4); p += m_numMatches*4;
 	*(int32_t*) p = m_numBreaks; p += 4;
-	memcpy(p, m_breakOffsets, m_numBreaks*4); p += m_numBreaks*4;
+	gbmemcpy(p, m_breakOffsets, m_numBreaks*4); p += m_numBreaks*4;
 	
 	return p - buf;
 }
@@ -1821,10 +1821,10 @@ int32_t MatchOffsets::deserialize(char *buf, int32_t bufsize){
 	}
 	m_numMatches = *(int32_t*) p ; p += 4;
 	m_numAlnums  = *(int32_t*) p ; p += 4;
-	memcpy(m_queryWords, p, m_numMatches); p += m_numMatches;
-	memcpy(m_matchOffsets, p, m_numMatches*4); p += m_numMatches*4;
+	gbmemcpy(m_queryWords, p, m_numMatches); p += m_numMatches;
+	gbmemcpy(m_matchOffsets, p, m_numMatches*4); p += m_numMatches*4;
 	m_numBreaks = *(int32_t*) p ; p += 4;
-	memcpy(m_breakOffsets, p, m_numBreaks*4); p += m_numBreaks*4;
+	gbmemcpy(m_breakOffsets, p, m_numBreaks*4); p += m_numBreaks*4;
 	
 	return p - buf;
 	

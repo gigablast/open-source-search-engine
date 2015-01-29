@@ -165,7 +165,7 @@ convert: hashinit failed" ); return 1; }
 
 	// save hi key if any
 	char savedhi[6];
-	memcpy ( savedhi , ophi , 6 );
+	gbmemcpy ( savedhi , ophi , 6 );
 
 	for ( ; p < pend ; p += 12 ) {
 		// shift the lower 5 bytes up 1 bit to cover the old
@@ -182,7 +182,7 @@ convert: hashinit failed" ); return 1; }
 			// turn on his punish bit --> fixing him
 			p[4] |= 0x80; 
 			// store in trash
-			memcpy ( trashTop , p , 12 );
+			gbmemcpy ( trashTop , p , 12 );
 			trashTop += 12;
 			// count it
 			trashed++;

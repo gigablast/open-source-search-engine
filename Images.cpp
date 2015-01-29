@@ -686,10 +686,10 @@ bool Images::downloadImages () {
 		// now copy the data over sequentially
 		char *p = ti->m_buf;
 		// the image url
-		memcpy(p,m_imageUrl.getUrl(),urlSize);
+		gbmemcpy(p,m_imageUrl.getUrl(),urlSize);
 		p += urlSize;
 		// the image thumbnail data
-		memcpy(p,m_imgData,m_thumbnailSize);
+		gbmemcpy(p,m_imgData,m_thumbnailSize);
 		p += m_thumbnailSize;
 		// update buf length of course
 		m_imageBuf.setLength ( p - m_imageBuf.getBufStart() );
@@ -979,14 +979,16 @@ void Images::thumbStart_r ( bool amThread ) {
 
 	makeTrashDir();
 
-	// get thread id
-	int32_t id = getpidtid();
+	// get thread id. pthread_t is 64 bit and pid_t is 32 bit on
+	// 64 bit oses
+	pthread_t id = getpidtid();
 
 	// pass the input to the program through this file
 	// rather than a pipe, since popen() seems broken.
 	// m_dir ends in / so this should work.
 	char in[364];
-	snprintf ( in , 363,"%strash/in.%"INT32"", g_hostdb.m_dir, id );
+	snprintf ( in , 363,"%strash/in.%"INT64""
+		   , g_hostdb.m_dir, (int64_t)id );
 	unlink ( in );
 
 	log( LOG_DEBUG, "image: thumbStart_r create in file." );
@@ -994,7 +996,8 @@ void Images::thumbStart_r ( bool amThread ) {
 	// collect the output from the filter from this file
 	// m_dir ends in / so this should work.
 	char out[364];
-	snprintf ( out , 363,"%strash/out.%"INT32"", g_hostdb.m_dir, id );
+	snprintf ( out , 363,"%strash/out.%"INT64""
+		   , g_hostdb.m_dir, (int64_t)id );
         unlink ( out );
 
 	log( LOG_DEBUG, "image: thumbStart_r create out file." );

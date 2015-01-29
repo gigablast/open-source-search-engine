@@ -98,7 +98,7 @@ bool RdbList::copyList ( RdbList *listSrc ) {
 	// sanity
 	if ( listSrc->m_listSize < 0 ) { char *xx=NULL;*xx=0; }
 	// basically just copy
-	memcpy ( this , listSrc , sizeof(RdbList) );
+	gbmemcpy ( this , listSrc , sizeof(RdbList) );
 	// null out our crap in case the copy fails or list is empty
 	m_list      = NULL;
 	m_listSize  = 0;
@@ -110,7 +110,7 @@ bool RdbList::copyList ( RdbList *listSrc ) {
 	// otherwise we gotta copy the list data itself
 	char *copy = (char *)mmalloc ( listSrc->m_listSize, "lstcp");
 	if ( ! copy ) return false;
-	memcpy ( copy , listSrc->m_list , listSrc->m_listSize );
+	gbmemcpy ( copy , listSrc->m_list , listSrc->m_listSize );
 	// now we use the copy
 	m_list      = copy;
 	m_listSize  = listSrc->m_listSize;
@@ -263,8 +263,8 @@ bool RdbList::addRecordRaw ( char *rec , int32_t recSize ) {
 	if ( m_listEnd + recSize >  m_alloc + m_allocSize ) 
 		if ( ! growList ( m_allocSize + recSize ) )
 			return false;// log("RdbList::merge: growList failed");
-	// memcpy the key to the end of the list
-	memcpy ( m_list + m_listSize , rec , recSize );
+	// gbmemcpy the key to the end of the list
+	gbmemcpy ( m_list + m_listSize , rec , recSize );
 	m_listSize += recSize;
 	m_listEnd  += recSize;
 	return true;
@@ -290,7 +290,7 @@ bool RdbList::addRecord ( char *key , int32_t dataSize , char *data ,
 			// compare next 6 bytes
 			if ( memcmp ( m_listPtrLo,key+6,6)==0) {
 				// store in end key
-				memcpy(m_listEnd,key,6);
+				gbmemcpy(m_listEnd,key,6);
 				// turn on both half bits
 				*m_listEnd |= 0x06;
 				// clear magic bit
@@ -301,7 +301,7 @@ bool RdbList::addRecord ( char *key , int32_t dataSize , char *data ,
 				return true;
 			}
 			// no match...
-			memcpy(m_listEnd,key,12);
+			gbmemcpy(m_listEnd,key,12);
 			// need to update this then
 			m_listPtrLo = m_listEnd+6;
 			// turn on just one compression bit
@@ -312,7 +312,7 @@ bool RdbList::addRecord ( char *key , int32_t dataSize , char *data ,
 			return true;
 		}
 		// no compression
-		memcpy(m_listEnd,key,18);
+		gbmemcpy(m_listEnd,key,18);
 		m_listPtrLo = m_listEnd+6;
 		m_listPtrHi = m_listEnd+12;
 		m_listSize += 18;
@@ -353,7 +353,7 @@ bool RdbList::addRecord ( char *key , int32_t dataSize , char *data ,
 		//*(int16_t *)(&m_list[m_listSize+4]) = 
 		//	*(int16_t *)&(((char *)&key)[4]);
 		//KEYSET(&m_list[m_listSize],key,m_ks-6);
-		memcpy(m_listEnd,key,m_ks-6);
+		gbmemcpy(m_listEnd,key,m_ks-6);
 		// turn on half bit
 		//m_list[m_listSize] |= 0x02;
 		*m_listEnd |= 0x02;
@@ -388,7 +388,7 @@ bool RdbList::addRecord ( char *key , int32_t dataSize , char *data ,
 		m_listEnd  += 4;
 	}
 	// copy the data itself to the list
-	memcpy ( &m_list[m_listSize] , data , dataSize );
+	gbmemcpy ( &m_list[m_listSize] , data , dataSize );
 	m_listSize += dataSize;
 	m_listEnd  += dataSize;
 	return true;
@@ -492,21 +492,21 @@ void RdbList::getKey ( char *rec , char *key ) {
 	// posdb?
 	if ( m_ks == 18 ) {
 		if ( rec[0]&0x04 ) {
-			memcpy ( key+12,m_listPtrHi,6);
-			memcpy ( key+6 ,m_listPtrLo,6);
-			memcpy ( key,rec,6);
+			gbmemcpy ( key+12,m_listPtrHi,6);
+			gbmemcpy ( key+6 ,m_listPtrLo,6);
+			gbmemcpy ( key,rec,6);
 			// clear compressionbits (1+2+4+8)
 			key[0] &= 0xf9;
 			return;
 		}
 		if ( rec[0]&0x02 ) {
-			memcpy ( key+12 ,m_listPtrHi,6);
-			memcpy ( key,rec,12);
+			gbmemcpy ( key+12 ,m_listPtrHi,6);
+			gbmemcpy ( key,rec,12);
 			// clear compressionbits (1+2+4+8)
 			key[0] &= 0xf9;
 			return;
 		}
-		memcpy ( key , rec , 18 );
+		gbmemcpy ( key , rec , 18 );
 		return;
 	}
 
@@ -917,8 +917,8 @@ bool RdbList::checkIndexList_r ( bool removeNegRecs , bool sleepOnProblem ) {
 	if ( status < 0 ) {
 		log("db: Record key in list is before start key.");
 		//key_t k ;
-		//memcpy ( ((char *)&k)   , p   , 6 );
-		//memcpy ( ((char *)&k)+6 , phi , 6 );
+		//gbmemcpy ( ((char *)&k)   , p   , 6 );
+		//gbmemcpy ( ((char *)&k)+6 , phi , 6 );
 		//log("db: k.n1=%"XINT32" k.n0=%"XINT64"",
 		//    k.n1,k.n0);
 		//log("db: s.n1=%"XINT32" s.n0=%"XINT64"",
@@ -1004,8 +1004,8 @@ bool RdbList::checkIndexList_r ( bool removeNegRecs , bool sleepOnProblem ) {
 	if ( status > 0 ) {
 		log("db: Got record key in list over end key.");
 		//key_t k ;
-		//memcpy ( ((char *)&k)   , oldp   , 6 );
-		//memcpy ( ((char *)&k)+6 , oldphi , 6 );
+		//gbmemcpy ( ((char *)&k)   , oldp   , 6 );
+		//gbmemcpy ( ((char *)&k)+6 , oldphi , 6 );
 		//log("db: k.n1=%"XINT32" k.n0=%"XINT64"",k.n1,k.n0);
 		//log("db: e.n1=%"XINT32" e.n0=%"XINT64"",m_endKey.n1,m_endKey.n0);
 		if ( sleepOnProblem ) {char *xx = NULL; *xx=0;}
@@ -1038,11 +1038,11 @@ bool RdbList::checkIndexList_r ( bool removeNegRecs , bool sleepOnProblem ) {
 	     status != 0 ) {
 		log(LOG_LOGIC,"db: Got bad last key.");
 		//key_t k ;
-		//memcpy ( ((char *)&k)   , oldp   , 6 );
-		//memcpy ( ((char *)&k)+6 , oldphi , 6 );
+		//gbmemcpy ( ((char *)&k)   , oldp   , 6 );
+		//gbmemcpy ( ((char *)&k)+6 , oldphi , 6 );
 		char k[MAX_KEY_BYTES];
-		memcpy ( k          , oldp   , m_ks-6 );
-		memcpy ( k+(m_ks-6) , oldphi , 6 );
+		gbmemcpy ( k          , oldp   , m_ks-6 );
+		gbmemcpy ( k+(m_ks-6) , oldphi , 6 );
 		//log(LOG_LOGIC,"db: k.n1=%"XINT32" k.n0=%"XINT64"",k.n1,k.n0);
 		//log(LOG_LOGIC,"db: l.n1=%"XINT32" l.n0=%"XINT64"",
 		//    m_lastKey.n1,m_lastKey.n0);
@@ -1058,10 +1058,10 @@ bool RdbList::checkIndexList_r ( bool removeNegRecs , bool sleepOnProblem ) {
 	// . otherwise, last key is now valid
 	// . this is only good for the call to Msg5::getRemoteList()
 	if ( ! m_lastKeyIsValid ) {
-		//memcpy ( ((char *)&m_lastKey)   , oldp   , 6 );
-		//memcpy ( ((char *)&m_lastKey)+6 , oldphi , 6 );
-		memcpy ( m_lastKey          , oldp   , (m_ks-6) );
-		memcpy ( m_lastKey+(m_ks-6) , oldphi , 6 );
+		//gbmemcpy ( ((char *)&m_lastKey)   , oldp   , 6 );
+		//gbmemcpy ( ((char *)&m_lastKey)+6 , oldphi , 6 );
+		gbmemcpy ( m_lastKey          , oldp   , (m_ks-6) );
+		gbmemcpy ( m_lastKey+(m_ks-6) , oldphi , 6 );
 		m_lastKeyIsValid = true;
 	}
 	// don't do this any more cuz we like to call merge_r back-to-back
@@ -1648,9 +1648,12 @@ void RdbList::merge_r ( RdbList **lists         ,
 	// . we don't want any positive recs to go un annhilated
 	// . but don't worry about this check if start and end keys are equal
 	//if ( m_startKey != m_endKey && (m_endKey.n0 & 0x01) == 0x00 )
+	// . MDW: this happens during the qainject1() qatest in qa.cpp that
+	//   deletes all the urls then does a dump of just negative keys.
+	//   so let's comment it out for now
 	if ( KEYCMP(m_startKey,m_endKey,m_ks)!=0 && KEYNEG(m_endKey) ) {
-		log(LOG_LOGIC,"db: rdblist: merge_r: Illegal endKey for "
-		    "merging. fixing.");
+		// log(LOG_LOGIC,"db: rdblist: merge_r: Illegal endKey for "
+		//     "merging rdb=%s. fixing.",getDbnameFromId(rdbId));
 		// make it legal so it will be read first NEXT time
 		KEYSUB(m_endKey,1,m_ks);
 	}
@@ -2603,10 +2606,10 @@ bool RdbList::indexMerge_r ( RdbList **lists         ,
 		// convenient ptrs
 		bigPtrLo = ptrs  [0];
 		//bigPtrHi = hiKeys[0];
-		// save for memcpy
+		// save for gbmemcpy
 		bstart = bigPtrLo;
 		bend   = ends[0];
-		// stop memcpy just before minRecSizes worth of keys are had
+		// stop gbmemcpy just before minRecSizes worth of keys are had
 		need = minRecSizes - (int32_t)(m_listPtr - m_list);
 		if ( bend - bstart > need ) bend = bstart + need;
 		// . skip keys until >= minPtrLo/Hi
@@ -2616,7 +2619,7 @@ bool RdbList::indexMerge_r ( RdbList **lists         ,
 		// we never have to check the high 6 bytes gain because
 		// the termid is 48bits
 		while ( fcmp2low (bigPtrLo,minPtrLo) < 0 ) {
-			// doing the single memcpy below is not good enough,
+			// doing the single gbmemcpy below is not good enough,
 			// because we may have
 			// advance 6 or 12 more... NO
 			//if ( isHalfBitOn(bigPtrLo) ) bigPtrLo += 6 ;
@@ -2637,8 +2640,8 @@ bool RdbList::indexMerge_r ( RdbList **lists         ,
 		// we have to make sure to set last key ptrs in 
 		// case another list annihilates us, or overrides us
 		if ( bigPtrLo > bstart ) lastPtrLo = bigPtrLo - 6;
-		// now do the memcpy
-		memcpy ( m_listPtr , bstart , bigPtrLo - bstart );
+		// now do the gbmemcpy
+		gbmemcpy ( m_listPtr , bstart , bigPtrLo - bstart );
 		// does it matter this points into another list? YES!!
 		// but we are keeping the same termid, so ignore this
 		//m_listPtrHi  = m_listPtr + (bigPtrHi - bstart);
@@ -2689,8 +2692,8 @@ bool RdbList::indexMerge_r ( RdbList **lists         ,
 	if ( skipFilter ) goto skipfilter;
 
 	k = (char*)&key;
-	memcpy(k, minPtrLo, 6);
-	memcpy(&k[6], minPtrHi, 6);
+	gbmemcpy(k, minPtrLo, 6);
+	gbmemcpy(&k[6], minPtrHi, 6);
 	groupId = getGroupId ( rdbId , &key );
 	// filter out if does not belong in this group due to scaling servers
 	if ( groupId != myGroupId && doGroupMask ) { 
@@ -2918,20 +2921,20 @@ bool RdbList::indexMerge_r ( RdbList **lists         ,
 	// the last key we stored
 	//e = (char *)&m_lastKey;
 	e = m_lastKey;
-	//memcpy ( e     , lastPtrLo   , 6 );
-	//memcpy ( e + 6 , m_listPtrHi , 6 );
-	// why did we get rid of the above memcpy's()?
+	//gbmemcpy ( e     , lastPtrLo   , 6 );
+	//gbmemcpy ( e + 6 , m_listPtrHi , 6 );
+	// why did we get rid of the above gbmemcpy's()?
 	// *(int32_t  *) e     = *(int32_t  *) lastPtrLo;
 	// *(int16_t *)(e+ 4) = *(int16_t *)(lastPtrLo+4);
-	memcpy ( e , lastPtrLo , hks );
-	memcpy ( e + hks , m_listPtrHi , 6 );
+	gbmemcpy ( e , lastPtrLo , hks );
+	gbmemcpy ( e + hks , m_listPtrHi , 6 );
 	// *(int32_t  *)(e+ 6) = *(int32_t  *) m_listPtrHi;  new one
 	// *(int16_t *)(e+10) = *(int16_t *)(m_listPtrHi+4); new one
 	// sanity check
 	//key_t fk;
 	//char *f = (char *)&fk;
-	//memcpy ( f     , lastPtrLo   , 6 );
-	//memcpy ( f + 6 , m_listPtrHi , 6 );
+	//gbmemcpy ( f     , lastPtrLo   , 6 );
+	//gbmemcpy ( f + 6 , m_listPtrHi , 6 );
 	//if ( m_lastKey != fk ) { char *xx = NULL; *xx = 0; }
 
 	m_lastKeyIsValid = true;
@@ -2948,8 +2951,8 @@ bool RdbList::indexMerge_r ( RdbList **lists         ,
 		//e = (char *)&highestKey;
 		char highestKey[MAX_KEY_BYTES];
 		e = highestKey;
-		memcpy ( e       , highestKeyPtrLo , hks );
-		memcpy ( e + hks , highestKeyPtrHi , 6 );
+		gbmemcpy ( e       , highestKeyPtrLo , hks );
+		gbmemcpy ( e + hks , highestKeyPtrHi , 6 );
 		// the highestKey may have been annihilated, but it is still
 		// good for m_endKey, just not m_lastKey
 		//key_t endKey;
@@ -3039,12 +3042,15 @@ bool RdbList::posdbMerge_r ( RdbList **lists         ,
 	// . we don't want any positive recs to go un annhilated
 	// . but don't worry about this check if start and end keys are equal
 	//if ( m_startKey != m_endKey && (m_endKey.n0 & 0x01) == 0x00 )
-	if ( KEYCMP(m_startKey,m_endKey,m_ks)!=0 && KEYNEG(m_endKey) ) {
-		log(LOG_LOGIC,"db: rdblist: posdbMerge_r: Illegal endKey for "
-		    "merging");
-		// this happens when dumping datedb... wtf?
-		//char *xx=NULL;*xx=0;
-	}
+	// . MDW: this happens during the qainject1() qatest in qa.cpp that
+	//   deletes all the urls then does a dump of just negative keys.
+	//   so let's comment it out for now
+	// if ( KEYCMP(m_startKey,m_endKey,m_ks)!=0 && KEYNEG(m_endKey) ) {
+	// 	log(LOG_LOGIC,"db: rdblist: posdbMerge_r: Illegal endKey for "
+	// 	    "merging");
+	// 	// this happens when dumping datedb... wtf?
+	// 	//char *xx=NULL;*xx=0;
+	// }
 	// bail if nothing requested
 	if ( minRecSizes == 0 ) return true;
 
@@ -3205,8 +3211,8 @@ bool RdbList::posdbMerge_r ( RdbList **lists         ,
 	// if this is true, we do not need to call this groupid filter code
 	if ( skipFilter ) goto skipfilter;
 	k = (char*)&key;
-	memcpy(k, minPtrBase, 6);
-	memcpy(&k[6], minPtrHi, 6);
+	gbmemcpy(k, minPtrBase, 6);
+	gbmemcpy(&k[6], minPtrHi, 6);
 	groupId = getGroupId ( RDB_POSDB , &key );
 	// filter out if does not belong in this group due to scaling servers
 	if ( groupId != myGroupId && doGroupMask ) { 
@@ -3446,13 +3452,13 @@ bool RdbList::posdbMerge_r ( RdbList **lists         ,
 		// the last key we stored
 		char *e = m_lastKey;
 		// record the last key we added in m_lastKey
-		memcpy ( e , pp , 6 );
+		gbmemcpy ( e , pp , 6 );
 		// take off compression bits
 		*e &= 0xf9;
 		e += 6;
-		memcpy ( e , m_listPtrLo , 6 );
+		gbmemcpy ( e , m_listPtrLo , 6 );
 		e += 6;
-		memcpy ( e , m_listPtrHi , 6 );
+		gbmemcpy ( e , m_listPtrHi , 6 );
 		// validate it now
 		m_lastKeyIsValid = true;
 	}
@@ -3468,14 +3474,14 @@ bool RdbList::posdbMerge_r ( RdbList **lists         ,
 
 	// save original end key
 	char orig[MAX_KEY_BYTES];
-	memcpy ( orig , m_endKey , m_ks );
+	gbmemcpy ( orig , m_endKey , m_ks );
 
 	// . we only need to shrink the endKey if we fill up our list and
 	//   there's still keys under m_endKey left over to merge
 	// . if no keys remain to merge, then don't decrease m_endKey
 	// . i don't want the endKey decreased unnecessarily because
 	//   it means there's no recs up to the endKey
-	memcpy ( m_endKey , m_lastKey , m_ks );
+	gbmemcpy ( m_endKey , m_lastKey , m_ks );
 	// if endkey is now negative we must have a dangling negative
 	// so make it positive (dangling = unmatched)
 	if ( KEYNEG(m_endKey) ) KEYADD(m_endKey,1,m_ks);

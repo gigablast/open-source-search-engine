@@ -68,7 +68,7 @@ static void clusterGetPages ( DiskPageCache *pc,
 		if ( bufPtr + size >= bufEnd )
 			size = bufEnd - bufPtr;
 		// copy the list into the buffer
-		memcpy ( bufPtr, cacheList.m_list, size );
+		gbmemcpy ( bufPtr, cacheList.m_list, size );
 		// advance to the next page
 		bufPtr += size;
 		*newOffset += size;
@@ -457,7 +457,7 @@ void Clusterdb::getSampleVector ( char *vec ,
 	// so get it
 	char *p = doc->getSampleVector ( );
 	// and store it. int16_t vectors are padded with 0's.
-	memcpy ( vec , p , SAMPLE_VECTOR_SIZE );
+	gbmemcpy ( vec , p , SAMPLE_VECTOR_SIZE );
 }
 */
 
@@ -604,7 +604,7 @@ void Clusterdb::getSampleVector ( char *vec , TermTable *table ) {
 	if ( nd > SAMPLE_VECTOR_LEN - 1 ) nd = SAMPLE_VECTOR_LEN - 1;
 	// make sure last component is a 0
 	d [ nd ] = 0;
-	memcpy ( vec , (char *)d , (nd+1) * 4 );
+	gbmemcpy ( vec , (char *)d , (nd+1) * 4 );
 }
 */
 
@@ -842,7 +842,7 @@ void Clusterdb::makeRecFromTitleRec ( char     *rec,
 					lang,
 					siteHash,
 					false );
-	memcpy(rec, &key, sizeof(key_t));
+	gbmemcpy(rec, &key, sizeof(key_t));
 }
 
 void Clusterdb::makeRecFromTitleRecKey ( char *rec,
@@ -862,6 +862,6 @@ void Clusterdb::makeRecFromTitleRecKey ( char *rec,
 					 0,
 					 siteHash,
 					 false );
-	memcpy(rec, &ckey, sizeof(key_t));
+	gbmemcpy(rec, &ckey, sizeof(key_t));
 }
 */

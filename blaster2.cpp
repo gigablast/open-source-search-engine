@@ -286,12 +286,12 @@ void startSpidering ( ) {
 
 		if(s_server) {
 			int32_t len = gbstrlen(s_server);
-			memcpy ( p, s_server, len);
+			gbmemcpy ( p, s_server, len);
 			p += len;
 			p += getRandomWords(p, pend, s_numRandWords);
 			int32_t appendLen = gbstrlen(s_append);
 			if ( p + appendLen < pend ) {
-				memcpy ( p, s_append, gbstrlen(s_append) );
+				gbmemcpy ( p, s_append, gbstrlen(s_append) );
 				p += gbstrlen(s_append);
 			}
 			*p++ = '\0';
@@ -299,10 +299,10 @@ void startSpidering ( ) {
 			t = g_mem.strdup(url, "saved url");
 		}
 		else {
-			memcpy ( p, s_p, gbstrlen(s_p));
+			gbmemcpy ( p, s_p, gbstrlen(s_p));
 			p += gbstrlen ( s_p );
 			if ( gbstrlen(s_p) + gbstrlen(s_append) < MAX_URL_LEN )
-				memcpy ( p, s_append, gbstrlen(s_append) );
+				gbmemcpy ( p, s_append, gbstrlen(s_append) );
 			p += gbstrlen(s_append);
 			//null end
 			*p ='\0';
@@ -425,7 +425,7 @@ int32_t getRandomWords(char *buf, char *bufend, int32_t numWords) {
 		int32_t windex = *(int32_t*)(&s_windices[wordNum*sizeof(int32_t)]);
 		int32_t wlen = gbstrlen(&s_words[windex]);
 		if(wlen + 1 + p >= bufend) return p - buf;
-		memcpy(p, &s_words[windex], wlen);
+		gbmemcpy(p, &s_words[windex], wlen);
 		p += wlen;
 		if(--numWords <= 0) return p - buf;
 		*p++ = '+';

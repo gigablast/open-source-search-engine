@@ -722,7 +722,7 @@ void RdbMerge::filterList ( RdbList *list ) {
         rec     = list->getCurrentRec    ();
         recSize = list->getCurrentRecSize();
         status  = list->skipCurrentRecord();
-        memcpy ( addPtr , rec , recSize );
+        gbmemcpy ( addPtr , rec , recSize );
         addPtr += recSize;
         if ( status ) goto loop;
  done:

@@ -201,6 +201,7 @@ static WebPage s_pages[] = {
 	  sendPageCloneColl  , 0 ,NULL,NULL,
 	  PG_MASTERADMIN|PG_ACTIVE},
 
+	// let's replace this with query reindex for the most part
 	{ PAGE_REPAIR    , "admin/rebuild"   , 0 , "rebuild" ,  1 , 0 ,
 	  "rebuild data",
 	  //USER_MASTER ,
@@ -272,6 +273,7 @@ static WebPage s_pages[] = {
 	  sendPageAutoban   , 0 ,NULL,NULL,
 	  PG_NOAPI|PG_MASTERADMIN},
 
+	// deactivate until works on 64-bit... mdw 12/14/14
 	{ PAGE_PROFILER    , "admin/profiler"   , 0 , "profiler" ,  0 ,M_POST,
 	  //USER_MASTER , 
 	  "profiler",
@@ -2373,6 +2375,10 @@ bool  Pages::printAdminLinks ( SafeBuf *sb,
 	// visible window... so just try 1000px max
 	sb->safePrintf("<div style=max-width:800px;>");
 
+	// int arch = 32;
+	// if ( __WORDSIZE == 64 ) arch = 64;
+	// if ( __WORDSIZE == 128 ) arch = 128;
+
 	//int32_t matt1 = atoip ( MATTIP1 , gbstrlen(MATTIP1) );
 	//int32_t matt2 = atoip ( MATTIP2 , gbstrlen(MATTIP2) );
 	for ( int32_t i = PAGE_BASIC_SETTINGS ; i < s_numPages ; i++ ) {
@@ -2393,6 +2399,10 @@ bool  Pages::printAdminLinks ( SafeBuf *sb,
 		if ( ! g_conf.m_isMattWells && i == PAGE_AUTOBAN )
 			continue;
 
+		// profiler.cpp only works for 32-bit elf headers right now
+		//if ( i == PAGE_PROFILER && arch != 32 )
+		//	continue;
+
 		// is this page basic?
 		bool pageBasic = false;
 		if ( i >= PAGE_BASIC_SETTINGS &&
@@ -2402,6 +2412,7 @@ bool  Pages::printAdminLinks ( SafeBuf *sb,
 		// print basic pages under the basic menu, advanced pages
 		// under the advanced menu...
 		if ( isBasic != pageBasic ) continue;
+
 
 		// ignore these for now
 		//if ( i == PAGE_SECURITY ) continue;
@@ -3901,6 +3912,7 @@ bool printRedBox ( SafeBuf *mb , TcpSocket *sock , HttpRequest *hr ) {
 		return (bool)adds;
 	}
 
+	bool printedMaster = false;
 	if ( g_conf.m_masterPwds.length() == 0 &&
 	     g_conf.m_connectIps.length() == 0 ) {
 		if ( adds ) mb->safePrintf("<br>");
@@ -3913,11 +3925,16 @@ bool printRedBox ( SafeBuf *mb , TcpSocket *sock , HttpRequest *hr ) {
 			       "table. Right now anybody might be able "
 			       "to access the Gigablast admin controls.");
 		mb->safePrintf("%s",boxEnd);
+		printedMaster = true;
 	}
 
 	CollectionRec *cr = g_collectiondb.getRec ( hr );
 
+	char *coll = "";
+	if ( cr ) coll = cr->m_coll;
+
 	if ( cr &&
+	     ! printedMaster &&
 	     g_conf.m_useCollectionPasswords &&
 	     cr->m_collectionPasswords.length() == 0 && 
 	     cr->m_collectionIps.length() == 0 ) {
@@ -3926,10 +3943,14 @@ bool printRedBox ( SafeBuf *mb , TcpSocket *sock , HttpRequest *hr ) {
 		mb->safePrintf("%s",box);
 		mb->safePrintf("URGENT. Please specify a COLLECTION password "
 			       "or IP address in the "
-			       "<a href=/admin/collectionpasswords>"
+			       "<a href=/admin/collectionpasswords?c=%s>"
 			       "password</a> "
 			       "table. Right now anybody might be able "
-			       "to access the Gigablast admin controls.");
+			       "to access the Gigablast admin controls "
+			       "for the <b>%s</b> collection."
+			       , cr->m_coll
+			       , cr->m_coll
+			       );
 		mb->safePrintf("%s",boxEnd);
 	}
 
@@ -3937,7 +3958,7 @@ bool printRedBox ( SafeBuf *mb , TcpSocket *sock , HttpRequest *hr ) {
 	int32_t out = 0;
 	for ( int32_t i = 0 ; i < g_hostdb.m_numHosts ; i++ ) {
 		Host *h = &g_hostdb.m_hosts[i];
-		if ( h->m_diskUsage < 98.0 ) continue;
+		if ( h->m_pingInfo.m_diskUsage < 98.0 ) continue;
 		out++;
 	}
 	if ( out > 0 ) {
@@ -3947,8 +3968,8 @@ bool printRedBox ( SafeBuf *mb , TcpSocket *sock , HttpRequest *hr ) {
 		if ( out == 1 ) s = " is";
 		mb->safePrintf("%s",box);
 		mb->safePrintf("%"INT32" host%s over 98%% disk usage. "
-			       "See the <a href=/admin/hosts>"
-			       "hosts</a> table.",out,s);
+			       "See the <a href=/admin/hosts?c=%s>"
+			       "hosts</a> table.",out,s,coll);
 		mb->safePrintf("%s",boxEnd);
 	}
 
@@ -3958,7 +3979,8 @@ bool printRedBox ( SafeBuf *mb , TcpSocket *sock , HttpRequest *hr ) {
 		// count if not dead
 		Host *h1 = &g_hostdb.m_hosts[i-1];
 		Host *h2 = &g_hostdb.m_hosts[i];
-		if (!strcmp(h1->m_gbVersionStrBuf,h2->m_gbVersionStrBuf))
+		if (!strcmp(h1->m_pingInfo.m_gbVersionStr,
+			    h2->m_pingInfo.m_gbVersionStr))
 			continue;
 		sameVersions = false;
 		break;
@@ -3968,10 +3990,33 @@ bool printRedBox ( SafeBuf *mb , TcpSocket *sock , HttpRequest *hr ) {
 		adds++;
 		mb->safePrintf("%s",box);
 		mb->safePrintf("One or more hosts have different gb versions. "
-			       "See the <a href=/admin/hosts>hosts</a> "
-			       "table.");
+			       "See the <a href=/admin/hosts?c=%s>hosts</a> "
+			       "table.",coll);
 		mb->safePrintf("%s",boxEnd);
 	}
+
+	
+	int jammedHosts = 0;
+	for ( int32_t i = 1 ; i < g_hostdb.getNumHosts() ; i++ ) {
+		Host *h = &g_hostdb.m_hosts[i];
+		if ( g_hostdb.isDead( h ) ) continue;
+		if ( h->m_pingInfo.m_udpSlotsInUse >= 400 ) jammedHosts++;
+	}
+	if ( jammedHosts > 0 ) {
+		if ( adds ) mb->safePrintf("<br>");
+		adds++;
+		char *s = "s are";
+		if ( out == 1 ) s = " is";
+		mb->safePrintf("%s",box);
+		mb->safePrintf("%"INT32" host%s jammed with "
+			       "over %"INT32" outstanding "
+			       "udp transactions. "
+			       "See <a href=/admin/sockets?c=%s>sockets</a>"
+			       " table.",jammedHosts,s,400,coll);
+		mb->safePrintf("%s",boxEnd);
+	}
+
+
 
 
 
@@ -4050,8 +4095,8 @@ bool printRedBox ( SafeBuf *mb , TcpSocket *sock , HttpRequest *hr ) {
 		mb->safePrintf("%s",box);
 		mb->safePrintf("%"INT32" %s dead and not responding to "
 			      "pings. See the "
-			       "<a href=/admin/host>hosts table</a>.",
-			       ps->m_numHostsDead ,s );
+			       "<a href=/admin/host?c=%s>hosts table</a>.",
+			       ps->m_numHostsDead ,s ,coll);
 		mb->safePrintf("%s",boxEnd);
 	}
 
@@ -4062,7 +4107,8 @@ bool printRedBox ( SafeBuf *mb , TcpSocket *sock , HttpRequest *hr ) {
 		mb->safePrintf("All Threads are disabled. "
 			       "Might hurt performance for doing system "
 			       "calls which call 3rd party executables and "
-			       "can take a int32_t time to run, like pdf2html.");
+			       "can take a int32_t time to run, "
+			       "like pdf2html.");
 		mb->safePrintf("%s",boxEnd);
 	}
 
@@ -4084,7 +4130,8 @@ bool printRedBox ( SafeBuf *mb , TcpSocket *sock , HttpRequest *hr ) {
 			       "Might hurt performance because these "
 			       "are calls to "
 			       "3rd party executables and "
-			       "can take a int32_t time to run, like pdf2html.");
+			       "can take a int32_t time to run, "
+			       "like pdf2html.");
 		mb->safePrintf("%s",boxEnd);
 	}
 

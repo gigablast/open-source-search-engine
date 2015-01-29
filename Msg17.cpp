@@ -149,7 +149,7 @@ bool Msg17::getFromCache ( char   cacheId,
 	*p++ = m_cacheId;
 	// the flag (0 means read request, 1 means store request)
 	*p++ = 0;
-	memcpy ( p , &collnum, sizeof(collnum_t)); p += sizeof(collnum_t);
+	gbmemcpy ( p , &collnum, sizeof(collnum_t)); p += sizeof(collnum_t);
 	//strcpy ( p , coll ); p += gbstrlen ( coll ) + 1;
         // . send the request to the key host
 	// . this returns false and sets g_errno on error
@@ -366,7 +366,7 @@ void handleRequest17 ( UdpSlot *slot , int32_t niceness  ) {
 
 	char *x = buf;
 	*(int32_t *)x = cachedTimeDelta; x += 4;
-	memcpy ( x , rec , recSize );
+	gbmemcpy ( x , rec , recSize );
 
 	// . set the msg40 from the cached record
 	// . UdpServer should free "rec" when he's done sending it
@@ -450,7 +450,7 @@ bool Msg17::storeInCache ( char   cacheId ,
 	*p++ = 1;
 	//char *coll = si->m_coll;
 	//strcpy ( p , coll ); p += gbstrlen(coll) + 1; // includes '\0'
-	memcpy ( p ,&collnum ,sizeof(collnum_t)); p += sizeof(collnum_t);
+	gbmemcpy ( p ,&collnum ,sizeof(collnum_t)); p += sizeof(collnum_t);
 
 	QUICKPOLL(niceness);
 
@@ -494,7 +494,7 @@ bool Msg17::storeInCache ( char   cacheId ,
 		// bail if not enough room!
 		if ( recSize > pend - p ) return true;
 		// otheriwse, store it
-		memcpy ( p, recPtr, recSize );
+		gbmemcpy ( p, recPtr, recSize );
 		// advance p by how many bytes we stored into "p"
 		p += recSize;
 	}

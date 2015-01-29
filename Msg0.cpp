@@ -1411,7 +1411,7 @@ void gotListWrapper ( void *state , RdbList *listb , Msg5 *msg5xx ) {
 				continue;
 			}
 			// store it
-			memcpy (dst , rec , LDBKS );
+			gbmemcpy (dst , rec , LDBKS );
 			dst += LDBKS;
 			// update it
 			lastIp32 = ip32;

@@ -777,9 +777,9 @@ bool Speller::gotSpellerReply( StateFrag *st ){
 		// make substitution and store in "dst"
 		char buf2 [ MAX_FRAG_SIZE];
 		char *nf = buf2;
-		memcpy ( nf , s1 , slen1 ) ; nf += slen1;
-		memcpy ( nf , s2 , slen2 ) ; nf += slen2;
-		memcpy ( nf , s3 , slen3 ) ; 
+		gbmemcpy ( nf , s1 , slen1 ) ; nf += slen1;
+		gbmemcpy ( nf , s2 , slen2 ) ; nf += slen2;
+		gbmemcpy ( nf , s3 , slen3 ) ; 
 		nf += slen3;
 	
 		// don't forget to NULL terminate
@@ -895,7 +895,7 @@ void Speller::gotFrags( void *state ){
 			else if ( qw->m_opcode == OP_RIGHTPAREN) *dptr++ = ')';
 			else if ( qw->m_opcode == OP_PIPE      ) *dptr++ = '|';
 			else { 
-				memcpy ( dptr , w , wlen ); 
+				gbmemcpy ( dptr , w , wlen ); 
 				dptr += wlen; 
 			}
 			*dptr = '\0';
@@ -1525,7 +1525,7 @@ bool Speller::canSplitWords( char *s, int32_t slen, bool *isPorn,
 			if ( *isPorn || nextWord == s + slen ){
 				char *p = splitWords;
 				for ( int32_t k = 1; k < curr; k++ ){
-					memcpy (p, index[k - 1], 
+					gbmemcpy (p, index[k - 1], 
 						index[k] - index[k - 1]);
 					p += index[k] - index[k - 1];
 					*p = ' ';
@@ -1738,7 +1738,7 @@ bool Speller::findNext( char *s, char *send, char **nextWord, bool *isPorn,
   if ( isAdult ( s, slen, &loc ) ){
   // if this string starts with the adult word
   if ( loc == s ){
-  memcpy ( splitWords, s, slen );
+  gbmemcpy ( splitWords, s, slen );
   splitWords[slen] = ' ';
   splitWords[slen + 1] = '\0';
   *isPorn = true;
@@ -1763,7 +1763,7 @@ bool Speller::findNext( char *s, char *send, char **nextWord, bool *isPorn,
   // continue if did not find it
   if ( pop <= 0 )
   continue;
-  memcpy ( splitWords, s, a - s );
+  gbmemcpy ( splitWords, s, a - s );
   splitWords[a - s] = ' ';
   splitWords[a - s + 1] = '\0';
   // see if we can split the rest

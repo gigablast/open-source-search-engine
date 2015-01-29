@@ -171,6 +171,9 @@ bool CommandUpdateSiteList ( char *rec ) {
 // . we'll show it in a special msg box on all admin pages if required
 bool CommandRebalance ( char *rec ) {
 	g_rebalance.m_userApproved = true;
+	// force this to on so it goes through
+	g_rebalance.m_numForeignRecs = 1;
+	g_rebalance.m_needsRebalanceValid = false;
 	return true;
 }
 
@@ -752,7 +755,7 @@ bool CommandReloadLanguagePages ( char *rec ) {
 }
 
 bool CommandClearKernelError ( char *rec ) {
-	g_hostdb.m_myHost->m_kernelErrors = 0;
+	g_hostdb.m_myHost->m_pingInfo.m_kernelErrors = 0;
 	return true;
 }
 
@@ -1179,10 +1182,8 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r ) {
 	if ( ! g_conf.m_allowCloudUsers &&
 	     ! isMasterAdmin &&
 	     ! isCollAdmin ) {
-		return g_httpServer.sendDynamicPage (s,
-						     "",
-						     0);
-
+		char *msg = "NO PERMISSION";
+		return g_httpServer.sendDynamicPage (s, msg,gbstrlen(msg));
 	}
 
 	//
@@ -2628,9 +2629,12 @@ bool Parms::printParm ( SafeBuf* sb,
 		// 	}
 		// }
 		if ( m->m_flags & PF_TEXTAREA ) {
+			int rows = 10;
+			if ( m->m_flags & PF_SMALLTEXTAREA )
+				rows = 4;
 			sb->safePrintf ("<textarea id=tabox "
-					"name=%s rows=10 cols=80>",
-					cgi);
+					"name=%s rows=%i cols=80>",
+					cgi,rows);
 			//sb->dequote ( s , gbstrlen(s) );
 			// note it
 			//log("hack: %s",sx->getBufStart());
@@ -2700,8 +2704,8 @@ bool Parms::printParm ( SafeBuf* sb,
 			strncpy ( s, "00:00", 5 );
 		char hr[3];
 		char min[3];
-		memcpy ( hr, s, 2 );
-		memcpy ( min, s + 3, 2 );
+		gbmemcpy ( hr, s, 2 );
+		gbmemcpy ( min, s + 3, 2 );
 		hr[2] = '\0';
 		min[2] = '\0';
 		// print the time in the input forms
@@ -3009,7 +3013,7 @@ bool Parms::removeParm ( int32_t i , int32_t an , char *THIS ) {
 	// how much to bury it with
 	int32_t size = (num - an - 1 ) * m->m_size ;
 	// bury it
-	memcpy ( dst , src , size );
+	gbmemcpy ( dst , src , size );
 
 	// and detach the buf on the tail so it doesn't core in Mem.cpp
 	// when it tries to free...
@@ -3236,7 +3240,7 @@ void Parms::setParm ( char *THIS , Parm *m , int32_t mm , int32_t j , char *s ,
 		     memcmp ( dst , s , len ) == 0 ) 
 			return;
 		// this means that we can not use string POINTERS as parms!!
-		if ( ! isHtmlEncoded ) memcpy ( dst , s , len ); 
+		if ( ! isHtmlEncoded ) {gbmemcpy ( dst , s , len ); }
 		else                   len = htmlDecode (dst , s,len,false,0);
 		dst[len] = '\0';
 		// . might have to set length
@@ -3376,7 +3380,7 @@ void Parms::setToDefault ( char *THIS , char objType , CollectionRec *argcr ) {
 			if ( ! argcr ) { char *xx=NULL;*xx=0; }
 			char *def = m->m_defOff+(char *)argcr;
 			char *dst = (char *)THIS + m->m_off;
-			memcpy ( dst , def , m->m_size );
+			gbmemcpy ( dst , def , m->m_size );
 			continue;
 		}
 		// leave arrays empty, set everything else to default
@@ -3896,10 +3900,10 @@ skip2:
 			d++; 
 		}
 		if ( ! *d ) last = d;
-		//memcpy ( p , "# " , 2 ); 
+		//gbmemcpy ( p , "# " , 2 ); 
 		//p += 2;
 		sb.safeMemcpy("# ",2);
-		//memcpy ( p , start , last - start );
+		//gbmemcpy ( p , start , last - start );
 		//p += last - start;
 		sb.safeMemcpy(start,last-start);
 		//*p++='\n';
@@ -4349,7 +4353,7 @@ bool Parms::serializeConfParm( Parm *m, int32_t i, char **p, char *end,
 			// copy the parm's whole value
 			if ( sp->val + size > end )
 				return true; // overflow
-			memcpy( sp->val, 
+			gbmemcpy( sp->val, 
 				(char *)&g_conf + m->m_off, size );
 			// inc by tot size if array
 			*p += sizeof( *sp ) + size; 
@@ -4463,7 +4467,7 @@ bool Parms::serializeCollParm( CollectionRec *cr,
 			// copy whole value
 			if ( sp->val + size > end )
 				return true;
-			memcpy( sp->val, 
+			gbmemcpy( sp->val, 
 				(char *)cr + m->m_off, 
 				size );
 			// inc by whole size of value
@@ -4613,7 +4617,7 @@ void Parms::deserializeConfParm( Parm *m, SerParm *sp, char **p,
 					       sp->size ) );
 		if ( ! goodParm ) {
 			// copy the new parm to m's loc
-			memcpy( (char *)&g_conf + m->m_off, sp->val, 
+			gbmemcpy( (char *)&g_conf + m->m_off, sp->val, 
 				sp->size );
 
 			// set num of member
@@ -4741,7 +4745,7 @@ void Parms::deserializeCollParm( CollectionRec *cr,
 
 		if ( 0 != memcmp( sp->val, (char *)cr + m->m_off, sp->size) ) {
 			// copy the new value
-			memcpy( (char *)cr + m->m_off, 
+			gbmemcpy( (char *)cr + m->m_off, 
 				sp->val,
 				sp->size );
 			
@@ -6530,6 +6534,18 @@ void Parms::init ( ) {
 	m->m_flags = PF_REDBOX;
 	m++;
 
+	m->m_title = "show errors";
+	m->m_desc  = "Show errors from generating search result summaries "
+		"rather than just hide the docid. Useful for debugging.";
+	m->m_cgi   = "showerrors";
+	m->m_off   = (char *)&si.m_showErrors - y;
+	m->m_type  = TYPE_BOOL;
+	m->m_def   = "0";
+	m->m_flags = PF_API;
+	m->m_page  = PAGE_RESULTS;
+	m->m_obj   = OBJ_SI;
+	m++;
+
 	m->m_title = "site cluster";
 	m->m_desc  = "Should search results be site clustered? This "
 		"limits each site to appearing at most twice in the "
@@ -6564,6 +6580,7 @@ void Parms::init ( ) {
 		"So documents must be exactly the same for the most part.";
 	m->m_cgi   = "dr"; // dedupResultsByDefault";
 	m->m_off   = (char *)&si.m_doDupContentRemoval - y;
+	m->m_defOff= (char *)&cr.m_dedupResultsByDefault - x;
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "0";
 	m->m_group = 1;
@@ -6911,7 +6928,7 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&si.m_defaultSortLang - y;
 	m->m_type  = TYPE_CHARPTR;
 	//m->m_size  = 6; // up to 5 chars + NULL, e.g. "en_US"
-	m->m_def   = "xx";//_US";
+	m->m_def   = "";//"xx";//_US";
 	m->m_group = 0;
 	m->m_flags = PF_API;
 	m->m_page  = PAGE_RESULTS;
@@ -9890,7 +9907,9 @@ void Parms::init ( ) {
 	m->m_cgi   = "ms";
 	m->m_off   = (char *)&g_conf.m_httpMaxSockets - g;
 	m->m_type  = TYPE_LONG;
-	m->m_def   = "100";
+	// up this some, am seeing sockets closed because of using gb
+	// as a cache...
+	m->m_def   = "300";
 	m->m_page  = PAGE_MASTER;
 	m->m_obj   = OBJ_CONF;
 	m++;
@@ -10284,11 +10303,18 @@ void Parms::init ( ) {
 
         m->m_title = "ask for gzipped docs when downloading";
         m->m_desc  = "If this is true, gb will send Accept-Encoding: gzip "
-		"to web servers when doing http downloads.";
+		"to web servers when doing http downloads. It does have "
+		"a tendency to cause out-of-memory errors when you enable "
+		"this, so until that is fixed better, it's probably a good "
+		"idea to leave this disabled.";
         m->m_cgi   = "afgdwd";
         m->m_off   = (char *)&g_conf.m_gzipDownloads - g;
         m->m_type  = TYPE_BOOL;
-        m->m_def   = "1";
+	// keep this default off because it seems some pages are huge
+	// uncomressed causing OOM errors and possibly corrupting stuff?
+	// not sure exactly, but i don't like going OOM. so maybe until
+	// that is fixed leave this off.
+        m->m_def   = "0";
 	m->m_page  = PAGE_MASTER;
 	m->m_obj   = OBJ_CONF;
         m++;
@@ -12181,7 +12207,8 @@ void Parms::init ( ) {
 	m->m_title = "use threads for intersects and merges";
 	m->m_desc  = "If enabled, Gigablast will use threads for these ops. "
 		"Default is now on in the event you have simultaneous queries "
-		"so one query does not hold back the other.";
+		"so one query does not hold back the other. There seems "
+		"to be a bug so leave this ON for now.";
 	        //"Until pthreads is any good leave this off.";
 	m->m_cgi   = "utfio";
 	m->m_off   = (char *)&g_conf.m_useThreadsForIndexOps - g;
@@ -12263,7 +12290,7 @@ void Parms::init ( ) {
 	m->m_cgi   = "fw";
 	m->m_off   = (char *)&g_conf.m_flushWrites - g;
 	m->m_type  = TYPE_BOOL;
-	m->m_def   = "1";
+	m->m_def   = "0";
 	m->m_group = 0;
 	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m->m_page  = PAGE_MASTER;
@@ -14941,7 +14968,11 @@ void Parms::init ( ) {
 		"it consist of multiple documents separated by this "
 		"delimeter. Each such item will be injected as an "
 		"independent document. Some possible delimeters: "
-		"<i>========</i> or <i>&lt;doc&gt;</i>";
+		"<i>========</i> or <i>&lt;doc&gt;</i>. If you set "
+		"<i>hasmime</i> above to true then Gigablast will check "
+		"for a url after the delimeter and use that url as the "
+		"injected url. Otherwise it will append numbers to the "
+		"url you provide above.";
 	m->m_cgi   = "delim";
 	m->m_obj   = OBJ_GBREQUEST;
 	m->m_type  = TYPE_CHARPTR;
@@ -15106,6 +15137,23 @@ void Parms::init ( ) {
 	m->m_def   = "xx";
 	m->m_flags = PF_API ;
 	m++;
+
+
+	m->m_title = "recycle content";
+	m->m_desc  = "If you check this box then Gigablast will not "
+		"re-download the content, but use the content that was "
+		"stored in the cache from last time. Useful for rebuilding "
+		"the index to pick up new inlink text or fresher "
+		"sitenuminlinks counts which influence ranking.";
+	m->m_cgi   = "qrecycle";
+	m->m_obj   = OBJ_GBREQUEST;
+	m->m_type  = TYPE_CHECKBOX;
+	m->m_def   = "0";
+	m->m_flags = PF_API;
+	m->m_page  = PAGE_REINDEX;
+	m->m_off   = (char *)&gr.m_recycleContent - (char *)&gr;
+	m++;
+
 
 	m->m_title = "FORCE DELETE";
 	m->m_desc  = "Check this checkbox to delete the results, not just "
@@ -15326,7 +15374,7 @@ void Parms::init ( ) {
 		"abbreviations at the bottom of the "
 		"<a href=/admin/filters>url filters</a> page.";
 	m->m_cgi   = "qlang";
-	m->m_off   = (char *)&cr.m_defaultSortLanguage - x;
+	m->m_off   = (char *)&cr.m_defaultSortLanguage2 - x;
 	m->m_type  = TYPE_STRING;
 	m->m_size  = 6; // up to 5 chars + NULL, e.g. "en_US"
 	m->m_def   = "xx";//_US";
@@ -16916,27 +16964,34 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_LONG;
 	m->m_group = 0;
 	m++;
+	*/
 
 	m->m_title = "linkdb min files needed to trigger to merge";
 	m->m_desc  = "Merge is triggered when this many linkdb data files "
-		"are on disk.";
+		"are on disk. Raise this when initially growing an index "
+		"in order to keep merging down.";
 	m->m_cgi   = "mlkftm";
 	m->m_off   = (char *)&cr.m_linkdbMinFilesToMerge - x;
-	m->m_def   = "4";
+	m->m_def   = "6"; 
 	m->m_type  = TYPE_LONG;
 	m->m_group = 0;
+	m->m_flags = PF_CLONE;//PF_HIDDEN | PF_NOSAVE;
+	m->m_page  = PAGE_SPIDER;
+	m->m_obj   = OBJ_COLL;
 	m++;
-	*/
 
-	//m->m_title = "tagdb min files to merge";
-	//m->m_desc  = "Merge is triggered when this many linkdb data files "
-	//	"are on disk.";
-	//m->m_cgi   = "mtftm";
-	//m->m_off   = (char *)&cr.m_tagdbMinFilesToMerge - x;
-	//m->m_def   = "2"; 
-	//m->m_type  = TYPE_LONG;
-	//m->m_group = 0;
-	//m++;
+	m->m_title = "tagdb min files to merge";
+	m->m_desc  = "Merge is triggered when this many linkdb data files "
+		"are on disk.";
+	m->m_cgi   = "mtftgm";
+	m->m_off   = (char *)&cr.m_tagdbMinFilesToMerge - x;
+	m->m_def   = "2"; 
+	m->m_type  = TYPE_LONG;
+	m->m_group = 0;
+	m->m_flags = PF_CLONE;//PF_HIDDEN | PF_NOSAVE;
+	m->m_page  = PAGE_SPIDER;
+	m->m_obj   = OBJ_COLL;
+	m++;
 
 	// this is overridden by collection
 	m->m_title = "titledb min files needed to trigger to merge";
@@ -16964,13 +17019,15 @@ void Parms::init ( ) {
 
 	m->m_title = "posdb min files needed to trigger to merge";
 	m->m_desc  = "Merge is triggered when this many posdb data files "
-		"are on disk.";
+		"are on disk. Raise this while doing massive injections "
+		"and not doing much querying. Then when done injecting "
+		"keep this low to make queries fast.";
 	m->m_cgi   = "mpftm";
 	m->m_off   = (char *)&cr.m_posdbMinFilesToMerge - x;
 	m->m_def   = "6"; 
 	m->m_type  = TYPE_LONG;
 	m->m_group = 0;
-	m->m_flags = PF_HIDDEN | PF_NOSAVE;
+	m->m_flags = PF_CLONE;//PF_HIDDEN | PF_NOSAVE;
 	m->m_page  = PAGE_SPIDER;
 	m->m_obj   = OBJ_COLL;
 	m++;
@@ -16997,12 +17054,17 @@ void Parms::init ( ) {
 	m->m_title = "enable link voting";
 	m->m_desc  = "If this is true Gigablast will "
 		"index hyper-link text and use hyper-link "
-		"structures to boost the quality of indexed documents.";
+		"structures to boost the quality of indexed documents. "
+		"You can disable this when doing a ton of injections to "
+		"keep things fast. Then do a posdb (index) rebuild "
+		"after re-enabling this when you are done injecting. Or "
+		"if you simply do not want link voting this will speed up"
+		"your injections and spidering a bit.";
 	m->m_cgi   = "glt";
 	m->m_off   = (char *)&cr.m_getLinkInfo - x;
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "1";
-	m->m_flags = PF_HIDDEN | PF_NOSAVE;
+	m->m_flags = PF_CLONE|PF_API;//PF_HIDDEN | PF_NOSAVE;
 	m->m_page  = PAGE_SPIDER;
 	m->m_obj   = OBJ_COLL;
 	m++;
@@ -17602,14 +17664,18 @@ void Parms::init ( ) {
 	m->m_flags = PF_CLONE;
 	m++;
 
-	m->m_title = "index spider replies";
-	m->m_desc  = "Index the spider replies of every url the spider "
+	m->m_title = "index spider status documents";
+	m->m_desc  = "Index a spider status \"document\" "
+		"for every url the spider "
 		"attempts to spider. Search for them using special "
 		"query operators like type:status or gberrorstr:success or "
-		"stats:gberrornum to get a histogram. They will not otherwise "
-		"show up in the search results. This will not work for "
-		"diffbot crawlbot collections yet until it has proven "
-		"more stable.";
+		"stats:gberrornum to get a histogram. "
+		"See <a href=/syntax.html>syntax</a> page for more examples. "
+		"They will not otherwise "
+		"show up in the search results.";
+	//      "This will not work for "
+	// 	"diffbot crawlbot collections yet until it has proven "
+	// 	"more stable.";
 	m->m_cgi   = "isr";
 	m->m_off   = (char *)&cr.m_indexSpiderReplies - x;
 	m->m_type  = TYPE_BOOL;
@@ -17618,7 +17684,7 @@ void Parms::init ( ) {
 	// and we add gbdocspidertime and gbdocindextime terms so you
 	// can use those to sort regular docs and not have spider reply
 	// status docs in the serps.
-	m->m_def   = "1";
+	m->m_def   = "0";
 	m->m_page  = PAGE_SPIDER;
 	m->m_obj   = OBJ_COLL;
 	m->m_flags = PF_CLONE;
@@ -18339,9 +18405,15 @@ void Parms::init ( ) {
 	m->m_group = 0;
 	m++;
 
-	m->m_title = "recycle link info";
-	m->m_desc  = "If enabled, gigablast will recycle the link info "
-		"when rebuilding titledb.";
+	m->m_title = "recycle link text";
+	m->m_desc  = "If enabled, gigablast will recycle the link text "
+		"when rebuilding titledb. "
+		"The siterank, which is determined by the "
+		"number of inlinks to a site, is stored/cached in tagdb "
+		"so that is a separate item. If you want to pick up new "
+		"link text you will want to set this to <i>NO</i> and "
+		"make sure to rebuild titledb, since that stores the "
+		"link text.";
 	m->m_cgi   = "rrli"; // repair full rebuild
 	m->m_off   = (char *)&g_conf.m_rebuildRecycleLinkInfo - g;
 	m->m_type  = TYPE_BOOL;
@@ -18572,10 +18644,13 @@ void Parms::init ( ) {
 	m->m_group = 0;
 	m++;
 
+	/*
 	m->m_title = "skip tagdb lookup";
-	m->m_desc  = "When rebuilding spiderdb and scanning it for new spiderdb "
-		"records, should a tagdb lookup be performed? Runs much much "
-		"faster without it. Will also keep the original doc quality and "
+	m->m_desc  = "When rebuilding spiderdb and scanning it for new "
+		"spiderdb records, should a tagdb lookup be performed? "
+		"Runs much much "
+		"faster without it. Will also keep the original doc quality "
+		"and "
 		"spider priority in tact.";
 	m->m_cgi   = "rssl";
 	m->m_off   = (char *)&g_conf.m_rebuildSkipSitedbLookup - g;
@@ -18585,6 +18660,7 @@ void Parms::init ( ) {
 	m->m_def   = "0";
 	m->m_group = 0;
 	m++;
+	*/
 
 	///////////////////////////////////////////
 	//          END PAGE REPAIR              //
@@ -18702,7 +18778,7 @@ void Parms::init ( ) {
 	//m->m_max   = MAX_MASTER_PASSWORDS;
 	//m->m_size  = PASSWORD_MAX_LEN+1;
 	//m->m_addin = 1; // "insert" follows?
-	m->m_flags = PF_PRIVATE | PF_TEXTAREA;
+	m->m_flags = PF_PRIVATE | PF_TEXTAREA | PF_SMALLTEXTAREA;
 	m++;
 
 
@@ -18730,7 +18806,7 @@ void Parms::init ( ) {
 	//m->m_addin = 1; // "insert" follows?
 	//m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m->m_obj   = OBJ_CONF;
-	m->m_flags = PF_PRIVATE | PF_TEXTAREA;
+	m->m_flags = PF_PRIVATE | PF_TEXTAREA | PF_SMALLTEXTAREA;
 	m++;
 
 	// m->m_title = "remove connect ip";
@@ -18826,7 +18902,11 @@ void Parms::init ( ) {
 	m->m_title = "Collection Passwords";
 	m->m_desc  = "Whitespace separated list of passwords. "
 		"Any matching password will have administrative access "
-		"to the controls for just this collection.";
+		"to the controls for just this collection. The master "
+		"password and IPs are controled through the "
+		"<i>master passwords</i> link under the ADVANCED controls "
+		"tab. The master passwords or IPs have administrative "
+		"access to all collections.";
 	m->m_cgi   = "collpwd";
 	m->m_xml   = "collectionPasswords";
 	m->m_obj   = OBJ_COLL;
@@ -18834,7 +18914,7 @@ void Parms::init ( ) {
 	m->m_def   = "";
 	m->m_type  = TYPE_SAFEBUF; // STRINGNONEMPTY;
 	m->m_page  = PAGE_COLLPASSWORDS;
-	m->m_flags = PF_PRIVATE | PF_TEXTAREA;
+	m->m_flags = PF_PRIVATE | PF_TEXTAREA | PF_SMALLTEXTAREA;
 	m++;
 
 	m->m_title = "Collection IPs";
@@ -18848,7 +18928,7 @@ void Parms::init ( ) {
 	m->m_def   = "";
 	m->m_type  = TYPE_SAFEBUF; // STRINGNONEMPTY;
 	m->m_page  = PAGE_COLLPASSWORDS;
-	m->m_flags = PF_PRIVATE | PF_TEXTAREA;
+	m->m_flags = PF_PRIVATE | PF_TEXTAREA | PF_SMALLTEXTAREA;
 	m++;
 
 
@@ -21043,7 +21123,8 @@ bool Parms::doParmSendingLoop ( ) {
 		}
 
 		// debug log
-		log("parms: sending parm request to hostid %"INT32"",h->m_hostId);
+		log(LOG_INFO,"parms: sending parm request "
+		    "to hostid %"INT32"",h->m_hostId);
 
 		// count it
 		pn->m_numRequests++;
@@ -21770,7 +21851,7 @@ bool Parms::updateParm ( char *rec , WaitEntry *we ) {
 	}
 	else {
 		// and copy the data into collrec or g_conf
-		memcpy ( dst , data , dataSize );
+		gbmemcpy ( dst , data , dataSize );
 	}
 
 	SafeBuf val2;
@@ -22591,7 +22672,7 @@ bool Parms::cloneCollRec ( char *dstCR , char *srcCR ) {
 			}
 			else {
 				// this should work for most types
-				memcpy ( dst , src , m->m_size );
+				gbmemcpy ( dst , src , m->m_size );
 			}
 			continue;
 		}
@@ -22616,7 +22697,7 @@ bool Parms::cloneCollRec ( char *dstCR , char *srcCR ) {
 			}
 			else {
 				// this should work for most types
-				memcpy ( dst , src , m->m_size );
+				gbmemcpy ( dst , src , m->m_size );
 			}
 
 			src += m->m_size;

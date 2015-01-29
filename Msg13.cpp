@@ -534,7 +534,8 @@ void handleRequest13 ( UdpSlot *slot , int32_t niceness  ) {
 		url.set ( r->ptr_url );
 		// . never download /master urls from ips of hosts in cluster
 		// . TODO: FIX! the pages might be in another cluster!
-		if ( ( strncasecmp ( url.getPath() , "/master/" , 8 ) == 0 ||
+		// . pages are now /admin/* not any /master/* any more.
+		if ( ( //strncasecmp ( url.getPath() , "/master/" , 8 ) == 0 ||
 		       strncasecmp ( url.getPath() , "/admin/"  , 7 ) == 0 )) {
 			log("spider: Got request to download possible "
 			    "gigablast control page %s. Sending back "
@@ -989,7 +990,8 @@ void downloadTheDocForReals3b ( Msg13Request *r ) {
 	if ( r->m_proxyIp ) {
 		char tmpIp[64];
 		sprintf(tmpIp,"%s",iptoa(r->m_urlIp));
-		log("sproxy: got proxy %s:%"INT32" and agent=\"%s\" to spider "
+		log(LOG_INFO,
+		    "sproxy: got proxy %s:%"INT32" and agent=\"%s\" to spider "
 		    "%s %s (numBannedProxies=%"INT32")",
 		    iptoa(r->m_proxyIp),
 		    (int32_t)r->m_proxyPort,
@@ -1465,9 +1467,9 @@ void gotHttpReply2 ( void *state ,
 			// if too big, forget it! otherwise we breach tmpBuf
 			if ( loc && locLen > 0 && locLen < 1024 ) {
 				p += sprintf ( p , "Location: " );
-				memcpy ( p , loc , locLen );
+				gbmemcpy ( p , loc , locLen );
 				p += locLen;
-				memcpy ( p , "\r\n", 2 );
+				gbmemcpy ( p , "\r\n", 2 );
 				p += 2;
 			}
 			// close it up
@@ -1481,7 +1483,7 @@ void gotHttpReply2 ( void *state ,
 			bytesOutPtr = &g_stats.m_compressMimeErrorBytesOut;
 			// only replace orig reply if we are smaller
 			if ( newSize < replySize ) {
-				memcpy ( reply , tmpBuf , newSize );
+				gbmemcpy ( reply , tmpBuf , newSize );
 				replySize = newSize;
 			}
 			// reset content hash
@@ -2221,7 +2223,7 @@ int32_t convertIntoLinks ( char *reply ,
 	// use this to ensure we do not breach
 	char *dstEnd = reply + replySize;
 	// . store into the new buffer
-	// . use memcpy() because it deal with potential overlap issues
+	// . use gbmemcpy() because it deal with potential overlap issues
 	char *dst    = reply;
 	// store the thing first
 	if ( dst + 100 >= dstEnd ) 
@@ -2240,7 +2242,7 @@ int32_t convertIntoLinks ( char *reply ,
 	char *content = dst;
 			 
 	// this tells xmldoc.cpp what's up
-	//memcpy ( dst , "<!--links-->\n", 13 );
+	//gbmemcpy ( dst , "<!--links-->\n", 13 );
 	//dst += 13;
 	// iterate over the links
 	for ( int32_t i = 0 ; i < links.m_numLinks ; i++ ) {
@@ -2253,13 +2255,13 @@ int32_t convertIntoLinks ( char *reply ,
 		// ensure no breach. if so, return now
 		if ( dst + len + 2 > dstEnd ) return dst - reply;
 		// lead it
-		memcpy ( dst, "<a href=", 8 );
+		gbmemcpy ( dst, "<a href=", 8 );
 		dst += 8;
 		// copy over, should be ok with overlaps
-		memcpy ( dst , str , len );
+		gbmemcpy ( dst , str , len );
 		dst += len;
 		// end tag and line
-		memcpy ( dst , "></a>\n", 6 );
+		gbmemcpy ( dst , "></a>\n", 6 );
 		dst += 6;
 	}
 	// null term it!
@@ -2489,14 +2491,14 @@ int32_t filterRobotsTxt ( char *reply ,
 		if ( ! *s || agent ) {
 			// this is a problem... if somehow its got a smaller
 			// mime than us, we can't let our new mime overwrite 
-			// the user-agent line we were going to memcpy()
+			// the user-agent line we were going to gbmemcpy()
 			if ( reply + 16 > agent ) return replySize;
 			if ( dst == reply ) {
-				memcpy ( dst , "HTTP/1.0 200\r\n\r\n", 16 );
+				gbmemcpy ( dst , "HTTP/1.0 200\r\n\r\n", 16 );
 				dst += 16;
 			}
 			// store the user-agent and following allows/disallows
-			memcpy ( dst, agent , start - agent );
+			gbmemcpy ( dst, agent , start - agent );
 			dst += ( start - agent );
 			// restart
 			agent = NULL;
@@ -2846,7 +2848,8 @@ bool addToHammerQueue ( Msg13Request *r ) {
 	//   which will store maybe a -1 if currently downloading...
 	if ( queueIt ) {
 		// debug
-		log("spider: adding %s to crawldelayqueue cd=%"INT32"ms",
+		log(LOG_INFO,
+		    "spider: adding %s to crawldelayqueue cd=%"INT32"ms",
 		    r->ptr_url,crawlDelayMS);
 		// save this
 		//r->m_udpSlot = slot; // this is already saved!
@@ -3010,7 +3013,7 @@ void stripProxyAuthorization ( char *squidProxiedReqBuf ) {
  loop:
 	// include space so it won't match anything in url
 	char *needle = "Proxy-Authorization: ";
-	char *s = strcasestr ( squidProxiedReqBuf , needle );
+	char *s = gb_strcasestr ( squidProxiedReqBuf , needle );
 	if ( ! s ) return;
 	// find next \r\n
 	char *end = strstr ( s , "\r\n");
@@ -3021,7 +3024,7 @@ void stripProxyAuthorization ( char *squidProxiedReqBuf ) {
 	int32_t reqLen = gbstrlen(squidProxiedReqBuf);
 	char *reqEnd = squidProxiedReqBuf + reqLen;
 	// include \0, so add +1
-	memcpy ( s ,end , reqEnd-end + 1);
+	gbmemcpy ( s ,end , reqEnd-end + 1);
 	// bury more of them
 	goto loop;
 }
@@ -3055,7 +3058,7 @@ void fixGETorPOST ( char *squidProxiedReqBuf ) {
 	// bury the http://xyz.com part now
 	char *reqEnd = squidProxiedReqBuf + gbstrlen(squidProxiedReqBuf);
 	// include the terminating \0, so add +1
-	memcpy ( httpStart , s , reqEnd - s + 1 );
+	gbmemcpy ( httpStart , s , reqEnd - s + 1 );
 	// now make HTTP/1.1 into HTTP/1.0
 	char *hs = strstr ( httpStart , "HTTP/1.1" );
 	if ( ! hs ) return;

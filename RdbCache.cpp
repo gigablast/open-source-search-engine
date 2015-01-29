@@ -918,8 +918,8 @@ bool RdbCache::addRecord ( collnum_t collnum ,
 	//if ( rec2 >= p && rec2 < p + need ) { 
 	//	log("cache: poop");}//char*xx=NULL;*xx=0;}
 	// then data
-	memcpy ( p , rec1 , recSize1 ); p += recSize1;
-	memcpy ( p , rec2 , recSize2 ); p += recSize2;
+	gbmemcpy ( p , rec1 , recSize1 ); p += recSize1;
+	gbmemcpy ( p , rec2 , recSize2 ); p += recSize2;
 
 	// . store 0 collnum, key AND timestamp at end of record --> delimeter
 	// . CAUTION: if doing a "promote" we can end up deleting the rec
@@ -1780,7 +1780,7 @@ bool RdbCache::convertCache ( int32_t numPtrsMax , int32_t maxMem ) {
 		// otherwise, get collnum
 		collnum_t collnum = *(collnum_t *)p;
 		// get key
-		memcpy ( key , p + sizeof(collnum_t), m_cks );
+		gbmemcpy ( key , p + sizeof(collnum_t), m_cks );
 		// now get the record proper
 		bool  found;
 		char *rec;

@@ -33,7 +33,7 @@
 //#define INDEXDB_SPLIT 8
 //#define DOCID_OFFSET_MASK (INDEXDB_SPLIT-1)
 #define DOCID_OFFSET_MASK (g_conf.m_indexdbSplit-1)
-#define MAX_SHARDS 128
+#define MAX_SHARDS 1024
 
 class Indexdb {
 
@@ -82,7 +82,7 @@ class Indexdb {
 	// extract the termId from a key
 	int64_t getTermId ( key_t *k ) {
 		int64_t termId = 0LL;
-		memcpy ( &termId , ((char *)k) + 6 , 6 );
+		gbmemcpy ( &termId , ((char *)k) + 6 , 6 );
 		return termId ;
 	};
 	int64_t getTermId ( key_t k ) { return getTermId ( &k ); };

@@ -408,6 +408,9 @@ bool Msg1c::gotList ( ) {
 
 	m_sb.setLabel("reiadd");
 
+	State13 *st = (State13 *)m_state;
+	GigablastRequest *gr = &st->m_gr;
+
 	m_numDocIdsAdded = 0;
 	//int32_t count = 0;
 	// list consists of docIds, loop through each one
@@ -432,7 +435,11 @@ bool Msg1c::gotList ( ) {
 		// url is a docid!
 		sprintf ( sr.m_url , "%"UINT64"" , docId );
 		// make a fake first ip
-		int32_t firstIp = (docId & 0xffffffff);
+		// use only 64k values so we don't stress doledb/waittrees/etc.
+		// for large #'s of docids
+		int32_t firstIp = (docId & 0x0000ffff);
+		// 0 is not a legit val. it'll core below.
+		if ( firstIp == 0 ) firstIp = 1;
 		// use a fake ip
 		sr.m_firstIp        =  firstIp;//nowGlobal;
 		// we are not really injecting...
@@ -445,6 +452,9 @@ bool Msg1c::gotList ( ) {
 		sr.m_probDocId      = docId;
 		// use test-parser not test-spider
 		sr.m_useTestSpiderDir = 0;
+		// now you can recycle content instead of re-downloading it
+		// for every docid
+		sr.m_recycleContent = gr->m_recycleContent;
 		// if this is zero we end up getting deduped in
 		// dedupSpiderList() if there was a SpiderReply whose
 		// spider time was > 0

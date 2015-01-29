@@ -207,7 +207,8 @@ void RdbDump::doneDumping ( ) {
 	m_isDumping = false;
 	// print stats
 	log(LOG_INFO,
-	    "db: Dumped %"INT32" positive and %"INT32" negative recs. Total = %"INT32".",
+	    "db: Dumped %"INT32" positive and %"INT32" negative recs. "
+	    "Total = %"INT32".",
 	     m_totalPosDumped , m_totalNegDumped ,
 	     m_totalPosDumped + m_totalNegDumped );
 
@@ -335,7 +336,14 @@ bool RdbDump::dumpTree ( bool recall ) {
 	// "lastKey" is set to the last key in the list
 	//else {
 	{
+
+		// can we remove neg recs?
+		// class RdbBase *base = m_rdb->getBase(m_collnum);
+		// bool removeNegRecs = false;
+		// if ( base->m_numFiles <= 0 ) removeNegRecs = true;
+
 		if ( recall ) goto skip;
+
 		// debug msg
 		//log("RdbDump:: getting list");
 		m_t1 = gettimeofdayInMilliseconds();
@@ -359,6 +367,11 @@ bool RdbDump::dumpTree ( bool recall ) {
 					   &m_numNegRecs   ,
 					   m_useHalfKeys );
 
+
+		// don't dump out any neg recs if it is our first time dumping
+		// to a file for this rdb/coll. TODO: implement this later.
+		//if ( removeNegRecs )
+		//	m_list.removeNegRecs();
 
 // 		if(!m_list->checkList_r ( false , // removeNegRecs?
 // 					 false , // sleep on problem?
@@ -521,9 +534,9 @@ bool RdbDump::dumpList ( RdbList *list , int32_t niceness , bool recall ) {
 			char tmp[MAX_KEY_BYTES];
 			char *p = m_list->getList();
 			// swap high 12 bytes with low 6 bytes for first key
-			memcpy ( tmp   , p            , m_ks-12 );
-			memcpy ( p     , p + (m_ks-12) ,      12 );
-			memcpy ( p + 12, tmp          , m_ks-12 );
+			gbmemcpy ( tmp   , p            , m_ks-12 );
+			gbmemcpy ( p     , p + (m_ks-12) ,      12 );
+			gbmemcpy ( p + 12, tmp          , m_ks-12 );
 			// big hack here
 			m_list->m_list         = p + 12;
 			m_list->m_listPtr      = p + 12;
@@ -560,12 +573,12 @@ bool RdbDump::dumpList ( RdbList *list , int32_t niceness , bool recall ) {
 			//char tmp[6];
 			char tmp[MAX_KEY_BYTES];
 			char *p = m_list->getList();
-			//memcpy ( tmp   , p     , 6 );
-			//memcpy ( p     , p + 6 , 6 );
-			//memcpy ( p + 6 , tmp   , 6 );
-			memcpy ( tmp   , p            , m_ks-6 );
-			memcpy ( p     , p + (m_ks-6) ,      6 );
-			memcpy ( p + 6 , tmp          , m_ks-6 );
+			//gbmemcpy ( tmp   , p     , 6 );
+			//gbmemcpy ( p     , p + 6 , 6 );
+			//gbmemcpy ( p + 6 , tmp   , 6 );
+			gbmemcpy ( tmp   , p            , m_ks-6 );
+			gbmemcpy ( p     , p + (m_ks-6) ,      6 );
+			gbmemcpy ( p + 6 , tmp          , m_ks-6 );
 			// big hack here
 			m_list->m_list       = p + 6;
 			m_list->m_listPtr    = p + 6;
@@ -793,12 +806,12 @@ bool RdbDump::doneReadingForVerify ( ) {
 		//char tmp[6];
 		char tmp[MAX_KEY_BYTES];
 		char *p = m_list->getList() - 6 ;
-		//memcpy ( tmp   , p     , 6 );
-		//memcpy ( p     , p + 6 , 6 );
-		//memcpy ( p + 6 , tmp   , 6 );
-		memcpy ( tmp          , p     , 6 );
-		memcpy ( p            , p + 6 , m_ks-6 );
-		memcpy ( p + (m_ks-6) , tmp   , 6 );
+		//gbmemcpy ( tmp   , p     , 6 );
+		//gbmemcpy ( p     , p + 6 , 6 );
+		//gbmemcpy ( p + 6 , tmp   , 6 );
+		gbmemcpy ( tmp          , p     , 6 );
+		gbmemcpy ( p            , p + 6 , m_ks-6 );
+		gbmemcpy ( p + (m_ks-6) , tmp   , 6 );
 		// undo the big hack
 		m_list->m_list       = p ;
 		m_list->m_listPtr    = p ;
@@ -816,9 +829,9 @@ bool RdbDump::doneReadingForVerify ( ) {
 		char tmp[MAX_KEY_BYTES];
 		char *p = m_list->getList() - 12 ;
 		// swap high 12 bytes with low 6 bytes for first key
-		memcpy ( tmp   , p            , 12 );
-		memcpy ( p     , p + 12 ,      6 );
-		memcpy ( p + 6, tmp          , 12 );
+		gbmemcpy ( tmp   , p            , 12 );
+		gbmemcpy ( p     , p + 12 ,      6 );
+		gbmemcpy ( p + 6, tmp          , 12 );
 		// big hack here
 		m_list->m_list         = p ;
 		m_list->m_listPtr      = p ;

@@ -188,7 +188,7 @@ class GigablastRequest {
 	int32_t  m_ern;
 	char *m_qlang;
         bool  m_forceDel;
-
+	char  m_recycleContent;
 	// useful bufs to copy data over
 	SafeBuf m_tmpBuf1;
 	SafeBuf m_tmpBuf2;
@@ -233,6 +233,7 @@ class GigablastRequest {
 
 #define PF_CLONE       0x20000
 #define PF_PRIVATE     0x40000 // for password to not show in api
+#define PF_SMALLTEXTAREA 0x80000
 
 class Parm {
  public:

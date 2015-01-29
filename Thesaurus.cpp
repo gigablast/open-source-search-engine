@@ -71,7 +71,7 @@ static int32_t findTermIds(char *s, int64_t *tids,
 	char buf[256];
 	if (!slen) slen = gbstrlen(s);
 	if (slen > 255) return 0;
-	memcpy(buf, s, slen);
+	gbmemcpy(buf, s, slen);
 	buf[slen] = '\0';
 	Words words;
 	Bits bits;
@@ -181,18 +181,18 @@ bool SynonymInfo::growSyns() {
 	newLeftId   = (int64_t *)p; p += newSlots * sizeof(int64_t);
 	newRightId  = (int64_t *)p; p += newSlots * sizeof(int64_t);
 	newSynHash  = (uint64_t*)p; p += newSlots * sizeof(uint64_t);
-	memcpy(newSyn     , m_syn     , m_numSyns * sizeof(char *));
-	memcpy(newAffinity, m_affinity, m_numSyns * sizeof(int32_t));
-	memcpy(newOffset  , m_offset  , m_numSyns * sizeof(int32_t));
-	memcpy(newLen     , m_len     , m_numSyns * sizeof(int32_t));
-	memcpy(newFirstId , m_firstId , m_numSyns * sizeof(int32_t));
-	memcpy(newLastId  , m_lastId  , m_numSyns * sizeof(int32_t));
-	memcpy(newType    , m_type    , m_numSyns * sizeof(char));
-	memcpy(newSort    , m_sort    , m_numSyns * sizeof(char));
-	memcpy(newHasSpace, m_hasSpace, m_numSyns * sizeof(bool));
-	memcpy(newLeftId  , m_leftSynHash  , m_numSyns * sizeof(int64_t));
-	memcpy(newRightId , m_rightSynHash , m_numSyns * sizeof(int64_t));
-	memcpy(newSynHash , m_synHash , m_numSyns * sizeof(uint64_t));
+	gbmemcpy(newSyn     , m_syn     , m_numSyns * sizeof(char *));
+	gbmemcpy(newAffinity, m_affinity, m_numSyns * sizeof(int32_t));
+	gbmemcpy(newOffset  , m_offset  , m_numSyns * sizeof(int32_t));
+	gbmemcpy(newLen     , m_len     , m_numSyns * sizeof(int32_t));
+	gbmemcpy(newFirstId , m_firstId , m_numSyns * sizeof(int32_t));
+	gbmemcpy(newLastId  , m_lastId  , m_numSyns * sizeof(int32_t));
+	gbmemcpy(newType    , m_type    , m_numSyns * sizeof(char));
+	gbmemcpy(newSort    , m_sort    , m_numSyns * sizeof(char));
+	gbmemcpy(newHasSpace, m_hasSpace, m_numSyns * sizeof(bool));
+	gbmemcpy(newLeftId  , m_leftSynHash  , m_numSyns * sizeof(int64_t));
+	gbmemcpy(newRightId , m_rightSynHash , m_numSyns * sizeof(int64_t));
+	gbmemcpy(newSynHash , m_synHash , m_numSyns * sizeof(uint64_t));
 	m_syn = newSyn;
 	m_affinity = newAffinity;
 	m_offset = newOffset;
@@ -219,7 +219,7 @@ bool SynonymInfo::growText() {
 	for (int32_t i = 0; i < m_numSyns; i++) {
 		m_syn[i] = newBuf + (m_syn[i] - m_talloc);
 	}
-	memcpy(newBuf, m_talloc, m_tbufLen);
+	gbmemcpy(newBuf, m_talloc, m_tbufLen);
 	if (m_tallocSize) mfree(m_talloc, m_tallocSize, "SynonymT");
 	m_talloc = newBuf;
 	m_tallocSize = newSize;
@@ -236,7 +236,7 @@ bool SynonymInfo::growTids() {
 	int64_t *newBuf;
 	newBuf = (int64_t *)mcalloc(newSize, "SynonymTID");
 	if (!newBuf) return false;
-	memcpy(newBuf, m_termId, m_tidSize);//newSize);
+	gbmemcpy(newBuf, m_termId, m_tidSize);//newSize);
 	if (m_tidSize > (int32_t)sizeof(m_tidBuf)) {
 		mfree(m_termId, m_tidSize, "SynonymTID");
 	}
@@ -252,7 +252,7 @@ bool SynonymInfo::setWord(char *s, int32_t len, uint64_t h) {
 	if ((len + m_tbufLen > tbufSize) && !growText()) {
 		return log("query: ran out of memory producing synonyms");
 	}
-	memcpy(m_talloc, s, len);
+	gbmemcpy(m_talloc, s, len);
 	m_h = h;
 	return true;
 }
@@ -326,7 +326,7 @@ bool SynonymInfo::addSynonym(char *syn, int32_t affinity,
 	}
 
 	// and finally, load all the info into the structure
-	memcpy(m_talloc + m_tbufLen, syn, len);
+	gbmemcpy(m_talloc + m_tbufLen, syn, len);
 	m_syn[m_numSyns] = m_talloc + m_tbufLen;
 	m_tbufLen += len;
 	m_affinity[m_numSyns] = affinity;
@@ -756,7 +756,7 @@ bool Thesaurus::getStems(char *s, int32_t slen, SynonymInfo *info) {
 	char buf[256], buf2[256];
 	int32_t bufLen = 0, buf2Len = 0;
 	// see if we can remove punctuation first
-	memcpy(buf, s2, slen);
+	gbmemcpy(buf, s2, slen);
 	bufLen = removePunctuation(buf, slen);
 	if (bufLen != slen) {
 		r |= info->addSynonym(buf, -1, -1, bufLen, 
@@ -787,14 +787,14 @@ bool Thesaurus::getStems(char *s, int32_t slen, SynonymInfo *info) {
 		// find the most likely word
 
 		while (rep < repend) {
-			memcpy(buf, s2, slen);
+			gbmemcpy(buf, s2, slen);
 			repLen = *repLenp;
 			int32_t stemLen = slen - sufLen;
 			bool mdbl = false;
 			bufLen = stemLen + repLen;
 			if (bufLen <= 1) continue;
 			// attach the replacement
-			memcpy(buf + stemLen, *rep, repLen + 1);
+			gbmemcpy(buf + stemLen, *rep, repLen + 1);
 			rep++;
 			repLenp++;
 			// needs to be hash64d because that's what the speller
@@ -804,7 +804,7 @@ bool Thesaurus::getStems(char *s, int32_t slen, SynonymInfo *info) {
 								 false, lang);
 			if (g_conf.m_logDebugQuery) {
 				char buf3[256];
-				memcpy(buf3, buf, bufLen);
+				gbmemcpy(buf3, buf, bufLen);
 				buf3[bufLen] = '\0';
 				log(LOG_DEBUG, "query: maybe stem %s (%"INT32")", 
 					buf3, pop);
@@ -818,7 +818,7 @@ bool Thesaurus::getStems(char *s, int32_t slen, SynonymInfo *info) {
 			if (!repLen && stemLen > 1 && 
 				buf[stemLen-1] == buf[stemLen-2]) {
 				char buf3[256];
-				memcpy(buf3, buf, bufLen - 1);
+				gbmemcpy(buf3, buf, bufLen - 1);
 				buf3[bufLen - 1] = '\0';
 				h2 = hash64d(buf3, bufLen - 1);
 				int32_t pop2 = g_speller.getPhrasePopularity(
@@ -828,7 +828,7 @@ bool Thesaurus::getStems(char *s, int32_t slen, SynonymInfo *info) {
 						"consonant removed \"%s\""
 						" (%"INT32")",
 						buf3, pop2);
-					memcpy(buf, buf3, bufLen);
+					gbmemcpy(buf, buf3, bufLen);
 					pop = pop2;
 					bufLen--;
 					mdbl = true;
@@ -837,7 +837,7 @@ bool Thesaurus::getStems(char *s, int32_t slen, SynonymInfo *info) {
 			if (!pop) continue;
 			if (best < pop) {
 				best = pop;
-				memcpy(buf2, buf, bufLen + 1);
+				gbmemcpy(buf2, buf, bufLen + 1);
 				buf2Len = bufLen;
 				dbl = mdbl;
 			}
@@ -852,7 +852,7 @@ bool Thesaurus::getStems(char *s, int32_t slen, SynonymInfo *info) {
 				      SYN_STEM, 1, false, 0, 0);
 	} else {
 		// else just copy this in to make the next section simpler
-		memcpy(buf2, s2, slen);
+		gbmemcpy(buf2, s2, slen);
 		buf2Len = slen;
 	}
 	
@@ -876,9 +876,9 @@ bool Thesaurus::getStems(char *s, int32_t slen, SynonymInfo *info) {
 				continue;
 			// found a possible replacement, so add the
 			//  suffix to it and see what we get
-			memcpy(buf, buf2, buf2Len);
+			gbmemcpy(buf, buf2, buf2Len);
 			bufLen = buf2Len - repLen;
-			memcpy(buf + bufLen, suf->m_suffix, suf->m_len + 1);
+			gbmemcpy(buf + bufLen, suf->m_suffix, suf->m_len + 1);
 			bufLen += suf->m_len;
 			// needs to be hash64d because that's what the speller
 			//  is expecting
@@ -889,9 +889,9 @@ bool Thesaurus::getStems(char *s, int32_t slen, SynonymInfo *info) {
 			//  evaluate it with the new suffix
 			if (dbl) {
 				// if we reached here, repLen is always 0
-				memcpy(buf3, buf2, bufLen);
+				gbmemcpy(buf3, buf2, bufLen);
 				buf3[buf2Len] = buf3[buf2Len - 1];
-				memcpy(buf3 + buf2Len + 1, suf->m_suffix,
+				gbmemcpy(buf3 + buf2Len + 1, suf->m_suffix,
 					suf->m_len + 1);
 				buf3Len = buf2Len + 1 + suf->m_len;
 				h2 = hash64d(buf3, buf3Len);
@@ -1252,18 +1252,18 @@ bool Thesaurus::generatePhrases(char *s, int32_t slen,
 				// copy the fragment before w1
 				n1 = w1 - p1;
 				n2 = n1;
-				memcpy(p2, p1, n2);
+				gbmemcpy(p2, p1, n2);
 				p1 += n1;
 				p2 += n2;
 				// copy the w1 synonym
 				n1 = w1Len;
 				if (i < 0) {
 					n2 = n1;
-					memcpy(p2, w1, n1);
+					gbmemcpy(p2, w1, n1);
 					leftSynHash = 0;
 				} else {
 					n2 = syn1.m_len[i];
-					memcpy(p2, syn1.m_syn[i], n2);
+					gbmemcpy(p2, syn1.m_syn[i], n2);
 					//lid = syn1.m_termId[i];
 					leftSynHash = syn1.m_synHash[i];
 					sort += syn1.m_sort[i];
@@ -1277,7 +1277,7 @@ bool Thesaurus::generatePhrases(char *s, int32_t slen,
 					} else {
 						*p2++ = ' ';
 						n2 = gbstrlen(articles[k]);
-						memcpy(p2, articles[k], n2);
+						gbmemcpy(p2, articles[k], n2);
 					}
 					p1 += n1 + 2;
 					p2 += n2;
@@ -1285,7 +1285,7 @@ bool Thesaurus::generatePhrases(char *s, int32_t slen,
 					if (midLen > stopLen) {
 						n1 = midLen - stopLen;
 						n2 = n1;
-						memcpy(p2, p1, n2);
+						gbmemcpy(p2, p1, n2);
 						p1 += n1 + 1;
 						*p2++ = ' ';
 					}
@@ -1293,7 +1293,7 @@ bool Thesaurus::generatePhrases(char *s, int32_t slen,
 					// copy the fragment between w1 and 2
 					n1 = w2 - (w1 + w1Len);
 					n2 = n1;
-					memcpy(p2, p1, n2);
+					gbmemcpy(p2, p1, n2);
 					p1 += n1;
 					p2 += n2;
 				}
@@ -1301,11 +1301,11 @@ bool Thesaurus::generatePhrases(char *s, int32_t slen,
 				n1 = w2Len;
 				if (j < 0) {
 					n2 = n1;
-					memcpy(p2, w2, n1);
+					gbmemcpy(p2, w2, n1);
 					rightSynHash = 0;
 				} else {
 					n2 = syn2.m_len[j];
-					memcpy(p2, syn2.m_syn[j], n2);
+					gbmemcpy(p2, syn2.m_syn[j], n2);
 					//rid = syn2.m_termId[j];
 					rightSynHash = syn2.m_synHash[j];
 					sort += syn2.m_sort[j];
@@ -1315,7 +1315,7 @@ bool Thesaurus::generatePhrases(char *s, int32_t slen,
 				// copy the fragment after w2
 				n1 = (s + slen) - (w2 + w2Len);
 				n2 = n1;
-				memcpy(p2, p1, n2);
+				gbmemcpy(p2, p1, n2);
 				p1 += n1;
 				p2 += n2;
 				*p2 = '\0';

@@ -74,7 +74,8 @@ public:
 
 	bool convertJSONtoXML ( int32_t niceness , int32_t startConvertPos );
 
-	bool safeDecodeJSONToUtf8 ( char *json, int32_t jsonLen, int32_t niceness);
+	bool safeDecodeJSONToUtf8 ( char *json, int32_t jsonLen, 
+				    int32_t niceness);
 	//			    bool decodeAll = false );
 
 	bool decodeJSONToUtf8 ( int32_t niceness );
@@ -323,6 +324,9 @@ public:
 		return true;
 	};
 
+
+	// hack off trailing 0's
+	bool printFloatPretty ( float f ) ;
 
 	bool  pushPtr  ( void *ptr );
 	bool  pushLong (int32_t i);

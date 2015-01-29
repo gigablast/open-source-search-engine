@@ -254,11 +254,11 @@ char *getMatches2 ( Needle *needles          ,
 		char oo[148];
 		char *xx ;
 		xx = oo;
-		//memcpy ( xx , p , 8 );
+		//gbmemcpy ( xx , p , 8 );
 		for ( int32_t k = 0 ; k < 5 ; k++ ) {
 			*xx++ = p[k];
 		}
-		memcpy ( xx , "..." , 3 );
+		gbmemcpy ( xx , "..." , 3 );
 		xx += 3;
 		*/
 		//
@@ -398,11 +398,11 @@ char *getMatches2 ( Needle *needles          ,
 		char oo[148];
 		char *xx ;
 		xx = oo;
-		//memcpy ( xx , p , 8 );
+		//gbmemcpy ( xx , p , 8 );
 		for ( int32_t k = 0 ; k < 5 ; k++ ) {
 			*xx++ = p[k];
 		}
-		memcpy ( xx , "..." , 3 );
+		gbmemcpy ( xx , "..." , 3 );
 		xx += 3;
 		*/
 		//

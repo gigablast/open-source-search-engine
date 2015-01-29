@@ -184,7 +184,8 @@ class StatKey {
 	// these two vars make up the key_t!
 	uint32_t m_zero;
 	uint32_t m_labelHash;
-	time_t        m_time1;
+	// force to 32-bit even though time_t is 64-bit on 64-bit systems
+	int32_t m_time1;
 };
 
 class StatData {

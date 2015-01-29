@@ -401,6 +401,10 @@ class RdbList {
 
 	bool checkIndexList_r ( bool removedNegRecs , bool sleepOnProblem );
 
+	// so RdbDump can avoid dumping out neg recs the first time it
+	// dumps to a file.
+	//void removeNegRecs ();
+
 	// the unalterd raw list. keys may be outside of [m_startKey,m_endKey]
 	char  *m_list;
 	int32_t   m_listSize;     // how many bytes we're using for a list

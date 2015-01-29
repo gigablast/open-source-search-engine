@@ -155,7 +155,7 @@ skipReplaceHost:
 			       "<tr><td colspan=%s><center>"
 			       //"<font size=+1>"
 			       "<b>Hosts "
-			       "(<a href=\"/admin/hosts?c=%s&sort=%"INT32"&reset=1\">"
+			       "(<a href=\"/admin/hosts?c=%s&sort=%"INT32"&resetstats=1\">"
 			       "reset)</b>"
 			       //"</font>"
 			       "</td></tr>" 
@@ -200,9 +200,15 @@ skipReplaceHost:
 
 			       //"<td><b>resends sent</td>"
 			       //"<td><b>errors recvd</td>"
-			       //"<td><b>ETRYAGAINS recvd</td>"
+			       "<td><b>try agains recvd</td>"
+
 			       "<td><a href=\"/admin/hosts?c=%s&sort=3\">"
 			       "<b>dgrams resent</a></td>"
+
+			       /*
+
+				 MDW: take out for adding new stuff
+
 			       "<td><a href=\"/admin/hosts?c=%s&sort=4\">"
 			       "<b>errors recvd</a></td>"
 			       "<td><a href=\"/admin/hosts?c=%s&sort=5\">"
@@ -212,6 +218,15 @@ skipReplaceHost:
 			       "<b>dgrams to</a></td>"
 			       "<td><a href=\"/admin/hosts?c=%s&sort=7\">"
 			       "<b>dgrams from</a></td>"
+			       */
+
+			       // "<td><a href=\"/admin/hosts?c=%s&sort=18\">"
+			       // "<b>corrupts</a></td>"
+			       // "<td><a href=\"/admin/hosts?c=%s&sort=19\">"
+			       // "<b># ooms</a></td>"
+			       // "<td><a href=\"/admin/hosts?c=%s&sort=20\">"
+			       // "<b>socks closed</a></td>"
+
 
 			       //"<td><a href=\"/admin/hosts?c=%s&sort=8\">"
 			       //"<b>loadavg</a></td>"
@@ -271,24 +286,24 @@ skipReplaceHost:
 			       cs,
 			       cs,
 			       cs,
-			       cs,
-			       cs,
-			       cs,
-			       cs,
 			       shotcol    );
 
 	// loop through each host we know and print it's stats
 	int32_t nh = g_hostdb.getNumHosts();
 	// should we reset resends, errorsRecvd and ETRYAGAINS recvd?
-	if ( r->getLong("reset",0) ) {
+	if ( r->getLong("resetstats",0) ) {
 		for ( int32_t i = 0 ; i < nh ; i++ ) {
 			// get the ith host (hostId)
 			Host *h = g_hostdb.getHost ( i );
-			h->m_totalResends   = 0;
+			h->m_pingInfo.m_totalResends   = 0;
 			h->m_errorReplies = 0;
-			h->m_etryagains   = 0;
+			h->m_pingInfo.m_etryagains   = 0;
 			h->m_dgramsTo     = 0;
 			h->m_dgramsFrom   = 0;
+			h->m_splitTimes = 0;
+			h->m_splitsDone = 0;
+			h->m_pingInfo.m_slowDiskReads =0;
+			
 		}
 	}
 
@@ -314,6 +329,7 @@ skipReplaceHost:
 	case 15:gbsort ( hostSort, nh, sizeof(int32_t), slowDiskSort    ); break;
 	case 16:gbsort ( hostSort, nh, sizeof(int32_t), defaultSort    ); break;
 	case 17:gbsort ( hostSort, nh, sizeof(int32_t), diskUsageSort   ); break;
+
 	}
 
 	// we are the only one that uses these flags, so set them now
@@ -348,7 +364,7 @@ skipReplaceHost:
 		int32_t i = hostSort[si];
 		// get the ith host (hostId)
 		Host *h = g_hostdb.getHost ( i );
-		char *vbuf = h->m_gbVersionStrBuf;
+		char *vbuf = h->m_pingInfo.m_gbVersionStr;//gbVersionStrBuf;
 		int32_t vhash32 = hash32n ( vbuf );
 		if ( vhash32 == majorityHash32 ) lastCount++;
 		else lastCount--;
@@ -399,7 +415,7 @@ skipReplaceHost:
 			*hp = '\0';
 		}
 		*/
-		char *vbuf = h->m_gbVersionStrBuf;
+		char *vbuf = h->m_pingInfo.m_gbVersionStr;//m_gbVersionStrBuf;
 		// get hash
 		int32_t vhash32 = hash32n ( vbuf );
 		char *vbuf1 = "";
@@ -429,22 +445,23 @@ skipReplaceHost:
 
 		char *fontTagFront = "";
 		char *fontTagBack  = "";
-		if ( h->m_percentMemUsed >= 98.0 && format == FORMAT_HTML ) {
+		if ( h->m_pingInfo.m_percentMemUsed >= 98.0 && 
+		     format == FORMAT_HTML ) {
 			fontTagFront = "<font color=red>";
 			fontTagBack  = "</font>";
 		}
 
-		float cpu = h->m_cpuUsage;
+		float cpu = h->m_pingInfo.m_cpuUsage;
 		if ( cpu > 100.0 ) cpu = 100.0;
 		if ( cpu < 0.0   ) cpu = -1.0;
 
 		char diskUsageMsg[64];
-		sprintf(diskUsageMsg,"%.1f%%",h->m_diskUsage);
-		if ( h->m_diskUsage < 0.0 )
+		sprintf(diskUsageMsg,"%.1f%%",h->m_pingInfo.m_diskUsage);
+		if ( h->m_pingInfo.m_diskUsage < 0.0 )
 			sprintf(diskUsageMsg,"???");
-		if ( h->m_diskUsage >= 98.0 && format == FORMAT_HTML )
+		if ( h->m_pingInfo.m_diskUsage>=98.0 && format == FORMAT_HTML )
 			sprintf(diskUsageMsg,"<font color=red><b>%.1f%%"
-				"</b></font>",h->m_diskUsage);
+				"</b></font>",h->m_pingInfo.m_diskUsage);
 
 
 		// split time, don't divide by zero!
@@ -459,63 +476,124 @@ skipReplaceHost:
 		//*fs = '\0';
 
 		// does its hosts.conf file disagree with ours?
-		if ( h->m_hostsConfCRC &&
+		if ( h->m_pingInfo.m_hostsConfCRC &&
 		     format == FORMAT_HTML &&
-		     h->m_hostsConfCRC != g_hostdb.getCRC() )
+		     h->m_pingInfo.m_hostsConfCRC != g_hostdb.getCRC() )
 			fb.safePrintf("<font color=red><b title=\"Hosts.conf "
 				      "in disagreement with ours.\">H"
 				      "</b></font>");
-		if ( h->m_hostsConfCRC &&
+		if ( h->m_pingInfo.m_hostsConfCRC &&
 		     format != FORMAT_HTML &&
-		     h->m_hostsConfCRC != g_hostdb.getCRC() )
+		     h->m_pingInfo.m_hostsConfCRC != g_hostdb.getCRC() )
 			fb.safePrintf("Hosts.conf in disagreement with ours");
 
+		int32_t flags = h->m_pingInfo.m_flags;
+
+
+		if ( format == FORMAT_HTML ) {
+			// use these new ones for now
+			int n = h->m_pingInfo.m_numCorruptDiskReads;
+			if ( n )
+				fb.safePrintf("<font color=red><b>"
+					      "C"
+					      "<sup>%"INT32"</sup>"
+					      "</b></font>"
+					      , n );
+			n = h->m_pingInfo.m_numOutOfMems;
+			if ( n )
+				fb.safePrintf("<font color=red><b>"
+					      "O"
+					      "<sup>%"INT32"</sup>"
+					      "</b></font>"
+					      , n );
+			n = h->m_pingInfo.m_socketsClosedFromHittingLimit;
+			if ( n )
+				fb.safePrintf("<font color=red><b>"
+					      "K"
+					      "<sup>%"INT32"</sup>"
+					      "</b></font>"
+					      , n );
+			if ( flags & PFLAG_OUTOFSYNC )
+				fb.safePrintf("<font color=red><b>"
+					      "N"
+					      "</b></font>"
+					      );
+		}
+
 		// recovery mode? reocvered from coring?
-		if ((h->m_flags & PFLAG_RECOVERYMODE)&& format == FORMAT_HTML )
+		if ((flags & PFLAG_RECOVERYMODE)&& format == FORMAT_HTML )
 			fb.safePrintf("<b title=\"Recovered from core"
 				      "\">x</b>");
-		if ((h->m_flags & PFLAG_RECOVERYMODE)&& format != FORMAT_HTML )
+		if ((flags & PFLAG_RECOVERYMODE)&& format != FORMAT_HTML )
 			fb.safePrintf("Recovered from core");
 
 		// rebalancing?
-		if ( (h->m_flags & PFLAG_REBALANCING)&& format == FORMAT_HTML )
+		if ( (flags & PFLAG_REBALANCING)&& format == FORMAT_HTML )
 			fb.safePrintf("<b title=\"Currently "
 				      "rebalancing\">R</b>");
-		if ( (h->m_flags & PFLAG_REBALANCING)&& format != FORMAT_HTML )
+		if ( (flags & PFLAG_REBALANCING)&& format != FORMAT_HTML )
 			fb.safePrintf("Currently rebalancing");
 
 		// has recs that should be in another shard? indicates
 		// we need to rebalance or there is a bad hosts.conf
-		if ((h->m_flags & PFLAG_FOREIGNRECS) && format == FORMAT_HTML )
+		if ((flags & PFLAG_FOREIGNRECS) && format == FORMAT_HTML )
 			fb.safePrintf("<font color=red><b title=\"Foreign "
 				      "data "
 				      "detected. Needs rebalance.\">F"
 				      "</b></font>");
-		if ((h->m_flags & PFLAG_FOREIGNRECS) && format != FORMAT_HTML )
+		if ((flags & PFLAG_FOREIGNRECS) && format != FORMAT_HTML )
 			fb.safePrintf("Foreign data detected. "
 				      "Needs rebalance.");
 
-		// if it has spiders going on say "S"
-		if ((h->m_flags & PFLAG_HASSPIDERS) && format == FORMAT_HTML )
-			fb.safePrintf ( "<span title=\"Spidering\">S</span>");
-		if ((h->m_flags & PFLAG_HASSPIDERS) && format != FORMAT_HTML )
+		// if it has spiders going on say "S" with # as the superscript
+		if ((flags & PFLAG_HASSPIDERS) && format == FORMAT_HTML )
+			fb.safePrintf ( "<span title=\"Spidering\">S"
+					"<sup>%"INT32"</sup>"
+					"</span>"
+					,h->m_pingInfo.m_currentSpiders
+					);
+
+		if ( format == FORMAT_HTML ) {
+			char *f1 = "";
+			char *f2 = "";
+			if ( h->m_pingInfo.m_udpSlotsInUse >= 200 ) {
+				f1 = "<b>";
+				f2 = "</b>";
+			}
+			if ( h->m_pingInfo.m_udpSlotsInUse >= 400 ) {
+				f1 = "<b><font color=red>";
+				f2 = "</font></b>";
+			}
+			fb.safePrintf("<span title=\"udpSlotsInUse\">"
+				      "%s"
+				      "U"
+				      "<sup>%"INT32"</sup>"
+				      "%s"
+				      "</span>"
+				      ,f1
+				      ,h->m_pingInfo.m_udpSlotsInUse
+				      ,f2
+				      );
+		}
+
+		if ((flags & PFLAG_HASSPIDERS) && format != FORMAT_HTML )
 			fb.safePrintf ( "Spidering");
 
 		// say "M" if merging
-		if ( (h->m_flags & PFLAG_MERGING) && format == FORMAT_HTML )
+		if ( (flags & PFLAG_MERGING) && format == FORMAT_HTML )
 			fb.safePrintf ( "<span title=\"Merging\">M</span>");
-		if ( (h->m_flags & PFLAG_MERGING) && format != FORMAT_HTML )
+		if ( (flags & PFLAG_MERGING) && format != FORMAT_HTML )
 			fb.safePrintf ( "Merging");
 
 		// say "D" if dumping
-		if (   (h->m_flags & PFLAG_DUMPING) && format == FORMAT_HTML )
+		if (   (flags & PFLAG_DUMPING) && format == FORMAT_HTML )
 			fb.safePrintf ( "<span title=\"Dumping\">D</span>");
-		if (   (h->m_flags & PFLAG_DUMPING) && format != FORMAT_HTML )
+		if (   (flags & PFLAG_DUMPING) && format != FORMAT_HTML )
 			fb.safePrintf ( "Dumping");
 
 
 		// say "y" if doing the daily merge
-		if (  !(h->m_flags & PFLAG_MERGEMODE0) )
+		if (  !(flags & PFLAG_MERGEMODE0) )
 			fb.safePrintf ( "y");
 
 		// clear it if it is us, this is invalid
@@ -564,19 +642,43 @@ skipReplaceHost:
 			sb.safePrintf("\t\t<gbVersion>%s</gbVersion>\n",vbuf);
 
 			sb.safePrintf("\t\t<resends>%"INT32"</resends>\n",
-				      h->m_totalResends);
+				      h->m_pingInfo.m_totalResends);
 
+			/*
+			  MDW: take out for new stuff
 			sb.safePrintf("\t\t<errorReplies>%"INT32"</errorReplies>\n",
 				      h->m_errorReplies);
+			*/
 
 			sb.safePrintf("\t\t<errorTryAgains>%"INT32""
 				      "</errorTryAgains>\n",
-				      h->m_etryagains);
+				      h->m_pingInfo.m_etryagains);
 
+			sb.safePrintf("\t\t<udpSlotsInUse>%"INT32""
+				      "</udpSlotsInUse>\n",
+				      h->m_pingInfo.m_udpSlotsInUse);
+
+			/*
 			sb.safePrintf("\t\t<dgramsTo>%"INT64"</dgramsTo>\n",
 				      h->m_dgramsTo);
 			sb.safePrintf("\t\t<dgramsFrom>%"INT64"</dgramsFrom>\n",
 				      h->m_dgramsFrom);
+			*/
+
+			sb.safePrintf("\t\t<numCorruptDiskReads>%"INT32""
+				      "</numCorruptDiskReads>\n"
+				      ,h->m_pingInfo.m_numCorruptDiskReads);
+			sb.safePrintf("\t\t<numOutOfMems>%"INT32""
+				      "</numOutOfMems>\n"
+				      ,h->m_pingInfo.m_numOutOfMems);
+			sb.safePrintf("\t\t<numClosedSockets>%"INT32""
+				      "</numClosedSockets>\n"
+				      ,h->m_pingInfo.
+				      m_socketsClosedFromHittingLimit);
+			sb.safePrintf("\t\t<numOutstandingSpiders>%"INT32""
+				      "</numOutstandingSpiders>\n"
+				      ,h->m_pingInfo.m_currentSpiders );
+
 
 			sb.safePrintf("\t\t<splitTime>%"INT32"</splitTime>\n",
 				      splitTime);
@@ -588,15 +690,15 @@ skipReplaceHost:
 
 			sb.safePrintf("\t\t<slowDiskReads>%"INT32""
 				      "</slowDiskReads>\n",
-				      h->m_slowDiskReads);
+				      h->m_pingInfo.m_slowDiskReads);
 
 			sb.safePrintf("\t\t<docsIndexed>%"INT32""
 				      "</docsIndexed>\n",
-				      h->m_docsIndexed);
+				      h->m_pingInfo.m_totalDocsIndexed);
 
 			sb.safePrintf("\t\t<percentMemUsed>%.1f%%"
 				      "</percentMemUsed>",
-				      h->m_percentMemUsed); // float
+				      h->m_pingInfo.m_percentMemUsed); // float
 
 			sb.safePrintf("\t\t<cpuUsage>%.1f%%"
 				      "</cpuUsage>",
@@ -653,18 +755,36 @@ skipReplaceHost:
 			sb.safePrintf("\t\t\"gbVersion\":\"%s\",\n",vbuf);
 
 			sb.safePrintf("\t\t\"resends\":%"INT32",\n",
-				      h->m_totalResends);
+				      h->m_pingInfo.m_totalResends);
 
+			/*
 			sb.safePrintf("\t\t\"errorReplies\":%"INT32",\n",
 				      h->m_errorReplies);
-
+			*/
 			sb.safePrintf("\t\t\"errorTryAgains\":%"INT32",\n",
-				      h->m_etryagains);
+				      h->m_pingInfo.m_etryagains);
+			sb.safePrintf("\t\t\"udpSlotsInUse\":%"INT32",\n",
+				      h->m_pingInfo.m_udpSlotsInUse);
 
+			/*
 			sb.safePrintf("\t\t\"dgramsTo\":%"INT64",\n",
 				      h->m_dgramsTo);
 			sb.safePrintf("\t\t\"dgramsFrom\":%"INT64",\n",
 				      h->m_dgramsFrom);
+			*/
+
+
+			sb.safePrintf("\t\t\"numCorruptDiskReads\":%"INT32",\n"
+				      ,h->m_pingInfo.m_numCorruptDiskReads);
+			sb.safePrintf("\t\t\"numOutOfMems\":%"INT32",\n"
+				      ,h->m_pingInfo.m_numOutOfMems);
+			sb.safePrintf("\t\t\"numClosedSockets\":%"INT32",\n"
+				      ,h->m_pingInfo.
+				      m_socketsClosedFromHittingLimit);
+			sb.safePrintf("\t\t\"numOutstandingSpiders\":%"INT32""
+				      ",\n"
+				      ,h->m_pingInfo.m_currentSpiders );
+
 
 			sb.safePrintf("\t\t\"splitTime\":%"INT32",\n",
 				      splitTime);
@@ -675,13 +795,13 @@ skipReplaceHost:
 				      fb.getBufStart());
 
 			sb.safePrintf("\t\t\"slowDiskReads\":%"INT32",\n",
-				      h->m_slowDiskReads);
+				      h->m_pingInfo.m_slowDiskReads);
 
 			sb.safePrintf("\t\t\"docsIndexed\":%"INT32",\n",
-				      h->m_docsIndexed);
+				      h->m_pingInfo.m_totalDocsIndexed);
 
 			sb.safePrintf("\t\t\"percentMemUsed\":\"%.1f%%\",\n",
-				      h->m_percentMemUsed); // float
+				      h->m_pingInfo.m_percentMemUsed); // float
 
 			sb.safePrintf("\t\t\"cpuUsage\":\"%.1f%%\",\n",cpu);
 
@@ -737,15 +857,17 @@ skipReplaceHost:
 
 			  // resends
 			  "<td>%"INT32"</td>"
+
 			  // error replies
-			  "<td>%"INT32"</td>"
+			  //"<td>%"INT32"</td>"
+
 			  // etryagains
 			  "<td>%"INT32"</td>"
 
 			  // # dgrams sent to
-			  "<td>%"INT64"</td>"
+			  //"<td>%"INT64"</td>"
 			  // # dgrams recvd from
-			  "<td>%"INT64"</td>"
+			  //"<td>%"INT64"</td>"
 
 			  // loadavg
 			  //"<td>%.2f</td>"
@@ -805,12 +927,14 @@ skipReplaceHost:
 			  vbuf1,
 			  vbuf,//hdbuf,
 			  vbuf2,
-			  h->m_totalResends,
-			  h->m_errorReplies,
-			  h->m_etryagains,
 
-			  h->m_dgramsTo,
-			  h->m_dgramsFrom,
+			  h->m_pingInfo.m_totalResends,
+
+
+			  // h->m_errorReplies,
+			  h->m_pingInfo.m_etryagains,
+			  // h->m_dgramsTo,
+			  // h->m_dgramsFrom,
 
 			  //h->m_loadAvg, // double
 			  splitTime,
@@ -818,11 +942,11 @@ skipReplaceHost:
 
 			  fb.getBufStart(),//flagString,
 
-			  h->m_slowDiskReads,
-			  h->m_docsIndexed,
+			  h->m_pingInfo.m_slowDiskReads,
+			  h->m_pingInfo.m_totalDocsIndexed,
 
 			  fontTagFront,
-			  h->m_percentMemUsed, // float
+			  h->m_pingInfo.m_percentMemUsed, // float
 			  fontTagBack,
 			  cpu, // float
 			  diskUsageMsg,
@@ -1136,17 +1260,19 @@ skipReplaceHost:
 		  "</td>"
 		  "</tr>\n"
 
+		  /*
 		  "<tr class=poo>"
 		  "<td>errors recvd</td>"
 		  "<td>How many errors were received from a host in response "
 		  "to a request to retrieve or insert data."
 		  "</td>"
 		  "</tr>\n"
-
+		  */
 
 		  "<tr class=poo>"
-		  "<td>ETRYAGAINS recvd</td>"
-		  "<td>How many ETRYAGAIN were received in response to a "
+		  "<td>try agains recvd</td>"
+		  "<td>How many ETRYAGAIN errors "
+		  "were received in response to a "
 		  "request to add data. Usually because the host's memory "
 		  "is full and it is dumping its data to disk. This number "
 		  "can be high if the host if failing to dump the data "
@@ -1155,6 +1281,7 @@ skipReplaceHost:
 		  "</td>"
 		  "</tr>\n"
 
+		  /*
 		  "<tr class=poo>"
 		  "<td>dgrams to</td>"
 		  "<td>How many datagrams were sent to the host from the "
@@ -1172,6 +1299,7 @@ skipReplaceHost:
 		  "selected host since startup. Includes ACK datagrams."
 		  "</td>"
 		  "</tr>\n"
+		  */
 
 		  "<tr class=poo>"
 		  "<td>avg split time</td>"
@@ -1244,7 +1372,7 @@ skipReplaceHost:
 
 		  "<tr class=poo>"
 		  "<td>ping1 age</td>"
-		  "<td>How int32_t ago the last ping request was sent to "
+		  "<td>How long ago the last ping request was sent to "
 		  "this host. Let's us know how fresh the ping time is."
 		  "</td>"
 		  "</tr>\n"
@@ -1310,6 +1438,40 @@ skipReplaceHost:
 		  "</td>"
 		  "</tr>\n"
 
+		  "<tr class=poo>"
+		  "<td>C (status flag)</td>"
+		  "<td>Indicates # of corrupted disk reads."
+		  "</td>"
+		  "</tr>\n"
+
+		  "<tr class=poo>"
+		  "<td>K (status flag)</td>"
+		  "<td>Indicates # of sockets closed from hitting limit."
+		  "</td>"
+		  "</tr>\n"
+
+		  "<tr class=poo>"
+		  "<td><nobr>O (status flag)</nobr></td>"
+		  "<td>Indicates # of times we ran out of memory."
+		  "</td>"
+		  "</tr>\n"
+
+		  "<tr class=poo>"
+		  "<td><nobr>N (status flag)</nobr></td>"
+		  "<td>Indicates host's clock is NOT in sync with host #0. "
+		  "Gigablast should automatically sync on startup, "
+		  "so this would be a problem "
+		  "if it does not go away. Hosts need to have their clocks "
+		  "in sync before they can add data to their index."
+		  "</td>"
+		  "</tr>\n"
+
+		  "<tr class=poo>"
+		  "<td><nobr>U (status flag)</nobr></td>"
+		  "<td>Indicates the number of active UDP transactions "
+		  "which are either intiating or receiving."
+		  "</td>"
+		  "</tr>\n"
 
 		  ,
 		  TABLE_STYLE
@@ -1349,11 +1511,11 @@ int32_t generatePingMsg( Host *h, int64_t nowms, char *buf ) {
                         sprintf(buf, "<font color=#ff0000><b>DEAD</b></font>");
         }
         // for kernel errors
-        else if ( h->m_kernelErrors > 0 ){
-                if ( h->m_kernelErrors == ME_IOERR )
+        else if ( h->m_pingInfo.m_kernelErrors > 0 ){
+                if ( h->m_pingInfo.m_kernelErrors == ME_IOERR )
                         sprintf(buf, "<font color=#ff0080><b>IOERR"
                                 "</b></font>");
-                else if ( h->m_kernelErrors == ME_100MBPS )
+                else if ( h->m_pingInfo.m_kernelErrors == ME_100MBPS )
                         sprintf(buf, "<font color=#ff0080><b>100MBPS"
                                 "</b></font>");
                 else
@@ -1385,11 +1547,13 @@ int32_t generatePingMsg( Host *h, int64_t nowms, char *buf ) {
 int defaultSort   ( const void *i1, const void *i2 ) {
 	Host *h1 = g_hostdb.getHost ( *(int32_t*)i1 );
 	Host *h2 = g_hostdb.getHost ( *(int32_t*)i2 );
+	PingInfo *p1 = &h1->m_pingInfo;
+	PingInfo *p2 = &h2->m_pingInfo;
 	// float up to the top if the host is reporting kernel errors
 	// even if the ping is normal
-	if ( h1->m_kernelErrors  > 0 && h2->m_kernelErrors <= 0 ) return -1;
-	if ( h2->m_kernelErrors  > 0 && h1->m_kernelErrors <= 0 ) return  1;
-	if ( h2->m_kernelErrors  > 0 && h1->m_kernelErrors > 0 ) {
+	if ( p1->m_kernelErrors  > 0 && p2->m_kernelErrors <= 0 ) return -1;
+	if ( p2->m_kernelErrors  > 0 && p1->m_kernelErrors <= 0 ) return  1;
+	if ( p2->m_kernelErrors  > 0 && p1->m_kernelErrors > 0 ) {
 		if ( h1->m_hostId < h2->m_hostId ) return -1;
 		return 1;
 	}
@@ -1403,10 +1567,12 @@ int defaultSort   ( const void *i1, const void *i2 ) {
 int pingSort1    ( const void *i1, const void *i2 ) {
 	Host *h1 = g_hostdb.getHost ( *(int32_t*)i1 );
 	Host *h2 = g_hostdb.getHost ( *(int32_t*)i2 );
+	PingInfo *p1 = &h1->m_pingInfo;
+	PingInfo *p2 = &h2->m_pingInfo;
 	// float up to the top if the host is reporting kernel errors
 	// even if the ping is normal
-	if ( h1->m_kernelErrors  > 0 ) return -1;
-	if ( h2->m_kernelErrors  > 0 ) return  1;
+	if ( p1->m_kernelErrors  > 0 ) return -1;
+	if ( p2->m_kernelErrors  > 0 ) return  1;
 	if ( h1->m_ping > h2->m_ping ) return -1;
 	if ( h1->m_ping < h2->m_ping ) return  1;
 	return 0;
@@ -1415,10 +1581,12 @@ int pingSort1    ( const void *i1, const void *i2 ) {
 int pingSort2    ( const void *i1, const void *i2 ) {
 	Host *h1 = g_hostdb.getHost ( *(int32_t*)i1 );
 	Host *h2 = g_hostdb.getHost ( *(int32_t*)i2 );
+	PingInfo *p1 = &h1->m_pingInfo;
+	PingInfo *p2 = &h2->m_pingInfo;
 	// float up to the top if the host is reporting kernel errors
 	// even if the ping is normal
-	if ( h1->m_kernelErrors  > 0 ) return -1;
-	if ( h2->m_kernelErrors  > 0 ) return  1;
+	if ( p1->m_kernelErrors  > 0 ) return -1;
+	if ( p2->m_kernelErrors  > 0 ) return  1;
 	if ( h1->m_pingShotgun > h2->m_pingShotgun ) return -1;
 	if ( h1->m_pingShotgun < h2->m_pingShotgun ) return  1;
 	return 0;
@@ -1435,14 +1603,18 @@ int pingMaxSort    ( const void *i1, const void *i2 ) {
 int slowDiskSort    ( const void *i1, const void *i2 ) {
 	Host *h1 = g_hostdb.getHost ( *(int32_t*)i1 );
 	Host *h2 = g_hostdb.getHost ( *(int32_t*)i2 );
-	if ( h1->m_slowDiskReads > h2->m_slowDiskReads ) return -1;
-	if ( h1->m_slowDiskReads < h2->m_slowDiskReads ) return  1;
+	PingInfo *p1 = &h1->m_pingInfo;
+	PingInfo *p2 = &h2->m_pingInfo;
+	if ( p1->m_slowDiskReads > p2->m_slowDiskReads ) return -1;
+	if ( p1->m_slowDiskReads < p2->m_slowDiskReads ) return  1;
 	return 0;
 }
 
 int pingAgeSort    ( const void *i1, const void *i2 ) {
 	Host *h1 = g_hostdb.getHost ( *(int32_t*)i1 );
 	Host *h2 = g_hostdb.getHost ( *(int32_t*)i2 );
+	//PingInfo *p1 = &h1->m_pingInfo;
+	//PingInfo *p2 = &h2->m_pingInfo;
 	if ( h1->m_lastPing > h2->m_lastPing ) return -1;
 	if ( h1->m_lastPing < h2->m_lastPing ) return  1;
 	return 0;
@@ -1463,16 +1635,20 @@ int splitTimeSort    ( const void *i1, const void *i2 ) {
 int flagSort    ( const void *i1, const void *i2 ) {
 	Host *h1 = g_hostdb.getHost ( *(int32_t*)i1 );
 	Host *h2 = g_hostdb.getHost ( *(int32_t*)i2 );
-	if ( h1->m_flags > h2->m_flags ) return -1;
-	if ( h1->m_flags < h2->m_flags ) return  1;
+	PingInfo *p1 = &h1->m_pingInfo;
+	PingInfo *p2 = &h2->m_pingInfo;
+	if ( p1->m_flags > p2->m_flags ) return -1;
+	if ( p1->m_flags < p2->m_flags ) return  1;
 	return 0;
 }
 
 int resendsSort  ( const void *i1, const void *i2 ) {
 	Host *h1 = g_hostdb.getHost ( *(int32_t*)i1 );
 	Host *h2 = g_hostdb.getHost ( *(int32_t*)i2 );
-	if ( h1->m_totalResends > h2->m_totalResends ) return -1;
-	if ( h1->m_totalResends < h2->m_totalResends ) return  1;
+	if ( h1->m_pingInfo.m_totalResends > h2->m_pingInfo.m_totalResends ) 
+		return -1;
+	if ( h1->m_pingInfo.m_totalResends < h2->m_pingInfo.m_totalResends ) 
+		return  1;
 	return 0;
 }
 
@@ -1487,8 +1663,8 @@ int errorsSort   ( const void *i1, const void *i2 ) {
 int tryagainSort ( const void *i1, const void *i2 ) {
 	Host *h1 = g_hostdb.getHost ( *(int32_t*)i1 );
 	Host *h2 = g_hostdb.getHost ( *(int32_t*)i2 );
-	if ( h1->m_etryagains > h2->m_etryagains ) return -1;
-	if ( h1->m_etryagains < h2->m_etryagains ) return  1;
+	if ( h1->m_pingInfo.m_etryagains>h2->m_pingInfo.m_etryagains)return -1;
+	if ( h1->m_pingInfo.m_etryagains<h2->m_pingInfo.m_etryagains)return  1;
 	return 0;
 }
 
@@ -1522,24 +1698,30 @@ int loadAvgSort ( const void *i1, const void *i2 ) {
 int memUsedSort ( const void *i1, const void *i2 ) {
 	Host *h1 = g_hostdb.getHost ( *(int32_t*)i1 );
 	Host *h2 = g_hostdb.getHost ( *(int32_t*)i2 );
-	if ( h1->m_percentMemUsed > h2->m_percentMemUsed ) return -1;
-	if ( h1->m_percentMemUsed < h2->m_percentMemUsed ) return  1;
+	PingInfo *p1 = &h1->m_pingInfo;
+	PingInfo *p2 = &h2->m_pingInfo;
+	if ( p1->m_percentMemUsed > p2->m_percentMemUsed ) return -1;
+	if ( p1->m_percentMemUsed < p2->m_percentMemUsed ) return  1;
 	return 0;
 }
 
 int cpuUsageSort ( const void *i1, const void *i2 ) {
 	Host *h1 = g_hostdb.getHost ( *(int32_t*)i1 );
 	Host *h2 = g_hostdb.getHost ( *(int32_t*)i2 );
-	if ( h1->m_cpuUsage > h2->m_cpuUsage ) return -1;
-	if ( h1->m_cpuUsage < h2->m_cpuUsage ) return  1;
+	PingInfo *p1 = &h1->m_pingInfo;
+	PingInfo *p2 = &h2->m_pingInfo;
+	if ( p1->m_cpuUsage > p2->m_cpuUsage ) return -1;
+	if ( p1->m_cpuUsage < p2->m_cpuUsage ) return  1;
 	return 0;
 }
 
 int diskUsageSort ( const void *i1, const void *i2 ) {
 	Host *h1 = g_hostdb.getHost ( *(int32_t*)i1 );
 	Host *h2 = g_hostdb.getHost ( *(int32_t*)i2 );
-	if ( h1->m_diskUsage > h2->m_diskUsage ) return -1;
-	if ( h1->m_diskUsage < h2->m_diskUsage ) return  1;
+	PingInfo *p1 = &h1->m_pingInfo;
+	PingInfo *p2 = &h2->m_pingInfo;
+	if ( p1->m_diskUsage > p2->m_diskUsage ) return -1;
+	if ( p1->m_diskUsage < p2->m_diskUsage ) return  1;
 	return 0;
 }
 

@@ -225,7 +225,7 @@ template<typename Type> class SafeList {
 #endif
 		if ( !m_list )
 			return false;
-		memcpy( m_list, list.m_list, list.m_listAlloc );
+		gbmemcpy( m_list, list.m_list, list.m_listAlloc );
 		m_listAlloc	   = list.m_listAlloc;
 		m_listSlab	   = list.m_listSlab;
 		m_usedNodes.m_head = list.m_usedNodes.m_head;

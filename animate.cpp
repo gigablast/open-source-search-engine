@@ -396,12 +396,12 @@ void main2 ( char *dirname ) {
 			Entry tmp;
 			Entry *a = e;
 			Entry *b = next;
-			// these must be preserved and not affected by memcpy()
+			// these must be preserved and not affected by gbmemcpy()
 			Entry *anext = a->m_next;
 			Entry *bnext = b->m_next;
-			memcpy ( &tmp , a    , sizeof(Entry) );
-			memcpy ( a    , b    , sizeof(Entry) );
-			memcpy ( b    , &tmp , sizeof(Entry) );
+			gbmemcpy ( &tmp , a    , sizeof(Entry) );
+			gbmemcpy ( a    , b    , sizeof(Entry) );
+			gbmemcpy ( b    , &tmp , sizeof(Entry) );
 			// preserve
 			a->m_next = anext;
 			b->m_next = bnext;

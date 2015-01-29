@@ -965,7 +965,7 @@ int32_t Words::isFloat  ( int32_t n, float& f) {
 		m_words[n+offset][0] == '-')) offset++;
 
 
-	memcpy(buf, getWord(n), getWordLen(n));
+	gbmemcpy(buf, getWord(n), getWordLen(n));
 	buf[getWordLen(n)] = '\0';
 	log(LOG_WARN, "trying to get %s %"INT32"", buf, offset);
 	
@@ -974,11 +974,11 @@ int32_t Words::isFloat  ( int32_t n, float& f) {
 		if(1 + n < m_numWords && 
 		   isPunct(n+1) && m_words[n+1][0] == '.') {
 			if(2 + n < m_numWords && isNum(n+2)) {
-				memcpy(p, m_words[n], m_wordLens[n]);
+				gbmemcpy(p, m_words[n], m_wordLens[n]);
 				p += m_wordLens[n];
-				memcpy(p, ".", 1);
+				gbmemcpy(p, ".", 1);
 				p++;
-				memcpy(p, m_words[n+2], m_wordLens[n+2]);
+				gbmemcpy(p, m_words[n+2], m_wordLens[n+2]);
 				f = atof(buf);
 				return 3 + offset;
 			}
@@ -1002,9 +1002,9 @@ int32_t Words::isFloat  ( int32_t n, float& f) {
 	//does this have a period in front?
 	if(isPunct(n) && (m_words[n][0] == '.' || m_words[n][0] == '-')) {
 		if(1 + n < m_numWords && isNum(n+1)) {
-			memcpy(p, m_words[n], m_wordLens[n]);
+			gbmemcpy(p, m_words[n], m_wordLens[n]);
 			p += m_wordLens[n];
-			memcpy(p, m_words[n+1], m_wordLens[n+1]);
+			gbmemcpy(p, m_words[n+1], m_wordLens[n+1]);
 			f = atof(buf);
 			return 2 + offset;
 		}

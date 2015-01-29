@@ -152,6 +152,8 @@ void allExitWrapper ( int fd , void *state ) ;
 
 void rmTest();
 
+int g_inMemcpy=0;
+
 //#ifndef _LARS_
 static void dumpTitledb  ( char *coll,int32_t sfn,int32_t numFiles,bool includeTree,
 			   int64_t docId , char justPrintDups ,
@@ -313,6 +315,7 @@ typedef enum {
 	ifk_installconf2 ,
 	ifk_installcat2 ,
 	ifk_kstart ,
+	ifk_dstart ,
 	ifk_installnewcat2 ,
 	ifk_dumpmissing ,
 	ifk_removedocids ,
@@ -334,9 +337,10 @@ int collcopy ( char *newHostsConf , char *coll , int32_t collnum ) ;
 bool doCmd ( const char *cmd , int32_t hostId , char *filename , bool sendToHosts,
 	     bool sendToProxies, int32_t hostId2=-1 );
 int injectFile ( char *filename , char *ips , 
-		 int64_t startDocId ,
-		 int64_t endDocId ,
-		 bool isDelete ) ;
+		 //int64_t startDocId ,
+		 //int64_t endDocId ,
+		 //bool isDelete ) ;
+		 char *coll );
 int injectFileTest ( int32_t  reqLen  , int32_t hid ); // generates the file
 void membustest ( int32_t nb , int32_t loops , bool readf ) ;
 
@@ -386,6 +390,7 @@ int main ( int argc , char *argv[] ) {
 int main2 ( int argc , char *argv[] ) {
 
 	g_conf.m_runAsDaemon = false;
+	g_conf.m_logToFile = false;
 
 #ifndef CYGWIN
 	// appears that linux 2.4.17 kernel would crash with this?
@@ -467,7 +472,12 @@ int main2 ( int argc , char *argv[] ) {
 
 			"start [hostId]\n"
 			"\tstart the gb process on all hosts or just on "
-			"[hostId], if specified, using an ssh command.\n\n"
+			"[hostId], if specified, using an ssh command. Runs "
+			"each gb process in a keepalive loop under bash.\n\n"
+
+			"start <hostId1-hostId2>\n"
+			"\tLike above but just start gb on the supplied "
+			"range of hostIds.\n\n"
 
 			/*
 			"kstart [hostId]\n"
@@ -481,16 +491,14 @@ int main2 ( int argc , char *argv[] ) {
 			"\tsaves and exits for all gb hosts or "
 			"just on [hostId], if specified.\n\n"
 
+			"stop <hostId1-hostId2>\n"
+			"\ttell gb to save and exit on the given range of "
+			"hostIds.\n\n"
+
 			"save [hostId]\n"
 			"\tjust saves for all gb hosts or "
 			"just on [hostId], if specified.\n\n"
 
-			"start <hostId1-hostId2>\n"
-			"\trun gb on the specified range of hostIds in "
-			"a keepalive loop.\n\n"
-
-			"stop <hostId1-hostId2>\n"
-			"\ttell gb to exit on the given range of hostIds.\n\n"
 
 			/*
 			"tmpstart [hostId]\n"
@@ -557,7 +565,9 @@ int main2 ( int argc , char *argv[] ) {
 
 			"dsh <CMD>\n"
 			"\trun this command on the primary IPs of "
-			"all active hosts in hosts.conf. Example: "
+			"all active hosts in hosts.conf. It will be "
+			"executed in the gigablast working directory on "
+			"each host. Example: "
 			"gb dsh 'ps auxw; uptime'\n\n"
 
 			/*
@@ -694,19 +704,24 @@ int main2 ( int argc , char *argv[] ) {
 			"current cluster. Remote network must have "
 			"called \"gb ddump\" twice in a row just before to "
 			"ensure all of its data is on disk.\n\n"
-
+			*/
 
 
 			// gb inject <file> <ip:port> [startdocid]
 			// gb inject titledb <newhosts.conf> [startdocid]
-			"inject <file> <ip:port> [startdocid]\n"
-			"\tInject all documents in <file> into the host "
-			"at ip:port. "
-			"Each document "
-			"must be preceeded by a valid HTTP mime with "
-			"a Content-Length: field. "
+			"inject <filename> "
+			"<ip:port> [collection]\n"
+			"\tInject all documents in <filename> into the gb "
+			"host at ip:port. File must be in WARC format. "
+			"Uses collection of 'main' if not specified. If "
+			"ip:port is a hosts.conf file then a round-robin "
+			"approach will be used."
+			// "Each document listed in the file "
+			// "must be preceeded by a valid HTTP mime with "
+			// "a Content-Length: field. WARC files are also ok."
 			"\n\n"
 
+			/*
 			"inject titledb-<DIR> <newhosts.conf> [startdocid]\n"
 			"\tInject all pages from all the titledb "
 			"files in the <DIR> directory into the appropriate "
@@ -1029,6 +1044,10 @@ int main2 ( int argc , char *argv[] ) {
 		cmd = argv[1];
 	}
 
+	char *cmd2 = "";
+	if ( argc >= 3 )
+		cmd2 = argv[2];
+
 	int32_t arch = 64;
 	if ( sizeof(char *) == 4 ) arch = 32;
 
@@ -1086,9 +1105,14 @@ int main2 ( int argc , char *argv[] ) {
 	//unclean shutdown.
 	g_recoveryMode = false;
 	if ( strcmp ( cmd , "-r" ) == 0 ) g_recoveryMode = true;
+	if ( strcmp ( cmd2 , "-r" ) == 0 ) g_recoveryMode = true;
 
 	// run as daemon? then we have to fork
 	if ( strcmp ( cmd , "-d" ) == 0 ) g_conf.m_runAsDaemon = true;
+	if ( strcmp ( cmd2 , "-d" ) == 0 ) g_conf.m_runAsDaemon = true;
+
+	if ( strcmp ( cmd , "-l" ) == 0 ) g_conf.m_logToFile = true;
+	if ( strcmp ( cmd2 , "-l" ) == 0 ) g_conf.m_logToFile = true;
 
 	bool testMandrill = false;
 	if ( strcmp ( cmd , "emailmandrill" ) == 0 ) {
@@ -1438,11 +1462,13 @@ int main2 ( int argc , char *argv[] ) {
 			goto printHelp;
 		char *file = argv[cmdarg+1];
 		char *ips  = argv[cmdarg+2];
-		int64_t startDocId = 0LL;
-		int64_t endDocId   = DOCID_MASK;
-		if ( cmdarg+3 < argc ) startDocId = atoll(argv[cmdarg+3]);
-		if ( cmdarg+4 < argc ) endDocId   = atoll(argv[cmdarg+4]);
-		injectFile ( file , ips , startDocId , endDocId , false );
+		char *coll = argv[cmdarg+3];
+		// int64_t startDocId = 0LL;
+		// int64_t endDocId   = DOCID_MASK;
+		// if ( cmdarg+3 < argc ) startDocId = atoll(argv[cmdarg+3]);
+		// if ( cmdarg+4 < argc ) endDocId   = atoll(argv[cmdarg+4]);
+		//injectFile ( file , ips , startDocId , endDocId , false );
+		injectFile ( file , ips , coll );
 		return 0;
 	}
 
@@ -1972,6 +1998,7 @@ int main2 ( int argc , char *argv[] ) {
 		return 0;
 	}
 	*/
+	/*
 	if ( strcmp ( cmd , "reject"  ) == 0 ) {
 		if ( argc != cmdarg+3 && 
 		     argc != cmdarg+4 &&
@@ -1986,6 +2013,7 @@ int main2 ( int argc , char *argv[] ) {
 		injectFile ( file , ips , startDocId , endDocId , true );
 		return 0;
 	}
+	*/
 	// gb dsh
 	if ( strcmp ( cmd , "dsh" ) == 0 ) {	
 		// get hostId to install TO (-1 means all)
@@ -2202,10 +2230,10 @@ int main2 ( int argc , char *argv[] ) {
 			int32_t h2 = -1;
 			sscanf ( argv[cmdarg+1],"%"INT32"-%"INT32"",&h1,&h2);
 			if ( h1 != -1 && h2 != -1 && h1 <= h2 )
-				return install ( ifk_kstart , h1, 
+				return install ( ifk_dstart , h1, 
 						 NULL,NULL,h2 );
 		}
-		return install ( ifk_kstart , hostId );
+		return install ( ifk_dstart , hostId );
 	}
 	if ( strcmp ( cmd , "kstop" ) == 0 ) {	
 		//same as stop, here for consistency
@@ -2807,6 +2835,9 @@ int main2 ( int argc , char *argv[] ) {
 		       dumpRevdb(coll,startFileNum,numFiles,includeTree);
 		else if ( argv[cmdarg+1][0] == 'S' )
 			dumpTagdb  (coll,startFileNum,numFiles,includeTree,0);
+		else if ( argv[cmdarg+1][0] == 'z' )
+			dumpTagdb  (coll,startFileNum,numFiles,includeTree,0,
+				    'z');
 		else if ( argv[cmdarg+1][0] == 'A' )
 			dumpTagdb  (coll,startFileNum,numFiles,includeTree,0,
 				     'A');
@@ -3496,10 +3527,10 @@ int main2 ( int argc , char *argv[] ) {
 	//	return 1;
 	//}
 
-	if(!g_profiler.init()) {
-		log("profiler: init failed.");
-	}
-	g_profiler.readSymbolTable();
+	// if(!g_profiler.init()) {
+	// 	log("profiler: init failed.");
+	// }
+	// g_profiler.readSymbolTable();
 
 	//exit(0);
 	// diff with indexdb in sync/ dir
@@ -5071,6 +5102,72 @@ int install ( install_flag_konst_t installFlag , int32_t hostId , char *dir ,
 			system ( tmp );
 		}
 		else if ( installFlag == ifk_kstart ) {
+			//keepalive
+			// . save old log now, too
+			//char tmp2[1024];
+			//tmp2[0]='\0';
+			// let's do this for everyone now
+			//if ( h2->m_hostId == 0 )
+			// we do not run as daemon so keepalive loop will
+			// work properly...
+			//sprintf(tmp2,
+			//	"mv ./log%03"INT32" ./log%03"INT32"-`date '+"
+			//	"%%Y_%%m_%%d-%%H:%%M:%%S'` ; " ,
+			//	h2->m_hostId   ,
+			//	h2->m_hostId   );
+			// . assume conf file name gbHID.conf
+			// . assume working dir ends in a '/'
+			//to test add: ulimit -t 10; to the ssh cmd
+			sprintf(tmp,
+				"ssh %s \"cd %s ; ulimit -c unlimited; "
+				"export MALLOC_CHECK_=0;"
+				"cp -f gb gb.oldsave ; "
+				"ADDARGS='' "
+				"EXITSTATUS=1 ; "
+				 "while [ \\$EXITSTATUS != 0 ]; do "
+ 				 "{ "
+
+				// in case gb was updated...
+				"mv -f gb.installed gb ; "
+
+				// move the log file
+				"mv ./log%03"INT32" ./log%03"INT32"-\\`date '+"
+				"%%Y_%%m_%%d-%%H:%%M:%%S'\\` ; " 
+
+				// indicate -l so we log to a logfile
+				"./gb -l "//%"INT32" "
+				"\\$ADDARGS "
+
+				// no longer log to stderr so we can
+				// do log file rotation
+				//" >& ./log%03"INT32""
+				" ;"
+
+				"EXITSTATUS=\\$? ; "
+				"ADDARGS='-r' ; "
+				"} " 
+ 				"done >& /dev/null & \" %s",
+				//"\" %s",
+				iptoa(h2->m_ip),
+				h2->m_dir      ,
+
+				// for moving log file
+				 h2->m_hostId   ,
+				 h2->m_hostId   ,
+
+				//h2->m_dir      ,
+
+				// hostid is now inferred from path
+				//h2->m_hostId   ,
+				amp );
+
+			// log it
+			//log(LOG_INIT,"admin: %s", tmp);
+			fprintf(stdout,"admin: %s\n", tmp);
+			// execute it
+			system ( tmp );
+		}
+		else if ( installFlag == ifk_dstart ) {
 			//keepalive
 			// . save old log now, too
 			//char tmp2[1024];
@@ -7005,14 +7102,14 @@ int32_t dumpSpiderdb ( char *coll,
 
 		// otherwise add it, it is a new never-before-seen domain
 		//char poo[999];
-		//memcpy ( poo , dom , domLen );
+		//gbmemcpy ( poo , dom , domLen );
 		//poo[domLen]=0;
 		//fprintf(stderr,"new dom %s hash=%"INT32"\n",dom,domHash);
 		// store the count of urls followed by the domain
 		char *ptr = buf + bufOff;
 		*(int32_t *)ptr = 1;
 		ptr += 4;
-		memcpy ( ptr , dom , domLen );
+		gbmemcpy ( ptr , dom , domLen );
 		ptr += domLen;
 		*ptr = '\0';
 		// use an ip of 1 if it is 0 so it hashes right
@@ -10508,7 +10605,7 @@ bool gbgunzip (char *filename) {
 			   "file, not a .gz:%s",
 			   filename);
 
-	memcpy(outfile, filename, outfilelen);
+	gbmemcpy(outfile, filename, outfilelen);
 	outfile[outfilelen] = '\0';
 
 	//open our input and output files right away
@@ -10610,7 +10707,7 @@ bool bucketstest ( char* dbname ) {
 	for ( int32_t i = 0 ; i < 1000 ; i++ ) {
 		int32_t j = (rand() % numKeys) * keySize;
 		int32_t m = (rand() % numKeys) * keySize;
-		memcpy((char*)&k[j], (char*)&k[m], keySize);
+		gbmemcpy((char*)&k[j], (char*)&k[m], keySize);
 		KEYXOR((char*)&k[j],0x01);
 	}
 
@@ -11679,7 +11776,7 @@ void dumpSectiondb(char *coll,int32_t startFileNum,int32_t numFiles,
 		// no longer a first key
 		firstKey = false;
 		// copy it
-		memcpy ( &lastk , k , sizeof(key128_t) );
+		gbmemcpy ( &lastk , k , sizeof(key128_t) );
 		int32_t shardNum =  getShardNum (RDB_SECTIONDB,k);
 		//int32_t groupNum = g_hostdb.getGroupNum ( gid );
 		// point to the data
@@ -11805,7 +11902,7 @@ void dumpRevdb(char *coll,int32_t startFileNum,int32_t numFiles, bool includeTre
 		// no longer a first key
 		firstKey = false;
 		// copy it
-		memcpy ( &lastk , k , sizeof(key_t) );
+		gbmemcpy ( &lastk , k , sizeof(key_t) );
 		// point to the data
 		char  *p       = data;
 		char  *pend    = data + size;
@@ -11830,7 +11927,8 @@ void dumpRevdb(char *coll,int32_t startFileNum,int32_t numFiles, bool includeTre
 }
 
 
-void dumpTagdb (char *coll,int32_t startFileNum,int32_t numFiles,bool includeTree, 
+void dumpTagdb (char *coll,int32_t startFileNum,int32_t numFiles,
+		bool includeTree, 
 		 int32_t c , char req, int32_t rdbId ) {
 	//g_conf.m_spiderdbMaxTreeMem = 1024*1024*30;
 	g_tagdb.init ();
@@ -11857,6 +11955,14 @@ void dumpTagdb (char *coll,int32_t startFileNum,int32_t numFiles,bool includeTre
 	sprintf(httpAddr,"127.0.0.1:%"INT32"", port );
 	if ( req == 'D') strcpy(action,"&deleterec=1&useNew=1");	
 	CollectionRec *cr = g_collectiondb.getRec(coll);
+
+	int64_t hostHash = -1;
+	int64_t lastHostHash = -2;
+	char *site = NULL;
+	char sbuf[1024*2];
+	int32_t siteNumInlinks = -1;
+	int32_t typeSite = hash64Lower_a("site",4);
+	int32_t typeInlinks = hash64Lower_a("sitenuminlinksuniquecblock",26);
 
  loop:
 	// use msg5 to get the list, should ALWAYS block since no threads
@@ -11890,7 +11996,9 @@ void dumpTagdb (char *coll,int32_t startFileNum,int32_t numFiles,bool includeTre
 		int32_t  size = list.getCurrentDataSize();
 		// is it a delete?
 		if ( (k.n0 & 0x01) == 0 ) {
-			printf("k.n1=%016"XINT64" k.n0=%016"XINT64" (delete)\n",
+			if ( req == 'z' ) continue;
+			printf("k.n1=%016"XINT64" "
+			       "k.n0=%016"XINT64" (delete)\n",
 			       k.n1  , k.n0   | 0x01  );  // fix it!
 			continue;
 		}
@@ -11911,7 +12019,8 @@ void dumpTagdb (char *coll,int32_t startFileNum,int32_t numFiles,bool includeTre
 				   size ,
 				   false);
 			fprintf(stdout,
-				"key=%s caturl=%s #catids=%"INT32" version=%"INT32"\n"
+				"key=%s caturl=%s #catids=%"INT32" "
+				"version=%"INT32"\n"
 			       ,KEYSTR(&k,12)
 			    ,crec.m_url
 			    ,(int32_t)crec.m_numCatids
@@ -11925,6 +12034,57 @@ void dumpTagdb (char *coll,int32_t startFileNum,int32_t numFiles,bool includeTre
 		// print the version and site
 		char tmpBuf[1024];
 		SafeBuf sb(tmpBuf, 1024);
+
+		// making sitelist.txt?
+		if ( tag->m_type == typeSite ) {
+			hostHash = tag->m_key.n1;
+			site = tag->getTagData();
+			// make it null if too many .'s
+			if ( site ) {
+				char *p = site;
+				int count = 0;
+				// foo.bar.baz.com is ok
+				for ( ; *p ; p++ ) 
+					if ( *p == '.' ) count++;
+				if ( count >= 4 )
+					site = NULL;
+			}
+			if ( site && ! is_ascii2_a ( site, gbstrlen(site) ) ) {
+				site = NULL;
+				continue;
+			}
+			if ( lastHostHash == hostHash && siteNumInlinks>=0) {
+				// if we ask for 1 or 2 we end up with 100M
+				// entries, but with 3+ we get 27M
+				if ( siteNumInlinks > 2 && site )
+					printf("%i %s\n",siteNumInlinks,site);
+				siteNumInlinks = -1;
+				site = NULL;
+			}
+			// save it
+			if ( site ) strcpy ( sbuf , site );
+			lastHostHash = hostHash;
+			continue;
+		}
+
+		if ( tag->m_type == typeInlinks ) {
+			hostHash = tag->m_key.n1;
+			siteNumInlinks = atoi(tag->getTagData());
+			if ( lastHostHash == hostHash && site ) {
+				// if we ask for 1 or 2 we end up with 100M
+				// entries, but with 3+ we get 27M
+				if ( siteNumInlinks > 2 )
+					printf("%i %s\n",siteNumInlinks,sbuf);
+				siteNumInlinks = -1;
+				site = NULL;
+			}
+			lastHostHash = hostHash;
+			continue;
+		}
+
+		if ( req == 'z' )
+			continue;
+
 		// print as an add request or just normal
 		if ( req == 'A' ) tag->printToBufAsAddRequest ( &sb );
 		else              tag->printToBuf             ( &sb );
@@ -12809,7 +12969,7 @@ void dumpIndexdbFile ( int32_t fn , int64_t off , char *ff , int32_t ks ,
 		goto loop;
 	}
 	// new top?
-	if ( size == ks ) { memcpy ( top , p + (ks-6) , 6 ); haveTop = true; }
+	if ( size == ks ) { gbmemcpy ( top , p + (ks-6) , 6 ); haveTop = true; }
 	// warning msg
 	if ( ! haveTop && ! warned ) {
 		warned = true;
@@ -12817,8 +12977,8 @@ void dumpIndexdbFile ( int32_t fn , int64_t off , char *ff , int32_t ks ,
 	}
 	// make the key
 	char tmp [ MAX_KEY_BYTES ];
-	memcpy ( tmp , p , ks-6 );
-	memcpy ( tmp + ks-6 , top , 6 );
+	gbmemcpy ( tmp , p , ks-6 );
+	gbmemcpy ( tmp + ks-6 , top , 6 );
 	// print the key
 	if ( ks == 12 )
 		fprintf(stdout,"%08"INT64") %08"XINT32" %016"XINT64"\n",
@@ -13077,6 +13237,8 @@ void dumpPosdb (char *coll,int32_t startFileNum,int32_t numFiles,bool includeTre
 		//	printf("%s",err );
 		//continue;
 		//if ( ! magicBit && recSize == 6 ) { char *xx=NULL;*xx=0; }
+		int32_t facetVal32 = g_posdb.getFacetVal32 ( &k );
+
 		if ( termId < 0 )
 			printf(
 			       "k=%s "
@@ -13134,6 +13296,7 @@ void dumpPosdb (char *coll,int32_t startFileNum,int32_t numFiles,bool includeTre
 			       //"outlnktxt=%01"INT32" "
 			       "mult=%02"INT32" "
 			       //"senth32=0x%08"XINT32" "
+			       "[facetval=%"INT32"] "
 			       "recSize=%"INT32" "
 			       "dh=0x%02"XINT32"%s%s\n" , 
 			       KEYSTR(&k,sizeof(key144_t)),
@@ -13150,6 +13313,7 @@ void dumpPosdb (char *coll,int32_t startFileNum,int32_t numFiles,bool includeTre
 			       //(int32_t)g_posdb.getIsOutlinkText(&k),
 			       (int32_t)g_posdb.getMultiplier(&k),
 			       //(int32_t)g_posdb.getSectionSentHash32(&k),
+			       facetVal32,
 			       recSize,
 			       
 			       (int32_t)dh, 
@@ -14097,7 +14261,7 @@ int injectFileTest ( int32_t reqLen , int32_t hid ) {
 	char *content = p;
 	sprintf ( p , 
 		  "u=%"UINT32".injecttest.com&c=&"
-		  "delete=0&ip=4.5.6.7&iplookups=0&"
+		  "deleteurl=0&ip=4.5.6.7&iplookups=0&"
 		  "dedup=1&rs=7&"
 		  "quick=1&hasmime=1&ucontent="
 		  "HTTP 200\r\n"
@@ -14147,12 +14311,14 @@ int injectFileTest ( int32_t reqLen , int32_t hid ) {
 	char *ips = iptoa(h->m_ip);
 
 	// now inject the file
-	return injectFile ( filename , ips , 0 , MAX_DOCID , false );
+	//return injectFile ( filename , ips , 0 , MAX_DOCID , false );
+	return injectFile ( filename , ips , "main");
 }
 
-//#define MAX_INJECT_SOCKETS 10
-#define MAX_INJECT_SOCKETS 1
+#define MAX_INJECT_SOCKETS 300
+//#define MAX_INJECT_SOCKETS 1
 static void doInject ( int fd , void *state ) ;
+static void doInjectWarc ( int64_t fsize );
 static void injectedWrapper ( void *state , TcpSocket *s ) ;
 static TcpServer s_tcp;
 static File      s_file;
@@ -14166,6 +14332,8 @@ static int32_t      s_maxSockets = MAX_INJECT_SOCKETS;
 static int32_t      s_outstanding = 0;
 static bool s_isDelete;
 static int32_t s_injectTitledb;
+static int32_t s_injectWarc;
+static char *s_coll = NULL;
 static key_t s_titledbKey;
 static char *s_req  [MAX_INJECT_SOCKETS];
 static int64_t s_docId[MAX_INJECT_SOCKETS];
@@ -14173,9 +14341,80 @@ static char s_init5 = false;
 static int64_t s_endDocId;
 
 int injectFile ( char *filename , char *ips , 
-		 int64_t startDocId ,
-		 int64_t endDocId ,
-		 bool isDelete ) {
+		 //int64_t startDocId ,
+		 //int64_t endDocId ,
+		 //bool isDelete ) {
+		 char *coll ) {
+
+
+
+	// or part of an itemlist.txt-N
+	int flen2 = gbstrlen(filename);
+	if ( flen2>=14 && strncmp(filename,"itemlist.txt",12)==0 ) {
+	        // must have -N
+		int split = atoi(filename+13);
+		log("inject: using part file of itemlist.txt of %i",split);
+		// open it
+		SafeBuf sb;
+		sb.load("./itemlist.txt");
+		// scan the lines
+		char *p = sb.getBufStart();
+		char *pend = p + sb.length();
+		int count = 0;
+		char *nextLine = NULL;
+		for (  ; p && p < pend ; p = nextLine ) {
+			nextLine = strstr(p,"\n");
+			if ( nextLine ) nextLine++;
+			if ( count >= 8 ) count = 0;
+			if ( count++ != split ) continue;
+			// get line
+			char *archiveDirName = p;
+			if ( nextLine ) nextLine[-1] = '\0';
+			// download the archive
+			SafeBuf cmd;
+			cmd.safePrintf("./ia-0.7.8-python2.7.pex download "
+				       "--format=\"Web ARChive GZ\" %s"
+				       ,archiveDirName);
+			gbsystem(cmd.getBufStart());
+			// now inject the warc gz files in there
+			Dir dir;
+			dir.set ( p );
+			dir.open();
+			log("setting dir to %s",p);
+		subloop:
+			char *warcFileName = dir.getNextFilename("*.warc.gz");
+			// get next archive
+			if ( ! warcFileName ) {
+				cmd.reset();
+				// remove the archive dir when done if
+				// no more warc.gz files in it
+				cmd.safePrintf("rm -rf %s",archiveDirName);
+				gbsystem(cmd.getBufStart());
+				// download the next archive using 'ia'
+				continue;
+			}
+			// inject the warc.gz files
+			cmd.reset();
+			cmd.safePrintf("gunzip -c %s/%s > ./foo%i.warc"
+				       ,archiveDirName,warcFileName,split);
+			gbsystem(cmd.getBufStart());
+			// now inject it
+			cmd.reset();
+			cmd.safePrintf("./gb inject ./foo%i.warc hosts.conf"
+				       ,split);
+			gbsystem(cmd.getBufStart());
+			goto subloop;
+		}
+		exit(0);
+		log("cmd: done injecting archives for split %i",split);
+	}
+
+
+
+
+	bool isDelete = false;
+	int64_t startDocId = 0LL;
+	int64_t endDocId = MAX_DOCID;
 
 	g_mem.init ( 4000000000LL );
 
@@ -14210,9 +14449,9 @@ int injectFile ( char *filename , char *ips ,
 		port = atoi(colon+1);
 	}
 	int32_t ip = 0;
-	// is ip field a hosts.conf instead?
+	// is ip field a hosts.conf instead? that means to round robin.
 	if ( strstr(ips,".conf") ) {
-		if ( ! s_hosts2.init ( 0 ) ) { // ips , 0 ) ) {
+		if ( ! s_hosts2.init ( -1 ) ) { // ips , 0 ) ) {
 			fprintf(stderr,"failed to load %s",ips);
 			exit(0);
 		}
@@ -14235,6 +14474,7 @@ int injectFile ( char *filename , char *ips ,
 	}
 
 	s_injectTitledb = false;
+
 	//char *coll = "main";
 	if ( strncmp(filename,"titledb",7) == 0 ) {
 		//int32_t hostId = 0;
@@ -14357,6 +14597,17 @@ int injectFile ( char *filename , char *ips ,
 				   "for reading.", filename) - 1;
 		s_off = 0;
 	}
+
+	// this might be a compressed warc like .warc.gz
+	s_injectWarc = false;
+	int flen = gbstrlen(filename);
+	if ( flen>5 && strcasecmp(filename+flen-5,".warc")==0 ) {
+		s_injectWarc = true;
+	}
+
+	
+	s_coll = coll;
+
 	// register sleep callback to get started
 	if ( ! g_loop.registerSleepCallback(1, NULL, doInject) )
 		return log("build: inject: Loop init failed.")-1;
@@ -14373,11 +14624,21 @@ void doInject ( int fd , void *state ) {
 		g_loop.unregisterSleepCallback ( NULL, doInject );
 	}
 	
+	// turn off threads so this happens right away
+	g_conf.m_useThreads = false;
+
 	int64_t fsize ;
 	if ( ! s_injectTitledb ) fsize = s_file.getFileSize();
 
-	// turn off threads so this happens right away
-	g_conf.m_useThreads = false;
+	// just repeat the function separately. i guess we'd repeat
+	// some code but for simplicity i think it is worth it. and we
+	// should probably phase out the ++++URL: format thing.
+	if ( s_injectWarc ) {
+		doInjectWarc ( fsize );
+		return;
+	}
+
+
 
  loop:
 
@@ -14689,7 +14950,7 @@ void doInject ( int fd , void *state ) {
 			      "dontlog=1&"
 			      "ip=%s&"
 			      //"recycle=%"INT32"&"
-			      "delete=%"INT32"&"
+			      "deleteurl=%"INT32"&"
 			      "u=",
 			      ipStr,
 			      //recycle,
@@ -14705,7 +14966,7 @@ void doInject ( int fd , void *state ) {
 			char *xx=NULL;*xx=0;
 			/*
 			// stick mime in there
-			memcpy ( rp , mimePtr , m.getMimeLen() );
+			gbmemcpy ( rp , mimePtr , m.getMimeLen() );
 			// skip that
 			rp += m.getMimeLen();
 			// turn \n\n into \r\n\r\n
@@ -14741,7 +15002,7 @@ void doInject ( int fd , void *state ) {
 		}
 
 		// store the content after the &ucontent
-		memcpy ( rp , contentPtr , contentPtrLen );
+		gbmemcpy ( rp , contentPtr , contentPtrLen );
 		rp += contentPtrLen;
 
 		s_off += contentPtrLen;
@@ -14815,11 +15076,384 @@ void doInject ( int fd , void *state ) {
 	goto loop;
 }
 
+
+// 100MB per warc rec max
+#define MAXWARCRECSIZE 100*1024*1024
+
+void doInjectWarc ( int64_t fsize ) {
+
+	static char *s_buf = NULL;
+
+	static bool s_hasMoreToRead;
+
+	static char *s_pbuf = NULL;
+	static char *s_pbufEnd = NULL;
+
+	bool needReadMore = false;
+	if ( ! s_pbuf ) needReadMore = true;
+
+
+ readMore:
+
+	if ( needReadMore ) {
+
+		log("inject: reading %"INT64" bytes more of warc file"
+		    ,(int64_t)MAXWARCRECSIZE);
+
+		// are we done?
+		if ( s_off >= fsize ) { 
+			log("inject: done parsing file");
+			g_loop.reset();  
+			exit(0); 
+		}
+
+		// read 1MB of data into this buf to get the first WARC record
+		// it must be < 1MB or we faulter.
+		if ( ! s_buf ) {
+			int64_t need = MAXWARCRECSIZE + 1;
+			s_buf = (char *)mmalloc ( need ,"sibuf");
+		}
+		if ( ! s_buf ) {
+			log("inject: failed to alloc buf");
+			exit(0);
+		}
+
+		int32_t maxToRead = MAXWARCRECSIZE;
+		int32_t toRead = maxToRead;
+		s_hasMoreToRead = true;
+		if ( s_off + toRead > fsize ) {
+			toRead = fsize - s_off;
+			s_hasMoreToRead = false;
+		}
+		int32_t bytesRead = s_file.read ( s_buf , toRead , s_off ) ;
+		if ( bytesRead != toRead ) {
+			log("inject: read of %s failed at offset "
+			    "%"INT64"", s_file.getFilename(), s_off);
+			exit(0);
+		}
+		// null term what we read
+		s_buf[bytesRead] = '\0';
+
+		// if not enough to constitute a WARC record probably just new lines
+		if( toRead < 20 ) {
+			log("inject: done processing file");
+			exit(0);
+		}
+
+		// mark the end of what we read
+		//char *fend = buf + toRead;
+
+		// point to what we read
+		s_pbuf = s_buf;
+		s_pbufEnd = s_buf + bytesRead;
+	}
+
+ loop:
+
+	char *realStart = s_pbuf;
+
+	// need at least say 100k for warc header
+	if ( s_pbuf + 100000 > s_pbufEnd && s_hasMoreToRead )  {
+		needReadMore = true;
+		goto readMore;
+	}
+
+	// find "WARC/1.0" or whatever
+	char *whp = s_pbuf;
+	for ( ; *whp && strncmp(whp,"WARC/",5) ; whp++ );
+	// none?
+	if ( ! *whp ) {
+		log("inject: could not find WARC/1 header start");
+		exit(0);
+	}
+
+	char *warcHeader = whp;
+
+	// find end of warc mime HEADER not the content
+	char *warcHeaderEnd = strstr(warcHeader,"\r\n\r\n");
+	if ( ! warcHeaderEnd ) {
+		log("inject: could not find end of WARC header.");
+		exit(0);
+	}
+	// \0 term for strstrs below
+	*warcHeaderEnd = '\0';
+	//warcHeaderEnd += 4;
+
+	char *warcContent = warcHeaderEnd + 4;
+
+	// get WARC-Type:
+	// revisit  (if url was already done before)
+	// request (making a GET or DNS request)
+	// response (reponse to a GET or dns request)
+	// warcinfo (crawling parameters, robots: obey, etc)
+	// metadata (fetchTimeMs: 263, hopsFromSeed:P,outlink:)
+	char *warcType = strstr(warcHeader,"WARC-Type:");
+	if ( ! warcType ) {
+		log("inject: could not find WARC-Type:");
+		exit(0);
+	}
+	warcType += 10;
+	for ( ; is_wspace_a(*warcType); warcType++ );
+
+	// get Content-Type: 
+	// application/warc-fields (fetch time, hops from seed)
+	// application/http; msgtype=request  (the GET request)
+	// application/http; msgtype=response (the GET reply)
+	char *warcConType = strstr(warcHeader,"Content-Type:");
+	if ( ! warcConType ) {
+		log("inject: could not find Content-Type:");
+		exit(0);
+	}
+	warcConType += 13;
+	for ( ; is_wspace_a(*warcConType); warcConType++ );
+			
+
+	// get Content-Length: of WARC header for its content
+	char *warcContentLenStr = strstr(warcHeader,"Content-Length:");
+	if ( ! warcContentLenStr ) {
+		log("inject: could not find WARC "
+		    "Content-Length:");
+		exit(0);
+	}
+	warcContentLenStr += 15;
+	for(;is_wspace_a(*warcContentLenStr);warcContentLenStr++);
+
+	// get warc content len
+	int64_t warcContentLen = atoll(warcContentLenStr);
+
+	char *warcContentEnd = warcContent + warcContentLen;
+
+	uint64_t oldOff = s_off;
+
+	uint64_t recSize = (warcContentEnd - realStart); 
+
+	// point to end of this warc record
+	s_pbuf += recSize;
+
+	// if we fall outside of the current read buf then re-read
+	if ( s_pbuf > s_pbufEnd ) {
+		if ( ! s_hasMoreToRead ) {
+			log("inject: warc file exceeded file length.");
+			exit(0);
+		}
+		if ( recSize > MAXWARCRECSIZE ) {
+			log("inject: skipping warc file of %"INT64" "
+			    "bytes which is too big",recSize);
+			s_off += recSize;
+		}
+		needReadMore = true;
+		goto readMore;
+	}
+
+	// advance this for next read from the file
+	s_off += recSize; // (warcContentEnd - realStart);//s_buf);
+
+
+	// if WARC-Type: is not response, skip it. so if it
+	// is a revisit then skip it i guess.
+	if ( strncmp ( warcType,"response", 8 ) ) {
+		// read another warc record
+		goto loop;
+	}
+
+	// warcConType needs to be 
+	// application/http; msgtype=response
+	if ( strncmp(warcConType,"application/http; msgtype=response", 34) ) {
+		// read another warc record
+		goto loop;
+	}
+
+	char *warcDateStr = strstr(warcHeader,"WARC-Date:");
+	if ( warcDateStr ) warcDateStr += 10;
+	for(;is_wspace_a(*warcDateStr);warcDateStr++);
+	// convert to timestamp
+	int64_t warcTime = 0;
+	if ( warcDateStr ) warcTime = atotime ( warcDateStr );
+
+	// set the url now
+	char *url = strstr(warcHeader,"WARC-Target-URI:");
+	if ( url ) url += 16;
+	// skip spaces
+	for ( ; url && is_wspace_a(*url) ; url++ );
+	if ( ! url ) {
+		log("inject: could not find WARC-Target-URI:");
+		exit(0);
+	}
+	// find end of it
+	char *urlEnd = url;
+	for (;urlEnd&&*urlEnd&&is_urlchar(*urlEnd);urlEnd++);
+
+	// null term url
+	//char c = *urlEnd;
+	*urlEnd = '\0';
+
+
+	char *httpReply = warcContent;
+	int64_t httpReplySize = warcContentLen;
+
+	// sanity check
+	//char *bufEnd = s_buf + MAXWARCRECSIZE;
+	if ( httpReply + httpReplySize >= s_pbufEnd ) {
+		int needMore = httpReply + httpReplySize - s_pbufEnd;
+		log("inject: not reading enough content to inject "
+		    "url %s . increase MAXWARCRECSIZE by %"INT32" more",url,
+		    needMore);
+		exit(0);
+	}
+
+	// put it back
+	//*urlEnd = c;
+
+
+	// should be a mime that starts with GET or POST
+	HttpMime m;
+	if ( ! m.set ( httpReply , httpReplySize , NULL ) ) {
+	  // 	if ( httpReplySize > 128 ) httpReplySize = 128;
+	// 	httpReply [ httpReplySize ] = '\0';
+	// 	log("build: inject: Failed to set mime at offset "
+	// 	    "%"INT64" where request=%s",s_off,httpReply);
+		log("inject: failed to set http mime at %"INT64" in file"
+		    ,oldOff);
+		goto loop;
+	// 	exit(0);
+	}
+
+	// check content type
+	int ct = m.getContentType();
+	if ( ct != CT_HTML &&
+	     ct != CT_TEXT &&
+	     ct != CT_XML &&
+	     ct != CT_JSON ) {
+		goto loop;
+	}
+
+
+	SafeBuf req;
+
+	// a different format?
+	char *ipStr = "1.2.3.4";
+	req.safePrintf(
+		       "POST /admin/inject HTTP/1.0\r\n"
+		       "Content-Length: 000000000\r\n"//bookmrk
+		       "Content-Type: text/html\r\n"
+		       "Connection: Close\r\n"
+		       "\r\n"
+		       // we need this ?
+		       "?"
+		       "c=%s&"
+		       // do parsing consistency testing (slower!)
+		       //"dct=1&"
+		       "hasmime=1&"
+		       // prevent looking up firstips
+		       // on all outlinks for speed:
+		       "spiderlinks=0&"
+		       "quick=1&" // quick reply
+		       "dontlog=0&"
+			      
+		       "lastspidered=%"INT64"&"
+		       "firstindexed=%"INT64"&"
+
+		       "deleteurl=0&"
+		       "ip=%s&"
+		       //"recycle=%"INT32"&"
+		       //"delete=%"INT32"&"
+		       "u="
+		       ,s_coll
+
+		       ,warcTime
+		       ,warcTime
+		       
+		       ,ipStr
+		       //recycle,
+		       );
+
+	// url encode the url
+	req.urlEncode ( url );
+	// finish it up
+	req.safePrintf("&content=");
+	// store the content after the &ucontent
+	req.urlEncode ( httpReply , httpReplySize );
+	req.nullTerm();
+
+
+	// replace 00000 with the REAL content length
+	char *start = strstr(req.getBufStart(),"c=");
+	int32_t realContentLen = gbstrlen(start);
+	char *ptr = req.getBufStart() ;
+	// find start of the 9 zeroes
+	while ( *ptr != '0' || ptr[1] !='0' ) ptr++;
+	// store length there
+	sprintf ( ptr , "%09"UINT32"" , realContentLen );
+	// remove the \0
+	ptr += strlen(ptr); *ptr = '\r';
+
+
+	int32_t ip = s_ip;
+	int32_t port = s_port;
+
+	// try hosts.conf
+	if ( ip == 0 ) {
+		// round robin over hosts in s_hosts2
+		if ( s_rrn >= s_hosts2.getNumHosts() ) s_rrn = 0;
+		Host *h = s_hosts2.getHost ( s_rrn );
+		ip = h->m_ip;
+		port = h->m_httpPort;
+		s_rrn++;
+	}
+
+	// log it
+	log("inject: injecting to %s:%i WARC url %s",iptoa(ip),(int)port,url);
+
+	// now inject it
+	bool status = s_tcp.sendMsg ( ip   ,
+				      port ,
+				      req.getBufStart()    ,
+				      req.getCapacity(),
+				      req.length(),
+				      req.length(),
+				      NULL   ,
+				      injectedWrapper ,
+				      9999*60*1000      , // timeout, 60days
+				      -1              , // maxTextDocLen
+				      -1              );// maxOtherDocLen
+
+	int realMax = 10;
+	if ( s_hosts2.getNumHosts() > 1 )
+	  realMax = s_hosts2.getNumHosts() * 5;
+
+	// launch another if blocked
+	if ( ! status ) {
+		// let injectedWrapper() below free it
+		req.detachBuf();
+		//int32_t nh = g_hostdb.getNumHosts();
+		//nh = (nh * 15) / 10;
+		//if ( nh > MAX_INJECT_SOCKETS - 10 ) 
+		//	nh = MAX_INJECT_SOCKETS - 10;
+		//if ( nh < 5 ) nh = 5;
+		// limit to one socket right now
+		//if ( ++s_outstanding < 1 ) goto loop;
+		s_outstanding++;
+		if ( s_outstanding < MAX_INJECT_SOCKETS &&
+		     s_outstanding < realMax ) 
+		  goto loop;
+		return;
+	}
+		
+	if ( g_errno ) {
+		// let tcpserver.cpp free it
+		req.detachBuf();
+		log("build: inject had error: %s.",mstrerror(g_errno));
+	}
+	// loop if not
+	goto loop;
+}
+
+
 void injectedWrapper ( void *state , TcpSocket *s ) {
 	s_outstanding--;
 	// errno?
 	if ( g_errno ) {
-		log("build: inject: Got server error: %s.",
+		log("inject: Got server error: %s.",
 		    mstrerror(g_errno));
 		doInject(0,NULL);
 		return;
@@ -14870,7 +15504,7 @@ void injectedWrapper ( void *state , TcpSocket *s ) {
 
 	// get return code
 	char *reply = s->m_readBuf;
-	logf(LOG_INFO,"build: inject: return=\n%s",reply);
+	logf(LOG_INFO,"inject: reply=\"%s\"",reply);
 	doInject(0,NULL);
 }
 
@@ -15151,37 +15785,44 @@ bool memTest() {
 	int numPtrs=0;
 	//int totalMem=0;
 	int i;
-	if ( ! g_log.init( g_hostdb.m_logFilename )        ) {
-		fprintf (stderr,"db: Log file init failed.\n" ); return 1; }
+	// if ( ! g_log.init( "./memlog" ) ) {//g_hostdb.m_logFilename )        ) {
+	// 	fprintf (stderr,"db: Log file init failed.\n" ); return 1; }
 	//g_mem.init(0xffffffff);
 	g_mem.m_maxMem = 0xffffffffLL;
+	g_mem.init( g_mem.m_maxMem );
 	
 
-	log(LOG_INIT, "memtest: Testing memory bus bandwidth.");
+	fprintf(stderr, "memtest: Testing memory bus bandwidth.\n");
 	// . read in 20MB 100 times (~2GB total)
 	// . tests main memory throughput
-	log(LOG_INIT, "memtest: Testing main memory.");
+	fprintf(stderr, "memtest: Testing main memory.\n");
 	membustest ( 20*1024*1024 , 100 , true );
 	// . read in 1MB 2,000 times (~2GB)
 	// . tests the L2 cache
-	log(LOG_INIT, "memtest: Testing 1MB L2 cache.");
+	fprintf(stderr, "memtest: Testing 1MB L2 cache.\n");
 	membustest ( 1024*1024 , 2000 , true );
 	// . read in 8000 200,000 times (~1.6GB)
 	// . tests the L1 cache
-	log(LOG_INIT, "memtest: Testing 8KB L1 cache.");
+	fprintf(stderr, "memtest: Testing 8KB L1 cache.\n");
 	membustest ( 8000 , 100000 , true );
 
-	log(LOG_INIT, "memtest: Allocating up to %"INT64" bytes",g_mem.m_maxMem);
+	fprintf(stderr, "memtest: Allocating up to %"INT64" bytes\n",
+		g_mem.m_maxMem);
 	for (i=0;i<4096;i++) {
 		ptrs[numPtrs] = mmalloc(1024*1024, "memtest");
 		if (!ptrs[numPtrs]) break;
 		numPtrs++;
 	}
-	
-	log(LOG_INIT, "memtest: Was able to allocate %"INT64" bytes of a total of "
-	    "%"INT64" bytes of memory attempted.",
+
+	fprintf(stderr, "memtest: Was able to allocate %"INT64" bytes of a "
+		"total of "
+	    "%"INT64" bytes of memory attempted.\n",
 	    g_mem.m_used,g_mem.m_maxMem);
-	log(LOG_INIT, "memtest: Dumping core to test max core file size.");
+
+	return true;
+
+
+	fprintf(stderr, "memtest: Dumping core to test max core file size.\n");
 	char *xx = NULL;
 	*xx = 0;
 	for (i=0;i<numPtrs;i++){
@@ -15200,7 +15841,7 @@ void membustest ( int32_t nb , int32_t loops , bool readf ) {
 
 	// don't exceed 50NB
 	if ( nb > 50*1024*1024 ) {
-		log(LOG_INIT,"memtest: truncating to 50 Megabytes.");
+		fprintf(stderr,"memtest: truncating to 50 Megabytes.\n");
 		nb = 50*1024*1024;
 	}
 
@@ -15224,8 +15865,12 @@ void membustest ( int32_t nb , int32_t loops , bool readf ) {
 	// pre-read it so sbrk() can do its thing
 	for ( int32_t i = 0 ; i < n ; i++ ) buf[i] = 1;
 
+	g_clockNeedsUpdate = true;
+
 	// time stamp
 	int64_t t = gettimeofdayInMilliseconds();
+
+	fprintf(stderr,"memtest: start = %"INT64"\n",t);
 
 	// . time the read loop
 	// . each read should only be 2 assenbly movl instructions:
@@ -15278,17 +15923,20 @@ void membustest ( int32_t nb , int32_t loops , bool readf ) {
 		goto loop;
 	}
 
+	g_clockNeedsUpdate = true;
 	// completed
 	int64_t now = gettimeofdayInMilliseconds();
+	fprintf(stderr,"memtest: now = %"INT64"\n",t);
 	// multiply by 4 since these are int32_ts
 	char *op = "read";
 	if ( ! readf ) op = "wrote";
-	log(LOG_INIT,"memtest: %s %"INT32" bytes (x%"INT32") in %"UINT64" ms.",
+	fprintf(stderr,"memtest: %s %"INT32" bytes (x%"INT32") in"
+		"%"UINT64" ms.\n",
 		 op , n , loops , now - t );
 	// stats
 	if ( now - t == 0 ) now++;
 	double d = (1000.0*(double)loops*(double)(n)) / ((double)(now - t));
-	log(LOG_INIT,"memtest: we did %.2f MB/sec." , d/(1024.0*1024.0));
+	fprintf(stderr,"memtest: we did %.2f MB/sec.\n" , d/(1024.0*1024.0));
 
 	mfree ( bufStart , bufSize , "main" );
 
@@ -17355,7 +18003,7 @@ char *getcwd2 ( char *arg2 ) {
 		if (p[0] != '.' || p[1] !='.' ) continue;
 		// if .. is at start of string
 		if ( p == arg ) {
-			memcpy ( arg , p+2,gbstrlen(p+2)+1);
+			gbmemcpy ( arg , p+2,gbstrlen(p+2)+1);
 			goto again;
 		}
 		// find previous /
@@ -17364,7 +18012,7 @@ char *getcwd2 ( char *arg2 ) {
 		slash--;
 		for ( ; slash > arg && *slash != '/' ; slash-- );
 		if ( slash<arg) slash=arg;
-		memcpy(slash,p+2,gbstrlen(p+2)+1);
+		gbmemcpy(slash,p+2,gbstrlen(p+2)+1);
 		goto again;
 		// if can't back up anymore...
 	}
@@ -17416,11 +18064,11 @@ char *getcwd2 ( char *arg2 ) {
 	// if "arg" is a RELATIVE path then append it
 	if ( arg && arg[0]!='/' ) {
 		if ( arg[0]=='.' && arg[1]=='/' ) {
-			memcpy ( end , arg+2 , alen -2 );
+			gbmemcpy ( end , arg+2 , alen -2 );
 			end += alen - 2;
 		}
 		else {
-			memcpy ( end , arg , alen );
+			gbmemcpy ( end , arg , alen );
 			end += alen;
 		}
 		*end = '\0';

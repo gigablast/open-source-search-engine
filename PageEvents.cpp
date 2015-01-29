@@ -7744,7 +7744,7 @@ bool brformat ( SafeBuf *src ,
 		if ( size == 1 )
 			*d++ = *p;
 		else {
-			memcpy ( d , p , size );
+			gbmemcpy ( d , p , size );
 			d += size;
 		}
 		// do not exceed maxchars
@@ -7774,7 +7774,7 @@ bool brformat ( SafeBuf *src ,
 		// if "word" bigger than "col" do not rewrind because
 		// we get into an infinite loop
 		     p - lastSpaceSrc >= width ) {
-			memcpy(d,"<br>\n",5);
+			gbmemcpy(d,"<br>\n",5);
 			d += 5;
 			continue;
 		}
@@ -7786,7 +7786,7 @@ bool brformat ( SafeBuf *src ,
 		// skip d after the space
 		d++;
 		// then insert the br
-		memcpy(d,"<br>\n",5);
+		gbmemcpy(d,"<br>\n",5);
 		d += 5;
 		lastWasBr = true;
 	}
@@ -7822,12 +7822,12 @@ void printAdminEventOptions ( SafeBuf* sb,
 	uu.set ( url , urlLen );
 	char dbuf [ MAX_URL_LEN ];
 	int32_t dlen = uu.getDomainLen();
-	memcpy ( dbuf , uu.getDomain() , dlen );
+	gbmemcpy ( dbuf , uu.getDomain() , dlen );
 	dbuf [ dlen ] = '\0';
 	// newspaperarchive urls have no domain
 	if ( dlen == 0 ) {
 		dlen = uu.getHostLen();
-		memcpy ( dbuf , uu.getHost() , dlen );
+		gbmemcpy ( dbuf , uu.getHost() , dlen );
 		dbuf [ dlen ] = '\0';
 	}
 
@@ -7870,7 +7870,7 @@ void printAdminEventOptions ( SafeBuf* sb,
 
 
 	dlen = uu.getDomainLen();
-	memcpy ( dbuf , uu.getDomain() , dlen );
+	gbmemcpy ( dbuf , uu.getDomain() , dlen );
 	dbuf [ dlen ] = '\0';
 	
 	sb->safePrintf("Ban By Domain: ");
@@ -8614,12 +8614,12 @@ static bool printResult ( CollectionRec *cr,
 	if ( si->m_isAssassin && !si->m_isFriend ) {
 		char dbuf [ MAX_URL_LEN ];
 		int32_t dlen = uu.getDomainLen();
-		memcpy ( dbuf , uu.getDomain() , dlen );
+		gbmemcpy ( dbuf , uu.getDomain() , dlen );
 		dbuf [ dlen ] = '\0';
 		// newspaperarchive urls have no domain
 		if ( dlen == 0 ) {
 			dlen = uu.getHostLen();
-			memcpy ( dbuf , uu.getHost() , dlen );
+			gbmemcpy ( dbuf , uu.getHost() , dlen );
 			dbuf [ dlen ] = '\0';
 		}
 		sb.safePrintf (" - "
@@ -8638,7 +8638,7 @@ static bool printResult ( CollectionRec *cr,
 				  dbuf , coll , dbuf );
 		banSites->safePrintf("%s+", dbuf);
 		dlen = uu.getHostLen();
-		memcpy ( dbuf , uu.getHost() , dlen );
+		gbmemcpy ( dbuf , uu.getHost() , dlen );
 		dbuf [ dlen ] = '\0';
 		sb.safePrintf(" - "
 				  " <a href=\"/admin/tagdb?"
@@ -18700,16 +18700,16 @@ bool sendPageAbout2 ( State3 *st3 ) {
 		// < as &lt; and > as &gt;
 		for ( ; *src ; src++ ) {
 			if ( *src == '#' ) {
-				memcpy ( dst,"<font color=gray>",17);
+				gbmemcpy ( dst,"<font color=gray>",17);
 				dst += 17;
 				inFont = true;
 			}
 			if ( *src == '<' ) {
-				memcpy ( dst , "&lt;",4);
+				gbmemcpy ( dst , "&lt;",4);
 				dst += 4;
 				// boldify start tags
 				//if ( src[1] != '/' && src[1] !='!' ) {
-				//	memcpy(dst,"<b>",3);
+				//	gbmemcpy(dst,"<b>",3);
 				//	dst += 3;
 				//	inBold = true;
 				//}
@@ -18718,21 +18718,21 @@ bool sendPageAbout2 ( State3 *st3 ) {
 			else if ( *src == '>' ) {
 				// end bold tags
 				if ( inBold ) {
-					memcpy(dst,"</b>",4);
+					gbmemcpy(dst,"</b>",4);
 					dst += 4;
 					inBold = false;
 				}
-				memcpy ( dst , "&gt;",4);
+				gbmemcpy ( dst , "&gt;",4);
 				dst += 4;
 				continue;
 			}
 			else if ( *src == '\n' ) {
 				if ( inFont ) {
-					memcpy(dst,"</font>",7);
+					gbmemcpy(dst,"</font>",7);
 					dst += 7;
 					inFont = false;
 				}
-				memcpy ( dst , "<br>",4);
+				gbmemcpy ( dst , "<br>",4);
 				dst += 4;
 				continue;
 			}

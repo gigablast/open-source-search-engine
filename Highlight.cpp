@@ -278,7 +278,7 @@ bool Highlight::highlightWords ( Words *words , Matches *m, Query *q ) {
 				if ( i + mat->m_numWords > backTagi )
 					backTagi = i + mat->m_numWords;
 
-				//memcpy ( m_bufPtr , backTag , backTagLen );
+				//gbmemcpy ( m_bufPtr , backTag , backTagLen );
 				//m_bufPtr += backTagLen ;
 				//backTagi = -1;
 			}
@@ -305,7 +305,7 @@ bool Highlight::highlightWords ( Words *words , Matches *m, Query *q ) {
 		else if ( endHead ) {
 			// include the tags style sheet immediately before
 			// the closing </TITLE> tag
-			//memcpy( m_bufPtr, s_styleSheet, s_styleSheetLen );
+			//gbmemcpy( m_bufPtr, s_styleSheet, s_styleSheetLen );
 			m_sb->safeMemcpy( s_styleSheet , s_styleSheetLen );
 			//m_bufPtr += s_styleSheetLen;
 		}
@@ -336,14 +336,14 @@ bool Highlight::highlightWords ( Words *words , Matches *m, Query *q ) {
 		// write the alnum word
 		//m_bufPtr +=latin1ToUtf8(m_bufPtr, m_bufEnd-m_bufPtr,w, wlen);
 		// everything is utf8 now
-		//memcpy ( m_bufPtr, w , wlen );
+		//gbmemcpy ( m_bufPtr, w , wlen );
 		//m_bufPtr += wlen;
 		m_sb->safeMemcpy ( w , wlen );
 
 		// back tag
 		if ( i == backTagi-1 ) {
 			// store the back tag
-			//memcpy ( m_bufPtr , backTag , backTagLen );
+			//gbmemcpy ( m_bufPtr , backTag , backTagLen );
 			//m_bufPtr += backTagLen ;
 			m_sb->safeMemcpy ( (char *)backTag , backTagLen );
 			//log(LOG_DEBUG, 

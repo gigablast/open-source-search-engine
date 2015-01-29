@@ -31,6 +31,8 @@
 #include "Mem.h"             // for g_mem
 #include "Loop.h"            // for g_loop.setNonBlocking(int fd)
 
+int64_t getFileSize ( char *filename ) ;
+
 // for avoiding unlink/opens that mess up our threaded read
 int32_t getCloseCount_r ( int fd );
 
@@ -111,7 +113,7 @@ class File {
 	// . returns -1 on error
 	// . otherwise returns file size in bytes
 	// . returns 0 if does not exist
-	int32_t getFileSize ( );
+	int64_t getFileSize ( );
 
 	// . when was it last touched?
 	time_t getLastModifiedTime ( );

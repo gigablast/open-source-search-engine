@@ -156,7 +156,7 @@ bool Query::set2 ( char *query        ,
 	// save original query
 	
 	m_origLen = queryLen;
-	memcpy ( m_orig , query , queryLen );
+	gbmemcpy ( m_orig , query , queryLen );
 	m_orig [ m_origLen ] = '\0';
 
 	log(LOG_DEBUG, "query: set called = %s", m_orig);
@@ -218,15 +218,15 @@ bool Query::set2 ( char *query        ,
 		}
 		// translate ( and )
 		if ( boolFlag == 1 && query[i] == '(' ) {
-			memcpy ( p , " LeFtP " , 7 ); p += 7;
+			gbmemcpy ( p , " LeFtP " , 7 ); p += 7;
 			continue;
 		}
 		if ( boolFlag == 1 && query[i] == ')' ) {
-			memcpy ( p , " RiGhP " , 7 ); p += 7;
+			gbmemcpy ( p , " RiGhP " , 7 ); p += 7;
 			continue;
 		}
 		if ( query[i] == '|' ) {
-			memcpy ( p , " PiiPE " , 7 ); p += 7;
+			gbmemcpy ( p , " PiiPE " , 7 ); p += 7;
 			continue;
 		}
 		// translate [#a] [#r] [#ap] [#rp] [] [p] to operators
@@ -682,7 +682,7 @@ bool Query::setQTerms ( Words &words , Phrases &phrases ) {
 		}
 		// debug
 		//char tmp[1024];
-		//memcpy ( tmp , qt->m_term , qt->m_termLen );
+		//gbmemcpy ( tmp , qt->m_term , qt->m_termLen );
 		//tmp [ qt->m_termLen ] = 0;
 		//logf(LOG_DEBUG,"got term %s (%"INT32")",tmp,qt->m_termLen);
 		// otherwise, add it
@@ -712,6 +712,13 @@ bool Query::setQTerms ( Words &words , Phrases &phrases ) {
 		// ignore if in quotes and part of phrase, watch out
 		// for things like "word", a single word in quotes.
 		if ( qw->m_quoteStart >= 0 && qw->m_phraseId ) continue;
+
+		// if we are not start of quote and NOT in a phrase we
+		// must be the tailing word i guess.
+		// fixes '"john smith" -"bob dole"' from having
+		// smith and dole as query terms.
+		if ( qw->m_quoteStart >= 0 && qw->m_quoteStart != i )
+			continue;
 
 		// ignore if weight is absolute zero
 		if ( qw->m_userWeight == 0   && 
@@ -788,6 +795,15 @@ bool Query::setQTerms ( Words &words , Phrases &phrases ) {
 			pw--;
 			fieldStart = pw;
 		}
+
+
+		// skip if it is punct. fixes queries like
+		// "(this OR that)" from including '(' or from including
+		// a space.
+		if ( fieldStart >-1 &&
+		     m_qwords[fieldStart].m_isPunct && 
+		     fieldStart+1<m_numWords )
+			fieldStart++;
 
 		if (fieldStart > -1) {
 			pw = i;
@@ -887,7 +903,7 @@ bool Query::setQTerms ( Words &words , Phrases &phrases ) {
 		}
 		// debug
 		//char tmp[1024];
-		//memcpy ( tmp , qt->m_term , qt->m_termLen );
+		//gbmemcpy ( tmp , qt->m_term , qt->m_termLen );
 		//tmp [ qt->m_termLen ] = 0;
 		//logf(LOG_DEBUG,"got term %s (%"INT32")",tmp,qt->m_termLen);
 		n++;
@@ -1219,6 +1235,8 @@ bool Query::setQTerms ( Words &words , Phrases &phrases ) {
 		if ( qw->m_inQuotes ) continue;
 		// skip if has plus sign in front
 		if ( qw->m_wordSign == '+' ) continue;
+		// not '-' either i guess
+		if ( qw->m_wordSign == '-' ) continue;
 		// no url: stuff, maybe only title
 		if ( qw->m_fieldCode &&
 		     qw->m_fieldCode != FIELD_TITLE &&
@@ -1824,7 +1842,7 @@ void Query::addCompoundTerms ( ) {
 		}
 		if (!numUORComponents) continue;
 		// copy it
-		memcpy ( &m_qterms[n] , &m_qterms[i] , sizeof(QueryTerm) );
+		gbmemcpy ( &m_qterms[n] , &m_qterms[i] , sizeof(QueryTerm) );
 		// get term's length
 		//char *beg = m_qterms[i].m_term;
 		//char *end = m_qterms[j-1].m_term + m_qterms[j-1].m_termLen;
@@ -2234,7 +2252,7 @@ bool Query::setQWords ( char boolFlag ,
 			else          fieldSign = m_qwords[j].m_wordSign;
 			// debug msg
 			//char ttt[128];
-			//memcpy ( ttt , field , fieldLen );
+			//gbmemcpy ( ttt , field , fieldLen );
 			//ttt[fieldLen] = '\0';
 			//log("field name = %s", ttt);
 			// . is it recognized field name,like "title" or "url"?
@@ -2408,6 +2426,10 @@ bool Query::setQWords ( char boolFlag ,
 			int32_t lastColonLen = -1;
 			int32_t colonCount = 0;
 			int32_t firstComma = -1;
+			// are we a facet term?
+			bool isFacetNumTerm = false;
+			if ( fieldCode == FIELD_GBFACETINT   ) isFacetNumTerm = true;
+			if ( fieldCode == FIELD_GBFACETFLOAT ) isFacetNumTerm = true;
 			// "w" points to the first alnumword after the field,
 			// so for site:xyz.com "w" points to the 'x' and wlen 
 			// would be 3 in that case sinze xyz is a word of 3 
@@ -2423,16 +2445,20 @@ bool Query::setQWords ( char boolFlag ,
 						firstColonLen = wlen;
 					colonCount++;
 				}
+
 				// hit a comma in something like
 				// gbfacetfloat:price,0-1,1-2.5,2.5-10
-				if ( w[wlen]==',' && firstComma == -1 )
+				if ( w[wlen]==',' && isFacetNumTerm && firstComma == -1 )
 					firstComma = wlen;
+
 				wlen++;
 			}
 			// ignore following words until we hit a space
 			ignoreTilSpace = true;
-			// the hash
-			uint64_t wid = hash64 ( w , wlen, 0LL );
+			// the hash. keep it case insensitive. only
+			// the fieldmatch stuff should be case-sensitive. this may change
+			// later.
+			uint64_t wid = hash64Lower_utf8 ( w , wlen, 0LL );
 
 			//
 			// BEGIN FACET RANGE LISTS
@@ -2443,7 +2469,9 @@ bool Query::setQWords ( char boolFlag ,
 			     ( fieldCode == FIELD_GBFACETINT ||
 			       fieldCode == FIELD_GBFACETFLOAT ) )
 				// hash the "price" not the following range lst
-				wid = hash64 ( w , firstComma );
+				// crap, since this uses the gbsortby: termlists it is
+				// NOT case-sensitive
+				wid = hash64Lower_utf8 ( w , firstComma );
 			// now store the range list so we can 
 			// fill up the buckets below
 			char *s = w + firstComma + 1;
@@ -2493,6 +2521,8 @@ bool Query::setQWords ( char boolFlag ,
 				for ( ; s < send && *s != '-' ; s++ );
 				// stop if not hyphen
 				if ( *s != '-' ) break;
+				// save that
+				char *cma = s;
 				// skip hyphen
 				s++;
 				// must be a digit or . or -
@@ -2500,14 +2530,17 @@ bool Query::setQWords ( char boolFlag ,
 				     s[0] != '.' &&
 				     s[0] != '-' )
 					break;
+				// save that
+				char *sav2 = s;
+				// advance to comma etc.
+				for ( ; s < send && *s != ',' ; s++ );
+				char *cma2 = s;
 				// if under max, add it
 				if ( nr < MAX_FACET_RANGES ) {
-					qw->m_facetRangeFloatA [nr] =atof(sav);
-					qw->m_facetRangeFloatB [nr] =atof(s);
+					qw->m_facetRangeFloatA [nr] =atof2(sav,cma-sav);
+					qw->m_facetRangeFloatB [nr] =atof2(sav2,cma2-sav2);
 					qw->m_numFacetRanges = ++nr;
 				}
-				// skip to comma or end
-				for ( ; s < send && *s != ',' ; s++ );
 				// skip that
 				if ( *s != ',' ) break;
 				// SKIP COMMA
@@ -2523,6 +2556,7 @@ bool Query::setQWords ( char boolFlag ,
 			// i've decided not to make 
 			// gbsortby:products.offerPrice 
 			// gbmin:price:1.23 case insensitive
+			// too late... we have to support what we have
 			if ( fieldCode == FIELD_GBSORTBYFLOAT ||
 			     fieldCode == FIELD_GBREVSORTBYFLOAT ||
 			     fieldCode == FIELD_GBSORTBYINT ||
@@ -2541,6 +2575,7 @@ bool Query::setQWords ( char boolFlag ,
 				// seen in XmlDoc.cpp::hashFacet2().
 				// the other fields are hashed in 
 				// XmlDoc.cpp::hashNumber3().
+				// CASE SENSITIVE!!!!
 				wid = hash64 ( w , firstColonLen , 0LL);
 				// if it is like
 				// gbfieldmatch:tag.uri:"http://xyz.com/poo"
@@ -3173,8 +3208,10 @@ bool Query::setQWords ( char boolFlag ,
 		// . do not worry about keepAllSingles because we turn
 		//   this into a phrase below!
 		// . if ( ! keepAllSingles &&
-		if ( ( qw->m_leftConnected || qw->m_rightConnected ) )
-			qw->m_ignoreWord = IGNORE_CONNECTED;
+		// . MDW: no longer do this. but we should consider them
+		//   wikibigrams for proximity weighting
+		// if ( ( qw->m_leftConnected || qw->m_rightConnected ) )
+		// 	qw->m_ignoreWord = IGNORE_CONNECTED;
 		// . ignore and/or between quoted phrases, save user from 
 		//   themselves (they meant AND/OR)
 		if ( ! keepAllSingles && qw->m_isQueryStopWord &&
@@ -3400,6 +3437,42 @@ bool Query::setQWords ( char boolFlag ,
 		upTo = i + nwk;
 	}
 
+
+	// consider terms strongly connected like wikipedia title phrases
+	for ( int32_t i = 0 ; i + 2 < m_numWords ; i++ ) {
+		// get ith word
+		QueryWord *qw1 = &m_qwords[i];
+		// must not already be in a wikiphrase
+		//if ( qw1->m_wikiPhraseId > 0 ) continue;
+		// what query word # is that?
+		int32_t qwn = qw1 - m_qwords;
+		// get the next alnum word after that
+		// assume its the last word in our bigram phrase
+		QueryWord *qw2 = &m_qwords[qwn+2];
+		// must be in same wikiphrase
+		if ( qw2->m_wikiPhraseId > 0 ) continue;
+
+		// if there is a strong connector like the . in 'dmoz.org'
+		// then consider it a wiki bigram too
+		if ( ! qw1->m_rightConnected ) continue;
+		if ( ! qw2->m_leftConnected  ) continue;
+
+		// fix 'rdf.org.dumps' so org.dumps gets same
+		// wikiphraseid as rdf.org
+		int id;
+		if ( qw1->m_wikiPhraseId ) id = qw1->m_wikiPhraseId;
+		else id = ++wkid;
+
+		// store it
+		qw1->m_wikiPhraseId = id;
+		qw1->m_wikiPhraseStart = i;
+		qw1->m_numWordsInWikiPhrase = 2;
+
+		qw2->m_wikiPhraseId = id;
+		qw2->m_wikiPhraseStart = i;
+		qw2->m_numWordsInWikiPhrase = 2;
+	}
+
 	// all done
 	return true;
 }
@@ -3431,8 +3504,8 @@ struct QueryField g_fields[] = {
 	 "gbfieldmatch:strings.vendor:\"My Vendor Inc.\"",
 	 "Matches all the meta tag or JSON or XML fields that have "
 	 "the name \"strings.vendor\" and contain the exactly provided "
-	 "value, in this case, <i>My Vendor Inc.</i>. This is case "
-	 "sensitive and includes punctuation, so it's exact match. In "
+	 "value, in this case, <i>My Vendor Inc.</i>. This is CASE "
+	 "SENSITIVE and includes punctuation, so it's exact match. In "
 	 "general, it should be a very short termlist, so it should be fast.",
 	 "Advanced Query Operators",
 	 QTF_BEGINNEWTABLE },
@@ -3579,8 +3652,9 @@ struct QueryField g_fields[] = {
 	{"type", 
 	 FIELD_TYPE, 
 	 false,
-	 "type:pdf",
-	 "Matches all documents that are PDFs. Other possible types include "
+	 "type:json",
+	 "Matches all documents that are in JSON format. "
+	 "Other possible types include "
 	 "<i>html, text, xml, pdf, doc, xls, ppt, ps, css, json, status.</i> "
 	 "<i>status</i> matches special documents that are stored every time "
 	 "a url is spidered so you can see all the spider attempts and when "
@@ -3591,7 +3665,7 @@ struct QueryField g_fields[] = {
 	{"filetype", 
 	 FIELD_TYPE, 
 	 false,
-	 "filetype:pdf",
+	 "filetype:json",
 	 "Same as type: above.",
 	 NULL,
 	0},
@@ -3653,12 +3727,12 @@ struct QueryField g_fields[] = {
 	{"gbcharset", 
 	 FIELD_CHARSET, 
 	 false,
-	 "gbcharset:utf-8",
-	 "Matches all documents originally in the Utf-8 charset. "
+	 "gbcharset:windows-1252",
+	 "Matches all documents originally in the Windows-1252 charset. "
 	 "Available character sets are listed in the <i>iana_charset.cpp</i> "
 	 "file in the open source distribution. There are a lot. Some "
 	 "more popular ones are: <i>us, latin1, iso-8859-1, csascii, ascii, "
-	 "latin2, latin3, latin4, greek, shift_jis.",
+	 "latin2, latin3, latin4, greek, utf-8, shift_jis.",
 	 NULL,
 	 0},
 
@@ -3762,6 +3836,35 @@ struct QueryField g_fields[] = {
 	 NULL,
 	 0},
 
+	{"gbcountry",
+	 FIELD_GBCOUNTRY,
+	 false,
+	 "gbcountry:us",
+	 "Matches documents determined by Gigablast to be from the United "
+	 "States. See the country abbreviations in the CountryCode.cpp "
+	 "open source distribution. Some more popular examples include: "
+	 "de, fr, uk, ca, cn.",
+	 NULL,
+	 0} ,
+
+// mdw
+
+	{"gbpermalink",
+	 FIELD_GBPERMALINK,
+	 false,
+	 "gbpermalink:1",
+	 "Matches documents that are permalinks. Use <i>gbpermalink:0</i> "
+	 "to match documents that are NOT permalinks.",
+	 NULL,
+	0},
+
+	{"gbdocid",
+	 FIELD_GBDOCID,
+	 false,
+	 "gbdocid:123456",
+	 "Matches the document with the docid 123456",
+	 NULL,
+	 0},
 
 
 
@@ -3813,7 +3916,7 @@ struct QueryField g_fields[] = {
 	{"gbsortby", 
 	 FIELD_GBSORTBYFLOAT, 
 	 false,
-	 "dog gbsortbyint:gbspiderdate",
+	 "dog gbsortbyint:gbdocspiderdate",
 	 "Sort the documents that contain 'dog' by "
 	 "the date they were last spidered, with the newest "
 	 "on top.",
@@ -3823,7 +3926,7 @@ struct QueryField g_fields[] = {
 	{"gbrevsortby", 
 	 FIELD_GBREVSORTBYFLOAT, 
 	 false,
-	 "dog gbrevsortbyint:gbspiderdate",
+	 "dog gbrevsortbyint:gbdocspiderdate",
 	 "Sort the documents that contain 'dog' by "
 	 "the date they were last spidered, but with the "
 	 "oldest on top.",
@@ -3849,7 +3952,7 @@ struct QueryField g_fields[] = {
 	{"gbsortbyint", 
 	 FIELD_GBSORTBYINT, 
 	 false,
-	 "gbsortbyint:gbspiderdate",
+	 "gbsortbyint:gbdocspiderdate",
 	 "Sort all documents by the date they were spidered/downloaded.",
 	 NULL,
 	 0},
@@ -3882,7 +3985,7 @@ struct QueryField g_fields[] = {
 	{"gbrevsortbyint", 
 	 FIELD_GBREVSORTBYINT, 
 	 false,
-	 "gbrevsortbyint:gbspiderdate",
+	 "gbrevsortbyint:gbdocspiderdate",
 	 "Sort all documents by the date they were spidered/downloaded "
 	 "but with the oldest on top.",
 	 NULL,
@@ -3998,7 +4101,7 @@ struct QueryField g_fields[] = {
 	{"gbdocspiderdate",
 	 FIELD_GENERIC,
 	 false,
-	 "gbspiderdate:1400081479",
+	 "gbdocspiderdate:1400081479",
 	 "Matches documents that have "
 	 "that spider date timestamp (UTC). Does not include the "
 	 "special spider status documents. This is the time the document "
@@ -4047,7 +4150,7 @@ struct QueryField g_fields[] = {
 	 "gbfacetstr:color",
 	 "Returns facets in "
 	 "the search results "
-	 "by their color field.",
+	 "by their color field. <i>color</i> is case INsensitive.",
 	 "Facet Related Query Operators",
 	 QTF_BEGINNEWTABLE},
 
@@ -4061,7 +4164,7 @@ struct QueryField g_fields[] = {
 	 "<i>{ \"product\":{\"color\":\"red\"}} "
 	 "</i> or, alternatively, an XML document like <i>"
 	 "&lt;product&gt;&lt;color&gt;red&lt;/price&gt;&lt;/product&gt;"
-	 "</i>", 
+	 "</i>. <i>product.color</i> is case INsensitive.", 
 	 NULL,
 	 0},
 
@@ -4070,7 +4173,7 @@ struct QueryField g_fields[] = {
 	 false,
 	 "gbfacetstr:gbtagsite cat",
 	 "Returns facets from the site names of all pages "
-	 "that contain the word 'cat' or 'cats', etc."
+	 "that contain the word 'cat' or 'cats', etc. <i>gbtagsite</i> is case insensitive."
 	 ,
 	 NULL,
 	 0},
@@ -4082,7 +4185,7 @@ struct QueryField g_fields[] = {
 	 "<i>{ \"product\":{\"cores\":10}} "
 	 "</i> or, alternatively, an XML document like <i>"
 	 "&lt;product&gt;&lt;cores&gt;10&lt;/price&gt;&lt;/product&gt;"
-	 "</i>", 
+	 "</i>. <i>product.cores</i> is case INsensitive.", 
 	 NULL,
 	 0},
 
@@ -4090,22 +4193,36 @@ struct QueryField g_fields[] = {
 	 "gbfacetint:gbhopcount",
 	 "Returns facets in "
 	 "of the <i>gbhopcount</i> field over the documents so you can "
-	 "search the distribution of hopcounts over the index.",
+	 "search the distribution of hopcounts over the index. <i>gbhopcount</i> is "
+	 "case INsensitive.",
 	 NULL,
 	 0},
+
+	{"gbfacetint", FIELD_GBFACETINT, false,
+	 "gbfacetint:gbtagsitenuminlinks",
+	 "Returns facets in "
+	 "of the <i>sitenuminlinks</i> field for the tag <i>sitenuminlinks</i>"
+	 "in the tag for each site. Any numeric tag in tagdb can be "
+	 "facetizeed "
+	 "in this manner so you can add your own facets this way on a per "
+	 "site or per url basis by making tagdb entries. Case Insensitive.",
+	 NULL,
+	 0},
+
 
 	{"gbfacetint", FIELD_GBFACETINT, false,
 	 "gbfacetint:size,0-10,10-20,30-100,100-200,200-1000,1000-10000",
 	 "Returns facets in "
 	 "of the <i>size</i> field (either in json, field or a meta tag) "
-	 "and cluster the results into the specified ranges.",
+	 "and cluster the results into the specified ranges. <i>size</i> is "
+	 "case INsensitive.",
 	 NULL,
 	 0},
 
 	{"gbfacetint", FIELD_GBFACETINT, false,
 	 "gbfacetint:gbsitenuminlinks",
 	 "Returns facets based on # of site inlinks the site of each "
-	 "result has.",
+	 "result has. <i>gbsitenuminlinks</i> is case INsensitive.",
 	 NULL,
 	 0},
 
@@ -4116,46 +4233,18 @@ struct QueryField g_fields[] = {
 	 "<i>{ \"product\":{\"weight\":1.45}} "
 	 "</i> or, alternatively, an XML document like <i>"
 	 "&lt;product&gt;&lt;weight&gt;1.45&lt;/price&gt;&lt;/product&gt;"
-	 "</i>", 
+	 "</i>. <i>product.weight</i> is case INsensitive.", 
 	 NULL,
 	 0},
 
 	{"gbfacetfloat", FIELD_GBFACETFLOAT, false,
 	 "gbfacetfloat:product.price,0-1.5,1.5-5,5.0-20,20-100.0",
-	 "Similar to above but cluster the pricess into the specified ranges.",
+	 "Similar to above but cluster the pricess into the specified ranges. "
+	 "<i>product.price</i> is case insensitive.",
 	 NULL,
 	 0},
 
 
-	{"gbcountry",
-	 FIELD_GBCOUNTRY,
-	 false,
-	 "gbcountry:us",
-	 "Matches documents determined by Gigablast to be from the United "
-	 "States. See the country abbreviations in the CountryCode.cpp "
-	 "open source distribution. Some more popular examples include: "
-	 "de, fr, uk, ca, cn.",
-	 NULL,
-	 0} ,
-
-// mdw
-
-	{"gbpermalink",
-	 FIELD_GBPERMALINK,
-	 false,
-	 "gbpermalink:1",
-	 "Matches documents that are permalinks. Use <i>gbpermalink:0</i> "
-	 "to match documents that are NOT permalinks.",
-	 NULL,
-	0},
-
-	{"gbdocid",
-	 FIELD_GBDOCID,
-	 false,
-	 "gbdocid:123456",
-	 "Matches the document with the docid 123456",
-	 NULL,
-	 0},
 
 	//
 	// spider status docs queries
@@ -4405,7 +4494,7 @@ void Query::printQueryTerms(){
 		if ( ttlen > 254 ) ttlen = 254;
 		if ( ttlen < 0   ) ttlen = 0;
 		// this is utf8
-		memcpy ( tt , getTerm(i) , ttlen );
+		gbmemcpy ( tt , getTerm(i) , ttlen );
 		tt[ttlen]='\0';
 		if ( c == '\0' ) c = ' ';
 		logf(LOG_DEBUG, "query: Query Term #%"INT32" "

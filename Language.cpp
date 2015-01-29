@@ -1484,10 +1484,10 @@ bool Language::getRecommendation( char *origWord, int32_t origWordLen,
 			char *p = possiblePhonet;
 			// first put in all the chars the are before the char
 			// to be added
-			memcpy ( p, origPhonet, i ); p += i;
+			gbmemcpy ( p, origPhonet, i ); p += i;
 			// the index of m_ruleChars[] is the char to be added
 			*p++ = j;
-			memcpy ( p, origPhonet + i, origLen - i ); 
+			gbmemcpy ( p, origPhonet + i, origLen - i ); 
 			p += origLen - i;
 			*p++ = '\0';
 			numRecos = tryPhonet( possiblePhonet, origPhonet,
@@ -1500,9 +1500,9 @@ bool Language::getRecommendation( char *origWord, int32_t origWordLen,
 	for ( int32_t i = 0; i < origLen; i++ ){
 		char *p = possiblePhonet;
 		// put the chars that come before the deleted char
-		memcpy ( p, origPhonet, i ); p += i;
+		gbmemcpy ( p, origPhonet, i ); p += i;
 		// put the chars that come after the deleted char
-		memcpy ( p, origPhonet + i + 1, origLen - i - 1 ); 
+		gbmemcpy ( p, origPhonet + i + 1, origLen - i - 1 ); 
 		p += origLen - i - 1;
 		*p++ = '\0';
 		numRecos = tryPhonet( possiblePhonet, origPhonet,
@@ -1518,11 +1518,11 @@ bool Language::getRecommendation( char *origWord, int32_t origWordLen,
 			// cannot substitue if both chars are the same
 			if ( j == *( origPhonet + i ) ) continue;
 			// put the chars that come before the substituted char
-			memcpy ( p, origPhonet, i ); p += i;
+			gbmemcpy ( p, origPhonet, i ); p += i;
 			// substitute the char
 			*p++ = j;
 			// put the chars that come after the deleted char
-			memcpy ( p, origPhonet + i + 1, origLen - i - 1); 
+			gbmemcpy ( p, origPhonet + i + 1, origLen - i - 1); 
 			p += origLen - i - 1;
 			*p++ = '\0';
 			numRecos = tryPhonet( possiblePhonet, origPhonet, 
@@ -1537,12 +1537,12 @@ bool Language::getRecommendation( char *origWord, int32_t origWordLen,
 		// cannot swap if both chars are the same
 		if ( *( origPhonet + i ) == *( origPhonet + i + 1 ) ) continue;
 		// put the chars that come before the swapped char
-		memcpy ( p, origPhonet, i ); p += i;
+		gbmemcpy ( p, origPhonet, i ); p += i;
 		//swap the chars
 		*p++ = *( origPhonet + i + 1);
 		*p++ = *( origPhonet + i );
 		// put the chars that come after the deleted char
-		memcpy ( p, origPhonet + i + 2, origLen - i - 2); 
+		gbmemcpy ( p, origPhonet + i + 2, origLen - i - 2); 
 		p += origLen - i - 2;
 		*p++ = '\0';
 		numRecos = tryPhonet( possiblePhonet, origPhonet,
@@ -2577,7 +2577,7 @@ bool Language::hasMispelling(char *phrase, int32_t phraseLen){
 		while ( *pend != ' ' && pend < phrase + phraseLen )
 			pend++;
 		char word[1024];
-		memcpy(word, p, pend - p);
+		gbmemcpy(word, p, pend - p);
 		word[pend - p] = '\0';
 		uint32_t key = hash32d(p, pend - p);
 		int32_t slot = m_misp.getSlot(key);
@@ -3711,7 +3711,7 @@ bool Language::makeQueryFiles ( ) {
 			char frag[1024];
 			int32_t flen;
 			char *query = r2.getString( "uip",&flen );
-			memcpy ( frag, query, flen );
+			gbmemcpy ( frag, query, flen );
 			frag[flen++] = '\t';
 			int32_t queryLen;
 			query = r2.getString( "q",&queryLen );
@@ -3817,7 +3817,7 @@ bool Language::makeQueryFiles ( ) {
 						continue;
 					}
 					// otherwise, more than 1 byte char
-					memcpy(frag+fragLen,p,cs);
+					gbmemcpy(frag+fragLen,p,cs);
 					fragLen += cs;
 				}
 

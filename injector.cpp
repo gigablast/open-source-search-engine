@@ -84,7 +84,7 @@ int main ( int argc , char *argv[] ) {
 	char *cptr = strstr ( buf , "Content-Length: ");
 	if ( ! cptr ) { fprintf(stderr,"cptr NULL\n"); return -1; }
 	cptr += 16; // point to it
-	memcpy ( cptr , ttt , 7 );
+	gbmemcpy ( cptr , ttt , 7 );
 	// print the mime
 	char *xx = buf + gbstrlen(mime) ; // + 200
 	char c = *xx;

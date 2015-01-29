@@ -915,6 +915,8 @@ bool Msg3a::mergeLists ( ) {
 	key_t         *ksPtr [MAX_SHARDS];
 	int64_t     *diEnd [MAX_SHARDS];
 	for ( int32_t j = 0; j < m_numHosts ; j++ ) {
+		// how does this happen?
+		if ( j >= MAX_SHARDS ) { char *xx=NULL;*xx=0; }
 		Msg39Reply *mr =m_reply[j];
 		// if we have gbdocid:| in query this could be NULL
 		if ( ! mr ) {
@@ -1012,6 +1014,12 @@ bool Msg3a::mergeLists ( ) {
 			    "termid %"UINT64" for facet",termId);
 			break;
 		}
+
+		bool isFloat  = false;
+		bool isInt = false;
+		if ( qt->m_fieldCode == FIELD_GBFACETFLOAT ) isFloat = true;
+		if ( qt->m_fieldCode == FIELD_GBFACETINT   ) isInt = true;
+
 		// the end point
 		char *pend = p + ((4+sizeof(FacetEntry)) * nh);
 		// int16_tcut
@@ -1035,16 +1043,43 @@ bool Msg3a::mergeLists ( ) {
 			fe2 = (FacetEntry *)ft->getValue ( &facetValue );
 			if ( ! fe2 ) {
 				ft->addKey ( &facetValue,fe );
+				continue;
 			}
-			else {
-				fe2->m_count += fe->m_count;
-				// prefer docid kinda randomly to balance 
-				// lookupFacets() load in Msg40.cpp
-				if ( rand() % 2 )
-					fe2->m_docId = fe->m_docId;
+
+			fe2->m_count += fe->m_count;
+
+			// prefer docid kinda randomly to balance 
+			// lookupFacets() load in Msg40.cpp
+			if ( rand() % 2 )
+				fe2->m_docId = fe->m_docId;
+
+
+			if ( isFloat ) {
+				// accumulate sum as double
+				double sum1 = *((double *)&fe ->m_sum);
+				double sum2 = *((double *)&fe2->m_sum);
+				sum2 += sum1;
+				*((double *)&fe2->m_sum) = sum2;
+				// and min/max as floats
+				float min1 = *((float *)&fe ->m_min);
+				float min2 = *((float *)&fe2->m_min);
+				if ( min1 < min2 ) min2 = min1;
+				*((float *)&fe2->m_min) = min2;
+				float max1 = *((float *)&fe ->m_max);
+				float max2 = *((float *)&fe2->m_max);
+				if ( max1 > max2 ) max2 = max1;
+				*((float *)&fe2->m_max) = max2;
+			}
+			if ( isInt ) {
+				fe2->m_sum += fe->m_sum;
+				if ( fe->m_min < fe2->m_min )
+					fe2->m_min = fe->m_min;
+				if ( fe->m_max > fe2->m_max )
+					fe2->m_max = fe->m_max;
 			}
 
 		}
+
 		// now get the next gbfacet: term if there was one
 		if ( p < last ) goto ploop;
 	}
@@ -1316,12 +1351,12 @@ int32_t Msg3a::serialize   ( char *buf , char *bufEnd ) {
 	// estimated # of total hits
 	*(int32_t *)p = m_numTotalEstimatedHits; p += 8;
 	// store each docid, 8 bytes each
-	memcpy ( p , m_docIds , m_numDocIds * 8 ); p += m_numDocIds * 8;
+	gbmemcpy ( p , m_docIds , m_numDocIds * 8 ); p += m_numDocIds * 8;
 	// store scores
-	memcpy ( p , m_scores , m_numDocIds * sizeof(double) );
+	gbmemcpy ( p , m_scores , m_numDocIds * sizeof(double) );
 	p +=  m_numDocIds * sizeof(double) ;
 	// store cluster levels
-	memcpy ( p , m_clusterLevels , m_numDocIds ); p += m_numDocIds;
+	gbmemcpy ( p , m_clusterLevels , m_numDocIds ); p += m_numDocIds;
 	// sanity check
 	if ( p > pend ) { char *xx = NULL ; *xx = 0; }
 	// return how much we did

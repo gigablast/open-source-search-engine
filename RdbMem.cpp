@@ -82,7 +82,7 @@ void *RdbMem::dupData ( char *key , char *data , int32_t dataSize ,
 			collnum_t collnum ) {
 	char *s = (char *) allocData ( key , dataSize , collnum );
 	if ( ! s ) return NULL;
-	memcpy ( s , data , dataSize );
+	gbmemcpy ( s , data , dataSize );
 	return s;
 }
 

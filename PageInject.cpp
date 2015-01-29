@@ -622,6 +622,29 @@ bool Msg7::inject ( void *state ,
 		m_injectUrlBuf.reset();
 		// by default append a -<ch64> to the provided url
 		m_injectUrlBuf.safePrintf("%s-%"UINT64"",u.getUrl(),ch64);
+
+		// HOWEVER, if an hasmime is true and an http:// follows
+		// the delimeter then use that as the url...
+		// this way we can specify our own urls.
+		char *du = start;
+		du += gbstrlen(delim);
+		if ( du && is_wspace_a ( *du ) ) du++;
+		if ( du && is_wspace_a ( *du ) ) du++;
+		if ( du && is_wspace_a ( *du ) ) du++;
+		if ( gr->m_hasMime && 
+		     (strncasecmp( du,"http://",7) == 0 ||
+		      strncasecmp( du,"https://",8) == 0 ) ) {
+			// find end of it
+			char *uend = du + 7;
+			for ( ; *uend && ! is_wspace_a(*uend) ; uend++ );
+			// inject that then
+			m_injectUrlBuf.reset();
+			m_injectUrlBuf.safeMemcpy ( du , uend - du );
+			m_injectUrlBuf.nullTerm();
+			// and point to the actual http mime then
+			start = uend;
+		}
+
 	}
 
 	// count them

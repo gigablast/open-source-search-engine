@@ -138,7 +138,7 @@ bool Pops::makeLocalPopFile ( char *coll ) {
 		goto loop;
 	}
 	// new top?
-	if ( size == ks ) { memcpy ( top , p + (ks-6) , 6 ); haveTop = true; }
+	if ( size == ks ) { gbmemcpy ( top , p + (ks-6) , 6 ); haveTop = true; }
 	// warning msg
 	if ( ! haveTop && ! warned ) {
 		warned = true;
@@ -158,7 +158,7 @@ bool Pops::makeLocalPopFile ( char *coll ) {
 		if ( count >= minDocs ) {
 			// if so, store the upper 4 bytes of the termid
 			int32_t h;
-			memcpy ( &h , tmp+8 , 4 );
+			gbmemcpy ( &h , tmp+8 , 4 );
 			// write it out
 			out.write ( &h , 4 );
 			// and the count
@@ -174,8 +174,8 @@ bool Pops::makeLocalPopFile ( char *coll ) {
 
 
 	// make the key
-	memcpy ( tmp , p , ks-6 );
-	memcpy ( tmp + ks-6 , top , 6 );
+	gbmemcpy ( tmp , p , ks-6 );
+	gbmemcpy ( tmp + ks-6 , top , 6 );
 	// print the key
 	//if ( ks == 12 )
 	//	fprintf(stdout,"%08lli) %08"XINT32" %016"XINT64"\n",

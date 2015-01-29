@@ -188,6 +188,7 @@ case EDMOZNOTREADY: return "Dmoz is not setup, follow instructions in "
 case EPROXYSSLCONNECTFAILED: return "SSL tunnel through HTTP proxy failed";
 case EINLINESECTIONS: return "Error generating section votes";
 case EREADONLYMODE: return "In read only mode. Failed.";
+case ENOTITLEREC: return "No title rec found when recycling content";
 	}
 	// if the remote error bit is clear it must be a regulare errno
 	//if ( ! ( errnum & REMOTE_ERROR_BIT ) ) return strerror ( errnum );

@@ -232,6 +232,7 @@ class SearchInput {
 	char   m_getSectionVotingInfo;
 	char   m_familyFilter;            // msg40
 	//char   m_restrictIndexdbForQuery; // msg40
+	char   m_showErrors;
 	char   m_doSiteClustering;        // msg40
 	char   m_doDupContentRemoval;     // msg40
 	char   m_getDocIdScoringInfo;
