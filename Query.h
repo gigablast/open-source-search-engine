@@ -546,6 +546,9 @@ class QueryTerm {
 	// 1-1 with the query terms.
 	HashTableX m_facetHashTable;
 
+	// for sorting the facetEntries in m_facetHashTable
+	SafeBuf m_facetIndexBuf;
+
 	char m_startKey[MAX_KEY_BYTES];
 	char m_endKey  [MAX_KEY_BYTES];
 	char m_ks;

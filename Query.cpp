@@ -53,6 +53,7 @@ void Query::reset ( ) {
 		QueryTerm *qt = &m_qterms[i];
 		HashTableX *ht = &qt->m_facetHashTable;
 		ht->reset();
+		qt->m_facetIndexBuf.purge();
 	}
 
 	m_docIdRestriction = 0LL;

@@ -629,6 +629,7 @@ bool Msg40::federatedLoop ( ) {
 	mr.m_maxAge                    = maxAge;
 	mr.m_addToCache                = m_si->m_wcache;
 	mr.m_docsToGet                 = m_docsToGet;
+	mr.m_maxFacets                 = m_si->m_maxFacets;
 	mr.m_niceness                  = m_si->m_niceness;
 	mr.m_debug                     = m_si->m_debug          ;
 	mr.m_getDocIdScoringInfo       = m_si->m_getDocIdScoringInfo;
@@ -6201,16 +6202,22 @@ void Msg40::lookupFacets2 ( ) {
 
 		HashTableX *fht = &qt->m_facetHashTable;
 
+		// now they are sorted in Msg3a.cpp
+		int32_t *ptr = (int32_t *)qt->m_facetIndexBuf.getBufStart();
+		int numPtrs = qt->m_facetIndexBuf.length()/sizeof(int32_t);
+
 		// scan every value this facet has
-		for (  ; m_j < fht->getNumSlots() ; m_j++ ) {
+		//for (  ; m_j < fht->getNumSlots() ; m_j++ ) {
+		for (  ; m_j < numPtrs ; m_j++ ) {
 			// skip empty slots
-			if ( ! fht->m_flags[m_j] ) continue;
+			//if ( ! fht->m_flags[m_j] ) continue;
+			int32_t slot = ptr[m_j];
 			// get hash of the facet value
 			FacetValHash_t fvh ;
-			fvh = *(int32_t *)fht->getKeyFromSlot(m_j);
+			fvh = *(int32_t *)fht->getKeyFromSlot(slot);
 			//int32_t count = *(int32_t *)fht->getValFromSlot(j);
 			// get the docid as well
-			FacetEntry *fe =(FacetEntry *)fht->getValFromSlot(m_j);
+			FacetEntry*fe=(FacetEntry *)fht->getValFromSlot(slot);
 			// how many docids in the results had this valud?
 			//int32_t      count = fe->m_count;
 			// one of the docids that had it
@@ -6312,48 +6319,15 @@ bool Msg40::printFacetTables ( SafeBuf *sb ) {
 	return true;
 }
 
-HashTableX *g_fht = NULL;
-QueryTerm *g_qt = NULL;
-
-// sort facets by document counts before displaying
-static int feCmp ( const void *a1, const void *b1 ) {
-	int32_t a = *(int32_t *)a1;
-	int32_t b = *(int32_t *)b1;
-	FacetEntry *fe1 = (FacetEntry *)g_fht->getValFromSlot(a);
-	FacetEntry *fe2 = (FacetEntry *)g_fht->getValFromSlot(b);
-	if ( fe2->m_count > fe1->m_count ) return 1;
-	if ( fe2->m_count < fe1->m_count ) return -1;
-	int32_t *k1 = (int32_t *)g_fht->getKeyFromSlot(a);
-	int32_t *k2 = (int32_t *)g_fht->getKeyFromSlot(b);
-	if ( g_qt->m_fieldCode == FIELD_GBFACETFLOAT )
-		return (int)( *(float *)k2 - *(float *)k1 );
-	// otherwise an int
-	return ( *k2 - *k1 );
-}
-
 bool Msg40::printFacetsForTable ( SafeBuf *sb , QueryTerm *qt ) {
 
 	//QueryWord *qw = qt->m_qword;
 	//if ( qw->m_numFacetRanges > 0 )
 
 	HashTableX *fht = &qt->m_facetHashTable;
-	// first sort facetentries in hashtable by their key before
-	// we print them out
-	int32_t np = fht->getNumSlotsUsed();
-	SafeBuf pbuf;
-	if ( ! pbuf.reserve(np*4) ) return false;
-	int32_t *ptrs = (int32_t *)pbuf.getBufStart();
-	int32_t numPtrs = 0;
-	for ( int32_t j = 0 ; j < fht->getNumSlots() ; j++ ) {
-		if ( ! fht->m_flags[j] ) continue;
-		ptrs[numPtrs++] = j;
-	}
-	// use this as global for qsort
-	g_fht = fht;
-	g_qt  = qt;
-	// use qsort
-	gbqsort ( ptrs , numPtrs , sizeof(int32_t) , feCmp , 0 );
-
+	
+	int32_t *ptrs = (int32_t *)qt->m_facetIndexBuf.getBufStart();
+	int32_t numPtrs = qt->m_facetIndexBuf.length() / sizeof(int32_t);
 
 	// now scan the slots and print out
 	HttpRequest *hr = &m_si->m_hr;

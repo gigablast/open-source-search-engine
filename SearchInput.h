@@ -336,6 +336,8 @@ class SearchInput {
 	int32_t   m_queryMatchOffsets;
 	int32_t   m_summaryMode;
 
+	int32_t m_maxFacets;
+
 	// are we doing a QA query for quality assurance consistency
 	char   m_qa;
 

@@ -6853,6 +6853,17 @@ void Parms::init ( ) {
 	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
+	m->m_title = "max number of facets to return";
+	m->m_desc  = "Max number of facets to return";
+	m->m_off   = (char *)&si.m_maxFacets - y;
+	m->m_type  = TYPE_LONG;
+	m->m_def   = "50";
+	m->m_group = 1;
+	m->m_cgi   = "nf";
+	m->m_flags = PF_API;
+	m->m_page  = PAGE_RESULTS;
+	m->m_obj   = OBJ_SI;
+	m++;
 
 	// m->m_title = "special query";
 	// m->m_desc  = "List of docids to restrain results to.";

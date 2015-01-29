@@ -65,6 +65,7 @@ class Msg39Request {
 		size_query                = 0;
 		size_whiteList            = 0;
 		m_sameLangWeight          = 20.0;
+		m_maxFacets = -1;
 		//size_coll                 = 0;
 
 		m_getDocIdScoringInfo = 1;
@@ -91,6 +92,7 @@ class Msg39Request {
 	// of Msg3a a little more docids than it needs because it assumes
 	// some will be de-duped at summary gen time.
 	int32_t    m_docsToGet;
+	int32_t    m_maxFacets;
 	int32_t    m_nqt; // # of query terms
 	char    m_niceness;
 	int32_t    m_maxAge;

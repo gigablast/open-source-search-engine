@@ -4,6 +4,7 @@
 //#include "Msg3b.h"
 #include "Wiki.h"
 //#include "Events.h" // class EventIdBits...printEventIds()
+#include "sort.h"
 
 static void gotReplyWrapper3a     ( void *state , void *state2 ) ;
 //static void gotRerankedDocIds     ( void *state );
@@ -827,6 +828,69 @@ bool Msg3a::gotAllShardReplies ( ) {
 	return true;
 }
 
+HashTableX *g_fht = NULL;
+QueryTerm *g_qt = NULL;
+
+// sort facets by document counts before displaying
+static int feCmp ( const void *a1, const void *b1 ) {
+	int32_t a = *(int32_t *)a1;
+	int32_t b = *(int32_t *)b1;
+	FacetEntry *fe1 = (FacetEntry *)g_fht->getValFromSlot(a);
+	FacetEntry *fe2 = (FacetEntry *)g_fht->getValFromSlot(b);
+	if ( fe2->m_count > fe1->m_count ) return 1;
+	if ( fe2->m_count < fe1->m_count ) return -1;
+	int32_t *k1 = (int32_t *)g_fht->getKeyFromSlot(a);
+	int32_t *k2 = (int32_t *)g_fht->getKeyFromSlot(b);
+	if ( g_qt->m_fieldCode == FIELD_GBFACETFLOAT )
+		return (int)( *(float *)k2 - *(float *)k1 );
+	// otherwise an int
+	return ( *k2 - *k1 );
+}
+
+// each query term has a safebuf of ptrs to the facet entries in its
+// m_facethashTable
+bool Msg3a::sortFacetEntries ( ) {
+
+	for ( int32_t i = 0 ; i < m_q->m_numTerms ; i++ ) {
+		// only for html for now i guess
+		//if ( m_si->m_format != FORMAT_HTML ) break;
+		QueryTerm *qt = &m_q->m_qterms[i];
+		// skip if not facet
+		if ( qt->m_fieldCode != FIELD_GBFACETSTR &&
+		     qt->m_fieldCode != FIELD_GBFACETINT &&
+		     qt->m_fieldCode != FIELD_GBFACETFLOAT )
+			continue;
+
+		HashTableX *fht = &qt->m_facetHashTable;
+		// first sort facetentries in hashtable by their key before
+		// we print them out
+		int32_t np = fht->getNumSlotsUsed();
+		SafeBuf *sb = &qt->m_facetIndexBuf;
+		if ( ! sb->reserve(np*4) ) return false;
+		int32_t *ptrs = (int32_t *)sb->getBufStart();
+		int32_t numPtrs = 0;
+		for ( int32_t j = 0 ; j < fht->getNumSlots() ; j++ ) {
+			if ( ! fht->m_flags[j] ) continue;
+			ptrs[numPtrs++] = j;
+		}
+		// use this as global for qsort
+		g_fht = fht;
+		g_qt  = qt;
+		// use qsort
+		gbqsort ( ptrs , numPtrs , sizeof(int32_t) , feCmp , 0 );
+		// now truncate the length. really we should have a max
+		// for each query term.
+		// this will prevent us from looking up 70,000 facets when
+		// the user specifies just &nf=50.
+		sb->setLength(numPtrs * sizeof(int32_t) );
+		int32_t maxSize = m_r->m_maxFacets * sizeof(int32_t);
+		if ( sb->length() > maxSize )
+			sb->setLength(maxSize);
+	}
+	return true;
+}
+
+
 // . merge all the replies together
 // . put final merged docids into m_docIds[],m_bitScores[],m_scores[],...
 // . this calls Msg51 to get cluster levels when done merging
@@ -1003,7 +1067,7 @@ bool Msg3a::mergeLists ( ) {
 		int64_t termId = *(int64_t *)p;
 		// skip that
 		p += 8;
-		// the # of 32-bit facet hashest
+		// the # of 32-bit facet hashes
 		int32_t nh = *(int32_t *)p;
 		p += 4;
 		// get that query term
@@ -1084,6 +1148,13 @@ bool Msg3a::mergeLists ( ) {
 		if ( p < last ) goto ploop;
 	}
 
+	// now sort the facets and put the indexes into 
+	// QueryTerm::m_facetIndexBuf. now since we sort here
+	// we can limit the facets we lookup in Msg40.cpp::lookupFacets2().
+	// we also limit to the SearchInput::m_maxFacets here too.
+	// sets g_errno on error and returns false so we return true.
+	if ( ! sortFacetEntries() )
+		return true;
 
 
 	//if ( m_r->m_getSectionStats ) return true;

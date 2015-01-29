@@ -71,6 +71,7 @@ public:
 		return g_clusterdb.getSiteHash26((char *)&m_clusterRecs[i]); 
 	};
 
+	bool sortFacetEntries();
 
 	void printTerms ( ) ;
 
