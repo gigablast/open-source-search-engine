@@ -866,7 +866,7 @@ bool Msg3a::sortFacetEntries ( ) {
 		// we print them out
 		int32_t np = fht->getNumSlotsUsed();
 		SafeBuf *sb = &qt->m_facetIndexBuf;
-		if ( ! sb->reserve(np*4) ) return false;
+		if ( ! sb->reserve(np*4,"sbfi") ) return false;
 		int32_t *ptrs = (int32_t *)sb->getBufStart();
 		int32_t numPtrs = 0;
 		for ( int32_t j = 0 ; j < fht->getNumSlots() ; j++ ) {
