@@ -1173,6 +1173,18 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r ) {
 
 	char guide = r->getLong("guide",0);
 
+
+	bool isMasterAdmin = g_conf.isMasterAdmin ( s , r );
+	bool isCollAdmin = g_conf.isCollAdmin ( s , r );
+	if ( ! g_conf.m_allowCloudUsers &&
+	     ! isMasterAdmin &&
+	     ! isCollAdmin ) {
+		return g_httpServer.sendDynamicPage (s,
+						     "",
+						     0);
+
+	}
+
 	//
 	// CLOUD SEARCH ENGINE SUPPORT
 	//

@@ -1187,6 +1187,25 @@ bool sendPageProfiler ( TcpSocket *s , HttpRequest *r ) {
 	
 	g_pages.printAdminTop ( &sb , s , r );
 
+	// no permmission?
+	bool isMasterAdmin = g_conf.isMasterAdmin ( s , r );
+	bool isCollAdmin = g_conf.isCollAdmin ( s , r );
+	if ( ! isMasterAdmin &&
+	     ! isCollAdmin ) {
+		//g_errno = ENOPERM;
+		//g_httpServer.sendErrorReply(s,g_errno,mstrerror(g_errno));
+		//return true;
+		sorts = 0;
+		sort10 = 0;
+		qpreset = 0;
+		profilerreset = 0;
+		realTimeSortMode = 2;
+		realTimeShowAll = 0;
+		startRt = 0;
+		stopRt = 0;
+	}
+
+
 	
 	if (!g_conf.m_profilingEnabled)
 		sb.safePrintf("<font color=#ff0000><b><centeR>"
