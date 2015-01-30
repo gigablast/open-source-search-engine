@@ -298,7 +298,9 @@ bool UdpServer::init ( uint16_t port, UdpProtocol *proto, int32_t niceness,
 	// maintain a ptr to the protocol
 	m_proto   = proto;
 	// sanity test so we can peek at the rdbid in a msg0 request
-	if ( RDBIDOFFSET +1 > m_proto->getMaxPeekSize()){char *xx=NULL;*xx=0;}
+	if( ! m_isDns &&
+	    RDBIDOFFSET +1 > m_proto->getMaxPeekSize() ) {
+		char *xx=NULL;*xx=0; }
 	// set the main process id
 	if ( s_pid == 0 ) s_pid = getpid();
 	// remember our level of niceness
