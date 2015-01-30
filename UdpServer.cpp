@@ -1934,8 +1934,18 @@ bool UdpServer::makeCallbacks_ass ( int32_t niceness ) {
 			// only allow niceness 0 msg 0x00 requests here since
 			// we call a msg8a from msg20.cpp summary generation
 			// which uses msg0 to read tagdb list from disk
-			if ( slot->m_msgType == 0x00 && slot->m_niceness )
-				continue;
+			if ( slot->m_msgType == 0x00 && slot->m_niceness ) {
+				// to keep udp slots from clogging up with 
+				// tagdb reads allow even niceness 1 tagdb 
+				// reads through. cache rate should be super
+				// higher and reads short.
+				char rdbId = 0;
+				if ( slot->m_readBuf &&
+				     slot->m_readBufSize > RDBIDOFFSET ) 
+					rdbId = slot->m_readBuf[RDBIDOFFSET];
+				if ( rdbId != RDB_TAGDB )
+					continue;
+			}
 		}
 		// if slot niceness is 1 and we are in a quickpoll, then
 		// change niceness to 0 if its a 0x2c or a get taglist handler
