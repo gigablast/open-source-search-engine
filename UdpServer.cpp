@@ -1506,7 +1506,7 @@ int32_t UdpServer::readSock_ass ( UdpSlot **slotPtr , int64_t now ) {
 		// . tagdb lookups were being dropped because of this being
 		//   500 so i raised to 900. a lot of them were from
 		//   'get outlink tag recs' or 'get link info' (0x20)
-		if ( msgType == 0x00 && m_numUsedSlots > 1000 && niceness ) {
+		if ( msgType == 0x00 && m_numUsedSlots > 1500 && niceness ) {
 			// allow a ton of those tagdb lookups to come in
 			char rdbId = 0;
 			if ( peekSize > RDBIDOFFSET )
