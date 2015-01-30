@@ -1536,8 +1536,12 @@ int32_t UdpServer::readSock_ass ( UdpSlot **slotPtr , int64_t now ) {
 		//if ( m_numUsedSlots >= (m_maxSlots>>1) ) getSlot = false;
 		//int32_t niceness = m_proto->isNice ( peek , peekSize );
 		// lower priorty slots are dropped first
-		if ( m_numUsedSlots >= 1300 && niceness > 0 && ! isProxy ) 
+		if ( m_numUsedSlots >= 1300 && niceness > 0 && ! isProxy &&
+		     // we dealt with special tagdb msg00's above so
+		     // do not deal with them here
+		     msgType != 0x00 ) 
 			getSlot = false;
+
 		// . reserve 300 slots for outgoing query-related requests
 		// . this was 1700, but the max udp slots is set to 3500
 		//   in main.cpp, so let's up this to 2300. i don't want to
