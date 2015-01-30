@@ -225,6 +225,7 @@ UdpServer::~UdpServer() {
 bool UdpServer::init ( uint16_t port, UdpProtocol *proto, int32_t niceness,
 		       int32_t readBufSize , int32_t writeBufSize , 
 		       int32_t pollTime , int32_t maxSlots , bool isDns ){
+
 	// save this
 	m_isDns = isDns;
 	// we now alloc so we don't blow up stack
@@ -296,6 +297,8 @@ bool UdpServer::init ( uint16_t port, UdpProtocol *proto, int32_t niceness,
 	m_msg0sInWaiting  = 0;
 	// maintain a ptr to the protocol
 	m_proto   = proto;
+	// sanity test so we can peek at the rdbid in a msg0 request
+	if ( RDBIDOFFSET +1 > m_proto->getMaxPeekSize()){char *xx=NULL;*xx=0;}
 	// set the main process id
 	if ( s_pid == 0 ) s_pid = getpid();
 	// remember our level of niceness
@@ -1501,8 +1504,14 @@ int32_t UdpServer::readSock_ass ( UdpSlot **slotPtr , int64_t now ) {
 		// . tagdb lookups were being dropped because of this being
 		//   500 so i raised to 900. a lot of them were from
 		//   'get outlink tag recs' or 'get link info' (0x20)
-		if ( msgType == 0x00 && m_numUsedSlots > 1000 && niceness )
-			getSlot = false;
+		if ( msgType == 0x00 && m_numUsedSlots > 1000 && niceness ) {
+			// allow a ton of those tagdb lookups to come in
+			char rdbId = 0;
+			if ( peekSize > RDBIDOFFSET )
+				rdbId = peek[RDBIDOFFSET];
+			if ( rdbId != RDB_TAGDB )
+				getSlot = false;
+		}
 
 		// added this because host #14 was clogging on
 		// State00's and ThreadReadBuf taking all the mem.
