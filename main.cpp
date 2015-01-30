@@ -14365,7 +14365,7 @@ int injectFile ( char *filename , char *ips ,
 		for (  ; p && p < pend ; p = nextLine ) {
 			nextLine = strstr(p,"\n");
 			if ( nextLine ) nextLine++;
-			if ( count >= 8 ) count = 0;
+			if ( count >= 20 ) count = 0;
 			if ( count++ != split ) continue;
 			// get line
 			char *archiveDirName = p;
