@@ -557,8 +557,9 @@ bool getLinkInfo ( SafeBuf   *reqBuf              ,
 	req->m_ourHostHash32 = ourHostHash32;
 	req->m_ourDomHash32 = ourDomHash32;
 
-	if ( g_conf.m_logDebugLinkInfo )
-		req->m_printDebugMsgs = true;
+	// why did i do this?
+	// if ( g_conf.m_logDebugLinkInfo )
+	// 	req->m_printDebugMsgs = true;
 
 	Url u;
 	u.set ( req->ptr_url );
@@ -2426,7 +2427,10 @@ bool Msg25::gotLinkText ( Msg20Request *req ) { // LinkTextReply *linkText ) {
 	struct tm *timeStruct = localtime ( &ttt );
 	m_lastUpdateTime = ttt;
 	char buf[64];
-	strftime ( buf, 64 , "%b-%d-%Y(%H:%M:%S)" , timeStruct );
+	if ( timeStruct )
+		strftime ( buf, 64 , "%b-%d-%Y(%H:%M:%S)" , timeStruct );
+	else
+		sprintf(buf,"UNKNOWN time");
 
 	char *ss = "site";
 	if ( m_mode == MODE_PAGELINKINFO ) ss = "page";
@@ -2845,8 +2849,12 @@ bool Msg25::gotLinkText ( Msg20Request *req ) { // LinkTextReply *linkText ) {
 		time_t dd = (time_t)r->m_discoveryDate;
 		if ( dd ) {
 			struct tm *timeStruct = gmtime ( &dd );
-			strftime ( discBuf, 128 , "<nobr>%b %d %Y</nobr>" , 
-				   timeStruct);
+			if ( timeStruct )
+				strftime ( discBuf, 128 , 
+					   "<nobr>%b %d %Y</nobr>" , 
+					   timeStruct);
+			else
+				sprintf(discBuf,"UNKNOWN DATE");
 		}
 		else 
 			sprintf(discBuf,"---");

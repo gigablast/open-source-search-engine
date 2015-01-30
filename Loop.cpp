@@ -903,8 +903,8 @@ bool Loop::init ( ) {
 	if ( g_errno ) log("loop: sigaction SIGHUP: %s.", mstrerror(errno));
 	if ( sigaction ( SIGTERM, &sa, 0 ) < 0 ) g_errno = errno;
 	if ( g_errno ) log("loop: sigaction SIGTERM: %s.", mstrerror(errno));
-	if ( sigaction ( SIGABRT, &sa, 0 ) < 0 ) g_errno = errno;
-	if ( g_errno ) log("loop: sigaction SIGTERM: %s.", mstrerror(errno));
+	// if ( sigaction ( SIGABRT, &sa, 0 ) < 0 ) g_errno = errno;
+	// if ( g_errno ) log("loop: sigaction SIGTERM: %s.",mstrerror(errno));
 
 	// we should save our data on segv, sigill, sigfpe, sigbus
 	sa.sa_sigaction = sigbadHandler;
@@ -916,10 +916,10 @@ bool Loop::init ( ) {
 	if ( g_errno ) log("loop: sigaction SIGFPE: %s.", mstrerror(errno));
 	if ( sigaction ( SIGBUS , &sa, 0 ) < 0 ) g_errno = errno;
 	if ( g_errno ) log("loop: sigaction SIGBUS: %s.", mstrerror(errno));
-	if ( sigaction ( SIGQUIT , &sa, 0 ) < 0 ) g_errno = errno;
-	if ( g_errno ) log("loop: sigaction SIGBUS: %s.", mstrerror(errno));
-	if ( sigaction ( SIGSYS , &sa, 0 ) < 0 ) g_errno = errno;
-	if ( g_errno ) log("loop: sigaction SIGBUS: %s.", mstrerror(errno));
+	// if ( sigaction ( SIGQUIT , &sa, 0 ) < 0 ) g_errno = errno;
+	// if ( g_errno ) log("loop: sigaction SIGBUS: %s.", mstrerror(errno));
+	// if ( sigaction ( SIGSYS , &sa, 0 ) < 0 ) g_errno = errno;
+	// if ( g_errno ) log("loop: sigaction SIGBUS: %s.", mstrerror(errno));
 
 
 	// if the UPS is about to go off it sends a SIGPWR
