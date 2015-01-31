@@ -1740,6 +1740,12 @@ int32_t Url::getSiteHash32 ( char *coll ) {
 }
 */
 
+int32_t Url::getHash32WithWWW ( ) {
+	uint32_t hh = hash32n ( "www." );
+	int32_t conti = 4;
+	hh = hash32_cont ( m_domain , m_dlen , hh , &conti );
+	return hh;
+}
 
 int32_t Url::getHostHash32 ( ) { 
 	return hash32 ( m_host , m_hlen ); 

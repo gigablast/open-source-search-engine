@@ -184,6 +184,9 @@ public:
 	int32_t      getHostHash32   ( ) ;
 	int32_t      getDomainHash32 ( ) ;
 
+	// if url is xyz.com then get hash of www.xyz.com
+	int32_t getHash32WithWWW ( );
+
 	int64_t getUrlHash64    ( ) ;
 	int64_t getHostHash64   ( ) ;
 	int64_t getDomainHash64   ( ) ;

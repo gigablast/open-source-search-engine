@@ -1776,6 +1776,8 @@ Tagdb g_tagdb2;
 // reset rdb and Xmls
 void Tagdb::reset() {
 	m_rdb.reset();
+	m_siteBuf1.purge();
+	m_siteBuf2.purge();
 	//s_lockTable2.reset();
 }
 
@@ -4944,4 +4946,233 @@ int32_t Tag::getDedupHash ( ) {
 	m_bufSize = saved;
 
 	return dh;
+}
+
+// make sure sizeof(Entry2)=5 not 8!
+#pragma pack(1)
+
+class Entry1 {
+public:
+	uint32_t m_hostHash32;
+	uint32_t m_siteNumInlinksUniqueCBlock;
+};
+
+class Entry2 {
+public:
+	uint32_t m_hostHash32;
+	uint8_t  m_siteNumInlinksUniqueCBlock;
+};
+
+static int linkSort1Cmp ( const void *a, const void *b ) {
+	Entry1 *ea = (Entry1 *)a;
+	Entry1 *eb = (Entry1 *)b;
+	if ( ea->m_hostHash32 > eb->m_hostHash32 ) return  1;
+	if ( ea->m_hostHash32 < eb->m_hostHash32 ) return -1;
+	return 0;
+}
+
+static int linkSort2Cmp ( const void *a, const void *b ) {
+	Entry2 *ea = (Entry2 *)a;
+	Entry2 *eb = (Entry2 *)b;
+	if ( ea->m_hostHash32 > eb->m_hostHash32 ) return  1;
+	if ( ea->m_hostHash32 < eb->m_hostHash32 ) return -1;
+	return 0;
+}
+
+bool Tagdb::loadMinSiteInlinksBuffer ( ) {
+
+	if ( ! loadMinSiteInlinksBuffer2() ) return false;
+
+	// sanity testing
+	uint32_t hostHash32 = hash32n("www.imdb.com");
+	int32_t msi = getMinSiteInlinks ( hostHash32 );
+	if ( msi < 10 ) {
+		log("tagdb: bad siteinlinks. linkedin.com not found.");
+		//return false;
+	}
+	hostHash32 = hash32n("0009.org" );
+	msi = getMinSiteInlinks ( hostHash32 );
+	if ( msi < 0 ) 	{
+		log("tagdb: bad siteinlinks. 0009.org not found.");
+		//return false;
+	}
+	Url tmp;
+	tmp.set("gnu.org");
+	hostHash32 = tmp.getHash32WithWWW();
+	msi = getMinSiteInlinks ( hostHash32 );
+	if ( msi < 0 ) 	{
+		log("tagdb: bad siteinlinks. www.gnu.org not found.");
+		//return false;
+	}
+
+	
+	return true;
+}
+
+bool Tagdb::loadMinSiteInlinksBuffer2 ( ) {
+
+	// use 4 bytes for the first 130,000 entries or so to hold
+	// # of site inlinks. then we only need 1 byte since the remaining
+	// 25M are <256 sitenuminlinksunqiecblocks
+	m_siteBuf1.load("sitelinks1.dat");
+	m_siteBuf2.load("sitelinks2.dat");
+
+	m_siteBuf1.setLabel("sitelnks");
+	m_siteBuf2.setLabel("sitelnks");
+
+	if ( m_siteBuf1.length() > 0 &&
+	     m_siteBuf2.length() > 0 ) 
+		return true;
+
+	log("gb: loading ./sitelinks.txt");
+
+	// ok, make it
+	SafeBuf tmp;
+	tmp.load("./sitelinks.txt");
+	if ( tmp.length() <= 0 ) {
+		log("gb: fatal error. could not find required file "
+		    "./sitelinks.txt");
+		return false;
+	}
+
+	log("gb: starting initial creation of sitelinks1.dat and "
+	    "sitelinks2.dat files");
+
+	// now parse each line in that
+	char *p = tmp.getBufStart();
+	char *pend = p + tmp.length();
+	char *newp = NULL;
+	SafeBuf buf1;
+	SafeBuf buf2;
+	int32_t count = 0;
+	for ( ; p < pend ; p = newp ) {
+		
+		if ( ++count % 1000000 == 0 )
+			log("gb: parsing line # %"INT32,count);
+
+		// advance to next line
+		newp = p;
+		for ( ; newp < pend && *newp != '\n' ; newp++ );
+		if ( newp < pend ) newp++;
+		// parse this line
+		int32_t numLinks = atoi(p);
+		// skip number
+		for ( ; *p && *p != ' ' && *p != '\n' ; p++ );
+		// strange
+		if ( ! *p || *p == '\n' ) continue;
+		// skip spaces
+		for ( ; *p == ' ' ; p++ );
+		// get hostname
+		char *host = p;
+		// find end of it
+		for ( ; *p && *p != '\n' && *p != ' ' && *p != '\t' ; p++ );
+		// hash it
+		uint32_t hostHash32 = hash32 ( host , p - host );
+		// store in buffer
+		if ( numLinks >= 256 ) {
+			Entry1 e1;
+			e1.m_siteNumInlinksUniqueCBlock = numLinks;
+			e1.m_hostHash32 = hostHash32;
+			buf1.safeMemcpy ( &e1 , sizeof(Entry1) );
+		}
+		else {
+			Entry2 e2;
+			e2.m_siteNumInlinksUniqueCBlock = numLinks;
+			e2.m_hostHash32 = hostHash32;
+			buf2.safeMemcpy ( &e2 , sizeof(Entry2) );
+		}
+	}		
+
+	log("gb: sorting sitelink data");
+
+	// now sort each one
+	qsort ( buf1.getBufStart() , 
+		buf1.length()/sizeof(Entry1),
+		sizeof(Entry1),
+		linkSort1Cmp );
+
+	qsort ( buf2.getBufStart() , 
+		buf2.length()/sizeof(Entry2),
+		sizeof(Entry2),
+		linkSort2Cmp );
+
+
+	// now copy to the official buffer so we only alloc what we need
+	m_siteBuf1.safeMemcpy ( &buf1 );
+	m_siteBuf2.safeMemcpy ( &buf2 );
+
+	log("gb: saving sitelinks1.dat and sitelinks2.dat");
+
+	m_siteBuf1.save("./sitelinks1.dat");
+	m_siteBuf2.save("./sitelinks2.dat");
+
+	return true;
+}
+
+int32_t Tagdb::getMinSiteInlinks ( uint32_t hostHash32 ) {
+
+	if ( m_siteBuf1.length() <= 0 ) { 
+		log("tagdb: load not called");
+		char *xx=NULL;*xx=0; 
+	}
+
+	// first check buf1 doing bstep
+	int32_t ne = m_siteBuf1.length() / sizeof(Entry1);
+	Entry1 *ep = (Entry1 *)m_siteBuf1.getBufStart();
+	Entry2 *fp = NULL;
+	int32_t i = ne / 2;
+	int32_t step = ne / 2;
+	int32_t count = 0;
+
+ loop1:
+
+	if ( i < 0 ) i = 0;
+	if ( i >= ne ) i = ne-1;
+	// after 3 single steps if no hit, try next hosthash buf
+	if ( count == 3 ) goto tryNextBuf;
+	step /= 2;
+	if ( step == 0 ) {
+		step = 1;
+		count++;
+	}
+	if ( hostHash32 < ep[i].m_hostHash32 ) {
+		i -= step;
+		goto loop1;
+	}
+	if ( hostHash32 > ep[i].m_hostHash32 ) {
+		i += step;
+		goto loop1;
+	}
+	return ep[i].m_siteNumInlinksUniqueCBlock;
+
+ tryNextBuf:
+
+	// reset parms
+	ne = m_siteBuf2.length() / sizeof(Entry2);
+	fp = (Entry2 *)m_siteBuf2.getBufStart();
+	i = ne / 2;
+	step = ne / 2;
+	count = 0;
+
+ loop2:
+
+	if ( i < 0 ) i = 0;
+	if ( i >= ne ) i = ne-1;
+	// after 3 single steps if no hit, that's it...
+	if ( count == 3 ) return -1;
+	step /= 2;
+	if ( step == 0 ) {
+		step = 1;
+		count++;
+	}
+	if ( hostHash32 < fp[i].m_hostHash32 ) {
+		i -= step;
+		goto loop2;
+	}
+	if ( hostHash32 > fp[i].m_hostHash32 ) {
+		i += step;
+		goto loop2;
+	}
+	return fp[i].m_siteNumInlinksUniqueCBlock;
+	
 }

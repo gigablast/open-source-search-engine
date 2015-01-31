@@ -3609,6 +3609,10 @@ int main2 ( int argc , char *argv[] ) {
 		return 1;
 	}
 	*/
+
+	// init minsitenuminlinks buffer
+	g_tagdb.loadMinSiteInlinksBuffer();
+
 	// . then our main udp server
 	// . must pass defaults since g_dns uses it's own port/instance of it
 	// . server should listen to a socket and register with g_loop
@@ -11962,7 +11966,7 @@ void dumpTagdb (char *coll,int32_t startFileNum,int32_t numFiles,
 	char sbuf[1024*2];
 	int32_t siteNumInlinks = -1;
 	int32_t typeSite = hash64Lower_a("site",4);
-	int32_t typeInlinks = hash64Lower_a("sitenuminlinksuniquecblock",26);
+	int32_t typeInlinks = hash64Lower_a("sitenuminlinks",14);
 
  loop:
 	// use msg5 to get the list, should ALWAYS block since no threads
@@ -12035,25 +12039,71 @@ void dumpTagdb (char *coll,int32_t startFileNum,int32_t numFiles,
 		char tmpBuf[1024];
 		SafeBuf sb(tmpBuf, 1024);
 
+		bool match = false;
+
+		hostHash = tag->m_key.n1;
+
+		if ( hostHash == lastHostHash ) {
+			match = true;
+		}
+		else {
+			site = NULL;
+			siteNumInlinks = -1;
+		}
+
+		lastHostHash = hostHash;
+
+		// if ( hostHash == 3079740012919792457LL )
+		// 	log("hey");
+
 		// making sitelist.txt?
-		if ( tag->m_type == typeSite ) {
-			hostHash = tag->m_key.n1;
+		if ( tag->m_type == typeSite && req == 'z' ) {
 			site = tag->getTagData();
 			// make it null if too many .'s
 			if ( site ) {
 				char *p = site;
 				int count = 0;
+				int alpha = 0;
+				int colons = 0;
 				// foo.bar.baz.com is ok
-				for ( ; *p ; p++ ) 
+				for ( ; *p ; p++ ) {
 					if ( *p == '.' ) count++;
+					if ( *p == ':' ) colons++;
+					if ( is_alpha_a(*p) || *p=='-' ) 
+						alpha++;
+				}
 				if ( count >= 4 )
 					site = NULL;
+				if ( colons > 1 )
+					site = NULL;
+				// no ip addresses allowed, need an alpha char
+				if ( alpha == 0 )
+					site = NULL;
 			}
+			// ends in :?
+			int slen = 0;
+			if ( site ) slen = gbstrlen(site);
+			if ( site && site[slen-1] == ':' )
+				site = NULL;
+			// port bug
+			if ( site && site[slen-2] == ':' && site[slen-1]=='/')
+				site = NULL;
+			// remove heavy spammers to save space
+			if ( site && strstr(site,"daily-camshow-report") )
+				site = NULL;
+			if ( site && strstr(site,".livejasminhd.") )
+				site = NULL;
+			if ( site && strstr(site,".pornlivenews.") )
+				site = NULL;
+			if ( site && strstr(site,".isapornblog.") )
+				site = NULL;
+			if ( site && strstr(site,".teen-model-24.") )
+				site = NULL;
 			if ( site && ! is_ascii2_a ( site, gbstrlen(site) ) ) {
 				site = NULL;
 				continue;
 			}
-			if ( lastHostHash == hostHash && siteNumInlinks>=0) {
+			if ( match && siteNumInlinks>=0) {
 				// if we ask for 1 or 2 we end up with 100M
 				// entries, but with 3+ we get 27M
 				if ( siteNumInlinks > 2 && site )
@@ -12063,14 +12113,12 @@ void dumpTagdb (char *coll,int32_t startFileNum,int32_t numFiles,
 			}
 			// save it
 			if ( site ) strcpy ( sbuf , site );
-			lastHostHash = hostHash;
 			continue;
 		}
 
-		if ( tag->m_type == typeInlinks ) {
-			hostHash = tag->m_key.n1;
+		if ( tag->m_type == typeInlinks && req == 'z' ) {
 			siteNumInlinks = atoi(tag->getTagData());
-			if ( lastHostHash == hostHash && site ) {
+			if ( match && site ) {
 				// if we ask for 1 or 2 we end up with 100M
 				// entries, but with 3+ we get 27M
 				if ( siteNumInlinks > 2 )
@@ -12078,7 +12126,6 @@ void dumpTagdb (char *coll,int32_t startFileNum,int32_t numFiles,
 				siteNumInlinks = -1;
 				site = NULL;
 			}
-			lastHostHash = hostHash;
 			continue;
 		}
 

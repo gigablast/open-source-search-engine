@@ -183,6 +183,9 @@ char *g_files[] = {
 	"wiktionary-lang.txt",
 	"wiktionary-syns.dat",
 
+	// gives us siteranks for the most popular sites:
+	"sitelinks.txt",
+
 	"unifiedDict.txt",
 	//"unifiedDict-buf.txt",
 	//"unifiedDict-map.dat",
