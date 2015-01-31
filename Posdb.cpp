@@ -4857,11 +4857,14 @@ void PosdbTable::rmDocIdVotes ( QueryTermInfo *qti ) {
 			     *(uint32_t *)(recPtr+8) ) 
 				continue;
 			// top 4 bytes are equal. check lower single byte then.
+			// DAMN, gbsortbyint:gbspiderdate term does not
+			// include the proper siterank and langid bits
+			// so we have to mask with 0xfc here.
 			if ( *(unsigned char *)(dp) >
-			     (*(unsigned char *)(recPtr+7) ) ) // & 0xfc ) )
+			     ( *(unsigned char *)(recPtr+7) & 0xfc ) )
 				break;
 			if ( *(unsigned char *)(dp) <
-			     (*(unsigned char *)(recPtr+7) ) ) // & 0xfc ) )
+			     ( *(unsigned char *)(recPtr+7) & 0xfc ) )
 				continue;
 			// . equal! mark it as nuked!
 			dp[5] = -1;//listGroupNum;
@@ -5008,8 +5011,18 @@ void PosdbTable::addDocIdVotes ( QueryTermInfo *qti , int32_t   listGroupNum ) {
 		// reset docid list ptrs
 		dp    =      m_docIdVoteBuf.getBufStart();
 		dpEnd = dp + m_docIdVoteBuf.length();
+
+		//long long lastddd = -1;
 		// loop it
 	subLoop:
+
+		// debug
+		// long long ddd = g_posdb.getDocId ( recPtr );
+		// if ( ddd < lastddd ) { char *xx=NULL;*xx=0; }
+		// lastddd = ddd;
+		// //log("posdb: d=%lli",ddd);
+		// if ( ddd == 52024517184 )
+		// 	log("hey");
 		// scan for his docids and inc the vote
 		for ( ; dp < dpEnd ; dp += 6 ) {
 			// if current docid in docid list is >= the docid
@@ -5023,11 +5036,14 @@ void PosdbTable::addDocIdVotes ( QueryTermInfo *qti , int32_t   listGroupNum ) {
 			     *(uint32_t *)(recPtr+8) ) 
 				continue;
 			// top 4 bytes are equal. check lower single byte then.
+			// DAMN, gbsortbyint:gbspiderdate term does not
+			// include the proper siterank and langid bits
+			// so we have to mask with 0xfc here.
 			if ( *(unsigned char *)(dp) >
-			     (*(unsigned char *)(recPtr+7) ) ) // & 0xfc ) )
+			     ((*(unsigned char *)(recPtr+7) ) & 0xfc) )
 				break;
 			if ( *(unsigned char *)(dp) <
-			     (*(unsigned char *)(recPtr+7) ) ) // & 0xfc ) )
+			     ( (*(unsigned char *)(recPtr+7) ) & 0xfc ) )
 				continue;
 
 			// if we are a range term, does this subtermlist
@@ -5224,8 +5240,10 @@ void PosdbTable::addDocIdVotes ( QueryTermInfo *qti , int32_t   listGroupNum ) {
 	// the actual docid!
 	// docid is only 5 bytes for now
 	*(int32_t  *)(dp+1) = *(int32_t  *)(minRecPtr+8);
-	// the single lower byte
-	dp[0] = minRecPtr[7] ; // & 0xfc;
+	// DAMN, gbsortbyint:gbspiderdate term does not
+	// include the proper siterank and langid bits
+	// so we have to mask with 0xfc here.
+	dp[0] = minRecPtr[7] & 0xfc;
 	// 0 vote count
 	dp[5] = 0;
 
@@ -5285,11 +5303,14 @@ void PosdbTable::shrinkSubLists ( QueryTermInfo *qti ) {
 			     *(uint32_t *)(recPtr+8) )
 				continue;
 			// check lower byte if equal
+			// DAMN, gbsortbyint:gbspiderdate term does not
+			// include the proper siterank and langid bits
+			// so we have to mask with 0xfc here.
 			if ( *(unsigned char *)(dp) >
-			     *(unsigned char *)(recPtr+7) ) // & 0xfc )
+			     ( *(unsigned char *)(recPtr+7) & 0xfc ) )
 				break;
 			if ( *(unsigned char *)(dp) <
-			     *(unsigned char *)(recPtr+7) ) // & 0xfc )
+			     ( *(unsigned char *)(recPtr+7) & 0xfc ) )
 				continue;
 			// copy over the 12 byte key
 			*(int64_t *)dst = *(int64_t *)recPtr;

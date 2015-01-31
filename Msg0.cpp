@@ -455,6 +455,7 @@ skip:
 	*(int32_t      *) p = startFileNum     ; p += 4;
 	*(int32_t      *) p = numFiles         ; p += 4;
 	*(int32_t      *) p = maxCacheAge      ; p += 4;
+	if ( p - m_request != RDBIDOFFSET ) { char *xx=NULL;*xx=0; }
 	*p               = m_rdbId          ; p++;
 	*p               = addToCache       ; p++;
 	*p               = doErrorCorrection; p++;

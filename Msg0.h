@@ -11,6 +11,8 @@
 #include "Hostdb.h"
 #include "Indexdb.h"
 
+#define RDBIDOFFSET (8+4+4+4+4)
+
 
 /*
 // termlist cache accessor functions for Msg5.cpp to use

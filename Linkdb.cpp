@@ -557,8 +557,9 @@ bool getLinkInfo ( SafeBuf   *reqBuf              ,
 	req->m_ourHostHash32 = ourHostHash32;
 	req->m_ourDomHash32 = ourDomHash32;
 
-	if ( g_conf.m_logDebugLinkInfo )
-		req->m_printDebugMsgs = true;
+	// why did i do this?
+	// if ( g_conf.m_logDebugLinkInfo )
+	// 	req->m_printDebugMsgs = true;
 
 	Url u;
 	u.set ( req->ptr_url );
@@ -2422,9 +2423,14 @@ bool Msg25::gotLinkText ( Msg20Request *req ) { // LinkTextReply *linkText ) {
 	// how many were filtered by LinkInfo::set()?
 	//int32_t inlinkingDocIdsFiltered2 = ng - m_linkInfo->getNumInlinks();
 
-	struct tm *timeStruct = localtime ( (time_t *)&m_lastUpdateTime );
+	time_t ttt;
+	struct tm *timeStruct = localtime ( &ttt );
+	m_lastUpdateTime = ttt;
 	char buf[64];
-	strftime ( buf, 64 , "%b-%d-%Y(%H:%M:%S)" , timeStruct );
+	if ( timeStruct )
+		strftime ( buf, 64 , "%b-%d-%Y(%H:%M:%S)" , timeStruct );
+	else
+		sprintf(buf,"UNKNOWN time");
 
 	char *ss = "site";
 	if ( m_mode == MODE_PAGELINKINFO ) ss = "page";
@@ -2831,18 +2837,24 @@ bool Msg25::gotLinkText ( Msg20Request *req ) { // LinkTextReply *linkText ) {
 		//if ( internal ) weight = 0.0;
 		// datedb date
 		char dbuf[128];
-		if ( r->m_datedbDate > 1 ) 
+		if ( r->m_datedbDate > 1 ) {
+			time_t ttt = (time_t)r->m_datedbDate;
 			sprintf(dbuf,"%s UTC",
-				asctime (gmtime((time_t *)&r->m_datedbDate )));
+				asctime (gmtime( &ttt ))  );
+		}
 		else 
 			sprintf(dbuf,"---");
 
 		char discBuf[128];
-		int32_t dd = r->m_discoveryDate;
+		time_t dd = (time_t)r->m_discoveryDate;
 		if ( dd ) {
-			struct tm *timeStruct = gmtime ( (time_t *)&dd );
-			strftime ( discBuf, 128 , "<nobr>%b %d %Y</nobr>" , 
-				   timeStruct);
+			struct tm *timeStruct = gmtime ( &dd );
+			if ( timeStruct )
+				strftime ( discBuf, 128 , 
+					   "<nobr>%b %d %Y</nobr>" , 
+					   timeStruct);
+			else
+				sprintf(discBuf,"UNKNOWN DATE");
 		}
 		else 
 			sprintf(discBuf,"---");
@@ -2908,7 +2920,7 @@ bool Msg25::gotLinkText ( Msg20Request *req ) { // LinkTextReply *linkText ) {
 
 					   "\t\t<siteRank>%"INT32"</siteRank>\n"
 					   , (int32_t)internal
-					   , dd
+					   , (uint32_t)dd
 					   , getLanguageString(r->m_language)
 					   , (int32_t)r->m_siteRank
 					   );

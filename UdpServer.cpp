@@ -225,6 +225,7 @@ UdpServer::~UdpServer() {
 bool UdpServer::init ( uint16_t port, UdpProtocol *proto, int32_t niceness,
 		       int32_t readBufSize , int32_t writeBufSize , 
 		       int32_t pollTime , int32_t maxSlots , bool isDns ){
+
 	// save this
 	m_isDns = isDns;
 	// we now alloc so we don't blow up stack
@@ -296,6 +297,10 @@ bool UdpServer::init ( uint16_t port, UdpProtocol *proto, int32_t niceness,
 	m_msg0sInWaiting  = 0;
 	// maintain a ptr to the protocol
 	m_proto   = proto;
+	// sanity test so we can peek at the rdbid in a msg0 request
+	if( ! m_isDns &&
+	    RDBIDOFFSET +1 > m_proto->getMaxPeekSize() ) {
+		char *xx=NULL;*xx=0; }
 	// set the main process id
 	if ( s_pid == 0 ) s_pid = getpid();
 	// remember our level of niceness
@@ -1501,8 +1506,14 @@ int32_t UdpServer::readSock_ass ( UdpSlot **slotPtr , int64_t now ) {
 		// . tagdb lookups were being dropped because of this being
 		//   500 so i raised to 900. a lot of them were from
 		//   'get outlink tag recs' or 'get link info' (0x20)
-		if ( msgType == 0x00 && m_numUsedSlots > 1000 && niceness )
-			getSlot = false;
+		if ( msgType == 0x00 && m_numUsedSlots > 1500 && niceness ) {
+			// allow a ton of those tagdb lookups to come in
+			char rdbId = 0;
+			if ( peekSize > RDBIDOFFSET )
+				rdbId = peek[RDBIDOFFSET];
+			if ( rdbId != RDB_TAGDB )
+				getSlot = false;
+		}
 
 		// added this because host #14 was clogging on
 		// State00's and ThreadReadBuf taking all the mem.
@@ -1525,8 +1536,12 @@ int32_t UdpServer::readSock_ass ( UdpSlot **slotPtr , int64_t now ) {
 		//if ( m_numUsedSlots >= (m_maxSlots>>1) ) getSlot = false;
 		//int32_t niceness = m_proto->isNice ( peek , peekSize );
 		// lower priorty slots are dropped first
-		if ( m_numUsedSlots >= 1300 && niceness > 0 && ! isProxy ) 
+		if ( m_numUsedSlots >= 1300 && niceness > 0 && ! isProxy &&
+		     // we dealt with special tagdb msg00's above so
+		     // do not deal with them here
+		     msgType != 0x00 ) 
 			getSlot = false;
+
 		// . reserve 300 slots for outgoing query-related requests
 		// . this was 1700, but the max udp slots is set to 3500
 		//   in main.cpp, so let's up this to 2300. i don't want to
@@ -1934,8 +1949,18 @@ bool UdpServer::makeCallbacks_ass ( int32_t niceness ) {
 			// only allow niceness 0 msg 0x00 requests here since
 			// we call a msg8a from msg20.cpp summary generation
 			// which uses msg0 to read tagdb list from disk
-			if ( slot->m_msgType == 0x00 && slot->m_niceness )
-				continue;
+			if ( slot->m_msgType == 0x00 && slot->m_niceness ) {
+				// to keep udp slots from clogging up with 
+				// tagdb reads allow even niceness 1 tagdb 
+				// reads through. cache rate should be super
+				// higher and reads short.
+				char rdbId = 0;
+				if ( slot->m_readBuf &&
+				     slot->m_readBufSize > RDBIDOFFSET ) 
+					rdbId = slot->m_readBuf[RDBIDOFFSET];
+				if ( rdbId != RDB_TAGDB )
+					continue;
+			}
 		}
 		// if slot niceness is 1 and we are in a quickpoll, then
 		// change niceness to 0 if its a 0x2c or a get taglist handler

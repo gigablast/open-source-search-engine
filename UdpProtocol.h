@@ -71,7 +71,9 @@ class UdpProtocol {
 	virtual bool stripHeaders ( ) { return true; };
 
 	// peek ahead for header (12 bytes) then 4 bytes for possible errno
-	virtual int32_t getMaxPeekSize ( ) { return 24; };
+	//virtual int32_t getMaxPeekSize ( ) { return 24; };
+	// add 1 so we can get RDBIDOFFSET from msg 0x00 requests
+	virtual int32_t getMaxPeekSize ( ) { return 25; };
 
 	// . returns 0 if hadError bit is NOT set
 	// . otherwise, returns first 4 bytes of msg CONTENT as an errno
