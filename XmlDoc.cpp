@@ -30235,7 +30235,8 @@ Msg20Reply *XmlDoc::getMsg20Reply ( ) {
 	}
 
 	// get thumbnail image DATA
-	if ( ! reply->ptr_imgData ) { // && m_req->m_getImageUrl ) {
+	if ( ! reply->ptr_imgData && ! m_req->m_getLinkText ) { 
+		// && m_req->m_getImageUrl ) {
 		reply-> ptr_imgData = ptr_imageData;
 		reply->size_imgData = size_imageData;
 	}
@@ -30531,18 +30532,19 @@ Msg20Reply *XmlDoc::getMsg20Reply ( ) {
 					 &linkNum            ,
 					 m_niceness          );
 
-	int64_t took = gettimeofdayInMilliseconds() - start;
-	if ( took > 100 )
-		log("build: took %"INT64" ms to get link text for "
-		    "%s from linker %s",
-		    took,
-		    m_req->ptr_linkee,
-		    m_firstUrl.m_url );
-
 
 	// . BUT this skips the news topic stuff too. bad?
 	// . THIS HAPPENED before because we were truncating the xml(see above)
 	if ( linkNode < 0 ) {
+
+		int64_t took = gettimeofdayInMilliseconds() - start;
+		if ( took > 100 )
+			log("build: took %"INT64" ms to get link text for "
+			    "%s from linker %s",
+			    took,
+			    m_req->ptr_linkee,
+			    m_firstUrl.m_url );
+
 		logf(LOG_DEBUG,"build: Got linknode = %"INT32" < 0. Cached "
 		     "linker %s does not have outlink to %s like linkdb "
 		     "says it should. page is probably too big and the "
@@ -30834,6 +30836,14 @@ Msg20Reply *XmlDoc::getMsg20Reply ( ) {
 			reply->size_tbuf = 0;
 		}
 	}
+
+	int64_t took = gettimeofdayInMilliseconds() - start;
+	if ( took > 100 )
+		log("build: took %"INT64" ms to get link text for "
+		    "%s from linker %s",
+		    took,
+		    m_req->ptr_linkee,
+		    m_firstUrl.m_url );
 
 
 	m_replyValid = true;
