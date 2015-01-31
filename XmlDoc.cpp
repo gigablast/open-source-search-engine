@@ -12897,6 +12897,13 @@ int32_t *XmlDoc::getSiteNumInlinks ( ) {
 	// . returns -1 if not found
 	int32_t hostHash32 = getHostHash32a();
 	int32_t min = g_tagdb.getMinSiteInlinks ( hostHash32 );
+
+	// try with www if not there
+	if ( min < 0 && ! m_firstUrl.hasSubdomain() ) {
+		int32_t wwwHash32 = m_firstUrl.getHash32WithWWW();
+		min = g_tagdb.getMinSiteInlinks ( wwwHash32 );
+	}
+
 	if ( min >= 0 ) {
 		if ( m_siteNumInlinks < min ||
 		     ! m_siteNumInlinksValid ) {
@@ -25217,7 +25224,15 @@ char *XmlDoc::addOutlinkSpiderRecsToMetaList ( ) {
 		// . consult our sitelinks.txt file
 		// . returns -1 if not found
 		int32_t min = g_tagdb.getMinSiteInlinks ( hostHash32 );
-		if ( min >= 0 && ksni < min ) ksni = min;
+
+		// try with www if not there
+		if ( min < 0 && ! url.hasSubdomain() ) {
+			int32_t wwwHash32 = url.getHash32WithWWW();
+			min = g_tagdb.getMinSiteInlinks ( wwwHash32 );
+		}
+
+		if ( min >= 0 && ksni < min ) 
+			ksni = min;
 		
 		//if ( ! m_siteNumInlinksValid ) { char *xx=NULL;*xx=0; }
 		//int32_t ksni = m_siteNumInlinks;

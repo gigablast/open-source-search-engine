@@ -4993,9 +4993,18 @@ bool Tagdb::loadMinSiteInlinksBuffer ( ) {
 	hostHash32 = hash32n("0009.org" );
 	msi = getMinSiteInlinks ( hostHash32 );
 	if ( msi < 0 ) 	{
-		log("tagdb: bad siteinlinks. 00o.qva.ooo7.org not found.");
+		log("tagdb: bad siteinlinks. 0009.org not found.");
 		//return false;
 	}
+	Url tmp;
+	tmp.set("gnu.org");
+	hostHash32 = tmp.getHash32WithWWW();
+	msi = getMinSiteInlinks ( hostHash32 );
+	if ( msi < 0 ) 	{
+		log("tagdb: bad siteinlinks. www.gnu.org not found.");
+		//return false;
+	}
+
 	
 	return true;
 }
