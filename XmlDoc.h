@@ -641,9 +641,9 @@ class XmlDoc {
 	//class Url *getAboutUsLink ( ) ;
 	int32_t *getFirstIp ( ) ;
 	bool *updateFirstIp ( ) ;
-	int32_t *getSiteNumInlinksUniqueIp ( ) ;
-	int32_t *getSiteNumInlinksUniqueCBlock ( ) ;
-	int32_t *getSiteNumInlinksTotal ( );
+	//int32_t *getSiteNumInlinksUniqueIp ( ) ;
+	//int32_t *getSiteNumInlinksUniqueCBlock ( ) ;
+	//int32_t *getSiteNumInlinksTotal ( );
 	//int32_t *getSiteNumInlinksFresh ( ) ;
 	//int32_t *getSitePop ( ) ;
 	uint8_t *getSiteNumInlinks8 () ;

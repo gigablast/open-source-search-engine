@@ -12574,6 +12574,7 @@ Addresses *XmlDoc::getAddresses ( ) {
 	return &m_addresses;
 }
 
+/*
 int32_t *XmlDoc::getSiteNumInlinksUniqueIp ( ) {
 	if ( m_siteNumInlinksUniqueIpValid ) 
 		return &m_siteNumInlinksUniqueIp;
@@ -12609,6 +12610,7 @@ int32_t *XmlDoc::getSiteNumInlinksTotal ( ) {
 	// ok we must be valid
 	return &m_siteNumInlinksTotal;
 }	
+*/
 
 // we need this for setting SpiderRequest::m_parentFirstIp of each outlink
 int32_t *XmlDoc::getFirstIp ( ) {
@@ -12650,6 +12652,9 @@ uint8_t *XmlDoc::getSiteNumInlinks8 () {
 	return &m_siteNumInlinks8;
 }
 
+// this is the # of GOOD INLINKS to the site. so it is no more than
+// 1 per c block, and it has to pass link spam detection. this is the
+// highest-level count of inlinks to the site. use it a lot.
 int32_t *XmlDoc::getSiteNumInlinks ( ) {
 
 	if ( m_siteNumInlinksValid ) return &m_siteNumInlinks;
@@ -12796,10 +12801,15 @@ int32_t *XmlDoc::getSiteNumInlinks ( ) {
 		    (PTRTYPE)tag3,
 		    m_firstUrl.m_url);
 
+	LinkInfo *sinfo = NULL;
+	char *mysite = NULL;
+
 	// if we are good return it
 	if ( tag && valid ) {
 		// set it
 		m_siteNumInlinks = atol(tag->getTagData());
+		m_siteNumInlinksValid = true;
+
 		// companion tags
 		if ( tag2 ) {
 			m_siteNumInlinksUniqueIp = atol(tag2->getTagData());
@@ -12813,9 +12823,10 @@ int32_t *XmlDoc::getSiteNumInlinks ( ) {
 			m_siteNumInlinksTotal =atol(tag4->getTagData());
 			m_siteNumInlinksTotalValid = true;
 		}
-		// it is good to go now
-		m_siteNumInlinksValid = true;
-		return &m_siteNumInlinks;
+
+		// . consult our sitelinks.txt file
+		// . returns -1 if not found
+		goto updateToMin;
 	}
 
 	// set status. we can time status changes with this routine!
@@ -12843,7 +12854,7 @@ int32_t *XmlDoc::getSiteNumInlinks ( ) {
 	m_updatingSiteLinkInfoTags = true;
 
 	// we need to re-get both if either is NULL
-	LinkInfo *sinfo = getSiteLinkInfo();
+	sinfo = getSiteLinkInfo();
 	// block or error?
 	if ( ! sinfo || sinfo == (LinkInfo *)-1) return (int32_t *)sinfo;
 
@@ -12857,7 +12868,7 @@ int32_t *XmlDoc::getSiteNumInlinks ( ) {
 	//Links *links = getLinks ();
 	//if ( ! links || links == (Links *)-1 ) return (int32_t *)links;
 
-	char *mysite = getSite();
+	mysite = getSite();
 	if ( ! mysite || mysite == (void *)-1 ) return (int32_t *)mysite;
 
 	setStatus ( "adding site info tags to tagdb 1");
@@ -12878,6 +12889,38 @@ int32_t *XmlDoc::getSiteNumInlinks ( ) {
 	m_siteNumInlinksUniqueIpValid = true;
 	m_siteNumInlinksUniqueCBlockValid = true;
 	m_siteNumInlinksTotalValid = true;
+
+
+ updateToMin:
+
+	// . consult our sitelinks.txt file
+	// . returns -1 if not found
+	int32_t hostHash32 = getHostHash32a();
+	int32_t min = g_tagdb.getMinSiteInlinks ( hostHash32 );
+	if ( min >= 0 ) {
+		if ( m_siteNumInlinks < min ||
+		     ! m_siteNumInlinksValid ) {
+			m_siteNumInlinks = min;
+			m_siteNumInlinksValid = true;
+		}
+		// if ( ! m_siteNumInlinksUniqueIpValid ||
+		//      m_siteNumInlinksUniqueIp < min ) {
+		// 	m_siteNumInlinksUniqueIp = min;
+		// 	m_siteNumInlinksUniqueIpValid = true;
+		// }
+		// if ( ! m_siteNumInlinksUniqueCBlockValid ||
+		//      m_siteNumInlinksUniqueCBlock < min ) {
+		// 	m_siteNumInlinksUniqueCBlock = min;
+		// 	m_siteNumInlinksUniqueCBlockValid = true;
+		// }
+		// if ( ! m_siteNumInlinksTotalValid ||
+		//      m_siteNumInlinksTotal < min ) {
+		// 	m_siteNumInlinksTotal = min;
+		// 	m_siteNumInlinksTotalValid = true;
+		// }
+	}		
+
+
 
 	// deal with it
 	return &m_siteNumInlinks;
@@ -19866,10 +19909,10 @@ bool XmlDoc::logIt ( SafeBuf *bb ) {
 
 	if ( m_siteNumInlinksValid ) {
 		sb->safePrintf("siteinlinks=%04"INT32" ",m_siteNumInlinks );
-		sb->safePrintf("siteipinlinks=%"INT32" ",
-			      m_siteNumInlinksUniqueIp);
-		sb->safePrintf("sitecblockinlinks=%"INT32" ",
-			      m_siteNumInlinksUniqueCBlock);
+		// sb->safePrintf("siteipinlinks=%"INT32" ",
+		// 	      m_siteNumInlinksUniqueIp);
+		// sb->safePrintf("sitecblockinlinks=%"INT32" ",
+		// 	      m_siteNumInlinksUniqueCBlock);
 		int32_t sr = ::getSiteRank ( m_siteNumInlinks );
 		sb->safePrintf("siterank=%"INT32" ", sr );
 	}
@@ -25169,6 +25212,13 @@ char *XmlDoc::addOutlinkSpiderRecsToMetaList ( ) {
 		Tag *st = NULL;
 		if ( gr ) st = gr->getTag ("sitenuminlinks");
 		if ( st ) ksni = atol(st->getTagData());
+
+		int32_t hostHash32   = url.getHostHash32();
+		// . consult our sitelinks.txt file
+		// . returns -1 if not found
+		int32_t min = g_tagdb.getMinSiteInlinks ( hostHash32 );
+		if ( min >= 0 && ksni < min ) ksni = min;
+		
 		//if ( ! m_siteNumInlinksValid ) { char *xx=NULL;*xx=0; }
 		//int32_t ksni = m_siteNumInlinks;
 		
@@ -25186,7 +25236,6 @@ char *XmlDoc::addOutlinkSpiderRecsToMetaList ( ) {
 
 		// get it quick
 		bool ispingserver = url.isPingServer();
-		int32_t hostHash32   = url.getHostHash32();
 		int32_t domHash32    = url.getDomainHash32();
 
 		// is link rss?

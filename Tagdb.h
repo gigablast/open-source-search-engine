@@ -373,6 +373,12 @@ class Tagdb  {
 
 	DiskPageCache m_pc;
 
+	bool    loadMinSiteInlinksBuffer ( );
+	bool    loadMinSiteInlinksBuffer2 ( );
+	int32_t getMinSiteInlinks ( uint32_t hostHash32 ) ;
+	SafeBuf m_siteBuf1;
+	SafeBuf m_siteBuf2;
+
 };
 
 // derive this from tagdb
