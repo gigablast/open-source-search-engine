@@ -7425,7 +7425,7 @@ SectionVotingTable *XmlDoc::getOldSectionVotingTable ( ) {
 				    -1    ,  // firstHostId
 				    0     ,  // startFileNum
 				    -1    ,  // numFiles
-				    30    ,  // timeout
+				    999995    ,  // timeout
 				    -1    ,  // syncPoint
 				    -1    ,  // preferLocalReads
 				    NULL  ,  // msg5
@@ -8925,7 +8925,9 @@ RdbList *XmlDoc::getDupList ( ) {
 				-1 , // firsthosti
 				0 , // startfilenum
 				-1, // # files
-				30 , // timeout
+				// never timeout when spidering in case
+				// a host is down.
+				9999977 , // timeout
 				-1 , // syncpoint
 				-1 , // preferlocal reads
 				NULL, // msg5
