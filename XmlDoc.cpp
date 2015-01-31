@@ -9139,7 +9139,7 @@ char *XmlDoc::isDupOfUs ( int64_t d ) {
 					   m_niceness   ,
 					   false        , // add to cache
 					   60*60*24     , // maxcacheage
-					   60           );// timeout
+					   999999       );// timeout
 		// we blocked
 		if ( ! s ) return (char *)-1;
 		// error?

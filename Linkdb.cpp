@@ -616,7 +616,10 @@ bool getLinkInfo ( SafeBuf   *reqBuf              ,
 			    req          , // state data
 			    NULL         , // state data
 			    gotMulticastReplyWrapper25 ,
-			    1000      , // timeout in seconds (was 30)
+			    // if this is too low we core in XmlDoc.cpp
+			    // after getNewSpiderReply() returns a -1 because
+			    // it blocks for some reason.
+			    9999998     , // timeout in seconds (was 30)
 			    req->m_niceness ,
 			    false, // realtime     ,
 			    hostId )) {// firstHostId  ,
