@@ -179,6 +179,9 @@ void processReply ( char *reply , int32_t replyLen ) {
 	// until i figure this one out, take it out
 	markOut ( content , "<docsInCollection>");
 
+	markOut ( content , "spider is done (");
+	markOut ( content , "spider is paused (");
+
 	// until i figure this one out, take it out
 	markOut ( content , "<hits>");
 
