@@ -4858,10 +4858,10 @@ void PosdbTable::rmDocIdVotes ( QueryTermInfo *qti ) {
 				continue;
 			// top 4 bytes are equal. check lower single byte then.
 			if ( *(unsigned char *)(dp) >
-			     (*(unsigned char *)(recPtr+7) ) ) // & 0xfc ) )
+			     (*(unsigned char *)(recPtr+7) & 0xfc ) )
 				break;
 			if ( *(unsigned char *)(dp) <
-			     (*(unsigned char *)(recPtr+7) ) ) // & 0xfc ) )
+			     (*(unsigned char *)(recPtr+7) & 0xfc ) )
 				continue;
 			// . equal! mark it as nuked!
 			dp[5] = -1;//listGroupNum;
@@ -5024,10 +5024,10 @@ void PosdbTable::addDocIdVotes ( QueryTermInfo *qti , int32_t   listGroupNum ) {
 				continue;
 			// top 4 bytes are equal. check lower single byte then.
 			if ( *(unsigned char *)(dp) >
-			     (*(unsigned char *)(recPtr+7) ) ) // & 0xfc ) )
+			     (*(unsigned char *)(recPtr+7) & 0xfc ) )
 				break;
 			if ( *(unsigned char *)(dp) <
-			     (*(unsigned char *)(recPtr+7) ) ) // & 0xfc ) )
+			     (*(unsigned char *)(recPtr+7) & 0xfc ) )
 				continue;
 
 			// if we are a range term, does this subtermlist
@@ -5136,12 +5136,12 @@ void PosdbTable::addDocIdVotes ( QueryTermInfo *qti , int32_t   listGroupNum ) {
 			continue;
 		}
 		// check lowest byte
-		if ( *(unsigned char *)(recPtr   +7) >
-		     *(unsigned char *)(minRecPtr+7) )
+		if ( (*(unsigned char *)(recPtr   +7) & 0xfc ) >
+		     (*(unsigned char *)(minRecPtr+7) & 0xfc ) )
 			continue;
 		// a new min
-		if ( *(unsigned char *)(recPtr   +7) <
-		     *(unsigned char *)(minRecPtr+7) ) {
+		if ( (*(unsigned char *)(recPtr   +7) & 0xfc ) <
+		     (*(unsigned char *)(minRecPtr+7) & 0xfc ) ) {
 			minRecPtr = recPtr;
 			mini = i;
 			continue;
@@ -5197,8 +5197,8 @@ void PosdbTable::addDocIdVotes ( QueryTermInfo *qti , int32_t   listGroupNum ) {
 	if(lastMinRecPtr &&
 	   *(uint32_t *)(lastMinRecPtr+8)==
 	   *(uint32_t *)(minRecPtr+8)&&
-	   *(unsigned char *)(lastMinRecPtr+7)==
-	   *(unsigned char *)(minRecPtr+7))
+	   (*(unsigned char *)(lastMinRecPtr+7)&0xfc)==
+	   (*(unsigned char *)(minRecPtr+7)&0xfc))
 		goto getMin;
 
 	// . do not store the docid if not in the whitelist
@@ -5225,7 +5225,7 @@ void PosdbTable::addDocIdVotes ( QueryTermInfo *qti , int32_t   listGroupNum ) {
 	// docid is only 5 bytes for now
 	*(int32_t  *)(dp+1) = *(int32_t  *)(minRecPtr+8);
 	// the single lower byte
-	dp[0] = minRecPtr[7] ; // & 0xfc;
+	dp[0] = minRecPtr[7] & 0xfc;
 	// 0 vote count
 	dp[5] = 0;
 
@@ -5286,10 +5286,10 @@ void PosdbTable::shrinkSubLists ( QueryTermInfo *qti ) {
 				continue;
 			// check lower byte if equal
 			if ( *(unsigned char *)(dp) >
-			     *(unsigned char *)(recPtr+7) ) // & 0xfc )
+			     (*(unsigned char *)(recPtr+7) & 0xfc ) )
 				break;
 			if ( *(unsigned char *)(dp) <
-			     *(unsigned char *)(recPtr+7) ) // & 0xfc )
+			     (*(unsigned char *)(recPtr+7) & 0xfc ) )
 				continue;
 			// copy over the 12 byte key
 			*(int64_t *)dst = *(int64_t *)recPtr;
@@ -6156,7 +6156,8 @@ void PosdbTable::intersectLists10_r ( ) {
 			// must match docid
 			if ( xc >= xcEnd ||
 			     *(int32_t *)(xc+8) != *(int32_t *)(docIdPtr+1) ||
-			     *(char *)(xc+7) != *(char *)(docIdPtr  ) ) {
+			     (*(char *)(xc+7)&0xfc) != 
+			     (*(char *)(docIdPtr)&0xfc) ) {
 				// flag it as not having the docid
 				qti->m_savedCursor[j] = NULL;
 				// skip this sublist if does not have our docid
@@ -6858,13 +6859,20 @@ void PosdbTable::intersectLists10_r ( ) {
 	// . miniMergedList[0] list can be null if it does not have 'street' 
 	//   but has 'streetlight' for the query 'street light'
 	//
-	if ( miniMergedList[0] ) {
+	if ( miniMergedList[0] && 
+	     // siterank/langid is always 0 in facet/numeric 
+	     // termlists so they sort by their number correctly
+	     ! (qip[0].m_bigramFlags[0] & (BF_NUMBER|BF_FACET) ) ) {
 		siteRank = g_posdb.getSiteRank ( miniMergedList[0] );
 		docLang  = g_posdb.getLangId   ( miniMergedList[0] );
 	}
 	else {
 		for ( int32_t k = 1 ; k < m_numQueryTermInfos ; k++ ) {
 			if ( ! miniMergedList[k] ) continue;
+			// siterank/langid is always 0 in facet/numeric 
+			// termlists so they sort by their number correctly
+			if ( qip[k].m_bigramFlags[0] & (BF_NUMBER|BF_FACET) )
+				continue;
 			siteRank = g_posdb.getSiteRank ( miniMergedList[k] );
 			docLang  = g_posdb.getLangId   ( miniMergedList[k] );
 			break;
