@@ -3611,7 +3611,10 @@ int main2 ( int argc , char *argv[] ) {
 	*/
 
 	// init minsitenuminlinks buffer
-	g_tagdb.loadMinSiteInlinksBuffer();
+	if ( ! g_tagdb.loadMinSiteInlinksBuffer() ) {
+		log("db: failed to load sitelinks.txt data");
+		return 1;
+	}
 
 	// . then our main udp server
 	// . must pass defaults since g_dns uses it's own port/instance of it
