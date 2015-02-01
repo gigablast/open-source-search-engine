@@ -19899,8 +19899,9 @@ bool XmlDoc::logIt ( SafeBuf *bb ) {
 		int32_t nt = info->getNumLinkTexts();
 		sb->safePrintf("goodinlinks=%"INT32" ",nt );
 		// new stuff. includes ourselves i think.
-		sb->safePrintf("ipinlinks=%"INT32" ",info->m_numUniqueIps);
-		sb->safePrintf("cblockinlinks=%"INT32" ",info->m_numUniqueCBlocks);
+		//sb->safePrintf("ipinlinks=%"INT32" ",info->m_numUniqueIps);
+		//sb->safePrintf("cblockinlinks=%"INT32" ",
+		//info->m_numUniqueCBlocks);
 	}
 
 	//
