@@ -842,8 +842,17 @@ void gotProxyHostReplyWrapper ( void *state , UdpSlot *slot ) {
 	// out to tell host #0 how long it took use to use this proxy, etc.
 	r->m_lbId = prep->m_lbId;
 
-	r->m_proxyUsernamePwdAuth = prep->m_usernamePwd;
-	if ( ! prep->m_usernamePwd[0] ) r->m_proxyUsernamePwdAuth = NULL;
+	// assume no username:password
+	r->m_proxyUsernamePwdAuth[0] = '\0';
+
+	// if proxy had one copy into the buf
+	if ( prep->m_usernamePwd && prep->m_usernamePwd[0] ) {
+		int32_t len = gbstrlen(prep->m_usernamePwd);
+		gbmemcpy ( r->m_proxyUsernamePwdAuth , 
+			   prep->m_usernamePwd ,
+			   len );
+		r->m_proxyUsernamePwdAuth[len] = '\0';
+	}
 
 	// if this proxy ip seems banned, are there more proxies to try?
 	r->m_hasMoreProxiesToTry = prep->m_hasMoreProxiesToTry;
@@ -994,10 +1003,11 @@ void downloadTheDocForReals3b ( Msg13Request *r ) {
 		char tmpIp[64];
 		sprintf(tmpIp,"%s",iptoa(r->m_urlIp));
 		log(LOG_INFO,
-		    "sproxy: got proxy %s:%"INT32" and agent=\"%s\" to spider "
+		    "sproxy: got proxy %s:%"UINT32" "
+		    "and agent=\"%s\" to spider "
 		    "%s %s (numBannedProxies=%"INT32")",
 		    iptoa(r->m_proxyIp),
-		    (int32_t)r->m_proxyPort,
+		    (uint32_t)(uint16_t)r->m_proxyPort,
 		    agent,
 		    tmpIp,
 		    r->ptr_url,
@@ -1105,6 +1115,12 @@ bool ipWasBanned ( TcpSocket *ts , const char **msg ) {
 		return true;
 	}
 
+	// if it has link to "google.com/recaptcha"
+	// TODO: use own gbstrstr so we can do QUICKPOLL(niceness)
+	if ( strstr ( ts->m_readBuf , "google.com/recaptcha/api/challenge") ) {
+		*msg = "recaptcha link";
+		return true;
+	}
 
 	// TODO: compare a simple checksum of the page content to what
 	// we have downloaded previously from this domain or ip. if it 

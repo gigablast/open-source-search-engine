@@ -10,6 +10,7 @@
 #define _MSG13_H_
 
 #include "Url.h" // MAX_URL_LEN
+#include "SpiderProxy.h" // MAXUSERNAMEPWD
 
 // max crawl delay form proxy backoff of 1 minute (60 seconds)
 #define MAX_PROXYCRAWLDELAYMS 60000
@@ -29,9 +30,9 @@ public:
 	int32_t  m_lbId; // loadbucket id
 	// the http proxy to use to download
 	int32_t  m_proxyIp;
-	int16_t m_proxyPort;
+	uint16_t m_proxyPort;
 	int32_t  m_banProxyIp;
-	int16_t m_banProxyPort;
+	uint16_t m_banProxyPort;
 	char  m_opCode;
 	char  m_lastHack;
 
@@ -68,7 +69,7 @@ public:
 	// for linked list, this is the hammer queue
 	class Msg13Request *m_nextLink;
 
-	char *m_proxyUsernamePwdAuth;
+	char m_proxyUsernamePwdAuth[MAXUSERNAMEPWD];
 
 	// if doing spider compression, compute contentHash32 of document
 	// downloaded, and if it matches this then send back EDOCUNCHANGED

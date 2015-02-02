@@ -20252,6 +20252,9 @@ bool XmlDoc::logIt ( SafeBuf *bb ) {
 			sb->safePrintf("numredirs=%"INT32" ",m_numRedirects);
 	}
 
+	if ( m_httpStatusValid && m_httpStatus != 200 )
+		sb->safePrintf("httpstatus=%"INT32,(int32_t)m_httpStatus);
+		
 	if ( m_isDupValid && m_isDup )
 		sb->safePrintf("dupofdocid=%"INT64" ",m_docIdWeAreADupOf);
 

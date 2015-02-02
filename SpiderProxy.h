@@ -38,7 +38,7 @@ bool saveSpiderProxyStats();
 //	char m_opCode;
 //};
 	
-#define MAXUSERNAMEPWD 128
+#define MAXUSERNAMEPWD 64
 
 // host #0 gives us a proxy to use:
 class ProxyReply {
