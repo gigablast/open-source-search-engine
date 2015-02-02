@@ -2380,6 +2380,14 @@ bool XmlDoc::indexDoc ( ) {
 		m_indexCodeValid = true;
 	}
 
+	// i've seen Multicast got error in reply from hostId 19 (msgType=0x22
+	// transId=496026 nice=1 net=default): Buf too small.
+	// so fix that with this
+	if ( g_errno == EBUFTOOSMALL ) {
+		m_indexCode = g_errno;
+		m_indexCodeValid = true;
+	}
+
 	if ( g_errno == EBADURL ) {
 		m_indexCode = g_errno;
 		m_indexCodeValid = true;
