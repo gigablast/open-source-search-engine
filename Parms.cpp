@@ -17714,7 +17714,7 @@ void Parms::init ( ) {
 	m->m_def   = "1";
 	m->m_page  = PAGE_SPIDER;
 	m->m_obj   = OBJ_COLL;
-	m->m_flags = PF_CLONE | PF_HIDDEN;
+	m->m_flags = PF_CLONE ;//| PF_HIDDEN; 
 	m++;
 
 	m->m_cgi   = "apiUrl";

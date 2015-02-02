@@ -2940,8 +2940,14 @@ bool UdpServer::readTimeoutPoll ( int64_t now ) {
 		// maybe QUICKPOLL(0) should at least send/read the udp ports?
 		//
 		// FOR NOW though since hosts do not go down that much
-		// let's also require that i has been 5 secs or more...
+		// let's also require that it has been 5 secs or more...
 		//
+
+		int32_t timeout = 5000;
+		// spider time requests typically have timeouts of 1 year!
+		// so we end up waiting for the host to come back online
+		// before the spider can proceed.
+		if ( slot->m_niceness ) timeout = slot->m_timeout;
 
 		// check it
 		if ( slot->m_maxResends >= 0 &&
@@ -2951,7 +2957,9 @@ bool UdpServer::readTimeoutPoll ( int64_t now ) {
 		     slot->m_sentBitsOn > slot->m_readAckBitsOn &&
 		     // fix too many timing out slot msgs when a host is
 		     // hogging the cpu on a niceness 0 thing...
-		     elapsed > 5000 &&
+		     //elapsed > 5000 &&
+		     // respect slot's timeout too!
+		     elapsed > timeout &&
 		     // only do this when sending a request
 		     slot->m_callback ) {
 			// should this be ENOACK or something?
@@ -2960,8 +2968,10 @@ bool UdpServer::readTimeoutPoll ( int64_t now ) {
 			something = true;
 			// note it
 			log("udp: Timing out slot (msgType=0x%"XINT32") "
-			    "after %"INT32" resends. hostid=%"INT32" (elapsed=%"INT64")" ,
-			    (int32_t)slot->m_msgType, (int32_t)slot->m_resendCount ,
+			    "after %"INT32" resends. hostid=%"INT32" "
+			    "(elapsed=%"INT64")" ,
+			    (int32_t)slot->m_msgType, 
+			    (int32_t)slot->m_resendCount ,
 			    slot->m_hostId,elapsed);
 			// keep going
 			continue;
