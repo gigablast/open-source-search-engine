@@ -122,6 +122,10 @@ bool buildProxyTable ( ) {
 	for ( ; *p ; ) {
 		// skip white space
 		if ( is_wspace_a(*p) ) { p++; continue; }
+
+		// skip http://
+		if ( strncasecmp(p,"http://",7) == 0 ) { p += 7; continue; }
+
 		// scan in an ip:port
 		char *s = p; char *portStr = NULL;
 		int32_t dc = 0, pc = 0, gc = 0, bc = 0;
@@ -225,7 +229,7 @@ bool buildProxyTable ( ) {
 		newThing.m_lastDownloadTookMS = -1;
 		newThing.m_lastSuccessfulTestMS = -1;
 
-		strcpy(newThing.m_usernamePwd,usernamePwd);
+		gbmemcpy(newThing.m_usernamePwd,usernamePwd,usernamePwdLen);
 		// ensure it is NULL terminated
 		newThing.m_usernamePwd[usernamePwdLen] = '\0';
 
