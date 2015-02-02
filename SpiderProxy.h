@@ -38,6 +38,8 @@ bool saveSpiderProxyStats();
 //	char m_opCode;
 //};
 	
+#define MAXUSERNAMEPWD 128
+
 // host #0 gives us a proxy to use:
 class ProxyReply {
 public:
@@ -51,6 +53,8 @@ public:
 	bool  m_hasMoreProxiesToTry;
 	// how many proxies do we have that are banned by the urlip?
 	int32_t  m_numBannedProxies;
+	// the username/pwd for authentication
+	char m_usernamePwd[MAXUSERNAMEPWD];
 };
 
 #endif

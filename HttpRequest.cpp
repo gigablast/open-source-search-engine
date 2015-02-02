@@ -155,7 +155,8 @@ bool HttpRequest::set (char *url,int32_t offset,int32_t size,time_t ifModifiedSi
 		       int32_t postContentLen ,
 		       // are we sending the request through an http proxy?
 		       // if so this will be non-zero
-		       int32_t proxyIp ) {
+		       int32_t proxyIp ,
+		       char *proxyUsernamePwd ) {
 
 	m_reqBufValid = false;
 
@@ -244,6 +245,15 @@ bool HttpRequest::set (char *url,int32_t offset,int32_t size,time_t ifModifiedSi
 	// note Connection: Close\r\n when making requests
 	//proto = "HTTP/1.1";
 
+	SafeBuf tmp;
+	char *up = "";
+	if ( proxyUsernamePwd && proxyUsernamePwd[0] ) {
+		tmp.safePrintf("Proxy-Authorization: Basic ");
+		tmp.base64Encode (proxyUsernamePwd,gbstrlen(proxyUsernamePwd));
+		tmp.safePrintf("\r\n");
+		up = tmp.getBufStart();
+	}
+
 	 // . now use "Accept-Language: en" to tell servers we prefer english
 	 // . i removed keep-alive connection since some connections close on
 	 //   non-200 ok http statuses and we think they're open since close
@@ -279,10 +289,12 @@ bool HttpRequest::set (char *url,int32_t offset,int32_t size,time_t ifModifiedSi
 			   //"Connection: Keep-Alive\r\n" 
 			   "Accept-Language: en\r\n"
 			   //"Accept: */*\r\n\r\n" ,
-			   "Accept: %s\r\n" ,
+			   "Accept: %s\r\n" 
+			   "%s"
+			   ,
 				 cmd,
 			   path , proto, host , 
-			   ims , userAgent , accept );
+			   ims , userAgent , accept , up );
 	 }
 	 else if ( size != -1 ) 
 		 m_reqBuf.safePrintf (
@@ -295,7 +307,9 @@ bool HttpRequest::set (char *url,int32_t offset,int32_t size,time_t ifModifiedSi
 			   "Accept-Language: en\r\n"
 			   //"Accept: */*\r\n"
 			   "Accept: %s\r\n"
-			   "Range: bytes=%"INT32"-%"INT32"\r\n" ,
+			   "Range: bytes=%"INT32"-%"INT32"\r\n" 
+			   "%s"
+			   ,
 				cmd,
 			   path ,
 			   proto ,
@@ -304,7 +318,8 @@ bool HttpRequest::set (char *url,int32_t offset,int32_t size,time_t ifModifiedSi
 			   userAgent ,
 			   accept ,
 			   offset ,
-			   offset + size );
+			   offset + size ,
+				      up);
 	 else if ( offset > 0  && size == -1 ) 
 		 m_reqBuf.safePrintf (
 			   "%s %s %s\r\n" 
@@ -316,7 +331,9 @@ bool HttpRequest::set (char *url,int32_t offset,int32_t size,time_t ifModifiedSi
 			   "Accept-Language: en\r\n"
 			   //"Accept: */*\r\n"
 			   "Accept: %s\r\n"
-			   "Range: bytes=%"INT32"-\r\n" ,
+			   "Range: bytes=%"INT32"-\r\n" 
+			   "%s"
+			   ,
 				cmd,
 			   path ,
 			   proto ,
@@ -324,7 +341,8 @@ bool HttpRequest::set (char *url,int32_t offset,int32_t size,time_t ifModifiedSi
 			   ims  ,
 			   userAgent ,
 			   accept ,
-			   offset );
+			   offset ,
+				      up );
 	 // Wget's request:
 	 // GET / HTTP/1.0\r\nUser-Agent: Wget/1.10.2\r\nAccept: */*\r\nHost: 127.0.0.1:8000\r\nConnection: Keep-Alive\r\n\r\n
 	 // firefox's request:
@@ -344,7 +362,9 @@ bool HttpRequest::set (char *url,int32_t offset,int32_t size,time_t ifModifiedSi
 			   "Connection: Close\r\n"
 			   //"Connection: Keep-Alive\r\n"
 			   //"Accept-Language: en\r\n"
-				"%s",
+				"%s"
+			   "%s"
+			   ,
 			   //"Accept: %s\r\n\r\n" ,
 				//"\r\n",
 				cmd,
@@ -353,7 +373,8 @@ bool HttpRequest::set (char *url,int32_t offset,int32_t size,time_t ifModifiedSi
 			   userAgent ,
 			   host ,
 			   ims ,
-			   acceptEncoding);
+			   acceptEncoding,
+				      up );
 			   //accept );
 	 }
 

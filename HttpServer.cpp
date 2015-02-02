@@ -133,7 +133,8 @@ bool HttpServer::getDoc ( char   *url      ,
 			  char    *cookie ,
 			  char    *additionalHeader ,
 			  char    *fullRequest ,
-			  char    *postContent ) { 
+			  char    *postContent ,
+			  char    *proxyUsernamePwdAuth ) { 
 	// sanity
 	if ( ip == -1 ) 
 		log("http: you probably didn't mean to set ip=-1 did you? "
@@ -197,7 +198,8 @@ bool HttpServer::getDoc ( char   *url      ,
 			       // request being sent to a proxy we have to
 			       // say "GET http://www.xyz.com/" the full
 			       // url, not just a relative path.
-			       additionalHeader , pcLen , proxyIp ) ) {
+			       additionalHeader , pcLen , proxyIp ,
+			       proxyUsernamePwdAuth ) ) {
 			log("http: http req error: %s",mstrerror(g_errno));
 			// TODO: ensure we close the socket on this error!
 			return true;

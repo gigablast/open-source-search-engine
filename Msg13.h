@@ -67,6 +67,9 @@ public:
 	int32_t  m_crawlDelayMS;
 	// for linked list, this is the hammer queue
 	class Msg13Request *m_nextLink;
+
+	char *m_proxyUsernamePwdAuth;
+
 	// if doing spider compression, compute contentHash32 of document
 	// downloaded, and if it matches this then send back EDOCUNCHANGED
 	int32_t  m_contentHash32;

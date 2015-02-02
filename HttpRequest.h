@@ -55,7 +55,8 @@ class HttpRequest {
 		   char *cookie = NULL ,
 		   char *additionalHeader = NULL , // does not incl \r\n
 		   int32_t postContentLen = -1 , // for content-length of POST
-		   int32_t proxyIp = 0 );
+		   int32_t proxyIp = 0 ,
+		   char *proxyUsernamePwdAuth = NULL );
 
 	// use this
 	SafeBuf m_reqBuf;

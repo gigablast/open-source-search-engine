@@ -8777,6 +8777,7 @@ void Parms::init ( ) {
 	m->m_title = "spider proxy ips";
 	m->m_desc  = "List of white space-separated spider proxy IPs. Put "
 		"in IP:port format. Example <i>1.2.3.4:80 4.5.6.7:99</i>. "
+		"You can also use <i>username:password@1.2.3.4:80</i>. "
 		"If a proxy itself times out when downloading through it "
 		"it will be perceived as a normal download timeout and the "
 		"page will be retried according to the url filters table, so "

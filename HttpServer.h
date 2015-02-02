@@ -101,7 +101,8 @@ class HttpServer {
 		      char *additionalHeader = NULL , // does not include \r\n
 		      // specify your own mime and post data here...
 		      char *fullRequest = NULL ,
-		      char *postContent = NULL );
+		      char *postContent = NULL ,
+		      char *proxyUsernamePwdAuth = NULL );
 
 	bool getDoc ( int32_t ip,
 		      int32_t port,

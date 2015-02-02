@@ -842,6 +842,9 @@ void gotProxyHostReplyWrapper ( void *state , UdpSlot *slot ) {
 	// out to tell host #0 how long it took use to use this proxy, etc.
 	r->m_lbId = prep->m_lbId;
 
+	r->m_proxyUsernamePwdAuth = prep->m_usernamePwd;
+	if ( ! prep->m_usernamePwd[0] ) r->m_proxyUsernamePwdAuth = NULL;
+
 	// if this proxy ip seems banned, are there more proxies to try?
 	r->m_hasMoreProxiesToTry = prep->m_hasMoreProxiesToTry;
 
@@ -1041,7 +1044,10 @@ void downloadTheDocForReals3b ( Msg13Request *r ) {
 				     false , // doPost?
 				     r->ptr_cookie , // cookie
 				     NULL , // additionalHeader
-				     exactRequest ) ) // our own mime!
+				     exactRequest , // our own mime!
+				     NULL , // postContent
+				     // this is NULL or '\0' if not there
+				     r->m_proxyUsernamePwdAuth ) )
 		// return false if blocked
 		return;
 	// . log this so i know about it

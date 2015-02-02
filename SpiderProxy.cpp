@@ -31,7 +31,7 @@ class SpiderProxy {
 public:
 	// ip/port of the spider proxy
 	int32_t m_ip;
-	int16_t m_port;
+	uint16_t m_port;
 	// last time we attempted to download the test url through this proxy
 	int64_t m_lastDownloadTestAttemptMS;
 	// use -1 to indicate timed out when downloading test url
@@ -63,6 +63,7 @@ public:
 	int32_t m_countForThisIp;
 	int64_t m_lastTimeUsedForThisIp;
 
+	char m_usernamePwd[MAXUSERNAMEPWD];
 };
 
 // hashtable that maps an ip:port key (64-bits) to a SpiderProxy
@@ -117,14 +118,43 @@ bool buildProxyTable ( ) {
 	tmptab.set(8,0,16,NULL,0,false,0,"tmptab");
 
 	// scan the user inputted space-separated list of ip:ports
+	// (optional username:password@ip:port)
 	for ( ; *p ; ) {
 		// skip white space
 		if ( is_wspace_a(*p) ) { p++; continue; }
 		// scan in an ip:port
 		char *s = p; char *portStr = NULL;
 		int32_t dc = 0, pc = 0, gc = 0, bc = 0;
+		char *msg;
+
+		char *usernamePwd = NULL;
+		int32_t usernamePwdLen = 0;
+		char *ipStart = p;
+
 		// scan all characters until we hit \0 or another whitespace
 		for ( ; *s && !is_wspace_a(*s); s++) {
+
+			if ( *s == '@' ) {
+				// must be username:pwd
+				if ( pc != 1 ) {
+					msg = "bad username:password";
+					goto hadError;
+				}
+				usernamePwd = p;
+				usernamePwdLen = s - p;
+				if ( usernamePwdLen >= MAXUSERNAMEPWD-2 ) {
+					msg = "username:password too long";
+					goto hadError;
+				}
+				dc = 0;
+				gc = 0;
+				bc = 0;
+				pc = 0;
+				portStr = NULL;
+				ipStart = s+1;
+				continue;
+			}
+
 			if ( *s == '.' ) { dc++; continue; }
 			if ( *s == ':' ) { portStr=s; pc++; continue; }
 			if ( is_digit(*s) ) { gc++; continue; }
@@ -132,7 +162,7 @@ bool buildProxyTable ( ) {
 			continue;
 		}
 		// ensure it is a legit ip:port combo
-		char *msg = NULL;
+		msg = NULL;
 		if ( gc < 4 ) 
 			msg = "not enough digits for an ip";
 		if ( pc > 1 )
@@ -142,6 +172,7 @@ bool buildProxyTable ( ) {
 		if ( bc )
 			msg = "got illegal char in ip:port listing";
 		if ( msg ) {
+		hadError:
 			char c = *s;
 			*s = '\0';
 			log("buf: %s for %s",msg,p);
@@ -150,9 +181,9 @@ bool buildProxyTable ( ) {
 		}
 
 		// convert it
-		int32_t iplen = s - p;
-		if ( portStr ) iplen = portStr - p;
-		int32_t ip = atoip(p,iplen);
+		int32_t iplen = s - ipStart;
+		if ( portStr ) iplen = portStr - ipStart;
+		int32_t ip = atoip(ipStart,iplen);
 		// another sanity check
 		if ( ip == 0 || ip == -1 ) {
 			log("spider: got bad proxy ip for %s",p);
@@ -193,6 +224,11 @@ bool buildProxyTable ( ) {
 		newThing.m_port = port;
 		newThing.m_lastDownloadTookMS = -1;
 		newThing.m_lastSuccessfulTestMS = -1;
+
+		strcpy(newThing.m_usernamePwd,usernamePwd);
+		// ensure it is NULL terminated
+		newThing.m_usernamePwd[usernamePwdLen] = '\0';
+
 		if ( ! s_iptab.addKey ( &ipKey, &newThing ) )
 			return false;
 	}		
@@ -386,10 +422,10 @@ bool printSpiderProxyTable ( SafeBuf *sb ) {
 		sb->safePrintf (
 			       "<tr bgcolor=#%s>"
 			       "<td>%s</td>" // proxy ip
-			       "<td>%"INT32"</td>" // port
+			       "<td>%"UINT32"</td>" // port
 			       , bg
 			       , iptoa(sp->m_ip)
-			       , (int32_t)sp->m_port
+			       , (uint32_t)(uint16_t)sp->m_port
 			       );
 
 		sb->safePrintf("<td>%"INT64"</td>",sp->m_timesUsed);
@@ -465,10 +501,20 @@ void gotTestUrlReplyWrapper ( void *state , TcpSocket *s ) {
 	// free that thing
 	//mfree ( ss , sizeof(spip) ,"spip" );
 
+	HttpMime mime;
+	bool ret = mime.set ( s->m_readBuf , s->m_readOffset , NULL );
+	int32_t status = mime.getHttpStatus();
+
 	// note it
-	if ( g_conf.m_logDebugProxies )
-		log("sproxy: got test url reply (%s): %s",
-		    mstrerror(g_errno),s->m_readBuf);
+	if ( g_conf.m_logDebugProxies || ! ret || status != 200 ) {
+		SafeBuf sb;
+		sb.safeMemcpy ( s->m_sendBuf , s->m_sendBufUsed );
+		sb.nullTerm();
+		log("sproxy: got test url reply (%s): %s *** sendbuf=%s",
+		    mstrerror(g_errno),
+		    s->m_readBuf,
+		    sb.getBufStart() );
+	}
 
 	// we can get the spider proxy ip/port from the socket because
 	// we sent this url download request to that spider proxy
@@ -480,8 +526,8 @@ void gotTestUrlReplyWrapper ( void *state , TcpSocket *s ) {
 
 	// did user remove it from the list before we could finish testing it?
 	if ( ! sp ) {
-		log("sproxy: spider proxy entry for ip %s:%"INT32" is gone! wtf? "
-		    "proxy stats table cannot be updated.",
+		log("sproxy: spider proxy entry for ip %s:%"INT32" is gone! "
+		    "wtf? proxy stats table cannot be updated.",
 		    iptoa(s->m_ip),(int32_t)s->m_port);
 		return;
 	}
@@ -493,12 +539,10 @@ void gotTestUrlReplyWrapper ( void *state , TcpSocket *s ) {
 	int64_t took = nowms - sp->m_lastDownloadTestAttemptMS;
 	sp->m_lastDownloadTookMS = (int32_t)took;
 
-	HttpMime mime;
-	mime.set ( s->m_readBuf , s->m_readOffset , NULL );
 
 	// tiny proxy permission denied is 403
-	int32_t status = mime.getHttpStatus();
-	if ( status == 403 && g_conf.m_logDebugProxies ) {
+	if ( status >= 400 ) { 
+		// if (  g_conf.m_logDebugProxies ) {
 		log("sproxy: got bad http status from proxy: %"INT32"",status);
 		g_errno = EPERMDENIED;
 	}
@@ -560,6 +604,10 @@ bool downloadTestUrlFromProxies ( ) {
 
 		sp->m_lastDownloadTestAttemptMS = nowms;
 
+		char *proxyUsernamePwdAuth = sp->m_usernamePwd;
+		if ( proxyUsernamePwdAuth && ! proxyUsernamePwdAuth[0] )
+			proxyUsernamePwdAuth = NULL;
+
 		// returns false if blocked
 		if ( ! g_httpServer.getDoc( tu ,
 					    0 , // ip
@@ -572,8 +620,16 @@ bool downloadTestUrlFromProxies ( ) {
 					    sp->m_ip, // proxyip
 					    sp->m_port, // proxyport
 					    -1, // maxtextdoclen
-					    -1 // maxtextotherlen
-					    ) ) {
+					    -1, // maxtextotherlen
+					    NULL, // agent                ,
+					    DEFAULT_HTTP_PROTO , // "HTTP/1.0"
+					    false , // doPost?
+					    NULL , // cookie
+					    NULL , // additionalHeader
+					    NULL , // our own mime!
+					    NULL , // postContent
+					    // is NULL or '\0' if not there
+					    proxyUsernamePwdAuth ) ) {
 			//blocked++;
 			continue;
 		}
@@ -872,6 +928,10 @@ void handleRequest54 ( UdpSlot *udpSlot , int32_t niceness ) {
 	ProxyReply *prep = (ProxyReply *)udpSlot->m_tmpBuf;
 	prep->m_proxyIp = winnersp->m_ip;
 	prep->m_proxyPort = winnersp->m_port;
+
+	// this is just '\0' if none
+	strcpy(prep->m_usernamePwd,winnersp->m_usernamePwd);
+
 	// do not count the proxy we are returning as "more"
 	prep->m_hasMoreProxiesToTry = ( aliveProxyCandidates > 1 );
 	// and the loadbucket id, so requester can tell us it is done
