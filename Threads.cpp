@@ -26,7 +26,7 @@ int pthread_mutex_lock   (pthread_mutex_t *t ) { return 0; }
 int pthread_mutex_unlock (pthread_mutex_t *t ) { return 0; }
 #else
 #include <pthread.h>
-pthread_attr_t s_attr;
+//pthread_attr_t s_attr;
 #endif
 
 // main process id (or thread id if using pthreads)
@@ -127,7 +127,9 @@ int *__errno_location (void) {
 
 // . crashed in saving with 800k, so try 1M
 // . must be multiple of THRPAGESIZE
-#define STACK_SIZE ((512+256) * 1024)
+//#define STACK_SIZE ((512+256) * 1024)
+// pthread_create() cores in calloc() if we don't make STACK_SIZE bigger:
+#define STACK_SIZE ((512+256+1024) * 1024)
 
 // jeta was having some problems, but i don't think they were related to
 // this stack size of 512k, but i will try boosting to 800k anyway.
@@ -143,11 +145,11 @@ int *__errno_location (void) {
 static char *s_stackAlloc = NULL;
 static int32_t  s_stackAllocSize;
 
-#ifndef PTHREADS
+//#ifndef PTHREADS
 static char *s_stack      = NULL;
 static int32_t  s_stackSize;
 static char *s_stackPtrs [ MAX_STACKS ];
-#endif
+//#endif
 
 static int32_t  s_next      [ MAX_STACKS ];
 static int32_t  s_head ;
@@ -337,7 +339,7 @@ bool Threads::init ( ) {
 	//if (!g_threads.registerType (SSLACCEPT_THREAD,20/*maxThreads*/,100)) 
 	//	return log("thread: Failed to register thread type." );
 
-#ifndef PTHREADS
+//#ifndef PTHREADS
 
 	// sanity check
 	if ( GUARDSIZE >= STACK_SIZE )
@@ -358,7 +360,7 @@ bool Threads::init ( ) {
 	log(LOG_INIT,"thread: Using %"INT32" bytes for %"INT32" thread stacks.",
 	    s_stackAllocSize,maxThreads);
 	// align
-	s_stack = (char *)(((int)s_stackAlloc+THRPAGESIZE-1)&~(THRPAGESIZE-1));
+	s_stack = (char *)(((uint64_t)s_stackAlloc+THRPAGESIZE-1)&~(THRPAGESIZE-1));
 	// new size
 	s_stackSize = s_stackAllocSize - (s_stack - s_stackAlloc);
 	// protect the whole stack while not in use
@@ -377,7 +379,7 @@ bool Threads::init ( ) {
 	// don't do real time stuff for now
 	return true;
 
-#else
+//#else
 
 	// . keep stack size small, 128k
 	// . if we get problems, we'll increase this to 256k
@@ -387,9 +389,9 @@ bool Threads::init ( ) {
 	//		    mstrerror(errno));
 	//pthread_attr_setschedparam  ( &s_attr , PTHREAD_EXPLICIT_SCHED  );
 	//pthread_attr_setscope       ( &s_attr , PTHREAD_SCOPE_SYSTEM    );
-	return true;
+//	return true;
 
-#endif
+//#endif
 
 }
 
@@ -961,6 +963,14 @@ bool ThreadQueue::timedCleanUp ( int32_t maxNiceness ) {
 				    "t=0x%"PTRFMT" "
 				    "jointid=0x%"XINT64".",
 				    (PTRTYPE)t,(int64_t)t->m_joinTid);
+
+			g_threads.returnStack ( t->m_si );
+			t->m_stack = NULL;
+			// re-protect this stack
+			mprotect ( t->m_stack + GUARDSIZE , 
+				   STACK_SIZE - GUARDSIZE, 
+				   PROT_NONE );
+
 		}
 		
 #else
@@ -1294,6 +1304,14 @@ bool ThreadQueue::cleanUp ( ThreadEntry *tt , int32_t maxNiceness ) {
 				    "t=0x%"PTRFMT" "
 				    "jointid=0x%"XINT64".",
 				    (PTRTYPE)t,(int64_t)t->m_joinTid);
+
+			g_threads.returnStack ( t->m_si );
+			t->m_stack = NULL;
+			// re-protect this stack
+			mprotect ( t->m_stack + GUARDSIZE , 
+				   STACK_SIZE - GUARDSIZE, 
+				   PROT_NONE );
+
 		}
 #else
 
@@ -2094,8 +2112,39 @@ bool ThreadQueue::launchThread2 ( ThreadEntry *te ) {
 	if ( sigprocmask ( SIG_BLOCK  , &sigs , NULL ) < 0 )
 		log("threads: failed to block sig");
 
+
+	// supply our own stack to make pthread_create() fast otherwise
+	// it has slowness issues with mmap()
+	// http://www.gossamer-threads.com/lists/linux/kernel/960227
+	t->m_stackSize = STACK_SIZE;
+	//t->m_stack = (char *)mmalloc ( t->m_stackSize , "Threads" );
+	int32_t si = g_threads.getStack ( );
+	if ( si < 0 ) {
+		log(LOG_LOGIC,"thread: Unable to get stack. Bad engineer.");
+		goto hadError;
+	}
+	t->m_si    = si;
+	t->m_stack = s_stackPtrs [ si ];
+	// check it's aligned
+	if ( (uint64_t)(t->m_stack) & (THRPAGESIZE-1) ) {
+		char *xx=NULL;*xx=0; }
+	// UNprotect the whole stack so we can use it
+	mprotect ( t->m_stack + GUARDSIZE , STACK_SIZE - GUARDSIZE , 
+		   PROT_READ | PROT_WRITE );
+
+	pthread_attr_t attr;
+	pthread_attr_init ( &attr );
+	pthread_attr_setstack ( &attr , t->m_stack , t->m_stackSize );
+
+	// debug
+	if ( g_conf.m_logDebugThread )
+		log("threads: pthread_create: "
+		    "stack=%"PTRFMT" stacksize=%"INT64""
+		    , (PTRTYPE)t->m_stack
+		    , (int64_t)t->m_stackSize );
+
 	// this returns 0 on success, or the errno otherwise
-	g_errno = pthread_create ( &t->m_joinTid , &s_attr, startUp2 , t) ;
+	g_errno = pthread_create ( &t->m_joinTid , &attr, startUp2 , t) ;
 
 	if ( sigprocmask ( SIG_UNBLOCK  , &sigs , NULL ) < 0 )
 		log("threads: failed to unblock sig");
