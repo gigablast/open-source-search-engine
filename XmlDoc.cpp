@@ -1979,7 +1979,7 @@ bool XmlDoc::injectDoc ( char *url ,
 			 bool deleteUrl,
 			 char *contentTypeStr, // text/html application/json
 			 bool spiderLinks ,
-			 bool newOnly, // index iff new
+			 char newOnly, // index iff new
 
 			 void *state,
 			 void (*callback)(void *state) ,
@@ -3109,10 +3109,10 @@ int32_t *XmlDoc::getIndexCode2 ( ) {
 			return &m_indexCode;
 		}
 		// if it was injected itself, only abandon this injection
-		// in the special case that m_newOnly is "2". otherwise
-		// if m_newOnly is 1 then we will overwrite any existing
-		// titlerecs that were injected themselves.
-		if ( od && od->m_wasContentInjected && m_newOnly == 2 ) {
+		// in the special case that m_newOnly is "1". otherwise
+		// if m_newOnly is 2 then we will overwrite any existing
+		// titlerecs that were not injected themselves.
+		if ( od && od->m_wasContentInjected && m_newOnly == 1 ) {
 			m_indexCode = EABANDONED;
 			m_indexCodeValid = true;
 			return &m_indexCode;

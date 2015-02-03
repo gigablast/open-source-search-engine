@@ -2370,7 +2370,7 @@ class XmlDoc {
 			 //char contentType, // CT_HTML, CT_XML
 			 char *contentTypeStr, // text/html, text/xml etc.
 			 bool spiderLinks ,
-			 bool newOnly, // index iff new
+			 char newOnly, // index iff new
 
 			 void *state,
 			 void (*callback)(void *state) ,
