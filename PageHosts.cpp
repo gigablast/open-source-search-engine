@@ -576,6 +576,29 @@ skipReplaceHost:
 				      );
 		}
 
+		if ( format == FORMAT_HTML ) {
+			char *f1 = "";
+			char *f2 = "";
+			if ( h->m_pingInfo.m_tcpSocketsInUse >= 100 ) {
+				f1 = "<b>";
+				f2 = "</b>";
+			}
+			if ( h->m_pingInfo.m_tcpSocketsInUse >= 200 ) {
+				f1 = "<b><font color=red>";
+				f2 = "</font></b>";
+			}
+			fb.safePrintf("<span title=\"tcpSocketsInUse\">"
+				      "%s"
+				      "T"
+				      "<sup>%"INT32"</sup>"
+				      "%s"
+				      "</span>"
+				      ,f1
+				      ,h->m_pingInfo.m_tcpSocketsInUse
+				      ,f2
+				      );
+		}
+
 		if ((flags & PFLAG_HASSPIDERS) && format != FORMAT_HTML )
 			fb.safePrintf ( "Spidering");
 
@@ -657,6 +680,10 @@ skipReplaceHost:
 			sb.safePrintf("\t\t<udpSlotsInUse>%"INT32""
 				      "</udpSlotsInUse>\n",
 				      h->m_pingInfo.m_udpSlotsInUse);
+
+			sb.safePrintf("\t\t<tcpSocketsInUse>%"INT32""
+				      "</tcpSocketsInUse>\n",
+				      h->m_pingInfo.m_tcpSocketsInUse);
 
 			/*
 			sb.safePrintf("\t\t<dgramsTo>%"INT64"</dgramsTo>\n",
@@ -765,6 +792,8 @@ skipReplaceHost:
 				      h->m_pingInfo.m_etryagains);
 			sb.safePrintf("\t\t\"udpSlotsInUse\":%"INT32",\n",
 				      h->m_pingInfo.m_udpSlotsInUse);
+			sb.safePrintf("\t\t\"tcpSocketsInUse\":%"INT32",\n",
+				      h->m_pingInfo.m_tcpSocketsInUse);
 
 			/*
 			sb.safePrintf("\t\t\"dgramsTo\":%"INT64",\n",
@@ -1469,7 +1498,14 @@ skipReplaceHost:
 		  "<tr class=poo>"
 		  "<td><nobr>U (status flag)</nobr></td>"
 		  "<td>Indicates the number of active UDP transactions "
-		  "which are either intiating or receiving."
+		  "which are either outgoing or incoming requests."
+		  "</td>"
+		  "</tr>\n"
+
+		  "<tr class=poo>"
+		  "<td><nobr>T (status flag)</nobr></td>"
+		  "<td>Indicates the number of active TCP transactions "
+		  "which are either outgoing or incoming requests."
 		  "</td>"
 		  "</tr>\n"
 

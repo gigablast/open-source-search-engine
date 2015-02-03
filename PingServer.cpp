@@ -506,6 +506,8 @@ void PingServer::pingHost ( Host *h , uint32_t ip , uint16_t port ) {
 
 	pi->m_udpSlotsInUse = g_udpServer.getNumUsedSlots();
 
+	pi->m_tcpSocketsInUse = g_httpServer.m_tcp.m_numUsed;
+
 	// store hd temps
 	// gbmemcpy ( p , me->m_hdtemps , 4 * 2 );
 	// p += 4 * 2;
