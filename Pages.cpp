@@ -4107,18 +4107,19 @@ bool printRedBox ( SafeBuf *mb , TcpSocket *sock , HttpRequest *hr ) {
 		mb->safePrintf("All Threads are disabled. "
 			       "Might hurt performance for doing system "
 			       "calls which call 3rd party executables and "
-			       "can take a int32_t time to run, "
-			       "like pdf2html.");
+			       "can take a long time to run, "
+			       "like pdf2html. Enable in master controls.");
 		mb->safePrintf("%s",boxEnd);
 	}
 
 
-	if ( g_conf.m_useThreadsForDisk ) { // || g_threads.m_disabled ) {
+	if ( ! g_conf.m_useThreadsForDisk ) { // || g_threads.m_disabled ) {
 		if ( adds ) mb->safePrintf("<br>");
 		adds++;
 		mb->safePrintf("%s",box);
-		mb->safePrintf("Threads are ENabled for disk. Severely hurts "
-			      "performance because pthreads suck.");
+		mb->safePrintf("Threads are Disabled for disk. Hurts "
+			       "performance mostly on non-SSD systems. "
+			       "Enable threads in the master controls.");
 		mb->safePrintf("%s",boxEnd);
 	}
 
@@ -4130,8 +4131,8 @@ bool printRedBox ( SafeBuf *mb , TcpSocket *sock , HttpRequest *hr ) {
 			       "Might hurt performance because these "
 			       "are calls to "
 			       "3rd party executables and "
-			       "can take a int32_t time to run, "
-			       "like pdf2html.");
+			       "can take a long time to run, "
+			       "like pdf2html. Enable in master controls.");
 		mb->safePrintf("%s",boxEnd);
 	}
 

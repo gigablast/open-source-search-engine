@@ -12206,12 +12206,14 @@ void Parms::init ( ) {
 	// pooling or something turn these off
 	m->m_title = "use threads for disk";
 	m->m_desc  = "If enabled, Gigablast will use threads for disk ops. "
-		"Until pthreads is any good leave this off. If you have "
-		"SSDs performance can be as much as 100x better.";
+		"Now that Gigablast uses pthreads more effectively, "
+		"leave this enabled for optimal performance in all cases.";
+	//"Until pthreads is any good leave this off. If you have "
+	//"SSDs performance can be as much as 100x better.";
 	m->m_cgi   = "utfd";
 	m->m_off   = (char *)&g_conf.m_useThreadsForDisk - g;
 	m->m_type  = TYPE_BOOL;
-	m->m_def   = "0";
+	m->m_def   = "1";
 	m->m_flags = 0;//PF_NOSAVE;
 	m->m_page  = PAGE_MASTER;
 	m->m_obj   = OBJ_CONF;
