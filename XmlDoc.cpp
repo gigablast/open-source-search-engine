@@ -2792,8 +2792,14 @@ bool XmlDoc::indexDoc2 ( ) {
 	m_msg4Waiting = false;
 
 	bool flush = false;
-	if ( m_contentInjected ) flush = true;
-	if ( m_sreqValid && m_sreq.m_isPageInject ) flush = true;
+
+	// no longer flush injections.
+	// TODO: pass in a flush flag with injection and flush in that
+	// case, but for now disable to make things faster. profiler
+	// indicates too much msg4 activity.
+	//if ( m_contentInjected ) flush = true;
+	//if ( m_sreqValid && m_sreq.m_isPageInject ) flush = true;
+
 	// to keep our qa runs consistent
 	if ( strcmp(cr->m_coll,"qatest123") ) flush = true;
 

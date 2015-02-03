@@ -1813,8 +1813,10 @@ void RdbList::merge_r ( RdbList **lists         ,
 		if ( niceness > 0 ) yieldPoint = m_listPtr + 100000;
 		else                yieldPoint = m_listPtr + 500000;
 		// only do this for low priority stuff now, i am concerned
-		// about int32_t merge times during queries (MDW)
-		if ( niceness > 0 ) sched_yield();
+		// about long merge times during queries (MDW)
+		// this is showing up in the profiler, not sure why
+		// so try taking out.
+		//if ( niceness > 0 ) sched_yield();
 	}
 	// we're done if all lists are exhausted
 	if ( mini == -1 ) goto done;
@@ -2729,7 +2731,7 @@ bool RdbList::indexMerge_r ( RdbList **lists         ,
 		if ( niceness > 0 ) yieldPoint = m_listPtr + 100000;
 		else                yieldPoint = m_listPtr + 500000;
 		// only do this for low priority stuff now, i am concerned
-		// about int32_t merge times during queries (MDW)
+		// about long merge times during queries (MDW)
 		if ( niceness > 0 ) sched_yield();
 	}
 
@@ -3246,8 +3248,10 @@ bool RdbList::posdbMerge_r ( RdbList **lists         ,
 		if ( niceness > 0 ) yieldPoint = m_listPtr + 100000;
 		else                yieldPoint = m_listPtr + 500000;
 		// only do this for low priority stuff now, i am concerned
-		// about int32_t merge times during queries (MDW)
-		if ( niceness > 0 ) sched_yield();
+		// about long merge times during queries (MDW)
+		// this is showing up in the profiler, not sure why
+		// so try taking out.
+		//if ( niceness > 0 ) sched_yield();
 	}
 
 #ifdef _MERGEDEBUG_
