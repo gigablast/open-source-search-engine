@@ -87,7 +87,15 @@ static void makeCallback ( ThreadEntry *t ) ;
 // is the caller a thread?
 bool Threads::amThread () {
 	if ( s_pid == (pthread_t)-1 ) return false;
+#ifdef PTHREADS
+	// gettid() is a bit newer so not in our libc32...
+	// so kinda fake it. return the "thread" id, not process id.
+	// Threads::amThread() should still work based on thread ids because
+	// the main process has a unique thread id as well.
+	return (pthread_self() != s_pid);
+#else
 	return ( getpidtid() != s_pid );
+#endif
 }
 
 #ifndef PTHREADS
@@ -2105,12 +2113,12 @@ bool ThreadQueue::launchThread2 ( ThreadEntry *te ) {
 	// is only meant to be called by the main process. if we end up
 	// double calling it, this thread may think g_callback is non-null
 	// then it gets set to NULL, then the thread cores! seen it...
-	sigset_t sigs;
-	sigemptyset ( &sigs );
-	sigaddset   ( &sigs , SIGALRM );
-	sigaddset   ( &sigs , SIGVTALRM );
-	if ( sigprocmask ( SIG_BLOCK  , &sigs , NULL ) < 0 )
-		log("threads: failed to block sig");
+	// sigset_t sigs;
+	// sigemptyset ( &sigs );
+	// sigaddset   ( &sigs , SIGALRM );
+	// sigaddset   ( &sigs , SIGVTALRM );
+	// if ( sigprocmask ( SIG_BLOCK  , &sigs , NULL ) < 0 )
+	// 	log("threads: failed to block sig");
 
 
 	// supply our own stack to make pthread_create() fast otherwise
@@ -2146,8 +2154,8 @@ bool ThreadQueue::launchThread2 ( ThreadEntry *te ) {
 	// this returns 0 on success, or the errno otherwise
 	g_errno = pthread_create ( &t->m_joinTid , &attr, startUp2 , t) ;
 
-	if ( sigprocmask ( SIG_UNBLOCK  , &sigs , NULL ) < 0 )
-		log("threads: failed to unblock sig");
+	// if ( sigprocmask ( SIG_UNBLOCK  , &sigs , NULL ) < 0 )
+	// 	log("threads: failed to unblock sig");
 
 
 #endif
@@ -2299,6 +2307,7 @@ static bool s_firstTime = true;
 int startUp ( void *state ) {
 	// get thread entry
 	ThreadEntry *t = (ThreadEntry *)state;
+
 	// no! now parent does since he is the one that needs to check it
 	// in the cleanup routine
 	// remember the pid
@@ -2324,6 +2333,9 @@ int startUp ( void *state ) {
 #ifndef PTHREADS
 	sigprocmask(SIG_BLOCK, &set, NULL);
 #else
+	// turn these off in the thread
+	sigaddset   ( &set , SIGALRM );
+	sigaddset   ( &set , SIGVTALRM );
 	pthread_sigmask(SIG_BLOCK,&set,NULL);
 #endif
 	// . what this lwp's priority be?

@@ -1055,6 +1055,12 @@ void sigbadHandler ( int x , siginfo_t *info , void *y ) {
 
 void sigvtalrmHandler ( int x , siginfo_t *info , void *y ) {
 
+#ifdef PTHREADS
+	// do not allow threads
+	// this call is very fast, can be called like 400M times per second
+	if ( g_threads.amThread() ) return;
+#endif
+
 	// stats
 	g_numVTAlarms++;
 
@@ -1159,6 +1165,12 @@ void sigvtalrmHandler ( int x , siginfo_t *info , void *y ) {
 }
 
 void sigalrmHandler ( int x , siginfo_t *info , void *y ) {
+
+#ifdef PTHREADS
+	// do not allow threads
+	// this call is very fast, can be called like 400M times per second
+	if ( g_threads.amThread() ) return;
+#endif
 
 	// so we don't call gettimeofday() thousands of times a second...
 	g_clockNeedsUpdate = true;

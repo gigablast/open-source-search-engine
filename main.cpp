@@ -3280,6 +3280,12 @@ int main2 ( int argc , char *argv[] ) {
 	if ( ! g_users.init()  ){
 		log("db: Users init failed. "); return 1;}
 
+	// int64_t uu = gettimeofdayInMilliseconds();
+	// for ( int i = 0 ; i < 10000000 ; i++ )
+	// 	bool x = g_threads.amThread();
+	// int64_t uu2 = gettimeofdayInMilliseconds();
+	// log("tod: took %"INT64,uu2-uu);
+
 	//if ( ! g_syncdb.init() ) {
 	//	log("db: Syncdb init failed." ); return 1; }
 
