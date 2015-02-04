@@ -2801,7 +2801,7 @@ bool XmlDoc::indexDoc2 ( ) {
 	//if ( m_sreqValid && m_sreq.m_isPageInject ) flush = true;
 
 	// to keep our qa runs consistent
-	if ( strcmp(cr->m_coll,"qatest123") ) flush = true;
+	if ( strcmp(cr->m_coll,"qatest123") == 0 ) flush = true;
 
 	if ( ! m_listAdded ) flush = false;
 	if ( m_listFlushed ) flush = false;
