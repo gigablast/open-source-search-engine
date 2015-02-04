@@ -1607,6 +1607,29 @@ int32_t urlDecode ( char *dest , char *s , int32_t slen ) {
 	return j;
 }
 
+
+int32_t urlDecodeNoZeroes ( char *dest , char *s , int32_t slen ) {
+	int32_t j = 0;
+	for ( int32_t i = 0 ; i < slen ; i++ ) {
+		if ( s[i] == '+' ) { dest[j++]=' '; continue; }
+		dest[j++] = s[i];
+		if ( s[i]  != '%'  ) continue;
+		if ( i + 2 >= slen ) continue;
+		// if two chars after are not hex chars, it's not an encoding
+		if ( ! is_hex ( s[i+1] ) ) continue;
+		if ( ! is_hex ( s[i+2] ) ) continue;
+		// convert hex chars to values
+		unsigned char a = htob ( s[i+1] ) * 16; 
+		unsigned char b = htob ( s[i+2] )     ;
+		// NO ZEROES! fixes &content= having decoded \0's in it
+		// and setting our parms
+		if ( a + b == 0 ) return j; 
+		dest[j-1] = (char) (a + b);
+		i += 2;
+	}
+	return j;
+}
+
 // . like above, but only decodes chars that should not have been encoded
 // . will also encode binary chars
 int32_t urlNormCode ( char *d , int32_t dlen , char *s , int32_t slen ) {

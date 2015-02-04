@@ -78,6 +78,7 @@ int32_t urlEncode     ( char *dest , int32_t destLen , char *src , int32_t srcLe
 int32_t urlEncodeLen  ( char *s , int32_t slen , bool requestPath = false ) ;
 // decode a url -- decode ALL %XX's
 int32_t urlDecode ( char *dest , char *t , int32_t tlen ) ;
+int32_t urlDecodeNoZeroes ( char *dest , char *t , int32_t tlen ) ;
 // . normalize the encoding
 // . like urlDecode() but only decodes chars that should not have been encoded
 // . also, will encode characters that should have been encoded

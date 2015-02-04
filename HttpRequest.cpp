@@ -1050,8 +1050,9 @@ bool HttpRequest::set ( char *origReq , int32_t origReqLen , TcpSocket *sock ) {
 		 int32_t decodeLen = m_cgiBufLen;
 		 // so subtract that
 		 if ( m_ucontent ) decodeLen -= m_ucontentLen;
-		 // decode everything
-		 int32_t len = urlDecode ( m_cgiBuf , m_cgiBuf , decodeLen );
+		 // decode everything. fixed for %00 in &content= so it
+		 // doesn't set our parms when injecting.
+		 int32_t len = urlDecodeNoZeroes(m_cgiBuf,m_cgiBuf,decodeLen);
 		 // we're parsing crap after the null if the last parm 
 		 // has no value
 		 //memset(m_cgiBuf+len, '\0', m_cgiBufLen-len);
@@ -1064,7 +1065,11 @@ bool HttpRequest::set ( char *origReq , int32_t origReqLen , TcpSocket *sock ) {
 		 char *buf = m_cgiBuf2;
 		 for (int32_t i = 0; i < m_cgiBuf2Size-1 ; i++) 
 			 if (buf[i] == '&') buf[i] = '\0';
-		 int32_t len = urlDecode ( m_cgiBuf2 , m_cgiBuf2 , m_cgiBuf2Size);
+		 // decode everything. fixed for %00 in &content= so it
+		 // doesn't set our parms when injecting.
+		 int32_t len = urlDecodeNoZeroes ( m_cgiBuf2 , 
+						   m_cgiBuf2 , 
+						   m_cgiBuf2Size);
 		 memset(m_cgiBuf2+len, '\0', m_cgiBuf2Size-len);
 	 }
 	 // . parse the fields after the ? in a cgi filename

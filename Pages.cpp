@@ -790,6 +790,8 @@ bool Pages::sendDynamicReply ( TcpSocket *s , HttpRequest *r , int32_t page ) {
 	// get safebuf stored in TcpSocket class
 	SafeBuf *parmList = &s->m_handyBuf;
 
+	parmList->reset();
+
 	// chuck this in there
 	s->m_pageNum = page;
 
