@@ -1623,7 +1623,11 @@ int32_t urlDecodeNoZeroes ( char *dest , char *s , int32_t slen ) {
 		unsigned char b = htob ( s[i+2] )     ;
 		// NO ZEROES! fixes &content= having decoded \0's in it
 		// and setting our parms
-		if ( a + b == 0 ) return j; 
+		if ( a + b == 0 ) {
+			log("fctypes: urlDecodeNoZeros encountered url "
+			    "encoded zero. truncating http request.");
+			return j; 
+		}
 		dest[j-1] = (char) (a + b);
 		i += 2;
 	}
