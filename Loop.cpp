@@ -2012,6 +2012,10 @@ void Loop::doPoll ( ) {
 	// handle returned threads for niceness -1
 	//g_threads.timedCleanUp(2/*ms*/);
 
+	// handle returned threads for niceness 0
+	g_threads.timedCleanUp(-3,0); // 3 ms
+
+
 	bool calledOne = false;
 
 	// now keep this fast, too. just check fds we need to.
