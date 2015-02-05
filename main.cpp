@@ -448,8 +448,8 @@ int main2 ( int argc , char *argv[] ) {
 		sb.safePrintf(
 			"[CMD] can have the following values:\n\n"
 
-			"-h\tprint this help.\n\n"
-			"-v\tprint version and exit.\n\n"
+			"-h\tPrint this help.\n\n"
+			"-v\tPrint version and exit.\n\n"
 
 			//"<hostId>\n"
 			//"\tstart the gb process for this <hostId> locally."
@@ -458,7 +458,7 @@ int main2 ( int argc , char *argv[] ) {
 
 
 			//"<hostId> -d\n\trun as daemon.\n\n"
-			"-d\trun as daemon.\n\n"
+			"-d\tRun as daemon.\n\n"
 
 			//"-o\tprint the overview documentation in HTML. "
 			//"Contains the format of hosts.conf.\n\n"
@@ -471,13 +471,17 @@ int main2 ( int argc , char *argv[] ) {
 			// "specified in Conf.h upon startup.\n\n"
 
 			"start [hostId]\n"
-			"\tstart the gb process on all hosts or just on "
+			"\tStart the gb process on all hosts or just on "
 			"[hostId], if specified, using an ssh command. Runs "
 			"each gb process in a keepalive loop under bash.\n\n"
 
 			"start <hostId1-hostId2>\n"
 			"\tLike above but just start gb on the supplied "
 			"range of hostIds.\n\n"
+
+			"dstart [hostId]\n"
+			"\tLike above but do not use a keepalive loop. So "
+			"if gb crashes it will not auto-resstart.\n\n"
 
 			/*
 			"kstart [hostId]\n"
@@ -488,15 +492,15 @@ int main2 ( int argc , char *argv[] ) {
 			*/
 
 			"stop [hostId]\n"
-			"\tsaves and exits for all gb hosts or "
+			"\tSaves and exits for all gb hosts or "
 			"just on [hostId], if specified.\n\n"
 
 			"stop <hostId1-hostId2>\n"
-			"\ttell gb to save and exit on the given range of "
+			"\tTell gb to save and exit on the given range of "
 			"hostIds.\n\n"
 
 			"save [hostId]\n"
-			"\tjust saves for all gb hosts or "
+			"\tJust saves for all gb hosts or "
 			"just on [hostId], if specified.\n\n"
 
 
@@ -520,11 +524,11 @@ int main2 ( int argc , char *argv[] ) {
 			*/
 
 			"spidersoff [hostId]\n"
-			"\tdisables spidering for all gb hosts or "
+			"\tDisables spidering for all gb hosts or "
 			"just on [hostId], if specified.\n\n"
 
 			"spiderson [hostId]\n"
-			"\tensables spidering for all gb hosts or "
+			"\tEnables spidering for all gb hosts or "
 			"just on [hostId], if specified.\n\n"
 
 			/*
@@ -564,7 +568,7 @@ int main2 ( int argc , char *argv[] ) {
 			*/
 
 			"dsh <CMD>\n"
-			"\trun this command on the primary IPs of "
+			"\tRun this command on the primary IPs of "
 			"all active hosts in hosts.conf. It will be "
 			"executed in the gigablast working directory on "
 			"each host. Example: "
@@ -578,7 +582,7 @@ int main2 ( int argc , char *argv[] ) {
 			*/
 
 			"install [hostId]\n"
-			"\tinstall all required files for gb from "
+			"\tInstall all required files for gb from "
 			"current working directory of the gb binary "
 			"to [hostId]. If no [hostId] is specified, install "
 			"to ALL hosts.\n\n"
@@ -590,10 +594,10 @@ int main2 ( int argc , char *argv[] ) {
 			*/
 
 			"installgb [hostId]\n"
-			"\tlike above, but install just the gb executable.\n\n"
+			"\tLike above, but install just the gb executable.\n\n"
 
 			"installgbrcp [hostId]\n"
-			"\tlike above, but install just the gb executable "
+			"\tLike above, but install just the gb executable "
 			"and using rcp.\n\n"
 
 			/*
