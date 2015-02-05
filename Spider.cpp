@@ -12556,7 +12556,11 @@ void gotCrawlInfoReply ( void *state , UdpSlot *slot ) {
 		// sending a notification if we haven't spidered anything
 		// because no seed urls have been added/injected.
 		//if ( cr->m_globalCrawlInfo.m_urlsConsidered == 0 ) return;
-		if ( cr->m_globalCrawlInfo.m_pageDownloadAttempts == 0 ) 
+		if ( cr->m_globalCrawlInfo.m_pageDownloadAttempts == 0 &&
+		     // if we don't have this here we may not get the
+		     // pageDownloadAttempts in time from the host that
+		     // did the spidering.
+		     ! hadUrlsReady ) 
 			continue;
 
 		// if urls were considered and roundstarttime is still 0 then
@@ -12593,8 +12597,12 @@ void gotCrawlInfoReply ( void *state , UdpSlot *slot ) {
 		// . we do it this way so SP_ROUNDDONE can be emailed and then
 		//   we'd email SP_MAXROUNDS to indicate we've hit the maximum
 		//   round count. 
-		if ( cr->m_localCrawlInfo.m_sentCrawlDoneAlert )
+		if ( cr->m_localCrawlInfo.m_sentCrawlDoneAlert ) {
+			// debug
+			logf(LOG_DEBUG,"spider: already sent alert for %s"
+			     , cr->m_coll);
 			continue;
+		}
 
 		
 		// do email and web hook...
