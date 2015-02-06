@@ -21008,7 +21008,9 @@ void gotParmReplyWrapper ( void *state , UdpSlot *slot ) {
 		// . we must always be the head lest we send out of order.
 		// . ParmNodes only destined to a specific hostid are ignored
 		//   for this check, only look at those whose m_hostId is -1
-		if(pn != s_headNode && pn->m_hostId==-1){char *xx=NULL;*xx=0; }
+		if(pn != s_headNode && pn->m_hostId==-1){
+			log("parms: got parm request out of band. not head.");
+		}
 
 		// a new head
 		if ( pn == s_headNode ) {
