@@ -1123,6 +1123,8 @@ bool printWebHomePage ( SafeBuf &sb , HttpRequest *r , TcpSocket *sock ) {
 	}
 
 
+	// take this out for now
+	/*
 	// always the option to add event guru to their list of
 	// search engine in their browser
 	sb.safePrintf("<br>"
@@ -1191,6 +1193,7 @@ bool printWebHomePage ( SafeBuf &sb , HttpRequest *r , TcpSocket *sock ) {
 		       ,0xbc
 
 		      );
+	*/
 
 
 	// print any red boxes we might need to
