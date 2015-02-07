@@ -38,6 +38,7 @@ uint32_t  g_listIps   [ MAX_HOSTS * 4 ];
 uint16_t  g_listPorts [ MAX_HOSTS * 4 ];
 int32_t      g_listNumTotal = 0;
 
+bool isMyIp ( int32_t ip ) ;
 
 void Hostdb::resetPortTables () {
 	g_hostTableUdp.reset();
@@ -780,15 +781,19 @@ bool Hostdb::init ( int32_t hostIdArg , char *netName ,
 		if ( wdir[wdirlen-1]=='/' ) wdir[--wdirlen]='\0';
 
 		// get real path (no symlinks symbolic links)
-		char tmp[256];
-		int32_t tlen = readlink ( wdir , tmp , 250 );
-		// if we got the actual path, copy that over
-		if ( tlen != -1 ) {
-			// wdir currently references into the hosts.conf buf
-			// so don't store the expanded directory into there
-			wdir = tmp;
-			//strncpy(wdir,tmp,tlen);
-			wdirlen = tlen;
+		// only if on same IP!!!!
+		if ( isMyIp ( h->m_ip ) ) {
+			char tmp[256];
+			int32_t tlen = readlink ( wdir , tmp , 250 );
+			// if we got the actual path, copy that over
+			if ( tlen != -1 ) {
+				// wdir currently references into the 
+				// hosts.conf buf so don't store the expanded
+				// directory into there
+				wdir = tmp;
+				//strncpy(wdir,tmp,tlen);
+				wdirlen = tlen;
+			}
 		}
 
 		// add slash if none there
@@ -2759,6 +2764,15 @@ int32_t *getLocalIps ( ) {
 	// return the static buffer
 	return s_localIps;
 }
+
+bool isMyIp ( int32_t ip ) {
+	int32_t *localIp = getLocalIps();
+	for ( ; *localIp ; localIp++ ) {
+		if ( ip == *localIp ) return true;
+	}
+	return false;
+}
+
 
 Host *Hostdb::getHost2 ( char *cwd , int32_t *localIps ) {
 	for ( int32_t i = 0 ; i < m_numHosts ; i++ ) {

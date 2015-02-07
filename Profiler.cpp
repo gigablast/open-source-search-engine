@@ -1812,7 +1812,9 @@ Profiler::printRealTimeInfo(SafeBuf *sb,
 		       );
 	sb->safePrintf("<a href=\"/admin/profiler?c=%s&rtstop=1\">"
 		       "(Stop)</a> [Click refresh to get latest profile "
-		       "stats]</b></td></tr>\n",
+		       "stats][Don't forget to click STOP when done so you "
+		       "don't leave the profiler running which can slow "
+		       "things down.]</b></td></tr>\n",
 		       coll);
 	/*
 	rtall = !rtall;
