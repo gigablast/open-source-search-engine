@@ -782,7 +782,7 @@ bool Hostdb::init ( int32_t hostIdArg , char *netName ,
 
 		// get real path (no symlinks symbolic links)
 		// only if on same IP!!!!
-		if ( isMyIP ( h->m_ip ) ) {
+		if ( isMyIp ( h->m_ip ) ) {
 			char tmp[256];
 			int32_t tlen = readlink ( wdir , tmp , 250 );
 			// if we got the actual path, copy that over
