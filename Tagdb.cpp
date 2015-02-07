@@ -5014,8 +5014,8 @@ bool Tagdb::loadMinSiteInlinksBuffer2 ( ) {
 	// use 4 bytes for the first 130,000 entries or so to hold
 	// # of site inlinks. then we only need 1 byte since the remaining
 	// 25M are <256 sitenuminlinksunqiecblocks
-	m_siteBuf1.load("sitelinks1.dat");
-	m_siteBuf2.load("sitelinks2.dat");
+	m_siteBuf1.load(g_hostdb.m_dir,"sitelinks1.dat");
+	m_siteBuf2.load(g_hostdb.m_dir,"sitelinks2.dat");
 
 	m_siteBuf1.setLabel("sitelnks");
 	m_siteBuf2.setLabel("sitelnks");
@@ -5024,11 +5024,11 @@ bool Tagdb::loadMinSiteInlinksBuffer2 ( ) {
 	     m_siteBuf2.length() > 0 ) 
 		return true;
 
-	log("gb: loading ./sitelinks.txt");
+	log("gb: loading %ssitelinks.txt",g_hostdb.m_dir);
 
 	// ok, make it
 	SafeBuf tmp;
-	tmp.load("./sitelinks.txt");
+	tmp.load(g_hostdb.m_dir,"sitelinks.txt");
 	if ( tmp.length() <= 0 ) {
 		log("gb: fatal error. could not find required file "
 		    "./sitelinks.txt");
@@ -5103,8 +5103,8 @@ bool Tagdb::loadMinSiteInlinksBuffer2 ( ) {
 
 	log("gb: saving sitelinks1.dat and sitelinks2.dat");
 
-	m_siteBuf1.save("./sitelinks1.dat");
-	m_siteBuf2.save("./sitelinks2.dat");
+	m_siteBuf1.save(g_hostdb.m_dir,"sitelinks1.dat");
+	m_siteBuf2.save(g_hostdb.m_dir,"sitelinks2.dat");
 
 	return true;
 }
