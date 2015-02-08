@@ -667,7 +667,8 @@ bool printLeftColumnRocketAndTabs ( SafeBuf *sb ,
 		{"USERS","/users.html"},
 		{"ABOUT","/about.html"},
 		{"NEWS","/news.html"},
-		{"FEED","/searchfeed.html"},
+		// take this out for now
+		//{"FEED","/searchfeed.html"},
 		{"FAQ","/faq.html"},
 		{"API","/api.html"}
 	};
@@ -1122,6 +1123,8 @@ bool printWebHomePage ( SafeBuf &sb , HttpRequest *r , TcpSocket *sock ) {
 	}
 
 
+	// take this out for now
+	/*
 	// always the option to add event guru to their list of
 	// search engine in their browser
 	sb.safePrintf("<br>"
@@ -1190,6 +1193,7 @@ bool printWebHomePage ( SafeBuf &sb , HttpRequest *r , TcpSocket *sock ) {
 		       ,0xbc
 
 		      );
+	*/
 
 
 	// print any red boxes we might need to

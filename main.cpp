@@ -1427,6 +1427,27 @@ int main2 ( int argc , char *argv[] ) {
 	getrlimit(RLIMIT_STACK, &rl);
 	log(LOG_INFO,"db: Stack size is %"INT64".", (int64_t)rl.rlim_cur);
 
+
+	// let's ensure our core file can dump
+	struct rlimit lim;
+	lim.rlim_cur = lim.rlim_max = RLIM_INFINITY;
+	if ( setrlimit(RLIMIT_CORE,&lim) )
+		log("db: setrlimit: %s.", mstrerror(errno) );
+	// limit fds
+	// try to prevent core from systems where it is above 1024
+	// because our FD_ISSET() libc function will core! (it's older)
+	int32_t NOFILE = 1024;
+	lim.rlim_cur = lim.rlim_max = NOFILE;
+	if ( setrlimit(RLIMIT_NOFILE,&lim))
+		log("db: setrlimit RLIMIT_NOFILE %"INT32": %s.",
+		    NOFILE,mstrerror(errno) );
+	struct rlimit rlim;
+	getrlimit ( RLIMIT_NOFILE,&rlim);
+	if ( (int32_t)rlim.rlim_max > NOFILE || (int32_t)rlim.rlim_cur > NOFILE ) {
+		log("db: setrlimit RLIMIT_NOFILE failed!");
+		char *xx=NULL;*xx=0;
+	}
+
 	// set the s_pages array for print admin pages
 	g_pages.init ( );
 
@@ -2936,25 +2957,6 @@ int main2 ( int argc , char *argv[] ) {
 		return 0;
 	}
 
-	// let's ensure our core file can dump
-	struct rlimit lim;
-	lim.rlim_cur = lim.rlim_max = RLIM_INFINITY;
-	if ( setrlimit(RLIMIT_CORE,&lim) )
-		log("db: setrlimit: %s.", mstrerror(errno) );
-	// limit fds
-	// try to prevent core from systems where it is above 1024
-	// because our FD_ISSET() libc function will core! (it's older)
-	int32_t NOFILE = 1024;
-	lim.rlim_cur = lim.rlim_max = NOFILE;
-	if ( setrlimit(RLIMIT_NOFILE,&lim))
-		log("db: setrlimit RLIMIT_NOFILE %"INT32": %s.",
-		    NOFILE,mstrerror(errno) );
-	struct rlimit rlim;
-	getrlimit ( RLIMIT_NOFILE,&rlim);
-	if ( (int32_t)rlim.rlim_max > NOFILE || (int32_t)rlim.rlim_cur > NOFILE ) {
-		log("db: setrlimit RLIMIT_NOFILE failed!");
-		char *xx=NULL;*xx=0;
-	}
 	//log("db: RLIMIT_NOFILE = %"INT32"",(int32_t)rlim.rlim_max);
 	//exit(0);
 	// . disable o/s's and hard drive's read ahead 
@@ -14379,6 +14381,7 @@ int injectFileTest ( int32_t reqLen , int32_t hid ) {
 //#define MAX_INJECT_SOCKETS 1
 static void doInject ( int fd , void *state ) ;
 static void doInjectWarc ( int64_t fsize );
+static void doInjectArc ( int64_t fsize );
 static void injectedWrapper ( void *state , TcpSocket *s ) ;
 static TcpServer s_tcp;
 static File      s_file;
@@ -14393,6 +14396,7 @@ static int32_t      s_outstanding = 0;
 static bool s_isDelete;
 static int32_t s_injectTitledb;
 static int32_t s_injectWarc;
+static int32_t s_injectArc;
 static char *s_coll = NULL;
 static key_t s_titledbKey;
 static char *s_req  [MAX_INJECT_SOCKETS];
@@ -14432,8 +14436,10 @@ int injectFile ( char *filename , char *ips ,
 			if ( nextLine ) nextLine[-1] = '\0';
 			// download the archive
 			SafeBuf cmd;
-			cmd.safePrintf("./ia-0.7.8-python2.7.pex download "
-				       "--format=\"Web ARChive GZ\" %s"
+			cmd.safePrintf("./ia download "
+				       //"--format=\"Web ARChive GZ\" "
+				       "--glob='*arc.gz' "
+				       "%s"
 				       ,archiveDirName);
 			gbsystem(cmd.getBufStart());
 			// now inject the warc gz files in there
@@ -14442,9 +14448,9 @@ int injectFile ( char *filename , char *ips ,
 			dir.open();
 			log("setting dir to %s",p);
 		subloop:
-			char *warcFileName = dir.getNextFilename("*.warc.gz");
+			char *xarcFilename = dir.getNextFilename("*arc.gz");
 			// get next archive
-			if ( ! warcFileName ) {
+			if ( ! xarcFilename ) {
 				cmd.reset();
 				// remove the archive dir when done if
 				// no more warc.gz files in it
@@ -14453,15 +14459,20 @@ int injectFile ( char *filename , char *ips ,
 				// download the next archive using 'ia'
 				continue;
 			}
+			int32_t flen = gbstrlen(xarcFilename);
+			char *ext = xarcFilename + flen -7;
+			// gunzip to foo.warc or foo.arc depending!
+			char *es = "";
+			if ( ext[0] == 'w' ) es = "w";
 			// inject the warc.gz files
 			cmd.reset();
-			cmd.safePrintf("gunzip -c %s/%s > ./foo%i.warc"
-				       ,archiveDirName,warcFileName,split);
+			cmd.safePrintf("gunzip -c %s/%s > ./foo%i.%sarc"
+				       ,archiveDirName,xarcFilename,split,es);
 			gbsystem(cmd.getBufStart());
 			// now inject it
 			cmd.reset();
-			cmd.safePrintf("./gb inject ./foo%i.warc hosts.conf"
-				       ,split);
+			cmd.safePrintf("./gbi inject ./foo%i.%sarc hosts.conf"
+				       ,split,es);
 			gbsystem(cmd.getBufStart());
 			goto subloop;
 		}
@@ -14660,13 +14671,19 @@ int injectFile ( char *filename , char *ips ,
 
 	// this might be a compressed warc like .warc.gz
 	s_injectWarc = false;
+	s_injectArc  = false;
 	int flen = gbstrlen(filename);
 	if ( flen>5 && strcasecmp(filename+flen-5,".warc")==0 ) {
 		s_injectWarc = true;
 	}
+	if ( flen>5 && strcasecmp(filename+flen-4,".arc")==0 ) {
+		s_injectArc = true;
+	}
 
 	
 	s_coll = coll;
+
+	if ( ! s_coll ) s_coll = "main";
 
 	// register sleep callback to get started
 	if ( ! g_loop.registerSleepCallback(1, NULL, doInject) )
@@ -14679,6 +14696,7 @@ int injectFile ( char *filename , char *ips ,
 }
 
 void doInject ( int fd , void *state ) {
+
 	if ( s_registered ) {
 		s_registered = 0;
 		g_loop.unregisterSleepCallback ( NULL, doInject );
@@ -14695,6 +14713,11 @@ void doInject ( int fd , void *state ) {
 	// should probably phase out the ++++URL: format thing.
 	if ( s_injectWarc ) {
 		doInjectWarc ( fsize );
+		return;
+	}
+
+	if ( s_injectArc ) {
+		doInjectArc ( fsize );
 		return;
 	}
 
@@ -15162,7 +15185,9 @@ void doInjectWarc ( int64_t fsize ) {
 
 		// are we done?
 		if ( s_off >= fsize ) { 
-			log("inject: done parsing file");
+			log("inject: done parsing warc file");
+			if ( s_outstanding ) {
+				log("inject: waiting for socks");return;}
 			g_loop.reset();  
 			exit(0); 
 		}
@@ -15197,6 +15222,8 @@ void doInjectWarc ( int64_t fsize ) {
 		// if not enough to constitute a WARC record probably just new lines
 		if( toRead < 20 ) {
 			log("inject: done processing file");
+			if ( s_outstanding ) {
+				log("inject: waiting for socks");return;}
 			exit(0);
 		}
 
@@ -15224,6 +15251,8 @@ void doInjectWarc ( int64_t fsize ) {
 	// none?
 	if ( ! *whp ) {
 		log("inject: could not find WARC/1 header start");
+		if ( s_outstanding ) {
+			log("inject: waiting for socks");return;}
 		exit(0);
 	}
 
@@ -15233,6 +15262,8 @@ void doInjectWarc ( int64_t fsize ) {
 	char *warcHeaderEnd = strstr(warcHeader,"\r\n\r\n");
 	if ( ! warcHeaderEnd ) {
 		log("inject: could not find end of WARC header.");
+		if ( s_outstanding ) {
+			log("inject: waiting for socks");return;}
 		exit(0);
 	}
 	// \0 term for strstrs below
@@ -15250,6 +15281,8 @@ void doInjectWarc ( int64_t fsize ) {
 	char *warcType = strstr(warcHeader,"WARC-Type:");
 	if ( ! warcType ) {
 		log("inject: could not find WARC-Type:");
+		if ( s_outstanding ) {
+			log("inject: waiting for socks");return;}
 		exit(0);
 	}
 	warcType += 10;
@@ -15262,6 +15295,8 @@ void doInjectWarc ( int64_t fsize ) {
 	char *warcConType = strstr(warcHeader,"Content-Type:");
 	if ( ! warcConType ) {
 		log("inject: could not find Content-Type:");
+		if ( s_outstanding ) {
+			log("inject: waiting for socks");return;}
 		exit(0);
 	}
 	warcConType += 13;
@@ -15273,6 +15308,8 @@ void doInjectWarc ( int64_t fsize ) {
 	if ( ! warcContentLenStr ) {
 		log("inject: could not find WARC "
 		    "Content-Length:");
+		if ( s_outstanding ) {
+			log("inject: waiting for socks");return;}
 		exit(0);
 	}
 	warcContentLenStr += 15;
@@ -15294,6 +15331,8 @@ void doInjectWarc ( int64_t fsize ) {
 	if ( s_pbuf > s_pbufEnd ) {
 		if ( ! s_hasMoreToRead ) {
 			log("inject: warc file exceeded file length.");
+			if ( s_outstanding ) {
+				log("inject: waiting for socks");return;}
 			exit(0);
 		}
 		if ( recSize > MAXWARCRECSIZE ) {
@@ -15337,6 +15376,8 @@ void doInjectWarc ( int64_t fsize ) {
 	for ( ; url && is_wspace_a(*url) ; url++ );
 	if ( ! url ) {
 		log("inject: could not find WARC-Target-URI:");
+		if ( s_outstanding ) {
+			log("inject: waiting for socks");return;}
 		exit(0);
 	}
 	// find end of it
@@ -15409,6 +15450,9 @@ void doInjectWarc ( int64_t fsize ) {
 		       "spiderlinks=0&"
 		       "quick=1&" // quick reply
 		       "dontlog=0&"
+
+		       // do not do re-injects. should save a TON of time
+		       "newonly=1&"
 			      
 		       "lastspidered=%"INT64"&"
 		       "firstindexed=%"INT64"&"
@@ -15473,13 +15517,374 @@ void doInjectWarc ( int64_t fsize ) {
 				      req.length(),
 				      NULL   ,
 				      injectedWrapper ,
-				      9999*60*1000      , // timeout, 60days
+				      // because it seems some sockets get stuck and
+				      // they have no reply but the host they are
+				      // connected to no longer has the connection
+				      // open. and the readbuf is empty, but the send
+				      // buf has been sent and it appears the inject
+				      // when through. just the reply was never
+				      // sent back for some reason.
+				      5*60*1000     , // timeout, 5 mins
 				      -1              , // maxTextDocLen
 				      -1              );// maxOtherDocLen
 
 	int realMax = 10;
 	if ( s_hosts2.getNumHosts() > 1 )
-	  realMax = s_hosts2.getNumHosts() * 5;
+		realMax = s_hosts2.getNumHosts() * 3;
+
+	// launch another if blocked
+	if ( ! status ) {
+		// let injectedWrapper() below free it
+		req.detachBuf();
+		//int32_t nh = g_hostdb.getNumHosts();
+		//nh = (nh * 15) / 10;
+		//if ( nh > MAX_INJECT_SOCKETS - 10 ) 
+		//	nh = MAX_INJECT_SOCKETS - 10;
+		//if ( nh < 5 ) nh = 5;
+		// limit to one socket right now
+		//if ( ++s_outstanding < 1 ) goto loop;
+		s_outstanding++;
+		if ( s_outstanding < MAX_INJECT_SOCKETS &&
+		     s_outstanding < realMax ) 
+		  goto loop;
+		return;
+	}
+		
+	if ( g_errno ) {
+		// let tcpserver.cpp free it
+		req.detachBuf();
+		log("build: inject had error: %s.",mstrerror(g_errno));
+	}
+	// loop if not
+	goto loop;
+}
+
+
+void doInjectArc ( int64_t fsize ) {
+
+	static char *s_buf = NULL;
+
+	static bool s_hasMoreToRead;
+
+	static char *s_pbuf = NULL;
+	static char *s_pbufEnd = NULL;
+
+	bool needReadMore = false;
+	if ( ! s_pbuf ) needReadMore = true;
+
+
+ readMore:
+
+	if ( needReadMore ) {
+
+		log("inject: reading %"INT64" bytes more of arc file"
+		    ,(int64_t)MAXWARCRECSIZE);
+
+		// are we done?
+		if ( s_off >= fsize ) { 
+			log("inject: done parsing arc file");
+			if ( s_outstanding ) {
+				log("inject: waiting for socks");return;}
+			g_loop.reset();  
+			exit(0); 
+		}
+
+		// read 1MB of data into this buf to get the first WARC record
+		// it must be < 1MB or we faulter.
+		if ( ! s_buf ) {
+			int64_t need = MAXWARCRECSIZE + 1;
+			s_buf = (char *)mmalloc ( need ,"sibuf");
+		}
+		if ( ! s_buf ) {
+			log("inject: failed to alloc buf");
+			exit(0);
+		}
+
+		int32_t maxToRead = MAXWARCRECSIZE;
+		int32_t toRead = maxToRead;
+		s_hasMoreToRead = true;
+		if ( s_off + toRead > fsize ) {
+			toRead = fsize - s_off;
+			s_hasMoreToRead = false;
+		}
+		int32_t bytesRead = s_file.read ( s_buf , toRead , s_off ) ;
+		if ( bytesRead != toRead ) {
+			log("inject: read of %s failed at offset "
+			    "%"INT64"", s_file.getFilename(), s_off);
+			exit(0);
+		}
+		// null term what we read
+		s_buf[bytesRead] = '\0';
+
+		// if not enough to constitute a ARC record probably just new 
+		// lines
+		if( toRead < 20 ) {
+			log("inject: done processing file");
+			if ( s_outstanding ) {
+				log("inject: waiting for socks");return;}
+			exit(0);
+		}
+
+		// mark the end of what we read
+		//char *fend = buf + toRead;
+
+		// point to what we read
+		s_pbuf = s_buf;
+		s_pbufEnd = s_buf + bytesRead;
+	}
+
+ loop:
+
+	char *realStart = s_pbuf;
+
+	// need at least say 100k for arc header
+	if ( s_pbuf + 100000 > s_pbufEnd && s_hasMoreToRead )  {
+		needReadMore = true;
+		goto readMore;
+	}
+
+	// find \n\nhttp://
+	char *whp = s_pbuf;
+	for ( ; *whp ; whp++ ) {
+		if ( whp[0] != '\n' ) continue;
+		if ( strncmp(whp+1,"http://",7) ) continue;
+		break;
+	}
+	// none?
+	if ( ! *whp ) {
+		log("inject: could not find next \\nhttp:// in arc file");
+		if ( s_outstanding ) {log("inject: waiting for socks");return;}
+		exit(0);
+	}
+
+	char *arcHeader = whp;
+
+	// find end of arc header not the content
+	char *arcHeaderEnd = strstr(arcHeader+1,"\n");
+	if ( ! arcHeaderEnd ) {
+		log("inject: could not find end of ARC header.");
+		exit(0);
+	}
+	// \0 term for strstrs below
+	*arcHeaderEnd = '\0';
+
+	char *arcContent = arcHeaderEnd + 1;
+
+	// parse arc header line
+	char *url = arcHeader + 1;
+	char *hp = url;
+
+	for ( ; *hp && *hp != ' ' ; hp++ );
+	if ( ! *hp ) {log("inject: bad arc header 1.");exit(0);}
+	*hp++ = '\0';
+	char *ipStr = hp;
+
+
+	for ( ; *hp && *hp != ' ' ; hp++ );
+	if ( ! *hp ) {log("inject: bad arc header 2.");exit(0);}
+	*hp++ = '\0';
+	char *timeStr = hp;
+
+
+	for ( ; *hp && *hp != ' ' ; hp++ );
+	if ( ! *hp ) {log("inject: bad arc header 3.");exit(0);}
+	*hp++ = '\0'; // null term timeStr
+	char *arcConType = hp;
+
+	for ( ; *hp && *hp != ' ' ; hp++ );
+	if ( ! *hp ) {log("inject: bad arc header 4.");exit(0);}
+	*hp++ = '\0'; // null term arcContentType
+
+	char *arcContentLenStr = hp;
+	// this is already \0 terminated from above!
+	//for ( ; *hp && *hp != '\n' ; hp++ );
+	//if ( ! *hp ) {log("inject: bad arc header 5.");exit(0);}
+	//*hp++ = '\0'; // null term lenStr
+
+	
+
+	// get arc content len
+	int64_t arcContentLen = atoll(arcContentLenStr);
+
+	char *arcContentEnd = arcContent + arcContentLen;
+
+	//uint64_t oldOff = s_off;
+
+	uint64_t recSize = (arcContentEnd - realStart); 
+
+	// point to end of this arc record
+	s_pbuf += recSize;
+
+	// if we fall outside of the current read buf then re-read
+	if ( s_pbuf > s_pbufEnd ) {
+		if ( ! s_hasMoreToRead ) {
+			log("inject: arc file exceeded file length.");
+			if ( s_outstanding ) {
+				log("inject: waiting for socks");return;}
+			exit(0);
+		}
+		if ( recSize > MAXWARCRECSIZE ) {
+			log("inject: skipping arc file of %"INT64" "
+			    "bytes which is too big",recSize);
+			s_off += recSize;
+		}
+		needReadMore = true;
+		goto readMore;
+	}
+
+	// advance this for next read from the file
+	s_off += recSize;
+
+
+	// arcConType needs to indexable
+	int32_t ct = getContentTypeFromStr ( arcConType );
+	if ( ct != CT_HTML &&
+	     ct != CT_TEXT &&
+	     ct != CT_XML &&
+	     ct != CT_JSON ) {
+		// read another arc record
+		goto loop;
+	}
+
+	// convert to timestamp
+	int64_t arcTime = 0;
+	// this time structure, once filled, will help yield a time_t
+	struct tm t;
+	// DAY OF MONTH
+	t.tm_mday = atol2 ( timeStr + 6 , 2 );
+	// MONTH
+	t.tm_mon = atol2 ( timeStr + 4  , 2 );
+	// YEAR
+	t.tm_year = atol2 ( timeStr     , 4 ) - 1900 ; // # of years since 1900
+	// TIME
+	t.tm_hour = atol2 ( timeStr +  8 , 2 );
+	t.tm_min  = atol2 ( timeStr + 10 , 2 );
+	t.tm_sec  = atol2 ( timeStr + 12 , 2 );
+	// unknown if we're in  daylight savings time
+	t.tm_isdst = -1;
+	// translate using mktime
+	arcTime = timegm ( &t );
+
+
+	char *httpReply = arcContent;
+	int64_t httpReplySize = arcContentLen;
+
+	// sanity check
+	if ( httpReply + httpReplySize >= s_pbufEnd ) {
+		int needMore = httpReply + httpReplySize - s_pbufEnd;
+		log("inject: not reading enough content to inject "
+		    "url %s . increase MAXWARCRECSIZE by %"INT32" more",url,
+		    needMore);
+		exit(0);
+	}
+
+
+	SafeBuf req;
+
+	// a different format?
+	//char *ipStr = "1.2.3.4";
+	req.safePrintf(
+		       "POST /admin/inject HTTP/1.0\r\n"
+		       "Content-Length: 000000000\r\n"//bookmrk
+		       "Content-Type: text/html\r\n"
+		       "Connection: Close\r\n"
+		       "\r\n"
+		       // we need this ?
+		       "?"
+		       "c=%s&"
+		       // do parsing consistency testing (slower!)
+		       //"dct=1&"
+		       "hasmime=1&"
+		       // prevent looking up firstips
+		       // on all outlinks for speed:
+		       "spiderlinks=0&"
+		       "quick=1&" // quick reply
+		       "dontlog=0&"
+
+		       // do not do re-injects. should save a TON of time
+		       "newonly=1&"
+			      
+		       "lastspidered=%"INT64"&"
+		       "firstindexed=%"INT64"&"
+
+		       "deleteurl=0&"
+		       "ip=%s&"
+		       //"recycle=%"INT32"&"
+		       //"delete=%"INT32"&"
+		       "u="
+		       ,s_coll
+
+		       ,arcTime
+		       ,arcTime
+		       
+		       ,ipStr
+		       //recycle,
+		       );
+
+	// url encode the url
+	req.urlEncode ( url );
+	// finish it up
+	req.safePrintf("&content=");
+	// store the content after the &ucontent
+	req.urlEncode ( httpReply , httpReplySize );
+	req.nullTerm();
+
+
+	// replace 00000 with the REAL content length
+	char *start = strstr(req.getBufStart(),"c=");
+	int32_t realContentLen = gbstrlen(start);
+	char *ptr = req.getBufStart() ;
+	// find start of the 9 zeroes
+	while ( *ptr != '0' || ptr[1] !='0' ) ptr++;
+	// store length there
+	sprintf ( ptr , "%09"UINT32"" , realContentLen );
+	// remove the \0
+	ptr += strlen(ptr); *ptr = '\r';
+
+
+	int32_t ip = s_ip;
+	int32_t port = s_port;
+
+	// try hosts.conf
+	if ( ip == 0 ) {
+		// round robin over hosts in s_hosts2
+		if ( s_rrn >= s_hosts2.getNumHosts() ) s_rrn = 0;
+		Host *h = s_hosts2.getHost ( s_rrn );
+		ip = h->m_ip;
+		port = h->m_httpPort;
+		s_rrn++;
+	}
+
+	// log it
+	log("inject: injecting ARC %s to %s:%i contentLen=%"INT64""
+	    ,url
+	    ,iptoa(ip)
+	    ,(int)port
+	    ,arcContentLen);
+
+	// now inject it
+	bool status = s_tcp.sendMsg ( ip   ,
+				      port ,
+				      req.getBufStart()    ,
+				      req.getCapacity(),
+				      req.length(),
+				      req.length(),
+				      NULL   ,
+				      injectedWrapper ,
+				      // because it seems some sockets get stuck and
+				      // they have no reply but the host they are
+				      // connected to no longer has the connection
+				      // open. and the readbuf is empty, but the send
+				      // buf has been sent and it appears the inject
+				      // when through. just the reply was never
+				      // sent back for some reason.
+				      5*60*1000     , // timeout, 5 mins
+				      -1              , // maxTextDocLen
+				      -1              );// maxOtherDocLen
+
+	int realMax = 10;
+	if ( s_hosts2.getNumHosts() > 1 )
+		realMax = s_hosts2.getNumHosts() * 3;
 
 	// launch another if blocked
 	if ( ! status ) {
@@ -15511,6 +15916,16 @@ void doInjectWarc ( int64_t fsize ) {
 
 void injectedWrapper ( void *state , TcpSocket *s ) {
 	s_outstanding--;
+
+	// wtf is this? s_tcp is counting THIS socket so say "== 1"
+	if ( s_tcp.m_numUsed == 1 && s_outstanding > 0 ) {
+		log("inject: resetting s_outstanding to 0");
+		s_outstanding = 0;
+	}
+
+	// debug note
+	logf(LOG_DEBUG,"inject: out=%i used=%i",(int)s_outstanding,(int)s_tcp.m_numUsed);
+
 	// errno?
 	if ( g_errno ) {
 		log("inject: Got server error: %s.",

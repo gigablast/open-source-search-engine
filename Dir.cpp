@@ -94,6 +94,11 @@ void Dir::rewind ( ) {
 
 char *Dir::getNextFilename ( char *pattern ) {
 
+	if ( ! m_dir ) {
+		log("dir: m_dir is NULL so can't find pattern %s",pattern);
+		return NULL;
+	}
+
 	struct dirent *ent;
 	int32_t plen = gbstrlen ( pattern );
 	while ( (ent = readdir ( m_dir ))  ) {
