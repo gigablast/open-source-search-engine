@@ -6553,6 +6553,7 @@ void Parms::init ( ) {
 		"like abc.xyz.com.";
 	m->m_cgi   = "sc";
 	m->m_off   = (char *)&si.m_doSiteClustering - y;
+	m->m_defOff= (char *)&cr.m_siteClusterByDefault - x;
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "0";
 	m->m_flags = PF_API;
