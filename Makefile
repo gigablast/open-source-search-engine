@@ -3,6 +3,9 @@ SHELL = /bin/bash
 uname_m = $(shell uname -m)
 ARCH=$(uname_m)
 
+# for building packages
+VERSION=19
+
 CC=g++
 
 # remove dlstubs.o for CYGWIN
@@ -627,10 +630,10 @@ master-rpm:
 # need to do 'apt-get install dh-make'
 # deb-master
 master-deb32:
-	git archive --format=tar --prefix=gb-1.18/ master > ../gb_1.18.orig.tar
+	git archive --format=tar --prefix=gb-1.$(VERSION)/ master > ../gb_1.$(VERSION).orig.tar
 	rm -rf debian
 # change "-p gb_1.0" to "-p gb_1.1" to update version for example
-	dh_make -s -e gigablast@mail.com -p gb_1.18 -f ../gb_1.18.orig.tar
+	dh_make -s -e gigablast@mail.com -p gb_1.$(VERSION) -f ../gb_1.$(VERSION).orig.tar
 # zero this out, it is just filed with the .txt files erroneously and it'll
 # try to automatiicaly install in /usr/docs/
 	rm debian/docs
@@ -645,7 +648,7 @@ master-deb32:
 # try to use our own rules so we can override dh_shlibdeps and others
 	cp gb.deb.rules debian/rules
 # make our own changelog file
-	echo "gb (1.18-1) unstable; urgency=low" > changelog
+	echo "gb (1."$(VERSION)"-1) unstable; urgency=low" > changelog
 	echo "" >> changelog
 	echo "  * More bug fixes." >> changelog
 	echo "" >> changelog
@@ -662,19 +665,19 @@ master-deb32:
 
 # move to current dur
 	mv ../gb_*.deb .	
-# upload den
-	scp gb*.deb gk268:/w/html/	
+# upload deb
+	scp gb_1.$(VERSION)*.deb gk268:/w/html/	
 # alien it
-	sudo alien --to-rpm gb_1.18-1_i386.deb
+	sudo alien --to-rpm gb_1.$(VERSION)-1_i386.deb
 # upload rpm
-	scp gb*.rpm gk268:/w/html/	
+	scp gb-1.$(VERSION)*.rpm gk268:/w/html/	
 
 
 master-deb64:
-	git archive --format=tar --prefix=gb-1.18/ master > ../gb_1.18.orig.tar
+	git archive --format=tar --prefix=gb-1.$(VERSION)/ master > ../gb_1.$(VERSION).orig.tar
 	rm -rf debian
 # change "-p gb_1.0" to "-p gb_1.1" to update version for example
-	dh_make -s -e gigablast@mail.com -p gb_1.18 -f ../gb_1.18.orig.tar
+	dh_make -s -e gigablast@mail.com -p gb_1.$(VERSION) -f ../gb_1.$(VERSION).orig.tar
 # zero this out, it is just filed with the .txt files erroneously and it'll
 # try to automatiicaly install in /usr/docs/
 	rm debian/docs
@@ -689,7 +692,7 @@ master-deb64:
 # try to use our own rules so we can override dh_shlibdeps and others
 	cp gb.deb.rules debian/rules
 # make our own changelog file
-	echo "gb (1.18-1) unstable; urgency=low" > changelog
+	echo "gb (1.$(VERSION)-1) unstable; urgency=low" > changelog
 	echo "" >> changelog
 	echo "  * More bug fixes." >> changelog
 	echo "" >> changelog
@@ -704,12 +707,13 @@ master-deb64:
 	dpkg-buildpackage -nc -aamd64 -tamd64 -b -uc -rfakeroot
 # move to current dur
 	mv ../gb_*.deb .	
-# upload den
-	scp gb*.deb gk268:/w/html/	
+# upload deb
+	scp gb_1.$(VERSION)*.deb gk268:/w/html/	
 # alien it
-	sudo alien --to-rpm gb_1.18-1_amd64.deb
+	sudo alien --to-rpm gb_1.$(VERSION)-1_amd64.deb
 # upload rpm
-	scp gb*.rpm gk268:/w/html/	
+	scp gb-1.$(VERSION)*.rpm gk268:/w/html/	
+
 
 
 #deb-testing
