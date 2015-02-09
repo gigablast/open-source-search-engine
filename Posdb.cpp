@@ -858,12 +858,17 @@ bool PosdbTable::allocTopTree ( ) {
 		nn2 *= m_r->m_numDocIdSplits;
 		// just in case one split is not as big
 		nn2 *= 2;
+
+		// boost this guy too since we compare it to nn2
+		if ( nn1 < 100 ) nn1 = 100;
+		nn1 *= m_r->m_numDocIdSplits;
+		nn1 *= 2;
 	}
 		
 	// do not go OOM just because client asked for 10B results and we
 	// only have like 100 results.
-	int64_t nn = nn1;
-	if ( nn2 < nn1 ) nn = nn2;
+	int64_t nn = nn2;
+	if ( nn1 < nn2 ) nn = nn1;
 
 	
 
