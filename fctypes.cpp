@@ -1992,6 +1992,12 @@ int64_t gettimeofdayInMilliseconds() {
 	return now;
 }
 
+
+int64_t gettimeofdayInMilliseconds_force ( ) {
+  g_clockNeedsUpdate = true;
+  return gettimeofdayInMilliseconds();
+}
+
 time_t getTime () {
 	return getTimeLocal();
 }
