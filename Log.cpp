@@ -124,6 +124,11 @@ bool Log::init ( char *filename ) {
 	// get size of current file. getFileSize() is defined in File.h.
 	m_logFileSize = getFileSize ( m_filename );
 
+	if ( strcmp(m_filename,"/dev/stderr") == 0 ) {
+		m_fd = 2; // stderr
+		return true;
+	}
+
 	// open it for appending.
 	// create with -rw-rw-r-- permissions if it's not there.
 	m_fd = open ( m_filename , 
