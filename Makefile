@@ -75,6 +75,17 @@ HOST=$(shell hostname)
 #print_vars:
 #	$(HOST)
 
+FFF = /etc/redhat-release
+
+ifneq ($(wildcard $(FFF)),)
+OS_RHEL := true
+STATIC :=
+else
+OS_DEB := true
+STATIC := -static
+endif
+
+
 ifeq ("titan","$(HOST)")
 # my machine, titan, runs the old 2.4 kernel, it does not use pthreads because
 # they were very buggy in 1999. Plus they are still kind of slow even today,
@@ -84,26 +95,26 @@ ifeq ("titan","$(HOST)")
 # -DMATTWELLS
 # turn off stack smash detection because it won't save and dump core when
 # stack gets smashed like it normally would when it gets a seg fault signal.
-CPPFLAGS = -m32 -g -Wall -pipe -Wno-write-strings -Wstrict-aliasing=0 -Wno-uninitialized -static -DTITAN
+CPPFLAGS = -m32 -g -Wall -pipe -Wno-write-strings -Wstrict-aliasing=0 -Wno-uninitialized $(STATIC) -DTITAN
 LIBS = ./libz.a ./libssl.a ./libcrypto.a ./libiconv.a ./libm.a
 
 # are we a 32-bit architecture? use different libraries then
 else ifeq ($(ARCH), i686)
-CPPFLAGS= -m32 -g -Wall -pipe -fno-stack-protector -Wno-write-strings -Wstrict-aliasing=0 -Wno-uninitialized -DPTHREADS -Wno-unused-but-set-variable -static
+CPPFLAGS= -m32 -g -Wall -pipe -fno-stack-protector -Wno-write-strings -Wstrict-aliasing=0 -Wno-uninitialized -DPTHREADS -Wno-unused-but-set-variable $(STATIC)
 LIBS= -L. ./libz.a ./libssl.a ./libcrypto.a ./libiconv.a ./libm.a ./libstdc++.a -lpthread
 
 else ifeq ($(ARCH), i386)
-CPPFLAGS= -m32 -g -Wall -pipe -fno-stack-protector -Wno-write-strings -Wstrict-aliasing=0 -Wno-uninitialized -DPTHREADS -Wno-unused-but-set-variable -static
+CPPFLAGS= -m32 -g -Wall -pipe -fno-stack-protector -Wno-write-strings -Wstrict-aliasing=0 -Wno-uninitialized -DPTHREADS -Wno-unused-but-set-variable $(STATIC)
 LIBS= -L. ./libz.a ./libssl.a ./libcrypto.a ./libiconv.a ./libm.a ./libstdc++.a -lpthread
 
 else
 #
 # Use -Wpadded flag to indicate padded structures.
 #
-CPPFLAGS = -g -Wall -pipe -fno-stack-protector -Wno-write-strings -Wstrict-aliasing=0 -Wno-uninitialized -DPTHREADS -Wno-unused-but-set-variable -static
+CPPFLAGS = -g -Wall -pipe -fno-stack-protector -Wno-write-strings -Wstrict-aliasing=0 -Wno-uninitialized -DPTHREADS -Wno-unused-but-set-variable $(STATIC)
 #LIBS= -L. ./libz.a ./libssl.a ./libcrypto.a ./libiconv.a ./libm.a ./libstdc++.a -lpthread
 # apt-get install libssl-dev (to provide libssl and libcrypto)
-# to build static libiconv.a do a './configure --enable-static' then 'make'
+# to build static libiconv.a do a './configure --enable$(STATIC)' then 'make'
 # in the iconv directory
 LIBS=  -lm -lpthread -lssl -lcrypto ./libiconv64.a ./libz64.a
 
@@ -188,7 +199,7 @@ cygwin:
 
 
 gb32:
-	make CPPFLAGS="-m32 -g -Wall -pipe -fno-stack-protector -Wno-write-strings -Wstrict-aliasing=0 -Wno-uninitialized -DPTHREADS -Wno-unused-but-set-variable -static" LIBS=" -L. ./libz.a ./libssl.a ./libcrypto.a ./libiconv.a ./libm.a ./libstdc++.a -lpthread " gb
+	make CPPFLAGS="-m32 -g -Wall -pipe -fno-stack-protector -Wno-write-strings -Wstrict-aliasing=0 -Wno-uninitialized -DPTHREADS -Wno-unused-but-set-variable $(STATIC)" LIBS=" -L. ./libz.a ./libssl.a ./libcrypto.a ./libiconv.a ./libm.a ./libstdc++.a -lpthread " gb
 
 #iana_charset.cpp: parse_iana_charsets.pl character-sets supported_charsets.txt
 #	./parse_iana_charsets.pl < character-sets
@@ -233,7 +244,7 @@ udptest: $(OBJS) udptest.o
 dnstest: $(OBJS) dnstest.o
 	$(CC) $(DEFS) $(CPPFLAGS) -o $@ $@.o $(OBJS) $(LIBS)
 thunder: thunder.o
-	$(CC) $(DEFS) $(CPPFLAGS) -static -o $@ $@.o
+	$(CC) $(DEFS) $(CPPFLAGS) $(STATIC) -o $@ $@.o
 threadtest: threadtest.o
 	$(CC) $(DEFS) $(CPPFLAGS) -o $@ $@.o -lpthread
 memtest: memtest.o
@@ -243,7 +254,7 @@ hashtest: hashtest.cpp
 hashtest0: hashtest
 	scp hashtest gb0:/a/
 membustest: membustest.cpp
-	$(CC) -O0 -o membustest membustest.cpp -static -lc
+	$(CC) -O0 -o membustest membustest.cpp $(STATIC) -lc
 mergetest: $(OBJS) mergetest.o
 	$(CC) $(DEFS) $(CPPFLAGS) -o $@ $@.o $(OBJS) $(LIBS)
 addtest: $(OBJS) addtest.o
@@ -293,7 +304,7 @@ urlinfo: $(OBJS) urlinfo.o
 dmozparse: $(OBJS) dmozparse.o
 	$(CC) $(DEFS) $(CPPFLAGS) -o $@ $@.o $(OBJS) $(LIBS)
 gbfilter: gbfilter.cpp
-	g++ -g -o gbfilter gbfilter.cpp -static -lc
+	g++ -g -o gbfilter gbfilter.cpp $(STATIC) -lc
 gbtitletest: gbtitletest.o
 	$(CC) $(DEFS) $(CPPFLAGS) -o $@ $@.o $(OBJS) $(LIBS)
 
