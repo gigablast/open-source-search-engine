@@ -5259,7 +5259,35 @@ bool printResult ( State0 *st, int32_t ix , int32_t *numPrintedSoFar ) {
 	}
 
 
-	if ( si->m_format == FORMAT_HTML && ( isAdmin || cr->m_isCustomCrawl)){
+	if ( si->m_format == FORMAT_HTML && si->m_doSiteClustering ) {
+		char hbuf [ MAX_URL_LEN ];
+		int32_t hlen = uu.getHostLen();
+		gbmemcpy ( hbuf , uu.getHost() , hlen );
+		hbuf [ hlen ] = '\0';
+
+		// make the cgi parm to add to the original url
+		char tmp[512];
+		SafeBuf qq (tmp,512);
+		qq.safePrintf("q=");
+		qq.urlEncode("site:");
+		qq.urlEncode (hbuf);
+		qq.urlEncode(" | ");
+		qq.safeStrcpy(st->m_qe);
+		qq.nullTerm();
+		// get the original url and add/replace in query
+		SafeBuf newUrl;
+		replaceParm ( qq.getBufStart() , &newUrl , hr );
+		// put show more results from this site link
+		sb->safePrintf (" - <nobr><a href=\"%s\">"
+			       "more from this site</a></nobr>"
+				, newUrl.getBufStart()
+				);
+		if ( indent ) sb->safePrintf ( "</blockquote><br>\n");
+		//else sb->safePrintf ( "<br><br>\n");
+	}
+
+
+	if (si->m_format == FORMAT_HTML && ( isAdmin || cr->m_isCustomCrawl)){
 		char *un = "";
 		int32_t  banVal = 1;
 		if ( mr->m_isBanned ) {
@@ -5269,6 +5297,7 @@ bool printResult ( State0 *st, int32_t ix , int32_t *numPrintedSoFar ) {
 		// don't put on a separate line because then it is too
 		// easy to mis-click on it
 		sb->safePrintf(//"<br>"
+			       " - "
 			      " <a style=color:green; href=\"/admin/tagdb?"
 			      "user=admin&"
 			      "tagtype0=manualban&"
@@ -5338,6 +5367,19 @@ bool printResult ( State0 *st, int32_t ix , int32_t *numPrintedSoFar ) {
 		*/
 		
 	}
+
+	// UN-indent it if level is 1
+	/*
+	if ( si->m_format == FORMAT_HTML && si->m_doIpClustering ) {
+		sb->safePrintf (" - [ <a href=\"/search?"
+			       "q=%%2Bip%%3A%s+%s&sc=0&c=%s\">"
+			       "More from this ip</a> ]",
+			       iptoa ( mr->m_ip ) ,
+			       st->m_qe , coll );
+		if ( indent ) sb->safePrintf ( "</blockquote><br>\n");
+		else sb->safePrintf ( "<br><br>\n");
+	}
+	*/
 
 	/*
 	// print the help
@@ -5806,31 +5848,6 @@ bool printResult ( State0 *st, int32_t ix , int32_t *numPrintedSoFar ) {
 	sb->safePrintf("</td></tr></table>");
 
 
-	/*
-	// UN-indent it if level is 1
-	if ( si->m_format == FORMAT_HTML && si->m_doIpClustering ) {
-		sb->safePrintf (" - [ <a href=\"/search?"
-			       "q=%%2Bip%%3A%s+%s&sc=0&c=%s\">"
-			       "More from this ip</a> ]",
-			       iptoa ( mr->m_ip ) ,
-			       st->m_qe , coll );
-		if ( indent ) sb->safePrintf ( "</blockquote><br>\n");
-		else sb->safePrintf ( "<br><br>\n");
-	}
-	else if ( si->m_format == FORMAT_HTML && si->m_doSiteClustering ) {
-		char hbuf [ MAX_URL_LEN ];
-		int32_t hlen = uu.getHostLen();
-		gbmemcpy ( hbuf , uu.getHost() , hlen );
-		hbuf [ hlen ] = '\0';
-		sb->safePrintf (" - <nobr><a href=\"/search?"
-			       "q=%%2Bsite%%3A%s+%s&sc=0&c=%s\">"
-			       "More from this site</a></nobr>",
-			       hbuf ,
-			       st->m_qe , coll );
-		if ( indent ) sb->safePrintf ( "</blockquote><br>\n");
-		else sb->safePrintf ( "<br><br>\n");
-	}
-	*/
 
 	// space out 0000 backlinks
 	char *p = sb->getBufStart() + placeHolder;
