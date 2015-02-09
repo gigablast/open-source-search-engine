@@ -125,7 +125,7 @@ bool Log::init ( char *filename ) {
 	m_logFileSize = getFileSize ( m_filename );
 
 	if ( strcmp(m_filename,"/dev/stderr") == 0 ) {
-		m_fd = 2; // stderr
+		m_fd = STDERR_FILENO; // 2; // stderr
 		return true;
 	}
 
