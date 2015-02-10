@@ -12870,6 +12870,15 @@ bool getSpiderStatusMsg ( CollectionRec *cx , SafeBuf *msg , int32_t *status ) {
 					 "limit." );
 	}
 
+	if ( ! cx->m_spideringEnabled ) {
+		*status = SP_PAUSED;
+		if ( cx->m_isCustomCrawl )
+			return msg->safePrintf("Job paused.");
+		else
+			return msg->safePrintf("Spidering disabled "
+					       "in spider controls.");
+	}
+
 	// . 0 means not to RE-crawl
 	// . indicate if we are WAITING for next round...
 	if ( cx->m_collectiveRespiderFrequency > 0.0 &&
@@ -12879,15 +12888,6 @@ bool getSpiderStatusMsg ( CollectionRec *cx , SafeBuf *msg , int32_t *status ) {
 				       "in %"INT32" seconds.",
 				       (int32_t)(cx->m_spiderRoundStartTime-
 						 now) );
-	}
-
-	if ( ! cx->m_spideringEnabled ) {
-		*status = SP_PAUSED;
-		if ( cx->m_isCustomCrawl )
-			return msg->safePrintf("Job paused.");
-		else
-			return msg->safePrintf("Spidering disabled "
-					       "in spider controls.");
 	}
 
 	// if spiderdb is empty for this coll, then no url
