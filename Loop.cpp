@@ -52,6 +52,8 @@ int32_t g_numVTAlarms = 0;
 int32_t g_numQuickPolls = 0;
 int32_t g_missedQuickPolls = 0;
 int32_t g_numSigChlds = 0;
+int32_t g_numSigPipes = 0;
+int32_t g_numSigIOs = 0;
 int32_t g_numSigQueues = 0;
 int32_t g_numSigOthers = 0;
 
@@ -639,6 +641,16 @@ void sigHandlerQueue_r ( int x , siginfo_t *info , void *v ) {
 		return;
 	}
 
+	if ( info->si_signo == SIGPIPE ) {
+		g_numSigPipes++;
+		return;
+	}
+
+	if ( info->si_signo == SIGIO ) {
+		g_numSigIOs++;
+		return;
+	}
+
 	if ( info->si_code == SI_QUEUE ) {
 		g_numSigQueues++;
 		//log("admin: got sigqueue");
@@ -646,6 +658,8 @@ void sigHandlerQueue_r ( int x , siginfo_t *info , void *v ) {
 		g_threads.m_needsCleanup = true;
 		return;
 	}
+
+
 
 	// wtf is this?
 	g_numSigOthers++;
