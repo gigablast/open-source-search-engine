@@ -96,6 +96,8 @@ extern int32_t g_numQuickPolls;
 
 extern int32_t g_numSigChlds;
 extern int32_t g_numSigQueues;
+extern int32_t g_numSigPipes;
+extern int32_t g_numSigIOs;
 extern int32_t g_numSigOthers;
 
 
