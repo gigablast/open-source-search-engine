@@ -580,6 +580,7 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 	caches[2] = g_dns.getCache();
 	caches[3] = g_dns.getCacheLocal();
 	caches[4] = resultsCache;
+	caches[5] = &g_spiderLoop.m_winnerListCache;
 	//caches[5] = &g_termListCache;
 	//caches[6] = &g_genericCache[SEORESULTS_CACHEID];
 	//caches[5] = &g_qtable;
@@ -590,7 +591,7 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 	//caches[6] = &g_forcedCache;
 	//caches[9] = &g_msg20Cache;
 	//caches[10] = &g_tagdb.m_listCache;
-	int32_t numCaches = 5;
+	int32_t numCaches = 6;
 
 	if ( format == FORMAT_HTML )
 		p.safePrintf (

@@ -1176,6 +1176,10 @@ bool Rdb::dumpTree ( int32_t niceness ) {
 	if ( g_conf.m_isWikipedia && m_rdbId == RDB_INDEXDB )
 		return true;
 
+	// never dump doledb any more. it's rdbtree only.
+	if ( m_rdbId == RDB_DOLEDB )
+		return true;
+
 	// if we are in a quickpoll do not initiate dump.
 	// we might have been called by handleRequest4 with a niceness of 0
 	// which was niceness converted from 1

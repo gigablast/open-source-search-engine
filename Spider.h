@@ -1163,6 +1163,7 @@ class SpiderColl {
 
 	bool  addToDoleTable   ( SpiderRequest *sreq ) ;
 
+	bool addDoleBufIntoDoledb ( bool isFromCache ) ;
 
 	bool updateSiteNumInlinksTable ( int32_t siteHash32,int32_t sni,
 					 time_t tstamp); // time_t
@@ -1552,6 +1553,8 @@ class SpiderLoop {
 	HashTableX m_lockTable;
 	// save on msg12 lookups! keep somewhat local...
 	RdbCache   m_lockCache;
+
+	RdbCache   m_winnerListCache;
 
 	//bool m_gettingLocks;
 
