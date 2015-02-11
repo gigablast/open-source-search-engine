@@ -12758,9 +12758,10 @@ int32_t *XmlDoc::getSiteNumInlinks ( ) {
 		else if ( ns < 100 ) maxAge = 60;
 		// if index size is tiny then maybe we are just starting to 
 		// build something massive, so reduce the cached max age
-		if ( g_titledb.m_rdb.getNumGlobalRecs() < 100000000 ) // 100M
+		int64_t nt = g_titledb.m_rdb.getCollNumTotalRecs(m_collnum);
+		if ( nt < 100000000 ) //100M
 			maxAge = 3;
-		if ( g_titledb.m_rdb.getNumGlobalRecs() < 10000000 ) // 10M
+		if ( nt < 10000000 ) //10M
 			maxAge = 1;
 		// for every 100 urls you already got, add a day!
 		sni = atol(tag->getTagData());

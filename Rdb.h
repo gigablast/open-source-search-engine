@@ -234,6 +234,8 @@ class Rdb {
 	// positive minus negative
 	int64_t getNumTotalRecs ( bool useCache = false ) ;
 
+	int64_t getCollNumTotalRecs ( collnum_t collnum );
+
 	int64_t getNumRecsOnDisk ( );
 
 	int64_t getNumGlobalRecs ( );

@@ -2756,6 +2756,24 @@ int64_t Rdb::getNumTotalRecs ( bool useCache ) {
 	return total;
 }
 
+
+int64_t Rdb::getCollNumTotalRecs ( collnum_t collnum ) {
+
+	if ( collnum < 0 ) return 0;
+
+	CollectionRec *cr = g_collectiondb.m_recs[collnum];
+	if ( ! cr ) return 0;
+	// if swapped out, this will be NULL, so skip it
+	RdbBase *base = cr->getBasePtr(m_rdbId);
+	if ( ! base ) {
+		log("rdb: getcollnumtotalrecs: base swapped out");
+		return 0;
+	}
+	return base->getNumTotalRecs();
+}
+
+
+
 // . how much mem is alloced for all of our maps?
 // . we have one map per file
 int64_t Rdb::getMapMemAlloced () {
