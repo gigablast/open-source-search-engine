@@ -20259,7 +20259,7 @@ bool XmlDoc::logIt ( SafeBuf *bb ) {
 	}
 
 	if ( m_httpStatusValid && m_httpStatus != 200 )
-		sb->safePrintf("httpstatus=%"INT32,(int32_t)m_httpStatus);
+		sb->safePrintf("httpstatus=%"INT32" ",(int32_t)m_httpStatus);
 		
 	if ( m_isDupValid && m_isDup )
 		sb->safePrintf("dupofdocid=%"INT64" ",m_docIdWeAreADupOf);

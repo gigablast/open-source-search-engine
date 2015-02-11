@@ -799,8 +799,21 @@ void  handleRequest25 ( UdpSlot *slot , int32_t netnice ) {
 
 	if ( g_errno == ETRYAGAIN ) { char *xx=NULL;*xx=0; }
 
+	// wait for msg5 to be done reading list. this happens somehow,
+	// i'm not 100% sure how. code has too many indirections.
+	if ( m25->m_gettingList ) {
+		log("linkdb: avoiding core");
+		return;
+	}
+
+	// sanity
+	if ( m25->m_msg5.m_msg3.m_numScansCompleted < 
+	     m25->m_msg5.m_msg3.m_numScansStarted ) { char *xx=NULL;*xx=0; }
+
 	if ( g_errno )
 		log("linkdb: error getting linkinfo: %s",mstrerror(g_errno));
+	// else
+	// 	log("linkdb: got link info without blocking");
 
 	// it did not block... g_errno will be set on error so sendReply()
 	// should in that case send an error reply.
@@ -1146,7 +1159,12 @@ bool Msg25::doReadLoop ( ) {
 	m_gettingList = false;
 	// debug log
 	if ( g_conf.m_logDebugBuild )
-		log("build: msg25 call to msg0 did not block");
+		log("build: msg25 call to msg5 did not block");
+
+	// sanity
+	if ( m_msg5.m_msg3.m_numScansCompleted < 
+	     m_msg5.m_msg3.m_numScansStarted ) { char *xx=NULL;*xx=0; }
+
 	// return true on error
 	if ( g_errno ) {
 		log("build: Had error getting linkers to url %s : %s.",
@@ -1202,6 +1220,10 @@ bool Msg25::gotList() {
 	m_gettingList = false;
 	// reset # of docIds linking to us
 	//m_numDocIds = 0;
+
+	// sanity
+	if ( m_msg5.m_msg3.m_numScansCompleted < 
+	     m_msg5.m_msg3.m_numScansStarted ) { char *xx=NULL;*xx=0; }
 
 	//log("debug: entering gotlist this=%"XINT32"",(int32_t)this);
 
@@ -1980,6 +2002,10 @@ bool Msg25::gotLinkText ( Msg20Request *req ) { // LinkTextReply *linkText ) {
 		     g_errno == ENOSLOTS    ) {
 			m_errors++;
 			if ( m_numReplies < m_numRequests ) return false;
+			if ( m_gettingList ) {
+				log("linkdb: gotLinkText: gettinglist1");
+				return false;
+			}
 			return true;
 		}
 		// otherwise, keep going, but this reply can not vote
@@ -2248,6 +2274,11 @@ bool Msg25::gotLinkText ( Msg20Request *req ) { // LinkTextReply *linkText ) {
 
 	// wait for all replies to come in
 	if ( m_numReplies < m_numRequests ) return false;
+
+	if ( m_gettingList ) {
+		log("linkdb: gotLinkText: gettinglist2");
+		return false;
+	}
 
 	//
 	//
