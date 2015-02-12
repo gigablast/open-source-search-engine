@@ -2120,6 +2120,7 @@ bool Rdb::hasRoom ( RdbList *list , int32_t niceness ) {
 	if ( m_rdbId == RDB_DOLEDB && 
 	     // if there is no room left in m_mem (RdbMem class)...
 	     m_mem.m_ptr2 - m_mem.m_ptr1 < dataSpace &&
+	     //m_mem.m_ptr1 - m_mem.m_mem > 1024 ) {
 	     // and last time we tried this, if any, it reclaimed 1MB+
 	     ( m_lastReclaim > 1024*1024 || m_lastReclaim == -1 ) ) {
 		// reclaim the memory now. returns -1 and sets g_errno on error
@@ -3266,19 +3267,39 @@ int32_t Rdb::reclaimMemFromDeletedTreeNodes( int32_t niceness ) {
 
 	char *pstart = p;
 
-	// how many nodes in tree are in use?
+	int32_t marked = 0;
+
+	// mark the data of unoccupied nodes somehow
 	int32_t nn = m_tree.m_minUnusedNode;
-	int32_t count = 0;
 	for ( int i = 0 ; i < nn ; i++ ) {
 		QUICKPOLL ( niceness );
-		// skip empty nodes in tree
-		if ( m_tree.m_parents[i] == -2 ) continue;
-		count++;
+		// count occupied skip empty nodes in tree
+		if ( m_tree.m_parents[i] != -2 ) continue;
+		// get the data
+		char *data = m_tree.m_data[i];
+		// skip if somehow null already
+		if ( ! data ) continue;
+		// sanity, ensure legit
+		if ( data < pstart ) { char *xx=NULL;*xx=0; }
+		// now mark the spiderrequest key as 00000's
+		memset ( data , 0 , sizeof(SPIDERDBKEY) );
+		// make it NULL
+		m_tree.m_data[i] = NULL;
+		marked++;
 	}
 
 	HashTableX ht;
-	if (!ht.set ( 4, 4, count*2, NULL , 0 , false , niceness ,"trectbl"))
+	if (!ht.set ( 4, 
+		      4, 
+		      m_tree.m_numUsedNodes*2, 
+		      NULL , 0 , 
+		      false , 
+		      niceness ,
+		      "trectbl",
+		      true )) // useMagic? yes..
 		return -1;
+
+	int32_t noticed = 0;
 
 	// the spider requests should be linear in there. so we can scan
 	// them. then put their offset into a map that maps it to the new
@@ -3288,7 +3309,14 @@ int32_t Rdb::reclaimMemFromDeletedTreeNodes( int32_t niceness ) {
 		SpiderRequest *sreq = (SpiderRequest *)p;
 		int32_t oldOffset = p - pstart;
 		int32_t recSize = sreq->getRecSize();
-		// copy it 
+		// if it has been expunged, skip the copy of it
+		if ( sreq->m_key.n0 == 0LL &&
+		     sreq->m_key.n1 == 0LL ) {
+			p += recSize;
+			noticed++;
+			continue;
+		}
+		// otherwise, copy it over if still in tree
 		gbmemcpy ( dst , p , recSize );
 		int32_t newOffset = dst - pstart;
 		// store in map
@@ -3297,15 +3325,22 @@ int32_t Rdb::reclaimMemFromDeletedTreeNodes( int32_t niceness ) {
 		p += recSize;
 	}
 
-	int32_t inUseNew = p - pstart;
+	if ( noticed != marked ) { char *xx=NULL;*xx=0; }
+
+	// sanity
+	if(ht.getNumSlotsUsed()!=m_tree.m_numUsedNodes){char *xx=NULL;*xx=0;}
+
+	int32_t inUseNew = dst - pstart;
 
 	// update mem class as well
-	m_mem.m_ptr1 = p;
+	m_mem.m_ptr1 = dst;
 
 	// how much did we reclaim
 	int32_t reclaimed = inUseOld - inUseNew;
 
 	if ( reclaimed < 0 ) { char *xx=NULL;*xx=0; }
+
+	if ( reclaimed == 0 && marked ) { char *xx=NULL;*xx=0;}
 
 	// now update data ptrs in the tree, m_data[]
 	for ( int i = 0 ; i < nn ; i++ ) {
@@ -3314,12 +3349,18 @@ int32_t Rdb::reclaimMemFromDeletedTreeNodes( int32_t niceness ) {
 		if ( m_tree.m_parents[i] == -2 ) continue;
 		// update the data otherwise
 		char *data = m_tree.m_data[i];
+		// sanity, ensure legit
+		if ( data < pstart ) { char *xx=NULL;*xx=0; }
 		int32_t offset = data - pstart;
 		int32_t *newOffsetPtr = (int32_t *)ht.getValue ( &offset );
 		if ( ! newOffsetPtr ) { char *xx=NULL;*xx=0; }
 		char *newData = pstart + *newOffsetPtr;
 		m_tree.m_data[i] = newData;
 	}
+
+	log("rdb: reclaimed %"INT32" bytes after scanning %"INT32" "
+	    "undeleted nodes and %"INT32" deleted nodes for doledb"
+	    ,reclaimed,nn,marked);
 
 	// return # of bytes of mem we reclaimed
 	return reclaimed;
