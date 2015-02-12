@@ -1,6 +1,11 @@
 // . TODO: do not cache if less than the 20k thing again.
 
-// . maybe update doledb entries periodically? it could be holding back urls.
+// do not add outlinks anymore if the outlink's firstip is in a
+// special hashtable of firstips we got tons of spiderrequests for.
+// so if m_totalBytesScanned is > 500MB then put it in the no outlinks table.
+
+
+// . nuke doledb every couple hours.
 //   CollectionRec::m_doledbRefreshRateInSecs. but how would this work
 //   for crawlbot jobs where we got 10,000 collections? i'd turn this off.
 //   we could selectively update certain firstips in doledb that have
@@ -8,6 +13,12 @@
 //   i'd like to see how many collections are actually active
 //   for diffbot first though.
 
+// . how to fix doledb tree being full. when we delete a node we don't
+//   really free its mem, so we need to reclaim somehow. we may have 1M
+//   entries. maybe just compress the memory, make it tight, and shift
+//   all the ptrs in the tree down. have a hashtable that maps the
+//   original mem ptr to the shift offset. do it in stages so we can
+//   call quickpoll in between.
    
 
 
