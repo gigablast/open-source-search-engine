@@ -1718,7 +1718,7 @@ bool RdbTree::getList ( collnum_t collnum ,
 	// don't core, but i think i fixed it here.
 	m_gettingList++;
 
-	// stop when we've hit or jsut exceed minRecSizes
+	// stop when we've hit or just exceed minRecSizes
 	// or we're out of nodes
 	for ( ; node >= 0 && list->getListSize() < minRecSizes ;
 	      node = getNextNode ( node ) ) {
