@@ -25162,7 +25162,7 @@ char *XmlDoc::addOutlinkSpiderRecsToMetaList ( ) {
 	bool ignore = false;
 	if ( mbuf[0] == '1' ) ignore = true;
 
-	//SpiderColl *sc = g_spiderCache.getSpiderCollIffNonNull ( m_collnum );
+	SpiderColl *sc = g_spiderCache.getSpiderCollIffNonNull ( m_collnum );
 
 	//
 	// serialize each link into the metalist now
@@ -25177,6 +25177,12 @@ char *XmlDoc::addOutlinkSpiderRecsToMetaList ( ) {
 		//int32_t    hc        = hcv[i];
 		// ip lookup failed? do not add to spiderdb then
 		if ( firstIp == 0 || firstIp == -1 ) continue;
+
+		// if firstIp is in the SpiderColl::m_overflowFirstIps list
+		// then do not add any more links to it. it already has
+		// more than 500MB worth.
+		if ( sc && sc->isFirstIpInOverflowList ( firstIp ) ) continue;
+
 		// sanity check
 		//if ( firstIp == 0x03 ) {char *xx=NULL;*xx=0; }
 		// get flags

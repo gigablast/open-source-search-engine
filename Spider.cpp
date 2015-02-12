@@ -1,11 +1,6 @@
 // . TODO: do not cache if less than the 20k thing again.
 
-// do not add outlinks anymore if the outlink's firstip is in a
-// special hashtable of firstips we got tons of spiderrequests for.
-// so if m_totalBytesScanned is > 500MB then put it in the no outlinks table.
-
-
-// . nuke doledb every couple hours.
+// . TODO: nuke doledb every couple hours.
 //   CollectionRec::m_doledbRefreshRateInSecs. but how would this work
 //   for crawlbot jobs where we got 10,000 collections? i'd turn this off.
 //   we could selectively update certain firstips in doledb that have
@@ -13,13 +8,6 @@
 //   i'd like to see how many collections are actually active
 //   for diffbot first though.
 
-// . how to fix doledb tree being full. when we delete a node we don't
-//   really free its mem, so we need to reclaim somehow. we may have 1M
-//   entries. maybe just compress the memory, make it tight, and shift
-//   all the ptrs in the tree down. have a hashtable that maps the
-//   original mem ptr to the shift offset. do it in stages so we can
-//   call quickpoll in between.
-   
 
 
 // TODO: add m_downloadTimeTable to measure download speed of an IP
@@ -1219,6 +1207,7 @@ CollectionRec *SpiderColl::getCollectionRec ( ) {
 }
 
 SpiderColl::SpiderColl () {
+	m_overflowList = NULL;
 	m_deleteMyself = false;
 	m_isLoading = false;
 	m_gettingList1 = false;
@@ -1829,6 +1818,11 @@ void SpiderColl::reset ( ) {
 	m_winnerTree  .reset();
 	m_winnerTable .reset();
 	m_dupCache    .reset();
+
+	if ( m_overflowList ) {
+		mfree ( m_overflowList , OVERFLOWLISTSIZE * 4 ,"olist" );
+		m_overflowList = NULL;
+	}
 
 	// each spider priority in the collection has essentially a cursor
 	// that references the next spider rec in doledb to spider. it is
@@ -3261,6 +3255,8 @@ void SpiderColl::populateDoledbFromWaitingTree ( ) { // bool reentry ) {
 	m_minFutureTimeMS = 0LL;
 
 	m_totalBytesScanned = 0LL;
+
+	m_totalNewSpiderRequests = 0LL;
 	
 	// . look up in spiderdb otherwise and add best req to doledb from ip
 	// . if it blocks ultimately it calls gotSpiderdbListWrapper() which
@@ -3906,12 +3902,14 @@ bool SpiderColl::scanListForWinners ( ) {
 		if ( ! isAssignedToUs ( sreq->m_firstIp ) )
 			continue;
 
+		int64_t uh48 = sreq->getUrlHash48();
+
 		// . skip if our twin should add it to doledb
 		// . waiting tree only has firstIps assigned to us so
 		//   this should not be necessary
 		//if ( ! isAssignedToUs ( sreq->m_firstIp ) ) continue;
 		// null out srep if no match
-		if ( srep && srepUh48 != sreq->getUrlHash48() ) srep = NULL;
+		if ( srep && srepUh48 != uh48 ) srep = NULL;
 		// if we are doing parser test, ignore all but initially
 		// injected requests. NEVER DOLE OUT non-injected urls
 		// when doing parser test
@@ -3938,6 +3936,12 @@ bool SpiderColl::scanListForWinners ( ) {
 			continue;
 		}
 
+		// if a replie-less new url spiderrequest count it
+		if ( ! srep && m_lastSreqUh48 != uh48 )
+			m_totalNewSpiderRequests++;
+
+		m_lastSreqUh48 = uh48;
+
 		// only add firstip if manually added and not fake
 		
 
@@ -3948,7 +3952,7 @@ bool SpiderColl::scanListForWinners ( ) {
 		//
 		if ( m_countingPagesIndexed ) { //&& sreq->m_fakeFirstIp ) {
 			// get request url hash48 (jez= 220459274533043 )
-			int64_t uh48 = sreq->getUrlHash48();
+			//int64_t uh48 = sreq->getUrlHash48();
 			// do not repeatedly page count if we just have
 			// a single fake firstip request. this just adds
 			// an entry to the table that will end up in
@@ -4294,7 +4298,7 @@ bool SpiderColl::scanListForWinners ( ) {
 			continue;
 		}
 
-		int64_t uh48 = sreq->getUrlHash48();
+		//int64_t uh48 = sreq->getUrlHash48();
 
 		// make key
 		key192_t wk = makeWinnerTreeKey( firstIp ,
@@ -4340,6 +4344,67 @@ bool SpiderColl::scanListForWinners ( ) {
 		// maxWinners=1 thing
 		if ( (int32_t)SR_READ_SIZE < 500000 ) { char *xx=NULL;*xx=0; }
 
+		bool overflow = false;
+		// don't add any more outlinks to this firstip after we
+		// have 10M spider requests for it.
+		if ( m_totalNewSpiderRequests > 10000000 )
+			overflow = true;
+
+		/////
+		//
+		// BEGIN maintain firstip overflow list
+		//
+		/////
+		// need space
+		if ( overflow && ! m_overflowList ) {
+			int32_t need = OVERFLOWLISTSIZE*4;
+			m_overflowList = (int32_t *)mmalloc(need,"list");
+			m_overflowList[0] = 0;
+		}
+		//
+		// ensure firstip is in the overflow list if we overflowed
+		int32_t emptySlot = -1;
+		bool found = false;
+		int32_t oi;
+		for ( oi = 0 ; ; oi++ ) {
+			// sanity
+			if ( ! m_overflowList ) break;
+			// an ip of zero is end of the list
+			if ( ! m_overflowList[oi] ) break;
+			// if already in there, we are done
+			if ( m_overflowList[oi] == firstIp ) {
+				found = true;
+				break;
+			}
+			// -1 means empty slot
+			if ( m_overflowList[oi] == -1 ) emptySlot = oi;
+		}
+		// add it if missing. add to empty slot.
+		if ( ! found && emptySlot >= 0 && m_overflowList )
+			m_overflowList[emptySlot] = firstIp;
+		// or add to new slot. this is #defined to 100 last check
+		else if ( ! found && oi+1<OVERFLOWLISTSIZE && m_overflowList ){
+			m_overflowList[oi] = firstIp;
+			m_overflowList[oi+1] = 0;
+		}
+		// ensure firstip is NOT in the overflow list if we are ok
+		for ( int32_t oi2 = 0 ; ! overflow ; oi2++ ) {
+			// sanity
+			if ( ! m_overflowList ) break;
+			// an ip of zero is end of the list
+			if ( ! m_overflowList[oi2] ) break;
+			// skip if not a match
+			if ( m_overflowList[oi2] != firstIp ) continue;
+			// take it out of list
+			m_overflowList[oi2] = -1;
+			break;
+		}
+		/////
+		//
+		// END maintain firstip overflow list
+		//
+		/////
+		
 
 		// only compare to min winner in tree if tree is full
 		if ( m_winnerTree.getNumUsedNodes() >= maxWinners ) {
@@ -13531,4 +13596,16 @@ void SpiderLoop::buildActiveList ( ) {
 		tail->m_nextActive = cr;
 		tail = cr;
 	}
+}
+
+bool SpiderColl::isFirstIpInOverflowList ( int32_t firstIp ) {
+	if ( ! m_overflowList ) return false;
+	if ( firstIp == 0 || firstIp == -1 ) return false;
+	for ( int32_t oi = 0 ; ; oi++ ) {
+		// stop at end
+		if ( ! m_overflowList[oi] ) break;
+		// an ip of zero is end of the list
+		if ( m_overflowList[oi] == firstIp ) return true;
+	}
+	return true;
 }

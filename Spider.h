@@ -1066,6 +1066,8 @@ extern class Doledb g_doledb;
 #define MAX_DOLEREC_SIZE      (MAX_BEST_REQUEST_SIZE+sizeof(key_t)+4)
 #define MAX_SP_REPLY_SIZE     (sizeof(SpiderReply))
 
+#define OVERFLOWLISTSIZE 200
+
 // we have one SpiderColl for each collection record
 class SpiderColl {
  public:
@@ -1297,6 +1299,12 @@ class SpiderColl {
 	int32_t m_outstandingSpiders[MAX_SPIDER_PRIORITIES];
 
 	bool printStats ( SafeBuf &sb ) ;
+
+	bool isFirstIpInOverflowList ( int32_t firstIp ) ;
+	int32_t *m_overflowList;
+	int64_t  m_totalNewSpiderRequests;
+	int64_t  m_lastSreqUh48;
+
 
  private:
 	class CollectionRec *m_cr;
