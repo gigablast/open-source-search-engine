@@ -621,6 +621,8 @@ bool CommandParserTestInit ( char *rec ) {
 	CollectionRec *cr = g_collectiondb.getRec("qatest123");
 	// turn on spiders
 	if ( cr ) cr->m_spideringEnabled = 1;
+	// tell spider loop to update active list
+	g_spiderLoop.m_activeListValid = false;
 	// if we are not host 0, turn on spiders for testing
 	if ( g_hostdb.m_myHost->m_hostId != 0 ) return true;
 	// start the test loop to inject urls for parsing/spidering
@@ -641,6 +643,8 @@ bool CommandSpiderTestInit ( char *rec ) {
 	CollectionRec *cr = g_collectiondb.getRec("qatest123");
 	// turn on spiders
 	if ( cr ) cr->m_spideringEnabled = 1;
+	// tell spider loop to update active list
+	g_spiderLoop.m_activeListValid = false;
 	// if we are not host 0, turn on spiders for testing
 	if ( g_hostdb.m_myHost->m_hostId != 0 ) return true;
 	// start the test loop to inject urls for parsing/spidering
@@ -659,6 +663,8 @@ bool CommandSpiderTestCont ( char *rec ) {
 	CollectionRec *cr = g_collectiondb.getRec("qatest123");
 	// turn on spiders
 	if ( cr ) cr->m_spideringEnabled = 1;
+	// tell spider loop to update active list
+	g_spiderLoop.m_activeListValid = false;
 	// done 
 	return true;
 }
@@ -3280,6 +3286,11 @@ void Parms::setParm ( char *THIS , Parm *m , int32_t mm , int32_t j , char *s ,
 			    oldVal,
 			    newVal);
 
+	// if they turn spiders on or off then tell spiderloop to update
+	// the active list
+	if ( strcmp(m->m_cgi,"cse") )
+		g_spiderLoop.m_activeListValid = false;
+
 	// only send email alerts if we are host 0 since everyone syncs up
 	// with host #0 anyway
 	if ( g_hostdb.m_hostId != 0 ) return;
@@ -3294,6 +3305,7 @@ void Parms::setParm ( char *THIS , Parm *m , int32_t mm , int32_t j , char *s ,
 	// turn them on when we restart the cluster
 	if ( strcmp(m->m_cgi,"se")==0 && g_conf.m_spideringEnabled )
 		return;
+
 
 	char tmp[1024];
 	Host *h0 = g_hostdb.getHost ( 0 );

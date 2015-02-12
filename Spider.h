@@ -1559,7 +1559,12 @@ class SpiderLoop {
 	//bool m_gettingLocks;
 
 	// for round robining in SpiderLoop::doleUrls(), etc.
-	int32_t m_cri;
+	//int32_t m_cri;
+
+	void buildActiveList ( ) ;
+	class CollectionRec *m_crx;
+	class CollectionRec *m_activeList;
+	bool m_activeListValid;
 
 	int64_t m_doleStart;
 

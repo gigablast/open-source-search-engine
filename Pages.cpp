@@ -1446,20 +1446,25 @@ bool Pages::printAdminTop (SafeBuf     *sb   ,
 	int32_t doneCount = 0;
 	int32_t activeCount = 0;
 	int32_t pauseCount = 0;
+	int32_t betweenRoundsCount = 0;
+	uint32_t nowGlobal = (uint32_t)getTimeGlobal();
 	for (int32_t i = 0 ; i < g_collectiondb.m_numRecs ; i++ ) {
 		CollectionRec *cc = g_collectiondb.m_recs[i];
 		if ( ! cc ) continue;
 		CrawlInfo *ci = &cc->m_globalCrawlInfo;
-		if (   cc->m_spideringEnabled && 
-		     ! ci->m_hasUrlsReadyToSpider &&
-		       ci->m_urlsHarvested )
+		if      ( cc->m_spideringEnabled &&
+			  nowGlobal < cc->m_spiderRoundStartTime )
+			betweenRoundsCount++;
+		else if ( cc->m_spideringEnabled && 
+			  ! ci->m_hasUrlsReadyToSpider &&
+			  ci->m_urlsHarvested )
 			emptyCount++;
 		else if ( ! ci->m_hasUrlsReadyToSpider )
 			doneCount++;
-		else if (cc->m_spideringEnabled && ci->m_hasUrlsReadyToSpider )
-			activeCount++;
 		else if (!cc->m_spideringEnabled && ci->m_hasUrlsReadyToSpider)
 			pauseCount++;
+		else if (cc->m_spideringEnabled && ci->m_hasUrlsReadyToSpider )
+			activeCount++;
 	}
 
 
@@ -1487,12 +1492,19 @@ bool Pages::printAdminTop (SafeBuf     *sb   ,
 		       "<font color=gray>"
 		       "&#x25cf;</font> spider queue empty (%"INT32")"
 		       "<br>"
+
+		       "<font color=blue>"
+		       "&#x25cf;</font>between rounds (%"INT32")"
+		       "<br>"
+
+
 		       "</div>"
 
 		       ,doneCount
 		       ,pauseCount
 		       ,activeCount
 		       ,emptyCount
+		       ,betweenRoundsCount
 
 		       );
 
@@ -2638,10 +2650,15 @@ bool Pages::printCollectionNavBar ( SafeBuf *sb     ,
 		       ".e{background-color:#e0e0e0;}"
 		       "</style>\n");
 
+	int32_t showAll = hr->getLong("showall",0);
+
 	int32_t row = 0;
+	uint32_t nowGlobal = (uint32_t)getTimeGlobal();
+	int32_t numPrinted = 0;
 
 	//for ( int32_t i = a ; i < b ; i++ ) {
 	for ( int32_t i = 0 ; i < g_collectiondb.m_numRecs ; i++ ) {
+
 		CollectionRec *cc = g_collectiondb.m_recs[i];
 		if ( ! cc ) continue;
 
@@ -2694,6 +2711,11 @@ bool Pages::printCollectionNavBar ( SafeBuf *sb     ,
 		       ci->m_urlsHarvested )
 			bcolor = "gray";
 
+		if ( cc->m_spideringEnabled &&
+		     nowGlobal < cc->m_spiderRoundStartTime )
+			bcolor = "blue";
+
+
 		sb->safePrintf("<font color=%s>&#x25cf;</font> ",bcolor);
 
 		if ( i != collnum || ! highlight )// || ! coll || ! coll[0])
@@ -2717,7 +2739,17 @@ bool Pages::printCollectionNavBar ( SafeBuf *sb     ,
 			sb->safePrintf("</div>\n");
 		else
 			sb->safePrintf("<br>\n");
+
+		if ( ++numPrinted >= 20 && ! showAll ) break;
 	}
+
+	if ( showAll ) return status;
+
+	// convert our current page number to a path
+	char *path = s_pages[page].m_filename;
+	sb->safePrintf("<a href=\"%s?c=%s&showall=1>...show all...</a><br>"
+		       , path , coll );
+
 
 	//sb->safePrintf ( "</center><br/>" );
 
