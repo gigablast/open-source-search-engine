@@ -1149,9 +1149,10 @@ class SpiderColl {
 	char m_sendLocalCrawlInfoToHost[MAX_HOSTS];
 
 	Msg4 m_msg4x;
-	Msg4 m_msg4;
-	Msg1 m_msg1;
-	bool m_msg1Avail;
+	//Msg4 m_msg4;
+	//Msg1 m_msg1;
+	//bool m_msg1Avail;
+	RdbList m_tmpList;
 
 	bool isInDupCache ( SpiderRequest *sreq , bool addToCache ) ;
 

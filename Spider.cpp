@@ -1,4 +1,4 @@
-// . do not cache if less than the 20k thing again.
+// . TODO: do not cache if less than the 20k thing again.
 
 // . maybe update doledb entries periodically? it could be holding back urls.
 //   CollectionRec::m_doledbRefreshRateInSecs. but how would this work
@@ -1062,12 +1062,12 @@ bool tryToDeleteSpiderColl ( SpiderColl *sc , char *msg ) {
 		    (PTRTYPE)sc,(int32_t)sc->m_collnum);
 		return true;
 	}
-	if ( sc->m_msg1.m_mcast.m_inUse ) {
-		log("spider: deleting sc=0x%"PTRFMT" for collnum=%"INT32" "
-		    "waiting2",
-		    (PTRTYPE)sc,(int32_t)sc->m_collnum);
-		return true;
-	}
+	// if ( sc->m_msg1.m_mcast.m_inUse ) {
+	// 	log("spider: deleting sc=0x%"PTRFMT" for collnum=%"INT32" "
+	// 	    "waiting2",
+	// 	    (PTRTYPE)sc,(int32_t)sc->m_collnum);
+	// 	return true;
+	// }
 	if ( sc->m_isLoading ) {
 		log("spider: deleting sc=0x%"PTRFMT" for collnum=%"INT32" "
 		    "waiting3",
@@ -1263,7 +1263,7 @@ bool SpiderColl::load ( ) {
 	}
 
 	// reset this once
-	m_msg1Avail    = true;
+	//m_msg1Avail    = true;
 	m_isPopulating = false;
 
 	// keep it kinda low if we got a ton of collections
@@ -4323,7 +4323,7 @@ bool SpiderColl::scanListForWinners ( ) {
 
 		// only put 40 urls from the same firstIp into doledb if
 		// we have a lot of urls in our spiderdb already.
-		// mdw: for testing take this out
+		// mdw: for testing take this out!
 		//if ( m_totalBytesScanned < 200000 ) maxWinners = 1;
 		// sanity. make sure read is somewhat hefty for our 
 		// maxWinners=1 thing
@@ -4938,7 +4938,7 @@ bool SpiderColl::addDoleBufIntoDoledb ( bool isFromCache ,
 	*/
 
 	// how did this happen?
-	if ( ! m_msg1Avail ) { char *xx=NULL;*xx=0; }
+	//if ( ! m_msg1Avail ) { char *xx=NULL;*xx=0; }
 
 	// add it to doledb ip table now so that waiting tree does not
 	// immediately get another spider request from this same ip added
@@ -5032,17 +5032,20 @@ bool SpiderColl::addDoleBufIntoDoledb ( bool isFromCache ,
 
 	m_msg4Start = gettimeofdayInMilliseconds();
 
-	RdbList *tmpList = &m_msg1.m_tmpList;
+	//RdbList *tmpList = &m_msg1.m_tmpList;
+
+	// keep it on stack now that doledb is tree-only
+	RdbList tmpList;
 
 	// only add one doledb record at a time now since we
 	// have the winnerListCache
 	m_doleBuf.setLength ( skipSize );
 
-	tmpList->setFromSafeBuf ( &m_doleBuf , RDB_DOLEDB );
+	tmpList.setFromSafeBuf ( &m_doleBuf , RDB_DOLEDB );
 
 	// now that doledb is tree-only and never dumps to disk, just
 	// add it directly
-	g_doledb.m_rdb.addList ( m_collnum , tmpList , MAX_NICENESS );
+	g_doledb.m_rdb.addList ( m_collnum , &tmpList , MAX_NICENESS );
 	// and it happens right away. just add it locally.
 	bool status = true;
 
@@ -5877,6 +5880,9 @@ void SpiderLoop::spiderDoledUrls ( ) {
 	// i'm not sure if this can happen here but i put this in as a 
 	// precaution.
 	if ( ! m_activeListValid ) goto collLoop;
+
+	// return now if list is just empty
+	if ( ! m_activeList ) return;
 
 	cr = m_crx;
 

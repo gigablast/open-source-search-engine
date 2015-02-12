@@ -3349,12 +3349,12 @@ int main2 ( int argc , char *argv[] ) {
 	// linkdb
 	if ( ! g_linkdb.init()     ) {
 		log("db: Linkdb init failed."   ); return 1; }
-	if ( ! g_cachedb.init()     ) {
-		log("db: Cachedb init failed."   ); return 1; }
-	if ( ! g_serpdb.init()     ) {
-		log("db: Serpdb init failed."   ); return 1; }
-	if ( ! g_monitordb.init()     ) {
-		log("db: Monitordb init failed."   ); return 1; }
+	// if ( ! g_cachedb.init()     ) {
+	// 	log("db: Cachedb init failed."   ); return 1; }
+	// if ( ! g_serpdb.init()     ) {
+	// 	log("db: Serpdb init failed."   ); return 1; }
+	// if ( ! g_monitordb.init()     ) {
+	// 	log("db: Monitordb init failed."   ); return 1; }
 	// use sectiondb again for its immense voting power for detecting and
 	// removing web page chrome, categories, etc. only use if 
 	// CollectionRec::m_isCustomCrawl perhaps to save space.

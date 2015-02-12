@@ -1494,7 +1494,7 @@ bool Pages::printAdminTop (SafeBuf     *sb   ,
 		       "<br>"
 
 		       "<font color=blue>"
-		       "&#x25cf;</font>between rounds (%"INT32")"
+		       "&#x25cf;</font> between rounds (%"INT32")"
 		       "<br>"
 
 
