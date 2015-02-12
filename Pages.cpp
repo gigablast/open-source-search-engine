@@ -2655,12 +2655,21 @@ bool Pages::printCollectionNavBar ( SafeBuf *sb     ,
 	int32_t row = 0;
 	uint32_t nowGlobal = (uint32_t)getTimeGlobal();
 	int32_t numPrinted = 0;
+	bool printMsg = false;
 
 	//for ( int32_t i = a ; i < b ; i++ ) {
 	for ( int32_t i = 0 ; i < g_collectiondb.m_numRecs ; i++ ) {
 
 		CollectionRec *cc = g_collectiondb.m_recs[i];
 		if ( ! cc ) continue;
+
+		if ( numPrinted >= 20 && ! showAll ) {
+			printMsg = true;
+			break;
+		}
+
+		// count it
+		numPrinted++;
 
 		//
 		// CLOUD SEARCH ENGINE SUPPORT
@@ -2740,15 +2749,17 @@ bool Pages::printCollectionNavBar ( SafeBuf *sb     ,
 		else
 			sb->safePrintf("<br>\n");
 
-		if ( ++numPrinted >= 20 && ! showAll ) break;
 	}
 
 	if ( showAll ) return status;
 
 	// convert our current page number to a path
-	char *path = s_pages[page].m_filename;
-	sb->safePrintf("<a href=\"%s?c=%s&showall=1>...show all...</a><br>"
-		       , path , coll );
+	if ( printMsg ) {
+		char *path = s_pages[page].m_filename;
+		sb->safePrintf("<a href=\"/%s?c=%s&showall=1\">"
+			       "...show all...</a><br>"
+			       , path , coll );
+	}
 
 
 	//sb->safePrintf ( "</center><br/>" );

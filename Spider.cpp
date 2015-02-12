@@ -7,12 +7,8 @@
 //   been in doledb for a long time.
 //   i'd like to see how many collections are actually active
 //   for diffbot first though.
-//   
-// . before we mark a spider job as done do one doledb rebuild without
-//   using the winnerlistcache and if it's still done then then mark
-//   it as done. if we found urls to spider say "found hidden urls by
-//   rebuilding doledb" in the logs.
 
+   
 
 
 // TODO: add m_downloadTimeTable to measure download speed of an IP
@@ -1249,6 +1245,8 @@ int32_t SpiderColl::getTotalOutstandingSpiders ( ) {
 	return sum;
 }
 
+void nukeDoledb ( collnum_t collnum ) ;
+
 // load the tables that we set when m_doInitialScan is true
 bool SpiderColl::load ( ) {
 
@@ -1347,19 +1345,21 @@ bool SpiderColl::load ( ) {
 		return log("spider: had error loading initial table: %s",
 			   mstrerror(g_errno));
 
+	// if we hade doledb0001.dat files on disk then nuke doledb
+	// and waiting tree and rebuild now with a tree-only doledb.
+	RdbBase *base = getRdbBase ( RDB_DOLEDB , m_collnum );
+
 	// . do this now just to keep everything somewhat in sync
 	// . we lost dmoz.org and could not get it back in because it was
 	//   in the doleip table but NOT in doledb!!!
 	if ( ! makeDoleIPTable() ) return false;
 
-	// if we hade doledb0001.dat files on disk then nuke doledb
-	// and waiting tree and rebuild now with a tree-only doledb.
-	RdbBase *base = getRdbBase ( m_collnum );
-	if ( base && base->m_numFiles == 0 ) return true;
-
 	// delete the files and doledb-saved.dat and the waitingtree
 	// and set the waitingtree into rebuild mode.
-	nukeDoledb ( m_collnum );
+	if ( base && base->m_numFiles > 0 ) {
+		nukeDoledb ( m_collnumm );
+		return true;
+	}
 
 	// otherwise true
 	return true;
@@ -1482,8 +1482,6 @@ char *SpiderColl::getCollName() {
 	if ( ! cr ) return "lostcollection";
 	return cr->m_coll;
 }
-
-void nukeDoledb ( collnum_t collnum ) ;
 
 //
 // remove all recs from doledb for the given collection
@@ -3475,7 +3473,7 @@ bool SpiderColl::evalIpLoop ( ) {
 				   0 ); // encoding. doesn't matter.
 		// now add the first rec m_doleBuf into doledb's tree
 		// and re-add the rest back to the cache with the same key.
-		return addDoleBufIntoDoledb ( false );
+		return addDoleBufIntoDoledb ( true , cachedTimestamp );
 	}
 
  top:
@@ -4760,10 +4758,11 @@ bool SpiderColl::addWinnersIntoDoledb ( ) {
 		}
 	}
 
-	return addDoleBufIntoDoledb ( false );
+	return addDoleBufIntoDoledb ( false , 0 );
 }
 
-bool SpiderColl::addDoleBufIntoDoledb ( bool isFromCache ) {
+bool SpiderColl::addDoleBufIntoDoledb ( bool isFromCache ,
+					uint32_t cachedTimestamp ) {
 
 	////////////////////
 	//
@@ -5378,7 +5377,7 @@ void SpiderLoop::startLoop ( ) {
 	//m_cri     = 0;
 	m_crx = NULL;
 	m_activeListValid = false;
-	m_activeHead = NULL;
+	m_activeList = NULL;
 	m_recalcTime = 0;
 	m_recalcTimeValid = false;
 	// falsify this flag
@@ -5822,15 +5821,32 @@ void SpiderLoop::spiderDoledUrls ( ) {
 	if ( nowGlobal >= m_recalcTime && m_recalcTimeValid )
 		m_activeListValid = false;
 
-	if ( ! m_activeListValid )
+	// we set m_activeListValid to false when enabling/disabling spiders,
+	// when rebuilding url filters in Collectiondb.cpp rebuildUrlFilters()
+	// and when updating the site list in updateSiteList(). all of these
+	// could possible make an inactive collection active again, or vice
+	// versa. also when deleting a collection in Collectiondb.cpp. this
+	// keeps the below loop fast when we have thousands of collections
+	// and most are inactive or empty/deleted.
+	if ( ! m_activeListValid ) {
 		buildActiveList();
+		m_crx = m_activeList;
+	}
+
+	// start again at head
+	if ( ! m_crx ) m_crx = m_activeList;
+
+	bool firstTime = true;
+
+	// detect overlap
+	CollectionRec *start = m_crx;
 
 	// log this now
 	//logf(LOG_DEBUG,"spider: getting collnum to dole from");
 	// get this
 	m_sc = NULL;
 	// avoid infinite loops
-	int32_t count = g_collectiondb.m_numRecs;
+	//int32_t count = g_collectiondb.m_numRecs;
 	// set this in the loop
 	CollectionRec *cr = NULL;
 	//uint32_t nowGlobal = 0;
@@ -5841,13 +5857,15 @@ void SpiderLoop::spiderDoledUrls ( ) {
 	// . just alternate them
 	//for ( ; count > 0 ; m_cri++ , count-- ) {
 
-	if ( m_crx ) m_crx = m_crx->m_next;
+ subloop:
 
-	// wrap it if we should
-	if ( ! m_crx ) m_crx = m_activeHead;
+	// if we hit the end of the list, wrap it around
+	if ( ! m_crx ) m_crx = m_activeList;
 
-	// if no collections are active just return now
-	if ( ! m_activeHead ) return;
+	// i guess return at the end of the linked list
+	if ( m_crx == start && ! firstTime ) return;
+
+	firstTime = false;
 
 	// if a collection got deleted re-calc the active list so
 	// we don't core trying to access a delete collectionrec.
@@ -5857,14 +5875,17 @@ void SpiderLoop::spiderDoledUrls ( ) {
 
 	cr = m_crx;
 
+	// advance for next time we call goto subloop;
+	m_crx = m_crx->m_nextActive;
+
 		// wrap it if we should
 		//if ( m_cri >= g_collectiondb.m_numRecs ) m_cri = 0;
 		// get rec
 		//cr = g_collectiondb.m_recs[m_cri];
 		// skip if gone
-		if ( ! cr ) continue;
+	        if ( ! cr ) goto subloop;
 		// stop if not enabled
-		if ( ! cr->m_spideringEnabled ) continue;
+		if ( ! cr->m_spideringEnabled ) goto subloop;
 
 		// hit crawl round max?
 		if ( cr->m_maxCrawlRounds > 0 &&
@@ -5880,7 +5901,7 @@ void SpiderLoop::spiderDoledUrls ( ) {
 				cr->m_needsSave = true;
 				cr->m_spiderStatus = SP_MAXROUNDS;
 			}
-			continue;
+			goto subloop;
 		}
 
 		// hit pages to crawl max?
@@ -5900,7 +5921,7 @@ void SpiderLoop::spiderDoledUrls ( ) {
 				cr->m_needsSave = true;
 				cr->m_spiderStatus = SP_MAXTOCRAWL;
 			}
-			continue;
+			goto subloop;
 		}
 
 		// hit pages to process max?
@@ -5918,7 +5939,7 @@ void SpiderLoop::spiderDoledUrls ( ) {
 				cr->m_needsSave = true;
 				cr->m_spiderStatus = SP_MAXTOPROCESS;
 			}
-			continue;
+			goto subloop;
 		}
 
 		// int16_tcut
@@ -5941,10 +5962,10 @@ void SpiderLoop::spiderDoledUrls ( ) {
 		// get the spider collection for this collnum
 		m_sc = g_spiderCache.getSpiderColl(cr->m_collnum);//m_cri);
 		// skip if none
-		if ( ! m_sc ) continue;
+		if ( ! m_sc ) goto subloop;
 		// skip if we completed the doledb scan for every spider
 		// priority in this collection
-		if ( m_sc->m_didRound ) continue;
+		if ( m_sc->m_didRound ) goto subloop;
 		// set current time, synced with host #0
 		nowGlobal = (uint32_t)getTimeGlobal();
 
@@ -5977,7 +5998,7 @@ void SpiderLoop::spiderDoledUrls ( ) {
 		// . if m_collectiveRespiderFrequency was set to 0.0 then
 		//   PageCrawlBot.cpp also sets m_roundStartTime to 0.
 		//
-		if ( nowGlobal < cr->m_spiderRoundStartTime ) continue;
+		if ( nowGlobal < cr->m_spiderRoundStartTime ) goto subloop;
 
 		// if populating this collection's waitingtree assume
 		// we would have found something to launch as well. it might
@@ -6011,13 +6032,13 @@ void SpiderLoop::spiderDoledUrls ( ) {
 		//	log("spider: has %"INT32" spiders out",m_sc->m_spidersOut);
 		// obey max spiders per collection too
 		if ( m_sc->m_spidersOut >= maxSpiders )
-			continue;
+			goto subloop;
 
 		// int16_tcut
 		SpiderColl *sc = cr->m_spiderColl;
 
 		if ( sc && sc->m_doleIpTable.isEmpty() )
-			continue;
+			goto subloop;
 
 		/*
 		// . HACK. 
@@ -6050,11 +6071,11 @@ void SpiderLoop::spiderDoledUrls ( ) {
 			continue;
 		*/
 		// ok, we are good to launch a spider for coll m_cri
-		break;
-	}
+		//break;
+		//}
 	
 	// if none, bail, wait for sleep wrapper to re-call us later on
-	if ( count == 0 ) return;
+	//if ( count == 0 ) return;
 
 	// sanity check
 	if ( nowGlobal == 0 ) { char *xx=NULL;*xx=0; }
@@ -6109,8 +6130,9 @@ void SpiderLoop::spiderDoledUrls ( ) {
 
  loop:
 
-	// int16_tcut
-	CrawlInfo *ci = &cr->m_localCrawlInfo;
+	// shortcut
+	//CrawlInfo *ci = &cr->m_localCrawlInfo;
+	ci = &cr->m_localCrawlInfo;
 
 	// bail if waiting for lock reply, no point in reading more
 	if ( m_msg12.m_gettingLocks ) {
@@ -13441,11 +13463,9 @@ void SpiderLoop::buildActiveList ( ) {
 	m_activeListValid = true;
 
 	// reset the linked list of active collections
-	m_activeHead = NULL;
+	m_activeList = NULL;
 
 	CollectionRec *tail = NULL;
-
-	int32_t nowGlobal = getTimeGlobal();
 
 	for ( int32_t i = 0 ; i < g_collectiondb.m_numRecs ; i++ ) {
 		// get rec
@@ -13480,7 +13500,7 @@ void SpiderLoop::buildActiveList ( ) {
 
 		// if first one, set it to head
 		if ( ! tail ) {
-			m_activeHead = cr;
+			m_activeList = cr;
 			tail = cr;
 			continue;
 		}

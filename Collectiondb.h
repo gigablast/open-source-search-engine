@@ -309,6 +309,9 @@ class CollectionRec {
 
  public:
 
+	// active linked list of collectionrecs used by spider.cpp
+	class CollectionRec *m_nextActive;
+
 	// these just set m_xml to NULL
 	CollectionRec();
 	virtual ~CollectionRec();
@@ -387,8 +390,8 @@ class CollectionRec {
 	// for regular crawls
 	bool rebuildUrlFilters2();
   
-  // for diffbot crawl or bulk jobs
-  bool rebuildUrlFiltersDiffbot();
+	// for diffbot crawl or bulk jobs
+	bool rebuildUrlFiltersDiffbot();
 
 	bool rebuildLangRules( char *lang , char *tld );
 

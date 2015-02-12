@@ -1163,7 +1163,7 @@ class SpiderColl {
 
 	bool  addToDoleTable   ( SpiderRequest *sreq ) ;
 
-	bool addDoleBufIntoDoledb ( bool isFromCache ) ;
+	bool addDoleBufIntoDoledb (bool isFromCache,uint32_t cachedTimestamp);
 
 	bool updateSiteNumInlinksTable ( int32_t siteHash32,int32_t sni,
 					 time_t tstamp); // time_t
@@ -1565,6 +1565,8 @@ class SpiderLoop {
 	class CollectionRec *m_crx;
 	class CollectionRec *m_activeList;
 	bool m_activeListValid;
+	uint32_t m_recalcTime;
+	bool m_recalcTimeValid;
 
 	int64_t m_doleStart;
 
