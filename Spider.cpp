@@ -1357,7 +1357,7 @@ bool SpiderColl::load ( ) {
 	// delete the files and doledb-saved.dat and the waitingtree
 	// and set the waitingtree into rebuild mode.
 	if ( base && base->m_numFiles > 0 ) {
-		nukeDoledb ( m_collnumm );
+		nukeDoledb ( m_collnum );
 		return true;
 	}
 
@@ -3890,6 +3890,11 @@ bool SpiderColl::scanListForWinners ( ) {
 		}
 		// cast it
 		SpiderRequest *sreq = (SpiderRequest *)rec;
+
+		// skip if our twin or another shard should handle it
+		if ( ! isAssignedToUs ( sreq->m_firstIp ) )
+			continue;
+
 		// . skip if our twin should add it to doledb
 		// . waiting tree only has firstIps assigned to us so
 		//   this should not be necessary
