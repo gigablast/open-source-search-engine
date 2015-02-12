@@ -1208,6 +1208,7 @@ CollectionRec *SpiderColl::getCollectionRec ( ) {
 
 SpiderColl::SpiderColl () {
 	m_overflowList = NULL;
+	m_lastOverflowFirstIp = 0;
 	m_deleteMyself = false;
 	m_isLoading = false;
 	m_gettingList1 = false;
@@ -3257,6 +3258,8 @@ void SpiderColl::populateDoledbFromWaitingTree ( ) { // bool reentry ) {
 	m_totalBytesScanned = 0LL;
 
 	m_totalNewSpiderRequests = 0LL;
+
+	m_lastOverflowFirstIp = 0;
 	
 	// . look up in spiderdb otherwise and add best req to doledb from ip
 	// . if it blocks ultimately it calls gotSpiderdbListWrapper() which
@@ -4344,68 +4347,6 @@ bool SpiderColl::scanListForWinners ( ) {
 		// maxWinners=1 thing
 		if ( (int32_t)SR_READ_SIZE < 500000 ) { char *xx=NULL;*xx=0; }
 
-		bool overflow = false;
-		// don't add any more outlinks to this firstip after we
-		// have 10M spider requests for it.
-		if ( m_totalNewSpiderRequests > 10000000 )
-			overflow = true;
-
-		/////
-		//
-		// BEGIN maintain firstip overflow list
-		//
-		/////
-		// need space
-		if ( overflow && ! m_overflowList ) {
-			int32_t need = OVERFLOWLISTSIZE*4;
-			m_overflowList = (int32_t *)mmalloc(need,"list");
-			m_overflowList[0] = 0;
-		}
-		//
-		// ensure firstip is in the overflow list if we overflowed
-		int32_t emptySlot = -1;
-		bool found = false;
-		int32_t oi;
-		for ( oi = 0 ; ; oi++ ) {
-			// sanity
-			if ( ! m_overflowList ) break;
-			// an ip of zero is end of the list
-			if ( ! m_overflowList[oi] ) break;
-			// if already in there, we are done
-			if ( m_overflowList[oi] == firstIp ) {
-				found = true;
-				break;
-			}
-			// -1 means empty slot
-			if ( m_overflowList[oi] == -1 ) emptySlot = oi;
-		}
-		// add it if missing. add to empty slot.
-		if ( ! found && emptySlot >= 0 && m_overflowList )
-			m_overflowList[emptySlot] = firstIp;
-		// or add to new slot. this is #defined to 100 last check
-		else if ( ! found && oi+1<OVERFLOWLISTSIZE && m_overflowList ){
-			m_overflowList[oi] = firstIp;
-			m_overflowList[oi+1] = 0;
-		}
-		// ensure firstip is NOT in the overflow list if we are ok
-		for ( int32_t oi2 = 0 ; ! overflow ; oi2++ ) {
-			// sanity
-			if ( ! m_overflowList ) break;
-			// an ip of zero is end of the list
-			if ( ! m_overflowList[oi2] ) break;
-			// skip if not a match
-			if ( m_overflowList[oi2] != firstIp ) continue;
-			// take it out of list
-			m_overflowList[oi2] = -1;
-			break;
-		}
-		/////
-		//
-		// END maintain firstip overflow list
-		//
-		/////
-		
-
 		// only compare to min winner in tree if tree is full
 		if ( m_winnerTree.getNumUsedNodes() >= maxWinners ) {
 			// get that key
@@ -4668,6 +4609,84 @@ bool SpiderColl::scanListForWinners ( ) {
 		    m_winnerTree.getNumUsedNodes());
 	// reset any errno cuz we're just a cache
 	g_errno = 0;
+
+
+	/////
+	//
+	// BEGIN maintain firstip overflow list
+	//
+	/////
+	bool overflow = false;
+	// don't add any more outlinks to this firstip after we
+	// have 10M spider requests for it.
+	if ( m_totalNewSpiderRequests > 10000000 )
+		overflow = true;
+
+	// need space
+	if ( overflow && ! m_overflowList ) {
+		int32_t need = OVERFLOWLISTSIZE*4;
+		m_overflowList = (int32_t *)mmalloc(need,"list");
+		m_overflowList[0] = 0;
+	}
+	//
+	// ensure firstip is in the overflow list if we overflowed
+	int32_t emptySlot = -1;
+	bool found = false;
+	int32_t oi;
+	// if we dealt with this last round, we're done
+	if ( m_lastOverflowFirstIp == firstIp )
+		return true;
+	m_lastOverflowFirstIp = firstIp;
+	if ( g_conf.m_logDebugSpider && overflow )
+		log("spider: got overflow for firstip %s",
+		    iptoa(firstIp));
+	for ( oi = 0 ; ; oi++ ) {
+		// sanity
+		if ( ! m_overflowList ) break;
+		// an ip of zero is end of the list
+		if ( ! m_overflowList[oi] ) break;
+		// if already in there, we are done
+		if ( m_overflowList[oi] == firstIp ) {
+			found = true;
+			break;
+		}
+		// -1 means empty slot
+		if ( m_overflowList[oi] == -1 ) emptySlot = oi;
+	}
+	// if we need to add it...
+	if ( overflow && ! found && m_overflowList ) {
+		// take the empty slot if there is one
+		if ( emptySlot >= 0 )
+			m_overflowList[emptySlot] = firstIp;
+		// or add to new slot. this is #defined to 200 last check
+		else if ( oi+1 < OVERFLOWLISTSIZE ) {
+			m_overflowList[oi] = firstIp;
+			m_overflowList[oi+1] = 0;
+		}
+		else 
+			log("spider: could not add firstip %s to "
+			    "overflow list, full.", iptoa(firstIp));
+	}
+	// ensure firstip is NOT in the overflow list if we are ok
+	for ( int32_t oi2 = 0 ; ! overflow ; oi2++ ) {
+		// sanity
+		if ( ! m_overflowList ) break;
+		// an ip of zero is end of the list
+		if ( ! m_overflowList[oi2] ) break;
+		// skip if not a match
+		if ( m_overflowList[oi2] != firstIp ) continue;
+		// take it out of list
+		m_overflowList[oi2] = -1;
+		break;
+	}
+	/////
+	//
+	// END maintain firstip overflow list
+	//
+	/////
+		
+
+
 
 	// ok we've updated m_bestRequest!!!
 	return true;

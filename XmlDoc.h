@@ -2032,6 +2032,7 @@ class XmlDoc {
 	char m_isFiltered;
 	int32_t m_urlFilterNum;
 	int32_t m_numOutlinksAdded;
+	int32_t m_linkOverflows;
 	int32_t m_numOutlinksAddedFromSameDomain;
 	int32_t m_numOutlinksFiltered;
 	int32_t m_numOutlinksBanned;

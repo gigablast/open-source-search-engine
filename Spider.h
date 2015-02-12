@@ -1304,6 +1304,7 @@ class SpiderColl {
 	int32_t *m_overflowList;
 	int64_t  m_totalNewSpiderRequests;
 	int64_t  m_lastSreqUh48;
+	int32_t  m_lastOverflowFirstIp;
 
 
  private:
