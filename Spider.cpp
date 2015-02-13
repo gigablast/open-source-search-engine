@@ -3462,15 +3462,28 @@ bool SpiderColl::evalIpLoop ( ) {
 	int32_t doleBufSize;
 	RdbCache *wc = &g_spiderLoop.m_winnerListCache;
 	time_t cachedTimestamp = 0;
-	bool inCache = wc->getRecord ( m_collnum     ,
-				       (char *)&cacheKey ,
-				       &doleBuf,
-				       &doleBufSize  ,
-				       false, // doCopy?
-				       120, // maxAge, 120 seconds
-				       true ,// incCounts
-				       &cachedTimestamp , // rec timestamp
-				       true );  // promote rec?
+	bool inCache = false;
+	bool useCache = true;
+	CollectionRec *cr = g_collectiondb.getRec ( m_collnum );
+	// if doing site or page quotes for the sitepages or domainpages
+	// url filter expressions, we can't muck with the cache because
+	// we end up skipping the counting part.
+	if ( ! cr )
+		useCache = false;
+	if ( cr && cr->m_urlFiltersHavePageCounts )
+		useCache = false;
+	if ( m_countingPagesIndexed )
+		useCache = false;
+	if ( useCache )
+		inCache = wc->getRecord ( m_collnum     ,
+					  (char *)&cacheKey ,
+					  &doleBuf,
+					  &doleBufSize  ,
+					  false, // doCopy?
+					  120, // maxAge, 120 seconds
+					  true ,// incCounts
+					  &cachedTimestamp , // rec timestamp
+					  true );  // promote rec?
 	// doleBuf could be NULL i guess...
 	if ( inCache && doleBufSize > 0 ) {
 		if ( g_conf.m_logDebugSpider )
@@ -3530,8 +3543,8 @@ bool SpiderColl::evalIpLoop ( ) {
 
 	// if we started reading, then assume we got a fresh list here
 	if ( g_conf.m_logDebugSpider )
-		log("spider: back from msg5 spiderdb read2 of %"INT32" bytes (cn=%"INT32")",
-		    m_list.m_listSize,(int32_t)m_collnum);
+		log("spider: back from msg5 spiderdb read2 of %"INT32" bytes "
+		    "(cn=%"INT32")",m_list.m_listSize,(int32_t)m_collnum);
 
 
 	// . set the winning request for all lists we read so far
@@ -3953,7 +3966,7 @@ bool SpiderColl::scanListForWinners ( ) {
 		//
 		// just calculating page counts? if the url filters are based
 		// on the # of pages indexed per ip or subdomain/site then
-		// we have to maintain a page count table.
+		// we have to maintain a page count table. sitepages.
 		//
 		if ( m_countingPagesIndexed ) { //&& sreq->m_fakeFirstIp ) {
 			// get request url hash48 (jez= 220459274533043 )
@@ -4003,6 +4016,16 @@ bool SpiderColl::scanListForWinners ( ) {
 			m_localTable.addScore(&sreq->m_firstIp,1);
 			m_localTable.addScore(&sreq->m_siteHash32,1);
 			m_localTable.addScore(&sreq->m_domHash32,1);
+			// debug
+			if ( ! g_conf.m_logDebugSpider ) continue;
+			int32_t *valPtr ;
+			int32_t fip = sreq->m_firstIp;
+			int32_t sh32 = sreq->m_siteHash32;
+			valPtr = (int32_t *)m_localTable.getValue(&sh32);
+			log("spider: sitequota: "
+			    "got %"INT32" indexed docs for site from "
+			    "firstip of %s from url %s",
+			    *valPtr,iptoa(fip),sreq->m_url);
 			continue;
 		}
 
@@ -4663,14 +4686,15 @@ bool SpiderColl::scanListForWinners ( ) {
 	// if read is not yet done, save the reply in case next list needs it
 	if ( srep ) { // && ! m_isReadDone ) {
 		int32_t rsize = srep->getRecSize();
-		if ( rsize > (int32_t)MAX_SP_REPLY_SIZE ) { char *xx=NULL;*xx=0; }
+		if ( rsize > (int32_t)MAX_SP_REPLY_SIZE){char *xx=NULL;*xx=0; }
 		gbmemcpy ( m_lastReplyBuf, srep, rsize );
 		m_lastReplyValid = true;
 	}
 
 	// debug info
 	if ( g_conf.m_logDebugSpider )
-		log("spider: Checked list of %"INT32" spiderdb bytes (%"INT32" recs) "
+		log("spider: Checked list of %"INT32" spiderdb "
+		    "bytes (%"INT32" recs) "
 		    "for winners "
 		    "for firstip=%s. winnerTreeUsedNodes=%"INT32"",
 		    list->getListSize(),recCount,iptoa(m_scanningIp),
@@ -6696,7 +6720,7 @@ bool SpiderLoop::gotDoledbList2 ( ) {
 		log("spider: setting pri2=%"INT32" queue doledb nextkey to "
 		    "%s (pri=%"INT32")",
 		    m_sc->m_pri2,KEYSTR(&m_sc->m_nextDoledbKey,12),pri4);
-		if ( pri4 != m_sc->m_pri2 ) { char *xx=NULL;*xx=0; }
+		//if ( pri4 != m_sc->m_pri2 ) { char *xx=NULL;*xx=0; }
 	}
 
 	// update next doledbkey for this priority to avoid having to

@@ -1211,6 +1211,7 @@ void sigalrmHandler ( int x , siginfo_t *info , void *y ) {
 		g_profiler.getStackFrame(0);
 }
 
+/*
 static sigset_t s_rtmin;
 
 void maskSignals() {
@@ -1242,7 +1243,7 @@ void unmaskSignals() {
 		return;
 	}
 }
-
+*/
 
 // shit, we can't make this realtime!! RdbClose() cannot be called by a
 // real time sig handler
@@ -1884,6 +1885,8 @@ void Loop::doPoll ( ) {
 	// based it only goes off when that much "cpu time" has elapsed.
 	else                 v.tv_usec = QUICKPOLL_INTERVAL * 1000;  
 
+	int32_t count = v.tv_usec;
+
 	// set descriptors we should watch
 	// MDW: no longer necessary since we have s_selectMaskRead, etc.
 	// for ( int32_t i = 0 ; i < MAX_NUM_FDS ; i++ ) {
@@ -1901,7 +1904,7 @@ void Loop::doPoll ( ) {
 	// gotta copy to our own since bits get cleared by select() function
 	fd_set readfds;
 	fd_set writefds;
-	fd_set exceptfds;
+	//fd_set exceptfds;
 	gbmemcpy ( &readfds, &s_selectMaskRead , sizeof(fd_set) );
 	gbmemcpy ( &writefds, &s_selectMaskWrite , sizeof(fd_set) );
 	//gbmemcpy ( &exceptfds, &s_selectMaskExcept , sizeof(fd_set) );
@@ -1909,7 +1912,7 @@ void Loop::doPoll ( ) {
 	// what is the point of fds for writing... its for when we
 	// get a new socket via accept() it is read for writing...
 	//FD_ZERO ( &writefds );
-	FD_ZERO ( &exceptfds );
+	//FD_ZERO ( &exceptfds );
 
 	if ( g_conf.m_logDebugLoop )
 		log("loop: in select");
@@ -1930,18 +1933,26 @@ void Loop::doPoll ( ) {
 
 	// . poll the fd's searching for socket closes
 	// . the sigalrms and sigvtalrms and SIGCHLDs knock us out of this
-	//   select() with n < 0 and errno equal to EINTR
+	//   select() with n < 0 and errno equal to EINTR.
+	// . crap the sigalarms kick us out here every 1ms. i noticed
+	//   then when running disableTimer() above and we don't get
+	//   any EINTRs... can we mask those out here? it only seems to be
+	//   the SIGALRMs not the SIGVTALRMs that interrupt us.
 	n = select (MAX_NUM_FDS, 
 		    &readfds,
 		    &writefds,
-		    &exceptfds,
+		    NULL,//&exceptfds,
 		    &v );
 
 	g_inWaitState = false;
 
+	if ( n >= 0 ) errno = 0;
+
 	if ( g_conf.m_logDebugLoop )
-		log("loop: out select n=%"INT32" errno=%"INT32" errnomsg=%s",
-		    (int32_t)n,(int32_t)errno,mstrerror(errno));
+		log("loop: out select n=%"INT32" errno=%"INT32" errnomsg=%s "
+		    "ms_wait=%i",
+		    (int32_t)n,(int32_t)errno,mstrerror(errno),
+		    (int)v.tv_sec*1000);
 
 	if ( n < 0 ) { 
 		// valgrind
@@ -1949,13 +1960,25 @@ void Loop::doPoll ( ) {
 			// got it. if we get a sig alarm or vt alarm or
 			// SIGCHLD (from Threads.cpp) we end up here.
 			//log("loop: got errno=%"INT32"",(int32_t)errno);
-			// if shutting own was it a sigterm ?
+			// if not linux we have to decrease this by 1ms
+			if ( m_shutdown ) count -= 1000; 
+			// and re-assign to wait less time. we are
+			// assuming SIGALRM goes off once per ms and if
+			// that is not what interrupted us we may end
+			// up exiting early
+			if ( count <= 0 && m_shutdown ) return;
+			// wait less this time around
+			v.tv_usec = count;
+			// if shutting down was it a sigterm ?
 			if ( m_shutdown ) goto again;
 			// handle returned threads for niceness 0
-			g_threads.timedCleanUp(-3,0); // 3 ms
+			if ( g_threads.m_needsCleanup )
+				g_threads.timedCleanUp(-3,0); // 3 ms
 			if ( m_inQuickPoll ) goto again;
 			// high niceness threads
-			g_threads.timedCleanUp(-4,MAX_NICENESS); // 3 ms
+			if ( g_threads.m_needsCleanup )
+				g_threads.timedCleanUp(-4,MAX_NICENESS); //3 ms
+
 			goto again;
 		}
 		g_errno = errno;
@@ -1980,8 +2003,8 @@ void Loop::doPoll ( ) {
 	 	log("loop: fd %"INT32" is on for read",i);
 	 	if ( FD_ISSET ( i , &writefds ) )
 	 	log("loop: fd %"INT32" is on for write",i);
-	 	if ( FD_ISSET ( i , &exceptfds ) )
-	 		log("loop: fd %"INT32" is on for except",i);
+	 	// if ( FD_ISSET ( i , &exceptfds ) )
+	 	// 	log("loop: fd %"INT32" is on for except",i);
 	  	// debug
 
 	 	// if niceness is not -1, handle it below
