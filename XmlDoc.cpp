@@ -9448,7 +9448,7 @@ int32_t getTopGigabits ( HashTableX   *ht          ,
 		// sanity check
 		if ( tn < 0 ) { char *xx=NULL;*xx=0; }
 		// kick out smallest
-		tree.deleteNode ( tn , false );
+		tree.deleteNode3 ( tn , false );
 		// get new smallest
 		tn = tree.getLowestNode();
 		// set the new minkey

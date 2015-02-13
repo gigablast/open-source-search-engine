@@ -1641,6 +1641,8 @@ bool SpiderColl::makeWaitingTree ( ) {
 		if ( g_spiderdb.isSpiderReply ( (key128_t *)rec ) ) continue;
 		// get request
 		SpiderRequest *sreq = (SpiderRequest *)rec;
+		// skip if not assigned to us
+		if ( ! isAssignedToUs ( sreq->m_firstIp ) ) continue;
 		// get first ip
 		int32_t firstIp = sreq->m_firstIp;
 		// skip if in dole ip table
@@ -1663,7 +1665,7 @@ bool SpiderColl::makeWaitingTree ( ) {
 		// add to table now since its in the tree
 		if ( ! m_waitingTable.addKey ( &firstIp , &fakeone ) ) {
 			log("spider: makeWaitTree2: %s",mstrerror(g_errno));
-			m_waitingTree.deleteNode ( wn , true );
+			m_waitingTree.deleteNode3 ( wn , true );
 			//log("sper: 6 del node %"INT32" for %s",wn,iptoa(firstIp));
 			return false;
 		}
@@ -2587,7 +2589,7 @@ bool SpiderColl::addToWaitingTree ( uint64_t spiderTimeMS , int32_t firstIp ,
 			    (uint32_t)(spiderTimeMS/1000LL),
 			    iptoa(firstIp));
 		// remove from tree so we can add it below
-		m_waitingTree.deleteNode ( tn , false );
+		m_waitingTree.deleteNode3 ( tn , false );
 		//log("spider: 4 del node %"INT32" for %s",tn,iptoa(firstIp));
 	}
 	else {
@@ -2661,7 +2663,7 @@ bool SpiderColl::addToWaitingTree ( uint64_t spiderTimeMS , int32_t firstIp ,
 	// add to table now since its in the tree
 	if ( ! m_waitingTable.addKey ( &firstIp , &spiderTimeMS ) ) {
 		// remove from tree then
-		m_waitingTree.deleteNode ( wn , false );
+		m_waitingTree.deleteNode3 ( wn , false );
 		//log("spider: 5 del node %"INT32" for %s",wn,iptoa(firstIp));
 		return false;
 	}
@@ -2734,7 +2736,7 @@ int32_t SpiderColl::getNextIpFromWaitingTree ( ) {
 		// these operations should fail if writes have been disabled
 		// and becase the trees/tables for spidercache are saving
 		// in Process.cpp's g_spiderCache::save() call
-		m_waitingTree.deleteNode ( node , true );
+		m_waitingTree.deleteNode3 ( node , true );
 		//log("spdr: 8 del node node %"INT32" for %s",node,iptoa(firstIp));
 		// note it
 		if ( g_conf.m_logDebugSpider )
@@ -3347,7 +3349,7 @@ key128_t makeUfnTreeKey ( int32_t      firstIp      ,
 // key bitmap (192 bits):
 //
 // ffffffff ffffffff ffffffff ffffffff  f=firstIp
-// pppppppp pppppppp HHHHHHHH HHHHHHHH  p=priority  H=hopcount
+// pppppppp pppppppp HHHHHHHH HHHHHHHH  p=255-priority  H=hopcount
 // tttttttt tttttttt tttttttt tttttttt  t=spiderTimeMS
 // tttttttt tttttttt tttttttt tttttttt  h=urlHash48
 // hhhhhhhh hhhhhhhh hhhhhhhh hhhhhhhh 
@@ -3798,7 +3800,7 @@ bool SpiderColl::scanListForWinners ( ) {
 		    sb.getBufStart(),
 		    iptoa(firstIp));
 		// delete the exact node #
-		m_waitingTree.deleteNode ( wn , false );
+		m_waitingTree.deleteNode3 ( wn , false );
 	}
 	*/
 	//char *xx=NULL;*xx=0; }
@@ -4310,6 +4312,9 @@ bool SpiderColl::scanListForWinners ( ) {
 						 spiderTimeMS ,
 						 uh48 );
 
+		// if ( uh48 == 110582802025376LL )
+		// 	log("hey");
+
 		// if this url is already in the winnerTree then either we 
 		// replace it or we skip ourselves. 
 		//
@@ -4325,13 +4330,14 @@ bool SpiderColl::scanListForWinners ( ) {
 			oldwk = (key192_t *)m_winnerTable.
 				getDataFromSlot ( winSlot );
 			// are we lower priority? (or equal)
+			// smaller keys are HIGHER priority.
 			if(KEYCMP((char *)&wk,(char *)oldwk,
-				  sizeof(key192_t))<=0) 
+				  sizeof(key192_t))>=0) 
 				continue;
 			// from table too. no it's a dup uh48!
 			//m_winnerTable.deleteKey ( &uh48 );
 			// otherwise we supplant it. remove old key from tree.
-			m_winnerTree.deleteNode ( 0 , oldwk );
+			m_winnerTree.deleteNode ( 0 , (char *)oldwk , false);
 			// supplant in table and tree... just add below...
 		}
 
@@ -4393,7 +4399,7 @@ bool SpiderColl::scanListForWinners ( ) {
 			// from table too
 			m_winnerTable.removeKey ( &m_tailUh48 );
 			// delete the tail so new spiderrequest can enter
-			m_winnerTree.deleteNode ( tailNode , true );
+			m_winnerTree.deleteNode3 ( tailNode , true );
 
 		}
 
@@ -4454,9 +4460,71 @@ bool SpiderColl::scanListForWinners ( ) {
 				      (char *)newMem ,
 				      need );
 
+		// log("adding wk uh48=%llu #usednodes=%i",
+		//     uh48,m_winnerTree.m_numUsedNodes);
+
 		// sanity
 		//SpiderRequest *sreq2 = (SpiderRequest *)m_winnerTree.
 		//getData ( nn );
+
+		// //////////////////////
+		// // MDW dedup test
+		// HashTableX dedup;
+		// int32_t ntn = m_winnerTree.getNumNodes();
+		// char dbuf[3*MAX_WINNER_NODES*(8+1)];
+		// dedup.set ( 8,
+		// 	    0,
+		// 	    (int32_t)2*ntn, // # slots to initialize to
+		// 	    dbuf,
+		// 	    (int32_t)(3*MAX_WINNER_NODES*(8+1)),
+		// 	    false,
+		// 	    MAX_NICENESS,
+		// 	    "windt");
+		// for ( int32_t node = m_winnerTree.getFirstNode() ; 
+		//       node >= 0 ; 
+		//       node = m_winnerTree.getNextNode ( node ) ) {
+		// // get data for that
+		// SpiderRequest *sreq2;
+		// sreq2 = (SpiderRequest *)m_winnerTree.getData ( node );
+		// // parse it up
+		// int32_t winIp;
+		// int32_t winPriority;
+		// int32_t winHopCount;
+		// int64_t winSpiderTimeMS;
+		// int64_t winUh48;
+		// key192_t *winKey = (key192_t *)m_winnerTree.getKey ( node );
+		// parseWinnerTreeKey ( winKey ,
+		// 		     &winIp ,
+		// 		     &winPriority,
+		// 		     &winHopCount,
+		// 		     &winSpiderTimeMS ,
+		// 		     &winUh48 );
+		// // sanity
+		//if(winUh48 != sreq2->getUrlHash48() ) { char *xx=NULL;*xx=0;}
+		// // make the doledb key
+		// key_t doleKey = g_doledb.makeKey ( winPriority,
+		// 				   // convert to secs from ms
+		// 				   winSpiderTimeMS / 1000     ,
+		// 				   winUh48 ,
+		// 				   false                    );
+		// // dedup. if we add dups the problem is is that they
+		// // overwrite the key in doledb yet the doleiptable count
+		// // remains undecremented and doledb is empty and never
+		// // replenished because the firstip can not be added to
+		// // waitingTree because doleiptable count is > 0. this was
+		// // causing spiders to hang for collections. i am not sure
+		// // why we should be getting dups in winnertree because they
+		// // have the same uh48 and that is the key in the tree.
+		// if ( dedup.isInTable ( &winUh48 ) ) {
+		// 	log("spider: got dup uh48=%"UINT64" dammit", winUh48);
+		// 	char *xx=NULL;*xx=0;
+		// 	continue;
+		// }
+		// // do not allow dups
+		// dedup.addKey ( &winUh48 );
+		// }
+		// // end dedup test
+		//////////////////////////
 
 		// set new tail priority and time for next compare
 		if ( m_winnerTree.getNumUsedNodes() >= maxWinners ) {
@@ -4957,7 +5025,7 @@ bool SpiderColl::addDoleBufIntoDoledb ( bool isFromCache ,
 		//int32_t wn = m_waitingTree.getNode(0,(char *)&m_waitingTreeKey);
 		//if ( wn < 0 ) { char *xx=NULL;*xx=0; }
 		if ( wn >= 0 ) {
-			m_waitingTree.deleteNode (wn,false );
+			m_waitingTree.deleteNode3 (wn,false );
 			//log("spdr: 2 del node %"INT32" for %s",wn,iptoa(firstIp));
 		}
 

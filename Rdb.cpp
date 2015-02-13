@@ -2426,7 +2426,7 @@ bool Rdb::addRecord ( collnum_t collnum,
 		// . we NO LONGER annihilate with him. why?
 		// . freeData should be true, the tree doesn't own the data
 		//   so it shouldn't free it really
-		m_tree.deleteNode ( n , true ); // false =freeData?);
+		m_tree.deleteNode3 ( n , true ); // false =freeData?);
 		// mark as changed
 		//if ( ! m_needsSave ) {
 		//	m_needsSave = true;
@@ -2669,7 +2669,7 @@ bool Rdb::addRecord ( collnum_t collnum,
 				    "errCode = %s",
 				    rr->getUrlHash48(),
 				    mstrerror(indexCode));
-				m_tree.deleteNode(tn,false);
+				m_tree.deleteNode3(tn,false);
 			}
 		}
 		// clear errors from adding to SpiderCache

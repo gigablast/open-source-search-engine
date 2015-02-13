@@ -10751,7 +10751,7 @@ bool bucketstest ( char* dbname ) {
 		int32_t n;
 		n = rt.getNode ( 0, oppKey );
 		if ( n >= 0 ) {
-			rt.deleteNode ( n , true );
+			rt.deleteNode3 ( n , true );
 		}
 		if ( rt.addNode ( 0, key , NULL , 0 ) < 0 )
 			return log("speedTest: rdb tree addNode "
@@ -11089,7 +11089,7 @@ bool bucketstest ( char* dbname ) {
 		collnum_t collnum = rand() % 10;
 
 		n = rt.getNode ( collnum , oppKey );
-		if ( n >= 0 ) rt.deleteNode ( n , true );
+		if ( n >= 0 ) rt.deleteNode3 ( n , true );
 
 		if ( rt.addNode (collnum, key, NULL , 0 ) < 0 )
 			return log("speedTest: rdb tree addNode "

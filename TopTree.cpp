@@ -380,7 +380,7 @@ bool TopTree::addNode ( TopNode *t , int32_t tnn ) {
 		// delete him from the top tree now as well
 		//deleteNode ( nn , domHash );
 		// then delete him from the m_t2 tree
-		m_t2.deleteNode ( min , false );
+		m_t2.deleteNode3 ( min , false );
 		//logf(LOG_DEBUG,"deleting1 %"INT32"",min);
 	}
 	// if we have not violated the ridiculous max, just add ourselves
@@ -489,7 +489,7 @@ bool TopTree::addNode ( TopNode *t , int32_t tnn ) {
 		// get next node from t2
 		int32_t next = m_t2.getNextNode ( min );
 		// delete from m_t2
-		m_t2.deleteNode ( min , false );
+		m_t2.deleteNode3 ( min , false );
 		// skip if not th emin
 		if ( m_domMinNode[domHash2] != min ) continue;
 		// if we were the last, that's it
