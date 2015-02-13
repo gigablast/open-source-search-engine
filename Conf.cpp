@@ -183,7 +183,7 @@ bool Conf::isMasterAdmin ( TcpSocket *socket , HttpRequest *hr ) {
 		isAdmin = true;
 
 	// coming from root gets you in
-	if ( isMasterIp ( socket->m_ip ) ) 
+	if ( socket && isMasterIp ( socket->m_ip ) ) 
 		isAdmin = true;
 
 	//if ( isConnectIp ( socket->m_ip ) ) return true;

@@ -3288,8 +3288,8 @@ void Parms::setParm ( char *THIS , Parm *m , int32_t mm , int32_t j , char *s ,
 
 	// if they turn spiders on or off then tell spiderloop to update
 	// the active list
-	if ( strcmp(m->m_cgi,"cse") )
-		g_spiderLoop.m_activeListValid = false;
+	//if ( strcmp(m->m_cgi,"cse") )
+	//	g_spiderLoop.m_activeListValid = false;
 
 	// only send email alerts if we are host 0 since everyone syncs up
 	// with host #0 anyway
@@ -16228,7 +16228,10 @@ void Parms::init ( ) {
 	m->m_def   = "1";
 	m->m_page  = PAGE_SPIDER;
 	m->m_obj   = OBJ_COLL;
-	m->m_flags = PF_CLONE;
+	// this linked list of colls is in Spider.cpp and used to only
+	// poll the active spider colls for spidering. so if coll
+	// gets paused/unpaused we have to update it.
+	m->m_flags = PF_CLONE | PF_REBUILDACTIVELIST;
 	m++;
 
 	m->m_title = "site list";
@@ -21267,6 +21270,9 @@ void handleRequest3fLoop ( void *weArg ) {
 		if ( parm->m_flags & PF_REBUILDPROXYTABLE )
 			we->m_doProxyRebuild = true;
 
+		if ( parm->m_flags & PF_REBUILDACTIVELIST )
+			we->m_rebuildActiveList = true;
+
 		// get collnum i guess
 		if ( parm->m_type != TYPE_CMD )
 			we->m_collnum = getCollnumFromParmRec ( rec );
@@ -21345,6 +21351,9 @@ void handleRequest3fLoop ( void *weArg ) {
 		cx->rebuildUrlFilters();
 	}
 
+	if ( we->m_rebuildActiveList && cx ) 
+		g_spiderLoop.m_activeListValid = false;
+
 	// if user changed the list of proxy ips rebuild the binary
 	// array representation of the proxy ips we have
 	if ( we->m_doProxyRebuild )
@@ -21390,6 +21399,7 @@ void handleRequest3f ( UdpSlot *slot , int32_t niceness ) {
 	we->m_parmEnd = parmEnd;
 	we->m_errno = 0;
 	we->m_doRebuilds = false;
+	we->m_rebuildActiveList = false;
 	we->m_updatedRound = false;
 	we->m_doProxyRebuild = false;
 	we->m_collnum = -1;
