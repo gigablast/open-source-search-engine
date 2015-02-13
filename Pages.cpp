@@ -1475,27 +1475,33 @@ bool Pages::printAdminTop (SafeBuf     *sb   ,
 		       "<b>Key</b>"
 		       "<br>"
 		       "<br>"
+		       "\n"
 		       );
 	sb->safePrintf(
 		       "<font color=black>"
 		       "&#x25cf;</font> spider is done (%"INT32")"
 		       "<br>"
+		       "\n"
 
 		       "<font color=orange>"
 		       "&#x25cf;</font> spider is paused (%"INT32")"
 		       "<br>"
+		       "\n"
 
 		       "<font color=green>"
 		       "&#x25cf;</font> spider is active (%"INT32")"
 		       "<br>"
+		       "\n"
 
 		       "<font color=gray>"
 		       "&#x25cf;</font> spider queue empty (%"INT32")"
 		       "<br>"
+		       "\n"
 
 		       "<font color=blue>"
 		       "&#x25cf;</font> between rounds (%"INT32")"
 		       "<br>"
+		       "\n"
 
 
 		       "</div>"
