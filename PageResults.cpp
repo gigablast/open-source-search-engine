@@ -2057,6 +2057,51 @@ bool printLeftNavColumn ( SafeBuf &sb, State0 *st ) {
 	return true;
 }
 
+bool printIgnoredWords ( SafeBuf *sb , SearchInput *si ) {
+	// mention ignored query terms
+	// we need to set another Query with "keepAllSingles" set to false
+	Query *qq2 = &si->m_q;
+	//qq2.set ( q , qlen , NULL , 0 , si->m_boolFlag , false );
+	bool firstIgnored = true;
+	for ( int32_t i = 0 ; i < qq2->m_numWords ; i++ ) {
+		//if ( si->m_xml ) break;
+		QueryWord *qw = &qq2->m_qwords[i];
+		// only print out words ignored cuz they were stop words
+		if ( qw->m_ignoreWord != IGNORE_QSTOP ) continue;
+		// print header -- we got one
+		if ( firstIgnored ) {
+			if ( si->m_format == FORMAT_XML )
+				sb->safePrintf ("\t<ignoredWords><![CDATA[");
+			else if ( si->m_format == FORMAT_JSON )
+				sb->safePrintf ("\t\"ignoredWords\":\"");
+			else if ( si->m_format == FORMAT_HTML )
+				sb->safePrintf ("<br><font "
+					       "color=\"#707070\">The "
+					       "following query words "
+					       "were ignored: "
+					       "<b>");
+			firstIgnored = false;
+		}
+		// print the word
+		char *t    = qw->m_word; 
+		int32_t  tlen = qw->m_wordLen;
+		sb->utf8Encode2 ( t , tlen );
+		sb->safePrintf (" ");
+	}
+	// print tail if we had ignored terms
+	if ( ! firstIgnored ) {
+		sb->incrementLength(-1);
+		if ( si->m_format == FORMAT_XML )
+			sb->safePrintf("]]></ignoredWords>\n");
+		else if ( si->m_format == FORMAT_JSON )
+			sb->safePrintf("\",\n");
+		else if ( si->m_format == FORMAT_HTML )
+			sb->safePrintf ("</b>. Preceed each with a '+' or "
+				       "wrap in "
+				       "quotes to not ignore.</font>");
+	}
+	return true;
+}
 
 bool printSearchResultsHeader ( State0 *st ) {
 
@@ -2421,6 +2466,8 @@ bool printSearchResultsHeader ( State0 *st ) {
 			       "<![CDATA[%s]]>"
 			       "</queryLanguage>\n"
 			       , getLanguageString(si->m_queryLangId) );
+		// print query words we ignored, like stop words
+		printIgnoredWords ( sb , si );
 		for ( int i = 0 ; i < q->m_numTerms ; i++ ) {
 			sb->safePrintf("\t\t<term>\n");
 			QueryTerm *qt = &q->m_qterms[i];
@@ -2494,6 +2541,8 @@ bool printSearchResultsHeader ( State0 *st ) {
 		sb->safePrintf("\t\"queryLanguage\":\"");
 		sb->jsonEncode ( getLanguageString(si->m_queryLangId) );
 		sb->safePrintf("\",\n");
+		// print query words we ignored, like stop words
+		printIgnoredWords ( sb , si );
 		sb->safePrintf("\t\"terms\":[\n");
 		for ( int i = 0 ; i < q->m_numTerms ; i++ ) {
 			sb->safePrintf("\t\t{\n");
@@ -2720,8 +2769,8 @@ bool printSearchResultsHeader ( State0 *st ) {
 	ulltoa ( inbuf , docsInColl );
 
         Query qq3;
-	Query *qq2;
-	bool firstIgnored;
+	//Query *qq2;
+	//bool firstIgnored;
 	//bool isAdmin = si->m_isMasterAdmin;
 	bool isAdmin = (si->m_isMasterAdmin || si->m_isCollAdmin);
 	if ( si->m_format != FORMAT_HTML ) isAdmin = false;
@@ -2981,44 +3030,10 @@ bool printSearchResultsHeader ( State0 *st ) {
 	}
 	*/
 
-	// mention ignored query terms
-	// we need to set another Query with "keepAllSingles" set to false
-	qq2 = &si->m_q;
-	//qq2.set ( q , qlen , NULL , 0 , si->m_boolFlag , false );
-	firstIgnored = true;
-	for ( int32_t i = 0 ; i < qq2->m_numWords ; i++ ) {
-		//if ( si->m_xml ) break;
-		QueryWord *qw = &qq2->m_qwords[i];
-		// only print out words ignored cuz they were stop words
-		if ( qw->m_ignoreWord != IGNORE_QSTOP ) continue;
-		// print header -- we got one
-		if ( firstIgnored ) {
-			if ( si->m_format == FORMAT_XML )
-				sb->safePrintf ("\t<ignoredWords><![CDATA[");
-			else if ( si->m_format == FORMAT_HTML )
-				sb->safePrintf (" &nbsp; <font "
-					       "color=\"#707070\">The "
-					       "following query words "
-					       "were ignored: "
-					       "<b>");
-			firstIgnored = false;
-		}
-		// print the word
-		char *t    = qw->m_word; 
-		int32_t  tlen = qw->m_wordLen;
-		sb->utf8Encode2 ( t , tlen );
-		sb->safePrintf (" ");
-	}
-	// print tail if we had ignored terms
-	if ( ! firstIgnored ) {
-		sb->incrementLength(-1);
-		if ( si->m_format == FORMAT_XML )
-			sb->safePrintf("]]></ignoredWords>\n");
-		else if ( si->m_format == FORMAT_HTML )
-			sb->safePrintf ("</b>. Preceed each with a '+' or "
-				       "wrap in "
-				       "quotes to not ignore.</font>");
-	}
+
+
+	printIgnoredWords ( sb , si );
+
 
 	if ( si->m_format == FORMAT_HTML ) sb->safePrintf("<br><br>");
 
