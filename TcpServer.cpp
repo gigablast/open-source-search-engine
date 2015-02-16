@@ -15,36 +15,28 @@ static void readTimeoutPollWrapper ( int sd , void *state ) ;
 static void acceptSocketWrapper    ( int sd , void *state ) ;
 static void timePollWrapper        ( int fd , void *state ) ;
 
-static void logSSLError(SSL *ssl, int ret) {
+static char *getSSLError(SSL *ssl, int ret) {
 	switch (SSL_get_error(ssl, ret)) {
 	case SSL_ERROR_NONE:
-		log("net: ssl: No Error.");
-		break;
+		return "No SSL Error.";
 	case SSL_ERROR_ZERO_RETURN:
-		log ("net: ssl: Error: Zero Return");
-		break;
+		return "Zero Return";
 	case SSL_ERROR_WANT_READ:
-		log ("net: ssl: Error: Want Read");
-		break;
+		return "Want Read";
 	case SSL_ERROR_WANT_WRITE:
-		log ("net: ssl: Error: Want Write");
-		break;
+		return "Want Write";
 	case SSL_ERROR_WANT_CONNECT:
-		log ("net: ssl: Error: Want Connect");
-		break;
-	//case SSL_ERROR_WANT_ACCEPT:
-	//	log ("net: ssl: Error: Want Accept");
-	//	break;
+		return "Want Connect";
+	case SSL_ERROR_WANT_ACCEPT:
+		return "Want Accept";
 	case SSL_ERROR_WANT_X509_LOOKUP:
-		log ("net: ssl: Error: Want X509 Lookup");
-		break;
+		return "Want X509 Lookup";
 	case SSL_ERROR_SYSCALL:
-		log ("net: ssl: Error: Syscall");
-		break;
+		return "Syscall";
 	case SSL_ERROR_SSL:
-		log ("net: ssl: Error: SSL");
-		break;
+		return "SSL Library failure";
 	}
+	return "Unknown SSL Error";
 }
 
 // free all TcpSockets and their bufs
@@ -976,6 +968,10 @@ TcpSocket *TcpServer::wrapSocket ( int sd , int32_t niceness , bool isIncoming )
 	// so let's go to 100 minutes so we can deal with reranked queries
 	// (Msg3b) that take like an hour.
 	s->m_timeout = 1000*60*1000;
+
+	if ( g_conf.m_logDebugTcp )
+		log("tcp: wrapping sd=%i",sd);
+
 	// a temp thang
 	//int parm;
 	// . TODO: make sure this sd will NEVER exist!!
@@ -1028,10 +1024,11 @@ TcpSocket *TcpServer::wrapSocket ( int sd , int32_t niceness , bool isIncoming )
 	// if a write we did failed because the buffer was full?.
 	// let's do this after the connection request is accepted!
 	// MDW: try this again
-	if(!g_loop.registerWriteCallback(sd,this,writeSocketWrapper,niceness)){
-	  	g_loop.unregisterReadCallback(sd,this , readSocketWrapper  );
-	  	goto hadError;
-	}
+	//if(!g_loop.registerWriteCallback(sd,this,writeSocketWrapper,
+	//niceness)){
+	//   	g_loop.unregisterReadCallback(sd,this , readSocketWrapper  );
+	//   	goto hadError;
+	// }
 	// return "s" on success
 	return s;
 	// otherwise, free "s" and return NULL
@@ -1184,7 +1181,13 @@ void readSocketWrapper ( int sd , void *state ) {
 	// -for-write fds on the select() call in Loop.cpp on the same fds
 	// we are waiting for reads on. so if we get a signal it could really
 	// be a ready-for-write signal, so try this writing just in case.
-	writeSocketWrapper ( sd , state );
+	// ok, since i added writecallbacks back, no need for this now
+	// MDW 2/16/2015
+	// plus, when this was here and we called readSocketWrapper from
+	// the readTimeoutPoll() function the readSocketWrapper2() would
+	// sometimes close the socket so 'sd' would be invalid and
+	// cause getSocket() called by writeSocketWrapper() to return NULL.
+	//writeSocketWrapper ( sd , state );
 }
 
 
@@ -1214,6 +1217,23 @@ void readSocketWrapper2 ( int sd , void *state ) {
 		THIS->destroySocket ( s );
 		return;
 	}
+
+	if ( s->m_sockState == ST_SSL_HANDSHAKE ) {
+		int r = THIS->sslHandshake ( s );
+		// return if it blocked
+		if ( r == 0 ) return;
+		// error?
+		if ( r == -1 ) {
+			log("tcp: ssl handshake2 error sd=%i",s->m_sd);
+			THIS->makeCallback ( s );
+			THIS->destroySocket ( s ); 
+			return; 
+		}
+		// it went through, should be ST_WRITING so go below
+		THIS->writeSocket ( s );
+		return;
+	}
+
 	// . if this socket was connecting than call connectSocket()
 	// . it returns false if blocked,true otherwise and sets g_errno on err
 	if ( s->isConnecting() ) {
@@ -1411,11 +1431,23 @@ int32_t TcpServer::readSocket ( TcpSocket *s ) {
 	// deal with errors
 	if ( n < 0 ) {
 		// valgrind
-		if ( errno == EINTR ) goto loop;
+		if ( errno == EINTR ) {
+			if ( g_conf.m_logDebugTcp )
+				log("tcp: readsocket: read got interrupted");
+			goto loop;
+		}
 		// copy errno to g_errno
 		g_errno = errno;
-		if ( g_errno == EAGAIN || g_errno == 0 ||
-				g_errno == EILSEQ) { g_errno = 0; return 0; }
+		if ( g_errno == EAGAIN || 
+		     g_errno == 0 ||
+		     g_errno == EILSEQ) { 
+			if ( g_conf.m_logDebugTcp )
+				log("tcp: readsocket: read got error "
+				    "(avail=%i) %s",
+				    (int)avail,mstrerror(g_errno));
+			g_errno = 0; 
+			return 0; 
+		}
 		log("tcp: Failed to read on socket: %s.", mstrerror(g_errno));
 		return -1;
 	}
@@ -1572,6 +1604,23 @@ void writeSocketWrapper ( int sd , void *state ) {
 		THIS->destroySocket ( s );
 		return;
 	}
+
+	if ( s->m_sockState == ST_SSL_HANDSHAKE ) {
+		int r = THIS->sslHandshake ( s );
+		// return if it blocked. write callback shoud be
+		// registered... or read, depending on the the handshake return
+		if ( r == 0 ) return;
+		// error?
+		if ( r == -1 ) {
+			log("tcp: ssl handshake error sd=%i",s->m_sd);
+			THIS->makeCallback ( s );
+			THIS->destroySocket ( s ); 
+			return; 
+		}
+		// it went through, should be ST_WRITING so go below
+	}
+			
+
 	// . if loop notified us of an error on this socket then destroy it
 	// . like -- pollhup, socket closed
 	if ( g_errno == ESOCKETCLOSED ) { 
@@ -1681,7 +1730,10 @@ int32_t TcpServer::writeSocket ( TcpSocket *s ) {
 
 	// we only register write callback to see when it is connected so
 	// we can do a write, so we should not need this now
-	//g_loop.unregisterWriteCallback(s->m_sd,this,writeSocketWrapper);
+	if ( s->m_writeRegistered ) {
+	       g_loop.unregisterWriteCallback(s->m_sd,this,writeSocketWrapper);
+	       s->m_writeRegistered = false;
+	}
 
 
  loop:
@@ -1714,15 +1766,19 @@ int32_t TcpServer::writeSocket ( TcpSocket *s ) {
 		msg = s->m_sendBuf + tunnelRequestSize;
 		s->m_totalToSend = s->m_sendBufUsed - tunnelRequestSize;
 		toSend = s->m_sendBufUsed - tunnelRequestSize -s->m_sendOffset;
-		// enter write mode after this
-		s->m_tunnelMode = 3;
 		// reset this so we do not truncate the NEXT reply!
 		s->m_totalToRead = 0;
 		//
 		// use ssl now
 		//
 		int r = sslHandshake ( s );
+		// error? g_errno will be set, return -1
 		if ( r == -1 ) return -1;
+		// return 0 if it would block
+		if ( r == 0 ) return 0;
+		// i guess it completed. will be ST_WRITING mode now.
+		// enter write tunnel mode too
+		s->m_tunnelMode = 3;
 	}
 
 	if ( s->m_tunnelMode == 3 ) {
@@ -1776,14 +1832,53 @@ int32_t TcpServer::writeSocket ( TcpSocket *s ) {
 			return -1;
 		}
 		g_errno = 0; 
-		//log("........... TcpServer write blocked on %i\n",
-		//s->m_sd);
+		if ( g_conf.m_logDebugTcp )
+			log("........... TcpServer write blocked on %i\n",
+			    s->m_sd);
+
+		// need to listen for writability now since our write
+		// failed to write everythin gout
+		if ( ! s->m_writeRegistered &&
+		     ! g_loop.registerWriteCallback(s->m_sd,
+						    this,
+						    writeSocketWrapper,
+						    s->m_niceness)){
+				log("tcp: failed to reg write callback1 for "
+				    "sd=%i", s->m_sd);
+				return -1;
+		}
+		// do not keep doing it otherwise select() goes crazy
+		s->m_writeRegistered = true;
+
 		return 0; 
 	}
 	// debug msg
 	if ( g_conf.m_logDebugTcp )
 		log("........... TcpServer wrote %i bytes on %i\n",
 		    n,s->m_sd);
+
+	// if we did not write all the bytes we wanted we have to register
+	// a write callback
+	if ( n < toSend ) {
+		// another debug
+		//if ( g_conf.m_logDebugTcp )
+			log("tcp: only wrote %"INT32" of %"INT32" bytes "
+			    "tried.",n,toSend);
+		// need to listen for writability now since our write
+		// failed to write everythin gout
+		if ( ! s->m_writeRegistered &&
+		     ! g_loop.registerWriteCallback(s->m_sd,
+						    this,
+						    writeSocketWrapper,
+						    s->m_niceness)){
+				log("tcp: failed to reg write callback1 for "
+				    "sd=%i", s->m_sd);
+				return -1;
+		}
+		// do not keep doing it otherwise select() goes crazy
+		s->m_writeRegistered = true;
+	}
+
 	// return 0 if we blocked on this write
 	if ( n == 0 ) return 0;
 	// update last action time stamp
@@ -1803,7 +1898,9 @@ int32_t TcpServer::writeSocket ( TcpSocket *s ) {
 	if ( s->m_totalSent  < s->m_totalToSend ) {
 		// note that
 		if ( g_conf.m_logDebugTcp )
-			log(".... Tcpserver: only sent fraction. looping.");
+			log(".... Tcpserver: only sent fraction %"INT32" of "
+			    "%"INT32" bytes. looping.",
+			    s->m_totalSent , s->m_totalToSend);
 		// . refill the sendBuf
 		// . this might set m_sendBufUsed, m_sendBufOffset, ...
 		// . it may also block in which case nothing will be changed
@@ -1845,6 +1942,12 @@ int32_t TcpServer::writeSocket ( TcpSocket *s ) {
 		s->m_sockState = ST_READING;
 		return 1 ;
 	}
+	else {
+		// close it. without this here the socket only gets
+		// closed for real in the timeout loop
+		destroySocket ( s );
+	}
+
 	// . otherwise, we finished sending a reply
 	// . our caller should call recycleSocket ( s ) to keep it alive
 	return true ;
@@ -1873,6 +1976,13 @@ int32_t TcpServer::connectSocket ( TcpSocket *s ) {
 		if ( g_conf.m_logDebugTcp )
 			log("........... TcpServer connected %i to %s "
 			    "port %i\n", s->m_sd, iptoa(s->m_ip), s->m_port );
+		// don't listen for writing any more
+		if ( s->m_writeRegistered ) {
+			g_loop.unregisterWriteCallback(s->m_sd,
+						       this,
+						       writeSocketWrapper);
+			s->m_writeRegistered = false;
+		}
 		// hey it was successful!
 		goto connected;
 	}
@@ -1880,24 +1990,50 @@ int32_t TcpServer::connectSocket ( TcpSocket *s ) {
 	if ( errno == EINTR ) goto retry3;
 	// copy errno to g_errno
 	g_errno = errno;
-	// hey! it's alrady connected!
+	// hey! it's alrady connected! 
+	// i'm not sure that is what this means... MDW 2/16/2015
+	// i think it means the connect request was already initiated.
 	if ( g_errno == EALREADY    ) {
+		if ( g_conf.m_logDebugTcp )
+			log("........... TcpServer got EALREADY, "
+			    "so must be in progress sd=%i",s->m_sd);
+		g_errno = EINPROGRESS;
+		/*
 		// debug msg
 		if ( g_conf.m_logDebugTcp )
 			log("........... TcpServer already connected %i to "
 			    "%s port %i\n", s->m_sd, iptoa(s->m_ip),s->m_port);
-
-		g_loop.unregisterWriteCallback(s->m_sd,
-					       this,
-					       writeSocketWrapper);
-
+		// we are already connected, stop waiting for writability
+		if ( s->m_writeRegistered ) {
+			g_loop.unregisterWriteCallback(s->m_sd,
+						       this,
+						       writeSocketWrapper);
+			s->m_writeRegistered = false;
+		}
 		g_errno = 0;
 		goto connected;
+		*/
 	}
 	// we blocked with the EINPROGRESS g_errno
 	if ( g_errno == EINPROGRESS ) { 
-		g_errno = 0; 
-		return 0; 
+		g_errno = 0;
+		// note that
+		if ( g_conf.m_logDebugTcp )
+			log("tcp: connection is in progress sd=%i",s->m_sd);
+		// according to 'man connect' select() needs to listen
+		// for writability
+		if ( s->m_writeRegistered ) return 0; 
+		// make select() listen on this fd for when it can write
+		if ( ! g_loop.registerWriteCallback(s->m_sd,
+						    this,
+						    writeSocketWrapper,
+						    s->m_niceness)){
+			log("tcp: failed to reg write callback2 for "
+			    "sd=%i", s->m_sd);
+			return -1;
+		}
+		s->m_writeRegistered = true;
+		return 0;
 	}
 	// return -1 on real error
 	if ( g_conf.m_logDebugTcp )
@@ -1906,14 +2042,23 @@ int32_t TcpServer::connectSocket ( TcpSocket *s ) {
 	return -1;
 
 connected:
-	// change state so this doesn't get called again
-	s->m_sockState = ST_WRITING;
 
 	// connect ssl
 	if ( m_useSSL ) {
+		// enter handshake mode now
+		s->m_sockState = ST_SSL_HANDSHAKE;
+		// i guess state is special
 		int r = sslHandshake ( s );
+		// there was an error
 		if (r == -1 ) return -1;
+		// i guess it would block. this should register
+		// the write callback if we need to do a write operation still
+		if ( r == 0 ) return 0;
 	}
+
+	// change state so this doesn't get called again
+	s->m_sockState = ST_WRITING;
+
 	return 1;
 }
 
@@ -2032,6 +2177,7 @@ void TcpServer::destroySocket ( TcpSocket *s ) {
 		}
 		*/
 		SSL_free(s->m_ssl);
+		s->m_ssl = NULL;
 	}
 
 	// ssl debug!
@@ -2073,7 +2219,10 @@ void TcpServer::destroySocket ( TcpSocket *s ) {
 	// always free the sendBuf 
 	if ( s->m_sendBuf ) mfree (s->m_sendBuf, s->m_sendBufSize,"TcpServer");
 	// unregister it with Loop so we don't get any calls about it
-	g_loop.unregisterWriteCallback ( sd , this , writeSocketWrapper );
+	if ( s->m_writeRegistered ) {
+		g_loop.unregisterWriteCallback ( sd, this, writeSocketWrapper);
+		s->m_writeRegistered = false;
+	}
 	g_loop.unregisterReadCallback  ( sd , this , readSocketWrapper  );
 	// debug msg
 	//log("unregistering sd=%"INT32"",sd);
@@ -2158,6 +2307,8 @@ void readTimeoutPollWrapper ( int sd , void *state ) {
 void TcpServer::readTimeoutPoll ( ) {
 	// get the time now in seconds
 	int64_t now = gettimeofdayInMilliseconds();
+	if ( g_conf.m_logDebugTcp )
+		log("tcp: entering timeout loop");
 	// send the msg that is mostly caught up with it's acks first.
 	// "ackWait" is how many more acks we need to complete the transmission
 	for ( int32_t i = 0 ; i <= m_lastFilled ; i++ ) {
@@ -2181,6 +2332,9 @@ void TcpServer::readTimeoutPoll ( ) {
 		// . if he is sending, that sticks too, so try it!
 		// . or if we're connecting to him...
 		if ( s->isSending() || s->isConnecting() ) {
+			if ( g_conf.m_logDebugTcp )
+				log("tcp: timeloop: calling writesock on sd=%i"
+				    ,s->m_sd);
 			writeSocketWrapper ( s->m_sd , this );
 			s = m_tcpSockets[i];
 			if ( ! s ) continue;
@@ -2189,6 +2343,9 @@ void TcpServer::readTimeoutPoll ( ) {
 		// . HACK: this fixes the problem, albeit not the best way
 		// . or if he's connecting to us...
 		if ( s->isReading() || s->isConnecting() ) {
+			if ( g_conf.m_logDebugTcp )
+				log("tcp: timeloop: calling readsock on sd=%i"
+				    ,s->m_sd);
 			readSocketWrapper ( s->m_sd , this );
 			s = m_tcpSockets[i];
 			if ( ! s ) continue;
@@ -2253,6 +2410,9 @@ void TcpServer::readTimeoutPoll ( ) {
 			continue;
 		}
 
+		if ( g_conf.m_logDebugTcp )
+			log("tcp: timeloop: timing out sd=%i"  ,s->m_sd);
+
 		//log("tcp: timeout=%"INT32" fd=%"INT32"",sockTimeout,s->m_sd);
 
 		// uncomment this if you want to close a socket if they havent 
@@ -2270,6 +2430,8 @@ void TcpServer::readTimeoutPoll ( ) {
 		// reset g_errno so we can continue
 		g_errno = 0;
 	}
+	if ( g_conf.m_logDebugTcp )
+		log("tcp: exiting timeout loop");
 }
 
 // . sd should be m_sock
@@ -2589,20 +2751,25 @@ bool TcpServer::sendChunk ( TcpSocket *s ,
 }
 
 
-// returns -1 on error with g_errno set
+// returns -1 on error with g_errno set. returns 0 if would block. 1 if done.
 int TcpServer::sslHandshake ( TcpSocket *s ) {
 
+	if ( s->m_sockState != ST_SSL_HANDSHAKE ) { char *xx=NULL;*xx=0; }
+
 	// steal from ssl tcp server i guess in case we are not it
-	s->m_ssl = SSL_new(g_httpServer.m_ssltcp.m_ctx);
+	if ( ! s->m_ssl ) {
+		s->m_ssl = SSL_new(g_httpServer.m_ssltcp.m_ctx);
+		SSL_set_fd(s->m_ssl, s->m_sd);
+		//int64_t now1 = gettimeofdayInMilliseconds();
+		SSL_set_connect_state(s->m_ssl);
+	}
 
-	SSL_set_fd(s->m_ssl, s->m_sd);
-
-	//int64_t now1 = gettimeofdayInMilliseconds();
-	SSL_set_connect_state(s->m_ssl);
 	int r = SSL_connect(s->m_ssl);
 
 	if ( g_conf.m_logDebugTcp )
-		log("tcp: connecting with ssl on sd=%"INT32"",(int32_t)s->m_sd);
+		log("tcp: ssl handshake on sd=%"INT32" r=%i",
+		    (int32_t)s->m_sd,r);
+
 	//int64_t now2 = gettimeofdayInMilliseconds();
 	//int64_t took = now2 - now1 ;
 	//if ( took >= 2 ) log("tcp: ssl_connect took %"INT64"ms", took);
@@ -2610,23 +2777,76 @@ int TcpServer::sslHandshake ( TcpSocket *s ) {
 		log("ssl: SSL is NULL after connect.");
 		char *xx = NULL; *xx = 0;
 	}
-	if ( r > 0 ) return r;
+	// if the connection happened return r, should be 1
+	if ( r > 0 ) {
+		if ( g_conf.m_logDebugTcp )
+			log("tcp: ssl handshake done. entering writing mode "
+			    "sd=%i",s->m_sd);
+		// ok, it completed, go into writing mode
+		s->m_sockState = ST_WRITING;
+		return r;
+	}
 
 	int sslError = SSL_get_error(s->m_ssl, r);
+
+	char *sslMsg = getSSLError(s->m_ssl, r);
+
+	log("tcp: ssl: Error on Connect (%"INT32"). r=%i ip=%s msg=%s",
+	    (int32_t)sslError,r,iptoa(s->m_ip),sslMsg);
+
+	// if ( sslError == SSL_ERROR_SSL ) {
+	// 	log("tcp: ssl handhshake already completed sd=%i?",s->m_sd);
+	// 	// ok, it completed, go into writing mode
+	// 	s->m_sockState = ST_WRITING;
+	// 	return 1;
+	// }
 
 	if ( sslError != SSL_ERROR_WANT_READ &&
 	     sslError != SSL_ERROR_WANT_WRITE &&
 	     sslError != SSL_ERROR_NONE ) {
-		logSSLError(s->m_ssl, r);
-		log("net: ssl: Error on Connect (%"INT32"). ip=%s",
-		    (int32_t)sslError,iptoa(s->m_ip));
 		g_errno = ESSLERROR;
+		// make sure read callback is registered
+		// g_loop.registerReadCallback (s->m_sd,this,readSocketWrapper,
+		// 			     s->m_niceness);
 		// crap, if we return 1 here then
 		// it will call THIS->writeSocket() which
 		// will return -1 and not set g_errno
 		return -1;
 	}
 
+	if ( sslError <= 0 ) { char *xx=NULL;*xx=0; }
+
+	if ( g_conf.m_logDebugTcp )
+		log("tcp: ssl handshake returned r=%i",r);
+
+	// read callbacks are always registered and if we need a read
+	// hopefully it will be called. TODO: verify this...
+	if ( sslError == SSL_ERROR_WANT_READ ) {
+		//log("tcp: ssl handshake is not want write sd=%i",s->m_sd);
+		//logSSLError(s->m_ssl, r);
+		return 0;
+	}
+
+	// returns 0 if it would block
+	// need to listen for writability now since our write
+	// failed to write everything out.
+	// if it is EWANTREAD we are already listening on the
+	// read for all file descriptors at all times. it is only
+	// writes we have to turn on and off.
+	if ( ! s->m_writeRegistered &&
+	     ! g_loop.registerWriteCallback(s->m_sd,
+					    this,
+					    writeSocketWrapper,
+					    s->m_niceness)){
+		log("tcp: failed to reg write callback3 for "
+		    "sd=%i", s->m_sd);
+		return -1;
+	}
+	// do not keep doing it otherwise select() goes crazy
+	s->m_writeRegistered = true;
+	log("tcp: registered write callback for sslHandshake");
+
+	// we would block
 	return 0;
 }
 
