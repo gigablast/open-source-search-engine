@@ -314,9 +314,9 @@ bool Loop::addSlot ( bool forReading , int fd, void *state,
 		char *xx=NULL;*xx=0; 
 	}
 	// debug note
-	if (  forReading )
+	if (  forReading && (g_conf.m_logDebugLoop || g_conf.m_logDebugTcp) )
 		log("loop: registering read callback sd=%i",fd);
-	else
+	else if ( g_conf.m_logDebugLoop || g_conf.m_logDebugTcp )
 		log("loop: registering write callback sd=%i",fd);
 
 	// . ensure fd not already registered with this callback/state
