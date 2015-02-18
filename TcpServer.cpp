@@ -1942,11 +1942,12 @@ int32_t TcpServer::writeSocket ( TcpSocket *s ) {
 		s->m_sockState = ST_READING;
 		return 1 ;
 	}
-	else {
-		// close it. without this here the socket only gets
-		// closed for real in the timeout loop
-		destroySocket ( s );
-	}
+
+	if ( s->m_streamingMode ) return true;
+
+	// close it. without this here the socket only gets
+	// closed for real in the timeout loop
+	destroySocket ( s );
 
 	// . otherwise, we finished sending a reply
 	// . our caller should call recycleSocket ( s ) to keep it alive
