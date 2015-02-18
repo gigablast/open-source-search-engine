@@ -234,6 +234,7 @@ class GigablastRequest {
 #define PF_CLONE       0x20000
 #define PF_PRIVATE     0x40000 // for password to not show in api
 #define PF_SMALLTEXTAREA 0x80000
+#define PF_REBUILDACTIVELIST 0x100000
 
 class Parm {
  public:

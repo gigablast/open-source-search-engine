@@ -1910,14 +1910,28 @@ int64_t gettimeofdayInMillisecondsSynced() {
 		log("xml: clock not in sync with host #0 yet!!!!!!");
 		//char *xx = NULL; *xx = 0; }
 	}
-	//if ( ! g_clockInSync ) 
-	//	log("gb: Getting global time but clock not in sync.");
-	// this isn't async signal safe...
-	struct timeval tv;
-	gettimeofday ( &tv , NULL );
-	int64_t now=(int64_t)(tv.tv_usec/1000)+((int64_t)tv.tv_sec)*1000;
+
+	int64_t now;
+
+	// the real tiem sigalrm interrupt in Loop.cpp sets this to
+	// true once per millisecond
+	if ( ! g_clockNeedsUpdate ) {
+		now = g_now;
+	}
+	else {
+		//if ( ! g_clockInSync ) 
+		//	log("gb: Getting global time but clock not in sync.");
+		// this isn't async signal safe...
+		struct timeval tv;
+		gettimeofday ( &tv , NULL );
+		now = (int64_t)(tv.tv_usec/1000)+((int64_t)tv.tv_sec)*1000;
+	}
+
 	// update g_nowLocal
 	if ( now > g_now ) g_now = now;
+
+	g_clockNeedsUpdate = false;
+
 	// adjust from Msg0x11 time adjustments
 	now += s_adjustment;
 	// update g_now if it is more accurate
@@ -1990,6 +2004,12 @@ int64_t gettimeofdayInMilliseconds() {
 	//   from what it should be
 	//if ( now > g_now ) g_now = now;
 	return now;
+}
+
+
+int64_t gettimeofdayInMilliseconds_force ( ) {
+  g_clockNeedsUpdate = true;
+  return gettimeofdayInMilliseconds();
 }
 
 time_t getTime () {

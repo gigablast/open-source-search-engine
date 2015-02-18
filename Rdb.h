@@ -146,7 +146,10 @@ class Rdb {
 		return addRecord(coll,(char *)&key,data,dataSize, niceness);};
 
 	// returns false if no room in tree or m_mem for a list to add
-	bool hasRoom ( RdbList *list );
+	bool hasRoom ( RdbList *list , int32_t niceness );
+
+	int32_t reclaimMemFromDeletedTreeNodes( int32_t niceness ) ;
+	int32_t m_lastReclaim;
 
 	// . returns false on error and sets errno
 	// . return true on success
@@ -233,6 +236,8 @@ class Rdb {
 
 	// positive minus negative
 	int64_t getNumTotalRecs ( bool useCache = false ) ;
+
+	int64_t getCollNumTotalRecs ( collnum_t collnum );
 
 	int64_t getNumRecsOnDisk ( );
 

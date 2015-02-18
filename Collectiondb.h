@@ -27,6 +27,7 @@ public:
 	char *m_parmEnd;
 	class UdpSlot *m_slot;
 	bool m_doRebuilds;
+	bool m_rebuildActiveList;
 	bool m_doProxyRebuild;
 	bool m_updatedRound;
 	collnum_t m_collnum;
@@ -309,6 +310,9 @@ class CollectionRec {
 
  public:
 
+	// active linked list of collectionrecs used by spider.cpp
+	class CollectionRec *m_nextActive;
+
 	// these just set m_xml to NULL
 	CollectionRec();
 	virtual ~CollectionRec();
@@ -387,8 +391,8 @@ class CollectionRec {
 	// for regular crawls
 	bool rebuildUrlFilters2();
   
-  // for diffbot crawl or bulk jobs
-  bool rebuildUrlFiltersDiffbot();
+	// for diffbot crawl or bulk jobs
+	bool rebuildUrlFiltersDiffbot();
 
 	bool rebuildLangRules( char *lang , char *tld );
 

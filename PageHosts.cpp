@@ -553,7 +553,7 @@ skipReplaceHost:
 					,h->m_pingInfo.m_currentSpiders
 					);
 
-		if ( format == FORMAT_HTML ) {
+		if ( format == FORMAT_HTML && h->m_pingInfo.m_udpSlotsInUse ) {
 			char *f1 = "";
 			char *f2 = "";
 			if ( h->m_pingInfo.m_udpSlotsInUse >= 200 ) {
@@ -576,7 +576,7 @@ skipReplaceHost:
 				      );
 		}
 
-		if ( format == FORMAT_HTML ) {
+		if ( format == FORMAT_HTML && h->m_pingInfo.m_tcpSocketsInUse){
 			char *f1 = "";
 			char *f2 = "";
 			if ( h->m_pingInfo.m_tcpSocketsInUse >= 100 ) {

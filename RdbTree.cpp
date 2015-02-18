@@ -713,7 +713,7 @@ int32_t RdbTree::deleteNode  ( collnum_t collnum , char *key , bool freeData ) {
 	//log("db: deleting n1=%"XINT64" n0=%"XINT64" node=%"INT32".",
 	//    *(int64_t *)(key+8), *(int64_t *)(key+0),node);
 	if ( node == -1 ) return -1;
-	deleteNode(node,freeData); 
+	deleteNode3(node,freeData); 
 	return node;
 }
 
@@ -739,7 +739,7 @@ void RdbTree::deleteNodes ( collnum_t collnum ,
 		if ( m_collnums[node] != collnum ) break;
 		//if ( m_keys    [node] > endKey   ) return;
 		if ( KEYCMP(m_keys,node,endKey,0,m_ks) > 0 ) break;
-		deleteNode ( node , freeData );
+		deleteNode3 ( node , freeData );
 		// rotation in setDepths() will cause him to be replaced
 		// with one of his kids, unless he's a leaf node
 		//node = next;
@@ -753,7 +753,7 @@ void RdbTree::deleteNodes ( collnum_t collnum ,
 // . deletes node i from the tree
 // . i's parent should point to i's left or right kid
 // . if i has no parent then his left or right kid becomes the new top node
-void RdbTree::deleteNode ( int32_t i , bool freeData ) {
+void RdbTree::deleteNode3 ( int32_t i , bool freeData ) {
 	// sanity check
 	if ( ! m_isWritable ) {
 		log("db: Can not delete record from tree because "
@@ -1107,7 +1107,7 @@ void RdbTree::deleteOrderedList ( collnum_t collnum ,
 	//if ( m_keys [ node ] == key && m_collnums [ node ] == collnum ) {
 	if ( KEYCMP(m_keys,node,key,0,m_ks)==0 && m_collnums[node] == collnum){
 		// trim the node from the tree
-		deleteNode ( node , true /*freeData?*/ );
+		deleteNode3 ( node , true /*freeData?*/ );
 		// get next node in tree
 		node = getNextNode ( node ) ;
 		// . point to next key in list to delete
@@ -1718,7 +1718,7 @@ bool RdbTree::getList ( collnum_t collnum ,
 	// don't core, but i think i fixed it here.
 	m_gettingList++;
 
-	// stop when we've hit or jsut exceed minRecSizes
+	// stop when we've hit or just exceed minRecSizes
 	// or we're out of nodes
 	for ( ; node >= 0 && list->getListSize() < minRecSizes ;
 	      node = getNextNode ( node ) ) {
@@ -2765,7 +2765,7 @@ bool RdbTree::fastLoad ( BigFile *f , RdbMem *stack ) {
 			log("got one");
 			// make it negative
 			m_keys[i].n0 &= 0xfffffffffffffffeLL;
-			//deleteNode ( i , true ); // freeData?
+			//deleteNode3 ( i , true ); // freeData?
 			//goto again;
 		}
 		log("REMOVED %"INT32"",count);
@@ -3116,12 +3116,12 @@ void RdbTree::cleanTree ( ) { // char **bases ) {
 		     g_collectiondb.m_recs[m_collnums[i]] ) continue;
 		// if it is negtiave, remove it, that is wierd corruption
 		if ( m_collnums[i] < 0 ) 
-			deleteNode ( i , true );
+			deleteNode3 ( i , true );
 		// remove it otherwise
 		// don't actually remove it!!!! in case collection gets
 		// moved accidentally.
 		// no... otherwise it can clog up the tree forever!!!!
-		deleteNode ( i , true );
+		deleteNode3 ( i , true );
 		count++;
 		// save it
 		collnum = m_collnums[i];

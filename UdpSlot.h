@@ -79,6 +79,8 @@
 #define MAX_DGRAMS (((180*1024*1024) / DGRAM_SIZE_LB) + 1)
 //#endif
 
+#define MAX_ABSDOCLEN ((MAX_DGRAMS * DGRAM_SIZE_LB)-50000)
+
 // . the max size of an incoming request for a hot udp server
 // . we cannot call malloc so it must fit in here
 // . i increased this from 5k to 10k to better support Msg17's caching requests

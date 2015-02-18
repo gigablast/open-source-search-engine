@@ -1034,6 +1034,17 @@ void downloadTheDocForReals3b ( Msg13Request *r ) {
 	// into the hammercache
 	r->m_downloadStartTimeMS = nowms;
 
+	// prevent core from violating MAX_DGRAMS #defined in UdpSlot.h
+	int32_t maxDocLen1 = r->m_maxTextDocLen;
+	int32_t maxDocLen2 = r->m_maxOtherDocLen;
+	
+	// fix core in UdpServer.cpp from sending back a too big reply
+	if ( maxDocLen1 < 0 || maxDocLen1 > MAX_ABSDOCLEN )
+		maxDocLen1 = MAX_ABSDOCLEN;
+	if ( maxDocLen2 < 0 || maxDocLen2 > MAX_ABSDOCLEN )
+		maxDocLen2 = MAX_ABSDOCLEN;
+
+
 	// . download it
 	// . if m_proxyIp is non-zero it will make requests like:
 	//   GET http://xyz.com/abc
@@ -1047,8 +1058,8 @@ void downloadTheDocForReals3b ( Msg13Request *r ) {
 				     30*1000              , // 30 sec timeout
 				     r->m_proxyIp     ,
 				     r->m_proxyPort   ,
-				     r->m_maxTextDocLen   ,
-				     r->m_maxOtherDocLen  ,
+				     maxDocLen1,//r->m_maxTextDocLen   ,
+				     maxDocLen2,//r->m_maxOtherDocLen  ,
 				     agent                ,
 				     DEFAULT_HTTP_PROTO , // "HTTP/1.0"
 				     false , // doPost?

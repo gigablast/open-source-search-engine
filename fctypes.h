@@ -177,6 +177,7 @@ int64_t gettimeofdayInMillisecondsSynced() ; // synced with host #0
 int64_t gettimeofdayInMillisecondsLocal () ;// this is local now
 int64_t gettimeofdayInMilliseconds() ;// this is local now
 uint64_t gettimeofdayInMicroseconds(void) ;
+int64_t gettimeofdayInMilliseconds_force ( ) ;
 
 // . get time in seconds since epoch
 // . use this instead of call to time(NULL) cuz it uses adjustment

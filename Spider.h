@@ -1066,6 +1066,8 @@ extern class Doledb g_doledb;
 #define MAX_DOLEREC_SIZE      (MAX_BEST_REQUEST_SIZE+sizeof(key_t)+4)
 #define MAX_SP_REPLY_SIZE     (sizeof(SpiderReply))
 
+#define OVERFLOWLISTSIZE 200
+
 // we have one SpiderColl for each collection record
 class SpiderColl {
  public:
@@ -1149,9 +1151,10 @@ class SpiderColl {
 	char m_sendLocalCrawlInfoToHost[MAX_HOSTS];
 
 	Msg4 m_msg4x;
-	Msg4 m_msg4;
-	Msg1 m_msg1;
-	bool m_msg1Avail;
+	//Msg4 m_msg4;
+	//Msg1 m_msg1;
+	//bool m_msg1Avail;
+	RdbList m_tmpList;
 
 	bool isInDupCache ( SpiderRequest *sreq , bool addToCache ) ;
 
@@ -1163,6 +1166,7 @@ class SpiderColl {
 
 	bool  addToDoleTable   ( SpiderRequest *sreq ) ;
 
+	bool addDoleBufIntoDoledb (bool isFromCache,uint32_t cachedTimestamp);
 
 	bool updateSiteNumInlinksTable ( int32_t siteHash32,int32_t sni,
 					 time_t tstamp); // time_t
@@ -1295,6 +1299,13 @@ class SpiderColl {
 	int32_t m_outstandingSpiders[MAX_SPIDER_PRIORITIES];
 
 	bool printStats ( SafeBuf &sb ) ;
+
+	bool isFirstIpInOverflowList ( int32_t firstIp ) ;
+	int32_t *m_overflowList;
+	int64_t  m_totalNewSpiderRequests;
+	int64_t  m_lastSreqUh48;
+	int32_t  m_lastOverflowFirstIp;
+
 
  private:
 	class CollectionRec *m_cr;
@@ -1553,10 +1564,19 @@ class SpiderLoop {
 	// save on msg12 lookups! keep somewhat local...
 	RdbCache   m_lockCache;
 
+	RdbCache   m_winnerListCache;
+
 	//bool m_gettingLocks;
 
 	// for round robining in SpiderLoop::doleUrls(), etc.
-	int32_t m_cri;
+	//int32_t m_cri;
+
+	void buildActiveList ( ) ;
+	class CollectionRec *m_crx;
+	class CollectionRec *m_activeList;
+	bool m_activeListValid;
+	uint32_t m_recalcTime;
+	bool m_recalcTimeValid;
 
 	int64_t m_doleStart;
 

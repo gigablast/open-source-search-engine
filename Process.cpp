@@ -1402,13 +1402,13 @@ bool Process::save2 ( ) {
 	// . Msg1 requests will get ETRYAGAIN error replies
 	// . this is instantaneous because all tree mods happen in this
 	//   main process, not in a thread
-	disableTreeWrites();
+	disableTreeWrites( false );
 
 	bool useThreads = true;
 
 	// . tell all rdbs to save trees
 	// . will return true if no rdb tree needs a save
-	if ( ! saveRdbTrees ( useThreads ) ) return false;
+	if ( ! saveRdbTrees ( useThreads , false ) ) return false;
 
 	// . save all rdb maps if they need it
 	// . will return true if no rdb map needs a save
@@ -1440,7 +1440,7 @@ bool Process::save2 ( ) {
 	g_cacheWritesEnabled = true;
 
 	// reenable tree writes since saves were completed
-	enableTreeWrites();
+	enableTreeWrites( false );
 
 	log(LOG_INFO,"gb: Saved data to disk. Re-enabling Writes.");
 
@@ -1463,7 +1463,8 @@ bool Process::shutdown2 ( ) {
 	if ( g_threads.amThread() ) return true;
 
 	if ( m_urgent )
-		log(LOG_INFO,"gb: Shutting down urgently. Try #%"INT32".",m_try++);
+		log(LOG_INFO,"gb: Shutting down urgently. Try #%"INT32".",
+		    m_try++);
 	else
 		log(LOG_INFO,"gb: Shutting down. Try #%"INT32".",m_try++);
 
@@ -1513,11 +1514,11 @@ bool Process::shutdown2 ( ) {
 	// . Msg1 requests will get ECLOSING error msgs
 	// . this is instantaneous because all tree mods happen in this
 	//   main process, not in a thread
-	disableTreeWrites();
+	disableTreeWrites( true );
 
 	// . tell all rdbs to save trees
 	// . will return true if no rdb tree needs a save
-	if ( ! saveRdbTrees ( useThreads ) ) 
+	if ( ! saveRdbTrees ( useThreads , true ) ) 
 		if ( ! m_urgent ) return false;
 
 	// save this right after the trees in case we core
@@ -1652,12 +1653,19 @@ bool Process::shutdown2 ( ) {
 	return true;
 }
 
-void Process::disableTreeWrites ( ) {
+void Process::disableTreeWrites ( bool shuttingDown ) {
 	// loop over all Rdbs
 	for ( int32_t i = 0 ; i < m_numRdbs ; i++ ) {
 		Rdb *rdb = m_rdbs[i];
+		// if we save doledb while spidering it screws us up
+		// because Spider.cpp can not directly write into the
+		// rdb tree and it expects that to always be available!
+		if ( ! shuttingDown && rdb->m_rdbId == RDB_DOLEDB )
+			continue;
 		rdb->disableWrites();
 	}
+	// don't save spider related trees if not shutting down
+	if ( ! shuttingDown ) return;
 	// disable all spider trees and tables
 	for ( int32_t i = 0 ; i < g_collectiondb.m_numRecs ; i++ ) {
 		SpiderColl *sc = g_spiderCache.getSpiderCollIffNonNull(i);
@@ -1669,12 +1677,14 @@ void Process::disableTreeWrites ( ) {
 	
 }
 
-void Process::enableTreeWrites ( ) {
+void Process::enableTreeWrites ( bool shuttingDown ) {
 	// loop over all Rdbs
 	for ( int32_t i = 0 ; i < m_numRdbs ; i++ ) {
 		Rdb *rdb = m_rdbs[i];
 		rdb->enableWrites();
 	}
+	// don't save spider related trees if not shutting down
+	if ( ! shuttingDown ) return;
 	// enable all waiting trees
 	for ( int32_t i = 0 ; i < g_collectiondb.m_numRecs ; i++ ) {
 		SpiderColl *sc = g_spiderCache.getSpiderCollIffNonNull(i);
@@ -1707,14 +1717,21 @@ bool Process::isRdbMerging ( ) {
 
 // . returns false if blocked, true otherwise
 // . calls callback when done saving
-bool Process::saveRdbTrees ( bool useThread ) {
+bool Process::saveRdbTrees ( bool useThread , bool shuttingDown ) {
 	// never if in read only mode
 	if ( g_conf.m_readOnlyMode ) return true;
+	// no thread if shutting down
+	if ( shuttingDown ) useThread = false;
 	// turn off statsdb until everyone is done
 	//g_statsdb.m_disabled = true;
 	// loop over all Rdbs and save them
 	for ( int32_t i = 0 ; ! m_calledSave && i < m_numRdbs ; i++ ) {
 		Rdb *rdb = m_rdbs[i];
+		// if we save doledb while spidering it screws us up
+		// because Spider.cpp can not directly write into the
+		// rdb tree and it expects that to always be available!
+		if ( ! shuttingDown && rdb->m_rdbId == RDB_DOLEDB )
+			continue;
 		rdb->saveTree ( useThread );
 	}
 
@@ -1728,7 +1745,7 @@ bool Process::saveRdbTrees ( bool useThread ) {
 	//   launched.
 	// . and sets m_isSaving=false on SpiderCache::doneSaving when they
 	//   are all done.
-	g_spiderCache.save ( useThread );
+	if ( shuttingDown ) g_spiderCache.save ( useThread );
 
 	// do not re-save the stuff we just did this round
 	m_calledSave = true;
@@ -1737,6 +1754,8 @@ bool Process::saveRdbTrees ( bool useThread ) {
 	// check if any need to finish saving
 	for ( int32_t i = 0 ; i < m_numRdbs ; i++ ) {
 		Rdb *rdb = m_rdbs[i];
+		// do not return until all saved if we are shutting down
+		if ( shuttingDown ) break;
 		//if ( rdb->needsSave ( ) ) return false;
 		// we disable the tree while saving so we can't really add recs
 		// to one rdb tree while saving, but for crawlbot
@@ -1744,11 +1763,15 @@ bool Process::saveRdbTrees ( bool useThread ) {
 		if ( rdb->isSavingTree ( ) ) return false;
 	}
 
+	// only save spiderdb based trees if shutting down so we can
+	// still write to them without writes being disabled
+	if ( ! shuttingDown ) return true;
+
 	// . check spider cache files (doleiptable waitingtree etc.)
 	// . this should return true if it still has some files that haven't
 	//   saved to disk yet... so if it returns true we return false 
 	//   indicating that we are still waiting!
-	if ( g_spiderCache.needsSave () ) return false;
+	if ( ! shuttingDown && g_spiderCache.needsSave () ) return false;
 
 	// reset for next call
 	m_calledSave = false;

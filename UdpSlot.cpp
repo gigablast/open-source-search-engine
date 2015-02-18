@@ -295,9 +295,12 @@ bool UdpSlot::sendSetup ( char      *msg         ,
 		int32_t maxMsgSize = m_maxDgramSize * MAX_DGRAMS;
 		log(LOG_LOGIC,"udp: Msg size of %"INT32" bytes is too big "
 		    "to send. Max dgram size = %"INT32". Max dgrams = "
-		    "%"INT32". Max msg size = %"INT32".",
+		    "%"INT32". Max msg size = %"INT32" msgtype=0x%hhx. Please "
+		    "increase the #define MAX_DGRAMS in UdpSlot.h and "
+		    "recompile to fix this.",
 		    (int32_t)msgSize,(int32_t)m_maxDgramSize,
-		    (int32_t)MAX_DGRAMS,maxMsgSize);
+		    (int32_t)MAX_DGRAMS,maxMsgSize,
+		    msgType);
 		char *xx=NULL; *xx=0;
 		return false;
 		//msgSize = MAX_DGRAMS * DGRAM_SIZE;

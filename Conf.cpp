@@ -174,20 +174,32 @@ bool Conf::isCollAdmin2 ( TcpSocket *sock ,
 // . only need to be from root IP *OR* have password, not both
 bool Conf::isMasterAdmin ( TcpSocket *socket , HttpRequest *hr ) {
 
+	bool isAdmin = false;
+
 	// totally open access?
 	//if ( m_numConnectIps  <= 0 && m_numMasterPwds <= 0 )
 	if ( m_connectIps.length() <= 0 &&
 	     m_masterPwds.length() <= 0 )
-		return true;
+		isAdmin = true;
 
 	// coming from root gets you in
-	if ( isMasterIp ( socket->m_ip ) ) return true;
+	if ( socket && isMasterIp ( socket->m_ip ) ) 
+		isAdmin = true;
 
 	//if ( isConnectIp ( socket->m_ip ) ) return true;
 
-	if ( hasMasterPwd ( hr ) ) return true;
+	if ( hasMasterPwd ( hr ) ) 
+		isAdmin = true;
 
-	return false;
+	if ( ! isAdmin )
+		return false;
+
+	// default this to true so if user specifies &admin=0 then it 
+	// cancels our admin view
+	if ( hr && ! hr->getLong("admin",1) )
+		return false;
+	
+	return true;
 }
 
 

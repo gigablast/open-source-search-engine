@@ -3349,12 +3349,12 @@ int main2 ( int argc , char *argv[] ) {
 	// linkdb
 	if ( ! g_linkdb.init()     ) {
 		log("db: Linkdb init failed."   ); return 1; }
-	if ( ! g_cachedb.init()     ) {
-		log("db: Cachedb init failed."   ); return 1; }
-	if ( ! g_serpdb.init()     ) {
-		log("db: Serpdb init failed."   ); return 1; }
-	if ( ! g_monitordb.init()     ) {
-		log("db: Monitordb init failed."   ); return 1; }
+	// if ( ! g_cachedb.init()     ) {
+	// 	log("db: Cachedb init failed."   ); return 1; }
+	// if ( ! g_serpdb.init()     ) {
+	// 	log("db: Serpdb init failed."   ); return 1; }
+	// if ( ! g_monitordb.init()     ) {
+	// 	log("db: Monitordb init failed."   ); return 1; }
 	// use sectiondb again for its immense voting power for detecting and
 	// removing web page chrome, categories, etc. only use if 
 	// CollectionRec::m_isCustomCrawl perhaps to save space.
@@ -10743,7 +10743,7 @@ bool bucketstest ( char* dbname ) {
 			keySize) ) // own data?
 		return log("speedTest: tree init failed.");
 	// add to regular tree
-	int64_t t = gettimeofdayInMilliseconds();
+	int64_t t = gettimeofdayInMilliseconds_force();
 	for ( int32_t i = 0 ; i < numKeys * keySize; i += keySize ) {
 		char* key = k+i;
 		KEYSET(oppKey,key,keySize);
@@ -10751,14 +10751,14 @@ bool bucketstest ( char* dbname ) {
 		int32_t n;
 		n = rt.getNode ( 0, oppKey );
 		if ( n >= 0 ) {
-			rt.deleteNode ( n , true );
+			rt.deleteNode3 ( n , true );
 		}
 		if ( rt.addNode ( 0, key , NULL , 0 ) < 0 )
 			return log("speedTest: rdb tree addNode "
 				   "failed");
 	}
 	// print time it took
-	int64_t e = gettimeofdayInMilliseconds();
+	int64_t e = gettimeofdayInMilliseconds_force();
 	log("db: added %"INT32" keys to rdb tree in %"INT64" ms, "
 	    "now have %"INT32" keys",numKeys,e - t, rt.getNumUsedNodes());
 
@@ -10772,7 +10772,7 @@ bool bucketstest ( char* dbname ) {
 	}
 
 	rdbb.testAndRepair();
-	t = gettimeofdayInMilliseconds();
+	t = gettimeofdayInMilliseconds_force();
 	log("db: added %"INT32" keys to rdb buckets in %"INT64" ms, "
 	    "now have %"INT32" keys, mem used: %"INT32"",
 	    numKeys,t - e, rdbb.getNumKeys(),rdbb.getMemOccupied());
@@ -10781,22 +10781,22 @@ bool bucketstest ( char* dbname ) {
 
 	log("db: saving and loading buckets.");
 	    
-	e = gettimeofdayInMilliseconds();
+	e = gettimeofdayInMilliseconds_force();
 
  	rdbb.fastSave ( ".",
  			false,
  			NULL, NULL);
 
-	t = gettimeofdayInMilliseconds();
+	t = gettimeofdayInMilliseconds_force();
 	log("db: saved rdbbuckets in %"INT64" ms",t - e);
 
 	//rdbb.setNeedsSave(false);
 	rdbb.clear();
-	e = gettimeofdayInMilliseconds();
+	e = gettimeofdayInMilliseconds_force();
 
  	rdbb.loadBuckets ( "TestBuckets" );
 
-	t = gettimeofdayInMilliseconds();
+	t = gettimeofdayInMilliseconds_force();
 	log("db: loaded rdbbuckets in %"INT64" ms", t - e);
 	
 	rdbb.selfTest(true, true);
@@ -10827,14 +10827,14 @@ bool bucketstest ( char* dbname ) {
 	int32_t found = 0;
 	for ( int32_t i = 0 ; i < 0; i++ ) {
 		int32_t j = (rand() % numKeys) * keySize;
-		e = gettimeofdayInMilliseconds();
+		e = gettimeofdayInMilliseconds_force();
 		int32_t nodeNum = rt.getNode ( 0 , (char*)&k[j]);
-		t = gettimeofdayInMilliseconds();
+		t = gettimeofdayInMilliseconds_force();
 		ttook += t - e;
 		
-		e = gettimeofdayInMilliseconds();
+		e = gettimeofdayInMilliseconds_force();
 		char* foundKey = rdbb.getKeyVal ( 0 , (char*)&k[j], NULL, NULL);
-		t = gettimeofdayInMilliseconds();
+		t = gettimeofdayInMilliseconds_force();
 		btook += t - e;
 
 
@@ -10870,10 +10870,10 @@ bool bucketstest ( char* dbname ) {
 
 
 	// sort the list of keys
-	t = gettimeofdayInMilliseconds();
+	t = gettimeofdayInMilliseconds_force();
 	gbsort ( k , numKeys , sizeof(key_t) , keycmp );
 	// print time it took
-	e = gettimeofdayInMilliseconds();
+	e = gettimeofdayInMilliseconds_force();
 	log("db: sorted %"INT32" in %"INT64" ms",numKeys,e - t);
 
 
@@ -10910,7 +10910,7 @@ bool bucketstest ( char* dbname ) {
 			ekey = key1;
 		}
 		
-		e = gettimeofdayInMilliseconds();
+		e = gettimeofdayInMilliseconds_force();
 		rt.getList ( (collnum_t)0 , 
 			     skey, 
 			     ekey, 
@@ -10919,7 +10919,7 @@ bool bucketstest ( char* dbname ) {
 			     &numPosRecs,
 			     &numNegRecs,
 			     true ); //use half keys
-		t = gettimeofdayInMilliseconds();
+		t = gettimeofdayInMilliseconds_force();
 		ttook += t - e;
 		tgot += treelist.getNumRecs();
 
@@ -10940,7 +10940,7 @@ bool bucketstest ( char* dbname ) {
 		    t - e  );
 		*/
 
-		e = gettimeofdayInMilliseconds();
+		e = gettimeofdayInMilliseconds_force();
 		rdbb.getList ( (collnum_t)0 , 
 			       skey, 
 			       ekey, 
@@ -10949,7 +10949,7 @@ bool bucketstest ( char* dbname ) {
 			       &numPosRecs,
 			       &numNegRecs,
 			       true ); //use half keys
-		t = gettimeofdayInMilliseconds();
+		t = gettimeofdayInMilliseconds_force();
 		btook += t - e;
 		bgot += bucketlist.getNumRecs();
 
@@ -11080,7 +11080,7 @@ bool bucketstest ( char* dbname ) {
 
 	for ( int32_t i = 0 ; i < numKeys ; i++ ) {
 
-		e = gettimeofdayInMilliseconds();
+		e = gettimeofdayInMilliseconds_force();
 
 		char* key = &k[i*keySize];
 		KEYSET(oppKey,key,keySize);
@@ -11089,19 +11089,19 @@ bool bucketstest ( char* dbname ) {
 		collnum_t collnum = rand() % 10;
 
 		n = rt.getNode ( collnum , oppKey );
-		if ( n >= 0 ) rt.deleteNode ( n , true );
+		if ( n >= 0 ) rt.deleteNode3 ( n , true );
 
 		if ( rt.addNode (collnum, key, NULL , 0 ) < 0 )
 			return log("speedTest: rdb tree addNode "
 				   "failed");
-		t = gettimeofdayInMilliseconds();
+		t = gettimeofdayInMilliseconds_force();
 		tAddTook += t - e;
 
-		e = gettimeofdayInMilliseconds();
+		e = gettimeofdayInMilliseconds_force();
 		if ( rdbb.addNode(collnum, key, NULL, 0 ) < 0 )
 			return log("speedTest: rdb buckets addNode "
 				   "failed");
-		t = gettimeofdayInMilliseconds();
+		t = gettimeofdayInMilliseconds_force();
 		bAddTook += t - e;
 
 		if(i % 100 != 0) continue;
@@ -11134,7 +11134,7 @@ bool bucketstest ( char* dbname ) {
 		}
 
 		
-		e = gettimeofdayInMilliseconds();
+		e = gettimeofdayInMilliseconds_force();
 		rt.getList ( collnum, 
 			     skey, 
 			     ekey, 
@@ -11143,7 +11143,7 @@ bool bucketstest ( char* dbname ) {
 			     &numPosRecs,
 			     &numNegRecs,
 			     true ); //use half keys
-		t = gettimeofdayInMilliseconds();
+		t = gettimeofdayInMilliseconds_force();
 		tgetListTook += t - e;
 		tgot += treelist.getNumRecs();
 
@@ -11170,7 +11170,7 @@ bool bucketstest ( char* dbname ) {
 			    t - e ,tgetListTook );
 		}
 
-		e = gettimeofdayInMilliseconds();
+		e = gettimeofdayInMilliseconds_force();
 		rdbb.getList ( collnum, 
 			       skey, 
 			       ekey, 
@@ -11179,7 +11179,7 @@ bool bucketstest ( char* dbname ) {
 			       &numPosRecs,
 			       &numNegRecs,
 			       true ); //use half keys
-		t = gettimeofdayInMilliseconds();
+		t = gettimeofdayInMilliseconds_force();
 		bgetListTook += t - e;
 		bgot += bucketlist.getNumRecs();
 
@@ -11258,10 +11258,10 @@ bool bucketstest ( char* dbname ) {
 		log("db: removing %"INT32" nodes from tree.  "
 		"tree currently has %"INT32" keys",
 		treelist.getNumRecs(), rt.getNumUsedNodes  ( ));
-		e = gettimeofdayInMilliseconds();
+		e = gettimeofdayInMilliseconds_force();
 
 		rt.deleteList(collnum, &treelist, true);
-		t = gettimeofdayInMilliseconds();
+		t = gettimeofdayInMilliseconds_force();
 		tdelListTook += t - e;
 
 		log("db: Now tree has %"INT32" keys", rt.getNumUsedNodes());
@@ -11269,9 +11269,9 @@ bool bucketstest ( char* dbname ) {
 		log("db: removing %"INT32" nodes from buckets. "
 		"buckets currently has %"INT32" keys", 
 		bucketlist.getNumRecs(), rdbb.getNumKeys(0));
-		e = gettimeofdayInMilliseconds();
+		e = gettimeofdayInMilliseconds_force();
 		rdbb.deleteList(collnum, &bucketlist);
-		t = gettimeofdayInMilliseconds();
+		t = gettimeofdayInMilliseconds_force();
 		bdelListTook += t - e;
 
 		log("db: Now buckets has %"INT32" keys",  rdbb.getNumKeys(0));
@@ -11298,13 +11298,13 @@ bool bucketstest ( char* dbname ) {
 	//int32_t n = rt.getNextNode ( (collnum_t)0, (char *)&kk );
 	int32_t n = rt.getFirstNode();
 	// loop it
-	t = gettimeofdayInMilliseconds();
+	t = gettimeofdayInMilliseconds_force();
 	int32_t count = 0;
 	while ( n >= 0 ) {
 		n = rt.getNextNode ( n );
 		count++;
 	}
-	e = gettimeofdayInMilliseconds();
+	e = gettimeofdayInMilliseconds_force();
 	log("db: getList for %"INT32" nodes in %"INT64" ms",count,e - t);
 #endif
 	rt.m_needsSave = false;
@@ -11317,7 +11317,7 @@ bool treetest ( ) {
 	int32_t numKeys = 500000;
 	log("db: speedtest: generating %"INT32" random keys.",numKeys);
 	// seed randomizer
-	srand ( (int32_t)gettimeofdayInMilliseconds() );
+	srand ( (int32_t)gettimeofdayInMilliseconds_force() );
 	// make list of one million random keys
 	key_t *k = (key_t *)mmalloc ( sizeof(key_t) * numKeys , "main" );
 	if ( ! k ) return log("speedtest: malloc failed");
@@ -11342,7 +11342,7 @@ bool treetest ( ) {
 			"tree-test"    ) )
 		return log("speedTest: tree init failed.");
 	// add to regular tree
-	int64_t t = gettimeofdayInMilliseconds();
+	int64_t t = gettimeofdayInMilliseconds_force();
 	for ( int32_t i = 0 ; i < numKeys ; i++ ) {
 		//if ( k[i].n1 == 1234567 )
 		//	fprintf(stderr,"i=%"INT32"\n",i);
@@ -11351,14 +11351,14 @@ bool treetest ( ) {
 				   "failed");
 	}
 	// print time it took
-	int64_t e = gettimeofdayInMilliseconds();
+	int64_t e = gettimeofdayInMilliseconds_force();
 	log("db: added %"INT32" keys to rdb tree in %"INT64" ms",numKeys,e - t);
 
 	// sort the list of keys
-	t = gettimeofdayInMilliseconds();
+	t = gettimeofdayInMilliseconds_force();
 	gbsort ( k , numKeys , sizeof(key_t) , keycmp );
 	// print time it took
-	e = gettimeofdayInMilliseconds();
+	e = gettimeofdayInMilliseconds_force();
 	log("db: sorted %"INT32" in %"INT64" ms",numKeys,e - t);
 
 	// get the list
@@ -11368,13 +11368,13 @@ bool treetest ( ) {
 	kk.n1 = 1234567;
 	int32_t n = rt.getNextNode ( (collnum_t)0, (char *)&kk );
 	// loop it
-	t = gettimeofdayInMilliseconds();
+	t = gettimeofdayInMilliseconds_force();
 	int32_t count = 0;
 	while ( n >= 0 && --first >= 0 ) {
 		n = rt.getNextNode ( n );
 		count++;
 	}
-	e = gettimeofdayInMilliseconds();
+	e = gettimeofdayInMilliseconds_force();
 	log("db: getList for %"INT32" nodes in %"INT64" ms",count,e - t);
 	return true;
 }
@@ -11386,7 +11386,7 @@ bool hashtest ( ) {
 	int32_t numKeys = 1000000;
 	log("db: speedtest: generating %"INT32" random keys.",numKeys);
 	// seed randomizer
-	srand ( (int32_t)gettimeofdayInMilliseconds() );
+	srand ( (int32_t)gettimeofdayInMilliseconds_force() );
 	// make list of one million random keys
 	key_t *k = (key_t *)mmalloc ( sizeof(key_t) * numKeys , "main" );
 	if ( ! k ) return log("speedtest: malloc failed");
@@ -11397,22 +11397,22 @@ bool hashtest ( ) {
 	HashTable ht;
 	ht.set ( (int32_t)(1.1 * numKeys) );
 	// add to regular tree
-	int64_t t = gettimeofdayInMilliseconds();
+	int64_t t = gettimeofdayInMilliseconds_force();
 	for ( int32_t i = 0 ; i < numKeys ; i++ ) 
 		if ( ! ht.addKey ( r[i] , 1 ) )
 			return log("hashtest: add key failed.");
 	// print time it took
-	int64_t e = gettimeofdayInMilliseconds();
+	int64_t e = gettimeofdayInMilliseconds_force();
 	// add times
 	log("db: added %"INT32" keys in %"INT64" ms",numKeys,e - t);
 
 	// do the delete test
-	t = gettimeofdayInMilliseconds();
+	t = gettimeofdayInMilliseconds_force();
 	for ( int32_t i = 0 ; i < numKeys ; i++ ) 
 		if ( ! ht.removeKey ( r[i] ) )
 			return log("hashtest: add key failed.");
 	// print time it took
-	e = gettimeofdayInMilliseconds();
+	e = gettimeofdayInMilliseconds_force();
 	// add times
 	log("db: deleted %"INT32" keys in %"INT64" ms",numKeys,e - t);
 
@@ -11474,7 +11474,7 @@ bool thrutest ( char *testdir , int64_t fileSize ) {
 
 	// write  2 gigs to the file, 1M at a time
 	{
-	int64_t t1 = gettimeofdayInMilliseconds();
+	int64_t t1 = gettimeofdayInMilliseconds_force();
 	int32_t numLoops = fileSize / bufSize;
 	int64_t off = 0LL;
 	int32_t next = 0;
@@ -11487,7 +11487,7 @@ bool thrutest ( char *testdir , int64_t fileSize ) {
 		if ( i + 1 < numLoops && next < 100000000 ) continue;
 		next = 0;
 		// print speed every X seconds
-		int64_t t2 = gettimeofdayInMilliseconds();
+		int64_t t2 = gettimeofdayInMilliseconds_force();
 		float mBps = (float)off / (float)(t2-t1) / 1000.0 ;
 		fprintf(stderr,"wrote %"INT64" bytes in %"INT64" ms (%.1f MB/s)\n",
 			off,t2-t1,mBps);
@@ -11497,7 +11497,7 @@ bool thrutest ( char *testdir , int64_t fileSize ) {
  doreadtest:
 
 	{
-	int64_t t1 = gettimeofdayInMilliseconds();
+	int64_t t1 = gettimeofdayInMilliseconds_force();
 	int32_t numLoops = fileSize / bufSize;
 	int64_t off = 0LL;
 	int32_t next = 0;
@@ -11510,7 +11510,7 @@ bool thrutest ( char *testdir , int64_t fileSize ) {
 		if ( i + 1 < numLoops && next < 100000000 ) continue;
 		next = 0;
 		// print speed every X seconds
-		int64_t t2 = gettimeofdayInMilliseconds();
+		int64_t t2 = gettimeofdayInMilliseconds_force();
 		float mBps = (float)off / (float)(t2-t1) / 1000.0 ;
 		fprintf(stderr,"read %"INT64" bytes in %"INT64" ms (%.1f MB/s)\n",
 			off,t2-t1,mBps);
@@ -11623,7 +11623,7 @@ skip:
 	//pthread_t tid1 ; //, tid2;
 
 	// set time
-	s_startTime = gettimeofdayInMilliseconds();
+	s_startTime = gettimeofdayInMilliseconds_force();
 
 	int32_t stksize = 1000000 ;
 	int32_t bufsize = stksize * s_numThreads ;
@@ -11702,12 +11702,12 @@ void *startUp ( void *state , ThreadEntry *t ) {
 		size = s_maxReadSize;
 		//if ( size < 32*1024 ) size = 32*1024;
 		// time it
-		int64_t start = gettimeofdayInMilliseconds();
+		int64_t start = gettimeofdayInMilliseconds_force();
 		//fprintf(stderr,"%"INT32") i=%"INT32" start\n",id,i );
 		//pread ( s_fd1 , buf , size , off );
 		s_f.read ( buf , size , off );
 		//fprintf(stderr,"%"INT32") i=%"INT32" done\n",id,i );
-		int64_t now = gettimeofdayInMilliseconds();
+		int64_t now = gettimeofdayInMilliseconds_force();
 #undef usleep
 		usleep(0);
 #define usleep(a) { char *xx=NULL;*xx=0; }
@@ -12247,20 +12247,20 @@ bool parseTest ( char *coll , int64_t docId , char *query ) {
 	// 0.35 ms to getText()
 
 	// speed test
-	int64_t t = gettimeofdayInMilliseconds();
+	int64_t t = gettimeofdayInMilliseconds_force();
 	for ( int32_t k = 0 ; k < 100 ; k++ )
 		xd.set2 (rec, listSize, coll , NULL , 0 );
-	int64_t e = gettimeofdayInMilliseconds();
+	int64_t e = gettimeofdayInMilliseconds_force();
 	logf(LOG_DEBUG,"build: Took %.3f ms to set title rec.",
 	     (float)(e-t)/100.0);
 
 	// speed test
-	t = gettimeofdayInMilliseconds();
+	t = gettimeofdayInMilliseconds_force();
 	for ( int32_t k = 0 ; k < 100 ; k++ ) {
 		char *mm = (char *)mmalloc ( 300*1024 , "ztest");
 		mfree ( mm , 300*1024 ,"ztest");
 	}
-	e = gettimeofdayInMilliseconds();
+	e = gettimeofdayInMilliseconds_force();
 	logf(LOG_DEBUG,"build: Took %.3f ms to do mallocs.",
 	     (float)(e-t)/100.0);
 
@@ -12270,7 +12270,7 @@ bool parseTest ( char *coll , int64_t docId , char *query ) {
 
 	// loop parse
 	Xml xml;
-	t = gettimeofdayInMilliseconds();
+	t = gettimeofdayInMilliseconds_force();
 	for ( int32_t i = 0 ; i < 100 ; i++ ) 
 		if ( ! xml.set ( content , contentLen , 
 				 false, 0, false, xd.m_version ,
@@ -12280,7 +12280,7 @@ bool parseTest ( char *coll , int64_t docId , char *query ) {
 			return log("build: speedtestxml: xml set: %s",
 				   mstrerror(g_errno));
 	// print time it took
-	e = gettimeofdayInMilliseconds();
+	e = gettimeofdayInMilliseconds_force();
 	log("build: Xml::set() took %.3f ms to parse docId %"INT64".", 
 	    (double)(e - t)/100.0,docId);
 	double bpms = contentLen/((double)(e-t)/100.0);
@@ -12289,7 +12289,7 @@ bool parseTest ( char *coll , int64_t docId , char *query ) {
 	xml.reset();
 
 	// loop parse
-	t = gettimeofdayInMilliseconds();
+	t = gettimeofdayInMilliseconds_force();
 	for ( int32_t i = 0 ; i < 100 ; i++ ) 
 		if ( ! xml.set ( content , contentLen , 
 				 false, 0, false, xd.m_version , false ,
@@ -12297,7 +12297,7 @@ bool parseTest ( char *coll , int64_t docId , char *query ) {
 			return log("build: xml(setparents=false): %s",
 				   mstrerror(g_errno));
 	// print time it took
-	e = gettimeofdayInMilliseconds();
+	e = gettimeofdayInMilliseconds_force();
 	log("build: Xml::set(setparents=false) took %.3f ms to "
 	    "parse docId %"INT64".", (double)(e - t)/100.0,docId);
 
@@ -12308,44 +12308,44 @@ bool parseTest ( char *coll , int64_t docId , char *query ) {
 	}
 	Words words;
 
-	t = gettimeofdayInMilliseconds();
+	t = gettimeofdayInMilliseconds_force();
 	for ( int32_t i = 0 ; i < 100 ; i++ ) 
 		if ( ! words.set ( &xml , true , true ) )
 			return log("build: speedtestxml: words set: %s",
 				   mstrerror(g_errno));
 	// print time it took
-	e = gettimeofdayInMilliseconds();
+	e = gettimeofdayInMilliseconds_force();
 	log("build: Words::set(xml,computeIds=true) took %.3f ms for %"INT32" words"
 	    " (precount=%"INT32") for docId %"INT64".", 
 	    (double)(e - t)/100.0,words.m_numWords,words.m_preCount,docId);
 
-	t = gettimeofdayInMilliseconds();
+	t = gettimeofdayInMilliseconds_force();
 	for ( int32_t i = 0 ; i < 100 ; i++ ) 
 		if ( ! words.set2 ( &xml , true , true ) )
 			return log("build: speedtestxml: words set: %s",
 				   mstrerror(g_errno));
 	// print time it took
-	e = gettimeofdayInMilliseconds();
+	e = gettimeofdayInMilliseconds_force();
 	log("build: Words::set2(xml,computeIds=true) took %.3f ms for %"INT32" "\
 	    "words (precount=%"INT32") for docId %"INT64".", 
 	    (double)(e - t)/100.0,words.m_numWords,words.m_preCount,docId);
 
 
 
-	t = gettimeofdayInMilliseconds();
+	t = gettimeofdayInMilliseconds_force();
 	for ( int32_t i = 0 ; i < 100 ; i++ ) 
 		if ( ! words.set ( &xml , true , false ) )
 			return log("build: speedtestxml: words set: %s",
 				   mstrerror(g_errno));
 	// print time it took
-	e = gettimeofdayInMilliseconds();
+	e = gettimeofdayInMilliseconds_force();
 	log("build: Words::set(xml,computeIds=false) "
 	    "took %.3f ms for %"INT32" words"
 	    " (precount=%"INT32") for docId %"INT64".", 
 	    (double)(e - t)/100.0,words.m_numWords,words.m_preCount,docId);
 
 
-	t = gettimeofdayInMilliseconds();
+	t = gettimeofdayInMilliseconds_force();
 	for ( int32_t i = 0 ; i < 100 ; i++ ) 
 		//if ( ! words.set ( &xml , true , true ) )
 		if ( ! words.set ( content , TITLEREC_CURRENT_VERSION,
@@ -12353,7 +12353,7 @@ bool parseTest ( char *coll , int64_t docId , char *query ) {
 			return log("build: speedtestxml: words set: %s",
 				   mstrerror(g_errno));
 	// print time it took
-	e = gettimeofdayInMilliseconds();
+	e = gettimeofdayInMilliseconds_force();
 	log("build: Words::set(content,computeIds=true) "
 	    "took %.3f ms for %"INT32" words "
 	    "for docId %"INT64".", 
@@ -12363,14 +12363,14 @@ bool parseTest ( char *coll , int64_t docId , char *query ) {
 	Pos pos;
 	// computeWordIds from xml
 	words.set ( &xml , true , true ) ;
-	t = gettimeofdayInMilliseconds();
+	t = gettimeofdayInMilliseconds_force();
 	for ( int32_t i = 0 ; i < 100 ; i++ ) 
 		//if ( ! words.set ( &xml , true , true ) )
 		if ( ! pos.set ( &words , NULL ) )
 			return log("build: speedtestxml: pos set: %s",
 				   mstrerror(g_errno));
 	// print time it took
-	e = gettimeofdayInMilliseconds();
+	e = gettimeofdayInMilliseconds_force();
 	log("build: Pos::set() "
 	    "took %.3f ms for %"INT32" words "
 	    "for docId %"INT64".", 
@@ -12380,14 +12380,14 @@ bool parseTest ( char *coll , int64_t docId , char *query ) {
 	Bits bits;
 	// computeWordIds from xml
 	words.set ( &xml , true , true ) ;
-	t = gettimeofdayInMilliseconds();
+	t = gettimeofdayInMilliseconds_force();
 	for ( int32_t i = 0 ; i < 100 ; i++ ) 
 		//if ( ! words.set ( &xml , true , true ) )
 		if ( ! bits.setForSummary ( &words ) )
 			return log("build: speedtestxml: Bits set: %s",
 				   mstrerror(g_errno));
 	// print time it took
-	e = gettimeofdayInMilliseconds();
+	e = gettimeofdayInMilliseconds_force();
 	log("build: Bits::setForSummary() "
 	    "took %.3f ms for %"INT32" words "
 	    "for docId %"INT64".", 
@@ -12405,7 +12405,7 @@ bool parseTest ( char *coll , int64_t docId , char *query ) {
 	bits.set ( &words ,TITLEREC_CURRENT_VERSION, 0);
 	Phrases phrases;
 	phrases.set ( &words,&bits,true,true,TITLEREC_CURRENT_VERSION,0);
-	t = gettimeofdayInMilliseconds();
+	t = gettimeofdayInMilliseconds_force();
 	for ( int32_t i = 0 ; i < 100 ; i++ ) 
 		//if ( ! words.set ( &xml , true , true ) )
 		// do not supply xd so it will be set from scratch
@@ -12423,7 +12423,7 @@ bool parseTest ( char *coll , int64_t docId , char *query ) {
 				   mstrerror(g_errno));
 
 	// print time it took
-	e = gettimeofdayInMilliseconds();
+	e = gettimeofdayInMilliseconds_force();
 	log("build: Scores::set() "
 	    "took %.3f ms for %"INT32" words "
 	    "for docId %"INT64".", 
@@ -12432,7 +12432,7 @@ bool parseTest ( char *coll , int64_t docId , char *query ) {
 	
 
 	//Phrases phrases;
-	t = gettimeofdayInMilliseconds();
+	t = gettimeofdayInMilliseconds_force();
 	for ( int32_t i = 0 ; i < 100 ; i++ ) 
 		if ( ! phrases.set ( &words ,
 				     &bits  ,
@@ -12443,7 +12443,7 @@ bool parseTest ( char *coll , int64_t docId , char *query ) {
 			return log("build: speedtestxml: Phrases set: %s",
 				   mstrerror(g_errno));
 	// print time it took
-	e = gettimeofdayInMilliseconds();
+	e = gettimeofdayInMilliseconds_force();
 	log("build: Phrases::set() "
 	    "took %.3f ms for %"INT32" words "
 	    "for docId %"INT64".", 
@@ -12461,7 +12461,7 @@ bool parseTest ( char *coll , int64_t docId , char *query ) {
 	//LinkInfo info1;
 	//LinkInfo info2;
 	// computeWordIds from xml
-	t = gettimeofdayInMilliseconds();
+	t = gettimeofdayInMilliseconds_force();
 	for ( int32_t i = 0 ; i < 100 ; i++ ) 
 		//if ( ! words.set ( &xml , true , true ) )
 		if ( ! weights.set (&words                   , 
@@ -12482,7 +12482,7 @@ bool parseTest ( char *coll , int64_t docId , char *query ) {
 			return log("build: speedtestxml: Weights set: %s",
 				   mstrerror(g_errno));
 	// print time it took
-	e = gettimeofdayInMilliseconds();
+	e = gettimeofdayInMilliseconds_force();
 	log("build: Weights::set() "
 	    "took %.3f ms for %"INT32" words "
 	    "for docId %"INT64".", 
@@ -12494,31 +12494,31 @@ bool parseTest ( char *coll , int64_t docId , char *query ) {
 		log("Unicode initialization failed!");
 		return 1;
 	}
-	t = gettimeofdayInMilliseconds();
+	t = gettimeofdayInMilliseconds_force();
 	for ( int32_t i = 0 ; i < 100 ; i++ ) 
 		if ( ! words.set ( &xml , true , true ) )
 			return log("build: speedtestxml: words set: %s",
 				   mstrerror(g_errno));
 	// print time it took
-	e = gettimeofdayInMilliseconds();
+	e = gettimeofdayInMilliseconds_force();
 	log("build: Words::set(computeIds=true) took %.3f ms for %"INT32" words "
 	    "for docId %"INT64".", 
 	    (double)(e - t)/100.0,words.m_numWords,docId);
 
-	t = gettimeofdayInMilliseconds();
+	t = gettimeofdayInMilliseconds_force();
 	for ( int32_t i = 0 ; i < 100 ; i++ ) 
 		if ( ! words.set ( &xml , false , true ) )
 			return log("build: speedtestxml: words set: %s",
 				   mstrerror(g_errno));
 	// print time it took
-	e = gettimeofdayInMilliseconds();
+	e = gettimeofdayInMilliseconds_force();
 	log("build: Words::set(computeIds=false) took %.3f ms for docId %"INT64".",
 	    (double)(e - t)/100.0,docId);
 	*/
 
 
 	char *buf = (char *)mmalloc(contentLen*2+1,"main");
-	t = gettimeofdayInMilliseconds();
+	t = gettimeofdayInMilliseconds_force();
 	for ( int32_t i = 0 ; i < 100 ; i++ ) 
 		if ( ! xml.getText ( buf , contentLen*2+1 ,
 				     0         ,  // startNode
@@ -12531,13 +12531,13 @@ bool parseTest ( char *coll , int64_t docId , char *query ) {
 			return log("build: speedtestxml: getText: %s",
 				   mstrerror(g_errno));
 	// print time it took
-	e = gettimeofdayInMilliseconds();
+	e = gettimeofdayInMilliseconds_force();
 	log("build: Xml::getText(computeIds=false) took %.3f ms for docId "
 	    "%"INT64".",(double)(e - t)/100.0,docId);
 
 
 
-	t = gettimeofdayInMilliseconds();
+	t = gettimeofdayInMilliseconds_force();
 	for ( int32_t i = 0 ; i < 100 ; i++ ) {
 		int32_t bufLen = xml.getText ( buf , contentLen*2+1 ,
 				     0         ,  // startNode
@@ -12555,7 +12555,7 @@ bool parseTest ( char *coll , int64_t docId , char *query ) {
 	}
 
 	// print time it took
-	e = gettimeofdayInMilliseconds();
+	e = gettimeofdayInMilliseconds_force();
 	log("build: Xml::getText(computeIds=false) w/ word::set() "
 	    "took %.3f ms for docId "
 	    "%"INT64".",(double)(e - t)/100.0,docId);
@@ -12568,7 +12568,7 @@ bool parseTest ( char *coll , int64_t docId , char *query ) {
 	q.set2 ( query , langUnknown , false );
 	matches.setQuery ( &q );
 	words.set ( &xml , true , 0 ) ;
-	t = gettimeofdayInMilliseconds();
+	t = gettimeofdayInMilliseconds_force();
 	for ( int32_t i = 0 ; i < 100 ; i++ ) {
 		matches.reset();
 		if ( ! matches.addMatches ( &words ) )
@@ -12576,7 +12576,7 @@ bool parseTest ( char *coll , int64_t docId , char *query ) {
 				   mstrerror(g_errno));
 	}
 	// print time it took
-	e = gettimeofdayInMilliseconds();
+	e = gettimeofdayInMilliseconds_force();
 	log("build: Matches::set() took %.3f ms for %"INT32" words"
 	    " (precount=%"INT32") for docId %"INT64".", 
 	    (double)(e - t)/100.0,words.m_numWords,words.m_preCount,docId);
@@ -12624,7 +12624,7 @@ bool summaryTest1   ( char *rec , int32_t listSize, char *coll , int64_t docId ,
 	// CollectionRec *cr = g_collectiondb.getRec ( coll );
 
 	// start the timer
-	int64_t t = gettimeofdayInMilliseconds();
+	int64_t t = gettimeofdayInMilliseconds_force();
 
 	//int32_t titleMaxLen               = cr->m_titleMaxLen;
 	//bool considerTitlesFromBody    = false;
@@ -12680,7 +12680,7 @@ bool summaryTest1   ( char *rec , int32_t listSize, char *coll , int64_t docId ,
 	}
 
 	// print time it took
-	int64_t e = gettimeofdayInMilliseconds();
+	int64_t e = gettimeofdayInMilliseconds_force();
 	log("build: V1  Summary/Title/Gigabits generation took %.3f ms for docId "
 	    "%"INT64".", 
 	    (double)(e - t)/100.0,docId);
@@ -12698,7 +12698,7 @@ bool summaryTest2   ( char *rec , int32_t listSize, char *coll , int64_t docId ,
 	CollectionRec *cr = g_collectiondb.getRec ( coll );
 
 	// start the timer
-	int64_t t = gettimeofdayInMilliseconds();
+	int64_t t = gettimeofdayInMilliseconds_force();
 
 	int32_t titleMaxLen               = cr->m_titleMaxLen;
 	int32_t summaryMaxLen             = cr->m_summaryMaxLen;
@@ -12804,7 +12804,7 @@ bool summaryTest2   ( char *rec , int32_t listSize, char *coll , int64_t docId ,
 	}
 
 	// print time it took
-	int64_t e = gettimeofdayInMilliseconds();
+	int64_t e = gettimeofdayInMilliseconds_force();
 	log("build: V2  Summary/Title/Gigabits generation took %.3f ms for "
 	    "docId %"INT64".",
 	    (double)(e - t)/100.0,docId);
@@ -12823,7 +12823,7 @@ bool summaryTest3   ( char *rec , int32_t listSize, char *coll , int64_t docId ,
 	CollectionRec *cr = g_collectiondb.getRec ( coll );
 
 	// start the timer
-	int64_t t = gettimeofdayInMilliseconds();
+	int64_t t = gettimeofdayInMilliseconds_force();
 
 	int32_t titleMaxLen               = cr->m_titleMaxLen;
 	int32_t summaryMaxLen             = cr->m_summaryMaxLen;
@@ -12961,7 +12961,7 @@ bool summaryTest3   ( char *rec , int32_t listSize, char *coll , int64_t docId ,
 	}
 
 	// print time it took
-	int64_t e = gettimeofdayInMilliseconds();
+	int64_t e = gettimeofdayInMilliseconds_force();
 	log("build: V3  Summary/Title/Gigabits generation took %.3f ms for "
 	    "docId %"INT64".",
 	    (double)(e - t)/100.0,docId);
@@ -14229,7 +14229,7 @@ bool pingTest ( int32_t hid , uint16_t clientPort ) {
 	int32_t ip = h->m_ip;
 	ip = atoip("127.0.0.1",9);
 
-	startTime = gettimeofdayInMilliseconds();
+	startTime = gettimeofdayInMilliseconds_force();
 	to.sin_family      = AF_INET;
 	to.sin_addr.s_addr = h->m_ip;
 	to.sin_port        = ntohs(h->m_port);
@@ -14255,7 +14255,7 @@ bool pingTest ( int32_t hid , uint16_t clientPort ) {
 	int32_t msgSize = 3; // indicates a debug ping packet to PingServer.cpp
 	up->setHeader ( dgram, msgSize, 0x11, dnum, transId, true, false , 0 );
 	int32_t size = up->getHeaderSize(0) + msgSize;
-	int64_t start = gettimeofdayInMilliseconds();
+	int64_t start = gettimeofdayInMilliseconds_force();
 	// debug
 	//log("db: sending %"INT32" bytes",size);
 	n = sendto(sock,dgram,size,0,(struct sockaddr *)&to,sizeof(to));
@@ -14266,7 +14266,7 @@ bool pingTest ( int32_t hid , uint16_t clientPort ) {
  readLoop2:
 	// loop until we read something
 	n = recvfrom (sock,dgram,DGRAM_SIZE,0,(sockaddr *)&from, &fromLen);
-	if (gettimeofdayInMilliseconds() - start>2000) {lost++; goto sendLoop;}
+	if (gettimeofdayInMilliseconds_force() - start>2000) {lost++; goto sendLoop;}
 	if ( n <= 0 ) goto readLoop2; // { sched_yield(); goto readLoop2; }
 	// for what transId?
 	int32_t tid = up->getTransId ( dgram , n );
@@ -14289,7 +14289,7 @@ bool pingTest ( int32_t hid , uint16_t clientPort ) {
 	// debug
 	//log("db: read %"INT32" bytes",n);
 	// mark the time
-	int64_t took = gettimeofdayInMilliseconds()-start;
+	int64_t took = gettimeofdayInMilliseconds_force()-start;
 	if ( took > 1 ) log("net: pingtest: got reply #%"INT32" (tid=%"INT32") "
 			    "in %"INT64" ms",replies,transId,took);
 	// make average
@@ -15984,7 +15984,7 @@ void injectedWrapper ( void *state , TcpSocket *s ) {
 }
 
 void saveRdbs ( int fd , void *state ) {
-	int64_t now = gettimeofdayInMilliseconds();
+	int64_t now = gettimeofdayInMilliseconds_force();
 	int64_t last;
 	Rdb *rdb ;
 	// . try saving every 10 minutes from time of last write to disk
@@ -16343,7 +16343,7 @@ void membustest ( int32_t nb , int32_t loops , bool readf ) {
 	g_clockNeedsUpdate = true;
 
 	// time stamp
-	int64_t t = gettimeofdayInMilliseconds();
+	int64_t t = gettimeofdayInMilliseconds_force();
 
 	fprintf(stderr,"memtest: start = %"INT64"\n",t);
 
@@ -16400,7 +16400,7 @@ void membustest ( int32_t nb , int32_t loops , bool readf ) {
 
 	g_clockNeedsUpdate = true;
 	// completed
-	int64_t now = gettimeofdayInMilliseconds();
+	int64_t now = gettimeofdayInMilliseconds_force();
 	fprintf(stderr,"memtest: now = %"INT64"\n",t);
 	// multiply by 4 since these are int32_ts
 	char *op = "read";
@@ -16981,7 +16981,7 @@ void countdomains( char* coll, int32_t numRecs, int32_t verbosity, int32_t outpu
 	g_titledb.getRdb()->addRdbBase1(coll );
 
 	log( LOG_INFO, "cntDm: parms: %s, %"INT32"", coll, numRecs );
-	int64_t time_start = gettimeofdayInMilliseconds();
+	int64_t time_start = gettimeofdayInMilliseconds_force();
 
 	// turn off threads
 	g_threads.disableThreads();
@@ -17722,7 +17722,7 @@ void countdomains( char* coll, int32_t numRecs, int32_t verbosity, int32_t outpu
 					
 		mfree( dom_table, numRecs * sizeof(struct dom_info *), "main-dcfdt" );
 
-		int64_t time_end = gettimeofdayInMilliseconds();
+		int64_t time_end = gettimeofdayInMilliseconds_force();
 		log( LOG_INFO, "cntDm: Took %"INT64"ms to count domains in %"INT32" recs.",
 		     time_end-time_start, countDocs );
 		log( LOG_INFO, "cntDm: %"INT32" bytes of Total Memory Used.", 
@@ -18643,7 +18643,7 @@ void rmTest() {
 
 	// now delete
 	fprintf(stderr,"Deleting files\n");
-	int64_t now = gettimeofdayInMillisecondsLocal();
+	int64_t now = gettimeofdayInMilliseconds_force();
 
 	for ( int32_t i = 0 ; i < max ; i++ ) {
 		SafeBuf fn;
@@ -18653,7 +18653,7 @@ void rmTest() {
 		f.unlink();
 	}
 
-	int64_t took = gettimeofdayInMillisecondsLocal() - now;
+	int64_t took = gettimeofdayInMilliseconds_force() - now;
 
 	fprintf(stderr,"Deleting files took %"INT64" ms\n",took);
 
