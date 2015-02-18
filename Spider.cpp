@@ -8880,10 +8880,12 @@ bool sendPage ( State11 *st ) {
 			      "<tr>"
 			      //"<td bgcolor=#ff6666>"
 			      "<td>"
+			      "For collection <i>%s</i>: "
 			      "<b><font color=red>%s</font></b>"
 			      "</td>"
 			      "</tr>"
 			      "</table>\n"
+			      , cr->m_coll
 			      , mb.getBufStart() );
 
 
