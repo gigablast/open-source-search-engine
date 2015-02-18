@@ -2792,9 +2792,6 @@ int TcpServer::sslHandshake ( TcpSocket *s ) {
 
 	char *sslMsg = getSSLError(s->m_ssl, r);
 
-	log("tcp: ssl: Error on Connect (%"INT32"). r=%i ip=%s msg=%s",
-	    (int32_t)sslError,r,iptoa(s->m_ip),sslMsg);
-
 	// if ( sslError == SSL_ERROR_SSL ) {
 	// 	log("tcp: ssl handhshake already completed sd=%i?",s->m_sd);
 	// 	// ok, it completed, go into writing mode
@@ -2805,6 +2802,10 @@ int TcpServer::sslHandshake ( TcpSocket *s ) {
 	if ( sslError != SSL_ERROR_WANT_READ &&
 	     sslError != SSL_ERROR_WANT_WRITE &&
 	     sslError != SSL_ERROR_NONE ) {
+
+		log("tcp: ssl: Error on Connect (%"INT32"). r=%i ip=%s msg=%s",
+		    (int32_t)sslError,r,iptoa(s->m_ip),sslMsg);
+
 		g_errno = ESSLERROR;
 		// make sure read callback is registered
 		// g_loop.registerReadCallback (s->m_sd,this,readSocketWrapper,
@@ -2814,6 +2815,10 @@ int TcpServer::sslHandshake ( TcpSocket *s ) {
 		// will return -1 and not set g_errno
 		return -1;
 	}
+
+	if ( g_conf.m_logDebugTcp )
+		log("tcp: ssl: Error on Connect (%"INT32"). r=%i ip=%s msg=%s",
+		    (int32_t)sslError,r,iptoa(s->m_ip),sslMsg);
 
 	if ( sslError <= 0 ) { char *xx=NULL;*xx=0; }
 
