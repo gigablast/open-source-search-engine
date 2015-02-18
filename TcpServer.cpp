@@ -705,7 +705,12 @@ bool TcpServer::sendMsg ( TcpSocket *s            ,
 	// . destroy the socket on error
 	// . this will also unregister all our callbacks for the socket
 	// . TODO: deleting nodes from under Loop::callCallbacks is dangerous!!
-	if      ( g_errno      ) { destroySocket ( s ); return true; }
+	if      ( g_errno      ) { 
+		if ( g_conf.m_logDebugTcp )
+			log("tcp: writeSocket error: %s",mstrerror(g_errno));
+		destroySocket ( s ); 
+		return true; 
+	}
 
 	// if in streaming mode just return true, do not set sockState
 	// to ST_NEEDS_CLOSE lest it be destroyed. streaming mode needs
@@ -1244,6 +1249,9 @@ void readSocketWrapper2 ( int sd , void *state ) {
 		if ( status == 1 ) status = THIS->writeSocket ( s );
 		// destroy socket and call callback on connect error
 		if ( status == -1 ) {
+			if ( g_conf.m_logDebugTcp )
+				log("tcp: connectSocket error2: %s",
+				    mstrerror(g_errno));
 			// i saw 
 			// ssl: Error on Connect
 			// ssl: Error: Syscall 
@@ -1707,6 +1715,9 @@ void writeSocketWrapper ( int sd , void *state ) {
 	// set to false, so don't destroy socket just yet...
 	if ( wasStreaming ) return;
 
+	// skip if we already destroyed in writeSocket()
+	if ( s->m_sockState == ST_CLOSE_CALLED ) return;
+
 	// . destroy the socket on error, recycle on transaction completion
 	// . this will also unregister all our callbacks for the socket
 	if      ( status == -1 ) THIS->destroySocket ( s );
@@ -1946,7 +1957,7 @@ int32_t TcpServer::writeSocket ( TcpSocket *s ) {
 	if ( s->m_streamingMode ) return true;
 
 	// close it. without this here the socket only gets
-	// closed for real in the timeout loop
+	// closed for real in the timeout loop.
 	destroySocket ( s );
 
 	// . otherwise, we finished sending a reply
@@ -2076,6 +2087,11 @@ void TcpServer::destroySocket ( TcpSocket *s ) {
 		// why is it being destroyed without g_errno set?
 		//if ( ! g_errno ) { char *xx=NULL;*xx=0; }
 		//char *xx=NULL;*xx=0; }
+	}
+
+	if ( s->m_sockState == ST_CLOSE_CALLED ) {
+		log("tcp: destroy already called for sock=%i",s->m_sd);
+		return;
 	}
 
 	// sanity check
