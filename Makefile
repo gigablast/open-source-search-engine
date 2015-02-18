@@ -83,9 +83,11 @@ FFF = /etc/redhat-release
 ifneq ($(wildcard $(FFF)),)
 OS_RHEL := true
 STATIC :=
+XMLDOCOPT := -O2
 else
 OS_DEB := true
 STATIC := -static
+XMLDOCOPT := -O3
 endif
 
 
@@ -384,7 +386,7 @@ Linkdb.o:
 	$(CC) $(DEFS) $(CPPFLAGS) -O3 -c $*.cpp 
 
 XmlDoc.o:
-	$(CC) $(DEFS) $(CPPFLAGS) -O3 -c $*.cpp 
+	$(CC) $(DEFS) $(CPPFLAGS) $(XMLDOCOPT) -c $*.cpp 
 
 # final gigabit generation in here:
 Msg40.o:
