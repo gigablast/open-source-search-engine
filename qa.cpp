@@ -26,6 +26,7 @@ void wait( float seconds ) {
 					    NULL , // state
 					    qatestWrapper,//m_masterLoop
 					    0    )) {// niceness
+		log("qa: waiting %i milliseconds",(int)delay);
 		s_registered = true;
 		// wait for it, return -1 since we blocked
 		return;
@@ -721,7 +722,7 @@ bool qainject1 ( ) {
 
 
 	if ( ! s_flags[21] ) {
-		wait(2.0);
+		wait(6.0);
 		s_flags[21] = true;
 		return false;
 	}
@@ -1071,18 +1072,20 @@ bool qaSyntax ( ) {
 			return false;
 	}
 
+	static int s_i;
+
 	// now query check
 	//static bool s_y4 = false;
 	if ( ! s_flags[4] ) {
 		wait(1.5);
 		s_flags[4] = true;
+		s_i = 0;
 		return false;
 	}
 
 	//
 	// now run a bunch of queries
 	//
-	static int s_i = 0;
 	static char *s_q[] ={"cat dog",
 			     "+cat",
 			     "mp3 \"take five\"",
@@ -2830,6 +2833,7 @@ bool qatest ( ) {
 	if ( s_registered ) {
 		g_loop.unregisterSleepCallback(NULL,qatestWrapper);
 		s_registered = false;
+		log("qa: done waiting");
 	}
 
 	if ( ! s_callback ) s_callback = qatest;

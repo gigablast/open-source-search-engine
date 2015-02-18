@@ -164,10 +164,10 @@ class RdbTree {
 	// . returns true  iff was found and deleted
 	// . returns false iff not found 
 	// . frees m_data[node] if freeIt is true
-	void deleteNode  ( int32_t  node , bool freeData );
-	//int32_t deleteNode  ( collnum_t collnum , key_t &key , bool freeData ) ;
+	void deleteNode3  ( int32_t  node , bool freeData );
+	//int32_t deleteNode  ( collnum_t collnum , key_t &key,bool freeData) ;
 	int32_t deleteNode  ( collnum_t collnum , char *key , bool freeData ) ;
-	int32_t deleteNode  ( collnum_t collnum , key_t &key , bool freeData ) {
+	int32_t deleteNode  ( collnum_t collnum , key_t &key , bool freeData) {
 		return deleteNode ( collnum , (char *)&key , freeData ); };
 
 	// delete all nodes with keys in [startKey,endKey]

@@ -116,7 +116,7 @@ bool Msge1::getFirstIps ( TagRec **grv ,
 	if ( ! launchRequests ( 0 ) ) return false;
 
 	// save it? might be a page parser
-	//if ( ! strcmp(m_coll,"qatest123") ) saveTestBuf();
+	if ( m_coll && ! strcmp(m_coll,"qatest123") ) saveTestBuf("qa");
 
 	// none blocked, we are done
 	return true;
@@ -340,7 +340,7 @@ void gotMsgCWrapper ( void *state , int32_t ip ) {
 	if ( ! THIS->launchRequests(i) ) return;
 	// . save it if we should. might be a page parser
 	// . mdw i uncommented this when we cored all the time
-	//if ( ! strcmp(THIS->m_coll,"qatest123")) saveTestBuf();
+	if ( THIS->m_coll&&!strcmp(THIS->m_coll,"qatest123"))saveTestBuf("qa");
 	// must be all done, call the callback
 	THIS->m_callback ( THIS->m_state );
 }

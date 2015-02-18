@@ -1084,6 +1084,9 @@ bool Collectiondb::setRecPtr ( collnum_t collnum , CollectionRec *cr ) {
 	// set it
 	m_recs = (CollectionRec **)m_recPtrBuf.getBufStart();
 
+	// tell spiders to re-upadted the active list
+	g_spiderLoop.m_activeListValid = false;
+
 	// a delete?
 	if ( ! cr ) {
 		// sanity
@@ -2102,6 +2105,10 @@ bool CollectionRec::rebuildUrlFilters2 ( ) {
 	//if ( m_numRegExs > 0 && strcmp(m_regExs[m_numRegExs-1],"default") )
 	//	addDefault = true;
 	if ( ! rebuild ) return true;
+
+	// tell spider loop to update active list
+	g_spiderLoop.m_activeListValid = false;
+
 
 	if ( !strcmp(s,"shallow" ) )
 		return rebuildShallowRules();

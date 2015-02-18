@@ -189,6 +189,8 @@ static int64_t s_lastTimeStart = 0LL;
 
 void XmlDoc::reset ( ) {
 
+	m_linkOverflows = 0;
+
 	m_isImporting = false;
 	
 	m_printedMenu = false;
@@ -9446,7 +9448,7 @@ int32_t getTopGigabits ( HashTableX   *ht          ,
 		// sanity check
 		if ( tn < 0 ) { char *xx=NULL;*xx=0; }
 		// kick out smallest
-		tree.deleteNode ( tn , false );
+		tree.deleteNode3 ( tn , false );
 		// get new smallest
 		tn = tree.getLowestNode();
 		// set the new minkey
@@ -19999,10 +20001,16 @@ bool XmlDoc::logIt ( SafeBuf *bb ) {
 			      (int32_t)m_links.hasRSSOutlink() );
 
 	if ( m_numOutlinksAddedValid ) 
-		sb->safePrintf("outlinksadded=%04"INT32" ",(int32_t)m_numOutlinksAdded);
+		sb->safePrintf("outlinksadded=%04"INT32" ",
+			       (int32_t)m_numOutlinksAdded);
+
+	if ( m_linkOverflows )
+		sb->safePrintf("linkoverflows=%04"INT32" ",
+			       (int32_t)m_linkOverflows);
 
 	if ( m_metaListValid ) 
-		sb->safePrintf("addlistsize=%05"INT32" ",(int32_t)m_metaListSize);
+		sb->safePrintf("addlistsize=%05"INT32" ",
+			       (int32_t)m_metaListSize);
 	else
 		sb->safePrintf("addlistsize=%05"INT32" ",(int32_t)0);
 
@@ -25162,7 +25170,7 @@ char *XmlDoc::addOutlinkSpiderRecsToMetaList ( ) {
 	bool ignore = false;
 	if ( mbuf[0] == '1' ) ignore = true;
 
-	//SpiderColl *sc = g_spiderCache.getSpiderCollIffNonNull ( m_collnum );
+	SpiderColl *sc = g_spiderCache.getSpiderCollIffNonNull ( m_collnum );
 
 	//
 	// serialize each link into the metalist now
@@ -25177,6 +25185,15 @@ char *XmlDoc::addOutlinkSpiderRecsToMetaList ( ) {
 		//int32_t    hc        = hcv[i];
 		// ip lookup failed? do not add to spiderdb then
 		if ( firstIp == 0 || firstIp == -1 ) continue;
+
+		// if firstIp is in the SpiderColl::m_overflowFirstIps list
+		// then do not add any more links to it. it already has
+		// more than 500MB worth.
+		if ( sc && sc->isFirstIpInOverflowList ( firstIp ) ) {
+			m_linkOverflows++;
+			continue;
+		}
+
 		// sanity check
 		//if ( firstIp == 0x03 ) {char *xx=NULL;*xx=0; }
 		// get flags

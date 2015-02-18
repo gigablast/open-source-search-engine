@@ -580,6 +580,7 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 	caches[2] = g_dns.getCache();
 	caches[3] = g_dns.getCacheLocal();
 	caches[4] = resultsCache;
+	caches[5] = &g_spiderLoop.m_winnerListCache;
 	//caches[5] = &g_termListCache;
 	//caches[6] = &g_genericCache[SEORESULTS_CACHEID];
 	//caches[5] = &g_qtable;
@@ -590,7 +591,7 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 	//caches[6] = &g_forcedCache;
 	//caches[9] = &g_msg20Cache;
 	//caches[10] = &g_tagdb.m_listCache;
-	int32_t numCaches = 5;
+	int32_t numCaches = 6;
 
 	if ( format == FORMAT_HTML )
 		p.safePrintf (
@@ -1822,9 +1823,9 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 		g_tagdb.getRdb(),
 		g_clusterdb.getRdb(),
 		g_linkdb.getRdb(),
-		g_cachedb.getRdb(),
-		g_serpdb.getRdb(),
-		g_monitordb.getRdb(),
+		//g_cachedb.getRdb(),
+		//g_serpdb.getRdb(),
+		//g_monitordb.getRdb(),
 		g_statsdb.getRdb(),
 		g_catdb.getRdb()
 		//g_placedb.getRdb() ,
@@ -2292,8 +2293,8 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 		  "<br><i>Note: twins may differ in rec counts but still have "
 		  "the same data because they dump at different times which "
 		  "leads to different reactions. To see if truly equal, "
-		  "do a 'gb ddump' then when that finishes, a, 'gb imerge'"
-		  "and a 'gb tmerge'\n");
+		  "do a 'gb ddump' then when that finishes, a, 'gb pmerge'"
+		  "for posdb or a 'gb tmerge' for titledb.\n");
 
 	// print the final tail
 	//p += g_httpServer.printTail ( p , pend - p );

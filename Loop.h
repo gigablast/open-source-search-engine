@@ -203,7 +203,8 @@ class Loop {
 
 	void unregisterCallback ( Slot **slots , int fd , void *state ,
 				  void (* callback)(int fd,void *state) ,
-				  bool silent = false );
+				  bool silent , // = false );
+				  bool forReading );
 
 	bool addSlot ( bool forReading , int fd , void *state , 
 		       void (* callback)(int fd , void *state ) ,

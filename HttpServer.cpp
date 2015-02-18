@@ -1299,11 +1299,11 @@ bool HttpServer::sendReply ( TcpSocket  *s , HttpRequest *r , bool isAdmin) {
 	mnew ( f, sizeof(File), "HttpServer");
 	// note that 
 	if ( g_conf.m_logDebugTcp )
-		log("tcp: new file=0x%"PTRFMT"",(PTRTYPE)f);
+		log("tcp: new filestate=0x%"PTRFMT"",(PTRTYPE)f);
 	// don't honor HUGE requests
 	if ( pathLen > 100 ) {
 		if ( g_conf.m_logDebugTcp )
-			log("tcp: deleting file=0x%"PTRFMT" [1]",
+			log("tcp: deleting filestate=0x%"PTRFMT" [1]",
 			    (PTRTYPE)f);
 		mdelete ( f, sizeof(File), "HttpServer");
 		delete (f);
@@ -1328,7 +1328,7 @@ bool HttpServer::sendReply ( TcpSocket  *s , HttpRequest *r , bool isAdmin) {
 		// use default page if does not exist under host-specific path
 		if (pathLen == 11 && strncmp ( path , "/index.html" ,11 ) ==0){
 			if ( g_conf.m_logDebugTcp )
-				log("tcp: deleting file=0x%"PTRFMT" [2]",
+				log("tcp: deleting filestate=0x%"PTRFMT" [2]",
 				    (PTRTYPE)f);
 			mdelete ( f, sizeof(File), "HttpServer");
 			delete (f);
@@ -1349,7 +1349,7 @@ bool HttpServer::sendReply ( TcpSocket  *s , HttpRequest *r , bool isAdmin) {
 	// if f STILL does not exist (or error) then send a 404
 	if ( f->doesExist() <= 0 ) {
 		if ( g_conf.m_logDebugTcp )
-			log("tcp: deleting file=0x%"PTRFMT" [3]",
+			log("tcp: deleting filestate=0x%"PTRFMT" [3]",
 			    (PTRTYPE)f);
 		mdelete ( f, sizeof(File), "HttpServer");
 		delete (f);
@@ -1376,7 +1376,8 @@ bool HttpServer::sendReply ( TcpSocket  *s , HttpRequest *r , bool isAdmin) {
 	// . set g_errno on error
 	if ( bytesToSend > 0  &&  ! f->open(O_RDONLY | O_NONBLOCK | O_ASYNC)) {
 		if ( g_conf.m_logDebugTcp )
-			log("tcp: deleting file=0x%"PTRFMT" [4]",(PTRTYPE)f);
+			log("tcp: deleting filestate=0x%"PTRFMT" [4]",
+			    (PTRTYPE)f);
 		mdelete ( f, sizeof(File), "HttpServer");
 		delete (f); 
 		return sendErrorReply ( s , 404 , "Not Found" );
@@ -1424,7 +1425,8 @@ bool HttpServer::sendReply ( TcpSocket  *s , HttpRequest *r , bool isAdmin) {
 			log("http: got ZET request and am not proxy");
 		// bail
 		if ( g_conf.m_logDebugTcp )
-			log("tcp: deleting file=0x%"PTRFMT" [5]",(PTRTYPE)f);
+			log("tcp: deleting filestate=0x%"PTRFMT" [5]",
+			    (PTRTYPE)f);
 		mdelete ( f, sizeof(File), "HttpServer");
 		delete (f); 
 		g_errno = EBADREQUEST;
@@ -1439,7 +1441,8 @@ bool HttpServer::sendReply ( TcpSocket  *s , HttpRequest *r , bool isAdmin) {
 	char *sendBuf    = (char *) mmalloc ( sendBufSize ,"HttpServer" );
 	if ( ! sendBuf ) { 
 		if ( g_conf.m_logDebugTcp )
-			log("tcp: deleting file=0x%"PTRFMT" [6]",(PTRTYPE)f);
+			log("tcp: deleting filestate=0x%"PTRFMT" [6]",
+			    (PTRTYPE)f);
 		mdelete ( f, sizeof(File), "HttpServer");
 		delete (f); 
 		return sendErrorReply(s,500,mstrerror(g_errno));
@@ -1688,7 +1691,7 @@ void cleanUp ( void *state , TcpSocket *s ) {
 							true );
 	}
 	if ( g_conf.m_logDebugTcp )
-		log("tcp: deleting file=0x%"PTRFMT" fd=%"INT32" [7] "
+		log("tcp: deleting filestate=0x%"PTRFMT" fd=%"INT32" [7] "
 		    "s=0x%"PTRFMT"", (PTRTYPE)f,fd,(PTRTYPE)s);
 	// this should also close f
 	mdelete ( f, sizeof(File), "HttpServer");

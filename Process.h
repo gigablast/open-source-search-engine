@@ -38,11 +38,11 @@ class Process {
 	bool isAnyTreeSaving    ( ) ;
 	bool save2              ( ) ;
 	bool shutdown2          ( ) ;
-	void disableTreeWrites  ( ) ;
-	void enableTreeWrites   ( ) ;
+	void disableTreeWrites  ( bool shuttingDown ) ;
+	void enableTreeWrites   ( bool shuttingDown ) ;
 	bool isRdbDumping       ( ) ;
 	bool isRdbMerging       ( ) ;
-	bool saveRdbTrees       ( bool useThread ) ;
+	bool saveRdbTrees       ( bool useThread , bool shuttingDown ) ;
 	bool saveRdbMaps        ( bool useThread ) ;
 	bool saveRdbCaches      ( bool useThread ) ;
 	bool saveBlockingFiles1 ( ) ;

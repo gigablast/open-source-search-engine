@@ -1332,7 +1332,7 @@ void RdbCache::clearAll ( ) {
 // . this just clears the contents of the cache
 // . used when deleting a collection in Rdb::delColl() and used in
 //   Rdb::updateToRebuild() when updating/setting the rdb to a rebuilt rdb
-/*
+// . try it again now with new 64-bit logic updates (MDW 2/10/2015)
 void RdbCache::clear ( collnum_t collnum ) {
 	// bail if no writing ops allowed now
 	if ( ! g_cacheWritesEnabled ) { char *xx=NULL;*xx=0; }
@@ -1348,7 +1348,6 @@ void RdbCache::clear ( collnum_t collnum ) {
 		*(collnum_t *)m_ptrs[i] = -1;
 	}
 }
-*/
 
 bool RdbCache::load ( ) {
 	return load ( m_dbname );

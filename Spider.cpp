@@ -1,6 +1,16 @@
+// . TODO: do not cache if less than the 20k thing again.
+
+// . TODO: nuke doledb every couple hours.
+//   CollectionRec::m_doledbRefreshRateInSecs. but how would this work
+//   for crawlbot jobs where we got 10,000 collections? i'd turn this off.
+//   we could selectively update certain firstips in doledb that have
+//   been in doledb for a long time.
+//   i'd like to see how many collections are actually active
+//   for diffbot first though.
+
+
+
 // TODO: add m_downloadTimeTable to measure download speed of an IP
-// TODO: consider adding m_titleWeight/m_bodyWeight/ etc. to url filters table.
-//       like maybe make the wikipedia page titles really heavy..
 // TODO: consider a "latestpubdateage" in url filters for pages that are
 //       adding new dates (not clocks) all the time
 
@@ -830,6 +840,8 @@ bool Doledb::init ( ) {
 	int32_t pcmem = 5000000; // g_conf.m_spiderdbMaxDiskPageCacheMem;
 	// keep this low if we are the tmp cluster
 	if ( g_hostdb.m_useTmpCluster ) pcmem = 0;
+	// we no longer dump doledb to disk, Rdb::dumpTree() does not allow it
+	pcmem = 0;
 	// we now use a page cache
 	if ( ! m_pc.init ( "doledb"  , 
 			   RDB_DOLEDB ,
@@ -1049,12 +1061,12 @@ bool tryToDeleteSpiderColl ( SpiderColl *sc , char *msg ) {
 		    (PTRTYPE)sc,(int32_t)sc->m_collnum);
 		return true;
 	}
-	if ( sc->m_msg1.m_mcast.m_inUse ) {
-		log("spider: deleting sc=0x%"PTRFMT" for collnum=%"INT32" "
-		    "waiting2",
-		    (PTRTYPE)sc,(int32_t)sc->m_collnum);
-		return true;
-	}
+	// if ( sc->m_msg1.m_mcast.m_inUse ) {
+	// 	log("spider: deleting sc=0x%"PTRFMT" for collnum=%"INT32" "
+	// 	    "waiting2",
+	// 	    (PTRTYPE)sc,(int32_t)sc->m_collnum);
+	// 	return true;
+	// }
 	if ( sc->m_isLoading ) {
 		log("spider: deleting sc=0x%"PTRFMT" for collnum=%"INT32" "
 		    "waiting3",
@@ -1195,6 +1207,8 @@ CollectionRec *SpiderColl::getCollectionRec ( ) {
 }
 
 SpiderColl::SpiderColl () {
+	m_overflowList = NULL;
+	m_lastOverflowFirstIp = 0;
 	m_deleteMyself = false;
 	m_isLoading = false;
 	m_gettingList1 = false;
@@ -1232,6 +1246,8 @@ int32_t SpiderColl::getTotalOutstandingSpiders ( ) {
 	return sum;
 }
 
+void nukeDoledb ( collnum_t collnum ) ;
+
 // load the tables that we set when m_doInitialScan is true
 bool SpiderColl::load ( ) {
 
@@ -1248,7 +1264,7 @@ bool SpiderColl::load ( ) {
 	}
 
 	// reset this once
-	m_msg1Avail    = true;
+	//m_msg1Avail    = true;
 	m_isPopulating = false;
 
 	// keep it kinda low if we got a ton of collections
@@ -1315,6 +1331,7 @@ bool SpiderColl::load ( ) {
 	BigFile file;
 	file.set ( dir , "waitingtree-saved.dat" , NULL );
 	bool treeExists = file.doesExist() > 0;
+
 	// load the table with file named "THISDIR/saved"
 	if ( treeExists && ! m_waitingTree.fastLoad(&file,&m_waitingMem) ) 
 		err = g_errno;
@@ -1329,10 +1346,21 @@ bool SpiderColl::load ( ) {
 		return log("spider: had error loading initial table: %s",
 			   mstrerror(g_errno));
 
+	// if we hade doledb0001.dat files on disk then nuke doledb
+	// and waiting tree and rebuild now with a tree-only doledb.
+	RdbBase *base = getRdbBase ( RDB_DOLEDB , m_collnum );
+
 	// . do this now just to keep everything somewhat in sync
 	// . we lost dmoz.org and could not get it back in because it was
 	//   in the doleip table but NOT in doledb!!!
 	if ( ! makeDoleIPTable() ) return false;
+
+	// delete the files and doledb-saved.dat and the waitingtree
+	// and set the waitingtree into rebuild mode.
+	if ( base && base->m_numFiles > 0 ) {
+		nukeDoledb ( m_collnum );
+		return true;
+	}
 
 	// otherwise true
 	return true;
@@ -1456,8 +1484,6 @@ char *SpiderColl::getCollName() {
 	return cr->m_coll;
 }
 
-void nukeDoledb ( collnum_t collnum ) ;
-
 //
 // remove all recs from doledb for the given collection
 //
@@ -1468,6 +1494,9 @@ static void nukeDoledbWrapper ( int fd , void *state ) {
 }
 
 void nukeDoledb ( collnum_t collnum ) {
+
+	// in case we changed url filters for this collection #
+	g_spiderLoop.m_winnerListCache.clear ( collnum );
 
 	//WaitEntry *we = (WaitEntry *)state;
 
@@ -1612,6 +1641,8 @@ bool SpiderColl::makeWaitingTree ( ) {
 		if ( g_spiderdb.isSpiderReply ( (key128_t *)rec ) ) continue;
 		// get request
 		SpiderRequest *sreq = (SpiderRequest *)rec;
+		// skip if not assigned to us
+		if ( ! isAssignedToUs ( sreq->m_firstIp ) ) continue;
 		// get first ip
 		int32_t firstIp = sreq->m_firstIp;
 		// skip if in dole ip table
@@ -1634,7 +1665,7 @@ bool SpiderColl::makeWaitingTree ( ) {
 		// add to table now since its in the tree
 		if ( ! m_waitingTable.addKey ( &firstIp , &fakeone ) ) {
 			log("spider: makeWaitTree2: %s",mstrerror(g_errno));
-			m_waitingTree.deleteNode ( wn , true );
+			m_waitingTree.deleteNode3 ( wn , true );
 			//log("sper: 6 del node %"INT32" for %s",wn,iptoa(firstIp));
 			return false;
 		}
@@ -1791,6 +1822,11 @@ void SpiderColl::reset ( ) {
 	m_winnerTable .reset();
 	m_dupCache    .reset();
 
+	if ( m_overflowList ) {
+		mfree ( m_overflowList , OVERFLOWLISTSIZE * 4 ,"olist" );
+		m_overflowList = NULL;
+	}
+
 	// each spider priority in the collection has essentially a cursor
 	// that references the next spider rec in doledb to spider. it is
 	// used as a performance hack to avoid the massive positive/negative
@@ -1898,6 +1934,10 @@ bool SpiderColl::addSpiderReply ( SpiderReply *srep ) {
 	////
 	if ( ! isAssignedToUs ( srep->m_firstIp ) )
 		return true;
+
+	// now just remove it since we only spider our own urls
+	// and doledb is in memory
+	g_spiderLoop.m_lockTable.removeKey ( &lockKey );
 
 	// update the latest siteNumInlinks count for this "site" (repeatbelow)
 	updateSiteNumInlinksTable ( srep->m_siteHash32, 
@@ -2549,7 +2589,7 @@ bool SpiderColl::addToWaitingTree ( uint64_t spiderTimeMS , int32_t firstIp ,
 			    (uint32_t)(spiderTimeMS/1000LL),
 			    iptoa(firstIp));
 		// remove from tree so we can add it below
-		m_waitingTree.deleteNode ( tn , false );
+		m_waitingTree.deleteNode3 ( tn , false );
 		//log("spider: 4 del node %"INT32" for %s",tn,iptoa(firstIp));
 	}
 	else {
@@ -2623,7 +2663,7 @@ bool SpiderColl::addToWaitingTree ( uint64_t spiderTimeMS , int32_t firstIp ,
 	// add to table now since its in the tree
 	if ( ! m_waitingTable.addKey ( &firstIp , &spiderTimeMS ) ) {
 		// remove from tree then
-		m_waitingTree.deleteNode ( wn , false );
+		m_waitingTree.deleteNode3 ( wn , false );
 		//log("spider: 5 del node %"INT32" for %s",wn,iptoa(firstIp));
 		return false;
 	}
@@ -2696,7 +2736,7 @@ int32_t SpiderColl::getNextIpFromWaitingTree ( ) {
 		// these operations should fail if writes have been disabled
 		// and becase the trees/tables for spidercache are saving
 		// in Process.cpp's g_spiderCache::save() call
-		m_waitingTree.deleteNode ( node , true );
+		m_waitingTree.deleteNode3 ( node , true );
 		//log("spdr: 8 del node node %"INT32" for %s",node,iptoa(firstIp));
 		// note it
 		if ( g_conf.m_logDebugSpider )
@@ -3174,7 +3214,7 @@ void SpiderColl::populateDoledbFromWaitingTree ( ) { // bool reentry ) {
 
 	// reset this
 	int32_t maxWinners = (int32_t)MAX_WINNER_NODES;
-	if ( ! m_cr->m_isCustomCrawl ) maxWinners = 1;
+	//if ( ! m_cr->m_isCustomCrawl ) maxWinners = 1;
 
 	if ( m_winnerTree.m_numNodes == 0 &&
 	     ! m_winnerTree.set ( -1 , // fixeddatasize
@@ -3218,6 +3258,10 @@ void SpiderColl::populateDoledbFromWaitingTree ( ) { // bool reentry ) {
 	m_minFutureTimeMS = 0LL;
 
 	m_totalBytesScanned = 0LL;
+
+	m_totalNewSpiderRequests = 0LL;
+
+	m_lastOverflowFirstIp = 0;
 	
 	// . look up in spiderdb otherwise and add best req to doledb from ip
 	// . if it blocks ultimately it calls gotSpiderdbListWrapper() which
@@ -3234,6 +3278,7 @@ void SpiderColl::populateDoledbFromWaitingTree ( ) { // bool reentry ) {
 	goto loop;
 }
 
+/*
 // replace this func with the one above...
 static void doledWrapper ( void *state ) {
 	SpiderColl *THIS = (SpiderColl *)state;
@@ -3269,6 +3314,7 @@ static void doledWrapper ( void *state ) {
 	// . re-entry is true because we just got the msg4 reply
 	THIS->populateDoledbFromWaitingTree ( );
 }
+*/
 
 key128_t makeUfnTreeKey ( int32_t      firstIp      ,
 			  int32_t      priority     ,
@@ -3303,7 +3349,7 @@ key128_t makeUfnTreeKey ( int32_t      firstIp      ,
 // key bitmap (192 bits):
 //
 // ffffffff ffffffff ffffffff ffffffff  f=firstIp
-// pppppppp pppppppp HHHHHHHH HHHHHHHH  p=priority  H=hopcount
+// pppppppp pppppppp HHHHHHHH HHHHHHHH  p=255-priority  H=hopcount
 // tttttttt tttttttt tttttttt tttttttt  t=spiderTimeMS
 // tttttttt tttttttt tttttttt tttttttt  h=urlHash48
 // hhhhhhhh hhhhhhhh hhhhhhhh hhhhhhhh 
@@ -3407,6 +3453,54 @@ bool SpiderColl::evalIpLoop ( ) {
 	// sanity
 	if ( m_scanningIp == 0 || m_scanningIp == -1 ) { char *xx=NULL;*xx=0;}
 
+	// if this ip is in the winnerlistcache use that. it saves
+	// us a lot of time.
+	key_t cacheKey;
+	cacheKey.n0 = m_scanningIp;
+	cacheKey.n1 = 0;
+	char *doleBuf = NULL;
+	int32_t doleBufSize;
+	RdbCache *wc = &g_spiderLoop.m_winnerListCache;
+	time_t cachedTimestamp = 0;
+	bool inCache = false;
+	bool useCache = true;
+	CollectionRec *cr = g_collectiondb.getRec ( m_collnum );
+	// if doing site or page quotes for the sitepages or domainpages
+	// url filter expressions, we can't muck with the cache because
+	// we end up skipping the counting part.
+	if ( ! cr )
+		useCache = false;
+	if ( cr && cr->m_urlFiltersHavePageCounts )
+		useCache = false;
+	if ( m_countingPagesIndexed )
+		useCache = false;
+	if ( useCache )
+		inCache = wc->getRecord ( m_collnum     ,
+					  (char *)&cacheKey ,
+					  &doleBuf,
+					  &doleBufSize  ,
+					  false, // doCopy?
+					  120, // maxAge, 120 seconds
+					  true ,// incCounts
+					  &cachedTimestamp , // rec timestamp
+					  true );  // promote rec?
+	// doleBuf could be NULL i guess...
+	if ( inCache && doleBufSize > 0 ) {
+		if ( g_conf.m_logDebugSpider )
+			log("spider: GOT %"INT32" bytes of SpiderRequests "
+			    "from winnerlistcache for ip %s",doleBufSize,
+			    iptoa(m_scanningIp));
+		// set own to false so it doesn't get freed
+		m_doleBuf.setBuf ( doleBuf , 
+				   doleBufSize ,
+				   doleBufSize , 
+				   false , // ownData?
+				   0 ); // encoding. doesn't matter.
+		// now add the first rec m_doleBuf into doledb's tree
+		// and re-add the rest back to the cache with the same key.
+		return addDoleBufIntoDoledb ( true , cachedTimestamp );
+	}
+
  top:
 
 	// did our collection rec get deleted? since we were doing a read
@@ -3449,8 +3543,8 @@ bool SpiderColl::evalIpLoop ( ) {
 
 	// if we started reading, then assume we got a fresh list here
 	if ( g_conf.m_logDebugSpider )
-		log("spider: back from msg5 spiderdb read2 of %"INT32" bytes (cn=%"INT32")",
-		    m_list.m_listSize,(int32_t)m_collnum);
+		log("spider: back from msg5 spiderdb read2 of %"INT32" bytes "
+		    "(cn=%"INT32")",m_list.m_listSize,(int32_t)m_collnum);
 
 
 	// . set the winning request for all lists we read so far
@@ -3719,7 +3813,7 @@ bool SpiderColl::scanListForWinners ( ) {
 		    sb.getBufStart(),
 		    iptoa(firstIp));
 		// delete the exact node #
-		m_waitingTree.deleteNode ( wn , false );
+		m_waitingTree.deleteNode3 ( wn , false );
 	}
 	*/
 	//char *xx=NULL;*xx=0; }
@@ -3821,12 +3915,19 @@ bool SpiderColl::scanListForWinners ( ) {
 		}
 		// cast it
 		SpiderRequest *sreq = (SpiderRequest *)rec;
+
+		// skip if our twin or another shard should handle it
+		if ( ! isAssignedToUs ( sreq->m_firstIp ) )
+			continue;
+
+		int64_t uh48 = sreq->getUrlHash48();
+
 		// . skip if our twin should add it to doledb
 		// . waiting tree only has firstIps assigned to us so
 		//   this should not be necessary
 		//if ( ! isAssignedToUs ( sreq->m_firstIp ) ) continue;
 		// null out srep if no match
-		if ( srep && srepUh48 != sreq->getUrlHash48() ) srep = NULL;
+		if ( srep && srepUh48 != uh48 ) srep = NULL;
 		// if we are doing parser test, ignore all but initially
 		// injected requests. NEVER DOLE OUT non-injected urls
 		// when doing parser test
@@ -3853,17 +3954,23 @@ bool SpiderColl::scanListForWinners ( ) {
 			continue;
 		}
 
+		// if a replie-less new url spiderrequest count it
+		if ( ! srep && m_lastSreqUh48 != uh48 )
+			m_totalNewSpiderRequests++;
+
+		m_lastSreqUh48 = uh48;
+
 		// only add firstip if manually added and not fake
 		
 
 		//
 		// just calculating page counts? if the url filters are based
 		// on the # of pages indexed per ip or subdomain/site then
-		// we have to maintain a page count table.
+		// we have to maintain a page count table. sitepages.
 		//
 		if ( m_countingPagesIndexed ) { //&& sreq->m_fakeFirstIp ) {
 			// get request url hash48 (jez= 220459274533043 )
-			int64_t uh48 = sreq->getUrlHash48();
+			//int64_t uh48 = sreq->getUrlHash48();
 			// do not repeatedly page count if we just have
 			// a single fake firstip request. this just adds
 			// an entry to the table that will end up in
@@ -3909,6 +4016,16 @@ bool SpiderColl::scanListForWinners ( ) {
 			m_localTable.addScore(&sreq->m_firstIp,1);
 			m_localTable.addScore(&sreq->m_siteHash32,1);
 			m_localTable.addScore(&sreq->m_domHash32,1);
+			// debug
+			if ( ! g_conf.m_logDebugSpider ) continue;
+			int32_t *valPtr ;
+			int32_t fip = sreq->m_firstIp;
+			int32_t sh32 = sreq->m_siteHash32;
+			valPtr = (int32_t *)m_localTable.getValue(&sh32);
+			log("spider: sitequota: "
+			    "got %"INT32" indexed docs for site from "
+			    "firstip of %s from url %s",
+			    *valPtr,iptoa(fip),sreq->m_url);
 			continue;
 		}
 
@@ -4209,7 +4326,7 @@ bool SpiderColl::scanListForWinners ( ) {
 			continue;
 		}
 
-		int64_t uh48 = sreq->getUrlHash48();
+		//int64_t uh48 = sreq->getUrlHash48();
 
 		// make key
 		key192_t wk = makeWinnerTreeKey( firstIp ,
@@ -4217,6 +4334,9 @@ bool SpiderColl::scanListForWinners ( ) {
 						 sreq->m_hopCount,
 						 spiderTimeMS ,
 						 uh48 );
+
+		// if ( uh48 == 110582802025376LL )
+		// 	log("hey");
 
 		// if this url is already in the winnerTree then either we 
 		// replace it or we skip ourselves. 
@@ -4233,27 +4353,28 @@ bool SpiderColl::scanListForWinners ( ) {
 			oldwk = (key192_t *)m_winnerTable.
 				getDataFromSlot ( winSlot );
 			// are we lower priority? (or equal)
+			// smaller keys are HIGHER priority.
 			if(KEYCMP((char *)&wk,(char *)oldwk,
-				  sizeof(key192_t))<=0) 
+				  sizeof(key192_t))>=0) 
 				continue;
 			// from table too. no it's a dup uh48!
 			//m_winnerTable.deleteKey ( &uh48 );
 			// otherwise we supplant it. remove old key from tree.
-			m_winnerTree.deleteNode ( 0 , oldwk );
+			m_winnerTree.deleteNode ( 0 , (char *)oldwk , false);
 			// supplant in table and tree... just add below...
 		}
 
 		// get the top 100 spider requests by priority/time/etc.
 		int32_t maxWinners = (int32_t)MAX_WINNER_NODES; // 40
-		if ( ! m_cr->m_isCustomCrawl ) maxWinners = 1;
+		//if ( ! m_cr->m_isCustomCrawl ) maxWinners = 1;
 
 		// only put 40 urls from the same firstIp into doledb if
 		// we have a lot of urls in our spiderdb already.
-		if ( m_totalBytesScanned < 200000 ) maxWinners = 1;
+		// mdw: for testing take this out!
+		//if ( m_totalBytesScanned < 200000 ) maxWinners = 1;
 		// sanity. make sure read is somewhat hefty for our 
 		// maxWinners=1 thing
 		if ( (int32_t)SR_READ_SIZE < 500000 ) { char *xx=NULL;*xx=0; }
-
 
 		// only compare to min winner in tree if tree is full
 		if ( m_winnerTree.getNumUsedNodes() >= maxWinners ) {
@@ -4301,7 +4422,7 @@ bool SpiderColl::scanListForWinners ( ) {
 			// from table too
 			m_winnerTable.removeKey ( &m_tailUh48 );
 			// delete the tail so new spiderrequest can enter
-			m_winnerTree.deleteNode ( tailNode , true );
+			m_winnerTree.deleteNode3 ( tailNode , true );
 
 		}
 
@@ -4362,9 +4483,71 @@ bool SpiderColl::scanListForWinners ( ) {
 				      (char *)newMem ,
 				      need );
 
+		// log("adding wk uh48=%llu #usednodes=%i",
+		//     uh48,m_winnerTree.m_numUsedNodes);
+
 		// sanity
 		//SpiderRequest *sreq2 = (SpiderRequest *)m_winnerTree.
 		//getData ( nn );
+
+		// //////////////////////
+		// // MDW dedup test
+		// HashTableX dedup;
+		// int32_t ntn = m_winnerTree.getNumNodes();
+		// char dbuf[3*MAX_WINNER_NODES*(8+1)];
+		// dedup.set ( 8,
+		// 	    0,
+		// 	    (int32_t)2*ntn, // # slots to initialize to
+		// 	    dbuf,
+		// 	    (int32_t)(3*MAX_WINNER_NODES*(8+1)),
+		// 	    false,
+		// 	    MAX_NICENESS,
+		// 	    "windt");
+		// for ( int32_t node = m_winnerTree.getFirstNode() ; 
+		//       node >= 0 ; 
+		//       node = m_winnerTree.getNextNode ( node ) ) {
+		// // get data for that
+		// SpiderRequest *sreq2;
+		// sreq2 = (SpiderRequest *)m_winnerTree.getData ( node );
+		// // parse it up
+		// int32_t winIp;
+		// int32_t winPriority;
+		// int32_t winHopCount;
+		// int64_t winSpiderTimeMS;
+		// int64_t winUh48;
+		// key192_t *winKey = (key192_t *)m_winnerTree.getKey ( node );
+		// parseWinnerTreeKey ( winKey ,
+		// 		     &winIp ,
+		// 		     &winPriority,
+		// 		     &winHopCount,
+		// 		     &winSpiderTimeMS ,
+		// 		     &winUh48 );
+		// // sanity
+		//if(winUh48 != sreq2->getUrlHash48() ) { char *xx=NULL;*xx=0;}
+		// // make the doledb key
+		// key_t doleKey = g_doledb.makeKey ( winPriority,
+		// 				   // convert to secs from ms
+		// 				   winSpiderTimeMS / 1000     ,
+		// 				   winUh48 ,
+		// 				   false                    );
+		// // dedup. if we add dups the problem is is that they
+		// // overwrite the key in doledb yet the doleiptable count
+		// // remains undecremented and doledb is empty and never
+		// // replenished because the firstip can not be added to
+		// // waitingTree because doleiptable count is > 0. this was
+		// // causing spiders to hang for collections. i am not sure
+		// // why we should be getting dups in winnertree because they
+		// // have the same uh48 and that is the key in the tree.
+		// if ( dedup.isInTable ( &winUh48 ) ) {
+		// 	log("spider: got dup uh48=%"UINT64" dammit", winUh48);
+		// 	char *xx=NULL;*xx=0;
+		// 	continue;
+		// }
+		// // do not allow dups
+		// dedup.addKey ( &winUh48 );
+		// }
+		// // end dedup test
+		//////////////////////////
 
 		// set new tail priority and time for next compare
 		if ( m_winnerTree.getNumUsedNodes() >= maxWinners ) {
@@ -4503,20 +4686,99 @@ bool SpiderColl::scanListForWinners ( ) {
 	// if read is not yet done, save the reply in case next list needs it
 	if ( srep ) { // && ! m_isReadDone ) {
 		int32_t rsize = srep->getRecSize();
-		if ( rsize > (int32_t)MAX_SP_REPLY_SIZE ) { char *xx=NULL;*xx=0; }
+		if ( rsize > (int32_t)MAX_SP_REPLY_SIZE){char *xx=NULL;*xx=0; }
 		gbmemcpy ( m_lastReplyBuf, srep, rsize );
 		m_lastReplyValid = true;
 	}
 
 	// debug info
 	if ( g_conf.m_logDebugSpider )
-		log("spider: Checked list of %"INT32" spiderdb bytes (%"INT32" recs) "
+		log("spider: Checked list of %"INT32" spiderdb "
+		    "bytes (%"INT32" recs) "
 		    "for winners "
 		    "for firstip=%s. winnerTreeUsedNodes=%"INT32"",
 		    list->getListSize(),recCount,iptoa(m_scanningIp),
 		    m_winnerTree.getNumUsedNodes());
 	// reset any errno cuz we're just a cache
 	g_errno = 0;
+
+
+	/////
+	//
+	// BEGIN maintain firstip overflow list
+	//
+	/////
+	bool overflow = false;
+	// don't add any more outlinks to this firstip after we
+	// have 10M spider requests for it.
+	if ( m_totalNewSpiderRequests > 10000000 )
+		overflow = true;
+
+	// need space
+	if ( overflow && ! m_overflowList ) {
+		int32_t need = OVERFLOWLISTSIZE*4;
+		m_overflowList = (int32_t *)mmalloc(need,"list");
+		m_overflowList[0] = 0;
+	}
+	//
+	// ensure firstip is in the overflow list if we overflowed
+	int32_t emptySlot = -1;
+	bool found = false;
+	int32_t oi;
+	// if we dealt with this last round, we're done
+	if ( m_lastOverflowFirstIp == firstIp )
+		return true;
+	m_lastOverflowFirstIp = firstIp;
+	if ( g_conf.m_logDebugSpider && overflow )
+		log("spider: got overflow for firstip %s",
+		    iptoa(firstIp));
+	for ( oi = 0 ; ; oi++ ) {
+		// sanity
+		if ( ! m_overflowList ) break;
+		// an ip of zero is end of the list
+		if ( ! m_overflowList[oi] ) break;
+		// if already in there, we are done
+		if ( m_overflowList[oi] == firstIp ) {
+			found = true;
+			break;
+		}
+		// -1 means empty slot
+		if ( m_overflowList[oi] == -1 ) emptySlot = oi;
+	}
+	// if we need to add it...
+	if ( overflow && ! found && m_overflowList ) {
+		// take the empty slot if there is one
+		if ( emptySlot >= 0 )
+			m_overflowList[emptySlot] = firstIp;
+		// or add to new slot. this is #defined to 200 last check
+		else if ( oi+1 < OVERFLOWLISTSIZE ) {
+			m_overflowList[oi] = firstIp;
+			m_overflowList[oi+1] = 0;
+		}
+		else 
+			log("spider: could not add firstip %s to "
+			    "overflow list, full.", iptoa(firstIp));
+	}
+	// ensure firstip is NOT in the overflow list if we are ok
+	for ( int32_t oi2 = 0 ; ! overflow ; oi2++ ) {
+		// sanity
+		if ( ! m_overflowList ) break;
+		// an ip of zero is end of the list
+		if ( ! m_overflowList[oi2] ) break;
+		// skip if not a match
+		if ( m_overflowList[oi2] != firstIp ) continue;
+		// take it out of list
+		m_overflowList[oi2] = -1;
+		break;
+	}
+	/////
+	//
+	// END maintain firstip overflow list
+	//
+	/////
+		
+
+
 
 	// ok we've updated m_bestRequest!!!
 	return true;
@@ -4688,6 +4950,11 @@ bool SpiderColl::addWinnersIntoDoledb ( ) {
 		}
 	}
 
+	return addDoleBufIntoDoledb ( false , 0 );
+}
+
+bool SpiderColl::addDoleBufIntoDoledb ( bool isFromCache ,
+					uint32_t cachedTimestamp ) {
 
 	////////////////////
 	//
@@ -4697,6 +4964,8 @@ bool SpiderColl::addWinnersIntoDoledb ( ) {
 	// a future time if it is not yet due for spidering.
 	//
 	////////////////////
+
+	int32_t firstIp = m_waitingTreeKey.n0 & 0xffffffff;
 
 	// sanity check. how did this happen? it messes up our crawl!
 	// maybe a doledb add went through? so we should add again?
@@ -4753,7 +5022,7 @@ bool SpiderColl::addWinnersIntoDoledb ( ) {
 	// if best request has a future spiderTime, at least update
 	// the wait tree with that since we will not be doling this request
 	// right now.
-	if ( m_winnerTree.isEmpty() && m_minFutureTimeMS ) {
+	if ( m_winnerTree.isEmpty() && m_minFutureTimeMS && ! isFromCache ) {
 
 		// if in the process of being added to doledb or in doledb...
 		if ( m_doleIpTable.isInTable ( &firstIp ) ) {
@@ -4780,7 +5049,7 @@ bool SpiderColl::addWinnersIntoDoledb ( ) {
 		//int32_t wn = m_waitingTree.getNode(0,(char *)&m_waitingTreeKey);
 		//if ( wn < 0 ) { char *xx=NULL;*xx=0; }
 		if ( wn >= 0 ) {
-			m_waitingTree.deleteNode (wn,false );
+			m_waitingTree.deleteNode3 (wn,false );
 			//log("spdr: 2 del node %"INT32" for %s",wn,iptoa(firstIp));
 		}
 
@@ -4856,7 +5125,7 @@ bool SpiderColl::addWinnersIntoDoledb ( ) {
 	*/
 
 	// how did this happen?
-	if ( ! m_msg1Avail ) { char *xx=NULL;*xx=0; }
+	//if ( ! m_msg1Avail ) { char *xx=NULL;*xx=0; }
 
 	// add it to doledb ip table now so that waiting tree does not
 	// immediately get another spider request from this same ip added
@@ -4868,6 +5137,7 @@ bool SpiderColl::addWinnersIntoDoledb ( ) {
 	//if ( ! addToDoleTable ( m_bestRequest ) ) return true;
 	// . MDW: now we have a list of doledb records in a SafeBuf:
 	// . scan the requests in safebuf
+	int32_t skipSize = 0;
 	for ( char *p = m_doleBuf.getBufStart() ; p < m_doleBuf.getBuf() ; ) {
 		// first is doledbkey
 		p += sizeof(key_t);
@@ -4878,9 +5148,14 @@ bool SpiderColl::addWinnersIntoDoledb ( ) {
 		sreq3 = (SpiderRequest *)p;
 		// point "p" to next spiderrequest
 		p += sreq3->getRecSize();
+		// for caching logic below, set this
+		skipSize = sizeof(key_t) + 4 + sreq3->getRecSize();
 		// process sreq3 my incrementing the firstip count in 
 		// m_doleIpTable
 		if ( ! addToDoleTable ( sreq3 ) ) return true;	
+
+		// only add the top key for now!
+		break;
 
 		// this logic is now in addToDoleTable()
 		// . if it was empty it is no longer
@@ -4891,6 +5166,30 @@ bool SpiderColl::addWinnersIntoDoledb ( ) {
 		//if ( bp <  0                     ) { char *xx=NULL;*xx=0; }
 		//if ( bp >= MAX_SPIDER_PRIORITIES ) { char *xx=NULL;*xx=0; }
 		//m_isDoledbEmpty [ bp ] = 0;
+	}
+
+	// now cache the REST of the spider requests to speed up scanning.
+	// better than adding 400 recs per firstip to doledb because
+	// msg5's call to RdbTree::getList() is way faster.
+	// even if m_doleBuf is from the cache, re-add it to lose the
+	// top rec.
+	// allow this to add a 0 length record otherwise we keep the same
+	// old url in here and keep spidering it over and over again!
+	if ( skipSize && m_doleBuf.length() - skipSize >= 0 ) {
+		key_t cacheKey;
+		cacheKey.n0 = firstIp;
+		cacheKey.n1 = 0;
+		RdbCache *wc = &g_spiderLoop.m_winnerListCache;
+		if ( g_conf.m_logDebugSpider )
+			log("spider: adding %"INT32" bytes of SpiderRequests "
+			    "to winnerlistcache for ip %s",
+			    m_doleBuf.length()-skipSize,iptoa(firstIp));
+		// inherit timestamp. if 0, RdbCache will set to current time
+		wc->addRecord ( m_collnum,
+				(char *)&cacheKey,
+				m_doleBuf.getBufStart() + skipSize ,
+				m_doleBuf.length() - skipSize ,
+				cachedTimestamp );
 	}
 
 	// and the whole thing is no longer empty
@@ -4920,14 +5219,28 @@ bool SpiderColl::addWinnersIntoDoledb ( ) {
 
 	m_msg4Start = gettimeofdayInMilliseconds();
 
-	RdbList *tmpList = &m_msg1.m_tmpList;
+	//RdbList *tmpList = &m_msg1.m_tmpList;
 
-	tmpList->setFromSafeBuf ( &m_doleBuf , RDB_DOLEDB );
+	// keep it on stack now that doledb is tree-only
+	RdbList tmpList;
+
+	// only add one doledb record at a time now since we
+	// have the winnerListCache
+	m_doleBuf.setLength ( skipSize );
+
+	tmpList.setFromSafeBuf ( &m_doleBuf , RDB_DOLEDB );
+
+	// now that doledb is tree-only and never dumps to disk, just
+	// add it directly
+	g_doledb.m_rdb.addList ( m_collnum , &tmpList , MAX_NICENESS );
+	// and it happens right away. just add it locally.
+	bool status = true;
 
 	// . use msg4 to transmit our guys into the rdb, RDB_DOLEDB
 	// . no, use msg1 for speed, so we get it right away!!
 	// . we' already incremented doleiptable counts... so we need to
 	//   make sure this happens!!!
+	/*
 	bool status = m_msg1.addList ( tmpList ,
 				       RDB_DOLEDB    ,
 				       m_collnum    ,
@@ -4939,6 +5252,7 @@ bool SpiderColl::addWinnersIntoDoledb ( ) {
 				       MAX_NICENESS);
 	// if it blocked set this to true so we do not reuse it
 	if ( ! status ) m_msg1Avail = false;
+	*/
 
 	int32_t storedFirstIp = (m_waitingTreeKey.n0) & 0xffffffff;
 
@@ -5249,12 +5563,18 @@ void SpiderLoop::reset() {
 	m_list.freeList();
 	m_lockTable.reset();
 	m_lockCache.reset();
+	m_winnerListCache.reset();
 }
 
 void updateAllCrawlInfosSleepWrapper ( int fd , void *state ) ;
 
 void SpiderLoop::startLoop ( ) {
-	m_cri     = 0;
+	//m_cri     = 0;
+	m_crx = NULL;
+	m_activeListValid = false;
+	m_activeList = NULL;
+	m_recalcTime = 0;
+	m_recalcTimeValid = false;
 	// falsify this flag
 	m_outstanding1 = false;
 	// not flushing
@@ -5282,6 +5602,16 @@ void SpiderLoop::startLoop ( ) {
 				  "lockcache", // dbname
 				  false  ) )
 		log("spider: failed to init lock cache. performance hit." );
+
+
+	if ( ! m_winnerListCache.init ( 20000000 , // maxcachemem, 20MB
+					-1     , // fixedatasize
+					false , // supportlists?
+					10000  , // maxcachenodes
+					false , // use half keys
+					"winnerspidercache", // dbname
+					false  ) )
+		log("spider: failed to init winnerlist cache. slows down.");
 
 	// dole some out
 	//g_spiderLoop.doleUrls1();
@@ -5667,6 +5997,8 @@ void SpiderLoop::spiderDoledUrls ( ) {
 	// doledb list, so do not try to read more just yet until we know
 	// if we got the lock or not
 	if ( m_msg12.m_gettingLocks ) {
+		// this should no longer happen
+		char *xx=NULL; *xx=0;
 		// make a note, maybe this is why spiders are deficient?
 		if ( g_conf.m_logDebugSpider )
 			log("spider: failed to get doledb rec to spider: "
@@ -5679,28 +6011,79 @@ void SpiderLoop::spiderDoledUrls ( ) {
 
  collLoop:
 
+	uint32_t nowGlobal = (uint32_t)getTimeGlobal();
+
+	if ( nowGlobal >= m_recalcTime && m_recalcTimeValid )
+		m_activeListValid = false;
+
+	// we set m_activeListValid to false when enabling/disabling spiders,
+	// when rebuilding url filters in Collectiondb.cpp rebuildUrlFilters()
+	// and when updating the site list in updateSiteList(). all of these
+	// could possible make an inactive collection active again, or vice
+	// versa. also when deleting a collection in Collectiondb.cpp. this
+	// keeps the below loop fast when we have thousands of collections
+	// and most are inactive or empty/deleted.
+	if ( ! m_activeListValid ) {
+		buildActiveList();
+		m_crx = m_activeList;
+	}
+
+	// start again at head
+	if ( ! m_crx ) m_crx = m_activeList;
+
+	bool firstTime = true;
+
+	// detect overlap
+	CollectionRec *start = m_crx;
+
 	// log this now
 	//logf(LOG_DEBUG,"spider: getting collnum to dole from");
 	// get this
 	m_sc = NULL;
 	// avoid infinite loops
-	int32_t count = g_collectiondb.m_numRecs;
+	//int32_t count = g_collectiondb.m_numRecs;
 	// set this in the loop
 	CollectionRec *cr = NULL;
-	uint32_t nowGlobal = 0;
+	//uint32_t nowGlobal = 0;
+	nowGlobal = 0;
 	// debug
 	//log("spider: m_cri=%"INT32"",(int32_t)m_cri);
 	// . get the next collection to spider
 	// . just alternate them
-	for ( ; count > 0 ; m_cri++ , count-- ) {
+	//for ( ; count > 0 ; m_cri++ , count-- ) {
+
+ subloop:
+
+	// if we hit the end of the list, wrap it around
+	if ( ! m_crx ) m_crx = m_activeList;
+
+	// i guess return at the end of the linked list
+	if ( m_crx == start && ! firstTime ) return;
+
+	firstTime = false;
+
+	// if a collection got deleted re-calc the active list so
+	// we don't core trying to access a delete collectionrec.
+	// i'm not sure if this can happen here but i put this in as a 
+	// precaution.
+	if ( ! m_activeListValid ) goto collLoop;
+
+	// return now if list is just empty
+	if ( ! m_activeList ) return;
+
+	cr = m_crx;
+
+	// advance for next time we call goto subloop;
+	m_crx = m_crx->m_nextActive;
+
 		// wrap it if we should
-		if ( m_cri >= g_collectiondb.m_numRecs ) m_cri = 0;
+		//if ( m_cri >= g_collectiondb.m_numRecs ) m_cri = 0;
 		// get rec
-		cr = g_collectiondb.m_recs[m_cri];
+		//cr = g_collectiondb.m_recs[m_cri];
 		// skip if gone
-		if ( ! cr ) continue;
+	        if ( ! cr ) goto subloop;
 		// stop if not enabled
-		if ( ! cr->m_spideringEnabled ) continue;
+		if ( ! cr->m_spideringEnabled ) goto subloop;
 
 		// hit crawl round max?
 		if ( cr->m_maxCrawlRounds > 0 &&
@@ -5716,7 +6099,7 @@ void SpiderLoop::spiderDoledUrls ( ) {
 				cr->m_needsSave = true;
 				cr->m_spiderStatus = SP_MAXROUNDS;
 			}
-			continue;
+			goto subloop;
 		}
 
 		// hit pages to crawl max?
@@ -5736,7 +6119,7 @@ void SpiderLoop::spiderDoledUrls ( ) {
 				cr->m_needsSave = true;
 				cr->m_spiderStatus = SP_MAXTOCRAWL;
 			}
-			continue;
+			goto subloop;
 		}
 
 		// hit pages to process max?
@@ -5754,7 +6137,7 @@ void SpiderLoop::spiderDoledUrls ( ) {
 				cr->m_needsSave = true;
 				cr->m_spiderStatus = SP_MAXTOPROCESS;
 			}
-			continue;
+			goto subloop;
 		}
 
 		// int16_tcut
@@ -5775,12 +6158,12 @@ void SpiderLoop::spiderDoledUrls ( ) {
 		//	continue;
 
 		// get the spider collection for this collnum
-		m_sc = g_spiderCache.getSpiderColl(m_cri);
+		m_sc = g_spiderCache.getSpiderColl(cr->m_collnum);//m_cri);
 		// skip if none
-		if ( ! m_sc ) continue;
+		if ( ! m_sc ) goto subloop;
 		// skip if we completed the doledb scan for every spider
 		// priority in this collection
-		if ( m_sc->m_didRound ) continue;
+		if ( m_sc->m_didRound ) goto subloop;
 		// set current time, synced with host #0
 		nowGlobal = (uint32_t)getTimeGlobal();
 
@@ -5813,7 +6196,7 @@ void SpiderLoop::spiderDoledUrls ( ) {
 		// . if m_collectiveRespiderFrequency was set to 0.0 then
 		//   PageCrawlBot.cpp also sets m_roundStartTime to 0.
 		//
-		if ( nowGlobal < cr->m_spiderRoundStartTime ) continue;
+		if ( nowGlobal < cr->m_spiderRoundStartTime ) goto subloop;
 
 		// if populating this collection's waitingtree assume
 		// we would have found something to launch as well. it might
@@ -5847,13 +6230,13 @@ void SpiderLoop::spiderDoledUrls ( ) {
 		//	log("spider: has %"INT32" spiders out",m_sc->m_spidersOut);
 		// obey max spiders per collection too
 		if ( m_sc->m_spidersOut >= maxSpiders )
-			continue;
+			goto subloop;
 
 		// int16_tcut
 		SpiderColl *sc = cr->m_spiderColl;
 
 		if ( sc && sc->m_doleIpTable.isEmpty() )
-			continue;
+			goto subloop;
 
 		/*
 		// . HACK. 
@@ -5886,17 +6269,17 @@ void SpiderLoop::spiderDoledUrls ( ) {
 			continue;
 		*/
 		// ok, we are good to launch a spider for coll m_cri
-		break;
-	}
+		//break;
+		//}
 	
 	// if none, bail, wait for sleep wrapper to re-call us later on
-	if ( count == 0 ) return;
+	//if ( count == 0 ) return;
 
 	// sanity check
 	if ( nowGlobal == 0 ) { char *xx=NULL;*xx=0; }
 
 	// sanity check
-	if ( m_cri >= g_collectiondb.m_numRecs ) { char *xx=NULL;*xx=0; }
+	//if ( m_cri >= g_collectiondb.m_numRecs ) { char *xx=NULL;*xx=0; }
 
 	// grab this
 	//collnum_t collnum = m_cri;
@@ -5945,8 +6328,9 @@ void SpiderLoop::spiderDoledUrls ( ) {
 
  loop:
 
-	// int16_tcut
-	CrawlInfo *ci = &cr->m_localCrawlInfo;
+	// shortcut
+	//CrawlInfo *ci = &cr->m_localCrawlInfo;
+	ci = &cr->m_localCrawlInfo;
 
 	// bail if waiting for lock reply, no point in reading more
 	if ( m_msg12.m_gettingLocks ) {
@@ -6336,7 +6720,7 @@ bool SpiderLoop::gotDoledbList2 ( ) {
 		log("spider: setting pri2=%"INT32" queue doledb nextkey to "
 		    "%s (pri=%"INT32")",
 		    m_sc->m_pri2,KEYSTR(&m_sc->m_nextDoledbKey,12),pri4);
-		if ( pri4 != m_sc->m_pri2 ) { char *xx=NULL;*xx=0; }
+		//if ( pri4 != m_sc->m_pri2 ) { char *xx=NULL;*xx=0; }
 	}
 
 	// update next doledbkey for this priority to avoid having to
@@ -6884,6 +7268,61 @@ bool SpiderLoop::spiderUrl9 ( SpiderRequest *sreq ,
 	//	return spiderUrl2();
 	//}
 	
+	// count it
+	m_processed++;
+
+	// now we just take it out of doledb instantly
+	int32_t node = g_doledb.m_rdb.m_tree.deleteNode(m_collnum,
+							(char *)m_doledbKey,
+							true);
+	if ( node == -1 ) { char *xx=NULL;*xx=0; }
+
+	// now remove from doleiptable since we removed from doledb
+	m_sc->removeFromDoledbTable ( sreq->m_firstIp );
+
+	// DO NOT add back to waiting tree if max spiders
+	// out per ip was 1 OR there was a crawldelay. but better
+	// yet, take care of that in the winReq code above.
+
+	// . now add to waiting tree so we add another spiderdb
+	//   record for this firstip to doledb
+	// . true = callForScan
+	// . do not add to waiting tree if we have enough outstanding
+	//   spiders for this ip. we will add to waiting tree when
+	//   we receive a SpiderReply in addSpiderReply()
+	if ( //sc && //out < cq->m_maxSpidersOutPerIp &&
+	     // this will just return true if we are not the 
+	     // responsible host for this firstip
+	     // DO NOT populate from this!!! say "false" here...
+	     ! m_sc->addToWaitingTree ( 0 , sreq->m_firstIp, false ) &&
+	     // must be an error...
+	     g_errno ) {
+		char *msg = "FAILED TO ADD TO WAITING TREE";
+		log("spider: %s %s",msg,mstrerror(g_errno));
+		//us->sendErrorReply ( udpSlot , g_errno );
+		//return;
+	}
+
+
+	// . add it to lock table to avoid respider, removing from doledb
+	//   is not enough because we re-add to doledb right away
+	// . return true on error here
+	HashTableX *ht = &g_spiderLoop.m_lockTable;
+	UrlLock tmp;
+	tmp.m_hostId = g_hostdb.m_myHost->m_hostId;
+	tmp.m_timestamp = 0;
+	tmp.m_expires = 0;
+	tmp.m_firstIp = m_sreq->m_firstIp;
+	tmp.m_spiderOutstanding = 0;
+	tmp.m_confirmed = 1;
+	tmp.m_collnum = m_collnum;
+	if ( ! ht->addKey ( &lockKeyUh48 , &tmp ) )
+		return true;
+
+	// now do it. this returns false if it would block, returns true if it
+	// would not block. sets g_errno on error. it spiders m_sreq.
+	return spiderUrl2 ( );
+
 	// flag it so m_sreq does not "disappear"
 	m_msg12.m_gettingLocks = true;
 
@@ -7369,6 +7808,9 @@ bool Msg12::getLocks ( int64_t uh48, // probDocId ,
 	// ensure not in use. not msg12 replies outstanding.
 	if ( m_numRequests != m_numReplies ) { char *xx=NULL;*xx=0; }
 
+	// no longer use this
+	char *xx=NULL;*xx=0;
+
 	// do not use locks for injections
 	//if ( m_sreq->m_isInjecting ) return true;
 	// get # of hosts in each mirror group
@@ -7527,6 +7969,10 @@ void rejuvenateIPWrapper ( void *state ) {
 
 // returns true if all done, false if waiting for more replies
 bool Msg12::gotLockReply ( UdpSlot *slot ) {
+
+	// no longer use this
+	char *xx=NULL;*xx=0;
+
 	// got reply
 	m_numReplies++;
 	// don't let udpserver free the request, it's our m_request[]
@@ -7703,6 +8149,9 @@ bool Msg12::removeAllLocks ( ) {
 	// ensure not in use. not msg12 replies outstanding.
 	if ( m_numRequests != m_numReplies ) { char *xx=NULL;*xx=0; }
 
+	// no longer use this
+	char *xx=NULL;*xx=0;
+
 	// skip if injecting
 	//if ( m_sreq->m_isInjecting ) return true;
 	if ( g_conf.m_logDebugSpider )
@@ -7774,6 +8223,9 @@ bool Msg12::confirmLockAcquisition ( ) {
 
 	// ensure not in use. not msg12 replies outstanding.
 	if ( m_numRequests != m_numReplies ) { char *xx=NULL;*xx=0; }
+
+	// no longer use this
+	char *xx=NULL;*xx=0;
 
 	// we are now removing 
 	m_confirming = true;
@@ -13196,4 +13648,75 @@ bool SpiderRequest::isCorrupt ( ) {
 	}
 
 	return false;
+}
+
+void SpiderLoop::buildActiveList ( ) {
+
+	// set current time, synced with host #0
+	uint32_t nowGlobal = (uint32_t)getTimeGlobal();
+
+	// when do we need to rebuild the active list again?
+	m_recalcTimeValid = false;
+
+	m_activeListValid = true;
+
+	// reset the linked list of active collections
+	m_activeList = NULL;
+
+	CollectionRec *tail = NULL;
+
+	for ( int32_t i = 0 ; i < g_collectiondb.m_numRecs ; i++ ) {
+		// get rec
+		CollectionRec *cr = g_collectiondb.m_recs[i];
+		// skip if gone
+		if ( ! cr ) continue;
+		// stop if not enabled
+		bool active = true;
+		if ( ! cr->m_spideringEnabled ) active = false;
+		if ( cr->m_spiderStatus == SP_MAXROUNDS ) active = false;
+		if ( cr->m_spiderStatus == SP_MAXTOCRAWL ) active = false;
+		if ( cr->m_spiderStatus == SP_MAXTOPROCESS ) active = false;
+		//
+		// . if doing respider with roundstarttime....
+		// . roundstarttime is > 0 if m_collectiveRespiderFrequency
+		//   is > 0, unless it has not been set to current time yet
+		// . if m_collectiveRespiderFrequency was set to 0.0 then
+		//   PageCrawlBot.cpp also sets m_roundStartTime to 0.
+		//
+		if ( nowGlobal < cr->m_spiderRoundStartTime ) {
+			active = false;
+			if ( cr->m_spiderRoundStartTime < m_recalcTime ) {
+				m_recalcTime = cr->m_spiderRoundStartTime;
+				m_recalcTimeValid = true;
+			}
+		}
+
+		if ( ! active ) continue;
+
+		// we are at the tail of the linked list
+		cr->m_nextActive = NULL;
+
+		// if first one, set it to head
+		if ( ! tail ) {
+			m_activeList = cr;
+			tail = cr;
+			continue;
+		}
+
+		// if not first one, add it to end of tail
+		tail->m_nextActive = cr;
+		tail = cr;
+	}
+}
+
+bool SpiderColl::isFirstIpInOverflowList ( int32_t firstIp ) {
+	if ( ! m_overflowList ) return false;
+	if ( firstIp == 0 || firstIp == -1 ) return false;
+	for ( int32_t oi = 0 ; ; oi++ ) {
+		// stop at end
+		if ( ! m_overflowList[oi] ) break;
+		// an ip of zero is end of the list
+		if ( m_overflowList[oi] == firstIp ) return true;
+	}
+	return true;
 }
