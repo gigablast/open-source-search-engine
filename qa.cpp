@@ -722,7 +722,7 @@ bool qainject1 ( ) {
 
 
 	if ( ! s_flags[21] ) {
-		wait(2.0);
+		wait(6.0);
 		s_flags[21] = true;
 		return false;
 	}
