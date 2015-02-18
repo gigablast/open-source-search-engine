@@ -2370,6 +2370,10 @@ bool XmlDoc::indexDoc ( ) {
 	if ( g_errno == ENOMEM )
 		return true;
 
+	// and do not add spider reply if shutting down the server
+	if ( g_errno == ESHUTTINGDOWN )
+		return true;
+
 	// if docid not found when trying to do a query reindex...
 	// this really shouldn't happen but i think we were adding
 	// additional SpiderRequests since we were using a fake first ip.
