@@ -238,6 +238,7 @@ bool buildProxyTable ( ) {
 	}		
 
  redo:
+	int32_t removed = 0;
 	// scan all SpiderProxies in tmptab
 	for ( int32_t i = 0 ; i < s_iptab.getNumSlots() ; i++ ) {
 		// skip empty buckets in hashtable s_iptab
@@ -246,12 +247,18 @@ bool buildProxyTable ( ) {
 		int64_t key = *(int64_t *)s_iptab.getKey(i);
 		// must also exist in tmptab, otherwise it got removed by user
 		if ( tmptab.isInTable ( &key ) ) continue;
+		// skip if not in table
+		if ( s_iptab.getSlot ( &key ) < 0 ) {
+			log("sproxy: iptable hashing messed up");
+			continue;
+		}
 		// shoot, it got removed. not in the new list of ip:ports
 		s_iptab.removeKey ( &key );
+		removed++;
 		// hashtable is messed up now, start over
-		goto redo;
+		//goto redo;
 	}
-
+	if ( removed ) goto redo;
 	return true;
 }
 
@@ -296,14 +303,18 @@ bool loadSpiderProxyStats ( ) {
 
 	initProxyTables();
 
-	// save hashtable
-	s_proxyBannedTable.load(g_hostdb.m_dir,"proxybantable.dat");
+	// take this out for now since i was seeing dups in s_iptab for
+	// some reason. was causing an infinite loop bug calling goto redo:
+	// all the time above.
 
-	s_banCountTable.load(g_hostdb.m_dir,"proxybancounttable.dat");
+	// save hashtable
+	//s_proxyBannedTable.load(g_hostdb.m_dir,"proxybantable.dat");
+
+	//s_banCountTable.load(g_hostdb.m_dir,"proxybancounttable.dat");
 
 	// save hash table. this also returns false if does not exist.
-	if ( ! s_iptab.load(g_hostdb.m_dir,"spiderproxystats.dat") ) 
-		return false;
+	//if ( ! s_iptab.load(g_hostdb.m_dir,"spiderproxystats.dat") ) 
+	//	return false;
 
 	// unset some flags
 	for ( int32_t i = 0 ; i < s_iptab.getNumSlots() ; i++ ) {
