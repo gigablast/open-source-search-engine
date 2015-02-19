@@ -4368,10 +4368,12 @@ bool SpiderColl::scanListForWinners ( ) {
 		int32_t maxWinners = (int32_t)MAX_WINNER_NODES; // 40
 		//if ( ! m_cr->m_isCustomCrawl ) maxWinners = 1;
 
-		// only put 40 urls from the same firstIp into doledb if
-		// we have a lot of urls in our spiderdb already.
+		// only put one doledb record into winner tree if
+		// the list is pretty short. otherwise, we end up caching
+		// too much. granted, we only cache for about 2 mins.
 		// mdw: for testing take this out!
-		//if ( m_totalBytesScanned < 200000 ) maxWinners = 1;
+		if ( m_totalBytesScanned < 25000 ) maxWinners = 1;
+
 		// sanity. make sure read is somewhat hefty for our 
 		// maxWinners=1 thing
 		if ( (int32_t)SR_READ_SIZE < 500000 ) { char *xx=NULL;*xx=0; }
