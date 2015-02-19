@@ -25195,6 +25195,7 @@ char *XmlDoc::addOutlinkSpiderRecsToMetaList ( ) {
 		// more than 500MB worth.
 		if ( sc && sc->isFirstIpInOverflowList ( firstIp ) ) {
 			m_linkOverflows++;
+			g_stats.m_totalOverflows++;
 			continue;
 		}
 

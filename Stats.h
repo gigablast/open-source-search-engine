@@ -196,6 +196,8 @@ class Stats {
 
 	int32_t m_parsingInconsistencies;
 
+	int32_t m_totalOverflows;
+
 	// count ip and domain hammer for Msg13.cpp here
 	//int32_t m_numBackoffs;
 
