@@ -183,6 +183,9 @@ void processReply ( char *reply , int32_t replyLen ) {
 	markOut ( content , "spider is done (");
 	markOut ( content , "spider is paused (");
 
+	// 3 Collections etc.
+	markOut ( content , "/rocket.jpg></div></a></center><br><br><div style=\"width:190px;padding:4px;margin-left:10px;background-color:white;border-top-left-radius:10px;border-bottom-left-radius:10px;border-color:blue;border-width:3px;border-style:solid;margin-right:-3px;border-right-color:white;overflow-y:auto;overflow-x:hidden;line-height:23px;color:black;\"><center><nobr><b>" );
+
 	// until i figure this one out, take it out
 	markOut ( content , "<hits>");
 

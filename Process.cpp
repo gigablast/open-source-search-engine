@@ -1471,8 +1471,24 @@ bool Process::shutdown2 ( ) {
 	// turn off statsdb so it does not try to add records for these writes
 	g_statsdb.m_disabled = true;
 
+	if ( g_threads.areThreadsEnabled () ) {
+		log("gb: disabling threads");
+		// now disable threads so we don't exit while threads are 
+		// outstanding
+		g_threads.disableThreads();
+	}
+
+	// wait for all threads to return
+	int32_t n = g_threads.getNumThreadsOutOrQueued() ;
+	if ( n != 0 ) {
+		log(LOG_INFO,"gb: Has %"INT32" threads out. Waiting for "
+		    "them to finish.",n);
+		return false;
+	}
+
 	// assume we will use threads
-	bool useThreads = true;
+	// no, not now that we disabled them
+	bool useThreads = false;//true;
 
 	// if urgent do not allow any further threads to be spawned unless
 	// they were already queued
@@ -1621,12 +1637,12 @@ bool Process::shutdown2 ( ) {
 	g_threads.timedCleanUp(0x7fffffff,MAX_NICENESS);
 
 	// wait for all threads to complete...
-	int32_t n = g_threads.getNumThreadsOutOrQueued() ;
+	//int32_t n = g_threads.getNumThreadsOutOrQueued() ;
 	//if ( n > 0 )
 	//	return log(LOG_INFO,
 	//		   "gb: Waiting for %"INT32" threads to complete.",n);
 
-	log(LOG_INFO,"gb: Has %"INT32" threads out.",n);
+	//log(LOG_INFO,"gb: Has %"INT32" threads out.",n);
 
 
 	//ok, resetAll will close httpServer's socket so now is the time to 
