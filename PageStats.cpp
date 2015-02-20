@@ -845,6 +845,9 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 			      
 			      //"<tr class=poo><td><b>Gigablast Version</b></td><td>%s %s</td></tr>\n"
 			      "<tr class=poo><td><b>Parsing Inconsistencies</b></td><td>%"INT32"</td>\n"
+
+			      "<tr class=poo><td><b>Spiderdb Overflows</b></td><td>%"INT32"</td>\n"
+
 			      "<tr class=poo><td><b>Index Shards</b></td><td>%"INT32"</td>\n"
 			      "<tr class=poo><td><b>Hosts per Shard</b></td><td>%"INT32"</td>\n"
 			      //"<tr class=poo><td><b>Fully Split</b></td><td>%"INT32"</td>\n"
@@ -874,6 +877,7 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 			      //GBPROJECTNAME,
 			      //GBVersion ,
 			      g_stats.m_parsingInconsistencies ,
+			      g_stats.m_totalOverflows,
 			      (int32_t)g_hostdb.getNumShards(),//g_hostdb.m_indexSplits,
 			      (int32_t)g_hostdb.getNumHostsPerShard(),
 			      g_spiderLoop.m_lockTable.m_numSlotsUsed,
