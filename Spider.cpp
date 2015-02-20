@@ -11267,6 +11267,7 @@ int32_t getUrlFilterNum2 ( SpiderRequest *sreq       ,
 					goto gotOne;
 			}
 			// check for ".css?" substring
+			// these two suck up a lot of time:
 			special = strstr(url,".css?");
 			if ( special ) goto gotOne;
 			special = strstr(url,"/print/");
