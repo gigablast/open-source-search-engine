@@ -223,6 +223,14 @@ bool HttpServer::getDoc ( char   *url      ,
 			// sb.safePrintf("Host: ");
 			// sb.safeMemcpy ( host, hostLen );
 			// sb.safePrintf("\r\n");
+			// include proxy authentication info now
+			if ( proxyUsernamePwdAuth && proxyUsernamePwdAuth[0] ){
+				sb.safePrintf("Proxy-Authorization: Basic ");
+				sb.base64Encode(proxyUsernamePwdAuth,
+						gbstrlen(proxyUsernamePwdAuth)
+						);
+				sb.safePrintf("\r\n");
+			}
 			sb.safePrintf("\r\n");
 			sb.nullTerm();
 			need += sb.length();
