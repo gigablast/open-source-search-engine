@@ -1223,6 +1223,8 @@ void readSocketWrapper2 ( int sd , void *state ) {
 		return;
 	}
 
+
+
 	if ( s->m_sockState == ST_SSL_HANDSHAKE ) {
 		int r = THIS->sslHandshake ( s );
 		// return if it blocked
@@ -1234,6 +1236,17 @@ void readSocketWrapper2 ( int sd , void *state ) {
 			THIS->destroySocket ( s ); 
 			return; 
 		}
+
+		// now we can complete a handshake here in this read function
+		// we have to handle it if we were tunnelmode 2 and advance
+		// to 3 otherwise it doesn't work because writeSocket()
+		// just re-does the handshake even though it is done.
+		if ( s->m_tunnelMode == 2 ) {
+			if ( g_conf.m_logDebugTcp )
+				log("tcp: going to tunnel mode 3");
+			s->m_tunnelMode = 3;
+		}
+
 		// it went through, should be ST_WRITING so go below
 		THIS->writeSocket ( s );
 		return;
@@ -1769,6 +1782,7 @@ int32_t TcpServer::writeSocket ( TcpSocket *s ) {
 		toSend = tunnelRequestSize - s->m_sendOffset;
 	}
 
+
 	// if tunnel is established, send ssl handshake
 	if ( s->m_tunnelMode == 2 ) {
 		char *end = strstr(s->m_sendBuf,"\r\n\r\n");
@@ -1779,14 +1793,23 @@ int32_t TcpServer::writeSocket ( TcpSocket *s ) {
 		toSend = s->m_sendBufUsed - tunnelRequestSize -s->m_sendOffset;
 		// reset this so we do not truncate the NEXT reply!
 		s->m_totalToRead = 0;
+		// why was this not ST_SSL_HANDSHAKE? force it to avoid core.
+		s->m_sockState = ST_SSL_HANDSHAKE;
 		//
 		// use ssl now
 		//
 		int r = sslHandshake ( s );
+		// we completed it!
+		if ( g_conf.m_logDebugTcp )
+			log("tcp: tunnel handshake returned %i",r);
 		// error? g_errno will be set, return -1
 		if ( r == -1 ) return -1;
 		// return 0 if it would block
 		if ( r == 0 ) return 0;
+		// we completed it!
+		if ( g_conf.m_logDebugTcp )
+			log("tcp: completed handshake in tunnel mode 2 going "
+			    "to 3");
 		// i guess it completed. will be ST_WRITING mode now.
 		// enter write tunnel mode too
 		s->m_tunnelMode = 3;
@@ -1979,15 +2002,17 @@ int32_t TcpServer::connectSocket ( TcpSocket *s ) {
 	to.sin_port        = htons ((uint16_t)( s->m_port));
 	bzero ( &(to.sin_zero) , 8 ); // TODO: bzero too slow?
 	if ( g_conf.m_logDebugTcp )
-		log("........... TcpServer connecting %i to %s port %i\n",
-		    s->m_sd,iptoa(s->m_ip), s->m_port );
+		log("........... TcpServer connecting %i to %s port "
+		    "%"UINT32"\n",
+		    s->m_sd,iptoa(s->m_ip), (uint32_t)(uint16_t)s->m_port );
  retry3:
 	// connect to the socket. This should be non-blocking!
 	if ( ::connect ( s->m_sd, (sockaddr *)&to, sizeof(to) ) == 0 ) {
 		// debug msg
 		if ( g_conf.m_logDebugTcp )
 			log("........... TcpServer connected %i to %s "
-			    "port %i\n", s->m_sd, iptoa(s->m_ip), s->m_port );
+			    "port %"UINT32"\n", s->m_sd, iptoa(s->m_ip), 
+			    (uint32_t)(uint16_t)s->m_port );
 		// don't listen for writing any more
 		if ( s->m_writeRegistered ) {
 			g_loop.unregisterWriteCallback(s->m_sd,

@@ -1025,7 +1025,7 @@ void printStackTrace ( int signum , siginfo_t *info , void *ptr ) {
 		//ba = g_profiler.getFuncBaseAddr((PTRTYPE)s_bt[i]);
 		//sigsegv_outp("%s", strings[i]);
 		//logf(LOG_DEBUG,"[0x%llx->0x%llx] %s"
-		logf(LOG_DEBUG,"[0x%"XINT64"]"
+		logf(LOG_DEBUG,"addr2line -e gb 0x%"XINT64""
 		     ,(uint64_t)s_bt[i]
 		     //,ba
 		     //,g_profiler.getFnName(ba,0));
