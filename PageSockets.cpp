@@ -204,6 +204,7 @@ void printTcpTable ( SafeBuf* p, char *title, TcpServer *server ) {
 		case ST_WRITING:    st="sending";    break;
 		case ST_NEEDS_CLOSE:    st="needs close";    break;
 		case ST_CLOSE_CALLED:    st="close called";    break;
+		case ST_SSL_HANDSHAKE: st = "ssl handshake"; break;
 		}
 		// bgcolor is lighter for incoming requests
 		char *bg = "c0c0f0";

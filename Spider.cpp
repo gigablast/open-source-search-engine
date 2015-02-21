@@ -3474,13 +3474,14 @@ bool SpiderColl::evalIpLoop ( ) {
 		useCache = false;
 	if ( m_countingPagesIndexed )
 		useCache = false;
+	// assume not from cache
 	if ( useCache )
 		inCache = wc->getRecord ( m_collnum     ,
 					  (char *)&cacheKey ,
 					  &doleBuf,
 					  &doleBufSize  ,
 					  false, // doCopy?
-					  120, // maxAge, 120 seconds
+					  300, // maxAge, 300 seconds
 					  true ,// incCounts
 					  &cachedTimestamp , // rec timestamp
 					  true );  // promote rec?
@@ -5177,7 +5178,14 @@ bool SpiderColl::addDoleBufIntoDoledb ( bool isFromCache ,
 	// top rec.
 	// allow this to add a 0 length record otherwise we keep the same
 	// old url in here and keep spidering it over and over again!
-	if ( skipSize && m_doleBuf.length() - skipSize >= 0 ) {
+	bool addToCache = false;
+	if ( skipSize && m_doleBuf.length() - skipSize >= 0 ) addToCache =true;
+	// if winnertree was empty, then we might have scanned like 10M
+	// twitter.com urls and not wanted any of them, so we don't want to
+	// have to keep redoing that!
+	if ( m_doleBuf.length() == 0 && ! isFromCache ) addToCache = true;
+
+	if ( addToCache ) {
 		key_t cacheKey;
 		cacheKey.n0 = firstIp;
 		cacheKey.n1 = 0;
@@ -10646,7 +10654,7 @@ int32_t getUrlFilterNum2 ( SpiderRequest *sreq       ,
 
 
 	char *ext;
-	char *special;
+	//char *special;
 
 	// CONSIDER COMPILING FOR SPEED:
 	// 1) each command can be combined into a bitmask on the spiderRequest
@@ -11272,10 +11280,11 @@ int32_t getUrlFilterNum2 ( SpiderRequest *sreq       ,
 			}
 			// check for ".css?" substring
 			// these two suck up a lot of time:
-			special = strstr(url,".css?");
-			if ( special ) goto gotOne;
-			special = strstr(url,"/print/");
-			if ( special ) goto gotOne;
+			// take them out for now. MDW 2/21/2015
+			//special = strstr(url,".css?");
+			//if ( special ) goto gotOne;
+			//special = strstr(url,"/print/");
+			//if ( special ) goto gotOne;
 			// no match, try the next rule
 			continue;
 		gotOne:
