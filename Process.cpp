@@ -1340,6 +1340,7 @@ bool Process::save ( ) {
 	logf(LOG_INFO,"db: Entering lock mode for saving.");
 	m_mode   = LOCK_MODE; // SAVE_MODE;
 	m_urgent = false;
+	m_calledSave = false;
 	return save2();
 }
 
@@ -1359,6 +1360,8 @@ bool Process::shutdown ( bool urgent ,
 
 	m_mode   = EXIT_MODE;
 	m_urgent = urgent;
+
+	m_calledSave = false;
 
 	// check memory buffers for overruns/underrunds to see if that
 	// caused this core
@@ -1738,16 +1741,30 @@ bool Process::saveRdbTrees ( bool useThread , bool shuttingDown ) {
 	if ( g_conf.m_readOnlyMode ) return true;
 	// no thread if shutting down
 	if ( shuttingDown ) useThread = false;
+	// debug note
+	log("gb: shuttingdown=%i",(int)shuttingDown);
 	// turn off statsdb until everyone is done
 	//g_statsdb.m_disabled = true;
 	// loop over all Rdbs and save them
-	for ( int32_t i = 0 ; ! m_calledSave && i < m_numRdbs ; i++ ) {
+	for ( int32_t i = 0 ; i < m_numRdbs ; i++ ) {
+		if ( m_calledSave ) {
+			log("gb: already saved trees, skipping.");
+			break;
+		}
 		Rdb *rdb = m_rdbs[i];
 		// if we save doledb while spidering it screws us up
 		// because Spider.cpp can not directly write into the
 		// rdb tree and it expects that to always be available!
 		if ( ! shuttingDown && rdb->m_rdbId == RDB_DOLEDB )
 			continue;
+		// note it
+		if ( ! rdb->m_dbname || ! rdb->m_dbname[0] )
+			log("gb: calling save tree for rdbid %i",
+			    (int)rdb->m_rdbId);
+		else
+			log("gb: calling save tree for %s",
+			    rdb->m_dbname);
+
 		rdb->saveTree ( useThread );
 	}
 
