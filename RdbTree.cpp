@@ -162,7 +162,9 @@ void RdbTree::reset ( ) {
 	     strcmp(m_dbname,"accessdb") &&
 	     strcmp(m_dbname,"statsdb") ) {
 	     //strcmp(m_dbname,"doledb") ) {
-		log("rdb: Resetting unsaved tree %s.",m_dbname);
+		log("rdb: RESETTING UNSAVED TREE %s.",m_dbname);
+		log("rdb: RESETTING UNSAVED TREE %s.",m_dbname);
+		log("rdb: RESETTING UNSAVED TREE %s.",m_dbname);
 		// when DELETING a collection from pagecrawlbot.cpp
 		// it calls Collectiondb::deleteRec() which calls
 		// SpiderColl::reset() which calls m_waitingTree.reset()

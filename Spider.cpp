@@ -1878,6 +1878,14 @@ bool SpiderColl::updateSiteNumInlinksTable ( int32_t siteHash32,
 //   the count in m_doleIpTable here
 bool SpiderColl::addSpiderReply ( SpiderReply *srep ) {
 
+	////
+	//
+	// skip if not assigned to us for doling
+	//
+	////
+	if ( ! isAssignedToUs ( srep->m_firstIp ) )
+		return true;
+
 	/////////
 	//
 	// remove the lock here
@@ -1891,8 +1899,10 @@ bool SpiderColl::addSpiderReply ( SpiderReply *srep ) {
 	time_t nowGlobal = getTimeGlobal();
 
 	if ( g_conf.m_logDebugSpider )
-		logf(LOG_DEBUG,"spider: scheduled lock removal in 5 secs for "
-		     "lockKey=%"UINT64"",  lockKey );
+		logf(LOG_DEBUG,"spider: removing lock uh48=%"INT64" "
+		     "lockKey=%"UINT64"",  
+		     srep->getUrlHash48(),
+		     lockKey );
 
 	// test it
 	//if ( m_nowGlobal == 0 && lock )
@@ -1926,14 +1936,6 @@ bool SpiderColl::addSpiderReply ( SpiderReply *srep ) {
 	if ( !lock && g_conf.m_logDebugSpider)//ht->isInTable(&lockKey)) 
 		logf(LOG_DEBUG,"spider: rdb: lockKey=%"UINT64" "
 		     "was not in lock table",lockKey);
-
-	////
-	//
-	// skip if not assigned to us for doling
-	//
-	////
-	if ( ! isAssignedToUs ( srep->m_firstIp ) )
-		return true;
 
 	// now just remove it since we only spider our own urls
 	// and doledb is in memory
@@ -3474,18 +3476,19 @@ bool SpiderColl::evalIpLoop ( ) {
 		useCache = false;
 	if ( m_countingPagesIndexed )
 		useCache = false;
+	// assume not from cache
 	if ( useCache )
 		inCache = wc->getRecord ( m_collnum     ,
 					  (char *)&cacheKey ,
 					  &doleBuf,
 					  &doleBufSize  ,
 					  false, // doCopy?
-					  120, // maxAge, 120 seconds
+					  300, // maxAge, 300 seconds
 					  true ,// incCounts
 					  &cachedTimestamp , // rec timestamp
 					  true );  // promote rec?
 	// doleBuf could be NULL i guess...
-	if ( inCache && doleBufSize > 0 ) {
+	if ( inCache ) { // && doleBufSize > 0 ) {
 		if ( g_conf.m_logDebugSpider )
 			log("spider: GOT %"INT32" bytes of SpiderRequests "
 			    "from winnerlistcache for ip %s",doleBufSize,
@@ -4161,6 +4164,11 @@ bool SpiderColl::scanListForWinners ( ) {
 
 		if ( g_conf.m_logDebugSpider )
 			log("spider: got ufn=%"INT32" for %s",ufn,sreq->m_url);
+
+		if ( g_conf.m_logDebugSpider && srep )
+			log("spider: lastspidered=%"UINT32"",
+			    srep->m_spideredTime);
+
 		
 		// spiders disabled for this row in url filteres?
 		//if ( ! m_cr->m_spidersEnabled[ufn] ) continue;
@@ -4210,6 +4218,11 @@ bool SpiderColl::scanListForWinners ( ) {
 				log("spider: skippingx %s",sreq->m_url);
 			continue;
 		}
+
+		// debug point
+		// if ( ((long long)srep->m_spideredTime)*1000LL > 
+		//      nowGlobalMS - 86400LL*1000LL*30LL )
+		// 	log("spider: should not be spidering this!");
 
 		//////
 		//
@@ -4311,6 +4324,14 @@ bool SpiderColl::scanListForWinners ( ) {
 		// "firstIp". this way we can spider multiple urls from the
 		// same ip at the same time.
 		int64_t key = makeLockTableKey ( sreq );
+
+		if ( g_conf.m_logDebugSpider )
+			log("spider: checking uh48=%"INT64" lockkey=%"INT64" "
+			    "used=%"INT32"",
+			    uh48,key,
+			    g_spiderLoop.m_lockTable.getNumUsedSlots());
+
+		// MDW
 		if ( g_spiderLoop.m_lockTable.isInTable ( &key ) ) {
 			// get it
 			//CrawlInfo *ci = &m_cr->m_localCrawlInfo;
@@ -5177,11 +5198,42 @@ bool SpiderColl::addDoleBufIntoDoledb ( bool isFromCache ,
 	// top rec.
 	// allow this to add a 0 length record otherwise we keep the same
 	// old url in here and keep spidering it over and over again!
-	if ( skipSize && m_doleBuf.length() - skipSize >= 0 ) {
+	bool addToCache = false;
+	if ( skipSize && m_doleBuf.length() - skipSize > 0 ) addToCache =true;
+	// if winnertree was empty, then we might have scanned like 10M
+	// twitter.com urls and not wanted any of them, so we don't want to
+	// have to keep redoing that!
+	if ( m_doleBuf.length() == 0 && ! isFromCache ) addToCache = true;
+
+	RdbCache *wc = &g_spiderLoop.m_winnerListCache;
+
+	// remove from cache? if we added the last spider request in the
+	// cached dolebuf to doledb then remove it from cache so it's not
+	// a cached empty dolebuf and we recompute it not using the cache.
+	if ( isFromCache && skipSize && m_doleBuf.length() - skipSize == 0 ) {
+		if ( addToCache ) { char *xx=NULL;*xx=0; }
+		// let's get this working right...
+		//wc->removeKey ( collnum , k , start );
+		//wc->markDeletedRecord(start);
+		// i don't think we can remove keys from cache so add
+		// a rec with a byte size of 1 to indicate for us to ignore.
+		// set the timestamp to 12345 so the getRecord above will
+		// not get it and promote it in the linked list.
+		char byte = 0;
 		key_t cacheKey;
 		cacheKey.n0 = firstIp;
 		cacheKey.n1 = 0;
-		RdbCache *wc = &g_spiderLoop.m_winnerListCache;
+		wc->addRecord ( m_collnum,
+				(char *)&cacheKey,
+				&byte ,
+				1 ,
+		 		12345 );//cachedTimestamp );
+	}
+
+	if ( addToCache ) {
+		key_t cacheKey;
+		cacheKey.n0 = firstIp;
+		cacheKey.n1 = 0;
 		if ( g_conf.m_logDebugSpider )
 			log("spider: adding %"INT32" bytes of SpiderRequests "
 			    "to winnerlistcache for ip %s",
@@ -5235,6 +5287,11 @@ bool SpiderColl::addDoleBufIntoDoledb ( bool isFromCache ,
 	// now that doledb is tree-only and never dumps to disk, just
 	// add it directly
 	g_doledb.m_rdb.addList ( m_collnum , &tmpList , MAX_NICENESS );
+
+	if ( g_conf.m_logDebugSpider )
+		log("spider: adding doledb tree node size=%"INT32"",skipSize);
+
+
 	// and it happens right away. just add it locally.
 	bool status = true;
 
@@ -7279,6 +7336,9 @@ bool SpiderLoop::spiderUrl9 ( SpiderRequest *sreq ,
 							true);
 	if ( node == -1 ) { char *xx=NULL;*xx=0; }
 
+	if ( g_conf.m_logDebugSpider )
+		log("spider: deleting doledb tree node %"INT32,node);
+
 	// now remove from doleiptable since we removed from doledb
 	m_sc->removeFromDoledbTable ( sreq->m_firstIp );
 
@@ -7318,6 +7378,9 @@ bool SpiderLoop::spiderUrl9 ( SpiderRequest *sreq ,
 	tmp.m_spiderOutstanding = 0;
 	tmp.m_confirmed = 1;
 	tmp.m_collnum = m_collnum;
+	if ( g_conf.m_logDebugSpider )
+		log("spider: adding lock uh48=%"INT64" lockkey=%"INT64"",
+		    m_sreq->getUrlHash48(),lockKeyUh48);
 	if ( ! ht->addKey ( &lockKeyUh48 , &tmp ) )
 		return true;
 
@@ -10646,7 +10709,7 @@ int32_t getUrlFilterNum2 ( SpiderRequest *sreq       ,
 
 
 	char *ext;
-	char *special;
+	//char *special;
 
 	// CONSIDER COMPILING FOR SPEED:
 	// 1) each command can be combined into a bitmask on the spiderRequest
@@ -11272,10 +11335,11 @@ int32_t getUrlFilterNum2 ( SpiderRequest *sreq       ,
 			}
 			// check for ".css?" substring
 			// these two suck up a lot of time:
-			special = strstr(url,".css?");
-			if ( special ) goto gotOne;
-			special = strstr(url,"/print/");
-			if ( special ) goto gotOne;
+			// take them out for now. MDW 2/21/2015
+			//special = strstr(url,".css?");
+			//if ( special ) goto gotOne;
+			//special = strstr(url,"/print/");
+			//if ( special ) goto gotOne;
 			// no match, try the next rule
 			continue;
 		gotOne:

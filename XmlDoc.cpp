@@ -20135,7 +20135,7 @@ bool XmlDoc::logIt ( SafeBuf *bb ) {
 		time_t spideredTime = m_oldDoc->getSpideredTime();
 		struct tm *timeStruct = gmtime ( &spideredTime );
 		char tmp[64];
-		strftime(tmp,64,"lastspidered=%b-%d-%Y(%H:%M:%S)",timeStruct);
+		strftime(tmp,64,"lastindexed=%b-%d-%Y(%H:%M:%S)",timeStruct);
 		sb->safePrintf("%s(%"UINT32") ", tmp,(uint32_t)spideredTime);
 	}
 

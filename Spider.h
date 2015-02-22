@@ -1306,7 +1306,6 @@ class SpiderColl {
 	int64_t  m_lastSreqUh48;
 	int32_t  m_lastOverflowFirstIp;
 
-
  private:
 	class CollectionRec *m_cr;
 };
