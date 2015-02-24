@@ -3276,6 +3276,9 @@ bool CollectionRec::rebuildUrlFiltersDiffbot() {
 	if ( ! upp ) upp = m_diffbotUrlProcessRegEx.getBufStart();
 	if ( upp && ! upp[0] ) upp = NULL;
 
+	char *ppp = m_diffbotPageProcessPattern.getBufStart();
+	if ( ppp && ! ppp[0] ) ppp = NULL;
+
 	///////
 	//
 	// recompile regular expressions
@@ -3513,6 +3516,24 @@ bool CollectionRec::rebuildUrlFiltersDiffbot() {
 		i++;
 	}
 
+	// url crawl and PAGE process pattern
+	if ( ucp && ! upp && ppp ) {
+		// if just matches ucp, just crawl it, do not process
+		m_regExs[i].set("matchesucp");
+		m_spiderPriorities   [i] = 53;
+		if ( m_collectiveRespiderFrequency<=0.0) m_spiderFreqs [i] = 0;
+		i++;
+		// crawl everything else, but don't harvest links,
+		// we have to see if the page content matches the "ppp"
+		// to determine whether the page should be processed or not.
+		m_regExs[i].set("default");
+		m_spiderPriorities   [i] = 52;
+		if ( m_collectiveRespiderFrequency<=0.0) m_spiderFreqs [i] = 0;
+		m_harvestLinks       [i] = false;
+		i++;
+		goto done;
+	}
+
 	// url crawl and process pattern
 	if ( ucp && upp ) {
 		m_regExs[i].set("matchesucp && matchesupp");
@@ -3600,6 +3621,7 @@ bool CollectionRec::rebuildUrlFiltersDiffbot() {
 		i++;
 	}
 
+ done:
 	m_numRegExs   = i;
 	m_numRegExs2  = i;
 	m_numRegExs3  = i;
