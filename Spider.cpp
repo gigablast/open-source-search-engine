@@ -4370,9 +4370,18 @@ bool SpiderColl::scanListForWinners ( ) {
 		// so we can kick out a lower priority version of the same url.
 		int32_t winSlot = m_winnerTable.getSlot ( &uh48 );
 		if ( winSlot >= 0 ) {
-			key192_t *oldwk ;
-			oldwk = (key192_t *)m_winnerTable.
+			key192_t *oldwk = (key192_t *)m_winnerTable.
 				getDataFromSlot ( winSlot );
+
+			// get the min hopcount  
+			SpiderRequest *wsreq ;
+			wsreq =(SpiderRequest *)m_winnerTree.
+				getData(0,(char *)oldwk);
+			if ( sreq->m_hopCount < wsreq->m_hopCount )
+				wsreq->m_hopCount = sreq->m_hopCount;
+			if ( wsreq->m_hopCount < sreq->m_hopCount )
+				sreq->m_hopCount = wsreq->m_hopCount;
+
 			// are we lower priority? (or equal)
 			// smaller keys are HIGHER priority.
 			if(KEYCMP((char *)&wk,(char *)oldwk,
