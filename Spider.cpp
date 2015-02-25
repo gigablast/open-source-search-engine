@@ -4377,10 +4377,12 @@ bool SpiderColl::scanListForWinners ( ) {
 			SpiderRequest *wsreq ;
 			wsreq =(SpiderRequest *)m_winnerTree.
 				getData(0,(char *)oldwk);
-			if ( sreq->m_hopCount < wsreq->m_hopCount )
-				wsreq->m_hopCount = sreq->m_hopCount;
-			if ( wsreq->m_hopCount < sreq->m_hopCount )
-				sreq->m_hopCount = wsreq->m_hopCount;
+			if ( wsreq ) {
+				if ( sreq->m_hopCount < wsreq->m_hopCount )
+					wsreq->m_hopCount = sreq->m_hopCount;
+				if ( wsreq->m_hopCount < sreq->m_hopCount )
+					sreq->m_hopCount = wsreq->m_hopCount;
+			}
 
 			// are we lower priority? (or equal)
 			// smaller keys are HIGHER priority.
