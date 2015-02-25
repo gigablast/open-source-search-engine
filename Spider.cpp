@@ -5066,7 +5066,14 @@ bool SpiderColl::addDoleBufIntoDoledb ( bool isFromCache ,
 
 		// before you set a time too far into the future, if we
 		// did receive new spider requests, entertain those
-		if ( m_gotNewDataForScanningIp ) {
+		if ( m_gotNewDataForScanningIp &&
+		     // we had twitter.com with a future spider date
+		     // on the pe2 cluster but we kept hitting this, so
+		     // don't do this anymore if we scanned a ton of bytes
+		     // like we did for twitter.com because it uses all the
+		     // resources when we can like 150MB of spider requests
+		     // for a single firstip
+		     m_totalBytesScanned < 30000 ) {
 			if ( g_conf.m_logDebugSpider )
 				log("spider: received new requests, not "
 				    "updating waiting tree with future time");
