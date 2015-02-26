@@ -1284,6 +1284,7 @@ class SpiderColl {
 	key_t m_msg5StartKey;
 
 	void devancePriority();
+	void setPriority(int32_t pri);
 
 	key_t m_nextDoledbKey;
 	bool  m_didRound;
@@ -1538,6 +1539,8 @@ class SpiderLoop {
 	bool m_isRegistered;
 
 	int32_t m_numSpidersOut;
+
+	int32_t m_launches;
 
 	// for spidering/parsing/indexing a url(s)
 	class XmlDoc *m_docs [ MAX_SPIDERS ];

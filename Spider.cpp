@@ -1797,7 +1797,7 @@ void SpiderColl::reset ( ) {
 
 	// reset these for SpiderLoop;
 	m_nextDoledbKey.setMin();
-	m_didRound = false;
+	//m_didRound = false;
 	// set this to -1 here, when we enter spiderDoledUrls() it will
 	// see that its -1 and set the m_msg5StartKey
 	m_pri2 = -1; // MAX_SPIDER_PRIORITIES - 1;
@@ -5777,12 +5777,13 @@ void doneSleepingWrapperSL ( int fd , void *state ) {
 		}
 		// re-entry is false because we are entering for the first time
 		sc->populateDoledbFromWaitingTree ( );
-		// skip if still loading doledb lists from disk this round
-		if ( ! sc->m_didRound ) continue;
+		// . skip if still loading doledb lists from disk this round
+		// . we use m_didRound to share spiders across all collections
+		//if ( ! sc->m_didRound ) continue;
 		// ensure at the top!
-		if ( sc->m_pri2!=MAX_SPIDER_PRIORITIES-1){char*xx=NULL;*xx=0;}
+		//if( sc->m_pri2!=MAX_SPIDER_PRIORITIES-1){char*xx=NULL;*xx=0;}
 		// ok, reset it so it can start a new doledb scan
-		sc->m_didRound = false;
+		//sc->m_didRound = false;
 		// reset this as well. if there are no spiderRequests
 		// available on any priority level for this collection,
 		// then it will remain true. but if we attempt to spider
@@ -6129,13 +6130,23 @@ void SpiderLoop::spiderDoledUrls ( ) {
 	// . just alternate them
 	//for ( ; count > 0 ; m_cri++ , count-- ) {
 
+	m_launches = 0;
+
  subloop:
 
 	// if we hit the end of the list, wrap it around
 	if ( ! m_crx ) m_crx = m_activeList;
 
-	// i guess return at the end of the linked list
-	if ( m_crx == start && ! firstTime ) return;
+	// i guess return at the end of the linked list if no collection
+	// launched a spider... otherwise do another cycle to launch another
+	// spider. i could see a single collection dominating all the spider
+	// slots in some scenarios with this approach unfortunately.
+	if ( m_crx == start && ! firstTime && m_launches == 0 )
+		return;
+
+	// reset # launches after doing a round and having launched > 0
+	if ( m_crx == start && ! firstTime )
+		m_launches = 0;
 
 	firstTime = false;
 
@@ -6240,7 +6251,14 @@ void SpiderLoop::spiderDoledUrls ( ) {
 		if ( ! m_sc ) goto subloop;
 		// skip if we completed the doledb scan for every spider
 		// priority in this collection
-		if ( m_sc->m_didRound ) goto subloop;
+		// MDW: this was the only thing based on the value of
+		// m_didRound, but it was preventing addSpiderReply() from
+		// calling g_spiderLoop.spiderDoledUrls( ) to launch another
+		// spider. but now since we use m_crx logic and not
+		// m_didRound logic to spread spiders equally over all 
+		// collections, let's try without this
+		//if ( m_sc->m_didRound ) goto subloop;
+
 		// set current time, synced with host #0
 		nowGlobal = (uint32_t)getTimeGlobal();
 
@@ -6420,20 +6438,21 @@ void SpiderLoop::spiderDoledUrls ( ) {
 	// reset priority when it goes bogus
 	if ( m_sc->m_pri2 < 0 ) {
 		// i guess the scan is complete for this guy
-		m_sc->m_didRound = true;
+		//m_sc->m_didRound = true;
 		// count # of priority scan rounds done
 		//m_sc->m_numRoundsDone++;
 		// reset for next coll
-		m_sc->m_pri2 = MAX_SPIDER_PRIORITIES - 1;
+		m_sc->setPriority ( MAX_SPIDER_PRIORITIES - 1 );
+		//m_sc->m_pri2 = MAX_SPIDER_PRIORITIES - 1;
 		// reset key now too since this coll was exhausted
 		//m_sc->m_nextDoledbKey=g_doledb.makeFirstKey2 ( m_sc->m_pri );
 		// we can't keep starting over because there are often tons
 		// of annihilations between positive and negative keys
 		// and causes massive disk slow down because we have to do
 		// like 300 re-reads or more of about 2k each on coeus
-		m_sc->m_nextDoledbKey = m_sc->m_nextKeys [ m_sc->m_pri2 ];
+		//m_sc->m_nextDoledbKey = m_sc->m_nextKeys [ m_sc->m_pri2 ];
 		// and this
-		m_sc->m_msg5StartKey = m_sc->m_nextDoledbKey;
+		//m_sc->m_msg5StartKey = m_sc->m_nextDoledbKey;
 		// was it all empty? if did not encounter ANY doledb recs
 		// after scanning all priorities, set empty to true.
 		//if ( ! m_sc->m_encounteredDoledbRecs &&
@@ -6562,11 +6581,14 @@ void SpiderLoop::spiderDoledUrls ( ) {
 		//if ( m_msg12.m_gettingLocks ) return;
 		// gotDoledbList2() always advances m_nextDoledbKey so
 		// try another read
-		goto loop;
+		// now advance to next coll, launch one spider per coll
+		goto subloop;//loop;
 	}
 	// wait for the msg12 get lock request to return... 
 	// or maybe spiders are off
-	return;
+	//return;
+	// now advance to next coll, launch one spider per coll
+	goto subloop;//loop;
 }
 
 // . decrement priority
@@ -6586,6 +6608,11 @@ void SpiderColl::devancePriority() {
 	m_msg5StartKey = m_nextDoledbKey;
 }
 
+void SpiderColl::setPriority(int32_t pri) {
+	m_pri2 = pri;
+	m_nextDoledbKey = m_nextKeys [ m_pri2 ];
+	m_msg5StartKey = m_nextDoledbKey;
+}
 
 void gotDoledbListWrapper2 ( void *state , RdbList *list , Msg5 *msg5 ) {
 	// process the doledb list and try to launch a spider
@@ -6607,6 +6634,8 @@ void gotDoledbListWrapper2 ( void *state , RdbList *list , Msg5 *msg5 ) {
 #define MAX_LOCK_AGE (3600*4)
 
 // spider the spider rec in this list from doledb
+// returns false if would block indexing a doc, returns true if would not,
+// and returns true and sets g_errno on error
 bool SpiderLoop::gotDoledbList2 ( ) {
 	// unlock
 	m_gettingDoledbList = false;
@@ -7574,6 +7603,9 @@ bool SpiderLoop::spiderUrl2 ( ) {
 	m_numSpidersOut++;
 	// count this
 	m_sc->m_spidersOut++;
+
+	g_spiderLoop.m_launches++;
+
 	// count it as a hit
 	//g_stats.m_spiderUrlsHit++;
 	// sanity check
@@ -7601,7 +7633,11 @@ bool SpiderLoop::spiderUrl2 ( ) {
 	// . reset the next doledbkey to start over!
 	// . when spiderDoledUrls() see this negative priority it will
 	//   reset the doledb scan to the top priority.
-	m_sc->m_pri2 = -1;	
+	// . MDW, no, 2/25/2015. then the 'goto loop;' statement
+	//   basially thinks a round was completed and exits
+	//m_sc->m_pri2 = -1;	
+	// maybe then try setting to 127
+	//m_sc->setPriority ( MAX_SPIDER_PRIORITIES - 1 );
 
 	// if we were injecting and it blocked... return false
 	if ( ! status ) return false;
