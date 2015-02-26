@@ -150,7 +150,7 @@ case	EBADGEOCODERREPLY: return "Geocoder returned bad reply or timed out";
 case	EBUFOVERFLOW     : return "Static buffer overflow";
 case	EPLSRESUBMIT     : return "The system was restarted. Please resubmit your evaluation.";
 case	EURLBADYEAR      : return "Url contained an out of usable range year";
-case	EABANDONED       : return "Injection is abandoned";
+case	EABANDONED       : return "Injected url already indexed";
 case	ECORRUPTHTTPGZIP : return "Http server returned corrupted gzip";
 case	EDOCIDCOLLISION  : return "DocId collision in titledb";
 case	ESSLERROR        : return "SSL error of some kind";
