@@ -493,19 +493,13 @@ bool Msg3a::gotCacheReply ( ) {
 		// clear it for transmit
 		m->reset();
 
-		// get that shard of hosts
-		Host *hosts = g_hostdb.getShard ( shardNum );
-		// see if all hosts in group are dead
-		int32_t x; 
-		for ( x = 0 ; x < g_hostdb.m_numHostsPerShard ; x++ )
-			if ( ! g_hostdb.isDead(&hosts[x]) ) break;
 		// if all hosts in group dead, just skip it!
 		// only do this if main process has been running more than
 		// 300 seconds because our brother hosts show up as "dead"
 		// until we've got a ping reply back from them.
 		// use 160 seconds. seems to take 138 secs or so to
 		// get pings from everyone.
-		if ( x >= g_hostdb.m_numHostsPerShard && elapsed > 160 ) {
+		if ( g_hostdb.isShardDead ( shardNum ) ) {
 			m_numReplies++;
 			log("msg3a: skipping dead shard # %i "
 			    "(elapsed=%li)",(int)shardNum,elapsed);

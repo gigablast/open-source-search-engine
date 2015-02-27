@@ -29983,6 +29983,21 @@ Msg20Reply *XmlDoc::getMsg20Reply ( ) {
 	//	// return NULL with g_errno set on error
 	//	if ( ! set ( tr , NULL , m_niceness ) ) return NULL;
 
+	// if  shard responsible for tagrec is dead, then
+	// just recycle!
+	if ( m_req && ! m_checkedUrlFilters ) {
+		char *site = getSite();
+		TAGDB_KEY tk = g_tagdb.makeStartKey ( site );
+		uint32_t shardNum = g_hostdb.getShardNum(RDB_TAGDB,&tk);
+		if ( g_hostdb.isShardDead ( shardNum ) ) {
+			log("query: skipping tagrec lookup for dead shard "
+			    "# %"INT32""
+			    ,shardNum);
+			m_tagRecDataValid = true;
+		}
+	}
+		
+
 	TagRec *gr = getTagRec();
 	if ( ! gr || gr == (void *)-1 ) return (Msg20Reply *)gr;
 

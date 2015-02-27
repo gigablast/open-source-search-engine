@@ -1600,7 +1600,16 @@ uint32_t Hostdb::makeGroupMask ( int32_t numGroups ) {
 }
 */
 
+#include "Stats.h"
+
 bool Hostdb::isShardDead ( int32_t shardNum ) {
+	// how many seconds since our main process was started?
+	// i guess all nodes initially appear dead, so
+	// compensate for that.
+	long long now = gettimeofdayInMilliseconds();
+	long elapsed = (now - g_stats.m_startTime) ;/// 1000;
+	if ( elapsed < 60*1000 ) return false; // try 60 secs now
+
 	Host *shard = getShard ( shardNum );
 	//Host *live = NULL;
 	for ( int32_t i = 0 ; i < m_numHostsPerShard ; i++ ) {
