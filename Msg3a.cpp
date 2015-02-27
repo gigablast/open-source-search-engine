@@ -349,6 +349,7 @@ bool Msg3a::gotCacheReply ( ) {
 
 	// reset replies received count
 	m_numReplies  = 0;
+	m_skippedShards = 0;
 	// int16_tcut
 	int32_t n = m_q->m_numTerms;
 
@@ -690,6 +691,7 @@ bool Msg3a::gotAllShardReplies ( ) {
 		}
 		// bad reply?
 		if ( ! mr || replySize < 29 ) {
+			m_skippedShards++;
 			log(LOG_LOGIC,"query: msg3a: Bad reply (size=%i) from "
 			    "host #%"INT32". Dead? Timeout? OOM?"
 			    ,(int)replySize

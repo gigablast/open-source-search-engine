@@ -144,6 +144,8 @@ public:
 	//char       m_request [MAX_MSG39_REQUEST_SIZE * MAX_SHARDS];
 	int32_t       m_numReplies;
 
+	int32_t m_skippedShards;
+
 	// . # estimated total hits
 	int64_t  m_numTotalEstimatedHits;
 

@@ -2347,14 +2347,24 @@ bool printSearchResultsHeader ( State0 *st ) {
 	}
 
 
-	if ( si->m_format == FORMAT_XML )
+	if ( si->m_format == FORMAT_XML ) {
 		sb->safePrintf("\t<numResultsOmitted>%"INT32""
 			       "</numResultsOmitted>\n",
 			       msg40->m_omitCount);
+		sb->safePrintf("<numShardsSkipped>%"INT32"</numShardsSkipped>\n",
+			       msg40->m_msg3a.m_skippedShards);
+		sb->safePrintf("<totalShards>%"INT32"</totalShards>\n",
+			       g_hostdb.m_numShards );
+	}
 
-	if ( st->m_header && si->m_format == FORMAT_JSON )
+	if ( st->m_header && si->m_format == FORMAT_JSON ) {
 		sb->safePrintf("\"numResultsOmitted\":%"INT32",\n",
 			       msg40->m_omitCount);
+		sb->safePrintf("\"numShardsSkipped\":%"INT32",\n",
+			       msg40->m_msg3a.m_skippedShards);
+		sb->safePrintf("\"totalShards\":%"INT32",\n",
+			       g_hostdb.m_numShards );
+	}
 
 
 
