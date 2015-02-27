@@ -1395,7 +1395,7 @@ bool Msg40::launchMsg20s ( bool recalled ) {
 
 	// . launch a msg20 getSummary() for each docid
 	// . m_numContiguous should preceed any gap, see below
-	for ( int32_t i = m_lastProcessedi+1 ; i < m_msg3a.m_numDocIds ; i++ ) {
+	for ( int32_t i = m_lastProcessedi+1 ; i < m_msg3a.m_numDocIds ;i++ ) {
 		// if the user only requested docids, do not get the summaries
 		if ( m_si->m_docIdsOnly ) break;
 		// if we have enough visible then no need to launch more!
@@ -1476,6 +1476,21 @@ bool Msg40::launchMsg20s ( bool recalled ) {
 		}
 		else
 			m = m_msg20[i];
+
+		// if to a dead host, skip it
+		int64_t docId = m_msg3a.m_docIds[i];
+		uint32_t shardNum = g_hostdb.getShardNumFromDocId ( docId );
+		if ( g_hostdb.isShardDead ( shardNum ) ) {
+			log("msg40: skipping summary lookup #%"INT32" of "
+			    "docid %"INT64" for dead shard #%"INT32""
+			    , i
+			    , docId
+			    , shardNum );
+			m_numRequests++;
+			m_numReplies++;
+			continue;
+		}
+
 
 		// if msg20 ptr null that means the cluster level is not CR_OK
 		if ( ! m ) {

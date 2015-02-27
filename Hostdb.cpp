@@ -1600,6 +1600,21 @@ uint32_t Hostdb::makeGroupMask ( int32_t numGroups ) {
 }
 */
 
+bool Hostdb::isShardDead ( int32_t shardNum ) {
+	Host *shard = getShard ( shardNum );
+	//Host *live = NULL;
+	for ( int32_t i = 0 ; i < m_numHostsPerShard ; i++ ) {
+		// get it
+		Host *h = &shard[i];
+		// skip if dead
+		if ( isDead(h->m_hostId) ) continue;
+		// return it if alive
+		return false;
+	}
+	return true;
+}
+
+
 // return first alive host in a shard
 Host *Hostdb::getLiveHostInShard ( int32_t shardNum ) {
 	Host *shard = getShard ( shardNum );
