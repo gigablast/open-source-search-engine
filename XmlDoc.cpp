@@ -15953,7 +15953,10 @@ char **XmlDoc::gotHttpReply ( ) {
 	// make the whole thing empty? some websites return compressed replies
 	// even though we do not ask for them. and then the compression
 	// is corrupt.
-	if ( saved == ECORRUPTHTTPGZIP ) {
+	if ( saved == ECORRUPTHTTPGZIP ||
+	     // if somehow we got a page too big for MAX_DGRAMS... treat
+	     // it like an empty page...
+	     saved == EMSGTOOBIG ) {
 		// free it i guess
 		mfree ( m_httpReply, m_httpReplyAllocSize, "XmlDocHR" );
 		// and reset it

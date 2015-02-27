@@ -291,7 +291,6 @@ bool UdpSlot::sendSetup ( char      *msg         ,
 
 	// can't be too big
 	if ( msgSize / m_maxDgramSize + 1 >= MAX_DGRAMS ) {
-		g_errno = EMSGTOOBIG;//EBADENGINEER;
 		int32_t maxMsgSize = m_maxDgramSize * MAX_DGRAMS;
 		log(LOG_LOGIC,"udp: Msg size of %"INT32" bytes is too big "
 		    "to send. Max dgram size = %"INT32". Max dgrams = "
@@ -301,7 +300,8 @@ bool UdpSlot::sendSetup ( char      *msg         ,
 		    (int32_t)msgSize,(int32_t)m_maxDgramSize,
 		    (int32_t)MAX_DGRAMS,maxMsgSize,
 		    msgType);
-		char *xx=NULL; *xx=0;
+		//char *xx=NULL; *xx=0;
+		g_errno = EMSGTOOBIG;//EBADENGINEER;
 		return false;
 		//msgSize = MAX_DGRAMS * DGRAM_SIZE;
 		//sleep(50000);

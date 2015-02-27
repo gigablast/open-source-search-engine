@@ -598,7 +598,7 @@ bool UdpServer::sendRequest ( char     *msg          ,
 		freeUdpSlot_ass ( slot );
 		if ( flipped ) interruptsOn();
 		return log("udp: Failed to initialize udp socket for "
-			   "sending.");
+			   "sending req: %s",mstrerror(g_errno));
 	}
 	// set this
 	slot->m_maxResends = maxResends;
@@ -742,10 +742,12 @@ void UdpServer::sendReply_ass ( char    *msg        ,
 				 maxWait    ,
 				 NULL       , 
 				 0          ) ) {
-		log("udp: Failed to initialize udp socket for sending.");
+		log("udp: Failed to initialize udp socket for sending "
+		    "reply: %s", mstrerror(g_errno));
 		mfree ( alloc , allocSize , "UdpServer");
 		if ( flipped ) interruptsOn();
-		if ( ! g_inSigHandler ) sendErrorReply ( slot , EBADENGINEER );
+		// was EBADENGINEER
+		if ( ! g_inSigHandler ) sendErrorReply ( slot , g_errno);
 		return ;
 	}
 	// set the callback2 , it might not be NULL if we're recording stats
