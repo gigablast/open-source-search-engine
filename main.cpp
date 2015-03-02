@@ -5209,7 +5209,8 @@ int install ( install_flag_konst_t installFlag , int32_t hostId , char *dir ,
 			//	h2->m_hostId   );
 			// . assume conf file name gbHID.conf
 			// . assume working dir ends in a '/'
-		  amp = "&";
+			amp = "&";
+			//if ( i > 0 && (i%5) == 0 ) amp = "";
 			//to test add: ulimit -t 10; to the ssh cmd
 			sprintf(tmp,
 				"ssh %s \"cd %s ; ulimit -c unlimited; "
