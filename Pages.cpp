@@ -643,6 +643,15 @@ bool Pages::sendDynamicReply ( TcpSocket *s , HttpRequest *r , int32_t page ) {
 		log("pages: accessing a crawlbot page without admin privs. "
 		    "no parms can be changed.");
 
+	if ( ! g_conf.m_allowCloudUsers &&
+	     ! publicPage &&
+	     ! isMasterAdmin &&
+	     ! g_conf.isCollAdmin ( s , r ) ) {
+		//char *msg = "Permission Denied";
+		//return g_httpServer.sendErrorReply(s, 403,msg);
+		return sendPageLogin ( s , r );
+	}
+
 	/*
 	// is request coming from a local ip?
 	bool isLocal = false;
