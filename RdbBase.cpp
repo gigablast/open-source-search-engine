@@ -1359,7 +1359,11 @@ void RdbBase::attemptMerge ( int32_t niceness, bool forceMergeAll, bool doLog ,
 	if ( g_merge2.m_isSuspended ) return;
 
 	// sanity checks
-	if (   g_loop.m_inQuickPoll ) { char *xx=NULL;*xx=0; }
+	if (   g_loop.m_inQuickPoll ) { 
+		log("rdb: cant attempt merge in quickpoll");
+		return;
+	}
+
 	if (   niceness == 0 ) { char *xx=NULL;*xx=0; }
 
 	if ( forceMergeAll ) m_nextMergeForced = true;
