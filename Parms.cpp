@@ -9847,7 +9847,7 @@ void Parms::init ( ) {
 
 	m->m_title = "injections enabled";
 	m->m_desc  = "Controls injecting for all collections";
-	m->m_cgi   = "se";
+	m->m_cgi   = "injen";
 	m->m_off   = (char *)&g_conf.m_injectionsEnabled - g;
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "1";
@@ -9857,7 +9857,7 @@ void Parms::init ( ) {
 
 	m->m_title = "querying enabled";
 	m->m_desc  = "Controls querying for all collections";
-	m->m_cgi   = "se";
+	m->m_cgi   = "qryen";
 	m->m_off   = (char *)&g_conf.m_queryingEnabled - g;
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "1";
