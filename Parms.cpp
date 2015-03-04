@@ -9846,7 +9846,7 @@ void Parms::init ( ) {
 	m++;
 
 	m->m_title = "injections enabled";
-	m->m_desc  = "Allows injecting for all collections";
+	m->m_desc  = "Controls injecting for all collections";
 	m->m_cgi   = "se";
 	m->m_off   = (char *)&g_conf.m_injectionsEnabled - g;
 	m->m_type  = TYPE_BOOL;
