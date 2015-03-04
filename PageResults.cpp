@@ -629,6 +629,13 @@ bool sendPageResults ( TcpSocket *s , HttpRequest *hr ) {
 		return sendReply(st,NULL);
 	}
 
+	// for now disable queries
+	if ( ! g_conf.m_queryingEnabled ) {
+		g_errno = EQUERYINGDISABLED;
+		return sendReply(st,NULL);
+	}
+
+
 	// LAUNCH ADS
 	// . now get the ad space for this query
 	// . don't get ads if we're not on the first page of results

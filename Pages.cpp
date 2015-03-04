@@ -4033,6 +4033,30 @@ bool printRedBox ( SafeBuf *mb , TcpSocket *sock , HttpRequest *hr ) {
 		mb->safePrintf("%s",boxEnd);
 	}
 
+	// injections disabled?
+	if ( ! g_conf.m_injectionsEnabled ) {
+		if ( adds ) mb->safePrintf("<br>");
+		adds++;
+		mb->safePrintf("%s",box);
+		mb->safePrintf("Injections are disabled in the "
+			       "<a href=/admin/hosts?c=%s>"
+			       "master controls</a>."
+			       ,coll);
+		mb->safePrintf("%s",boxEnd);
+	}
+
+	// querying disabled?
+	if ( ! g_conf.m_queryingEnabled ) {
+		if ( adds ) mb->safePrintf("<br>");
+		adds++;
+		mb->safePrintf("%s",box);
+		mb->safePrintf("Querying is disabled in the "
+			       "<a href=/admin/hosts?c=%s>"
+			       "master controls</a>."
+			       ,coll);
+		mb->safePrintf("%s",boxEnd);
+	}
+
 
 	bool sameVersions = true;
 	for ( int32_t i = 1 ; i < g_hostdb.getNumHosts() ; i++ ) {
