@@ -2278,7 +2278,8 @@ bool SpiderColl::addSpiderRequest ( SpiderRequest *sreq ,
 	// HACK: set isOutlink to true here since we don't know if we have sre
 	ufn = ::getUrlFilterNum(sreq,NULL,nowGlobalMS,false,MAX_NICENESS,m_cr,
 				true,//isoutlink? HACK!
-				NULL); // quota table quotatable
+				NULL,// quota table quotatable
+				-1 );  // langid not valid
 	// sanity check
 	//if ( ufn < 0 ) { 
 	//	log("spider: failed to add spider request for %s because "
@@ -4148,7 +4149,8 @@ bool SpiderColl::scanListForWinners ( ) {
 					     m_cr,
 					     false, // isOutlink?
 					     // provide the page quota table
-					     &m_localTable);
+						&m_localTable,
+						-1);
 		// sanity check
 		if ( ufn == -1 ) { 
 			log("spider: failed to match url filter for "
@@ -10725,14 +10727,18 @@ int32_t getUrlFilterNum2 ( SpiderRequest *sreq       ,
 		       int32_t           niceness   ,
 		       CollectionRec *cr         ,
 			bool           isOutlink  ,
-			HashTableX   *quotaTable ) {
+			   HashTableX   *quotaTable ,
+			   int32_t langIdArg ) {
+
+	int32_t langId = langIdArg;
+	if ( srep ) langId = srep->m_langId;
 
 	// convert lang to string
 	char *lang    = NULL;
 	int32_t  langLen = 0;
-	if ( srep ) {
+	if ( langId >= 0 ) { // if ( srep ) {
 		// this is NULL on corruption
-		lang = getLanguageAbbr ( srep->m_langId );	
+		lang = getLanguageAbbr ( langId );//srep->m_langId );	
 		langLen = gbstrlen(lang);
 	}
 
@@ -11884,7 +11890,7 @@ int32_t getUrlFilterNum2 ( SpiderRequest *sreq       ,
 			// if we do not have enough info for outlink, all done
 			if ( isOutlink ) return -1;
 			// must have a reply
-			if ( ! srep ) continue;
+			if ( langId == -1 ) continue;
 			// skip if unknown? no, we support "xx" as unknown now
 			//if ( srep->m_langId == 0 ) continue;
 			// set these up
@@ -12446,7 +12452,8 @@ int32_t getUrlFilterNum ( SpiderRequest *sreq       ,
 		       int32_t           niceness   ,
 		       CollectionRec *cr         ,
 		       bool           isOutlink  ,
-		       HashTableX    *quotaTable ) {
+			  HashTableX    *quotaTable ,
+			  int32_t langId ) {
 
 	/*
 	  turn this off for now to save memory on the g0 cluster.
@@ -12479,7 +12486,8 @@ int32_t getUrlFilterNum ( SpiderRequest *sreq       ,
 				      niceness,
 				      cr,
 				      isOutlink,
-				      quotaTable );
+				      quotaTable ,
+				      langId );
 
 	/*
 	// is table full? clear it if so
