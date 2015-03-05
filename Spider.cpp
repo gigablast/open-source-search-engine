@@ -2278,7 +2278,8 @@ bool SpiderColl::addSpiderRequest ( SpiderRequest *sreq ,
 	// HACK: set isOutlink to true here since we don't know if we have sre
 	ufn = ::getUrlFilterNum(sreq,NULL,nowGlobalMS,false,MAX_NICENESS,m_cr,
 				true,//isoutlink? HACK!
-				NULL); // quota table quotatable
+				NULL,// quota table quotatable
+				-1 );  // langid not valid
 	// sanity check
 	//if ( ufn < 0 ) { 
 	//	log("spider: failed to add spider request for %s because "
@@ -4148,7 +4149,8 @@ bool SpiderColl::scanListForWinners ( ) {
 					     m_cr,
 					     false, // isOutlink?
 					     // provide the page quota table
-					     &m_localTable);
+						&m_localTable,
+						-1);
 		// sanity check
 		if ( ufn == -1 ) { 
 			log("spider: failed to match url filter for "
@@ -6164,6 +6166,16 @@ void SpiderLoop::spiderDoledUrls ( ) {
 	// advance for next time we call goto subloop;
 	m_crx = m_crx->m_nextActive;
 
+
+	// get the spider collection for this collnum
+	m_sc = g_spiderCache.getSpiderColl(cr->m_collnum);//m_cri);
+	// skip if none
+	if ( ! m_sc ) goto subloop;
+	// always reset priority to max at start
+	m_sc->setPriority ( MAX_SPIDER_PRIORITIES - 1 );
+
+ subloopNextPriority:
+
 		// wrap it if we should
 		//if ( m_cri >= g_collectiondb.m_numRecs ) m_cri = 0;
 		// get rec
@@ -6246,9 +6258,9 @@ void SpiderLoop::spiderDoledUrls ( ) {
 		//	continue;
 
 		// get the spider collection for this collnum
-		m_sc = g_spiderCache.getSpiderColl(cr->m_collnum);//m_cri);
+		//m_sc = g_spiderCache.getSpiderColl(cr->m_collnum);//m_cri);
 		// skip if none
-		if ( ! m_sc ) goto subloop;
+		//if ( ! m_sc ) goto subloop;
 		// skip if we completed the doledb scan for every spider
 		// priority in this collection
 		// MDW: this was the only thing based on the value of
@@ -6460,7 +6472,8 @@ void SpiderLoop::spiderDoledUrls ( ) {
 		//     ! m_sc->m_waitingTreeNeedsRebuild )
 		//	m_sc->m_lastDoledbReadEmpty = true;
 		// and go up top
-		goto collLoop;
+		//goto collLoop;
+		goto subloop;
 	}
 
 	// . skip priority if we knows its empty in doledb
@@ -6567,10 +6580,24 @@ void SpiderLoop::spiderDoledUrls ( ) {
 	//    "pri=%"INT32"+",m_list.m_listSize,(int32_t)m_sc->m_pri);
 	// breathe
 	QUICKPOLL ( MAX_NICENESS );
+
+	int32_t saved = m_launches;
+
 	// . add urls in list to cache
 	// . returns true if we should read another list
 	// . will set startKey to next key to start at
-	if ( gotDoledbList2 ( ) ) {
+	bool status = gotDoledbList2 ( );
+
+	// if we did not launch anything, then decrement priority and
+	// try again. but if priority hits -1 then subloop2 will just go to 
+	// the next collection.
+	if ( saved == m_launches ) {
+		m_sc->devancePriority();
+		goto subloopNextPriority;
+	}
+
+
+	if ( status ) {
 		// . if priority is -1 that means try next priority
 		// . DO NOT reset the whole scan. that was what was happening
 		//   when we just had "goto loop;" here
@@ -6720,7 +6747,7 @@ bool SpiderLoop::gotDoledbList2 ( ) {
 		// . this priority is EMPTY, try next
 		// . will also set m_sc->m_nextDoledbKey
 		// . will also set m_sc->m_msg5StartKey
-		m_sc->devancePriority();
+		//m_sc->devancePriority();
 		// this priority is EMPTY, try next
 		//m_sc->m_pri = m_sc->m_pri - 1;
 		// how can this happen?
@@ -6879,7 +6906,7 @@ bool SpiderLoop::gotDoledbList2 ( ) {
 		// assume we could have launched a spider
 		if ( max > 0 ) ci->m_lastSpiderCouldLaunch = nowGlobal;
 		// this priority is maxed out, try next
-		m_sc->devancePriority();
+		//m_sc->devancePriority();
 		// assume not an empty read
 		//m_sc->m_encounteredDoledbRecs = true;
 		//m_sc->m_pri = pri - 1;
@@ -6972,7 +6999,7 @@ bool SpiderLoop::gotDoledbList2 ( ) {
 			// since we are returning false. so let's try the
 			// next priority in line.
 			//m_sc->m_pri--;
-			m_sc->devancePriority();
+			//m_sc->devancePriority();
 			// try returning true now that we skipped to
 			// the next priority level to avoid the infinite
 			// loop as described above.
@@ -10700,14 +10727,18 @@ int32_t getUrlFilterNum2 ( SpiderRequest *sreq       ,
 		       int32_t           niceness   ,
 		       CollectionRec *cr         ,
 			bool           isOutlink  ,
-			HashTableX   *quotaTable ) {
+			   HashTableX   *quotaTable ,
+			   int32_t langIdArg ) {
+
+	int32_t langId = langIdArg;
+	if ( srep ) langId = srep->m_langId;
 
 	// convert lang to string
 	char *lang    = NULL;
 	int32_t  langLen = 0;
-	if ( srep ) {
+	if ( langId >= 0 ) { // if ( srep ) {
 		// this is NULL on corruption
-		lang = getLanguageAbbr ( srep->m_langId );	
+		lang = getLanguageAbbr ( langId );//srep->m_langId );	
 		langLen = gbstrlen(lang);
 	}
 
@@ -11859,7 +11890,7 @@ int32_t getUrlFilterNum2 ( SpiderRequest *sreq       ,
 			// if we do not have enough info for outlink, all done
 			if ( isOutlink ) return -1;
 			// must have a reply
-			if ( ! srep ) continue;
+			if ( langId == -1 ) continue;
 			// skip if unknown? no, we support "xx" as unknown now
 			//if ( srep->m_langId == 0 ) continue;
 			// set these up
@@ -12421,7 +12452,8 @@ int32_t getUrlFilterNum ( SpiderRequest *sreq       ,
 		       int32_t           niceness   ,
 		       CollectionRec *cr         ,
 		       bool           isOutlink  ,
-		       HashTableX    *quotaTable ) {
+			  HashTableX    *quotaTable ,
+			  int32_t langId ) {
 
 	/*
 	  turn this off for now to save memory on the g0 cluster.
@@ -12454,7 +12486,8 @@ int32_t getUrlFilterNum ( SpiderRequest *sreq       ,
 				      niceness,
 				      cr,
 				      isOutlink,
-				      quotaTable );
+				      quotaTable ,
+				      langId );
 
 	/*
 	// is table full? clear it if so

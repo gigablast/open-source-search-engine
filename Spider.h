@@ -1596,6 +1596,7 @@ int32_t getUrlFilterNum ( class SpiderRequest *sreq ,
 		       int32_t niceness , 
 		       class CollectionRec *cr ,
 		       bool isOutlink , // = false ,
-		       HashTableX *quotaTable );//= NULL ) ;
+			  HashTableX *quotaTable ,//= NULL ) ;
+			  int32_t langIdArg );
 
 #endif
