@@ -6747,7 +6747,7 @@ bool SpiderLoop::gotDoledbList2 ( ) {
 		// . this priority is EMPTY, try next
 		// . will also set m_sc->m_nextDoledbKey
 		// . will also set m_sc->m_msg5StartKey
-		m_sc->devancePriority();
+		//m_sc->devancePriority();
 		// this priority is EMPTY, try next
 		//m_sc->m_pri = m_sc->m_pri - 1;
 		// how can this happen?
@@ -6906,7 +6906,7 @@ bool SpiderLoop::gotDoledbList2 ( ) {
 		// assume we could have launched a spider
 		if ( max > 0 ) ci->m_lastSpiderCouldLaunch = nowGlobal;
 		// this priority is maxed out, try next
-		m_sc->devancePriority();
+		//m_sc->devancePriority();
 		// assume not an empty read
 		//m_sc->m_encounteredDoledbRecs = true;
 		//m_sc->m_pri = pri - 1;
@@ -6999,7 +6999,7 @@ bool SpiderLoop::gotDoledbList2 ( ) {
 			// since we are returning false. so let's try the
 			// next priority in line.
 			//m_sc->m_pri--;
-			m_sc->devancePriority();
+			//m_sc->devancePriority();
 			// try returning true now that we skipped to
 			// the next priority level to avoid the infinite
 			// loop as described above.
