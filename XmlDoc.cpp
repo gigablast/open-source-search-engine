@@ -15237,6 +15237,13 @@ SafeBuf *XmlDoc::getDiffbotReply ( ) {
 	if ( cr->m_forceUseFloaters ) useProxies = true;
 	// we gotta have some proxy ips that we can use
 	if ( ! g_conf.m_proxyIps.hasDigits() ) useProxies = false;
+
+	// until we fix https CONNECT support for https urls diffbot can't
+	// go through gb. we should fix that by downloading the whole page
+	// ourselves and sending it back, and tell diffbot's phantomjs not
+	// to do the certificate check.
+	useProxies = false;
+
 	// if we used a proxy to download the doc, then diffbot should too
 	// BUT tell diffbot to go through host #0 so we can send it to the
 	// correct proxy using our load balancing & backoff algos.
