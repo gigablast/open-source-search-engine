@@ -6164,6 +6164,16 @@ void SpiderLoop::spiderDoledUrls ( ) {
 	// advance for next time we call goto subloop;
 	m_crx = m_crx->m_nextActive;
 
+
+	// get the spider collection for this collnum
+	m_sc = g_spiderCache.getSpiderColl(cr->m_collnum);//m_cri);
+	// skip if none
+	if ( ! m_sc ) goto subloop;
+	// always reset priority to max at start
+	m_sc->setPriority ( MAX_SPIDER_PRIORITIES - 1 );
+
+ subloopNextPriority:
+
 		// wrap it if we should
 		//if ( m_cri >= g_collectiondb.m_numRecs ) m_cri = 0;
 		// get rec
@@ -6246,9 +6256,9 @@ void SpiderLoop::spiderDoledUrls ( ) {
 		//	continue;
 
 		// get the spider collection for this collnum
-		m_sc = g_spiderCache.getSpiderColl(cr->m_collnum);//m_cri);
+		//m_sc = g_spiderCache.getSpiderColl(cr->m_collnum);//m_cri);
 		// skip if none
-		if ( ! m_sc ) goto subloop;
+		//if ( ! m_sc ) goto subloop;
 		// skip if we completed the doledb scan for every spider
 		// priority in this collection
 		// MDW: this was the only thing based on the value of
@@ -6460,7 +6470,8 @@ void SpiderLoop::spiderDoledUrls ( ) {
 		//     ! m_sc->m_waitingTreeNeedsRebuild )
 		//	m_sc->m_lastDoledbReadEmpty = true;
 		// and go up top
-		goto collLoop;
+		//goto collLoop;
+		goto subloop;
 	}
 
 	// . skip priority if we knows its empty in doledb
@@ -6567,10 +6578,24 @@ void SpiderLoop::spiderDoledUrls ( ) {
 	//    "pri=%"INT32"+",m_list.m_listSize,(int32_t)m_sc->m_pri);
 	// breathe
 	QUICKPOLL ( MAX_NICENESS );
+
+	int32_t saved = m_launches;
+
 	// . add urls in list to cache
 	// . returns true if we should read another list
 	// . will set startKey to next key to start at
-	if ( gotDoledbList2 ( ) ) {
+	bool status = gotDoledbList2 ( );
+
+	// if we did not launch anything, then decrement priority and
+	// try again. but if priority hits -1 then subloop2 will just go to 
+	// the next collection.
+	if ( saved == m_launches ) {
+		m_sc->devancePriority();
+		goto subloopNextPriority;
+	}
+
+
+	if ( status ) {
 		// . if priority is -1 that means try next priority
 		// . DO NOT reset the whole scan. that was what was happening
 		//   when we just had "goto loop;" here
