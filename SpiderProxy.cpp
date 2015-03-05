@@ -24,47 +24,6 @@
 // . TODO: to prevent host #0 from getting too slammed we can also recruit
 //   other hosts to act just like host #0.
 
-// host #0 breaks Conf::m_spiderIps safebuf into an array of
-// SpiderProxy classes and saves to disk as spoderproxies.dat to ensure 
-// persistence
-class SpiderProxy {
-public:
-	// ip/port of the spider proxy
-	int32_t m_ip;
-	uint16_t m_port;
-	// last time we attempted to download the test url through this proxy
-	int64_t m_lastDownloadTestAttemptMS;
-	// use -1 to indicate timed out when downloading test url
-	int32_t   m_lastDownloadTookMS;
-	// 0 means none... use mstrerror()
-	int32_t   m_lastDownloadError;
-	// use -1 to indicate never
-	int64_t m_lastSuccessfulTestMS;
-
-	// how many times have we told a requesting host to use this proxy
-	// to download their url with.
-	int32_t m_numDownloadRequests;
-
-	// how many are outstanding? everytime a host requests a proxyip
-	// it also tells us its outstanding counts for each proxy ip
-	// so we can ensure this is accurate even though a host may die
-	// and come back up.
-	int32_t m_numOutstandingDownloads;
-
-	// waiting on test url to be downloaded
-	bool m_isWaiting;
-
-	int64_t m_timesUsed;
-
-	int32_t m_lastBytesDownloaded;
-
-	// special things used by LoadBucket algo to determine which
-	// SpiderProxy to use to download from a particular IP
-	int32_t m_countForThisIp;
-	int64_t m_lastTimeUsedForThisIp;
-
-	char m_usernamePwd[MAXUSERNAMEPWD];
-};
 
 // hashtable that maps an ip:port key (64-bits) to a SpiderProxy
 static HashTableX s_iptab;
@@ -1081,3 +1040,14 @@ bool initSpiderProxyStuff() {
 
 }
 
+SpiderProxy *getSpiderProxyByIpPort ( int32_t ip , uint16_t port ) {
+	for ( int32_t i = 0 ; i < s_iptab.getNumSlots() ; i++ ) {
+		// skip empty slots
+		if ( ! s_iptab.m_flags[i] ) continue;
+		SpiderProxy *sp = (SpiderProxy *)s_iptab.getValueFromSlot(i);
+		if ( sp->m_ip != ip ) continue;
+		if ( sp->m_port != port ) continue;
+		return sp;
+	}
+	return NULL;
+}

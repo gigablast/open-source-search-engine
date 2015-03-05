@@ -1178,9 +1178,9 @@ int Mem::printBreech ( int32_t i , char core ) {
 	int32_t size = s_sizes[i];
 	for ( int32_t j = 0 ; j < OVERPAD ; j++ ) {
 		if ( (unsigned char)mem[size+j] == MAGICCHAR ) continue;
-		log(LOG_LOGIC,"mem: overrun  at %"PTRFMT" "
+		log(LOG_LOGIC,"mem: overrun  at 0x%"PTRFMT" (size=%"INT32")"
 		    "roff=%"INT32" note=%s",
-		    (PTRTYPE)mem,j,&s_labels[i*16]);
+		    (PTRTYPE)mem,size,j,&s_labels[i*16]);
 
 		// mark it for freed mem re-use check below
 		if ( ! bp ) bp = &mem[size+j];
@@ -1205,8 +1205,10 @@ int Mem::printBreech ( int32_t i , char core ) {
 		}
 		// now report it
 		if ( mink == -1 ) continue;
-		log("mem: possible breeching buffer=%s dist=%"PTRFMT"",
+		log("mem: possible breeching buffer=%s at 0x%"PTRFMT" "
+		    "breaching at offset of %"PTRFMT" bytes",
 		    &s_labels[mink*16],
+		    (PTRTYPE)s_mptrs[mink],
 		    (PTRTYPE)s_mptrs[mink]-((PTRTYPE)mem+s_sizes[i]));
 		flag = 1;
 	}

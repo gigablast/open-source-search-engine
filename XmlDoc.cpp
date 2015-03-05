@@ -15272,6 +15272,14 @@ SafeBuf *XmlDoc::getDiffbotReply ( ) {
 		m_diffbotUrl.urlEncode(p1);
 		*p2 = c;
 	}
+
+	// now so it works just give it a proxy directly, so it doesn't
+	// have to go through gb.
+	// if ( useProxies ) {
+	// 	// msg13 typically uses this to get an unbanned proxy
+	// 	getProxiesToUse();
+	// }
+
 	// if we use proxies then increase the timeout since proxies 
 	// increase the crawl delay in hopes of backing off to discover
 	// the website's policy so we don't hit it too hard and get banned.
