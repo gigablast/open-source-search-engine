@@ -6,6 +6,8 @@
 //#include "Events.h" // class EventIdBits...printEventIds()
 #include "sort.h"
 
+#include "Stats.h"
+
 static void gotReplyWrapper3a     ( void *state , void *state2 ) ;
 //static void gotRerankedDocIds     ( void *state );
 
@@ -347,6 +349,7 @@ bool Msg3a::gotCacheReply ( ) {
 
 	// reset replies received count
 	m_numReplies  = 0;
+	m_skippedShards = 0;
 	// int16_tcut
 	int32_t n = m_q->m_numTerms;
 
@@ -420,6 +423,10 @@ bool Msg3a::gotCacheReply ( ) {
 	
 	if ( ! m_rbufPtr ) return true;
 
+	// how many seconds since our main process was started?
+	long long now = gettimeofdayInMilliseconds();
+	long elapsed = (now - g_stats.m_startTime) / 1000;
+
 	// free this one too
 	m_rbuf2.purge();
 	// and copy that!
@@ -458,7 +465,6 @@ bool Msg3a::gotCacheReply ( ) {
 		// going to sweat over performance on non-fully split indexes
 		// because they suck really bad anyway compared to full
 		// split indexes. "gid" is already set if we are not split.
-		//uint32_t gid = h->m_groupId;//g_hostdb.getGroupId(i);
 		int32_t shardNum = h->m_shardNum;
 		int32_t firstHostId = h->m_hostId;
 		// get strip num
@@ -487,6 +493,26 @@ bool Msg3a::gotCacheReply ( ) {
 		Multicast *m = &m_mcast[i];
 		// clear it for transmit
 		m->reset();
+
+		// if all hosts in group dead, just skip it!
+		// only do this if main process has been running more than
+		// 300 seconds because our brother hosts show up as "dead"
+		// until we've got a ping reply back from them.
+		// use 160 seconds. seems to take 138 secs or so to
+		// get pings from everyone.
+		if ( g_hostdb.isShardDead ( shardNum ) ) {
+			m_numReplies++;
+			log("msg3a: skipping dead shard # %i "
+			    "(elapsed=%li)",(int)shardNum,elapsed);
+			// see if this fixes the core?
+			// assume reply is empty!!
+			//m_reply[t][i] = NULL;
+			// nuke reply in there so getBestReply() returns NULL
+			//m_mcast[i].reset();
+			continue;
+		}
+
+
 		// . send out a msg39 request to each shard
 		// . multicasts to a host in group "groupId"
 		// . we always block waiting for the reply with a multicast
@@ -664,9 +690,12 @@ bool Msg3a::gotAllShardReplies ( ) {
 			char *xx = NULL; *xx=0; 
 		}
 		// bad reply?
-		if ( ! mr ) {
-			log(LOG_LOGIC,"query: msg3a: Bad NULL reply from "
-			    "host #%"INT32". Timeout? OOM?",i);
+		if ( ! mr || replySize < 29 ) {
+			m_skippedShards++;
+			log(LOG_LOGIC,"query: msg3a: Bad reply (size=%i) from "
+			    "host #%"INT32". Dead? Timeout? OOM?"
+			    ,(int)replySize
+			    ,i);
 			m_reply       [i] = NULL;
 			m_replyMaxSize[i] = 0;
 			// it might have been timd out, just ignore it!!
@@ -678,15 +707,16 @@ bool Msg3a::gotAllShardReplies ( ) {
 			return true;
 		}
 		// how did this happen?
-		if ( replySize < 29 && ! mr->m_errno ) {
-			// if size is 0 it can be Msg39 giving us an error!
-			g_errno = EBADREPLYSIZE;
-			m_errno = EBADREPLYSIZE;
-			log(LOG_LOGIC,"query: msg3a: Bad reply size of %"INT32".",
-			    replySize);
-			// all reply buffers should be freed on reset()
-			return true;
-		}
+		// if ( replySize < 29 && ! mr->m_errno ) {
+		// 	// if size is 0 it can be Msg39 giving us an error!
+		// 	g_errno = EBADREPLYSIZE;
+		// 	m_errno = EBADREPLYSIZE;
+		// 	log(LOG_LOGIC,"query: msg3a: Bad reply size "
+		// 	    "of %"INT32".",
+		// 	    replySize);
+		// 	// all reply buffers should be freed on reset()
+		// 	return true;
+		// }
 
 		// can this be non-null? we shouldn't be overwriting one
 		// without freeing it...

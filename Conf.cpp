@@ -143,6 +143,8 @@ bool Conf::isCollAdmin2 ( TcpSocket *sock ,
 	if ( strcmp(cr->m_coll,"main")==0 ) return false;
 	if ( strcmp(cr->m_coll,"dmoz")==0 ) return false;
 
+	if ( ! g_conf.m_useCollectionPasswords) return false;
+
 	// empty password field? then allow them through
 	if ( cr->m_collectionPasswords.length() <= 0 &&
 	     cr->m_collectionIps      .length() <= 0 )

@@ -4868,10 +4868,17 @@ int install ( install_flag_konst_t installFlag , int32_t hostId , char *dir ,
 			fileListBuf.safePrintf(" %shosts.conf",srcDir);
 			fileListBuf.safePrintf(" %sgb.conf",srcDir);
 
+			char *ipStr = iptoa(h2->m_ip);
 
 			SafeBuf tmpBuf;
 			tmpBuf.safePrintf(
+					  // ensure directory is there, if
+					  // not then make it
+					  "ssh %s 'mkdir %s' ; "
 					  "scp -r %s %s:%s"
+					  , ipStr
+					  , h2->m_dir
+
 					  , fileListBuf.getBufStart()
 					  , iptoa(h2->m_ip)
 					  , h2->m_dir
@@ -5202,7 +5209,8 @@ int install ( install_flag_konst_t installFlag , int32_t hostId , char *dir ,
 			//	h2->m_hostId   );
 			// . assume conf file name gbHID.conf
 			// . assume working dir ends in a '/'
-		  amp = "&";
+			amp = "&";
+			//if ( i > 0 && (i%5) == 0 ) amp = "";
 			//to test add: ulimit -t 10; to the ssh cmd
 			sprintf(tmp,
 				"ssh %s \"cd %s ; ulimit -c unlimited; "

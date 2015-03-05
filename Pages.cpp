@@ -643,6 +643,15 @@ bool Pages::sendDynamicReply ( TcpSocket *s , HttpRequest *r , int32_t page ) {
 		log("pages: accessing a crawlbot page without admin privs. "
 		    "no parms can be changed.");
 
+	if ( ! g_conf.m_allowCloudUsers &&
+	     ! publicPage &&
+	     ! isMasterAdmin &&
+	     ! g_conf.isCollAdmin ( s , r ) ) {
+		//char *msg = "Permission Denied";
+		//return g_httpServer.sendErrorReply(s, 403,msg);
+		return sendPageLogin ( s , r );
+	}
+
 	/*
 	// is request coming from a local ip?
 	bool isLocal = false;
@@ -4021,6 +4030,30 @@ bool printRedBox ( SafeBuf *mb , TcpSocket *sock , HttpRequest *hr ) {
 		mb->safePrintf("%"INT32" host%s over 98%% disk usage. "
 			       "See the <a href=/admin/hosts?c=%s>"
 			       "hosts</a> table.",out,s,coll);
+		mb->safePrintf("%s",boxEnd);
+	}
+
+	// injections disabled?
+	if ( ! g_conf.m_injectionsEnabled ) {
+		if ( adds ) mb->safePrintf("<br>");
+		adds++;
+		mb->safePrintf("%s",box);
+		mb->safePrintf("Injections are disabled in the "
+			       "<a href=/admin/hosts?c=%s>"
+			       "master controls</a>."
+			       ,coll);
+		mb->safePrintf("%s",boxEnd);
+	}
+
+	// querying disabled?
+	if ( ! g_conf.m_queryingEnabled ) {
+		if ( adds ) mb->safePrintf("<br>");
+		adds++;
+		mb->safePrintf("%s",box);
+		mb->safePrintf("Querying is disabled in the "
+			       "<a href=/admin/hosts?c=%s>"
+			       "master controls</a>."
+			       ,coll);
 		mb->safePrintf("%s",boxEnd);
 	}
 

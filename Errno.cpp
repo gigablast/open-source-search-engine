@@ -138,7 +138,7 @@ case	ERESTRICTEDPAGE  : return "Page is /admin or /master and restricted";
 //case	ESPIDERRECDUP    : return "Duplicate spiderdb record";
 case	EDOCISERRPG      : return "Doc is error page";
 case	EFORCED          : return "Doc was force respidered";
-case	EDISABLED        : return "Injection is disabled in Master Controls";
+case	EINJECTIONSDISABLED: return "Injection is disabled in Master Controls";
 case	ETAGBREACH       : return "Sections parser ran out of tag stack space";
 case	EDISKSTUCK       : return "Disk is stuck";
 case	EDOCHIJACKED     : return "Doc is hijacked";
@@ -150,7 +150,7 @@ case	EBADGEOCODERREPLY: return "Geocoder returned bad reply or timed out";
 case	EBUFOVERFLOW     : return "Static buffer overflow";
 case	EPLSRESUBMIT     : return "The system was restarted. Please resubmit your evaluation.";
 case	EURLBADYEAR      : return "Url contained an out of usable range year";
-case	EABANDONED       : return "Injection is abandoned";
+case	EABANDONED       : return "Injected url already indexed";
 case	ECORRUPTHTTPGZIP : return "Http server returned corrupted gzip";
 case	EDOCIDCOLLISION  : return "DocId collision in titledb";
 case	ESSLERROR        : return "SSL error of some kind";
@@ -189,6 +189,7 @@ case EPROXYSSLCONNECTFAILED: return "SSL tunnel through HTTP proxy failed";
 case EINLINESECTIONS: return "Error generating section votes";
 case EREADONLYMODE: return "In read only mode. Failed.";
 case ENOTITLEREC: return "No title rec found when recycling content";
+case EQUERYINGDISABLED: return "Querying is disabled in the master controls";
 	}
 	// if the remote error bit is clear it must be a regulare errno
 	//if ( ! ( errnum & REMOTE_ERROR_BIT ) ) return strerror ( errnum );

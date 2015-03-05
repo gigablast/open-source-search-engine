@@ -946,11 +946,11 @@ TcpSocket *TcpServer::wrapSocket ( int sd , int32_t niceness , bool isIncoming )
 		return NULL;
 	}
 	// save this i guess
-	int32_t saved = s->m_numDestroys;
+	//int32_t saved = s->m_numDestroys;
 	// clear it
 	memset ( s , 0 , sizeof(TcpSocket) );
 	// restore
-	s->m_numDestroys = saved;
+	//s->m_numDestroys = saved;
 	// store sd in our TcpSocket
 	s->m_sd = sd;
 	// store the last action time as now (used for timeout'ing sockets)
@@ -1246,7 +1246,8 @@ void readSocketWrapper2 ( int sd , void *state ) {
 				log("tcp: going to tunnel mode 3");
 			s->m_tunnelMode = 3;
 		}
-
+		// sanity
+		if ( s->m_sockState != ST_WRITING ) { char *xx=NULL;*xx=0; }
 		// it went through, should be ST_WRITING so go below
 		THIS->writeSocket ( s );
 		return;
@@ -1633,12 +1634,13 @@ void writeSocketWrapper ( int sd , void *state ) {
 		if ( r == 0 ) return;
 		// error?
 		if ( r == -1 ) {
-			log("tcp: ssl handshake error sd=%i",s->m_sd);
+			log("tcp: ssl handshake4 error sd=%i",s->m_sd);
 			THIS->makeCallback ( s );
 			THIS->destroySocket ( s ); 
 			return; 
 		}
 		// it went through, should be ST_WRITING so go below
+		if ( s->m_sockState != ST_WRITING ) { char *xx=NULL;*xx=0; }
 	}
 			
 
@@ -1993,6 +1995,7 @@ int32_t TcpServer::writeSocket ( TcpSocket *s ) {
 //   state is ST_CONNECTING
 int32_t TcpServer::connectSocket ( TcpSocket *s ) {
 	// if this socket is not in connecting state (ST_CONNECTING) then ret
+	// No! socket state could be ST_SSL_HANDSHAKE
 	//	if ( ! s->isConnecting() ) return true;
 	// now we have a connect just starting or already in progress
 	struct sockaddr_in to;
@@ -2373,7 +2376,9 @@ void TcpServer::readTimeoutPoll ( ) {
 		}
 		// . if he is sending, that sticks too, so try it!
 		// . or if we're connecting to him...
-		if ( s->isSending() || s->isConnecting() ) {
+		if ( s->isSending() || 
+		     s->isConnecting() || 
+		     s->m_sockState == ST_SSL_HANDSHAKE ) {
 			if ( g_conf.m_logDebugTcp )
 				log("tcp: timeloop: calling writesock on sd=%i"
 				    ,s->m_sd);
@@ -2384,7 +2389,9 @@ void TcpServer::readTimeoutPoll ( ) {
 		// . seems like we don't always get the ready-for-read signal
 		// . HACK: this fixes the problem, albeit not the best way
 		// . or if he's connecting to us...
-		if ( s->isReading() || s->isConnecting() ) {
+		if ( s->isReading() || 
+		     s->isConnecting() ||
+		     s->m_sockState == ST_SSL_HANDSHAKE ) {
 			if ( g_conf.m_logDebugTcp )
 				log("tcp: timeloop: calling readsock on sd=%i"
 				    ,s->m_sd);
@@ -2395,6 +2402,7 @@ void TcpServer::readTimeoutPoll ( ) {
 		// continue if socket not in an active state
 		if ( ! s->isReading   () && 
 		     ! s->isConnecting() &&
+		     s->m_sockState != ST_SSL_HANDSHAKE &&
 		     ! s->isSending   ()    ) continue;
 		// . if the transmission time out then makeCallback() will
 		//   make the callback and then unconditionally delete 
@@ -2453,7 +2461,12 @@ void TcpServer::readTimeoutPoll ( ) {
 		}
 
 		if ( g_conf.m_logDebugTcp )
-			log("tcp: timeloop: timing out sd=%i"  ,s->m_sd);
+			log("tcp: timeloop: timing out sd=%i s=0x%"PTRFMT ,
+			    s->m_sd,(PTRTYPE)s);
+
+		else if ( m_useSSL )
+			log("tcp: timeloop: timing out ssl sd=%i s=0x%"PTRFMT ,
+			    s->m_sd,(PTRTYPE)s);
 
 		//log("tcp: timeout=%"INT32" fd=%"INT32"",sockTimeout,s->m_sd);
 
@@ -2821,7 +2834,7 @@ int TcpServer::sslHandshake ( TcpSocket *s ) {
 	}
 	// if the connection happened return r, should be 1
 	if ( r > 0 ) {
-		if ( g_conf.m_logDebugTcp )
+		//if ( g_conf.m_logDebugTcp )
 			log("tcp: ssl handshake done. entering writing mode "
 			    "sd=%i",s->m_sd);
 		// ok, it completed, go into writing mode
@@ -2869,7 +2882,7 @@ int TcpServer::sslHandshake ( TcpSocket *s ) {
 	// read callbacks are always registered and if we need a read
 	// hopefully it will be called. TODO: verify this...
 	if ( sslError == SSL_ERROR_WANT_READ ) {
-		//log("tcp: ssl handshake is not want write sd=%i",s->m_sd);
+		log("tcp: ssl handshake is not want write sd=%i",s->m_sd);
 		//logSSLError(s->m_ssl, r);
 		return 0;
 	}

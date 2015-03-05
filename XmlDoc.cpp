@@ -15953,7 +15953,10 @@ char **XmlDoc::gotHttpReply ( ) {
 	// make the whole thing empty? some websites return compressed replies
 	// even though we do not ask for them. and then the compression
 	// is corrupt.
-	if ( saved == ECORRUPTHTTPGZIP ) {
+	if ( saved == ECORRUPTHTTPGZIP ||
+	     // if somehow we got a page too big for MAX_DGRAMS... treat
+	     // it like an empty page...
+	     saved == EMSGTOOBIG ) {
 		// free it i guess
 		mfree ( m_httpReply, m_httpReplyAllocSize, "XmlDocHR" );
 		// and reset it
@@ -19157,10 +19160,15 @@ int32_t *XmlDoc::getUrlFilterNum ( ) {
 
 
 	// make a fake one for now
-	SpiderReply fakeReply;
-	// just language for now, so we can FILTER by language
-	if ( m_langIdValid ) fakeReply.m_langId = m_langId;
+	// SpiderReply fakeReply;
+	// // fix errors
+	// fakeReply.reset();
+	// fakeReply.m_isIndexedINValid = true;
+	// // just language for now, so we can FILTER by language
+	// if ( m_langIdValid ) fakeReply.m_langId = m_langId;
 
+	int32_t langIdArg = -1;
+	if ( m_langIdValid ) langIdArg = m_langId;
 
 	CollectionRec *cr = getCollRec();
 	if ( ! cr ) return NULL;
@@ -19189,10 +19197,13 @@ int32_t *XmlDoc::getUrlFilterNum ( ) {
 	// . look it up
 	// . use the old spidered date for "nowGlobal" so we can be consistent
 	//   for injecting into the "qatest123" coll
-	int32_t ufn = ::getUrlFilterNum ( oldsr,&fakeReply,spideredTime,false,
-				       m_niceness,cr,
-				       false, // isOutlink?
-				       NULL);
+	int32_t ufn = ::getUrlFilterNum ( oldsr,
+					  NULL,//&fakeReply,
+					  spideredTime,false,
+					  m_niceness,cr,
+					  false, // isOutlink?
+					  NULL,
+					  langIdArg);
 
 	// put it back
 	//newsr->m_spideredTime = saved;
@@ -24953,7 +24964,8 @@ void XmlDoc::setSpiderReqForMsg20 ( SpiderRequest *sreq   ,
 
 	// validate the stuff so getUrlFilterNum() acks it
 	sreq->m_hopCountValid = 1;
-	
+
+	srep->reset();
 
 	srep->m_spideredTime         = getSpideredTime();//m_spideredTime;
 	//srep->m_isSpam             = isSpam; // real-time update this!!!
@@ -29980,6 +29992,21 @@ Msg20Reply *XmlDoc::getMsg20Reply ( ) {
 	//	// return NULL with g_errno set on error
 	//	if ( ! set ( tr , NULL , m_niceness ) ) return NULL;
 
+	// if  shard responsible for tagrec is dead, then
+	// just recycle!
+	if ( m_req && ! m_checkedUrlFilters ) {
+		char *site = getSite();
+		TAGDB_KEY tk = g_tagdb.makeStartKey ( site );
+		uint32_t shardNum = g_hostdb.getShardNum(RDB_TAGDB,&tk);
+		if ( g_hostdb.isShardDead ( shardNum ) ) {
+			log("query: skipping tagrec lookup for dead shard "
+			    "# %"INT32""
+			    ,shardNum);
+			m_tagRecDataValid = true;
+		}
+	}
+		
+
 	TagRec *gr = getTagRec();
 	if ( ! gr || gr == (void *)-1 ) return (Msg20Reply *)gr;
 
@@ -30039,12 +30066,15 @@ Msg20Reply *XmlDoc::getMsg20Reply ( ) {
 		SpiderReply   srep;
 		setSpiderReqForMsg20 ( &sreq , &srep );//, *isSpam );
 		int32_t spideredTime = getSpideredTime();
+		int32_t langIdArg = -1;
+		if ( m_langIdValid ) langIdArg = m_langId;
 		// get it
 		int32_t ufn;
 		ufn=::getUrlFilterNum(&sreq,&srep,spideredTime,true,
 				      m_niceness,cr,
 				      false, // isOutlink?
-				      NULL );
+				      NULL ,
+				      langIdArg);
 		// sanity check
 		if ( ufn < 0 ) { 
 			log("msg20: bad url filter for url %s", sreq.m_url);

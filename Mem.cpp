@@ -674,7 +674,14 @@ void Mem::addMem ( void *mem , int32_t size , const char *note , char isnew ) {
 			     s_labels[h*16+5] == 'M'  )
 				goto skipMe;
 			log("mem: addMem: Mem already added. "
-			    "rmMem not called?");
+			    "rmMem not called? label=%c%c%c%c%c%c"
+			    ,s_labels[h*16+0]
+			    ,s_labels[h*16+1]
+			    ,s_labels[h*16+2]
+			    ,s_labels[h*16+3]
+			    ,s_labels[h*16+4]
+			    ,s_labels[h*16+5]
+			    );
 			char *xx = NULL; *xx = 0; //sleep(50000);
 		}
 		h++;

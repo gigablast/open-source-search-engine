@@ -31,8 +31,8 @@ static void sendReplyWrapper ( void *state ) {
 //   HttpServer::sendReply() so we gotta copy it here
 bool sendPageInject ( TcpSocket *sock , HttpRequest *hr ) {
 
-	if ( ! g_conf.m_injectionEnabled ) {
-		g_errno = EBADENGINEER;
+	if ( ! g_conf.m_injectionsEnabled ) {
+		g_errno = EINJECTIONSDISABLED;//BADENGINEER;
 		log("inject: injection disabled");
 		return g_httpServer.sendErrorReply(sock,500,"injection is "
 						   "disabled by "

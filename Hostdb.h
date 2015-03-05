@@ -441,6 +441,8 @@ class Hostdb {
 
 	int64_t getNumGlobalEvents ( );
 
+	bool isShardDead ( int32_t shardNum ) ;
+
 	//Host *getLiveHostInGroup ( int32_t groupId );
 	Host *getLiveHostInShard ( int32_t shardNum );
 

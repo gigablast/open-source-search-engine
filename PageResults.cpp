@@ -160,7 +160,7 @@ bool sendReply ( State0 *st , char *reply ) {
 		return true;
 	}
 	// error otherwise
-	if ( savedErr != ENOPERM ) 
+	if ( savedErr != ENOPERM && savedErr != EQUERYINGDISABLED ) 
 		g_stats.m_numFails++;
 
 	mdelete(st, sizeof(State0), "PageResults2");
@@ -628,6 +628,13 @@ bool sendPageResults ( TcpSocket *s , HttpRequest *hr ) {
 		g_errno = EBUYFEED;
 		return sendReply(st,NULL);
 	}
+
+	// for now disable queries
+	if ( ! g_conf.m_queryingEnabled ) {
+		g_errno = EQUERYINGDISABLED;
+		return sendReply(st,NULL);
+	}
+
 
 	// LAUNCH ADS
 	// . now get the ad space for this query
@@ -2347,14 +2354,24 @@ bool printSearchResultsHeader ( State0 *st ) {
 	}
 
 
-	if ( si->m_format == FORMAT_XML )
+	if ( si->m_format == FORMAT_XML ) {
 		sb->safePrintf("\t<numResultsOmitted>%"INT32""
 			       "</numResultsOmitted>\n",
 			       msg40->m_omitCount);
+		sb->safePrintf("\t<numShardsSkipped>%"INT32"</numShardsSkipped>\n",
+			       msg40->m_msg3a.m_skippedShards);
+		sb->safePrintf("\t<totalShards>%"INT32"</totalShards>\n",
+			       g_hostdb.m_numShards );
+	}
 
-	if ( st->m_header && si->m_format == FORMAT_JSON )
+	if ( st->m_header && si->m_format == FORMAT_JSON ) {
 		sb->safePrintf("\"numResultsOmitted\":%"INT32",\n",
 			       msg40->m_omitCount);
+		sb->safePrintf("\"numShardsSkipped\":%"INT32",\n",
+			       msg40->m_msg3a.m_skippedShards);
+		sb->safePrintf("\"totalShards\":%"INT32",\n",
+			       g_hostdb.m_numShards );
+	}
 
 
 

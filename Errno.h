@@ -142,7 +142,7 @@ enum {
 	//ESPIDERRECDUP    , // duplicate spiderdb record
 	EDOCISERRPG      , // Doc is error page
 	EFORCED          , // Doc was force re-spidered
-	EDISABLED        , // injection is disabled
+	EINJECTIONSDISABLED        , // injection is disabled
 	ETAGBREACH       , // Sections.cpp ran out of stack space
 	EDISKSTUCK       ,
 	EDOCHIJACKED     ,
@@ -193,6 +193,7 @@ enum {
 	EPROXYSSLCONNECTFAILED,
 	EINLINESECTIONS,
 	EREADONLYMODE,
-	ENOTITLEREC
+	ENOTITLEREC,
+	EQUERYINGDISABLED
 };
 #endif

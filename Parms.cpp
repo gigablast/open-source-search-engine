@@ -9844,6 +9844,27 @@ void Parms::init ( ) {
 	m->m_page  = PAGE_MASTER;
 	m->m_obj   = OBJ_CONF;
 	m++;
+
+	m->m_title = "injections enabled";
+	m->m_desc  = "Controls injecting for all collections";
+	m->m_cgi   = "injen";
+	m->m_off   = (char *)&g_conf.m_injectionsEnabled - g;
+	m->m_type  = TYPE_BOOL;
+	m->m_def   = "1";
+	m->m_page  = PAGE_MASTER;
+	m->m_obj   = OBJ_CONF;
+	m++;
+
+	m->m_title = "querying enabled";
+	m->m_desc  = "Controls querying for all collections";
+	m->m_cgi   = "qryen";
+	m->m_off   = (char *)&g_conf.m_queryingEnabled - g;
+	m->m_type  = TYPE_BOOL;
+	m->m_def   = "1";
+	m->m_page  = PAGE_MASTER;
+	m->m_obj   = OBJ_CONF;
+	m++;
+
 	
 	m->m_title = "max total spiders";
 	m->m_desc  = "What is the maximum number of web "
@@ -9982,6 +10003,7 @@ void Parms::init ( ) {
 	m->m_obj   = OBJ_CONF;
         m++;
 
+	/*
 	m->m_title = "url injection enabled";
 	m->m_desc  = "If enabled you can directly inject URLs into the index.";
 	m->m_cgi   = "ie";
@@ -9992,6 +10014,7 @@ void Parms::init ( ) {
 	m->m_obj   = OBJ_CONF;
 	m->m_def   = "1";
 	m++;
+	*/
 
 	m->m_title = "init QA tests";
 	m->m_desc  = "If initiated gb performs some integrity tests "
