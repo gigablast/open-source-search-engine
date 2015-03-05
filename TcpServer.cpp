@@ -946,11 +946,11 @@ TcpSocket *TcpServer::wrapSocket ( int sd , int32_t niceness , bool isIncoming )
 		return NULL;
 	}
 	// save this i guess
-	int32_t saved = s->m_numDestroys;
+	//int32_t saved = s->m_numDestroys;
 	// clear it
 	memset ( s , 0 , sizeof(TcpSocket) );
 	// restore
-	s->m_numDestroys = saved;
+	//s->m_numDestroys = saved;
 	// store sd in our TcpSocket
 	s->m_sd = sd;
 	// store the last action time as now (used for timeout'ing sockets)

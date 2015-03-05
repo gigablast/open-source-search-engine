@@ -160,7 +160,7 @@ bool sendReply ( State0 *st , char *reply ) {
 		return true;
 	}
 	// error otherwise
-	if ( savedErr != ENOPERM ) 
+	if ( savedErr != ENOPERM && savedErr != EQUERYINGDISABLED ) 
 		g_stats.m_numFails++;
 
 	mdelete(st, sizeof(State0), "PageResults2");
