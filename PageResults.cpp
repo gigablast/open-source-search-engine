@@ -2358,9 +2358,9 @@ bool printSearchResultsHeader ( State0 *st ) {
 		sb->safePrintf("\t<numResultsOmitted>%"INT32""
 			       "</numResultsOmitted>\n",
 			       msg40->m_omitCount);
-		sb->safePrintf("<numShardsSkipped>%"INT32"</numShardsSkipped>\n",
+		sb->safePrintf("\t<numShardsSkipped>%"INT32"</numShardsSkipped>\n",
 			       msg40->m_msg3a.m_skippedShards);
-		sb->safePrintf("<totalShards>%"INT32"</totalShards>\n",
+		sb->safePrintf("\t<totalShards>%"INT32"</totalShards>\n",
 			       g_hostdb.m_numShards );
 	}
 
