@@ -208,6 +208,7 @@ UdpServer::UdpServer ( ) {
 	m_maxSlots = 0;
 	m_buf = NULL;
 	m_outstandingConverts = 0;
+	m_writeRegistered = false;
 }
 
 UdpServer::~UdpServer() {
@@ -787,6 +788,16 @@ void UdpServer::sendReply_ass ( char    *msg        ,
 	//return true;
 }
 
+// . this wrapper is called when m_sock is ready for writing
+// . should only be called by Loop.cpp since it calls callbacks
+// . should only be called if in an interrupt or interrupts are off!!
+void sendPollWrapper_ass ( int fd , void *state ) { 
+	UdpServer *THIS  = (UdpServer *)state;
+	// begin the read/send/callback loop
+	//THIS->process_ass ( g_now );
+	THIS->sendPoll_ass ( true , g_now );
+}
+
 // . returns false and sets g_errno on error, true otherwise
 // . will send an ACK or dgram
 // . you need to occupy s_token  to do large reads/sends on a slot
@@ -867,6 +878,14 @@ bool UdpServer::doSending_ass (UdpSlot *slot,bool allowResends,int64_t now) {
 		// but Loop should call us again asap because I don't think
 		// we'll get a ready to write signal... don't count on it
 		m_needToSend = true;
+		// ok, now it should
+		if ( ! m_writeRegistered ) {
+			g_loop.registerWriteCallback ( m_sock,
+						       this,
+						       sendPollWrapper_ass,
+						       0 ); // niceness
+			m_writeRegistered = true;
+		}
 		goto done;
 	}
 	// otherwise keep looping, we might be able to send more
@@ -878,15 +897,6 @@ bool UdpServer::doSending_ass (UdpSlot *slot,bool allowResends,int64_t now) {
 	return true;
 }
 
-// . this wrapper is called when m_sock is ready for writing
-// . should only be called by Loop.cpp since it calls callbacks
-// . should only be called if in an interrupt or interrupts are off!!
-// void sendPollWrapper_ass ( int fd , void *state ) { 
-// 	UdpServer *THIS  = (UdpServer *)state;
-// 	// begin the read/send/callback loop
-// 	THIS->process_ass ( g_now );
-// }
-
 // . should only be called from process_ass() since this is not re-entrant
 // . sends all the awaiting dgrams it can
 // . returns false if blocked, true otherwise
@@ -894,6 +904,8 @@ bool UdpServer::doSending_ass (UdpSlot *slot,bool allowResends,int64_t now) {
 // . tries to send msgs that are the "most caught up" to their ACKs first
 // . call the callback of slots that are TIMEDOUT or get an error!
 // . verified that this is not interruptible
+// . MDW: THIS IS NOW called by Loop.cpp when our udp socket is ready for
+//   sending on, and a previous sendto() would have blocked.
 bool UdpServer::sendPoll_ass ( bool allowResends , int64_t now ) {
 	// . turn off interrupts to be safe
 	// . unless we're in a sighandler or they're already off
@@ -921,6 +933,14 @@ bool UdpServer::sendPoll_ass ( bool allowResends , int64_t now ) {
 	// . return true if we processed something
 	if ( ! slot ) {
 		if ( flipped ) interruptsOn();
+		// if nobody needs to send now unregister write callback
+		// so select() loop in Loop.cpp does not keep freaking out
+		if ( ! m_needToSend && m_writeRegistered ) {
+			g_loop.unregisterWriteCallback(m_sock,
+						       this,
+						       sendPollWrapper_ass);
+			m_writeRegistered = false;
+		}
 		return something;
 	}
 	// otherwise, we can send something
@@ -939,6 +959,7 @@ bool UdpServer::sendPoll_ass ( bool allowResends , int64_t now ) {
 	// . send all we can from this slot
 	// . when shutting down during a dump we can get EBADF during a send
 	//   so do not loop forever
+	// . this returns false on error, i haven't seen it happen though
 	if ( ! doSending_ass ( slot , allowResends , now ) ) return true;
 	// if the send
 	// return if it blocked

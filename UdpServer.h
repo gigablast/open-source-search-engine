@@ -278,6 +278,8 @@ class UdpServer {
 	// on receiving a fd-ready-for-writing signal for this UdpServer
 	bool m_needToSend;
 
+	bool m_writeRegistered;
+
 	UdpSlot *getActiveHead ( ) { return m_head2; };
 
 	// cancel a transaction

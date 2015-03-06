@@ -305,11 +305,16 @@ void printUdpTable ( SafeBuf *p, char *title, UdpServer *server ,
 		else
 			msgCount1[s->m_msgType]++;
 	}
+
+	char *wr = "";
+	if ( server->m_writeRegistered )
+		wr = " [write registered]";
+
 	// print the counts
 	p->safePrintf ( "<table %s>"
 			"<tr class=hdrow><td colspan=19>"
 			"<center>"
-			"<b>%s Summary</b> (%"INT32" transactions)"
+			"<b>%s Summary</b> (%"INT32" transactions)%s"
 			"</td></tr>"
 			"<tr bgcolor=#%s>"
 			"<td><b>niceness</td>"
@@ -318,6 +323,7 @@ void printUdpTable ( SafeBuf *p, char *title, UdpServer *server ,
 			"</tr>",
 			TABLE_STYLE,
 			title , server->getNumUsedSlots() ,
+			wr ,
 			DARK_BLUE );
 	for ( int32_t i = 0; i < 96; i++ ) {
 		if ( msgCount0[i] <= 0 ) continue;
