@@ -3525,6 +3525,9 @@ bool SafeBuf::base64Encode ( char *sx , int32_t len , int32_t niceness ) {
 	return true;
 }
 
+bool SafeBuf::base64Encode( char *s ) {
+	return base64Encode(s,gbstrlen(s)); 
+}
 
 bool SafeBuf::base64Decode ( char *src , int32_t srcLen , int32_t niceness ) {
 

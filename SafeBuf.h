@@ -122,6 +122,8 @@ public:
 	bool  base64Encode ( char *s , int32_t len , int32_t niceness = 0 );
 	bool  base64Decode ( char *src , int32_t srcLen , int32_t niceness = 0 ) ;
 
+	bool base64Encode( char *s ) ;
+
 	//bool  pushLong ( int32_t val ) { return safeMemcpy((char *)&val,4); }
 	bool  cat(SafeBuf& c);
 	// . only cat the sections/tag that start with "tagFilter"

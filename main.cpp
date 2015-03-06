@@ -165,8 +165,16 @@ static int32_t dumpSpiderdb ( char *coll,int32_t sfn,int32_t numFiles,bool inclu
 			   char printStats , int32_t firstIp );
 static void dumpSectiondb( char *coll,int32_t sfn,int32_t numFiles,bool includeTree);
 static void dumpRevdb    ( char *coll,int32_t sfn,int32_t numFiles,bool includeTree);
-static void dumpTagdb   ( char *coll,int32_t sfn,int32_t numFiles,bool includeTree,
-			   int32_t c, char rec=0, int32_t rdbId = RDB_TAGDB );
+
+static void dumpTagdb   ( char *coll,
+			  int32_t sfn,
+			  int32_t numFiles,
+			  bool includeTree,
+			  int32_t c, 
+			  char rec=0, 
+			  int32_t rdbId = RDB_TAGDB ,
+			  char *site = NULL );
+
 static void dumpIndexdb  ( char *coll,int32_t sfn,int32_t numFiles,bool includeTree, 
 			   int64_t termId ) ;
 void dumpPosdb  ( char *coll,int32_t sfn,int32_t numFiles,bool includeTree, 
@@ -2858,11 +2866,24 @@ int main2 ( int argc , char *argv[] ) {
 		       dumpSectiondb(coll,startFileNum,numFiles,includeTree);
 		else if ( argv[cmdarg+1][0] == 'V' )
 		       dumpRevdb(coll,startFileNum,numFiles,includeTree);
-		else if ( argv[cmdarg+1][0] == 'S' )
-			dumpTagdb  (coll,startFileNum,numFiles,includeTree,0);
-		else if ( argv[cmdarg+1][0] == 'z' )
+		else if ( argv[cmdarg+1][0] == 'S' ) {
+			char *site = NULL;
+			if ( cmdarg+6 < argc ) site = argv[cmdarg+6];
+			dumpTagdb(coll,
+				  startFileNum,
+				  numFiles,
+				  includeTree,
+				  0,
+				  0,
+				  RDB_TAGDB,
+				  site);
+		}
+		else if ( argv[cmdarg+1][0] == 'z' ) {
+			char *site = NULL;
+			if ( cmdarg+6 < argc ) site = argv[cmdarg+6];
 			dumpTagdb  (coll,startFileNum,numFiles,includeTree,0,
-				    'z');
+				    'z',RDB_TAGDB,site);
+		}
 		else if ( argv[cmdarg+1][0] == 'A' )
 			dumpTagdb  (coll,startFileNum,numFiles,includeTree,0,
 				     'A');
@@ -11956,7 +11977,8 @@ void dumpRevdb(char *coll,int32_t startFileNum,int32_t numFiles, bool includeTre
 
 void dumpTagdb (char *coll,int32_t startFileNum,int32_t numFiles,
 		bool includeTree, 
-		 int32_t c , char req, int32_t rdbId ) {
+		int32_t c , char req, int32_t rdbId ,
+		char *siteArg ) {
 	//g_conf.m_spiderdbMaxTreeMem = 1024*1024*30;
 	g_tagdb.init ();
 	//g_collectiondb.init(true);
@@ -11966,6 +11988,11 @@ void dumpTagdb (char *coll,int32_t startFileNum,int32_t numFiles,
 	key128_t endKey   ;
 	startKey.setMin();
 	endKey.setMax();
+	if ( siteArg ) {
+		startKey = g_tagdb.makeStartKey ( siteArg );
+		endKey = g_tagdb.makeEndKey ( siteArg );
+		log("gb: using site %s for start key",siteArg );
+	}
 	// turn off threads
 	g_threads.disableThreads();
 	// get a meg at a time

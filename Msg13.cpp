@@ -61,6 +61,7 @@ int32_t convertIntoLinks    ( char *reply, int32_t replySize , Xml *xml ,
 
 static bool setProxiedUrlFromSquidProxiedRequest ( Msg13Request *r );
 static void stripProxyAuthorization ( char *squidProxiedReqBuf ) ;
+static bool addNewProxyAuthorization ( SafeBuf *req , Msg13Request *r );
 static void fixGETorPOST ( char *squidProxiedReqBuf ) ;
 static int64_t computeProxiedCacheKey64 ( Msg13Request *r ) ;
 
@@ -1029,6 +1030,17 @@ void downloadTheDocForReals3b ( Msg13Request *r ) {
 	// to another proxy... and sending to the actual webserver
 	if ( r->m_isSquidProxiedUrl && ! r->m_proxyIp )
 		fixGETorPOST ( exactRequest );
+
+	// ALSO ADD authorization to the NEW proxy we are sending to
+	// r->m_proxyIp/r->m_proxyPort that has a username:password
+	char tmpBuf[1024];
+	SafeBuf newReq (tmpBuf,1024);
+	if ( r->m_isSquidProxiedUrl && r->m_proxyIp ) {
+		newReq.safeStrcpy ( exactRequest );
+		addNewProxyAuthorization ( &newReq , r );
+		newReq.nullTerm();
+		exactRequest = newReq.getBufStart();
+	}
 
 	// indicate start of download so we can overwrite the 0 we stored
 	// into the hammercache
@@ -3029,6 +3041,29 @@ void scanHammerQueue ( int fd , void *state ) {
 
 		// try to download some more i guess...
 	}
+}
+
+bool addNewProxyAuthorization ( SafeBuf *req , Msg13Request *r ) {
+
+	if ( ! r->m_proxyIp   ) return true;
+	if ( ! r->m_proxyPort ) return true;
+
+	// get proxy from list to get username/password
+	SpiderProxy *sp = getSpiderProxyByIpPort (r->m_proxyIp,r->m_proxyPort);
+
+	// if none required, all done
+	if ( ! sp->m_usernamePwd ) return true;
+	// strange?
+	if ( req->length() < 8 ) return false;
+	// back up over final \r\n
+	req->m_length -= 2 ;
+	// insert it
+	req->safePrintf("Proxy-Authorization: Basic ");
+	req->base64Encode ( sp->m_usernamePwd );
+	req->safePrintf("\r\n");
+	req->safePrintf("\r\n");
+	req->nullTerm();
+	return true;
 }
 
 // When the Msg13Request::m_isSquidProxiedUrl bit then request we got is

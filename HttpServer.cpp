@@ -156,6 +156,14 @@ bool HttpServer::getDoc ( char   *url      ,
 		defPort = 443;
 	}
 
+	// if we are using gigablast as a squid proxy then the
+	// "fullRequest" and the url will be like "CONNECT foo.com:443 HTT..."
+	// and it is an https url, because we only use the CONNECT cmd for
+	// downloading https urls over a proxy i think
+	char *p = fullRequest;
+	if ( p && strncmp(p,"CONNECT ",8)==0 )
+		urlIsHttps = true;
+
 	// if going through a proxy do not use the ssl server, it will
 	// handle the encryption from itself to the host website. unfortunately
 	// then the http requests/responses are unencrypted from the
@@ -3582,7 +3590,10 @@ void gotSquidProxiedUrlIp ( void *state , int32_t ip ) {
 
 	// include terminating \0. well it is already i think. see
 	// Msg13Request::getSize(), so no need to add +1
-	r->size_url = sqs->m_sock->m_readOffset;
+	r->size_url = sqs->m_sock->m_readOffset + 1;
+
+	// sanity
+	if ( r->ptr_url && r->ptr_url[r->size_url-1] ) { char *xx=NULL;*xx=0;}
 
 	// use urlip for this, it determines what host downloads it
 	r->m_firstIp                = r->m_urlIp;
