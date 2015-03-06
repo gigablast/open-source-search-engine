@@ -4039,7 +4039,7 @@ bool printRedBox ( SafeBuf *mb , TcpSocket *sock , HttpRequest *hr ) {
 		adds++;
 		mb->safePrintf("%s",box);
 		mb->safePrintf("Injections are disabled in the "
-			       "<a href=/admin/hosts?c=%s>"
+			       "<a href=/admin/master?c=%s>"
 			       "master controls</a>."
 			       ,coll);
 		mb->safePrintf("%s",boxEnd);
@@ -4051,7 +4051,7 @@ bool printRedBox ( SafeBuf *mb , TcpSocket *sock , HttpRequest *hr ) {
 		adds++;
 		mb->safePrintf("%s",box);
 		mb->safePrintf("Querying is disabled in the "
-			       "<a href=/admin/hosts?c=%s>"
+			       "<a href=/admin/master?c=%s>"
 			       "master controls</a>."
 			       ,coll);
 		mb->safePrintf("%s",boxEnd);
@@ -4130,8 +4130,9 @@ bool printRedBox ( SafeBuf *mb , TcpSocket *sock , HttpRequest *hr ) {
 		mb->safePrintf("%s",box);
 		mb->safePrintf("A host requires a shard rebalance. "
 			       "Click 'rebalance shards' in the "
-			       "<a href=/admin/master>master controls</a> "
-			       "to rebalance all hosts.");
+			       "<a href=/admin/master?c=%s>"
+			       "master controls</a> "
+			       "to rebalance all hosts.",coll);
 		mb->safePrintf("%s",boxEnd);
 	}
 
