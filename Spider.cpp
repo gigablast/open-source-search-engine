@@ -1495,8 +1495,11 @@ static void nukeDoledbWrapper ( int fd , void *state ) {
 
 void nukeDoledb ( collnum_t collnum ) {
 
+	//g_spiderLoop.m_winnerListCache.verify();	
 	// in case we changed url filters for this collection #
 	g_spiderLoop.m_winnerListCache.clear ( collnum );
+
+	//g_spiderLoop.m_winnerListCache.verify();	
 
 	//WaitEntry *we = (WaitEntry *)state;
 
@@ -3478,7 +3481,8 @@ bool SpiderColl::evalIpLoop ( ) {
 	if ( m_countingPagesIndexed )
 		useCache = false;
 	// assume not from cache
-	if ( useCache )
+	if ( useCache ) {
+		//wc->verify();
 		inCache = wc->getRecord ( m_collnum     ,
 					  (char *)&cacheKey ,
 					  &doleBuf,
@@ -3488,6 +3492,10 @@ bool SpiderColl::evalIpLoop ( ) {
 					  true ,// incCounts
 					  &cachedTimestamp , // rec timestamp
 					  true );  // promote rec?
+		//wc->verify();
+	}
+
+
 	// doleBuf could be NULL i guess...
 	if ( inCache ) { // && doleBufSize > 0 ) {
 		if ( g_conf.m_logDebugSpider )
@@ -3495,11 +3503,15 @@ bool SpiderColl::evalIpLoop ( ) {
 			    "from winnerlistcache for ip %s",doleBufSize,
 			    iptoa(m_scanningIp));
 		// set own to false so it doesn't get freed
-		m_doleBuf.setBuf ( doleBuf , 
-				   doleBufSize ,
-				   doleBufSize , 
-				   false , // ownData?
-				   0 ); // encoding. doesn't matter.
+		// m_doleBuf.setBuf ( doleBuf , 
+		// 		   doleBufSize ,
+		// 		   doleBufSize , 
+		// 		   false , // ownData?
+		// 		   0 ); // encoding. doesn't matter.
+		m_doleBuf.reset();
+		// gotta copy it because we end up re-adding part of it
+		// to rdbcache below
+		m_doleBuf.safeMemcpy ( doleBuf , doleBufSize );
 		// now add the first rec m_doleBuf into doledb's tree
 		// and re-add the rest back to the cache with the same key.
 		return addDoleBufIntoDoledb ( true , cachedTimestamp );
@@ -5249,11 +5261,13 @@ bool SpiderColl::addDoleBufIntoDoledb ( bool isFromCache ,
 		key_t cacheKey;
 		cacheKey.n0 = firstIp;
 		cacheKey.n1 = 0;
+		//wc->verify();
 		wc->addRecord ( m_collnum,
 				(char *)&cacheKey,
 				&byte ,
 				1 ,
 		 		12345 );//cachedTimestamp );
+		//wc->verify();
 	}
 
 	if ( addToCache ) {
@@ -5264,12 +5278,14 @@ bool SpiderColl::addDoleBufIntoDoledb ( bool isFromCache ,
 			log("spider: adding %"INT32" bytes of SpiderRequests "
 			    "to winnerlistcache for ip %s",
 			    m_doleBuf.length()-skipSize,iptoa(firstIp));
+		//wc->verify();
 		// inherit timestamp. if 0, RdbCache will set to current time
 		wc->addRecord ( m_collnum,
 				(char *)&cacheKey,
 				m_doleBuf.getBufStart() + skipSize ,
 				m_doleBuf.length() - skipSize ,
 				cachedTimestamp );
+		//wc->verify();
 	}
 
 	// and the whole thing is no longer empty
@@ -6042,36 +6058,6 @@ void gotDoledbListWrapper2 ( void *state , RdbList *list , Msg5 *msg5 ) ;
 // now check our RDB_DOLEDB for SpiderRequests to spider!
 void SpiderLoop::spiderDoledUrls ( ) {
 
-	// must be spidering to dole out
-	if ( ! g_conf.m_spideringEnabled ) return;
-	// or if trying to exit
-	if ( g_process.m_mode == EXIT_MODE ) return;	
-	// if we don't have all the url counts from all hosts, then wait.
-	// one host is probably down and was never up to begin with
-	if ( ! s_countsAreValid ) return;
-	//if ( ! g_conf.m_webSpideringEnabled )  return;
-	// if we do not overlap ourselves
-	if ( m_gettingDoledbList ) return;
-	// bail instantly if in read-only mode (no RdbTrees!)
-	if ( g_conf.m_readOnlyMode ) return;
-	// or if doing a daily merge
-	if ( g_dailyMerge.m_mergeMode ) return;
-	// skip if too many udp slots being used
-	if ( g_udpServer.getNumUsedSlots() >= 1300 ) return;
-	// stop if too many out. this is now 50 down from 500.
-	if ( m_numSpidersOut >= MAX_SPIDERS ) return;
-	// a new global conf rule
-	if ( m_numSpidersOut >= g_conf.m_maxTotalSpiders ) return;
-	// bail if no collections
-	if ( g_collectiondb.m_numRecs <= 0 ) return;
-	// not while repairing
-	if ( g_repairMode ) return;
-	// do not spider until collections/parms in sync with host #0
-	if ( ! g_parms.m_inSyncWithHost0 ) return;
-	// don't spider if not all hosts are up, or they do not all
-	// have the same hosts.conf.
-	if ( ! g_pingServer.m_hostsConfInAgreement ) return;
-
 	//char *reb = g_rebalance.getNeedsRebalance();
 	//if ( ! reb || *reb ) {return;
 
@@ -6141,6 +6127,38 @@ void SpiderLoop::spiderDoledUrls ( ) {
 	m_launches = 0;
 
  subloop:
+
+	// must be spidering to dole out
+	if ( ! g_conf.m_spideringEnabled ) return;
+	// or if trying to exit
+	if ( g_process.m_mode == EXIT_MODE ) return;	
+	// if we don't have all the url counts from all hosts, then wait.
+	// one host is probably down and was never up to begin with
+	if ( ! s_countsAreValid ) return;
+	//if ( ! g_conf.m_webSpideringEnabled )  return;
+	// if we do not overlap ourselves
+	if ( m_gettingDoledbList ) return;
+	// bail instantly if in read-only mode (no RdbTrees!)
+	if ( g_conf.m_readOnlyMode ) return;
+	// or if doing a daily merge
+	if ( g_dailyMerge.m_mergeMode ) return;
+	// skip if too many udp slots being used
+	if ( g_udpServer.getNumUsedSlots() >= 1300 ) return;
+	// stop if too many out. this is now 50 down from 500.
+	if ( m_numSpidersOut >= MAX_SPIDERS ) return;
+	// a new global conf rule
+	if ( m_numSpidersOut >= g_conf.m_maxTotalSpiders ) return;
+	// bail if no collections
+	if ( g_collectiondb.m_numRecs <= 0 ) return;
+	// not while repairing
+	if ( g_repairMode ) return;
+	// do not spider until collections/parms in sync with host #0
+	if ( ! g_parms.m_inSyncWithHost0 ) return;
+	// don't spider if not all hosts are up, or they do not all
+	// have the same hosts.conf.
+	if ( ! g_pingServer.m_hostsConfInAgreement ) return;
+
+
 
 	// if we hit the end of the list, wrap it around
 	if ( ! m_crx ) m_crx = m_activeList;
