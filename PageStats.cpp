@@ -846,7 +846,10 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 			      //"<tr class=poo><td><b>Gigablast Version</b></td><td>%s %s</td></tr>\n"
 			      "<tr class=poo><td><b>Parsing Inconsistencies</b></td><td>%"INT32"</td>\n"
 
-			      "<tr class=poo><td><b>Spiderdb Overflows</b></td><td>%"INT32"</td>\n"
+			      // overflows. when we have too many unindexed 
+			      // spiderrequests for a particular firstip, we 
+			      // start dropping so we don't spam spiderdb
+			      "<tr class=poo><td><b>Dropped Outlinks</b></td><td>%"INT32"</td>\n"
 
 			      "<tr class=poo><td><b>Index Shards</b></td><td>%"INT32"</td>\n"
 			      "<tr class=poo><td><b>Hosts per Shard</b></td><td>%"INT32"</td>\n"
