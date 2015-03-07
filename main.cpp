@@ -14464,7 +14464,9 @@ int injectFile ( char *filename , char *ips ,
 		for (  ; p && p < pend ; p = nextLine ) {
 			nextLine = strstr(p,"\n");
 			if ( nextLine ) nextLine++;
-			if ( count >= 20 ) count = 0;
+			// this is how many hosts we are using!!
+			// TODO: make this get from hosts.conf!!!
+			if ( count >= 40 ) count = 0;
 			if ( count++ != split ) continue;
 			// get line
 			char *archiveDirName = p;
@@ -15285,7 +15287,8 @@ void doInjectWarc ( int64_t fsize ) {
 	for ( ; *whp && strncmp(whp,"WARC/",5) ; whp++ );
 	// none?
 	if ( ! *whp ) {
-		log("inject: could not find WARC/1 header start");
+		log("inject: could not find WARC/1 header start for file=%s",
+		    s_file.getFilename());
 		if ( s_outstanding ) {
 			log("inject: waiting for socks");return;}
 		exit(0);
@@ -15296,7 +15299,8 @@ void doInjectWarc ( int64_t fsize ) {
 	// find end of warc mime HEADER not the content
 	char *warcHeaderEnd = strstr(warcHeader,"\r\n\r\n");
 	if ( ! warcHeaderEnd ) {
-		log("inject: could not find end of WARC header.");
+		log("inject: could not find end of WARC header for file=%s.",
+		    s_file.getFilename());
 		if ( s_outstanding ) {
 			log("inject: waiting for socks");return;}
 		exit(0);
@@ -15565,7 +15569,7 @@ void doInjectWarc ( int64_t fsize ) {
 
 	int realMax = 10;
 	if ( s_hosts2.getNumHosts() > 1 )
-		realMax = s_hosts2.getNumHosts() * 3;
+		realMax = s_hosts2.getNumHosts() * 2;
 
 	// launch another if blocked
 	if ( ! status ) {

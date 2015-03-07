@@ -15424,7 +15424,7 @@ void Parms::init ( ) {
 		"boosts to no language in particular. See the language "
 		"abbreviations at the bottom of the "
 		"<a href=/admin/filters>url filters</a> page.";
-	m->m_cgi   = "qlang";
+	m->m_cgi   = "defqlang";
 	m->m_off   = (char *)&cr.m_defaultSortLanguage2 - x;
 	m->m_type  = TYPE_STRING;
 	m->m_size  = 6; // up to 5 chars + NULL, e.g. "en_US"
