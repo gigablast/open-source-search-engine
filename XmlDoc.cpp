@@ -22617,6 +22617,10 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 	// do not index json items as separate docs if we are page parser
 	if ( getIsPageParser() ) tdbrLen = 0;
 
+	// same goes if appending -diffbotxyz%UINT32 would be too long
+	if ( m_firstUrl.getUrlLen() + 11 + 10 > MAX_URL_LEN ) 
+		tdbrLen = 0;
+
 	// once we have tokenized diffbot reply we can get a unique 
 	// hash of the title of each json item. that way, if a page changes
 	// and it gains or loses a diffbot item, the old items will still
@@ -22675,6 +22679,11 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 			fakeUrl.safePrintf("-diffbotxyz%"UINT32"",
 					   //(int32_t)m_diffbotJSONCount);
 					   (uint32_t)jth);
+			if ( fakeUrl.length() > MAX_URL_LEN ) {
+				log("build: diffbot enhanced url too long for "
+				    "%s",fakeUrl.getBufStart());
+				char *xx=NULL;*xx=0;
+			}
 			m_diffbotJSONCount++;
 			// this can go on the stack since set4() copies it
 			SpiderRequest sreq;
