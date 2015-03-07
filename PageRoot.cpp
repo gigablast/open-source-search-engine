@@ -728,9 +728,10 @@ bool printLeftColumnRocketAndTabs ( SafeBuf *sb ,
 
 		if ( isSearchResultsPage && i >= 5 ) break;
 
-		if ( i >= 1 && i <= 4 &&
-		     cr->m_diffbotApiUrl.length()<= 0 )
-			continue;
+		// what was this for?
+		// if ( i >= 1 && i <= 4 &&
+		//      cr->m_diffbotApiUrl.length() >= 0 )
+		// 	continue;
 
 		char delim = '?';
 		if ( strstr ( mi[i].m_url,"?") ) delim = '&';
