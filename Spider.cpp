@@ -3959,7 +3959,9 @@ bool SpiderColl::scanListForWinners ( ) {
 		}
 
 		// if a replie-less new url spiderrequest count it
-		if ( ! srep && m_lastSreqUh48 != uh48 )
+		if ( ! srep && m_lastSreqUh48 != uh48 &&
+		     // avoid counting query reindex requests
+		     ! sreq->m_fakeFirstIp )
 			m_totalNewSpiderRequests++;
 
 		m_lastSreqUh48 = uh48;
@@ -4747,6 +4749,8 @@ bool SpiderColl::scanListForWinners ( ) {
 	bool overflow = false;
 	// don't add any more outlinks to this firstip after we
 	// have 10M spider requests for it.
+	// lower for testing
+	//if ( m_totalNewSpiderRequests > 100 )
 	if ( m_totalNewSpiderRequests > 10000000 )
 		overflow = true;
 
@@ -4765,9 +4769,9 @@ bool SpiderColl::scanListForWinners ( ) {
 	if ( m_lastOverflowFirstIp == firstIp )
 		return true;
 	m_lastOverflowFirstIp = firstIp;
-	if ( g_conf.m_logDebugSpider && overflow )
-		log("spider: got overflow for firstip %s",
-		    iptoa(firstIp));
+	if ( overflow && g_conf.m_logDebugSpider )
+		log("spider: firstip %s overflowing with %"INT32" new reqs",
+		    iptoa(firstIp),(int32_t)m_totalNewSpiderRequests);
 	for ( oi = 0 ; ; oi++ ) {
 		// sanity
 		if ( ! m_overflowList ) break;
@@ -4783,6 +4787,7 @@ bool SpiderColl::scanListForWinners ( ) {
 	}
 	// if we need to add it...
 	if ( overflow && ! found && m_overflowList ) {
+		log("spider: adding %s to overflow list",iptoa(firstIp));
 		// take the empty slot if there is one
 		if ( emptySlot >= 0 )
 			m_overflowList[emptySlot] = firstIp;
@@ -4805,6 +4810,7 @@ bool SpiderColl::scanListForWinners ( ) {
 		if ( m_overflowList[oi2] != firstIp ) continue;
 		// take it out of list
 		m_overflowList[oi2] = -1;
+		log("spider: removing %s from overflow list",iptoa(firstIp));
 		break;
 	}
 	/////
@@ -13874,5 +13880,5 @@ bool SpiderColl::isFirstIpInOverflowList ( int32_t firstIp ) {
 		// an ip of zero is end of the list
 		if ( m_overflowList[oi] == firstIp ) return true;
 	}
-	return true;
+	return false;
 }
