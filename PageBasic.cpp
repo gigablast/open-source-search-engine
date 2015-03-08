@@ -76,6 +76,10 @@ public:
 	int16_t m_tagLen;
 };
 
+void doneAddingSeedsWrapper ( void *state ) {
+	// note it
+	log("basic: done adding seeds using msg4");
+}
 
 // . Collectiondb.cpp calls this when any parm flagged with 
 //   PF_REBUILDURLFILTERS is updated
@@ -444,9 +448,12 @@ bool updateSiteListBuf ( collnum_t collnum ,
 					 sc->m_collnum ,
 					 // no need for callback since m_msg4x
 					 // should set msg4::m_inUse to false
-					 // when it comes back
-					 NULL , // state
-					 NULL , // callback 
+					 // when it comes back.
+					 // crap if we don't have a callback
+					 // Msg4.cpp::storeLineWaiters()
+					 // will core
+					 sc , // state
+					 doneAddingSeedsWrapper, // callback 
 					 MAX_NICENESS ,
 					 RDB_SPIDERDB
 					 ) )
