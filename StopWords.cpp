@@ -127,7 +127,7 @@ static char      *s_stopWords[] = {
 	"under", // fix title for http://www.harwoodmuseum.org/press_detail.php?ID=44
 	"would",
 	"yours",
-	"theirs"
+	"theirs",
 	//"aren",  // aren't
 	//"hadn",  // hadn't
 	//"didn",  // didn't
@@ -136,20 +136,25 @@ static char      *s_stopWords[] = {
 	//"ve",    // would've should've
 	//"should",
 	//"shouldn", // shouldn't
+	NULL
 };
 static HashTableX s_stopWordTable;
 static bool       s_stopWordsInitialized = false;
 
-bool initWordTable( HashTableX *table, char *words[], int32_t size ,
+bool initWordTable( HashTableX *table, char *words[], 
+		    //int32_t size ,
 		    char *label ) {
+	// count them
+	int32_t count; for ( count = 0 ; words[count] ; count++ );
 	// set up the hash table
-	if ( ! table->set ( 8,4,size * 2,NULL,0,false,0,label ) ) 
+	if ( ! table->set ( 8,4,count * 2,NULL,0,false,0,label ) ) 
 		return log(LOG_INIT,"build: Could not init stop words "
 			   "table." );
 	// now add in all the stop words
-	int32_t n = (int32_t)size/ sizeof(char *); 
+	int32_t n = count;//(int32_t)size/ sizeof(char *); 
 	for ( int32_t i = 0 ; i < n ; i++ ) {
 		char      *sw    = words[i];
+		if ( ! sw ) break;
 		int32_t       swlen = gbstrlen ( sw );
 		int64_t  swh   = hash64Lower_utf8 ( sw , swlen );
 		//log("ii: #%"INT32"  %s",i,sw);
@@ -162,7 +167,8 @@ bool isStopWord ( char *s , int32_t len , int64_t h ) {
 	if ( ! s_stopWordsInitialized ) {
 		s_stopWordsInitialized = 
 			initWordTable(&s_stopWordTable, s_stopWords, 
-				      sizeof(s_stopWords),"stopwords");
+				      //sizeof(s_stopWords),
+				      "stopwords");
 		if (!s_stopWordsInitialized) return false;
 	} 
 
@@ -178,7 +184,8 @@ bool isStopWord2 ( int64_t *h ) {
 	if ( ! s_stopWordsInitialized ) {
 		s_stopWordsInitialized = 
 			initWordTable(&s_stopWordTable, s_stopWords, 
-				      sizeof(s_stopWords),"stopwrds2");
+				      //sizeof(s_stopWords)
+				      "stopwrds2");
 		if (!s_stopWordsInitialized) return false;
 	} 
 
@@ -1696,7 +1703,7 @@ static char *s_queryStopWordsUnknown[] = {
 	//"er",		// you,
 	//"sådan",	// such
 	//"vår",		// our
-	"blivit" 	// from
+	"blivit", 	// from
 	//"dess",		// its
 	//"inom",		// within
 	//"mellan",	// between
@@ -1724,6 +1731,7 @@ static char *s_queryStopWordsUnknown[] = {
 
 	// additional stop words
 	//"san"           // like san francisco
+	NULL
 };
 
 
@@ -1767,7 +1775,8 @@ static char *s_queryStopWordsEnglish[] = {
 	"to",
 	"from",
 	"in",
-	"on"
+	"on",
+	NULL
 };
 
 
@@ -2001,9 +2010,10 @@ static char *s_queryStopWordsGerman[] = {
 	//"würden",	// would
 	"zu",		// to
 	"zum",		// zu
-	"zur"		// zu
+	"zur",	// zu
 	//"zwar",		// indeed
 	//"zwischen",	// between
+	NULL
 };
 
 
@@ -2048,7 +2058,7 @@ bool isQueryStopWord ( char *s , int32_t len , int64_t h , int32_t langId ) {
 			if ( ! words ) continue;
 			if ( ! initWordTable ( ht,//&s_queryStopWordTable, 
 					       words,
-					       sizeof(words),
+					       //sizeof(words),
 					       "qrystops") )
 				return false;
 		}
