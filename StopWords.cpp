@@ -6,6 +6,7 @@
 #include "HashTableX.h"
 #include "Speller.h"
 #include "Loop.h"
+#include "Posdb.h" // MAXLANGID
 
 // . h is the lower ascii 64bit hash of a word
 // . this returns true if h is the hash of an ENGLISH stop word
@@ -221,7 +222,9 @@ bool isStopWord32 ( int32_t h ) {
 // . see backups for the hold list
 // . i shrunk this list a lot
 // . see backups for the hold list
-static char      *s_queryStopWords[] = {
+
+// langid 0 is for all languages, or when it lang is unknown, 'xx'
+static char *s_queryStopWordsUnknown[] = {
 	"at",
 	//"be",
 	"by",
@@ -1722,14 +1725,305 @@ static char      *s_queryStopWords[] = {
 	// additional stop words
 	//"san"           // like san francisco
 };
-static HashTableX s_queryStopWordTable;
+
+
+// english is 1
+static char *s_queryStopWordsEnglish[] = {
+	"at",
+	"by",
+	"of",
+	"on",
+	"or",
+	"over",
+	"if",
+	"is",
+	"it",
+	"in",
+	"into",
+	"re",
+	"to",
+	"the",
+	"and",
+	"for",
+	"also",
+	"from",
+	"with",
+	"about",
+	"above",
+	"their",
+	"i",
+	"a",
+	"an",
+	"the",
+	"and",
+	"or",
+	"as",
+	"of",
+	"at",
+	"by",
+	"for",
+	"with",
+	"about",
+	"to",
+	"from",
+	"in",
+	"on"
+};
+
+
+static char *s_queryStopWordsGerman[] = {
+	// german stop words
+	//"aber",		// but
+	//"alle",		// all
+	//"allem",	// 
+	//"allen",	// 
+	//"aller",	// 
+	//"alles",	// 
+	//"als",		// than,
+	//"also",		// so
+	"am",		// an
+	"an",		// at
+	//"ander",	// other
+	//"andere",	// 
+	//"anderem",	// 
+	//"anderen",	// 
+	//"anderer",	// 
+	//"anderes",	// 
+	//"anderm",	// 
+	//"andern",	// 
+	//"anderr",	// 
+	//"anders",	// 
+	//"auch",		// also
+	"auf",		// on
+	//"aus",		// out
+	"bei",		// by
+	//"bin",		// am
+	//"bis",		// until
+	//"bist",		// art
+	//"da",		// there
+	"damit",	// with
+	//"dann",		// then
+	"der",		// the
+	"den",		// 
+	"des",		// 
+	"dem",		// 
+	"die",		// 
+	"das",		// 
+	//"daß",		// that
+	"derselbe",	// the
+	"derselben",	// 
+	"denselben",	// 
+	"desselben",	// 
+	"demselben",	// 
+	"dieselbe",	// 
+	"dieselben",	// 
+	"dasselbe",	// 
+	"dazu",		// to
+	//"dein",		// thy
+	//"deine",	// 
+	//"deinem",	// 
+	//"deinen",	// 
+	//"deiner",	// 
+	//"deines",	// 
+	//"denn",		// because
+	"derer",	// of
+	"dessen",	// of
+	//"dich",		// thee
+	//"dir",		// to
+	//"du",		// thou
+	//"dies",		// this
+	//"diese",	// 
+	//"diesem",	// 
+	//"diesen",	// 
+	//"dieser",	// 
+	//"dieses",	// 
+	//"doch",		// (several
+	//"dort",		// (over)
+	//"durch",	// through
+	"ein",		// a
+	"eine",		// 
+	"einem",	// 
+	"einen",	// 
+	"einer",	// 
+	"eines",	// 
+	//"einig",	// some
+	//"einige",	// 
+	//"einigem",	// 
+	//"einigen",	// 
+	//"einiger",	// 
+	//"einiges",	// 
+	//"einmal",	// once
+	//"er",		// he
+	//"ihn",		// him
+	"ihm",		// to
+	"es",		// it
+	//"etwas",	// something
+	//"euer",		// your
+	//"eure",		// 
+	//"eurem",	// 
+	//"euren",	// 
+	//"eurer",	// 
+	//"eures",	// 
+	"für",		// for
+	//"gegen",	// towards
+	//"gewesen",	// p.p.
+	//"hab",		// have
+	//"habe",		// have
+	//"haben",	// have
+	//"hat",		// has
+	//"hatte",	// had
+	//"hatten",	// had
+	//"hier",		// here
+	//"hin",		// there
+	//"hinter",	// behind
+	"ich",		// I
+	//"mich",		// me
+	"mir",		// to
+	//"ihr",		// you,
+	//"ihre",		// 
+	//"ihrem",	// 
+	//"ihren",	// 
+	//"ihrer",	// 
+	//"ihres",	// 
+	"euch",		// to
+	"im",		// in
+	"in",		// in
+	//"indem",	// while
+	"ins",		// in
+	"ist",		// is
+	//"jede",		// each,
+	//"jedem",	// 
+	//"jeden",	// 
+	//"jeder",	// 
+	//"jedes",	// 
+	//"jene",		// that
+	//"jenem",	// 
+	//"jenen",	// 
+	//"jener",	// 
+	//"jenes",	// 
+	//"jetzt",	// now
+	//"kann",		// can
+	//"kein",		// no
+	//"keine",	// 
+	//"keinem",	// 
+	//"keinen",	// 
+	//"keiner",	// 
+	//"keines",	// 
+	//"können",	// can
+	//"könnte",	// could
+	//"machen",	// do
+	//"man",		// one
+	//"manche",	// some,
+	//"manchem",	// 
+	//"manchen",	// 
+	//"mancher",	// 
+	//"manches",	// 
+	//"mein",		// my
+	//"meine",	// 
+	//"meinem",	// 
+	//"meinen",	// 
+	//"meiner",	// 
+	//"meines",	// 
+	"mit",		// with
+	//"muss",		// must
+	//"musste",	// had
+	//"nach",		// to(wards)
+	//"nicht",	// not
+	//"nichts",	// nothing
+	//"noch",		// still,
+	//"nun",		// now
+	//"nur",		// only
+	//"ob",		// whether
+	"oder",		// or
+	//"ohne",		// without
+	//"sehr",		// very
+	//"sein",		// his
+	//"seine",	// 
+	//"seinem",	// 
+	//"seinen",	// 
+	//"seiner",	// 
+	//"seines",	// 
+	//"selbst",	// self
+	//"sich",		// herself
+	//"sie",		// they,
+	"ihnen",	// to
+	//"sind",		// are
+	//"so",		// so
+	//"solche",	// such
+	//"solchem",	// 
+	//"solchen",	// 
+	//"solcher",	// 
+	//"solches",	// 
+	//"soll",		// shall
+	//"sollte",	// should
+	//"sondern",	// but
+	//"sonst",	// else
+	"über",		// over
+	//"um",		// about,
+	"und",		// and
+	//"uns",		// us
+	//"unse",		// 
+	//"unsem",	// 
+	//"unsen",	// 
+	//"unser",	// 
+	//"unses",	// 
+	//"unter",	// under
+	//"viel",		// much
+	//"vom",		// von
+	"von",		// from
+	//"vor",		// before
+	//"während",	// while
+	//"war",		// was
+	//"waren",	// were
+	//"warst",	// wast
+	//"was",		// what
+	//"weg",		// away,
+	//"weil",		// because
+	//"weiter",	// further
+	//"welche",	// which
+	//"welchem",	// 
+	//"welchen",	// 
+	//"welcher",	// 
+	//"welches",	// 
+	//"wenn",		// when
+	//"werde",	// will
+	//"werden",	// will
+	//"wie",		// how
+	//"wieder",	// again
+	//"will",		// want
+	//"wir",		// we
+	//"wird",		// will
+	//"wirst",	// willst
+	//"wo",		// where
+	//"wollen",	// want
+	//"wollte",	// wanted
+	//"würde",	// would
+	//"würden",	// would
+	"zu",		// to
+	"zum",		// zu
+	"zur"		// zu
+	//"zwar",		// indeed
+	//"zwischen",	// between
+};
+
+
+static HashTableX s_queryStopWordTables[MAXLANGID+1];
 static bool       s_queryStopWordsInitialized = false;
 
-bool isQueryStopWord ( char *s , int32_t len , int64_t h ) {
+static char **s_queryStopWords2[MAXLANGID+1];
+
+bool isQueryStopWord ( char *s , int32_t len , int64_t h , int32_t langId ) {
 
 	// include a bunch of foreign prepositions so they don't get required
 	// by the bitScores in IndexTable.cpp
 	if ( ! s_queryStopWordsInitialized ) {
+		// reset these
+		for ( int32_t i = 0 ; i <= MAXLANGID ; i++ )
+			s_queryStopWords2[i] = NULL;
+		// now set to what we got
+		s_queryStopWords2[langUnknown] = s_queryStopWordsUnknown;
+		s_queryStopWords2[langEnglish] = s_queryStopWordsEnglish;
+		s_queryStopWords2[langGerman ] = s_queryStopWordsGerman;
 		// set up the hash table
 // 		if ( ! s_queryStopWordTable.set ( sizeof(s_queryStopWords) * 2 ) ) 
 // 			return log(LOG_INIT,"query: Could not init query "
@@ -1748,12 +2042,17 @@ bool isQueryStopWord ( char *s , int32_t len , int64_t h ) {
 // 			//swh   = hash64AsciiLower ( sw , swlen );
 // 			//s_queryStopWordTable.addTerm (swh,i+1,i+1,true);
 // 		}
-		s_queryStopWordsInitialized = 
-			initWordTable(&s_queryStopWordTable, 
-				      s_queryStopWords,
-				      sizeof(s_queryStopWords),
-				      "qrystops");
-		if (!s_queryStopWordsInitialized) return false;
+		for ( int32_t i = 0 ; i <= MAXLANGID ; i++ ) {
+			HashTableX *ht = &s_queryStopWordTables[i];
+			char **words = s_queryStopWords2[i];
+			if ( ! words ) continue;
+			if ( ! initWordTable ( ht,//&s_queryStopWordTable, 
+					       words,
+					       sizeof(words),
+					       "qrystops") )
+				return false;
+		}
+		s_queryStopWordsInitialized = true;
 	} 
 
 	// . all 1 char letter words are stop words
@@ -1762,8 +2061,14 @@ bool isQueryStopWord ( char *s , int32_t len , int64_t h ) {
 	// . let 'a' remain a query stop word i guess... (mdw 7/16/12)
 	//if ( len == 1 && is_alpha_a(*s) ) return false;
 
+	if ( langId < 0 ) langId = langUnknown;
+	if ( langId > MAXLANGID ) langId = langUnknown;
+
+	// if empty, use default table
+	if ( ! s_queryStopWords2[langId] ) langId = langUnknown;
+
 	// get from table
-	return s_queryStopWordTable.getScore ( &h );
+	return s_queryStopWordTables[langId].getScore ( &h );
 }
 
 // is it a stop word?
@@ -3557,7 +3862,8 @@ static bool       s_commonQueryWordsInitialized = false;
 // for Process.cpp::resetAll() to call when exiting to free all mem
 void resetStopWordTables() {
 	s_stopWordTable.reset();
-	s_queryStopWordTable.reset();
+	for ( int i = 0 ; i <= MAXLANGID ; i++ )
+		s_queryStopWordTables[i].reset();
 	s_commonWordTable.reset();
 	s_commonQueryWordTable.reset();
 }
@@ -3642,7 +3948,8 @@ bool isVerb ( int64_t *hp ) {
 
 void resetStopWords ( ) {
 	s_stopWordTable.reset();
-	s_queryStopWordTable.reset();
+	for ( int i = 0 ; i <= MAXLANGID ; i++ )
+		s_queryStopWordTables[i].reset();
 	s_commonWordTable.reset();
 	s_verbTable.reset();
 	s_commonQueryWordTable.reset();

@@ -9600,7 +9600,8 @@ bool XmlDoc::addGigabits(Words *ww,int64_t docId,Sections *sections,
 		// are we capitalized?
 		bool cap = ww->isCapitalized(i);
 		// ignore lower case query stop words
-		if (!cap&&isQueryStopWord(wptrs[i],wlens[i],wids[i]))continue;
+		if (!cap&&isQueryStopWord(wptrs[i],wlens[i],wids[i],langId))
+			continue;
 		// hash of word then the phrase
 		//uint32_t h = wids[i] & 0xffffffff;
 		//uint64_t h = wids[i];

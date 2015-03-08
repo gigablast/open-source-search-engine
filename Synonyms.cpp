@@ -600,7 +600,7 @@ int64_t getSynBaseHash64 ( char *qstr , uint8_t langId ) {
 		//					 true,
 		//					 langId);
 		// is it a queryStopWord like "the" or "and"?
-		bool isQueryStop = ::isQueryStopWord(NULL,0,wids[i]);
+		bool isQueryStop = ::isQueryStopWord(NULL,0,wids[i],langId);
 		// a more restrictive list
 		bool isStop = ::isStopWord(NULL,0,wids[i]);
 		if ( ::isCommonQueryWordInEnglish(wids[i]) ) isStop = true;
