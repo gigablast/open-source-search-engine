@@ -1889,6 +1889,15 @@ int32_t UdpSlot::getScore ( int64_t now ) {
 	     s_token && s_token != this && ! old )
 		return -1;
 	*/
+
+	// do not do sends if callback was called. maybe cancelled?
+	// this was causing us to get into an infinite loop in 
+	// UdpServer.cpp's sendPoll_ass(). there wasn't anything to send i
+	// guess because it got cancelled (?) but we kept returning it here
+	// nonetheless.
+	if ( m_calledCallback )
+		return -1;
+
 	// send ACKs before regular dgrams so we don't hold people up
 	if ( m_sentAckBitsOn < m_readBitsOn && m_proto->useAcks() ) 
 		return 0x7fffffff;
