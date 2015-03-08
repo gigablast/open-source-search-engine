@@ -1759,8 +1759,13 @@ void doneSendingWrapper9 ( void *state , TcpSocket *sock ) {
 	// the send completed, count it
 	THIS->m_sendsIn++;
 	// error?
-	if ( THIS->m_sendsIn > THIS->m_sendsOut )
-		log("msg40: sendsin > sendsout");
+	if ( THIS->m_sendsIn > THIS->m_sendsOut ) {
+		log("msg40: sendsin > sendsout. bailing!!!");
+		// try to prevent a core i haven't fixed right yet!!!
+		// seems like a reply coming back after we've destroyed the
+		// state!!!
+		return;
+	}
 	// debug
 	//g_errno = ETCPTIMEDOUT;
 	// socket error? if client closes the socket midstream we get one.
