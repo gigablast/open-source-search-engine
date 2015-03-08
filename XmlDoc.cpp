@@ -21422,8 +21422,20 @@ int32_t *XmlDoc::redoJSONObjects ( int32_t *newTitleHashes ,
 	int32_t *oldTitleHashes = getDiffbotTitleHashes ( &numOldHashes );
 	// sanity. should return right away without having to block
 	if ( oldTitleHashes == (void *)-1 ) { char *xx=NULL;*xx=0; }
+
+	//int32_t count = m_diffbotJSONCount;
 	// sanity again
-	if ( numOldHashes != m_diffbotJSONCount ) { char *xx=NULL;*xx=0; }
+	if ( numOldHashes != m_diffbotJSONCount ) { 
+		log("build: can't remove json objects. "
+		    "jsoncount mismatch %"INT32" != %"INT32
+		    ,numOldHashes
+		    ,m_diffbotJSONCount
+		    );
+		g_errno = EBADENGINEER;
+		return NULL;
+		//count = 0;
+		//char *xx=NULL;*xx=0; 
+	}
 
 	// scan down each
 	for ( ; m_joc < m_diffbotJSONCount ; ) {
