@@ -180,6 +180,10 @@ JsonItem *Json::parseJsonStringIntoJsonItems ( char *json , int32_t niceness ) {
 			// set the name
 			ji->m_name    = NAME;
 			ji->m_nameLen = NAMELEN;
+			// init to a bogus value. should be set below.
+			// at least this should avoid a core in XmlDoc.cpp
+			// getTokenizedDiffbotReply()
+			ji->m_valueLen = 0;
 			// this goes on the stack
 			if ( m_stackPtr >= MAXJSONPARENTS ) return NULL;
 			m_stack[m_stackPtr++] = ji;

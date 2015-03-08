@@ -3248,7 +3248,7 @@ bool Rdb::needsSave() {
 }
 
 // if we are doledb, we are a tree-only rdb, so try to reclaim
-// memory from deleted nodes. works by condesing the used memory.
+// memory from deleted nodes. works by condensing the used memory.
 // returns how much we reclaimed.
 int32_t Rdb::reclaimMemFromDeletedTreeNodes( int32_t niceness ) {
 
@@ -3284,7 +3284,7 @@ int32_t Rdb::reclaimMemFromDeletedTreeNodes( int32_t niceness ) {
 	// mark the data of unoccupied nodes somehow
 	int32_t nn = m_tree.m_minUnusedNode;
 	for ( int i = 0 ; i < nn ; i++ ) {
-		QUICKPOLL ( niceness );
+		//QUICKPOLL ( niceness );
 		// count occupied skip empty nodes in tree
 		if ( m_tree.m_parents[i] == -2 ) {marked++; continue; }
 		// get data ptr
@@ -3307,7 +3307,7 @@ int32_t Rdb::reclaimMemFromDeletedTreeNodes( int32_t niceness ) {
 	// them. then put their offset into a map that maps it to the new
 	// offset after doing the memmove().
 	for ( ; p < pend ; ) {
-		QUICKPOLL ( niceness );
+		//QUICKPOLL ( niceness );
 		SpiderRequest *sreq = (SpiderRequest *)p;
 		int32_t oldOffset = p - pstart;
 		int32_t recSize = sreq->getRecSize();
@@ -3331,8 +3331,14 @@ int32_t Rdb::reclaimMemFromDeletedTreeNodes( int32_t niceness ) {
 
 	//if ( skipped != marked ) { char *xx=NULL;*xx=0; }
 
-	// sanity
-	if(ht.getNumSlotsUsed()!=m_tree.m_numUsedNodes){char *xx=NULL;*xx=0;}
+	// sanity -- this breaks us. i tried taking the quickpolls out to stop
+	if(ht.getNumSlotsUsed()!=m_tree.m_numUsedNodes){
+		log("rdb: %"INT32" != %"INT32
+		    ,ht.getNumSlotsUsed()
+		    ,m_tree.m_numUsedNodes
+		    );
+		char *xx=NULL;*xx=0;
+	}
 
 	int32_t inUseNew = dst - pstart;
 
@@ -3348,7 +3354,7 @@ int32_t Rdb::reclaimMemFromDeletedTreeNodes( int32_t niceness ) {
 
 	// now update data ptrs in the tree, m_data[]
 	for ( int i = 0 ; i < nn ; i++ ) {
-		QUICKPOLL ( niceness );
+		//QUICKPOLL ( niceness );
 		// skip empty nodes in tree
 		if ( m_tree.m_parents[i] == -2 ) continue;
 		// update the data otherwise
