@@ -1481,13 +1481,9 @@ bool Process::shutdown2 ( ) {
 		g_threads.disableThreads();
 	}
 
-	// wait for all threads to return
-	int32_t n = g_threads.getNumThreadsOutOrQueued() ;
-	if ( n != 0 ) {
-		log(LOG_INFO,"gb: Has %"INT32" threads out. Waiting for "
-		    "them to finish.",n);
-		return false;
-	}
+	// . suspend all merges
+	g_merge.suspendMerge () ;
+	g_merge2.suspendMerge() ;
 
 	// assume we will use threads
 	// no, not now that we disabled them
@@ -1502,6 +1498,21 @@ bool Process::shutdown2 ( ) {
 		if ( ! useThreads ) g_threads.disableThreads();
 	}
 
+	static bool s_printed = false;
+
+	// wait for all threads to return
+	int32_t n = g_threads.getNumThreadsOutOrQueued() ;
+	if ( n != 0 ) {
+		log(LOG_INFO,"gb: Has %"INT32" threads out. Waiting for "
+		    "them to finish.",n);
+		return false;
+	}
+	else if ( ! s_printed ) {
+		s_printed = true;
+		log(LOG_INFO,"gb: No threads out.");
+	}
+
+
 
 	// disable all spidering
 	// we can exit while spiders are in the queue because
@@ -1514,9 +1525,6 @@ bool Process::shutdown2 ( ) {
 
 	//g_conf.m_injectionEnabled = false;
 
-	// . suspend all merges
-	g_merge.suspendMerge () ;
-	g_merge2.suspendMerge() ;
 	// make sure they are in a saveable state. we need to make sure
 	// they have dumped out the latest merged list and updated the 
 	// appropriate RdbMap so we can save it below
