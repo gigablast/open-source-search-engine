@@ -360,6 +360,9 @@ bool Conf::init ( char *dir ) { // , int32_t hostId ) {
 	// . the hosts splitting count isn't right and it just sends to like
 	//   host #0 or something...
 	g_conf.m_doSpellChecking = false;
+
+	g_conf.m_forceIt = false;
+
 	// always turn on threads if live
 	if ( g_conf.m_isLive ) g_conf.m_useThreads = true;
 	// disable this at startup always... no since might have crashed

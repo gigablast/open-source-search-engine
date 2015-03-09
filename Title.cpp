@@ -1114,7 +1114,7 @@ bool Title::setTitle4 ( XmlDoc   *xd            ,
 		// scan the words in this title candidate
 		for ( int32_t j = a ; j < b ; j++ ) {
 			// skip stop words
-			if ( w->isQueryStopWord(j) ) continue;
+			if ( w->isQueryStopWord(j,xd->m_langId) ) continue;
 			// punish if uncapitalized non-stopword
 			if ( ! w->isCapitalized(j) ) uncapped = true;
 			// skip if no query

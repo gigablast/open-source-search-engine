@@ -164,10 +164,11 @@ class Words {
 				    m_wordIds [n]);
 	}
 
-	bool isQueryStopWord ( int32_t n ) {
+	bool isQueryStopWord ( int32_t n , int32_t langId ) {
 		return ::isQueryStopWord(m_words   [n],
 					 m_wordLens[n],
-					 m_wordIds [n]);
+					 m_wordIds [n],
+					 langId);
 	}
 
 

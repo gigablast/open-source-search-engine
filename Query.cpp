@@ -2798,7 +2798,8 @@ bool Query::setQWords ( char boolFlag ,
 			qw->m_isStopWord      = false;
 		}
 		else {
-			qw->m_isQueryStopWord =::isQueryStopWord (w,wlen,wid);
+			qw->m_isQueryStopWord =::isQueryStopWord (w,wlen,wid,
+								  m_langId);
 			// . BUT, if it is a single letter contraction thing
 			// . ninad: make this == 1 if in utf8! TODO!! it is!
 			if ( wlen == 1 && w[-1] == '\'' )

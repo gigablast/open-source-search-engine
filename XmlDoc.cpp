@@ -9600,7 +9600,8 @@ bool XmlDoc::addGigabits(Words *ww,int64_t docId,Sections *sections,
 		// are we capitalized?
 		bool cap = ww->isCapitalized(i);
 		// ignore lower case query stop words
-		if (!cap&&isQueryStopWord(wptrs[i],wlens[i],wids[i]))continue;
+		if (!cap&&isQueryStopWord(wptrs[i],wlens[i],wids[i],langId))
+			continue;
 		// hash of word then the phrase
 		//uint32_t h = wids[i] & 0xffffffff;
 		//uint64_t h = wids[i];
@@ -21422,8 +21423,20 @@ int32_t *XmlDoc::redoJSONObjects ( int32_t *newTitleHashes ,
 	int32_t *oldTitleHashes = getDiffbotTitleHashes ( &numOldHashes );
 	// sanity. should return right away without having to block
 	if ( oldTitleHashes == (void *)-1 ) { char *xx=NULL;*xx=0; }
+
+	//int32_t count = m_diffbotJSONCount;
 	// sanity again
-	if ( numOldHashes != m_diffbotJSONCount ) { char *xx=NULL;*xx=0; }
+	if ( numOldHashes != m_diffbotJSONCount ) { 
+		log("build: can't remove json objects. "
+		    "jsoncount mismatch %"INT32" != %"INT32
+		    ,numOldHashes
+		    ,m_diffbotJSONCount
+		    );
+		g_errno = EBADENGINEER;
+		return NULL;
+		//count = 0;
+		//char *xx=NULL;*xx=0; 
+	}
 
 	// scan down each
 	for ( ; m_joc < m_diffbotJSONCount ; ) {

@@ -514,6 +514,8 @@ class Conf {
 	// use seo tools and control datacenter fans, etc.
 	bool   m_isMattWells;
 
+	bool   m_forceIt;
+
 	// maximum number of synonyms/stems to expand a word into
 	//int32_t   m_maxSynonyms;
 
