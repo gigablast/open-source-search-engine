@@ -2119,12 +2119,14 @@ bool Rdb::hasRoom ( RdbList *list , int32_t niceness ) {
 	// memory from deleted nodes. works by condesing the used memory.
 	if ( m_rdbId == RDB_DOLEDB && 
 	     // if there is no room left in m_mem (RdbMem class)...
-	     m_mem.m_ptr2 - m_mem.m_ptr1 < dataSpace &&
+	     ( m_mem.m_ptr2 - m_mem.m_ptr1 < dataSpace||g_conf.m_forceIt) &&
 	     //m_mem.m_ptr1 - m_mem.m_mem > 1024 ) {
 	     // and last time we tried this, if any, it reclaimed 1MB+
-	     ( m_lastReclaim > 1024*1024 || m_lastReclaim == -1 ) ) {
+	     (m_lastReclaim>1024*1024||m_lastReclaim==-1||g_conf.m_forceIt)){
 		// reclaim the memory now. returns -1 and sets g_errno on error
 		int32_t reclaimed = reclaimMemFromDeletedTreeNodes(niceness);
+		// reset force flag
+		g_conf.m_forceIt = false;
 		// ignore errors for now
 		g_errno = 0;
 		// how much did we free up?
@@ -3281,25 +3283,44 @@ int32_t Rdb::reclaimMemFromDeletedTreeNodes( int32_t niceness ) {
 		      true )) // useMagic? yes..
 		return -1;
 
+	int32_t dups = 0;
+
 	// mark the data of unoccupied nodes somehow
 	int32_t nn = m_tree.m_minUnusedNode;
-	for ( int i = 0 ; i < nn ; i++ ) {
+	for ( int32_t i = 0 ; i < nn ; i++ ) {
 		//QUICKPOLL ( niceness );
-		// count occupied skip empty nodes in tree
+		// skip empty nodes in tree
 		if ( m_tree.m_parents[i] == -2 ) {marked++; continue; }
 		// get data ptr
 		char *data = m_tree.m_data[i];
+		// and key ptr, if negative skip it
+		//char *key = m_tree.getKey(i);
+		//if ( (key[0] & 0x01) == 0x00 ) { occupied++; continue; }
 		// sanity, ensure legit
 		if ( data < pstart ) { char *xx=NULL;*xx=0; }
 		// offset
 		int32_t doff = (int32_t)(data - pstart);
+		// a dup? sanity check
+		if ( ht.isInTable ( &doff ) ) {
+			int32_t *vp = (int32_t *) ht.getValue ( &doff );
+			log("rdb: reclaim got dup oldi=0x%"PTRFMT" "
+			    "newi=%"INT32" dataoff=%"INT32"."
+			    ,(PTRTYPE)vp,i,doff);
+			//while ( 1 == 1 ) sleep(1);
+			dups++;
+			continue;
+		}
 		// indicate it is legit
-		int32_t val = 1;
+		int32_t val = i;
 		ht.addKey ( &doff , &val );
 		occupied++;
 	}
 
-	if ( occupied != m_tree.getNumUsedNodes() ) { char *xx=NULL;*xx=0;}
+	if ( occupied + dups != m_tree.getNumUsedNodes() ) 
+		log("rdb: reclaim mismatch1");
+
+	if ( ht.getNumSlotsUsed() + dups != m_tree.m_numUsedNodes )
+		log("rdb: reclaim mismatch2");
 
 	int32_t skipped = 0;
 
@@ -3311,7 +3332,14 @@ int32_t Rdb::reclaimMemFromDeletedTreeNodes( int32_t niceness ) {
 		SpiderRequest *sreq = (SpiderRequest *)p;
 		int32_t oldOffset = p - pstart;
 		int32_t recSize = sreq->getRecSize();
-		// if not in hash table it was a delete
+		// negative key? this shouldn't happen
+		if ( (sreq->m_key.n0 & 0x01) == 0x00 ) {
+			log("rdb: reclaim got negative doldb key in scan");
+			p += sizeof(DOLEDBKEY);
+			skipped++;
+			continue;
+		}
+		// if not in hash table it was deleted from tree i guess
 		if ( ! ht.isInTable ( &oldOffset ) ) {
 			p += recSize;
 			skipped++; 
@@ -3332,13 +3360,14 @@ int32_t Rdb::reclaimMemFromDeletedTreeNodes( int32_t niceness ) {
 	//if ( skipped != marked ) { char *xx=NULL;*xx=0; }
 
 	// sanity -- this breaks us. i tried taking the quickpolls out to stop
-	if(ht.getNumSlotsUsed()!=m_tree.m_numUsedNodes){
-		log("rdb: %"INT32" != %"INT32
-		    ,ht.getNumSlotsUsed()
-		    ,m_tree.m_numUsedNodes
-		    );
-		char *xx=NULL;*xx=0;
-	}
+	// if(ht.getNumSlotsUsed()!=m_tree.m_numUsedNodes){
+	// 	log("rdb: %"INT32" != %"INT32
+	// 	    ,ht.getNumSlotsUsed()
+	// 	    ,m_tree.m_numUsedNodes
+	// 	    );
+	// 	while(1==1)sleep(1);
+	// 	char *xx=NULL;*xx=0;
+	// }
 
 	int32_t inUseNew = dst - pstart;
 

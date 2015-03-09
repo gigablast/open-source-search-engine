@@ -718,6 +718,11 @@ bool CommandDiskPageCacheOff ( char *rec ) {
 	return true;
 }
 
+bool CommandForceIt ( char *rec ) {
+	g_conf.m_forceIt = true;
+	return true;
+}
+
 bool CommandDiskDump ( char *rec ) {
 	//g_checksumdb.getRdb()->dumpTree ( 1 ); // niceness
 	g_clusterdb.getRdb()->dumpTree  ( 1 );
@@ -10200,6 +10205,17 @@ void Parms::init ( ) {
 	m->m_cast  = 1;
 	m->m_page  = PAGE_MASTER;
 	m->m_obj   = OBJ_CONF;
+	m++;
+
+	m->m_title = "force reclaim";
+	m->m_desc  = "Force reclaim of doledb mem.";
+	m->m_cgi   = "forceit";
+	m->m_type  = TYPE_CMD;
+	m->m_func  = CommandForceIt;
+	m->m_cast  = 1;
+	m->m_page  = PAGE_MASTER;
+	m->m_obj   = OBJ_CONF;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "tight merge posdb";

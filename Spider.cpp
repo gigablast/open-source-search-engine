@@ -3427,6 +3427,9 @@ static void gotSpiderdbListWrapper ( void *state , RdbList *list , Msg5 *msg5){
 	SpiderColl *THIS = (SpiderColl *)state;
 	// prevent a core
 	THIS->m_gettingList1 = false;
+	// are we trying to exit? some firstip lists can be quite long, so
+	// terminate here so all threads can return and we can exit properly
+	if ( g_process.m_mode == EXIT_MODE ) return;
 	// return if that blocked
 	if ( ! THIS->evalIpLoop() ) return;
 	// we are done, re-entry popuatedoledb

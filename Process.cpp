@@ -1502,12 +1502,12 @@ bool Process::shutdown2 ( ) {
 
 	// wait for all threads to return
 	int32_t n = g_threads.getNumThreadsOutOrQueued() ;
-	if ( n != 0 ) {
+	if ( n != 0 && ! m_urgent ) {
 		log(LOG_INFO,"gb: Has %"INT32" threads out. Waiting for "
 		    "them to finish.",n);
 		return false;
 	}
-	else if ( ! s_printed ) {
+	else if ( ! s_printed && ! m_urgent ) {
 		s_printed = true;
 		log(LOG_INFO,"gb: No threads out.");
 	}
