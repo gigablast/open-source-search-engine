@@ -14440,18 +14440,40 @@ void gotDiffbotReplyWrapper ( void *state , TcpSocket *s ) {
 	if ( THIS->m_diffbotReplyError ) countIt = false;
 
 	/*
+
+	  // solution for bug #2092 but probably not really needed so
+	  // commented out.
+
 	// if doing /vxxx/analzye?mode=xxxx then ensure matches
 	bool isAnalyze = false;
 	if ( countIt && 
-	     m_diffbotApiUrlValid &&
-	     strstr ( m_diffbotApiUrl.getBufStart(), "/analyze?") )
+	     THIS->m_diffbotApiUrlValid &&
+	     strstr ( THIS->m_diffbotApiUrl.getBufStart(), "/analyze?") )
 		isAnalyze = true;
 
 	char *mode = NULL;
 	if ( isAnalyze ) {
-		mode = strstr (m_diffbotApiUrl.getBufStart(), "mode=");
+		mode = strstr (THIS->m_diffbotApiUrl.getBufStart(), "mode=");
 		if ( mode ) mode += 5;
 		// find end of it
+	}
+
+	char *pageType = NULL;
+	int32_t pageTypeLen;
+	if ( mode && 
+	     THIS->m_diffbotReplyValid && 
+	     THIS->m_diffbotReply.length() > 5 ) {
+		char *reply = THIS->m_diffbotReply.getBufStart();
+		pageType = strstr ( reply , "\"type\":\"" );
+		if ( pageType ) pageType += 8;
+		char *e = pageType;
+		for ( ; *e && *e != '\"' ; e++ );
+		pageTypeLen = e - pageType;
+	}
+
+	// if it does not match, do not count it
+	if ( mode && pageType && strncmp ( mode , pageType , pageTypeLen ) ) 
+		countIt = false;
 	*/
 
 	// increment this counter on a successful reply from diffbot
