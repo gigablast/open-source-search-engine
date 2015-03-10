@@ -7674,6 +7674,16 @@ Links *XmlDoc::getLinks ( bool doQuickSet ) {
 	if ( m_linksValid ) return &m_links;
 	// set status
 	setStatus ( "getting outlinks");
+
+	// . add links from diffbot reply
+	// . get the reply of json objects from diffbot
+	// . this will be empty if we are a json object!
+	// . will also be empty if not meant to be sent to diffbot
+	// . the TOKENIZED reply consists of \0 separated json objects that
+	//   we create from the original diffbot reply
+	SafeBuf *dbr = getDiffbotReply();
+	if ( ! dbr || dbr == (void *)-1 ) return (Links *)dbr;
+
 	// this will set it if necessary
 	Xml *xml = getXml();
 	// bail on error
@@ -7737,7 +7747,8 @@ Links *XmlDoc::getLinks ( bool doQuickSet ) {
 			     m_niceness  ,
 			     *pp         , // parent url in permalink format?
 			     oldLinks    ,// oldLinks, might be NULL!
-			     doQuickSet  ))
+			     doQuickSet  ,
+			     dbr ) )
 		return NULL;
 
 	m_linksValid = true;
