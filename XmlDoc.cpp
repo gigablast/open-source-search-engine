@@ -14276,6 +14276,10 @@ void gotDiffbotReplyWrapper ( void *state , TcpSocket *s ) {
 	if ( g_errno == ECONNRESET ||
 	     g_errno == ETIMEDOUT ) {
 	retry:
+		// reset error in case was set below before our retry.
+		// getDiffbotReply() will retry because we never set
+		// m_diffbotReplyValid to true, below.
+		THIS->m_diffbotReplyError = 0;
 		log("buld: retrying diffbot reply");
 		// resume. this checks g_errno for being set.
 		THIS->m_masterLoop ( THIS->m_masterState );
