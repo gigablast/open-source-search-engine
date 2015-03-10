@@ -33786,20 +33786,20 @@ bool XmlDoc::hashFacet2 ( char *prefix,
 	if ( strcmp(prefix,"gbfacetfloat")==0 ) isFloat = true;
 
 	// store in buffer for display on pageparser.cpp output
-	char buf[128];
+	char buf[130];
 	int32_t bufLen;
 	if ( isFloat )
-		bufLen=sprintf(buf,"facetField=%s facetVal32=%f",term,
+		bufLen=snprintf(buf,128,"facetField=%s facetVal32=%f",term,
 			       *(float *)&val32);
 	else
-		bufLen=sprintf(buf,"facetField=%s facetVal32=%"UINT32"",
+		bufLen=snprintf(buf,128,"facetField=%s facetVal32=%"UINT32"",
 			       term,(uint32_t)val32);
 
 	// make a special hashinfo for this facet
 	HashInfo hi;
 	hi.m_tt = tt;
 	// the full prefix
-	char fullPrefix[64];
+	char fullPrefix[66];
 	snprintf(fullPrefix,64,"%s:%s",prefix,term);
 	hi.m_prefix = fullPrefix;//"gbfacet";
 
@@ -33893,7 +33893,7 @@ bool XmlDoc::hashFieldMatchTerm ( char *val , int32_t vlen , HashInfo *hi ) {
 	hi2.m_tt = tt;
 	// the full prefix
 	char fullPrefix[64];
-	snprintf(fullPrefix,64,"%s:%s",prefix,hi->m_prefix);
+	snprintf(fullPrefix,62,"%s:%s",prefix,hi->m_prefix);
 	hi2.m_prefix = fullPrefix;//"gbfacet";
 
 	// add to wts for PageParser.cpp display
@@ -34171,7 +34171,8 @@ bool XmlDoc::hashNumber2 ( float f , HashInfo *hi , char *sortByStr ) {
 
 	// store in buffer
 	char buf[128];
-	int32_t bufLen = sprintf(buf,"%s:%s float32=%f",sortByStr,hi->m_prefix,f);
+	int32_t bufLen = snprintf(buf,126,"%s:%s float32=%f",
+				  sortByStr,hi->m_prefix,f);
 
 	// add to wts for PageParser.cpp display
 	// store it
@@ -34279,7 +34280,8 @@ bool XmlDoc::hashNumber3 ( int32_t n , HashInfo *hi , char *sortByStr ) {
 
 	// store in buffer
 	char buf[128];
-	int32_t bufLen = sprintf(buf,"%s:%s int32=%"INT32"",sortByStr,hi->m_prefix,n);
+	int32_t bufLen = snprintf(buf,126,"%s:%s int32=%"INT32"",sortByStr,
+				  hi->m_prefix,n);
 
 	// add to wts for PageParser.cpp display
 	// store it
