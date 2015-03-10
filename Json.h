@@ -15,6 +15,8 @@
 
 #define MAXJSONPARENTS 64
 
+bool endsInCurly ( char *s , int32_t slen );
+
 class JsonItem {
 
  public:

@@ -3930,6 +3930,20 @@ bool printResult ( State0 *st, int32_t ix , int32_t *numPrintedSoFar ) {
 		// a dud? just print empty {}'s
 		if ( mr->size_content == 1 ) 
 			sb->safePrintf("{}");
+		// must have an ending } otherwise it was truncated json.
+		// i'm seeing this happen sometimes, i do not know if diffbot
+		// or gigablast is truncating the json
+		else if ( ! endsInCurly ( mr->ptr_content, mr->size_content )){
+			sb->safePrintf("{"
+				       "\"error\":"
+				       "\"Bad JSON. "
+				       "Diffbot reply was missing final "
+				       "curly bracket. Truncated JSON.\""
+				       "}");
+			// make a note of it
+			log("results: omitting diffbot reply missing curly "
+			    "for %s",mr->ptr_ubuf);
+		}
 		// if it's a diffbot object just print it out directly
 		// into the json. it is already json.
 		else

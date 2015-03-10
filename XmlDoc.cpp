@@ -1101,7 +1101,8 @@ CollectionRec *XmlDoc::getCollRec ( ) {
 	if ( ! m_collnumValid ) { char *xx=NULL;*xx=0; }
 	CollectionRec *cr = g_collectiondb.m_recs[m_collnum];
 	if ( ! cr ) {
-		log("build: got NULL collection rec.");
+		log("build: got NULL collection rec for collnum=%"INT32".",
+		    (int32_t)m_collnum);
 		g_errno = ENOCOLLREC;
 		return NULL;
 	}
@@ -14271,6 +14272,17 @@ void gotDiffbotReplyWrapper ( void *state , TcpSocket *s ) {
 		hadError = true;
 	}
 
+	// just retry if connection got reset by peer!
+	if ( g_errno == ECONNRESET ||
+	     g_errno == ETIMEDOUT ) {
+	retry:
+		log("buld: retrying diffbot reply");
+		// resume. this checks g_errno for being set.
+		THIS->m_masterLoop ( THIS->m_masterState );
+		return;
+	}
+		
+
 	//char *buf = s->m_readBuf;
 	// do not allow TcpServer.cpp to free it since m_diffbotReply
 	// is now responsible for that
@@ -14284,10 +14296,12 @@ void gotDiffbotReplyWrapper ( void *state , TcpSocket *s ) {
 		// g_errno should be set
 		if ( ! g_errno ) { char *xx=NULL;*xx=0; }
 		// note it
-		log("xmldoc: error setting diffbot mime");
+		log("build: error setting diffbot mime");
 		THIS->m_diffbotReplyError = EDIFFBOTMIMEERROR;
 		hadError = true;
 	}
+
+	bool retryUrl = false;
 
 	// check the status
 	if ( ! hadError && mime.getHttpStatus() != 200 ) {
@@ -14295,8 +14309,17 @@ void gotDiffbotReplyWrapper ( void *state , TcpSocket *s ) {
 		log("xmldoc: diffbot reply mime was %"INT32"",
 		    mime.getHttpStatus());
 		hadError = true;
+		// gateway timed out? then retry.
+		if ( mime.getHttpStatus() == 504 )
+			retryUrl = true;
 	}
 
+	if ( hadError )
+		log("build: diffbot error for url %s",
+		    THIS->m_diffbotUrl.getBufStart());
+
+	if ( retryUrl )
+		goto retry;
 
 	// get page content
 	char *page = NULL;
@@ -14381,9 +14404,21 @@ void gotDiffbotReplyWrapper ( void *state , TcpSocket *s ) {
 		}
 	}
 
-
 	// reply is now valid but might be empty
 	THIS->m_diffbotReplyValid = true;
+
+	// if json reply was truncated, that is an error as well.
+	// likewise we have to check if such bad json is in the serps
+	// when doing an icc=1 and print 'bad json' in json instead.
+	if ( ! THIS->m_diffbotReplyError && s->m_readOffset > 1 &&
+	     // json must end with '}' (ignores trailing whitespace)
+	     ! endsInCurly ( s->m_readBuf , s->m_readOffset ) ) {
+		// hopefully this can be re-tried later. 
+		THIS->m_diffbotReplyError = EJSONMISSINGLASTCURLY;
+		// make a note of it
+		log("build: got diffbot reply missing curly for %s",
+		    THIS->m_firstUrl.m_url);
+	}
 
 	//if ( ! cr ) return;
 
@@ -14886,6 +14921,14 @@ SafeBuf *XmlDoc::getTokenizedDiffbotReply ( ) {
 // . the diffbot reply will be a list of json objects we want to index
 SafeBuf *XmlDoc::getDiffbotReply ( ) {
 
+	// got reply of malformed json missing final '}'
+	if ( m_diffbotReplyValid && 
+	     m_diffbotReplyError == EJSONMISSINGLASTCURLY ) {
+		// hopefully spider will retry later
+		g_errno = m_diffbotReplyError;
+		return NULL;
+	}
+
 	if ( m_diffbotReplyValid )
 		return &m_diffbotReply;
 
@@ -15178,6 +15221,10 @@ SafeBuf *XmlDoc::getDiffbotReply ( ) {
 	//if ( api && api[0] == '/' ) { api++; apiLen--; }
 	// append the custom url. i.e. /api/analyze?mode=auto&u=
 	//if ( api ) diffbotUrl.safeMemcpy ( api , apiLen );
+
+	// reset it in case we are a re-call from gotDiffbotReplyWrapper()
+	// if g_errno == ECONNRESET
+	m_diffbotUrl.reset();
 	// store the api url into here
 	m_diffbotUrl.safeMemcpy ( apiUrl.getUrl() , apiUrl.getUrlLen() );
 
@@ -15323,16 +15370,22 @@ SafeBuf *XmlDoc::getDiffbotReply ( ) {
 
 	// mark as tried
 	if ( m_srepValid ) { char *xx=NULL;*xx=0; }
-	m_sentToDiffbot = 1;
+
+	// might have been a recall if gotDiffbotReplyWrapper() sensed
+	// g_errno == ECONNRESET and it will retry
+	if ( ! m_sentToDiffbot ) {
+
+		m_sentToDiffbot = 1;
 	
-	// count it for stats
-	cr->m_localCrawlInfo.m_pageProcessAttempts++;
-	cr->m_globalCrawlInfo.m_pageProcessAttempts++;
+		// count it for stats
+		cr->m_localCrawlInfo.m_pageProcessAttempts++;
+		cr->m_globalCrawlInfo.m_pageProcessAttempts++;
 
-	// changing status, resend local crawl info to all
-	cr->localCrawlInfoUpdate();
+		// changing status, resend local crawl info to all
+		cr->localCrawlInfoUpdate();
 
-	cr->m_needsSave = true;
+		cr->m_needsSave = true;
+	}
 
 	char *additionalHeaders = NULL;
 	if ( headers.length() > 0 )
@@ -15356,7 +15409,11 @@ SafeBuf *XmlDoc::getDiffbotReply ( ) {
 				     0 , // ifmodifiedsince
 				     this , // state
 				     gotDiffbotReplyWrapper ,
-				     180*1000, // 180 sec timeout
+				     // MDW: boost timeout from 180 to 18000
+				     // seconds so we can figure out why
+				     // diffbot times out, etc. what is
+				     // going on.
+				     18000*1000, // 180 sec timeout
 				     0,//proxyip
 				     0,//proxyport
 				     // unlimited replies i guess
@@ -20147,6 +20204,9 @@ bool XmlDoc::logIt ( SafeBuf *bb ) {
 	     m_diffbotApiUrl.getBufStart()[0] )
 		sb->safePrintf("diffbotjsonobjects=%"INT32" ",
 			      (int32_t)m_diffbotJSONCount);
+
+	if ( m_diffbotReplyValid )
+		sb->safePrintf("diffboterror=%"INT32" ",m_diffbotReplyError);
 
 	if ( m_siteValid )
 		sb->safePrintf("site=%s ",ptr_site);
