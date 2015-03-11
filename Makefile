@@ -4,7 +4,7 @@ uname_m = $(shell uname -m)
 ARCH=$(uname_m)
 
 # for building packages
-VERSION=19
+VERSION=20
 
 CC=g++
 
@@ -613,17 +613,17 @@ depend:
 # move this tarball into ~/rpmbuild/?????
 # then run rpmbuild -ba gb-1.0.spec to build the rpms
 # rpm -ivh gb-1.0-...  to install the pkg
-testing-rpm:
-	git archive --format=tar --prefix=gb-1.0/ testing > gb-1.0.tar
-	mv gb-1.0.tar /home/mwells/rpmbuild/SOURCES/
-	rpmbuild -bb gb-1.0.spec
-	scp /home/mwells/rpmbuild/RPMS/x86_64/gb-*rpm www.gigablast.com:/w/html/
+# testing-rpm:
+# 	git archive --format=tar --prefix=gb-1.0/ testing > gb-1.0.tar
+# 	mv gb-1.0.tar /home/mwells/rpmbuild/SOURCES/
+# 	rpmbuild -bb gb-1.0.spec
+# 	scp /home/mwells/rpmbuild/RPMS/x86_64/gb-*rpm www.gigablast.com:/w/html/
 
-master-rpm:
-	git archive --format=tar --prefix=gb-1.0/ master > gb-1.0.tar
-	mv gb-1.0.tar /home/mwells/rpmbuild/SOURCES/
-	rpmbuild -bb gb-1.0.spec
-	scp /home/mwells/rpmbuild/RPMS/x86_64/gb-*rpm www.gigablast.com:/w/html/
+# master-rpm:
+# 	git archive --format=tar --prefix=gb-1.0/ master > gb-1.0.tar
+# 	mv gb-1.0.tar /home/mwells/rpmbuild/SOURCES/
+# 	rpmbuild -bb gb-1.0.spec
+# 	scp /home/mwells/rpmbuild/RPMS/x86_64/gb-*rpm www.gigablast.com:/w/html/
 
 # REDHAT PACKAGE SECTION END
 
@@ -635,7 +635,7 @@ master-deb32:
 	git archive --format=tar --prefix=gb-1.$(VERSION)/ master > ../gb_1.$(VERSION).orig.tar
 	rm -rf debian
 # change "-p gb_1.0" to "-p gb_1.1" to update version for example
-	dh_make -s -e gigablast@mail.com -p gb_1.$(VERSION) -f ../gb_1.$(VERSION).orig.tar
+	dh_make -y -s -e gigablast@mail.com -p gb_1.$(VERSION) -f ../gb_1.$(VERSION).orig.tar
 # zero this out, it is just filed with the .txt files erroneously and it'll
 # try to automatiicaly install in /usr/docs/
 	rm debian/docs
@@ -670,7 +670,7 @@ master-deb32:
 # upload deb
 	scp gb_1.$(VERSION)*.deb gk268:/w/html/	
 # alien it
-	sudo alien --to-rpm gb_1.$(VERSION)-1_i386.deb
+	alien --to-rpm gb_1.$(VERSION)-1_i386.deb
 # upload rpm
 	scp gb-1.$(VERSION)*.rpm gk268:/w/html/	
 
@@ -679,7 +679,7 @@ master-deb64:
 	git archive --format=tar --prefix=gb-1.$(VERSION)/ master > ../gb_1.$(VERSION).orig.tar
 	rm -rf debian
 # change "-p gb_1.0" to "-p gb_1.1" to update version for example
-	dh_make -s -e gigablast@mail.com -p gb_1.$(VERSION) -f ../gb_1.$(VERSION).orig.tar
+	dh_make -y -s -e gigablast@mail.com -p gb_1.$(VERSION) -f ../gb_1.$(VERSION).orig.tar
 # zero this out, it is just filed with the .txt files erroneously and it'll
 # try to automatiicaly install in /usr/docs/
 	rm debian/docs
@@ -712,7 +712,7 @@ master-deb64:
 # upload deb
 	scp gb_1.$(VERSION)*.deb gk268:/w/html/	
 # alien it
-	sudo alien --to-rpm gb_1.$(VERSION)-1_amd64.deb
+	alien --to-rpm gb_1.$(VERSION)-1_amd64.deb
 # upload rpm
 	scp gb-1.$(VERSION)*.rpm gk268:/w/html/	
 
