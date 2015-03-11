@@ -29354,7 +29354,8 @@ bool XmlDoc::hashAds ( HashTableX *tt ) {
 		char *descr;
 		//buflen = snprintf(buf,128,"%s-%s", 
 		//		  m_adProvider[i],m_adClient[i]);
-		int32_t buflen = snprintf(buf,128,"%"UINT64"",ptr_adVector[i] );
+		snprintf(buf,128,"%"UINT64"",ptr_adVector[i] );
+		int32_t bufLen = gbstrlen(buf);
 		field = "gbad";
 		descr = "ad provider and id";
 		// update hash parms
@@ -29366,7 +29367,7 @@ bool XmlDoc::hashAds ( HashTableX *tt ) {
 		//log(LOG_WARN, "build: url %s indexing ad termid %s:%s",
 		// getFirstUrl()->getUrl(), field, buf);
 		//this returns false on failure
-		if ( ! hashString ( buf,buflen,&hi ) ) return false;
+		if ( ! hashString ( buf,bufLen,&hi ) ) return false;
 	}
 	return true;
 }
@@ -33787,13 +33788,13 @@ bool XmlDoc::hashFacet2 ( char *prefix,
 
 	// store in buffer for display on pageparser.cpp output
 	char buf[130];
-	int32_t bufLen;
 	if ( isFloat )
-		bufLen=snprintf(buf,128,"facetField=%s facetVal32=%f",term,
-			       *(float *)&val32);
+		snprintf(buf,128,"facetField=%s facetVal32=%f",term,
+			 *(float *)&val32);
 	else
-		bufLen=snprintf(buf,128,"facetField=%s facetVal32=%"UINT32"",
-			       term,(uint32_t)val32);
+		snprintf(buf,128,"facetField=%s facetVal32=%"UINT32"",
+			 term,(uint32_t)val32);
+	int32_t bufLen = gbstrlen(buf);
 
 	// make a special hashinfo for this facet
 	HashInfo hi;
@@ -34171,8 +34172,8 @@ bool XmlDoc::hashNumber2 ( float f , HashInfo *hi , char *sortByStr ) {
 
 	// store in buffer
 	char buf[128];
-	int32_t bufLen = snprintf(buf,126,"%s:%s float32=%f",
-				  sortByStr,hi->m_prefix,f);
+	snprintf(buf,126,"%s:%s float32=%f",sortByStr,hi->m_prefix,f);
+	int32_t bufLen = gbstrlen(buf);
 
 	// add to wts for PageParser.cpp display
 	// store it
@@ -34280,8 +34281,8 @@ bool XmlDoc::hashNumber3 ( int32_t n , HashInfo *hi , char *sortByStr ) {
 
 	// store in buffer
 	char buf[128];
-	int32_t bufLen = snprintf(buf,126,"%s:%s int32=%"INT32"",sortByStr,
-				  hi->m_prefix,n);
+	snprintf(buf,126,"%s:%s int32=%"INT32"",sortByStr, hi->m_prefix,n);
+	int32_t bufLen = gbstrlen(buf);
 
 	// add to wts for PageParser.cpp display
 	// store it
@@ -49872,6 +49873,9 @@ char *XmlDoc::hashXMLFields ( HashTableX *table ) {
 		// . skip if it's a tag not text node skip it
 		// . we just want the "text" nodes
 		if ( nodes[i].isTag() ) continue;
+
+		//if(!strncmp(nodes[i].m_node,"Congress%20Presses%20Uber",20))
+		//	log("hey:hy");
 
 		// assemble the full parent name
 		// like "tag1.tag2.tag3"
