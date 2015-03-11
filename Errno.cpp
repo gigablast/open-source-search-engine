@@ -190,6 +190,7 @@ case EINLINESECTIONS: return "Error generating section votes";
 case EREADONLYMODE: return "In read only mode. Failed.";
 case ENOTITLEREC: return "No title rec found when recycling content";
 case EQUERYINGDISABLED: return "Querying is disabled in the master controls";
+case EJSONMISSINGLASTCURLY: return "JSON was missing last curly bracket";
 	}
 	// if the remote error bit is clear it must be a regulare errno
 	//if ( ! ( errnum & REMOTE_ERROR_BIT ) ) return strerror ( errnum );

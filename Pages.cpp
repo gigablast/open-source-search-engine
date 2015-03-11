@@ -2672,8 +2672,16 @@ bool Pages::printCollectionNavBar ( SafeBuf *sb     ,
 	int32_t numPrinted = 0;
 	bool printMsg = false;
 
+	// if doing qa test don't print out collection names because
+	// they are somewhat random and throw off the diff in qa.cpp
+	int32_t qa = hr->getLong("qa",0);
+	//if ( ! strcmp(coll,"qatest123") ) qa = 1;
+
 	//for ( int32_t i = a ; i < b ; i++ ) {
 	for ( int32_t i = 0 ; i < g_collectiondb.m_numRecs ; i++ ) {
+
+		if ( qa ) 
+			break;
 
 		CollectionRec *cc = g_collectiondb.m_recs[i];
 		if ( ! cc ) continue;

@@ -2834,7 +2834,7 @@ int TcpServer::sslHandshake ( TcpSocket *s ) {
 	}
 	// if the connection happened return r, should be 1
 	if ( r > 0 ) {
-		//if ( g_conf.m_logDebugTcp )
+		if ( g_conf.m_logDebugTcp )
 			log("tcp: ssl handshake done. entering writing mode "
 			    "sd=%i",s->m_sd);
 		// ok, it completed, go into writing mode
@@ -2882,7 +2882,9 @@ int TcpServer::sslHandshake ( TcpSocket *s ) {
 	// read callbacks are always registered and if we need a read
 	// hopefully it will be called. TODO: verify this...
 	if ( sslError == SSL_ERROR_WANT_READ ) {
-		log("tcp: ssl handshake is not want write sd=%i",s->m_sd);
+		if ( g_conf.m_logDebugTcp )
+			log("tcp: ssl handshake is not want write sd=%i",
+			    s->m_sd);
 		//logSSLError(s->m_ssl, r);
 		return 0;
 	}

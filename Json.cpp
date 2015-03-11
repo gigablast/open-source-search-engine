@@ -474,3 +474,17 @@ char *JsonItem::getValueAsString ( int32_t *valueLen ) {
 	*valueLen = sprintf ( s_numBuf,"%f", m_valueDouble );
 	return s_numBuf;
 }
+
+bool endsInCurly ( char *s , int32_t slen ) {
+	char *e = s + slen - 1;
+	// don't backup more than 30 chars
+	char *m = e - 30;
+	if ( m < s ) m = s;
+	// \0?
+	if ( e > m && *e == '\0' ) e--;
+	// scan backwards, skipping whitespace
+	for ( ; e > m && is_wspace_a(*e) ; e-- );
+	// should be a } now to be valid json
+	if ( e >= m && *e == '}' ) return true;
+	return false;
+}
