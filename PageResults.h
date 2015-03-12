@@ -25,6 +25,7 @@ public:
 	// m_socket->m_numDestroys
 	int32_t         m_numDestroys;
 	bool         m_header;
+	bool m_isDiffbot;
 
 	collnum_t    m_collnum;
 	//Query        m_q;

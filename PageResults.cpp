@@ -543,10 +543,6 @@ bool sendPageResults ( TcpSocket *s , HttpRequest *hr ) {
 	// save this count so we know if TcpServer.cpp calls destroySocket(s)
 	st->m_numDestroys = s->m_numDestroys;
 
-	// you have to say "&header=1" to get back the header for json now.
-	// later on maybe it will default to on.
-	st->m_header = hr->getLong("header",0);
-
 	// . parse it up
 	// . this returns false and sets g_errno and, maybe, g_msg on error
 	SearchInput *si = &st->m_si;
@@ -575,6 +571,17 @@ bool sendPageResults ( TcpSocket *s , HttpRequest *hr ) {
 	// turn this on for json output, unless diffbot collection
 	if ( format == FORMAT_JSON && ! cr->m_isCustomCrawl )
 		st->m_header = 1;
+
+	// global-index is not a custom crawl but we should use "objects"
+	bool isDiffbot = cr->m_isCustomCrawl;
+	if ( strcmp(cr->m_coll,"GLOBAL-INDEX") == 0 ) isDiffbot = true;
+	st->m_isDiffbot = isDiffbot;
+
+	if ( st->m_isDiffbot ) st->m_header = 0;
+
+	// you have to say "&header=1" to get back the header for json now.
+	// later on maybe it will default to on.
+	st->m_header = hr->getLong("header",st->m_header);
 
 	// take this out here as well!
 	// limit here
@@ -1735,11 +1742,14 @@ bool printLeftNavColumn ( SafeBuf &sb, State0 *st ) {
 	//int32_t numCols = 5;
 	//int32_t perRow = numGigabits / numCols;
 
+	if ( ! st->m_header )
+		numGigabits = 0;
+
 	if ( numGigabits && format == FORMAT_XML )
 		sb.safePrintf("\t<gigabits>\n");
 
 	if ( numGigabits && format == FORMAT_JSON )
-		sb.safePrintf("\"gigabits\":{\n");
+	 	sb.safePrintf("\"gigabits\":{\n");
 
 
 	if ( numGigabits && format == FORMAT_HTML )
@@ -2635,20 +2645,17 @@ bool printSearchResultsHeader ( State0 *st ) {
 		printLeftNavColumn ( *sb,st );
 	}
 
-	// global-index is not a custom crawl but we should use "objects"
-	bool isDiffbot = cr->m_isCustomCrawl;
-	if ( strcmp(cr->m_coll,"GLOBAL-INDEX") == 0 ) isDiffbot = true;
-
 	// for diffbot collections only...
 	if ( st->m_header &&
 	     si->m_format == FORMAT_JSON &&
-	     isDiffbot ) {
+	     st->m_isDiffbot ) {
 		sb->safePrintf("\"objects\":[\n");
 		return true;
 	}
 
-	if ( si->m_format == FORMAT_JSON &&
-	     ! cr->m_isCustomCrawl ) {
+	if ( st->m_header &&
+	     si->m_format == FORMAT_JSON &&
+	     ! st->m_isDiffbot ) {
 		sb->safePrintf("\"results\":[\n");
 		return true;
 	}
