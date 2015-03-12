@@ -2571,6 +2571,19 @@ bool Rdb::addRecord ( collnum_t collnum,
 				    "skipping.",sreq->m_url);
 			return true;
 		}
+		// if we are overflowing...
+		if ( isReq &&
+		     ! sreq->m_isAddUrl &&
+		     ! sreq->m_isPageReindex &&
+		     ! sreq->m_urlIsDocId &&
+		     ! sreq->m_forceDelete &&
+		     sc->isFirstIpInOverflowList ( sreq->m_firstIp ) ) {
+			if ( g_conf.m_logDebugSpider )
+				log("spider: skipping for overflow url %s ",
+				    sreq->m_url);
+			g_stats.m_totalOverflows++;
+			return true;
+		}
 	}
 
 	if ( m_useTree && (tn=m_tree.addNode (collnum,key,data,dataSize))>=0) {

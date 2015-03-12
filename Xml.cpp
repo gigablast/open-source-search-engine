@@ -369,10 +369,16 @@ bool Xml::set ( char  *s             ,
 		// set his parent xml node if is xml
 		xi->m_parent = parent;
 
+		bool endsInSlash = false;
+		if ( xi->m_node[xi->m_nodeLen-2] == '/' ) endsInSlash = true;
+		if ( xi->m_node[xi->m_nodeLen-2] == '?' ) endsInSlash = true;
+
 		// if not text node then he's the new parent
 		if ( pureXml &&
 		     xi->m_nodeId && 
-		     xi->m_nodeId != TAG_COMMENT ) {
+		     xi->m_nodeId != TAG_COMMENT &&
+		     xi->m_nodeId != TAG_CDATA &&
+		     ! endsInSlash ) {
 
 			// if we are a back tag pop the stack
 			if ( ! xi->isFrontTag() ) {

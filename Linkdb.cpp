@@ -4955,7 +4955,9 @@ bool Links::set ( bool useRelNoFollow ,
 		  //char *coll ,
 		  bool parentIsPermalink ,
 		  Links *oldLinks ,
-		  bool doQuickSet ) {
+		  bool doQuickSet ,
+		  // some json from diffbot:
+		  SafeBuf *diffbotReply ) {
 
 	reset();
 
@@ -5025,6 +5027,39 @@ bool Links::set ( bool useRelNoFollow ,
 	//	gotIt = true;
 	//	break;
 	//}
+
+
+	// get list of links from diffbot json reply
+	char *p = NULL;
+	if ( diffbotReply && diffbotReply->length() > 10 ) 
+		p = strstr ( diffbotReply->getBufStart() , "\"links\":[\"" );
+	// skip over the heading stuff
+	if ( p ) p += 10;
+	// parse out the links from diffbot reply
+	for ( ; p ; ) {
+		// must not be json mark up
+		if ( ! *p || *p == ']' || *p == '\"' ) break;
+		// save p
+		char *start = p;
+		// get length of the link
+		for ( ; *p && *p != '\"' ; p++ );
+		// set end of link
+		char *end = p;
+		// add the link
+		if ( ! addLink ( start ,  // linkStr
+				 end - start ,  // linkStrLen
+				 -1, // i 
+				 setLinkHash , 
+				 TITLEREC_CURRENT_VERSION ,
+				 niceness , 
+				 false , // isRSS?
+				 TAG_LINK , // node id -> LF_LINKTAG flag
+				 0 )) // flags
+			return false;
+		// now advance to next link if any.
+		for ( ; *p == '\"' || *p == ',' || is_wspace_a(*p) ; p++ );
+	}
+	
 
 	// visit each node in the xml tree. a node can be a tag or a non-tag.
 	char *urlattr = NULL;

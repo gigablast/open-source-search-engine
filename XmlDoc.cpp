@@ -189,8 +189,6 @@ static int64_t s_lastTimeStart = 0LL;
 
 void XmlDoc::reset ( ) {
 
-	m_linkOverflows = 0;
-
 	m_isImporting = false;
 	
 	m_printedMenu = false;
@@ -7676,6 +7674,16 @@ Links *XmlDoc::getLinks ( bool doQuickSet ) {
 	if ( m_linksValid ) return &m_links;
 	// set status
 	setStatus ( "getting outlinks");
+
+	// . add links from diffbot reply
+	// . get the reply of json objects from diffbot
+	// . this will be empty if we are a json object!
+	// . will also be empty if not meant to be sent to diffbot
+	// . the TOKENIZED reply consists of \0 separated json objects that
+	//   we create from the original diffbot reply
+	SafeBuf *dbr = getDiffbotReply();
+	if ( ! dbr || dbr == (void *)-1 ) return (Links *)dbr;
+
 	// this will set it if necessary
 	Xml *xml = getXml();
 	// bail on error
@@ -7739,7 +7747,8 @@ Links *XmlDoc::getLinks ( bool doQuickSet ) {
 			     m_niceness  ,
 			     *pp         , // parent url in permalink format?
 			     oldLinks    ,// oldLinks, might be NULL!
-			     doQuickSet  ))
+			     doQuickSet  ,
+			     dbr ) )
 		return NULL;
 
 	m_linksValid = true;
@@ -14431,18 +14440,40 @@ void gotDiffbotReplyWrapper ( void *state , TcpSocket *s ) {
 	if ( THIS->m_diffbotReplyError ) countIt = false;
 
 	/*
+
+	  // solution for bug #2092 but probably not really needed so
+	  // commented out.
+
 	// if doing /vxxx/analzye?mode=xxxx then ensure matches
 	bool isAnalyze = false;
 	if ( countIt && 
-	     m_diffbotApiUrlValid &&
-	     strstr ( m_diffbotApiUrl.getBufStart(), "/analyze?") )
+	     THIS->m_diffbotApiUrlValid &&
+	     strstr ( THIS->m_diffbotApiUrl.getBufStart(), "/analyze?") )
 		isAnalyze = true;
 
 	char *mode = NULL;
 	if ( isAnalyze ) {
-		mode = strstr (m_diffbotApiUrl.getBufStart(), "mode=");
+		mode = strstr (THIS->m_diffbotApiUrl.getBufStart(), "mode=");
 		if ( mode ) mode += 5;
 		// find end of it
+	}
+
+	char *pageType = NULL;
+	int32_t pageTypeLen;
+	if ( mode && 
+	     THIS->m_diffbotReplyValid && 
+	     THIS->m_diffbotReply.length() > 5 ) {
+		char *reply = THIS->m_diffbotReply.getBufStart();
+		pageType = strstr ( reply , "\"type\":\"" );
+		if ( pageType ) pageType += 8;
+		char *e = pageType;
+		for ( ; *e && *e != '\"' ; e++ );
+		pageTypeLen = e - pageType;
+	}
+
+	// if it does not match, do not count it
+	if ( mode && pageType && strncmp ( mode , pageType , pageTypeLen ) ) 
+		countIt = false;
 	*/
 
 	// increment this counter on a successful reply from diffbot
@@ -20096,10 +20127,6 @@ bool XmlDoc::logIt ( SafeBuf *bb ) {
 		sb->safePrintf("outlinksadded=%04"INT32" ",
 			       (int32_t)m_numOutlinksAdded);
 
-	if ( m_linkOverflows )
-		sb->safePrintf("linkoverflows=%04"INT32" ",
-			       (int32_t)m_linkOverflows);
-
 	if ( m_metaListValid ) 
 		sb->safePrintf("addlistsize=%05"INT32" ",
 			       (int32_t)m_metaListSize);
@@ -25287,7 +25314,7 @@ char *XmlDoc::addOutlinkSpiderRecsToMetaList ( ) {
 	bool ignore = false;
 	if ( mbuf[0] == '1' ) ignore = true;
 
-	SpiderColl *sc = g_spiderCache.getSpiderCollIffNonNull ( m_collnum );
+	//SpiderColl *sc = g_spiderCache.getSpiderCollIffNonNull ( m_collnum );
 
 	//
 	// serialize each link into the metalist now
@@ -25306,11 +25333,12 @@ char *XmlDoc::addOutlinkSpiderRecsToMetaList ( ) {
 		// if firstIp is in the SpiderColl::m_overflowFirstIps list
 		// then do not add any more links to it. it already has
 		// more than 500MB worth.
-		if ( sc && sc->isFirstIpInOverflowList ( firstIp ) ) {
-			m_linkOverflows++;
-			g_stats.m_totalOverflows++;
-			continue;
-		}
+		// this was moved to Rdb.cpp's addRecord()
+		// if ( sc && sc->isFirstIpInOverflowList ( firstIp ) ) {
+		// 	m_linkOverflows++;
+		// 	g_stats.m_totalOverflows++;
+		// 	continue;
+		// }
 
 		// sanity check
 		//if ( firstIp == 0x03 ) {char *xx=NULL;*xx=0; }
@@ -29326,7 +29354,8 @@ bool XmlDoc::hashAds ( HashTableX *tt ) {
 		char *descr;
 		//buflen = snprintf(buf,128,"%s-%s", 
 		//		  m_adProvider[i],m_adClient[i]);
-		int32_t buflen = snprintf(buf,128,"%"UINT64"",ptr_adVector[i] );
+		snprintf(buf,128,"%"UINT64"",ptr_adVector[i] );
+		int32_t bufLen = gbstrlen(buf);
 		field = "gbad";
 		descr = "ad provider and id";
 		// update hash parms
@@ -29338,7 +29367,7 @@ bool XmlDoc::hashAds ( HashTableX *tt ) {
 		//log(LOG_WARN, "build: url %s indexing ad termid %s:%s",
 		// getFirstUrl()->getUrl(), field, buf);
 		//this returns false on failure
-		if ( ! hashString ( buf,buflen,&hi ) ) return false;
+		if ( ! hashString ( buf,bufLen,&hi ) ) return false;
 	}
 	return true;
 }
@@ -33758,20 +33787,20 @@ bool XmlDoc::hashFacet2 ( char *prefix,
 	if ( strcmp(prefix,"gbfacetfloat")==0 ) isFloat = true;
 
 	// store in buffer for display on pageparser.cpp output
-	char buf[128];
-	int32_t bufLen;
+	char buf[130];
 	if ( isFloat )
-		bufLen=sprintf(buf,"facetField=%s facetVal32=%f",term,
-			       *(float *)&val32);
+		snprintf(buf,128,"facetField=%s facetVal32=%f",term,
+			 *(float *)&val32);
 	else
-		bufLen=sprintf(buf,"facetField=%s facetVal32=%"UINT32"",
-			       term,(uint32_t)val32);
+		snprintf(buf,128,"facetField=%s facetVal32=%"UINT32"",
+			 term,(uint32_t)val32);
+	int32_t bufLen = gbstrlen(buf);
 
 	// make a special hashinfo for this facet
 	HashInfo hi;
 	hi.m_tt = tt;
 	// the full prefix
-	char fullPrefix[64];
+	char fullPrefix[66];
 	snprintf(fullPrefix,64,"%s:%s",prefix,term);
 	hi.m_prefix = fullPrefix;//"gbfacet";
 
@@ -33865,7 +33894,7 @@ bool XmlDoc::hashFieldMatchTerm ( char *val , int32_t vlen , HashInfo *hi ) {
 	hi2.m_tt = tt;
 	// the full prefix
 	char fullPrefix[64];
-	snprintf(fullPrefix,64,"%s:%s",prefix,hi->m_prefix);
+	snprintf(fullPrefix,62,"%s:%s",prefix,hi->m_prefix);
 	hi2.m_prefix = fullPrefix;//"gbfacet";
 
 	// add to wts for PageParser.cpp display
@@ -34143,7 +34172,8 @@ bool XmlDoc::hashNumber2 ( float f , HashInfo *hi , char *sortByStr ) {
 
 	// store in buffer
 	char buf[128];
-	int32_t bufLen = sprintf(buf,"%s:%s float32=%f",sortByStr,hi->m_prefix,f);
+	snprintf(buf,126,"%s:%s float32=%f",sortByStr,hi->m_prefix,f);
+	int32_t bufLen = gbstrlen(buf);
 
 	// add to wts for PageParser.cpp display
 	// store it
@@ -34251,7 +34281,8 @@ bool XmlDoc::hashNumber3 ( int32_t n , HashInfo *hi , char *sortByStr ) {
 
 	// store in buffer
 	char buf[128];
-	int32_t bufLen = sprintf(buf,"%s:%s int32=%"INT32"",sortByStr,hi->m_prefix,n);
+	snprintf(buf,126,"%s:%s int32=%"INT32"",sortByStr, hi->m_prefix,n);
+	int32_t bufLen = gbstrlen(buf);
 
 	// add to wts for PageParser.cpp display
 	// store it
@@ -49842,6 +49873,9 @@ char *XmlDoc::hashXMLFields ( HashTableX *table ) {
 		// . skip if it's a tag not text node skip it
 		// . we just want the "text" nodes
 		if ( nodes[i].isTag() ) continue;
+
+		//if(!strncmp(nodes[i].m_node,"Congress%20Presses%20Uber",20))
+		//	log("hey:hy");
 
 		// assemble the full parent name
 		// like "tag1.tag2.tag3"

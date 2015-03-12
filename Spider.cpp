@@ -3791,6 +3791,27 @@ bool SpiderColl::readListFromSpiderdb ( ) {
 	//if ( m_isReadDone ) return true;
 }
 
+static int32_t s_lastIn  = 0;
+static int32_t s_lastOut = 0;
+
+bool SpiderColl::isFirstIpInOverflowList ( int32_t firstIp ) {
+	if ( ! m_overflowList ) return false;
+	if ( firstIp == 0 || firstIp == -1 ) return false;
+	if ( firstIp == s_lastIn ) return true;
+	if ( firstIp == s_lastOut ) return false;
+	for ( int32_t oi = 0 ; ; oi++ ) {
+		// stop at end
+		if ( ! m_overflowList[oi] ) break;
+		// an ip of zero is end of the list
+		if ( m_overflowList[oi] == firstIp ) {
+			s_lastIn = firstIp;
+			return true;
+		}
+	}
+	s_lastOut = firstIp;
+	return false;
+}
+
 // . ADDS top X winners to m_winnerTree
 // . this is ONLY CALLED from evalIpLoop() above
 // . scan m_list that we read from spiderdb for m_scanningIp IP
@@ -4787,7 +4808,7 @@ bool SpiderColl::scanListForWinners ( ) {
 	// don't add any more outlinks to this firstip after we
 	// have 10M spider requests for it.
 	// lower for testing
-	//if ( m_totalNewSpiderRequests > 100 )
+	//if ( m_totalNewSpiderRequests > 1 )
 	if ( m_totalNewSpiderRequests > 10000000 )
 		overflow = true;
 
@@ -4825,6 +4846,8 @@ bool SpiderColl::scanListForWinners ( ) {
 	// if we need to add it...
 	if ( overflow && ! found && m_overflowList ) {
 		log("spider: adding %s to overflow list",iptoa(firstIp));
+		// reset this little cache thingy
+		s_lastOut = 0;
 		// take the empty slot if there is one
 		if ( emptySlot >= 0 )
 			m_overflowList[emptySlot] = firstIp;
@@ -4848,6 +4871,8 @@ bool SpiderColl::scanListForWinners ( ) {
 		// take it out of list
 		m_overflowList[oi2] = -1;
 		log("spider: removing %s from overflow list",iptoa(firstIp));
+		// reset this little cache thingy
+		s_lastIn = 0;
 		break;
 	}
 	/////
@@ -13953,16 +13978,4 @@ void SpiderLoop::buildActiveList ( ) {
 		tail->m_nextActive = cr;
 		tail = cr;
 	}
-}
-
-bool SpiderColl::isFirstIpInOverflowList ( int32_t firstIp ) {
-	if ( ! m_overflowList ) return false;
-	if ( firstIp == 0 || firstIp == -1 ) return false;
-	for ( int32_t oi = 0 ; ; oi++ ) {
-		// stop at end
-		if ( ! m_overflowList[oi] ) break;
-		// an ip of zero is end of the list
-		if ( m_overflowList[oi] == firstIp ) return true;
-	}
-	return false;
 }

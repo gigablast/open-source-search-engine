@@ -182,6 +182,7 @@ void processReply ( char *reply , int32_t replyLen ) {
 
 	markOut ( content , "spider is done (");
 	markOut ( content , "spider is paused (");
+	markOut ( content , "spider queue empty (");
 
 	markOut ( content , "<totalShards>");
 
@@ -545,7 +546,7 @@ bool qainject1 ( ) {
 	// turn off images thumbnails
 	if ( ! s_flags[17] ) {
 		s_flags[17] = true;
-		if ( ! getUrl ( "/admin/spider?c=qatest123&mit=0&mns=1"
+		if ( ! getUrl ( "/admin/spider?c=qatest123&qa=1&mit=0&mns=1"
 				// no spider replies because it messes
 				// up our last test to make sure posdb
 				// is 100% empty. 
@@ -851,7 +852,7 @@ bool qainject2 ( ) {
 	if ( ! s_flags[17] ) {
 		s_flags[17] = true;
 		// can't turn off spiders because we need for query reindex
-		if ( ! getUrl ( "/admin/spider?c=qatest123&mit=0&mns=1"
+		if ( ! getUrl ( "/admin/spider?c=qatest123&qa=1&mit=0&mns=1"
 				// turn off use robots to avoid that
 				// xyz.com/robots.txt redir to seekseek.com
 				"&obeyRobots=0"
@@ -1041,7 +1042,7 @@ bool qaSyntax ( ) {
 	if ( ! s_flags[2] ) {
 		s_flags[2] = true;
 		// can't turn off spiders because we need for query reindex
-		if ( ! getUrl ( "/admin/spider?c=qatest123&mit=0&mns=1"
+		if ( ! getUrl ( "/admin/spider?c=qatest123&qa=1&mit=0&mns=1"
 				// index spider reply status docs
 				"&isr=1"
 				// turn off use robots to avoid that
@@ -1249,7 +1250,7 @@ bool qaimport () {
 	// turn spiders off so it doesn't spider while we are importing
 	if ( ! s_flags[18] ) {
 		s_flags[18] = true;
-		if ( ! getUrl ( "/admin/spider?cse=0&c=qatest123",
+		if ( ! getUrl ( "/admin/spider?cse=0&qa=1&c=qatest123",
 				// checksum of reply expected
 				238170006 ) )
 			return false;
@@ -1353,7 +1354,7 @@ bool qainlinks() {
 	// turn spiders off so it doesn't spider while we are importing
 	if ( ! s_flags[18] ) {
 		s_flags[18] = true;
-		if ( ! getUrl ( "/admin/spider?cse=0&c=qatest123",
+		if ( ! getUrl ( "/admin/spider?cse=0&qa=1&c=qatest123",
 				// checksum of reply expected
 				238170006 ) )
 			return false;
@@ -1485,7 +1486,7 @@ bool qareindex() {
 	// turn off images thumbnails
 	if ( ! s_flags[17] ) {
 		s_flags[17] = true;
-		if ( ! getUrl ( "/admin/spider?c=qatest123&mit=0&mns=1",
+		if ( ! getUrl ( "/admin/spider?c=qatest123&qa=1&mit=0&mns=1",
 				// checksum of reply expected
 				238170006 ) )
 			return false;
@@ -1755,7 +1756,7 @@ bool qaspider1 ( ) {
 	// set max spiders to 1 for consistency!
 	if ( ! s_flags[24] ) {
 		s_flags[24] = true;
-		if ( ! getUrl ( "/admin/spider?c=qatest123&mit=0&mns=1"
+		if ( ! getUrl ( "/admin/spider?c=qatest123&qa=1&mit=0&mns=1"
 				// so site2:www.walmart.com works
                                 "&isr=1"
 				,
@@ -2022,7 +2023,7 @@ bool qaspider2 ( ) {
 	// turn off images thumbnails
 	if ( ! s_flags[24] ) {
 		s_flags[24] = true;
-		if ( ! getUrl ( "/admin/spider?c=qatest123&mit=0&mns=1",
+		if ( ! getUrl ( "/admin/spider?c=qatest123&qa=1&mit=0&mns=1",
 				// checksum of reply expected
 				238170006 ) )
 			return false;
@@ -2227,7 +2228,7 @@ bool qascrape ( ) {
 	// turn off images thumbnails
 	if ( ! s_flags[24] ) {
 		s_flags[24] = true;
-		if ( ! getUrl ( "/admin/spider?c=qatest123&mit=0&mns=1",
+		if ( ! getUrl ( "/admin/spider?c=qatest123&qa=1&mit=0&mns=1",
 				// checksum of reply expected
 				238170006 ) )
 			return false;
@@ -2346,7 +2347,7 @@ bool qajson ( ) {
 	// turn off images thumbnails
 	if ( ! s_flags[24] ) {
 		s_flags[24] = true;
-		if ( ! getUrl ( "/admin/spider?c=qatest123&mit=0&mns=1"
+		if ( ! getUrl ( "/admin/spider?c=qatest123&qa=1&mit=0&mns=1"
 				// index spider replies status docs
 				"&isr=1"
 				,
@@ -2570,7 +2571,7 @@ bool qaxml ( ) {
 	// turn off images thumbnails
 	if ( ! s_flags[24] ) {
 		s_flags[24] = true;
-		if ( ! getUrl ( "/admin/spider?c=qatest123&mit=0&mns=1",
+		if ( ! getUrl ( "/admin/spider?c=qatest123&qa=1&mit=0&mns=1",
 				// checksum of reply expected
 				238170006 ) )
 			return false;
