@@ -13439,7 +13439,7 @@ void handleRequestc1 ( UdpSlot *slot , int32_t niceness ) {
 
 			// and no ips awaiting scans to get into doledb
 			// except for ips needing scans 60+ seconds from now
-			if ( nextTimeMS < nowMS + 60000 ) {
+			if ( nextTimeMS &&  nextTimeMS < nowMS + 60000 ) {
 				if ( printIt )
 				log("spider: not ending crawl because "
 				    "waiting tree key is ready for scan "
