@@ -2570,6 +2570,11 @@ bool Query::setQWords ( char boolFlag ,
 				qw->m_ignoreWordInBoolQuery = true;
 			}
 
+			// this seems case sensitive now, gbfacetstr:humanLang
+			if ( fieldCode == FIELD_GBFACETSTR ) {
+				wid = hash64 ( w , wlen , 0LL );
+			}
+
 			if ( fieldCode == FIELD_GBFIELDMATCH ) {
 				// hash the json field name. (i.e. tag.uri)
 				// make it case sensitive as 
