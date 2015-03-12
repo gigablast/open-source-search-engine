@@ -1209,6 +1209,7 @@ CollectionRec *SpiderColl::getCollectionRec ( ) {
 SpiderColl::SpiderColl () {
 	m_overflowList = NULL;
 	m_lastOverflowFirstIp = 0;
+	m_lastPrinted = 0;
 	m_deleteMyself = false;
 	m_isLoading = false;
 	m_gettingList1 = false;
@@ -2786,6 +2787,27 @@ int32_t SpiderColl::getNextIpFromWaitingTree ( ) {
 	// all done
 	return firstIp;
 }
+
+uint64_t SpiderColl::getNextSpiderTimeFromWaitingTree ( ) {
+	// if nothing to scan, bail
+	if ( m_waitingTree.isEmpty() ) return 0LL;
+	// the key
+	key_t mink; mink.setMin();
+	// set node from wait tree key. this way we can resume from a prev key
+	int32_t node = m_waitingTree.getNextNode (0,(char *)&mink );
+	// if empty, stop
+	if ( node < 0 ) return 0LL;
+	// get the key
+	key_t *wk = (key_t *)m_waitingTree.getKey ( node );
+	// time from that
+	uint64_t spiderTimeMS = (wk->n1);
+	spiderTimeMS <<= 32;
+	spiderTimeMS |= ((wk->n0) >> 32);
+	// stop if need to wait for this one
+	return spiderTimeMS;
+}
+	
+
 
 static void gotSpiderdbListWrapper2( void *state , RdbList *list,Msg5 *msg5) {
 
@@ -13317,6 +13339,8 @@ void handleRequestc1 ( UdpSlot *slot , int32_t niceness ) {
 
 	uint32_t now = (uint32_t)getTimeGlobalNoCore();
 
+	uint64_t nowMS = gettimeofdayInMillisecondsGlobalNoCore();
+
 	//SpiderColl *sc = g_spiderCache.getSpiderColl(collnum);
 
 	for ( int32_t i = 0 ; i < g_collectiondb.m_numRecs ; i++ ) {
@@ -13370,6 +13394,44 @@ void handleRequestc1 ( UdpSlot *slot , int32_t niceness ) {
 		     //g_conf.m_spideringEnabled &&
 		     ci->m_lastSpiderAttempt - ci->m_lastSpiderCouldLaunch > 
 		     spiderDoneTimer ) {
+
+			// break it here for our collnum to see if
+			// doledb was just lagging or not.
+			bool printIt = true;
+			if ( g_now < sc->m_lastPrinted + 5 ) printIt = false;
+			if ( printIt ) sc->m_lastPrinted = g_now;
+
+			// doledb must be empty
+			if ( ! sc->m_doleIpTable.isEmpty() ) {
+				if ( printIt )
+				log("spider: not ending crawl because "
+				    "doledb not empty for coll=%s",cr->m_coll);
+				goto doNotEnd;
+			}
+
+			uint64_t nextTimeMS ;
+			nextTimeMS = sc->getNextSpiderTimeFromWaitingTree ( );
+
+			// and no ips awaiting scans to get into doledb
+			// except for ips needing scans 60+ seconds from now
+			if ( nextTimeMS < nowMS + 60000 ) {
+				if ( printIt )
+				log("spider: not ending crawl because "
+				    "waiting tree key is ready for scan "
+				    "%"INT64" ms from now for coll=%s",
+				    nextTimeMS - nowMS,cr->m_coll );
+				goto doNotEnd;
+			}
+
+			// maybe wait for waiting tree population to finish
+			if ( sc->m_waitingTreeNeedsRebuild ) {
+				if ( printIt )
+				log("spider: not ending crawl because "
+				    "waiting tree is building for coll=%s",
+				    cr->m_coll );
+				goto doNotEnd;
+			}
+
 			// this is the MOST IMPORTANT variable so note it
 			log(LOG_INFO,
 			    "spider: coll %s has no more urls to spider",
@@ -13382,6 +13444,7 @@ void handleRequestc1 ( UdpSlot *slot , int32_t niceness ) {
 			cr->m_needsSave = true;
 		}
 
+	doNotEnd:
 
 		int32_t hostId = slot->m_host->m_hostId;
 

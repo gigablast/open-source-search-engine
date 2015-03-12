@@ -22006,6 +22006,41 @@ bool Parms::updateParm ( char *rec , WaitEntry *we ) {
 			cr->m_localCrawlInfo.m_lastSpiderAttempt = 0;
 		}
 	}
+
+	//
+	// if user changed the crawl/process max then reset here so
+	// spiders will resume
+	// 
+	if ( base == cr && 
+	     dst == (char *)&cr->m_maxToCrawl &&
+	     cr->m_spiderStatus == SP_MAXTOCRAWL ) {
+		// reset this for rebuilding of active spider collections
+		// so this collection can be in the linked list again
+		cr->m_spiderStatus = SP_INPROGRESS;
+		// rebuild list of active spider collections then
+		g_spiderLoop.m_activeListValid = false;
+	}
+
+	if ( base == cr && 
+	     dst == (char *)&cr->m_maxToProcess &&
+	     cr->m_spiderStatus == SP_MAXTOPROCESS ) {
+		// reset this for rebuilding of active spider collections
+		// so this collection can be in the linked list again
+		cr->m_spiderStatus = SP_INPROGRESS;
+		// rebuild list of active spider collections then
+		g_spiderLoop.m_activeListValid = false;
+	}
+
+	if ( base == cr && 
+	     dst == (char *)&cr->m_maxCrawlRounds &&
+	     cr->m_spiderStatus == SP_MAXROUNDS ) {
+		// reset this for rebuilding of active spider collections
+		// so this collection can be in the linked list again
+		cr->m_spiderStatus = SP_INPROGRESS;
+		// rebuild list of active spider collections then
+		g_spiderLoop.m_activeListValid = false;
+	}
+
 	//
 	// END HACK
 	//

@@ -1212,6 +1212,7 @@ class SpiderColl {
 	int32_t     m_numAdded;
 	int64_t m_numBytesScanned;
 	int64_t m_lastPrintCount;
+	int64_t m_lastPrinted;
 
 	// used by SpiderLoop.cpp
 	int32_t m_spidersOut;
@@ -1253,6 +1254,7 @@ class SpiderColl {
 	bool addToWaitingTree    ( uint64_t spiderTime , int32_t firstIp ,
 				   bool callForScan );
 	int32_t getNextIpFromWaitingTree ( );
+	uint64_t getNextSpiderTimeFromWaitingTree ( ) ;
 	void populateDoledbFromWaitingTree ( );
 
 	//bool scanSpiderdb        ( bool needList );
