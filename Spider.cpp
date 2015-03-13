@@ -6148,6 +6148,9 @@ void SpiderLoop::spiderDoledUrls ( ) {
 	if ( ! m_activeListValid ) {
 		buildActiveList();
 		m_crx = m_activeList;
+		// recompute every 3 seconds, it seems kinda buggy!!
+		m_recalcTime = nowGlobal + 3;
+		m_recalcTimeValid = true;
 	}
 
 	// start again at head
@@ -13956,10 +13959,12 @@ void SpiderLoop::buildActiveList ( ) {
 		//
 		if ( nowGlobal < cr->m_spiderRoundStartTime ) {
 			active = false;
-			if ( cr->m_spiderRoundStartTime < m_recalcTime ) {
-				m_recalcTime = cr->m_spiderRoundStartTime;
-				m_recalcTimeValid = true;
-			}
+			// no need to do this now since we recalc every
+			// 3 seconds anyway...
+			// if ( cr->m_spiderRoundStartTime < m_recalcTime ) {
+			// 	m_recalcTime = cr->m_spiderRoundStartTime;
+			// 	m_recalcTimeValid = true;
+			// }
 		}
 
 		if ( ! active ) continue;
