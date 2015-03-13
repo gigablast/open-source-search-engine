@@ -1183,6 +1183,8 @@ public:
 	// set from a simple text buffer
 	bool set ( char *buf , int32_t niceness ) ;
 
+	bool print ( SafeBuf *sb ) ;
+
 	// Link in ascii text
 	bool addLink(char *link,int32_t linkLen,int32_t nodeNum,bool setLinkHashes,
 		     int32_t titleRecVersion, int32_t niceness , bool isRSS ,

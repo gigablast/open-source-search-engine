@@ -35178,6 +35178,9 @@ bool XmlDoc::printDoc ( SafeBuf *sb ) {
 		sb->safePrintf("<b>END EXACT DIFFBOT REPLY</b><br><br>\n");
 	}	
 
+	// print outlinks
+	links->print( sb );
+
 	//
 	// PRINT ADDRESSES (prints streets first)
 	//

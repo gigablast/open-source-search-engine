@@ -5068,6 +5068,26 @@ bool Links::set ( bool useRelNoFollow ,
 		// . continue if this tag ain't an <a href> tag
 		// . atom feeds have a <link href=""> field in them
 		int32_t id = xml->getNodeId ( i );
+
+		int32_t  slen;
+		char *s ;
+		// reset
+		linkflags_t flags = 0;
+
+		if ( xml->m_pureXml ) {
+			// if it's a back tag continue
+			if ( xml->isBackTag ( i ) ) continue;
+			// must be a <> tag not innerhtml of tag
+			if ( xml->m_nodes[i].m_nodeId != TAG_XMLTAG ) continue;
+			// must be <link> i guess
+			if ( xml->m_nodes[i].m_tagNameLen != 4 ) continue;
+			if ( strncmp ( xml->m_nodes[i].m_tagName , "link" , 4))
+				continue;
+			// pure xml does not have ids like this so force it
+			id = TAG_LINK;
+			goto gotOne;
+		}
+
 		if ( id != TAG_A         &&
 		     id != TAG_LINK      &&
 		     id != TAG_AREA      &&
@@ -5076,19 +5096,18 @@ bool Links::set ( bool useRelNoFollow ,
 		     id != TAG_URLFROM   && //  <UrlFrom> for ahrefs.com
 		     id != TAG_FBORIGLINK )
 			continue;
+
+	gotOne:
+
 		urlattr = "href";
 		if ( id == TAG_WEBLOG     ) urlattr ="url";
 		if ( id == TAG_FBORIGLINK ) m_isFeedBurner = true;
 
 		// if it's a back tag continue
 		if ( xml->isBackTag ( i ) ) continue;
-		// reset
-		linkflags_t flags = 0;
 		// . if it has rel=nofollow then ignore it
 		// . for old titleRecs we should skip this part so that the
 		//   link: terms are indexed/hashed the same way in XmlDoc.cpp
-		int32_t  slen;
-		char *s ;
 		if ( useRelNoFollow ) s = xml->getString ( i , "rel", &slen ) ;
 		if ( useRelNoFollow &&
 		     slen==8 &&   // ASCII
@@ -5121,7 +5140,10 @@ bool Links::set ( bool useRelNoFollow ,
 			if ( node[nodeLen-2] == '/' )  continue;
 			// expect the url like <link> url </link> then
 			if ( i+2 >= m_numNodes         ) continue;
-			if ( xml->getNodeId(i+2) != id ) continue;
+			// if we are html and not xml, need </link>. we
+			// need for xml too but its tag id is TAG_XMLTAG.
+			if ( xml->getNodeId(i+2) != id && ! xml->m_pureXml ) 
+				continue;
 			if ( ! xml->isBackTag(i+2)     ) continue;
 			// ok assume url is next node
 			link    = xml->getNode(i+1);
@@ -5340,6 +5362,30 @@ bool Links::set ( char *buf ,  int32_t niceness ) { //char *coll,int32_t nicenes
 	}
 	// assume none are flagged as old, LF_OLDLINK
 	m_flagged = true;
+	return true;
+}
+
+bool Links::print ( SafeBuf *sb ) {
+	sb->safePrintf(
+		       "<table cellpadding=3 border=1>\n"
+		       "<tr>"
+		       "<td>#</td>"
+		       "<td colspan=40>"
+		       // table header row
+		       "Outlink"
+		       "</td>"
+		       "</tr>"
+		       );
+	// find the link point to our url
+	int32_t i;
+	for ( i = 0 ; i < m_numLinks ; i++ ) {
+		char *link    = getLinkPtr(i);
+		int32_t  linkLen = getLinkLen(i);
+		sb->safePrintf("<tr><td>%"INT32"</td><td>",i);
+		sb->safeMemcpy(link,linkLen);
+		sb->safePrintf("</td></tr>\n");
+	}
+	sb->safePrintf("</table>\n<br>\n");
 	return true;
 }
 

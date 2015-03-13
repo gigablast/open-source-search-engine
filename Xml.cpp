@@ -287,10 +287,15 @@ bool Xml::set ( char  *s             ,
 		return true;
 	}
 
-	// override
+	// override. no don't it hurts when parsing CT_XML docs!!
+	// we need XmlNode.cpp's setNodeInfo() to identify xml tags in 
+	// an rss feed. No, this was here for XmlDoc::hashXml() i think
+	// so let's just fix Links.cpp to get links from pure xml.
 	if ( contentType == CT_XML )
-		pureXml = true;
+	 	pureXml = true;
 
+	// is it an xml conf file?
+	m_pureXml = pureXml;
 
 	QUICKPOLL((niceness));
 	int32_t i;
