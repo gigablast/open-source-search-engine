@@ -13426,8 +13426,8 @@ void handleRequestc1 ( UdpSlot *slot , int32_t niceness ) {
 			// break it here for our collnum to see if
 			// doledb was just lagging or not.
 			bool printIt = true;
-			if ( g_now < sc->m_lastPrinted + 5 ) printIt = false;
-			if ( printIt ) sc->m_lastPrinted = g_now;
+			if ( now < sc->m_lastPrinted ) printIt = false;
+			if ( printIt ) sc->m_lastPrinted = now + 5;
 
 			// doledb must be empty
 			if ( ! sc->m_doleIpTable.isEmpty() ) {
