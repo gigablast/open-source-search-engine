@@ -25,6 +25,7 @@ void Msg3a::constructor ( ) {
 	m_numDocIds    = 0;
 	m_collnums     = NULL;
 	m_inUse        = false;
+	m_q            = NULL;
 
 	// need to call all safebuf constructors now to set m_label
 	m_rbuf2.constructor();
@@ -1063,13 +1064,21 @@ bool Msg3a::mergeLists ( ) {
 		// and Msg40.cpp ultimately.
 		HashTableX *ht = &qt->m_facetHashTable;
 		// we have to manually call this because Query::constructor()
-		// might have been called explicitly
-		ht->constructor();
+		// might have been called explicitly. not now because
+		// i added a call the Query::constructor() to call
+		// QueryTerm::constructor() for each QueryTerm in
+		// Query::m_qterms[]. this was causing a mem leak of 
+		// 'fhtqt' too beacause we were re-using the query for each 
+		// coll in the federated loop search.
+		//ht->constructor();
 		// 4 byte key, 4 byte score for counting facet values
 		if ( ! ht->set(4,sizeof(FacetEntry),
 			       128,NULL,0,false,
 			       m_r->m_niceness,"fhtqt")) 
 			return true;
+		// debug note
+		// log("results: alloc fhtqt of %"PTRFMT" for st0=%"PTRFMT,
+		//     (PTRTYPE)ht->m_buf,(PTRTYPE)m_q->m_st0Ptr);
 		// sanity
 		if ( ! ht->m_isWritable ) {char *xx=NULL;*xx=0;}
 	}
@@ -1185,7 +1194,6 @@ bool Msg3a::mergeLists ( ) {
 	// sets g_errno on error and returns false so we return true.
 	if ( ! sortFacetEntries() )
 		return true;
-
 
 	//if ( m_r->m_getSectionStats ) return true;
 	//

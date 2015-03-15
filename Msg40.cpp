@@ -140,6 +140,13 @@ void Msg40::resetBuf2 ( ) {
 }
 
 Msg40::~Msg40() {
+	// free tmp msg3as now
+	for ( int32_t i = 0 ; i < m_numCollsToSearch ; i++ ) {
+		if ( ! m_msg3aPtrs[i] ) continue;
+		mdelete ( m_msg3aPtrs[i] , sizeof(Msg3a), "tmsg3a");
+		delete  ( m_msg3aPtrs[i] );
+		m_msg3aPtrs[i] = NULL;
+	}
 	if ( m_buf  ) mfree ( m_buf  , m_bufMaxSize  , "Msg40" );
 	m_buf  = NULL;
 	resetBuf2();

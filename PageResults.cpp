@@ -128,6 +128,8 @@ bool sendReply ( State0 *st , char *reply ) {
 
 	g_stats.logAvgQueryTime(st->m_startTime);
 
+	//log("results: debug: in sendReply deleting st=%"PTRFMT,(PTRTYPE)st);
+
 	if ( ! savedErr ) { // g_errno ) {
 		g_stats.m_numSuccess++;
 		// . one hour cache time... no 1000 hours, basically infinite
@@ -563,6 +565,9 @@ bool sendPageResults ( TcpSocket *s , HttpRequest *hr ) {
 		return sendReply ( st, NULL );
 	}
 
+	// for debug
+	si->m_q.m_st0Ptr = (char *)st;
+
 	int32_t  codeLen = 0;
 	char *code = hr->getString("code", &codeLen, NULL);
 	// allow up to 1000 results per query for paying clients
@@ -635,7 +640,13 @@ bool sendPageResults ( TcpSocket *s , HttpRequest *hr ) {
 		return sendReply(st,NULL);
 	}
 
-
+	// filter that one query causing the memleak for now
+	// if ( strstr(si->m_q.m_orig,
+	// 	    "type:json AND ((((query=humanLanguage:en") ) {
+	// 	g_errno = EQUERYINGDISABLED;
+	// 	return sendReply(st,NULL);
+	// }
+		
 	// LAUNCH ADS
 	// . now get the ad space for this query
 	// . don't get ads if we're not on the first page of results
@@ -691,6 +702,8 @@ bool sendPageResults ( TcpSocket *s , HttpRequest *hr ) {
 	st->m_gotResults=st->m_msg40.getResults(si,false,st,gotResultsWrapper);
 	// save error
 	st->m_errno = g_errno;
+
+	//log("results: debug: new state=%"PTRFMT,(PTRTYPE)st);
 
 	// wait for ads and spellcheck and results?
 	if ( !st->m_gotAds || !st->m_gotSpell || !st->m_gotResults )
@@ -1128,6 +1141,7 @@ bool gotResults ( void *state ) {
 	// record that
 	st->m_took = took;
 
+	//log("results: debug: in gotResults state=%"PTRFMT,(PTRTYPE)st);
 
 	// grab the query
 	Msg40 *msg40 = &(st->m_msg40);
