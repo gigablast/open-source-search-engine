@@ -29,7 +29,7 @@ void SearchInput::clear ( int32_t niceness ) {
 	reset();
 	// set all to 0 just to avoid any inconsistencies
 	int32_t size = (char *)&m_END_TEST - (char *)&m_START;
-	memset ( this , 0x00 , size );
+	memset ( &m_START , 0x00 , size );
 	m_sbuf1.reset();
 	m_sbuf2.reset();
 	m_sbuf3.reset();
@@ -184,6 +184,8 @@ bool SearchInput::set ( TcpSocket *sock , HttpRequest *r ) { //, Query *q ) {
 
 	// store list of collection #'s to search here. usually just one.
 	m_collnumBuf.reset();
+
+	m_q.reset();
 
 	// zero out everything, set niceness to 0
 	clear ( 0 ) ;
