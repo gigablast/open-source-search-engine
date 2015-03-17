@@ -670,7 +670,7 @@ master-deb32:
 # upload deb
 	scp gb_1.$(VERSION)*.deb gk268:/w/html/	
 # alien it
-	alien --to-rpm gb_1.$(VERSION)-1_i386.deb
+	sudo alien --to-rpm gb_1.$(VERSION)-1_i386.deb
 # upload rpm
 	scp gb-1.$(VERSION)*.rpm gk268:/w/html/	
 
@@ -712,7 +712,7 @@ master-deb64:
 # upload deb
 	scp gb_1.$(VERSION)*.deb gk268:/w/html/	
 # alien it
-	alien --to-rpm gb_1.$(VERSION)-1_amd64.deb
+	sudo alien --to-rpm gb_1.$(VERSION)-1_amd64.deb
 # upload rpm
 	scp gb-1.$(VERSION)*.rpm gk268:/w/html/	
 
