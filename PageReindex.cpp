@@ -451,7 +451,8 @@ bool Msg1c::gotList ( ) {
 		// for msg12 locking
 		sr.m_probDocId      = docId;
 		// use test-parser not test-spider
-		sr.m_useTestSpiderDir = 0;
+		//sr.m_useTestSpiderDir = 0;
+		sr.m_parentIsSiteMap = 0;
 		// now you can recycle content instead of re-downloading it
 		// for every docid
 		sr.m_recycleContent = gr->m_recycleContent;

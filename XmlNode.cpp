@@ -194,8 +194,10 @@ NodeType g_nodes[] = {
 
 	{"scriptText",0, 1, 0, 0,0, TAG_SCRIPTTEXT,0 },
 	{"BUTTON"   , 1, 1, 1, 0,0, TAG_BUTTON	,0}, 	
-	{"UrlFrom", 0, 1, 1, 0,0, TAG_URLFROM ,1}
+	{"UrlFrom", 0, 1, 1, 0,0, TAG_URLFROM ,1},
 
+	// for sitemap.xml
+	{"LOC"     , 0, 1, 1, 0,0, TAG_LOC,0}
 	//{"BUTTON"   , 1, 1, 1, 2, 122,0},
 	//{"BDO"      , 1, 1, 1, 2, 123,0},
 	//{"LABEL"    , 1, 1, 1, 2, 124,0},
@@ -312,7 +314,9 @@ int32_t XmlNode::set ( char *node , bool pureXml , int32_t version ) {
 		m_hasBackTag = true;
 		m_isBreaking = true;
 		m_isVisible  = true;
-		m_nodeId     = TAG_XMLTAG;//1;
+		//m_nodeId     = TAG_XMLTAG;//1;
+		// this returns 1 if tag is not in the list
+		m_nodeId = setNodeInfo ( m_hash );//&m_hasBackTag , 
 	}
 	// . determine if the nodeId for this node
 	// . determine if it breaks lines (for phrasing purposes)

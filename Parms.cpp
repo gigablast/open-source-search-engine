@@ -22322,11 +22322,18 @@ bool printUrlExpressionExamples ( SafeBuf *sb ) {
 
 
 			  "<tr class=poo><td>isrss | !isrss</td>"
-			  "<td>Matches if document is an rss feed. "
-			  "When harvesting outlinks we <i>guess</i> if they "
-			  "are an rss feed by seeing if their file extension "
-			  "is xml, rss or rdf. Or if they are in an "
-			  "alternative link tag.</td></tr>"
+			  "<td>Matches if document is an RSS feed. Will "
+			  "only match this rule if the document has been "
+			  "successfully spidered before, because it requires "
+			  "downloading the document content to see if it "
+			  "truly is an RSS feed.."
+			  "</td></tr>"
+
+			  "<tr class=poo><td>isrssext | !isrssext</td>"
+			  "<td>Matches if url ends in .xml .rss or .atom. "
+			  "TODO: Or if the link was in an "
+			  "alternative link tag."
+			  "</td></tr>"
 
 			  //"<tr class=poo><td>!isrss</td>"
 			  //"<td>Matches if document is NOT an rss feed."
@@ -22487,6 +22494,13 @@ bool printUrlExpressionExamples ( SafeBuf *sb ) {
 			  "then this will be matched."
 			  "</td></tr>"
 
+			  "<tr class=poo><td>isparentsitemap | "
+			  "!isparentsitemap</td>"
+			  "<td>"
+			  "If a parent of the URL was a sitemap.xml page "
+			  "then this will be matched."
+			  "</td></tr>"
+
 			  /*
 			  "<tr class=poo><td>parentisnew | !parentisnew</td>"
 			  "<td>"
@@ -22552,6 +22566,20 @@ bool printUrlExpressionExamples ( SafeBuf *sb ) {
 			  "once."
 			  "Can use <, >, <=, >=, ==, != comparison operators. "
 			  "</td></tr>"
+
+
+			  "<tr class=poo><td>pagenuminlinks&gt;20</td>"
+			  "<td>"
+			  "How many inlinks does the URL itself have? "
+			  "We only count one link per unique C-Class IP "
+			  "address "
+			  "so that a webmaster who owns an entire C-Class "
+			  "of IP addresses will only have her inlinks counted "
+			  "once."
+			  "Can use <, >, <=, >=, ==, != comparison operators. "
+			  "This is useful for spidering popular URLs quickly."
+			  "</td></tr>"
+
 
 			  "<tr class=poo><td>httpstatus==404</td>"
 			  "<td>"

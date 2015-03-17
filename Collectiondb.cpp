@@ -2071,6 +2071,11 @@ bool CollectionRec::countEvents ( ) {
 */
 
 bool CollectionRec::rebuildUrlFilters2 ( ) {
+
+	// tell spider loop to update active list
+	g_spiderLoop.m_activeListValid = false;
+
+
 	bool rebuild = true;
 	if ( m_numRegExs == 0 ) 
 		rebuild = true;
@@ -2105,9 +2110,6 @@ bool CollectionRec::rebuildUrlFilters2 ( ) {
 	//if ( m_numRegExs > 0 && strcmp(m_regExs[m_numRegExs-1],"default") )
 	//	addDefault = true;
 	if ( ! rebuild ) return true;
-
-	// tell spider loop to update active list
-	g_spiderLoop.m_activeListValid = false;
 
 
 	if ( !strcmp(s,"shallow" ) )
@@ -2221,6 +2223,32 @@ bool CollectionRec::rebuildUrlFilters2 ( ) {
 		m_spiderFreqs [n] = .00347; // 5 mins
 	n++;
 
+	// 20+ unique c block parent request urls means it is important!
+	m_regExs[n].set("numinlinks>7 && isnew");
+	m_harvestLinks       [n] = 1;
+	m_spiderFreqs        [n] = 7; // 30 days default
+	m_maxSpidersPerRule  [n] = 9; // max spiders
+	m_spiderIpMaxSpiders [n] = 7; // max spiders per ip
+	m_spiderIpWaits      [n] = 1000; // same ip wait
+	m_spiderPriorities   [n] = 52;
+	if ( ! strcmp(s,"news") )
+		m_spiderFreqs [n] = .00347; // 5 mins
+	n++;
+
+	// 20+ unique c block parent request urls means it is important!
+	m_regExs[n].set("numinlinks>7");
+	m_harvestLinks       [n] = 1;
+	m_spiderFreqs        [n] = 7; // 30 days default
+	m_maxSpidersPerRule  [n] = 9; // max spiders
+	m_spiderIpMaxSpiders [n] = 7; // max spiders per ip
+	m_spiderIpWaits      [n] = 1000; // same ip wait
+	m_spiderPriorities   [n] = 51;
+	if ( ! strcmp(s,"news") )
+		m_spiderFreqs [n] = .00347; // 5 mins
+	n++;
+
+
+
 	m_regExs[n].set("hopcount==0 && iswww && isnew");
 	m_harvestLinks       [n] = 1;
 	m_spiderFreqs        [n] = 7; // 30 days default
@@ -2264,6 +2292,55 @@ bool CollectionRec::rebuildUrlFilters2 ( ) {
 	if ( ! strcmp(s,"news") )
 		m_spiderFreqs [n] = .00347; // 5 mins
 	n++;
+
+
+	m_regExs[n].set("parentisrss && isnew");
+	m_harvestLinks       [n] = 1;
+	m_spiderFreqs        [n] = 7; // 30 days default
+	m_maxSpidersPerRule  [n] = 9; // max spiders
+	m_spiderIpMaxSpiders [n] = 7; // max spiders per ip
+	m_spiderIpWaits      [n] = 1000; // same ip wait
+	m_spiderPriorities   [n] = 45;
+	if ( ! strcmp(s,"news") )
+		m_spiderFreqs [n] = .00347; // 5 mins
+	n++;
+
+	m_regExs[n].set("parentissitemap && isnew");
+	m_harvestLinks       [n] = 1;
+	m_spiderFreqs        [n] = 7; // 30 days default
+	m_maxSpidersPerRule  [n] = 9; // max spiders
+	m_spiderIpMaxSpiders [n] = 7; // max spiders per ip
+	m_spiderIpWaits      [n] = 1000; // same ip wait
+	m_spiderPriorities   [n] = 44;
+	if ( ! strcmp(s,"news") )
+		m_spiderFreqs [n] = .00347; // 5 mins
+	n++;
+
+
+	m_regExs[n].set("parentisrss");
+	m_harvestLinks       [n] = 1;
+	m_spiderFreqs        [n] = 20.0; // 30 days default
+	m_maxSpidersPerRule  [n] = 9; // max spiders
+	m_spiderIpMaxSpiders [n] = 7; // max spiders per ip
+	m_spiderIpWaits      [n] = 1000; // same ip wait
+	m_spiderPriorities   [n] = 43;
+	if ( ! strcmp(s,"news") )
+		m_spiderFreqs [n] = .00347; // 5 mins
+	n++;
+
+	m_regExs[n].set("parentissitemap");
+	m_harvestLinks       [n] = 1;
+	m_spiderFreqs        [n] = 20.0; // 30 days default
+	m_maxSpidersPerRule  [n] = 9; // max spiders
+	m_spiderIpMaxSpiders [n] = 7; // max spiders per ip
+	m_spiderIpWaits      [n] = 1000; // same ip wait
+	m_spiderPriorities   [n] = 42;
+	if ( ! strcmp(s,"news") )
+		m_spiderFreqs [n] = .00347; // 5 mins
+	n++;
+
+
+
 
 	m_regExs[n].set("hopcount==1 && isnew");
 	m_harvestLinks       [n] = 1;

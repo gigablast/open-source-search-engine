@@ -532,6 +532,7 @@ class XmlDoc {
 	char *getIsPermalink ( ) ;
 	char *getIsUrlPermalinkFormat ( ) ;
 	char *getIsRSS ( ) ;
+	char *getIsSiteMap ( ) ;
 	class Xml *getXml ( ) ;
 	uint8_t *getLangVector ( ) ;	
 	uint8_t *getLangId ( ) ;
@@ -1215,6 +1216,7 @@ class XmlDoc {
 	char     m_rootLangIdValid;
 	char     m_datedbDateValid;
 	char     m_isRSSValid;
+	char     m_isSiteMapValid;
 	char     m_spiderLinksArgValid;
 	char     m_isContentTruncatedValid;
 	char     m_xmlValid;
@@ -1435,6 +1437,8 @@ class XmlDoc {
 	bool m_exactContentHash64Valid;
 	bool m_looseContentHash64Valid;
 	bool m_jpValid;
+
+	char m_isSiteMap;
 
 	// shadows
 	char m_isRSS2;

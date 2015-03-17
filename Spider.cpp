@@ -127,7 +127,8 @@ int32_t SpiderRequest::print ( SafeBuf *sbarg ) {
 	strftime ( time , 256 , "%b %e %T %Y UTC", timeStruct );
 	sb->safePrintf("addedTime=%s(%"UINT32") ",time,(uint32_t)m_addedTime );
 
-	sb->safePrintf("parentFirstIp=%s ",iptoa(m_parentFirstIp) );
+	//sb->safePrintf("parentFirstIp=%s ",iptoa(m_parentFirstIp) );
+	sb->safePrintf("pageNumInlinks=%i ",(int)m_pageNumInlinks);
 	sb->safePrintf("parentHostHash32=0x%"XINT32" ",m_parentHostHash32 );
 	sb->safePrintf("parentDomHash32=0x%"XINT32" ",m_parentDomHash32 );
 	sb->safePrintf("parentSiteHash32=0x%"XINT32" ",m_parentSiteHash32 );
@@ -174,6 +175,7 @@ int32_t SpiderRequest::print ( SafeBuf *sbarg ) {
 	if ( m_parentIsRSS ) sb->safePrintf("PARENTISRSS ");
 	if ( m_parentIsPermalink ) sb->safePrintf("PARENTISPERMALINK ");
 	if ( m_parentIsPingServer ) sb->safePrintf("PARENTISPINGSERVER ");
+	if ( m_parentIsSiteMap ) sb->safePrintf("PARENTISSITEMAP ");
 	if ( m_isMenuOutlink ) sb->safePrintf("MENUOUTLINK ");
 
 	if ( m_parentHasAddress ) sb->safePrintf("PARENTHASADDRESS ");
@@ -355,7 +357,7 @@ int32_t SpiderRequest::printToTable ( SafeBuf *sb , char *status ,
 
 	//sb->safePrintf(" <td>%s(%"UINT32")</td>\n",mstrerror(m_errCode),m_errCode);
 	//sb->safePrintf(" <td>%"INT32"ms</td>\n",m_crawlDelay );
-	sb->safePrintf(" <td>%s</td>\n",iptoa(m_parentFirstIp) );
+	sb->safePrintf(" <td>%i</td>\n",(int)m_pageNumInlinks);
 	sb->safePrintf(" <td>%"UINT64"</td>\n",getParentDocId() );
 
 	//sb->safePrintf(" <td>0x%"XINT32"</td>\n",m_parentHostHash32);
@@ -387,6 +389,7 @@ int32_t SpiderRequest::printToTable ( SafeBuf *sb , char *status ,
 	if ( m_parentIsRSS ) sb->safePrintf("PARENTISRSS ");
 	if ( m_parentIsPermalink ) sb->safePrintf("PARENTISPERMALINK ");
 	if ( m_parentIsPingServer ) sb->safePrintf("PARENTISPINGSERVER ");
+	if ( m_parentIsSiteMap ) sb->safePrintf("PARENTISSITEMAP ");
 	if ( m_isMenuOutlink ) sb->safePrintf("MENUOUTLINK ");
 
 	if ( m_parentHasAddress ) sb->safePrintf("PARENTHASADDRESS ");
@@ -2371,7 +2374,7 @@ bool SpiderColl::addSpiderRequest ( SpiderRequest *sreq ,
 	     "spider: %s request to waiting tree %s "
 	     "uh48=%"UINT64" "
 	     "firstIp=%s "
-	     "parentFirstIp=%"UINT32" "
+	     "pageNumInlinks=%"UINT32" "
 	     "parentdocid=%"UINT64" "
 	     "isinjecting=%"INT32" "
 	     "ispagereindex=%"INT32" "
@@ -2384,7 +2387,7 @@ bool SpiderColl::addSpiderRequest ( SpiderRequest *sreq ,
 	     sreq->m_url,
 	     sreq->getUrlHash48(),
 	     iptoa(sreq->m_firstIp),
-	     (uint32_t)sreq->m_parentFirstIp,
+	     (uint32_t)sreq->m_pageNumInlinks,//(uint32_t)sreq->m_parentFirstIp
 	     sreq->getParentDocId(),
 	     (int32_t)(bool)sreq->m_isInjecting,
 	     (int32_t)(bool)sreq->m_isPageReindex,
@@ -3557,6 +3560,11 @@ bool SpiderColl::evalIpLoop ( ) {
 		m_didRead = true;
 		// reset some stuff
 		m_lastScanningIp = 0;
+
+		// reset these that need to keep track of requests for
+		// the same url that might span two spiderdb lists or more
+		m_lastSreqUh48 = 0LL;
+
 		// do a read. if it blocks it will recall this loop
 		if ( ! readListFromSpiderdb () ) return false;
 	}
@@ -4022,7 +4030,46 @@ bool SpiderColl::scanListForWinners ( ) {
 		     ! sreq->m_fakeFirstIp )
 			m_totalNewSpiderRequests++;
 
+		// reset page inlink count on url request change
+		if ( m_lastSreqUh48 != uh48 )
+			m_pageNumInlinks = 1;
+
+		//int32_t  ipdom ( int32_t ip ) { return ip & 0x00ffffff; };
+		int32_t cblock = ipdom ( sreq->m_firstIp );
+
+		bool countIt = true;
+
+		if ( uh48 != m_lastSreqUh48 )
+			countIt = false;
+
+		if ( cblock == m_lastCBlockIp )
+			countIt = false;
+
+		// 20 is good enough
+		if ( m_pageNumInlinks >= 20 )
+			countIt = false;
+
+		if ( countIt ) {
+			int32_t ca;
+			for ( ca = 0 ; ca < m_pageNumInlinks ; ca++ ) 
+				if ( m_cblocks[ca] == cblock ) break;
+			// if found in our list, do not count it, already did
+			if ( ca < m_pageNumInlinks )
+				countIt = false;
+		}
+
+		if ( countIt ) {
+			m_cblocks[m_pageNumInlinks] = cblock;
+			m_pageNumInlinks++;
+			if ( m_pageNumInlinks > 20 ) { char *xx=NULL;*xx=0;}
+		}
+
+		// set this now. it does increase with each request. so 
+		// initial requests will not see the full # of inlinks.
+		sreq->m_pageNumInlinks = (uint8_t)m_pageNumInlinks;
+		
 		m_lastSreqUh48 = uh48;
+		m_lastCBlockIp = cblock;
 
 		// only add firstip if manually added and not fake
 		
@@ -4236,12 +4283,23 @@ bool SpiderColl::scanListForWinners ( ) {
 		//if ( ! m_cr->m_spidersEnabled[ufn] ) continue;
 		if ( m_cr->m_maxSpidersPerRule[ufn] <= 0 ) continue;
 
-		// skip if banned
-		if ( priority == SPIDER_PRIORITY_FILTERED ) continue;
-		if ( priority == SPIDER_PRIORITY_BANNED   ) continue;
+		// skip if banned (unless need to delete from index)
+		bool skip = false;
+		if ( priority == SPIDER_PRIORITY_FILTERED ) skip = true;
+		if ( priority == SPIDER_PRIORITY_BANNED   ) skip = true;
+		// but if it is currently indexed we have to delete it
+		if ( srep && srep->m_isIndexed ) skip = false;
+		if ( skip ) continue;
 
 		// temp debug
 		//char *xx=NULL;*xx=0;
+
+		// priority maybe -3 (SPIDER_PRIORITY_FILTERED)
+		// because we need to delete the url from the index.
+		// seems like we need priority to be in [0-127] so make it 127.
+		// just make 127 a reserved priority;
+		if ( priority < 0 )
+			priority = 127;
 
 		int64_t spiderTimeMS;
 		spiderTimeMS = getSpiderTimeMS ( sreq,ufn,srep,nowGlobalMS );
@@ -4249,13 +4307,15 @@ bool SpiderColl::scanListForWinners ( ) {
 		//int32_t maxSpidersPerIp = m_cr->m_spiderIpMaxSpiders[ufn];
 		// sanity
 		if ( (int64_t)spiderTimeMS < 0 ) { 
-			log("spider: got corrupt 2 spiderRequest in scan (cn=%"INT32")",
+			log("spider: got corrupt 2 spiderRequest in "
+			    "scan (cn=%"INT32")",
 			    (int32_t)m_collnum);
 			continue;
 		}
 		// more corruption detection
 		if ( sreq->m_hopCount < -1 ) {
-			log("spider: got corrupt 5 spiderRequest in scan (cn=%"INT32")",
+			log("spider: got corrupt 5 spiderRequest in "
+			    "scan (cn=%"INT32")",
 			    (int32_t)m_collnum);
 			continue;
 		}
@@ -4267,8 +4327,8 @@ bool SpiderColl::scanListForWinners ( ) {
 
 		// if it is in future, skip it and just set m_futureTime and
 		// and we will update the waiting tree
-		// with an entry based on that future time if the winnerTree turns
-		// out to be empty after we've completed our scan
+		// with an entry based on that future time if the winnerTree 
+		// turns out to be empty after we've completed our scan
 		if ( spiderTimeMS > nowGlobalMS ) {
 			// if futuretime is zero set it to this time
 			if ( ! m_minFutureTimeMS ) 
@@ -10966,6 +11026,21 @@ int32_t getUrlFilterNum2 ( SpiderRequest *sreq       ,
 		}
 
 
+		if ( strncmp(p,"numinlinks",10) == 0 ) {
+			// skip for msg20
+			if ( isForMsg20 ) continue;
+			// if no match continue
+			if ( (bool)sreq->m_pageNumInlinks == val) continue;
+			// skip
+			p += 10;
+			// skip to next constraint
+			p = strstr(p, "&&");
+			// all done?
+			if ( ! p ) return i;
+			p += 2;
+			goto checkNextRule;
+		}
+
 		if ( *p=='h' && strncmp(p,"hasauthorityinlink",18) == 0 ) {
 			// skip for msg20
 			if ( isForMsg20 ) continue;
@@ -11286,6 +11361,21 @@ int32_t getUrlFilterNum2 ( SpiderRequest *sreq       ,
 			goto checkNextRule;
 		}
 
+		if ( strncmp(p,"isparentsitemap",15) == 0 ) {
+			// skip for msg20
+			if ( isForMsg20 ) continue;
+			// if no match continue
+			if ( (bool)sreq->m_parentIsSiteMap == val) continue;
+			// skip
+			p += 15;
+			// skip to next constraint
+			p = strstr(p, "&&");
+			// all done?
+			if ( ! p ) return i;
+			p += 2;
+			goto checkNextRule;
+		}
+
 		/*
 		if ( strncmp(p,"isparentindexed",16) == 0 ) {
 			// skip for msg20
@@ -11519,6 +11609,21 @@ int32_t getUrlFilterNum2 ( SpiderRequest *sreq       ,
 			if ( (bool)srep->m_isRSS == val ) continue; 
 			// skip it
 			p += 5;
+			// check for &&
+			p = strstr(p, "&&");
+			// if nothing, else then it is a match
+			if ( ! p ) return i;
+			// skip the '&&' and go to next rule
+			p += 2;
+			goto checkNextRule;
+		}
+
+		// check for "isrss" aka "rss"
+		if ( strncmp(p,"isrssext",8) == 0 ) {
+			// if we are not rss, we do not match this rule
+			if ( (bool)sreq->m_isRSSExt == val ) continue; 
+			// skip it
+			p += 8;
 			// check for &&
 			p = strstr(p, "&&");
 			// if nothing, else then it is a match

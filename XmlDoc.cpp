@@ -908,8 +908,8 @@ char *XmlDoc::getTestDir ( ) {
 	if ( strcmp(cr->m_coll,"qatest123") ) return NULL;
 	// if Test.cpp explicitly set SpiderRequest::m_useTestSpiderDir bit
 	// then return "test-spider" otherwise...
-	if ( m_sreqValid && m_sreq.m_useTestSpiderDir ) 
-		return "qa";//"test-spider";
+	//if ( m_sreqValid && m_sreq.m_useTestSpiderDir ) 
+	//	return "qa";//"test-spider";
 	// ... default to "test-parser"
 	//return "test-parser";
 	return "qa";
@@ -2207,7 +2207,7 @@ void XmlDoc::getRebuiltSpiderRequest ( SpiderRequest *sreq ) {
 	sreq->m_parentHostHash32     = 0;//m_sreq.m_parentHostHash32;
 	sreq->m_parentDomHash32      = 0;//m_sreq.m_parentDomHash32;
 	sreq->m_parentSiteHash32     = 0;//m_sreq.m_parentSiteHash32;
-	sreq->m_parentFirstIp        = 0;//m_sreq.m_parentFirstIp;
+	sreq->m_pageNumInlinks       = 0;//m_sreq.m_parentFirstIp;
 
 	Url *fu = getFirstUrl();
 
@@ -5668,6 +5668,23 @@ char *XmlDoc::getIsRSS ( ) {
 	m_isRSS2     = (bool)m_isRSS;
 	m_isRSSValid = true;
 	return &m_isRSS2;
+}
+
+char *XmlDoc::getIsSiteMap ( ) {
+	if ( m_isSiteMapValid ) return &m_isSiteMap;
+	uint8_t  *ct = getContentType();
+	if ( ! ct    || ct    == (uint8_t  *)-1 ) return (char *)ct;
+	char *uf = m_firstUrl.getFilename();
+	int32_t ulen = m_firstUrl.getFilenameLen();
+	// sitemap.xml
+	m_isSiteMap = false;
+	// must be xml to be a sitemap
+	if ( *ct == CT_XML && 
+	     ulen == 11 && 
+	     strncmp(uf,"sitemap.xml",11) == 0 )
+		m_isSiteMap = true;
+	m_isSiteMapValid = true;
+	return &m_isSiteMap;
 }
 
 // . this function should really be called getTagTokens() because it mostly
@@ -19487,15 +19504,6 @@ int8_t *XmlDoc::getHopCount ( ) {
 	}
 	char *isRSS = getIsRSS();
 	if ( ! isRSS || isRSS == (char *)-1) return (int8_t *)isRSS;
-	// and now so do rss urls
-	if ( *isRSS ) {
-		// force it to one, not zero, otherwise it gets pounded
-		// too hard on the aggregator sites. spider priority
-		// is too high
-		m_hopCount      = 1; 
-		m_hopCountValid = true;
-		return &m_hopCount; 
-	}
 	// check for site root
 	TagRec *gr = getTagRec();
 	if ( ! gr || gr == (TagRec *)-1 ) return (int8_t *)gr;
@@ -19535,6 +19543,17 @@ int8_t *XmlDoc::getHopCount ( ) {
 		hc = 1;
 	// truncate, hop count is only one byte in the TitleRec.h::m_hopCount
 	if ( hc > 0x7f ) hc = 0x7f;
+
+	// and now so do rss urls.
+	if ( *isRSS && hc > 1 ) {
+		// force it to one, not zero, otherwise it gets pounded
+		// too hard on the aggregator sites. spider priority
+		// is too high
+		m_hopCount      = 1; 
+		m_hopCountValid = true;
+		return &m_hopCount; 
+	}
+
 	// unknown hop counts (-1) are propogated, except for root urls
 	m_hopCountValid = true;
 	m_hopCount      = hc;
@@ -25073,7 +25092,7 @@ void XmlDoc::setSpiderReqForMsg20 ( SpiderRequest *sreq   ,
 	sreq->m_parentHostHash32     = 0;//m_sreq.m_parentHostHash32;
 	sreq->m_parentDomHash32      = 0;//m_sreq.m_parentDomHash32;
 	sreq->m_parentSiteHash32     = 0;//m_sreq.m_parentSiteHash32;
-	sreq->m_parentFirstIp        = 0;//m_sreq.m_parentFirstIp;
+	sreq->m_pageNumInlinks       = 0;//m_sreq.m_parentFirstIp;
 
 	sreq->m_isNewOutlink         = 0;
 	sreq->m_isAddUrl             = 0;//m_isAddUrl;
@@ -25210,10 +25229,12 @@ char *XmlDoc::addOutlinkSpiderRecsToMetaList ( ) {
 
 	bool    isParentRSS       = false;
 	bool    parentIsPermalink = false;
+	bool    parentIsSiteMap   = false;
 	// PageAddUrl.cpp does not supply a valid new doc, so this is NULL
 	if ( nd ) {
 		isParentRSS       = *nd->getIsRSS() ;
 		parentIsPermalink = *nd->getIsPermalink();
+		parentIsSiteMap   = *nd->getIsSiteMap();
 	}
 
 	int32_t n = links->m_numLinks;
@@ -25257,7 +25278,7 @@ char *XmlDoc::addOutlinkSpiderRecsToMetaList ( ) {
 
 	// int16_tcut
 	bool isScraping = (m_sreqValid && m_sreq.m_isScraping);
-	bool useTestSpiderDir = (m_sreqValid && m_sreq.m_useTestSpiderDir);
+	//bool useTestSpiderDir = (m_sreqValid && m_sreq.m_useTestSpiderDir);
 
 	CollectionRec *cr = getCollRec();
 	if ( ! cr ) return NULL;
@@ -25438,8 +25459,14 @@ char *XmlDoc::addOutlinkSpiderRecsToMetaList ( ) {
 		int32_t domHash32    = url.getDomainHash32();
 
 		// is link rss?
-		bool isrss = false;
-		if (slen>6 && !strncasecmp(s+slen-4,".rss",4)) isrss = true;
+		//bool isrss = false;
+		//if (slen>6 && !strncasecmp(s+slen-4,".rss",4)) isrss = true;
+		bool isRSSExt = false;
+		char *ext = url.getExtension();
+		if ( ext && strcasecmp(ext,"rss" ) == 0 ) isRSSExt = true;
+		if ( ext && strcasecmp(ext,"xml" ) == 0 ) isRSSExt = true;
+		if ( ext && strcasecmp(ext,"atom") == 0 ) isRSSExt = true;
+
 
 		// make the spider request rec for it
 		SpiderRequest ksr;
@@ -25452,9 +25479,11 @@ char *XmlDoc::addOutlinkSpiderRecsToMetaList ( ) {
 		ksr.m_siteHash32       = linkSiteHashes[i];//siteHash32;
 		ksr.m_siteNumInlinks   = ksni;
 		ksr.m_siteNumInlinksValid = true;
+		ksr.m_isRSSExt            = true;
 		// continue using "test-spider" subdir to cache web pages
 		// if our parent was using that
-		ksr.m_useTestSpiderDir = useTestSpiderDir;
+		//ksr.m_useTestSpiderDir = useTestSpiderDir;
+		ksr.m_parentIsSiteMap = parentIsSiteMap;
 
 		// now we need this so we can share Msg12 spider locks with
 		// query reindex docid-based spider requests. that way
@@ -25491,11 +25520,12 @@ char *XmlDoc::addOutlinkSpiderRecsToMetaList ( ) {
 		ksr.m_parentHostHash32 = hostHash32a;
 		ksr.m_parentDomHash32  = m_domHash32;
 		ksr.m_parentSiteHash32 = m_siteHash32;
-		ksr.m_parentFirstIp    = *pfip;//m_ip;
+		//ksr.m_parentFirstIp    = *pfip;//m_ip;
+		ksr.m_pageNumInlinks   = 0;
 
 		ksr.m_parentHasAddress = parentHasAddress;
 		// get this
-		bool isupf = ::isPermalink(NULL,&url,CT_HTML,NULL,isrss);
+		bool isupf = ::isPermalink(NULL,&url,CT_HTML,NULL,isRSSExt);
 		// set some bit flags. the rest are 0 since we call reset()
 		if ( newOutlink   ) ksr.m_isNewOutlink         = 1;
 		if ( isupf        ) ksr.m_isUrlPermalinkFormat = 1;
@@ -25579,6 +25609,7 @@ char *XmlDoc::addOutlinkSpiderRecsToMetaList ( ) {
 		if ( isParentRSS                 ) ksr.m_parentIsRSS       = 1;
 		if ( parentIsPermalink           ) ksr.m_parentIsPermalink = 1;
 		if ( isParentPingServer          ) ksr.m_parentIsPingServer= 1;
+		if ( parentIsSiteMap             ) ksr.m_parentIsSiteMap   = 1;
 
 		// this is used for building dmoz. we just want to index
 		// the urls in dmoz, not their outlinks.

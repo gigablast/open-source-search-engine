@@ -5074,6 +5074,9 @@ bool Links::set ( bool useRelNoFollow ,
 		// reset
 		linkflags_t flags = 0;
 
+		/*
+		  MDW: now we set m_nodeId properly to TAG_LINK even in
+		  pure xml docs
 		if ( xml->m_pureXml ) {
 			// if it's a back tag continue
 			if ( xml->isBackTag ( i ) ) continue;
@@ -5087,9 +5090,11 @@ bool Links::set ( bool useRelNoFollow ,
 			id = TAG_LINK;
 			goto gotOne;
 		}
+		*/
 
 		if ( id != TAG_A         &&
-		     id != TAG_LINK      &&
+		     id != TAG_LINK      && // rss feed url
+		     id != TAG_LOC       && // sitemap.xml url
 		     id != TAG_AREA      &&
 		     id != TAG_ENCLOSURE &&
 		     id != TAG_WEBLOG    &&
@@ -5097,7 +5102,7 @@ bool Links::set ( bool useRelNoFollow ,
 		     id != TAG_FBORIGLINK )
 			continue;
 
-	gotOne:
+		//gotOne:
 
 		urlattr = "href";
 		if ( id == TAG_WEBLOG     ) urlattr ="url";
@@ -5131,6 +5136,7 @@ bool Links::set ( bool useRelNoFollow ,
 		// follow, like in an rss feed.
 		if ( linkLen==0 && 
 		     (id == TAG_LINK || 
+		      id == TAG_LOC || // sitemap.xml urls
 		      id == TAG_URLFROM ||
 		      id == TAG_FBORIGLINK) ) {
 			// the the <link> node
@@ -5140,10 +5146,7 @@ bool Links::set ( bool useRelNoFollow ,
 			if ( node[nodeLen-2] == '/' )  continue;
 			// expect the url like <link> url </link> then
 			if ( i+2 >= m_numNodes         ) continue;
-			// if we are html and not xml, need </link>. we
-			// need for xml too but its tag id is TAG_XMLTAG.
-			if ( xml->getNodeId(i+2) != id && ! xml->m_pureXml ) 
-				continue;
+			if ( xml->getNodeId(i+2) != id ) continue;
 			if ( ! xml->isBackTag(i+2)     ) continue;
 			// ok assume url is next node
 			link    = xml->getNode(i+1);

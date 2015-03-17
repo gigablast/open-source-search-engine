@@ -509,8 +509,15 @@ class SpiderRequest {
 	// spidered (when m_url was not an outlink on its parent page)
 	uint32_t  m_parentPrevSpiderTime; // time_t
 
+	//int32_t    m_parentFirstIp;
+	// # of spider requests from different c-blocks. capped at 255.
+	// taken from the # of SpiderRequests.
+	uint8_t    m_pageNumInlinks;
+	uint8_t    m_reservedb2;
+	uint8_t    m_reservedb3;
+	uint8_t    m_reservedb4;
+
 	// info on the page we were harvest from
-	int32_t    m_parentFirstIp;
 	int32_t    m_parentHostHash32;
 	int32_t    m_parentDomHash32;
 	int32_t    m_parentSiteHash32;
@@ -583,11 +590,12 @@ class SpiderRequest {
 	// or from PageParser.cpp directly
 	int32_t    m_isPageParser:1; 
 	// should we use the test-spider-dir for caching test coll requests?
-	int32_t    m_useTestSpiderDir:1;
+	//int32_t    m_useTestSpiderDir:1;
+	int32_t    m_parentIsSiteMap:1;
 	// . is the url a docid (not an actual url)
 	// . could be a "query reindex"
 	int32_t    m_urlIsDocId:1;
-	// does m_url end in .rss? or a related rss file extension?
+	// does m_url end in .rss .xml .atom? or a related rss file extension?
 	int32_t    m_isRSSExt:1;
 	// is url in a format known to be a permalink format?
 	int32_t    m_isUrlPermalinkFormat:1;
@@ -1307,6 +1315,11 @@ class SpiderColl {
 	int32_t *m_overflowList;
 	int64_t  m_totalNewSpiderRequests;
 	int64_t  m_lastSreqUh48;
+
+	int32_t m_cblocks[20];
+	int32_t m_pageNumInlinks;
+	int32_t m_lastCBlockIp;
+		
 	int32_t  m_lastOverflowFirstIp;
 
  private:
