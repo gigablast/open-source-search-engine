@@ -1295,6 +1295,7 @@ bool Query::setQTerms ( Words &words , Phrases &phrases ) {
 			qt->m_isPhrase  = false ;
 			qt->m_isUORed   = false;
 			qt->m_UORedTerm = NULL;
+			qt->m_langIdBits = 0;
 			// synonym of this term...
 			qt->m_synonymOf = origTerm;
 			// nuke this crap since it was done above and we
@@ -5056,6 +5057,8 @@ bool Query::isSplit() {
 void QueryTerm::constructor ( ) {
 	m_facetHashTable.constructor(); // hashtablex
 	m_facetIndexBuf.constructor(); // safebuf
+	m_langIdBits = 0;
+	m_langIdBitsValid = false;
 }
 
 bool QueryTerm::isSplit() {
