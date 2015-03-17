@@ -3,6 +3,9 @@ SHELL = /bin/bash
 uname_m = $(shell uname -m)
 ARCH=$(uname_m)
 
+# for building packages
+VERSION=20
+
 CC=g++
 
 # remove dlstubs.o for CYGWIN
@@ -80,9 +83,11 @@ FFF = /etc/redhat-release
 ifneq ($(wildcard $(FFF)),)
 OS_RHEL := true
 STATIC :=
+XMLDOCOPT := -O2
 else
 OS_DEB := true
 STATIC := -static
+XMLDOCOPT := -O3
 endif
 
 
@@ -381,7 +386,7 @@ Linkdb.o:
 	$(CC) $(DEFS) $(CPPFLAGS) -O3 -c $*.cpp 
 
 XmlDoc.o:
-	$(CC) $(DEFS) $(CPPFLAGS) -O3 -c $*.cpp 
+	$(CC) $(DEFS) $(CPPFLAGS) $(XMLDOCOPT) -c $*.cpp 
 
 # final gigabit generation in here:
 Msg40.o:
@@ -602,23 +607,23 @@ depend:
 
 # REDHAT PACKAGE SECTION BEGIN
 
-# try building the .deb and then running 'alien --to-rpm gb_1.0-1_i386.deb'
+# try building the .deb and then running 'alien --to-rpm gb_1.0-1_i686.deb'
 # to build the .rpm
 
 # move this tarball into ~/rpmbuild/?????
 # then run rpmbuild -ba gb-1.0.spec to build the rpms
 # rpm -ivh gb-1.0-...  to install the pkg
-testing-rpm:
-	git archive --format=tar --prefix=gb-1.0/ testing > gb-1.0.tar
-	mv gb-1.0.tar /home/mwells/rpmbuild/SOURCES/
-	rpmbuild -bb gb-1.0.spec
-	scp /home/mwells/rpmbuild/RPMS/x86_64/gb-*rpm www.gigablast.com:/w/html/
+# testing-rpm:
+# 	git archive --format=tar --prefix=gb-1.0/ testing > gb-1.0.tar
+# 	mv gb-1.0.tar /home/mwells/rpmbuild/SOURCES/
+# 	rpmbuild -bb gb-1.0.spec
+# 	scp /home/mwells/rpmbuild/RPMS/x86_64/gb-*rpm www.gigablast.com:/w/html/
 
-master-rpm:
-	git archive --format=tar --prefix=gb-1.0/ master > gb-1.0.tar
-	mv gb-1.0.tar /home/mwells/rpmbuild/SOURCES/
-	rpmbuild -bb gb-1.0.spec
-	scp /home/mwells/rpmbuild/RPMS/x86_64/gb-*rpm www.gigablast.com:/w/html/
+# master-rpm:
+# 	git archive --format=tar --prefix=gb-1.0/ master > gb-1.0.tar
+# 	mv gb-1.0.tar /home/mwells/rpmbuild/SOURCES/
+# 	rpmbuild -bb gb-1.0.spec
+# 	scp /home/mwells/rpmbuild/RPMS/x86_64/gb-*rpm www.gigablast.com:/w/html/
 
 # REDHAT PACKAGE SECTION END
 
@@ -627,11 +632,10 @@ master-rpm:
 # need to do 'apt-get install dh-make'
 # deb-master
 master-deb32:
-# need to change in changelog too!! dont' forget!!!
-	git archive --format=tar --prefix=gb-1.17/ master > ../gb_1.17.orig.tar
+	git archive --format=tar --prefix=gb-1.$(VERSION)/ master > ../gb_1.$(VERSION).orig.tar
 	rm -rf debian
 # change "-p gb_1.0" to "-p gb_1.1" to update version for example
-	dh_make -s -e gigablast@mail.com -p gb_1.17 -f ../gb_1.17.orig.tar
+	dh_make -y -s -e gigablast@mail.com -p gb_1.$(VERSION) -f ../gb_1.$(VERSION).orig.tar
 # zero this out, it is just filed with the .txt files erroneously and it'll
 # try to automatiicaly install in /usr/docs/
 	rm debian/docs
@@ -645,28 +649,37 @@ master-deb32:
 	cp control.deb debian/control
 # try to use our own rules so we can override dh_shlibdeps and others
 	cp gb.deb.rules debian/rules
+# make our own changelog file
+	echo "gb (1."$(VERSION)"-1) unstable; urgency=low" > changelog
+	echo "" >> changelog
+	echo "  * More bug fixes." >> changelog
+	echo "" >> changelog
+	echo -n " -- mwells <gigablast@mail.com>  " >> changelog	
+	date +"%a, %d %b %Y %T %z" >> changelog
+	echo "" >> changelog
 	cp changelog debian/changelog
 # fix dh_shlibdeps from bitching about dependencies on shared libs
 # YOU HAVE TO RUN THIS before you run 'make'
 #	export LD_LIBRARY_PATH=./debian/gb/var/gigablast/data0
 # build the package now
-	dpkg-buildpackage -j6 -nc -ai386 -ti386 -b -uc -rfakeroot
+#	dpkg-buildpackage -j6 -nc -ai386 -ti386 -b -uc -rfakeroot
+	dpkg-buildpackage -j6 -nc -b -uc -rfakeroot
+
 # move to current dur
 	mv ../gb_*.deb .	
-# upload den
-	scp gb*.deb gk268:/w/html/	
+# upload deb
+	scp gb_1.$(VERSION)*.deb gk268:/w/html/	
 # alien it
-	sudo alien --to-rpm gb_1.17-1_i386.deb
+	sudo alien --to-rpm gb_1.$(VERSION)-1_i386.deb
 # upload rpm
-	scp gb*.rpm gk268:/w/html/	
+	scp gb-1.$(VERSION)*.rpm gk268:/w/html/	
 
 
 master-deb64:
-# need to change in changelog too!! dont' forget!!!
-	git archive --format=tar --prefix=gb-1.17/ master > ../gb_1.17.orig.tar
+	git archive --format=tar --prefix=gb-1.$(VERSION)/ master > ../gb_1.$(VERSION).orig.tar
 	rm -rf debian
 # change "-p gb_1.0" to "-p gb_1.1" to update version for example
-	dh_make -s -e gigablast@mail.com -p gb_1.17 -f ../gb_1.17.orig.tar
+	dh_make -y -s -e gigablast@mail.com -p gb_1.$(VERSION) -f ../gb_1.$(VERSION).orig.tar
 # zero this out, it is just filed with the .txt files erroneously and it'll
 # try to automatiicaly install in /usr/docs/
 	rm debian/docs
@@ -680,6 +693,14 @@ master-deb64:
 	cp control.deb debian/control
 # try to use our own rules so we can override dh_shlibdeps and others
 	cp gb.deb.rules debian/rules
+# make our own changelog file
+	echo "gb (1.$(VERSION)-1) unstable; urgency=low" > changelog
+	echo "" >> changelog
+	echo "  * More bug fixes." >> changelog
+	echo "" >> changelog
+	echo -n " -- mwells <gigablast@mail.com>  " >> changelog	
+	date +"%a, %d %b %Y %T %z" >> changelog
+	echo "" >> changelog
 	cp changelog debian/changelog
 # fix dh_shlibdeps from bitching about dependencies on shared libs
 # YOU HAVE TO RUN THIS before you run 'make'
@@ -688,51 +709,52 @@ master-deb64:
 	dpkg-buildpackage -nc -aamd64 -tamd64 -b -uc -rfakeroot
 # move to current dur
 	mv ../gb_*.deb .	
-# upload den
-	scp gb*.deb gk268:/w/html/	
+# upload deb
+	scp gb_1.$(VERSION)*.deb gk268:/w/html/	
 # alien it
-	sudo alien --to-rpm gb_1.17-1_amd64.deb
+	sudo alien --to-rpm gb_1.$(VERSION)-1_amd64.deb
 # upload rpm
-	scp gb*.rpm gk268:/w/html/	
+	scp gb-1.$(VERSION)*.rpm gk268:/w/html/	
+
 
 
 #deb-testing
-testing-deb:
-	git archive --format=tar --prefix=gb-1.5/ testing > ../gb_1.5.orig.tar
-	rm -rf debian
+#testing-deb:
+#	git archive --format=tar --prefix=gb-1.5/ testing > ../gb_1.5.orig.tar
+#	rm -rf debian
 # change "-p gb_1.0" to "-p gb_1.1" to update version for example
-	dh_make -e gigablast@mail.com -p gb_1.5 -f ../gb_1.5.orig.tar
+#	dh_make -e gigablast@mail.com -p gb_1.5 -f ../gb_1.5.orig.tar
 # zero this out, it is just filed with the .txt files erroneously and it'll
 # try to automatiicaly install in /usr/docs/
-	rm debian/docs
-	touch debian/docs
+#	rm debian/docs
+#	touch debian/docs
 # make the debian/copyright file contain the license
-	cp copyright.head  debian/copyright
-#	cat LICENSE | awk -Fxvcty '{print " "$1}' >> debian/copyright
-	cat LICENSE >> debian/copyright
-	cat copyright.tail >> debian/copyright
+#	cp copyright.head  debian/copyright
+##	cat LICENSE | awk -Fxvcty '{print " "$1}' >> debian/copyright
+#	cat LICENSE >> debian/copyright
+#	cat copyright.tail >> debian/copyright
 # the control file describes the package
-	cp control.deb debian/control
+#	cp control.deb debian/control
 # try to use our own rules so we can override dh_shlibdeps and others
-	cp gb.deb.rules debian/rules
-	cp changelog debian/changelog
+#	cp gb.deb.rules debian/rules
+#	cp changelog debian/changelog
 # make the pkg dependencies file ourselves since we overrode dh_shlibdeps
 # with our own debian/rules file. see that file for more info.
-#	echo  "shlibs:Depends=libc6 (>= 2.3)" > debian/gb.substvars 
-#	echo  "shlibs:Depends=netpbm (>= 0.0)" > debian/gb.substvars 
-#	echo  "misc:Depends=netpbm (>= 0.0)" > debian/gb.substvars 
+##	echo  "shlibs:Depends=libc6 (>= 2.3)" > debian/gb.substvars 
+##	echo  "shlibs:Depends=netpbm (>= 0.0)" > debian/gb.substvars 
+##	echo  "misc:Depends=netpbm (>= 0.0)" > debian/gb.substvars 
 # fix dh_shlibdeps from bitching about dependencies on shared libs
 # YOU HAVE TO RUN THIS before you run 'make'
-#	export LD_LIBRARY_PATH=./debian/gb/var/gigablast/data0
+##	export LD_LIBRARY_PATH=./debian/gb/var/gigablast/data0
 # build the package now. if we don't specify -ai386 -ti386 then some users
 # get a wrong architecture msg and 'dpkg -i' fails
-	dpkg-buildpackage -nc -ai386 -ti386 -b -uc -rfakeroot
-#	dpkg-buildpackage -nc -b -uc -rfakeroot
+#	dpkg-buildpackage -nc -ai686 -ti686 -b -uc -rfakeroot
+##	dpkg-buildpackage -nc -b -uc -rfakeroot
 # move to current dur
-	mv ../gb_*.deb .	
+#	mv ../gb_*.deb .	
 
 install-pkgs-local:
-	sudo alien --to-rpm gb_1.5-1_i386.deb
+	sudo alien --to-rpm gb_1.5-1_i686.deb
 # upload
 	scp gb*.deb gb*.rpm gk268:/w/html/
 
