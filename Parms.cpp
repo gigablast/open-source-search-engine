@@ -22712,6 +22712,14 @@ bool printUrlExpressionExamples ( SafeBuf *sb ) {
 			  "<i>foo.somesite.com</i> would NOT match."
 			  "</td></tr>"
 
+
+			  "<tr class=poo><td>isroot | !isroot</td>"
+			  "<td>Matches if the URL is a root URL. Like if "
+			  "its path is just '/'. Example: http://www.abc.com "
+			  "is a root ur but http://www.abc.com/foo is not. "
+			  "</td></tr>"
+
+
 			  "<tr class=poo><td>isonsamedomain | !isonsamedomain</td>"
 			  "<td>"
 			  "This is true if the url is from the same "

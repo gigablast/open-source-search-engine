@@ -11379,6 +11379,42 @@ int32_t getUrlFilterNum2 ( SpiderRequest *sreq       ,
 			goto checkNextRule;
 		}
 
+		// does it have an rss inlink? we want to expedite indexing
+		// of such pages. i.e. that we gather from an rss feed that
+		// we got from a pingserver...
+		if ( strncmp(p,"isroot",6) == 0 ) {
+			// skip for msg20
+			//if ( isForMsg20 ) continue;
+			// this is a docid only url, no actual url, so skip
+			if ( sreq->m_isPageReindex ) continue;
+			// a fast check
+			char *u = sreq->m_url;
+			// skip http
+			u += 4;
+			// then optional s for https
+			if ( *u == 's' ) u++;
+			// then ://
+			u += 3;
+			// scan until \0 or /
+			for ( ; *u && *u !='/' ; u++ );
+			// if \0 we are root
+			bool isRoot = true;
+			if ( *u == '/' ) {
+				u++;
+				if ( *u ) isRoot = false;
+			}
+			// if we are not root
+			if ( isRoot == val ) continue;
+			// skip
+			p += 6;
+			// skip to next constraint
+			p = strstr(p, "&&");
+			// all done?
+			if ( ! p ) return i;
+			p += 2;
+			goto checkNextRule;
+		}
+
 		/*
 		if ( strncmp(p,"isparentindexed",16) == 0 ) {
 			// skip for msg20
