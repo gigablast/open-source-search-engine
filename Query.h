@@ -397,6 +397,9 @@ class QueryWord {
 class QueryTerm {
 
  public:
+
+	void constructor ( ) ;
+
 	// the query word we were derived from
 	QueryWord *m_qword;
 	// . are we a phrase termid or single word termid from that QueryWord?
@@ -870,6 +873,9 @@ class Query {
 		}
 		return NULL;
 	};
+
+	// for debugging fhtqt mem leak
+	char *m_st0Ptr;
 
 	// silly little functions that support the BIG HACK
 	//int32_t getNumNonFieldedSingletonTerms() { return m_numTermsSpecial; };

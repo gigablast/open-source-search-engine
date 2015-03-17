@@ -32,6 +32,11 @@ void Query::constructor ( ) {
 	m_qwords               = NULL;
 	m_numTerms = 0;
 	m_containingParent = NULL;
+	m_st0Ptr = NULL;
+	// we have to manually call this because Query::constructor()
+	// might have been called explicitly
+	for ( int32_t i = 0 ; i < MAX_QUERY_TERMS ; i++ )
+		m_qterms[i].constructor();
 	//m_expressions          = NULL;
 	reset ( );
 }
@@ -48,10 +53,15 @@ void Query::reset ( ) {
 
 	// if Query::constructor() was called explicitly then we have to
 	// call destructors explicitly as well...
+	// essentially call QueryTerm::reset() on each query term
 	for ( long i = 0 ; i < m_numTerms ; i++ ) {
 	 	// get it
 		QueryTerm *qt = &m_qterms[i];
 		HashTableX *ht = &qt->m_facetHashTable;
+		// debug note
+		// log("results: free fhtqt of %"PTRFMT" for q=%"PTRFMT 
+		//     " st0=%"PTRFMT,
+		//     (PTRTYPE)ht->m_buf,(PTRTYPE)this,(PTRTYPE)m_st0Ptr);
 		ht->reset();
 		qt->m_facetIndexBuf.purge();
 	}
@@ -5041,6 +5051,11 @@ bool Query::isSplit() {
 	for(int32_t i = 0; i < m_numTerms; i++) 
 		if(m_qterms[i].isSplit()) return true;
 	return false;
+}
+
+void QueryTerm::constructor ( ) {
+	m_facetHashTable.constructor(); // hashtablex
+	m_facetIndexBuf.constructor(); // safebuf
 }
 
 bool QueryTerm::isSplit() {

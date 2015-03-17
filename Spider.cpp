@@ -6208,6 +6208,9 @@ void SpiderLoop::spiderDoledUrls ( ) {
 	if ( ! m_activeListValid ) {
 		buildActiveList();
 		m_crx = m_activeList;
+		// recompute every 3 seconds, it seems kinda buggy!!
+		m_recalcTime = nowGlobal + 3;
+		m_recalcTimeValid = true;
 	}
 
 	// start again at head
@@ -13528,8 +13531,8 @@ void handleRequestc1 ( UdpSlot *slot , int32_t niceness ) {
 			// break it here for our collnum to see if
 			// doledb was just lagging or not.
 			bool printIt = true;
-			if ( g_now < sc->m_lastPrinted + 5 ) printIt = false;
-			if ( printIt ) sc->m_lastPrinted = g_now;
+			if ( now < sc->m_lastPrinted ) printIt = false;
+			if ( printIt ) sc->m_lastPrinted = now + 5;
 
 			// doledb must be empty
 			if ( ! sc->m_doleIpTable.isEmpty() ) {
@@ -14061,10 +14064,12 @@ void SpiderLoop::buildActiveList ( ) {
 		//
 		if ( nowGlobal < cr->m_spiderRoundStartTime ) {
 			active = false;
-			if ( cr->m_spiderRoundStartTime < m_recalcTime ) {
-				m_recalcTime = cr->m_spiderRoundStartTime;
-				m_recalcTimeValid = true;
-			}
+			// no need to do this now since we recalc every
+			// 3 seconds anyway...
+			// if ( cr->m_spiderRoundStartTime < m_recalcTime ) {
+			// 	m_recalcTime = cr->m_spiderRoundStartTime;
+			// 	m_recalcTimeValid = true;
+			// }
 		}
 
 		if ( ! active ) continue;
