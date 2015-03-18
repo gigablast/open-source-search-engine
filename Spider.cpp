@@ -11771,10 +11771,9 @@ int32_t getUrlFilterNum2 ( SpiderRequest *sreq       ,
 		}
 		// iswww, means url is like www.xyz.com/...
 		if ( strncmp(p,"iswww", 5) == 0 ) {
-			// now this is a bit
-			if ( (bool)sreq->m_isWWWSubdomain == (bool)val ) 
-				continue;
-			/*
+			// now this is a bit - doesn't seem to be working yet
+			//if ( (bool)sreq->m_isWWWSubdomain == (bool)val ) 
+			//	continue;
 			// skip "iswww"
 			p += 5;
 			// skip over http:// or https://
@@ -11788,7 +11787,6 @@ int32_t getUrlFilterNum2 ( SpiderRequest *sreq       ,
 			    u[2] == 'w' ) isWWW = 1;
 			// skip if no match
 			if ( isWWW == val ) continue;
-			*/
 			// TODO: fix www.knightstown.skepter.com
 			// maybe just have a bit in the spider request
 			// another rule?
