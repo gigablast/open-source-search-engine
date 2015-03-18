@@ -1702,6 +1702,8 @@ CollectionRec::CollectionRec() {
 	//	m_spiderQuotas[i] = -1;
 	memset( m_spiderPriorities, 0, 
 		MAX_FILTERS*sizeof(*m_spiderPriorities) );
+	memset ( m_harvestLinks,0,MAX_FILTERS);
+	memset ( m_forceDelete,0,MAX_FILTERS);
 	//memset( m_rulesets, 0, MAX_FILTERS*sizeof(*m_rulesets) );
 	//for ( int i = 0; i < MAX_SEARCH_PASSWORDS; i++ ) {
 	//	*(m_searchPwds[i]) = '\0';

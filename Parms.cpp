@@ -3451,8 +3451,11 @@ bool Parms::setFromFile ( void *THIS        ,
 	Xml xml;
 	//char buf [ MAX_XML_CONF ];
 	SafeBuf sb;
-	if ( filename&&!setXmlFromFile(&xml,filename,&sb))//buf,MAX_XML_CONF) )
+	if ( filename&&!setXmlFromFile(&xml,filename,&sb)){//buf,MAX_XML_CONF))
+		log("parms: error setting from file %s: %s",filename,
+		    mstrerror(g_errno));
 		return false;
+	}
 
 	// . all the collectionRecs have the same default file in
 	//   the workingDir/collections/default.conf
@@ -3504,7 +3507,7 @@ bool Parms::setFromFile ( void *THIS        ,
 		if ( m->m_type == TYPE_CONSTANT ) continue;
 		// these are special commands really
 		if ( m->m_type == TYPE_BOOL2    ) continue;
-		//if ( strcmp ( m->m_xml , "users" ) == 0 )
+		//if ( strcmp ( m->m_xml , "forceDeleteUrls" ) == 0 )
 		//	log("got it");
 		// we did not get one from first xml file yet
 		bool first = true;
@@ -13165,6 +13168,19 @@ void Parms::init ( ) {
 	m++;
 	*/
 
+	m->m_title = "delete";
+	m->m_cgi   = "fdu";
+	m->m_xml   = "forceDeleteUrls";
+	m->m_max   = MAX_FILTERS;
+	m->m_off   = (char *)cr.m_forceDelete - x;
+	m->m_type  = TYPE_CHECKBOX;
+	m->m_def   = "0";
+	m->m_page  = PAGE_FILTERS;
+	m->m_rowid = 1;
+	m->m_flags = PF_REBUILDURLFILTERS | PF_CLONE;
+	m->m_obj   = OBJ_COLL;
+	m++;
+
 	m->m_title = "spider priority";
 	m->m_cgi   = "fsp";
 	m->m_xml   = "filterPriority";
@@ -13177,19 +13193,6 @@ void Parms::init ( ) {
 	m->m_def   = "50";
 	m->m_flags = PF_REBUILDURLFILTERS | PF_CLONE;
 	m->m_addin = 1; // "insert" follows?
-	m++;
-
-	m->m_title = "delete";
-	m->m_cgi   = "fdu";
-	m->m_xml   = "forceDeleteUrls";
-	m->m_max   = MAX_FILTERS;
-	m->m_off   = (char *)cr.m_forceDelete - x;
-	m->m_type  = TYPE_CHECKBOX;
-	m->m_def   = "0";
-	m->m_page  = PAGE_FILTERS;
-	m->m_rowid = 1;
-	m->m_flags = PF_REBUILDURLFILTERS | PF_CLONE;
-	m->m_obj   = OBJ_COLL;
 	m++;
 
 	/*

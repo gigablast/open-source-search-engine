@@ -381,6 +381,8 @@ bool Xml::set ( char  *s             ,
 		bool endsInSlash = false;
 		if ( xi->m_node[xi->m_nodeLen-2] == '/' ) endsInSlash = true;
 		if ( xi->m_node[xi->m_nodeLen-2] == '?' ) endsInSlash = true;
+		// disregard </> in the conf files
+		if ( xi->m_nodeLen==3 && endsInSlash    ) endsInSlash = false;
 
 		// if not text node then he's the new parent
 		// if we don't do this for xhtml then we don't pop the parent
