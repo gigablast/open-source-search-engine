@@ -1625,6 +1625,11 @@ bool printDropDown ( int32_t n , SafeBuf* sb, char *name, int32_t select,
 	// . by default, minus 2 includes minus 3, the new "FILTERED" priority
 	// . it is link "BANNED" but does not mean the url is low quality necessarily
 	if ( includeMinusTwo ) i = -3;
+
+	// no more DELETE, etc.
+	i = 0;
+	if ( select < 0 ) select = 0;
+
 	for ( ; i < n ; i++ ) {
 		if ( i == select ) s = " selected";
 		else               s = "";
@@ -12987,9 +12992,10 @@ void Parms::init ( ) {
 		"together in the same expression text box. "
 		"A <i>spider priority</i> of "
 		//"<i>FILTERED</i> or <i>BANNED</i> "
-		"<i>DELETE</i> "
-		"will cause the URL to not be spidered, or if it has already "
-		"been indexed, it will be deleted when it is respidered."
+		// "<i>DELETE</i> "
+		// "will cause the URL to not be spidered, "
+		// "or if it has already "
+		// "been indexed, it will be deleted when it is respidered."
 		"<br><br>";
 		
 		/*
@@ -13171,6 +13177,19 @@ void Parms::init ( ) {
 	m->m_def   = "50";
 	m->m_flags = PF_REBUILDURLFILTERS | PF_CLONE;
 	m->m_addin = 1; // "insert" follows?
+	m++;
+
+	m->m_title = "delete";
+	m->m_cgi   = "fdu";
+	m->m_xml   = "forceDeleteUrls";
+	m->m_max   = MAX_FILTERS;
+	m->m_off   = (char *)cr.m_forceDelete - x;
+	m->m_type  = TYPE_CHECKBOX;
+	m->m_def   = "0";
+	m->m_page  = PAGE_FILTERS;
+	m->m_rowid = 1;
+	m->m_flags = PF_REBUILDURLFILTERS | PF_CLONE;
+	m->m_obj   = OBJ_COLL;
 	m++;
 
 	/*

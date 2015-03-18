@@ -2198,7 +2198,8 @@ bool CollectionRec::rebuildUrlFilters2 ( ) {
 	m_maxSpidersPerRule  [n] = 1; // max spiders
 	m_spiderIpMaxSpiders [n] = 1; // max spiders per ip
 	m_spiderIpWaits      [n] = 1000; // same ip wait
-	m_spiderPriorities   [n] = 3;
+	m_spiderPriorities   [n] = 100;
+	m_forceDelete        [n] = 1;
 	n++;
 
 	m_regExs[n].set("errorcount>=1 && hastmperror");
@@ -2456,6 +2457,7 @@ bool CollectionRec::rebuildUrlFilters2 ( ) {
 	m_numRegExs5  = n;
 	m_numRegExs6  = n;
 	m_numRegExs8  = n;
+	m_numRegExs7  = n;
 
 	// more rules
 
@@ -2510,7 +2512,8 @@ bool CollectionRec::rebuildLangRules ( char *langStr , char *tldStr ) {
 	m_maxSpidersPerRule  [n] = 1; // max spiders
 	m_spiderIpMaxSpiders [n] = 1; // max spiders per ip
 	m_spiderIpWaits      [n] = 1000; // same ip wait
-	m_spiderPriorities   [n] = 3;
+	m_spiderPriorities   [n] = 100;
+	m_forceDelete        [n] = 1;
 	n++;
 
 	m_regExs[n].set("errorcount>=1 && hastmperror");
@@ -2871,6 +2874,7 @@ bool CollectionRec::rebuildLangRules ( char *langStr , char *tldStr ) {
 	m_numRegExs5  = n;
 	m_numRegExs6  = n;
 	m_numRegExs8  = n;
+	m_numRegExs7  = n;
 
 	// done rebuilding CHINESE rules
 	return true;
@@ -2914,7 +2918,8 @@ bool CollectionRec::rebuildShallowRules ( ) {
 	m_maxSpidersPerRule  [n] = 1; // max spiders
 	m_spiderIpMaxSpiders [n] = 1; // max spiders per ip
 	m_spiderIpWaits      [n] = 1000; // same ip wait
-	m_spiderPriorities   [n] = 3;
+	m_spiderPriorities   [n] = 100;
+	m_forceDelete        [n] = 1;
 	n++;
 
 	m_regExs[n].set("errorcount>=1 && hastmperror");
@@ -3089,6 +3094,7 @@ bool CollectionRec::rebuildShallowRules ( ) {
 	m_numRegExs5  = n;
 	m_numRegExs6  = n;
 	m_numRegExs8  = n;
+	m_numRegExs7  = n;
 
 	// done rebuilding SHALLOW rules
 	return true;
@@ -3465,6 +3471,7 @@ bool CollectionRec::rebuildUrlFiltersDiffbot() {
 		m_spiderFreqs       [i] = respiderFreq;
 		//m_spiderDiffbotApiUrl[i].purge();
 		m_harvestLinks[i] = true;
+		m_forceDelete [i] = false;
 	}
 
 	int32_t i = 0;
@@ -3477,7 +3484,8 @@ bool CollectionRec::rebuildUrlFiltersDiffbot() {
 
 	// 2nd default url 
 	m_regExs[i].set("ismedia && !ismanualadd");
-	m_spiderPriorities   [i] = SPIDER_PRIORITY_FILTERED;
+	m_spiderPriorities   [i] = 0;//SPIDER_PRIORITY_FILTERED;
+	m_maxSpidersPerRule  [i] = 0;
 	i++;
 
 	// hopcount filter if asked for
@@ -3495,7 +3503,10 @@ bool CollectionRec::rebuildUrlFiltersDiffbot() {
 		m_regExs[i].set(hopcountStr);
 
 		// means DELETE :
-		m_spiderPriorities   [i] = SPIDER_PRIORITY_FILTERED; 
+		m_spiderPriorities   [i] = 0;//SPIDER_PRIORITY_FILTERED; 
+
+		//  just don't spider
+		m_maxSpidersPerRule[i] = 0;
 
 		// compatibility with m_spiderRoundStartTime:
 		m_spiderFreqs[i] = 0.0; 
@@ -3516,7 +3527,8 @@ bool CollectionRec::rebuildUrlFiltersDiffbot() {
 	// MDW: even if they supplied a crawl pattern let's restrict to seed
 	// domains 12/15/14
 	m_regExs[i].set("!isonsamedomain && !ismanualadd");
-	m_spiderPriorities   [i] = SPIDER_PRIORITY_FILTERED;
+	m_spiderPriorities   [i] = 0;//SPIDER_PRIORITY_FILTERED;
+	m_maxSpidersPerRule  [i] = 0;
 	i++;
 	//}
 
@@ -3529,7 +3541,8 @@ bool CollectionRec::rebuildUrlFiltersDiffbot() {
 	// only negative patterns then restrict to domains of seeds
 	if ( ucp && ! ucpHasPositive && ! m_hasucr ) {
 		m_regExs[i].set("!isonsamedomain && !ismanualadd");
-		m_spiderPriorities   [i] = SPIDER_PRIORITY_FILTERED;
+		m_spiderPriorities   [i] = 0;//SPIDER_PRIORITY_FILTERED;
+		m_maxSpidersPerRule  [i] = 0;
 		i++;
 	}
 
@@ -3555,7 +3568,7 @@ bool CollectionRec::rebuildUrlFiltersDiffbot() {
 
 	// excessive errors? (tcp/dns timed out, etc.) retry once per month?
 	m_regExs[i].set("errorcount>=3 && hastmperror");
-	m_spiderPriorities   [i] = 30;
+	m_spiderPriorities   [i] = 3;
 	m_spiderFreqs        [i] = 30; // 30 days
 	// if bulk job, do not download a url more than 3 times
 	if ( m_isCustomCrawl == 2 ) m_maxSpidersPerRule [i] = 0;
@@ -3633,7 +3646,9 @@ bool CollectionRec::rebuildUrlFiltersDiffbot() {
 		i++;
 		// do not crawl anything else
 		m_regExs[i].set("default");
-		m_spiderPriorities   [i] = SPIDER_PRIORITY_FILTERED;
+		m_spiderPriorities   [i] = 0;//SPIDER_PRIORITY_FILTERED;
+		// don't spider
+		m_maxSpidersPerRule[i] = 0;
 		// this needs to be zero so &spiderRoundStart=0
 		// functionality which sets m_spiderRoundStartTime
 		// to the current time works
@@ -3653,7 +3668,9 @@ bool CollectionRec::rebuildUrlFiltersDiffbot() {
 		i++;
 		// do not crawl anything else
 		m_regExs[i].set("default");
-		m_spiderPriorities   [i] = SPIDER_PRIORITY_FILTERED;
+		m_spiderPriorities   [i] = 0;//SPIDER_PRIORITY_FILTERED;
+		// don't delete, just don't spider
+		m_maxSpidersPerRule[i] = 0;
 		// this needs to be zero so &spiderRoundStart=0
 		// functionality which sets m_spiderRoundStartTime
 		// to the current time works
@@ -3707,6 +3724,7 @@ bool CollectionRec::rebuildUrlFiltersDiffbot() {
 	m_numRegExs6  = i;
 	//m_numRegExs7  = i;
 	m_numRegExs8  = i;
+	m_numRegExs7  = i;
 	//m_numRegExs11 = i;
 
 

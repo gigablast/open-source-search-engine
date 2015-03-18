@@ -848,8 +848,10 @@ void StateCD::printSpiderdbList ( RdbList *list,SafeBuf *sb,char **lastKeyPtr){
 		// lastspidertime>={roundstart} --> spiders disabled rule
 		// so that we do not spider a url twice in the same round
 		if ( ufn >= 0 && //! cr->m_spidersEnabled[ufn] ) {
+		     cr->m_regExs[ufn].length() &&
 		     // we set this to 0 instead of using the checkbox
-		     cr->m_maxSpidersPerRule[ufn] <= 0 ) {
+		     strstr(cr->m_regExs[ufn].getBufStart(),"round") ) {
+			//cr->m_maxSpidersPerRule[ufn] <= 0 ) {
 			priority = -5;
 		}
 
@@ -935,10 +937,12 @@ void StateCD::printSpiderdbList ( RdbList *list,SafeBuf *sb,char **lastKeyPtr){
 				       //, iptoa(sreq->m_firstIp)
 				       );
 			// print priority
-			if ( priority == SPIDER_PRIORITY_FILTERED )
+			//if ( priority == SPIDER_PRIORITY_FILTERED )
+			// we just turn off the spiders now
+			if ( ufn >= 0 && cr->m_maxSpidersPerRule[ufn] <= 0 )
 				sb->safePrintf("url ignored");
-			else if ( priority == SPIDER_PRIORITY_BANNED )
-				sb->safePrintf("url banned");
+			//else if ( priority == SPIDER_PRIORITY_BANNED )
+			//	sb->safePrintf("url banned");
 			else if ( priority == -4 )
 				sb->safePrintf("error");
 			else if ( priority == -5 )

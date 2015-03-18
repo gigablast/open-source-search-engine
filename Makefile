@@ -175,6 +175,11 @@ vclean:
 	@echo ""
 	@echo "sudo yum install gcc-c++"
 	@echo ""
+	@echo ""
+	@echo "If make fails on CentOS then first run:"
+	@echo ""
+	@echo "sudo yum install gcc-c++ openssl-devel"
+	@echo ""
 	@echo "*****"
 	@echo ""
 

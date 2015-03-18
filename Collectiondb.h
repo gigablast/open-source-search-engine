@@ -814,6 +814,9 @@ class CollectionRec {
 	int32_t      m_numRegExs8;
 	char      m_harvestLinks     [ MAX_FILTERS ];
 
+	int32_t      m_numRegExs7;
+	char      m_forceDelete  [ MAX_FILTERS ];
+
 	// dummy?
 	int32_t      m_numRegExs9;
 

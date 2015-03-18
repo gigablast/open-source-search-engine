@@ -3551,16 +3551,16 @@ int32_t *XmlDoc::getIndexCode2 ( ) {
 		// and return to be called again i hope
 		return (int32_t *)priority;
 	}
-	if ( *priority  == SPIDER_PRIORITY_FILTERED ) {
+	if ( *priority  == -3 ) { // SPIDER_PRIORITY_FILTERED ) {
 		m_indexCode      = EDOCFILTERED;
 		m_indexCodeValid = true;
 		return &m_indexCode;
 	}
-	if ( *priority  == SPIDER_PRIORITY_BANNED ) {
-		m_indexCode      = EDOCBANNED;
-		m_indexCodeValid = true;
-		return &m_indexCode;
-	}
+	// if ( *priority  == SPIDER_PRIORITY_BANNED ) {
+	// 	m_indexCode      = EDOCBANNED;
+	// 	m_indexCodeValid = true;
+	// 	return &m_indexCode;
+	// }
 
 	// . if using diffbot and the diffbot reply had a time out error
 	//   or otherwise... diffbot failure demands a re-try always i guess.
@@ -19907,8 +19907,9 @@ char *XmlDoc::getIsFiltered ( ) {
 	int32_t *priority = getSpiderPriority();
 	if ( ! priority || priority == (void *)-1 ) return (char *)priority;
 	m_isFiltered = false;
-	if ( *priority == SPIDER_PRIORITY_FILTERED ) m_isFiltered = true;
-	if ( *priority == SPIDER_PRIORITY_BANNED   ) m_isFiltered = true;
+	// if ( *priority == SPIDER_PRIORITY_FILTERED ) m_isFiltered = true;
+	// if ( *priority == SPIDER_PRIORITY_BANNED   ) m_isFiltered = true;
+	if ( *priority == -3 ) m_isFiltered = true;
 	m_isFilteredValid = true;
 	return &m_isFiltered;
 }
@@ -19921,7 +19922,7 @@ int32_t *XmlDoc::getSpiderPriority ( ) {
 	if ( ! gr || gr == (TagRec *)-1 ) return (int32_t *)gr;
 	// this is an automatic ban!
 	if ( gr->getLong("manualban",0) ) {
-		m_priority      = SPIDER_PRIORITY_BANNED;
+		m_priority      = -3;//SPIDER_PRIORITY_BANNED;
 		m_priorityValid = true;
 		return &m_priority;
 	}
@@ -19931,7 +19932,12 @@ int32_t *XmlDoc::getSpiderPriority ( ) {
 	if ( *ufn < 0 ) { char *xx=NULL;*xx=0; }
 	CollectionRec *cr = getCollRec();
 	if ( ! cr ) return NULL;
+
 	m_priority = cr->m_spiderPriorities[*ufn];
+
+	// continue to use -3 to indicate SPIDER_PRIORITY_FILTERED for now
+	if ( cr->m_forceDelete[*ufn] ) m_priority = -3;
+
 	m_priorityValid = true;
 	return &m_priority;
 }
@@ -30244,13 +30250,15 @@ Msg20Reply *XmlDoc::getMsg20Reply ( ) {
 		// save it
 		reply->m_urlFilterNum = ufn;
 		// get spider priority if ufn is valid
-		int32_t pr = 0; if ( ufn >= 0 ) pr = cr->m_spiderPriorities[ufn];
+		int32_t pr = 0; 
+		//if ( ufn >= 0 ) pr = cr->m_spiderPriorities[ufn];
+		if ( cr->m_forceDelete[ufn] ) pr = -3;
 
 		// this is an automatic ban!
-		if ( gr->getLong("manualban",0) ) pr = SPIDER_PRIORITY_BANNED;
+		if ( gr->getLong("manualban",0))pr=-3;//SPIDER_PRIORITY_BANNED;
 
 		// is it banned
-		if ( pr == SPIDER_PRIORITY_BANNED ) { // -2
+		if ( pr == -3 ) { // SPIDER_PRIORITY_BANNED ) { // -2
 			// set m_errno
 			reply->m_errno = EDOCBANNED;
 			// and this
@@ -30266,12 +30274,12 @@ Msg20Reply *XmlDoc::getMsg20Reply ( ) {
 		pr = 0;
 
 
-		if ( pr == SPIDER_PRIORITY_FILTERED ) { // -3
-			// set m_errno
-			reply->m_errno = EDOCFILTERED;
-			// and this
-			reply->m_isFiltered = true;
-		}
+		// if ( pr == SPIDER_PRIORITY_FILTERED ) { // -3
+		// 	// set m_errno
+		// 	reply->m_errno = EDOCFILTERED;
+		// 	// and this
+		// 	reply->m_isFiltered = true;
+		// }
 		// done if we are
 		if ( reply->m_errno && ! m_req->m_showBanned ) {
 			// give back the url at least

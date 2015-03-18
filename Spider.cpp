@@ -2313,14 +2313,16 @@ bool SpiderColl::addSpiderRequest ( SpiderRequest *sreq ,
 	if ( priority >= MAX_SPIDER_PRIORITIES) {char *xx=NULL;*xx=0;}
 
 	// do not add to doledb if bad
-	if ( priority == SPIDER_PRIORITY_FILTERED ) {
+	//if ( priority == SPIDER_PRIORITY_FILTERED ) {
+	if ( m_cr->m_forceDelete[ufn] ) {
 		if ( g_conf.m_logDebugSpider )
 			log("spider: request %s is filtered ufn=%"INT32"",
 			    sreq->m_url,ufn);
 		return true;
 	}
 
-	if ( priority == SPIDER_PRIORITY_BANNED   ) {
+	//if ( priority == SPIDER_PRIORITY_BANNED   ) {
+	if ( m_cr->m_forceDelete[ufn] ) {
 		if ( g_conf.m_logDebugSpider )
 			log("spider: request %s is banned ufn=%"INT32"",
 			    sreq->m_url,ufn);
@@ -4267,8 +4269,11 @@ bool SpiderColl::scanListForWinners ( ) {
 		}
 		// set the priority (might be the same as old)
 		int32_t priority = m_cr->m_spiderPriorities[ufn];
+		// now get rid of negative priorities since we added a
+		// separate force delete checkbox in the url filters
+		if ( priority < 0 ) priority = 0;
 		// sanity checks
-		if ( priority == -1 ) { char *xx=NULL;*xx=0; }
+		//if ( priority == -1 ) { char *xx=NULL;*xx=0; }
 		if ( priority >= MAX_SPIDER_PRIORITIES) {char *xx=NULL;*xx=0;}
 
 		if ( g_conf.m_logDebugSpider )
@@ -4285,10 +4290,11 @@ bool SpiderColl::scanListForWinners ( ) {
 
 		// skip if banned (unless need to delete from index)
 		bool skip = false;
-		if ( priority == SPIDER_PRIORITY_FILTERED ) skip = true;
-		if ( priority == SPIDER_PRIORITY_BANNED   ) skip = true;
+		// if ( priority == SPIDER_PRIORITY_FILTERED ) skip = true;
+		// if ( priority == SPIDER_PRIORITY_BANNED   ) skip = true;
+		if ( m_cr->m_forceDelete[ufn] ) skip = true;
 		// but if it is currently indexed we have to delete it
-		if ( srep && srep->m_isIndexed ) skip = false;
+		if ( skip && srep && srep->m_isIndexed ) skip = false;
 		if ( skip ) continue;
 
 		// temp debug
@@ -4298,8 +4304,10 @@ bool SpiderColl::scanListForWinners ( ) {
 		// because we need to delete the url from the index.
 		// seems like we need priority to be in [0-127] so make it 127.
 		// just make 127 a reserved priority;
-		if ( priority < 0 )
-			priority = 127;
+		if ( skip ) {
+			// force it to a delete
+			sreq->m_forceDelete = true;
+		}
 
 		int64_t spiderTimeMS;
 		spiderTimeMS = getSpiderTimeMS ( sreq,ufn,srep,nowGlobalMS );
