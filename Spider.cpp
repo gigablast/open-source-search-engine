@@ -4300,14 +4300,9 @@ bool SpiderColl::scanListForWinners ( ) {
 		// temp debug
 		//char *xx=NULL;*xx=0;
 
-		// priority maybe -3 (SPIDER_PRIORITY_FILTERED)
-		// because we need to delete the url from the index.
-		// seems like we need priority to be in [0-127] so make it 127.
-		// just make 127 a reserved priority;
-		if ( skip ) {
+		if ( m_cr->m_forceDelete[ufn] )
 			// force it to a delete
 			sreq->m_forceDelete = true;
-		}
 
 		int64_t spiderTimeMS;
 		spiderTimeMS = getSpiderTimeMS ( sreq,ufn,srep,nowGlobalMS );
