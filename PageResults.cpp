@@ -9195,19 +9195,19 @@ bool printSearchFiltersBar ( SafeBuf *sb , HttpRequest *hr ) {
 
 		s_mi[n].m_menuNum  = 11;
 		s_mi[n].m_title    = "Respider all results";
-		s_mi[n].m_cgi      = "/admin/reindex";
+		s_mi[n].m_cgi      = "";//"/admin/reindex";
 		s_mi[n].m_icon     = NULL;
 		n++;
 
 		s_mi[n].m_menuNum  = 11;
 		s_mi[n].m_title    = "Delete all results";
-		s_mi[n].m_cgi      = "/admin/reindex";
+		s_mi[n].m_cgi      = "";//"/admin/reindex";
 		s_mi[n].m_icon     = NULL;
 		n++;
 
 		s_mi[n].m_menuNum  = 11;
 		s_mi[n].m_title    = "Scrape from google/bing";
-		s_mi[n].m_cgi      = "/admin/inject";
+		s_mi[n].m_cgi      = "";//"/admin/inject";
 		s_mi[n].m_icon     = NULL;
 		n++;
 
@@ -9434,7 +9434,7 @@ bool printMenu ( SafeBuf *sb , int32_t menuNum , HttpRequest *hr ) {
 }
 
 bool replaceParm ( char *cgi , SafeBuf *newUrl , HttpRequest *hr ) { 
-
+	if ( ! cgi[0] ) return true;
 	// get original request url. this is not \0 terminated
 	char *src    = hr->m_origUrlRequest;
 	int32_t  srcLen = hr->m_origUrlRequestLen;
@@ -9450,7 +9450,8 @@ bool replaceParm2 ( char *cgi , SafeBuf *newUrl ,
 	char *srcEnd = src + srcLen;
 
 	char *equal = strstr(cgi,"=");
-	if ( ! equal ) return log("results: %s has no equal sign",cgi);
+	if ( ! equal ) 
+		return log("results: %s has no equal sign",cgi);
 	int32_t cgiLen = equal - cgi;
 
 	char *found = NULL;

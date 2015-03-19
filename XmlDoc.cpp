@@ -25508,7 +25508,7 @@ char *XmlDoc::addOutlinkSpiderRecsToMetaList ( ) {
 		ksr.m_siteHash32       = linkSiteHashes[i];//siteHash32;
 		ksr.m_siteNumInlinks   = ksni;
 		ksr.m_siteNumInlinksValid = true;
-		ksr.m_isRSSExt            = true;
+		ksr.m_isRSSExt            = isRSSExt;
 		// continue using "test-spider" subdir to cache web pages
 		// if our parent was using that
 		//ksr.m_useTestSpiderDir = useTestSpiderDir;
