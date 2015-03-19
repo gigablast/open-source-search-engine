@@ -4258,7 +4258,7 @@ bool getSpiderRequestMetaList ( char *doc ,
 		sreq.m_hostHash32 = url.getHostHash32();
 		sreq.m_domHash32  = url.getDomainHash32();
 		sreq.m_siteHash32 = url.getHostHash32();
-		sreq.m_probDocId  = probDocId;
+		//sreq.m_probDocId  = probDocId;
 		sreq.m_hopCount   = 0; // we're a seed
 		sreq.m_hopCountValid = true;
 		sreq.m_addedTime = now;

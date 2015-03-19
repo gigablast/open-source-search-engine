@@ -449,7 +449,7 @@ bool Msg1c::gotList ( ) {
 		sr.m_urlIsDocId     =  1;
 		sr.m_fakeFirstIp    =  1;
 		// for msg12 locking
-		sr.m_probDocId      = docId;
+		//sr.m_probDocId      = docId;
 		// use test-parser not test-spider
 		//sr.m_useTestSpiderDir = 0;
 		sr.m_parentIsSiteMap = 0;

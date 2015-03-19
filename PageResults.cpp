@@ -4040,6 +4040,71 @@ bool printResult ( State0 *st, int32_t ix , int32_t *numPrintedSoFar ) {
 		sb->safePrintf("\",\n");
 	}
 
+	// print spider status pages special
+	if ( mr->ptr_content && 
+	     si->m_format == FORMAT_HTML &&
+	     mr->m_contentType == CT_STATUS ) {
+		if ( *numPrintedSoFar )
+			sb->safePrintf("<br><hr><br>\n");
+		// skip to gbssurl
+		char *s = strstr ( mr->ptr_content,"\"gbssUrl\":");
+		if ( ! s ) goto badformat;
+		// then do two columns after the two urls
+		char *e = strstr ( s , "\"gbssStatusCode\":" );
+		if ( ! e ) goto badformat;
+		char *m = strstr ( e , "\"gbssNumOutlinksAdded\":");
+		if ( ! m ) goto badformat;
+		// exclude \0
+		char *end = mr->ptr_content + mr->size_content - 1;
+		// use a table with 2 columns
+		// so we can use \n to separate lines and don't have to add brs
+		// and boldify just the main url, not the redir url!
+		sb->safePrintf("<pre style=display:inline;>"
+			       "\"gbssUrl\":\""
+			       "<b style=color:blue;><a href=/get?d=%"INT64">"
+			       , mr->m_docId
+			       );
+		char *s2 = strstr ( s , "\"gbssFinalRedirectUrl\":");
+		char *bend = e - 3;
+		if ( s2 ) bend = s2 - 3;
+		sb->safeMemcpy ( s+11 , bend - (s+11));
+		sb->safePrintf("</a></b></pre>\",<br>");
+		// now print redir url if there
+		if ( s2 ) {
+			sb->safePrintf("<pre style=display:inline;>");
+			sb->safeMemcpy ( s2 , e-s2 );
+			sb->removeLastChar('\n');
+			sb->safePrintf("</pre>");
+		}
+		sb->safePrintf("<table border=0 cellpadding=0 cellspacing=0>"
+			       "<tr><td>");
+		sb->safePrintf("<pre>");
+		//int32_t off = sb->length();
+		sb->safeMemcpy ( e , m - e );
+		sb->safePrintf("</pre>");
+		sb->safePrintf("</td><td>");
+		sb->safePrintf("<pre>");
+		sb->safeMemcpy ( m , end - m );
+		// remove last \n
+		sb->removeLastChar('\n');
+		sb->removeLastChar('}');
+		sb->removeLastChar('\n');
+		sb->safePrintf("</pre>\n");
+		sb->safePrintf("</td></tr></table>");
+		// replace \n with <br>
+		// sb->safeReplace2 ( "\n" , 1 ,
+		// 		   "<br>" , 4 ,
+		// 		   0,//niceness ,
+		// 		   off );
+		// inc it
+		*numPrintedSoFar = *numPrintedSoFar + 1;
+		// just in case
+		sb->nullTerm();
+		return true;
+	}
+
+	badformat:
+
 	Highlight hi;
 
 	// get the url
@@ -4372,7 +4437,6 @@ bool printResult ( State0 *st, int32_t ix , int32_t *numPrintedSoFar ) {
 	// PRINT THE TITLE
 	//
 	///////
-
 
 	// the a href tag
 	if ( si->m_format == FORMAT_HTML ) {
@@ -5196,7 +5260,8 @@ bool printResult ( State0 *st, int32_t ix , int32_t *numPrintedSoFar ) {
 		sb->safePrintf (" - "
 				"<a style=color:blue; "
 				"href=\"/search?sb=1&c=%s&"
-				"q=url2%%3A" 
+				//"q=url2%%3A" 
+				"q=gbfieldmatch%%3AgbssUrl%%3A"
 				, coll 
 				);
 		sb->urlEncode ( url , gbstrlen(url) , false );

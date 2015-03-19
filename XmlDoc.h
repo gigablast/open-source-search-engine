@@ -735,6 +735,16 @@ class XmlDoc {
 
 	char *getDiffbotParentUrl( char *myUrl );
 
+	int64_t m_diffbotReplyEndTime;
+	int64_t m_diffbotReplyStartTime;
+	int32_t m_diffbotReplyRetries;
+
+	uint64_t m_downloadStartTime;
+	//uint64_t m_downloadEndTime;
+
+	uint64_t m_ipStartTime;
+	uint64_t m_ipEndTime;
+
 	void copyFromOldDoc ( class XmlDoc *od ) ;
 
 	class SpiderReply *getFakeSpiderReply ( );
@@ -786,8 +796,8 @@ class XmlDoc {
 	bool hashContentType ( class HashTableX *table ) ;
 	bool hashDMOZCategories ( class HashTableX *table ) ;
 	bool hashLinks ( class HashTableX *table ) ;
-	bool hashUrl ( class HashTableX *table , bool isStatusDoc = false ) ;
-	bool hashDateNumbers ( class HashTableX *tt , bool isStatusDoc=false) ;
+	bool hashUrl ( class HashTableX *table );
+	bool hashDateNumbers ( class HashTableX *tt );
 	bool hashSections ( class HashTableX *table ) ;
 	bool hashIncomingLinkText ( class HashTableX *table            ,
 				    bool       hashAnomalies    ,
@@ -1149,6 +1159,7 @@ class XmlDoc {
 	char     m_addedSpiderRequestSizeValid;
 	char     m_addedSpiderReplySizeValid;
 	char     m_addedStatusDocSizeValid;
+	char     m_downloadStartTimeValid;
 	//char   m_docQualityValid;
 	char     m_siteValid;
 	char     m_startTimeValid;
@@ -1716,6 +1727,9 @@ class XmlDoc {
 	bool doesPageContentMatchDiffbotProcessPattern() ;
 	int32_t *getDiffbotTitleHashes ( int32_t *numHashes ) ;
 	char *hashJSONFields ( HashTableX *table );
+	char *hashJSONFields2 ( HashTableX *table , HashInfo *hi , Json *jp ,
+				bool hashWithoutFieldNames ) ;
+
 	char *hashXMLFields ( HashTableX *table );
 	int32_t *reindexJSONObjects ( int32_t *newTitleHashes , 
 				      int32_t numNewHashes ) ;

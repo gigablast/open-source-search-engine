@@ -524,7 +524,9 @@ class SpiderRequest {
 
 	// the PROBABLE DOCID. if there is a collision with another docid
 	// then we increment the last 8 bits or so. see Msg22.cpp.
-	int64_t m_probDocId;
+	//int64_t m_probDocId;
+	int32_t m_reservedc1;
+	int32_t m_reservedc2;
 
 	//int32_t  m_parentPubDate;
 
@@ -1152,6 +1154,9 @@ class SpiderColl {
 	int64_t m_tailUh48;
 	int32_t      m_tailHopCount;
 	int64_t m_minFutureTimeMS;
+
+	int32_t m_numSuccessReplies;
+	int32_t m_numFailedReplies;
 
 	// . do not re-send CrawlInfoLocal for a coll if not update
 	// . we store the flags in here as true if we should send our

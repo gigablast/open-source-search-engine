@@ -1802,6 +1802,9 @@ void SpiderColl::clearLocks ( ) {
 
 void SpiderColl::reset ( ) {
 
+	m_numSuccessReplies = 0;
+	m_numFailedReplies  = 0;
+
 	// reset these for SpiderLoop;
 	m_nextDoledbKey.setMin();
 	//m_didRound = false;
@@ -3973,8 +3976,20 @@ bool SpiderColl::scanListForWinners ( ) {
 		}
 		// if its a SpiderReply set it for an upcoming requests
 		if ( ! g_spiderdb.isSpiderRequest ( (key128_t *)rec ) ) {
+
 			// see if this is the most recent one
 			SpiderReply *tmp = (SpiderReply *)rec;
+
+			// reset reply stats if beginning a new url
+			if ( srepUh48 != tmp->getUrlHash48() ) {
+				m_numSuccessReplies = 0;
+				m_numFailedReplies  = 0;
+			}
+
+			// inc stats
+			if ( tmp->m_errCode == 0 ) m_numSuccessReplies++;
+			else                       m_numFailedReplies ++;
+
 			// if we have a more recent reply already, skip this 
 			if ( srep && 
 			     srep->getUrlHash48() == tmp->getUrlHash48() &&
@@ -3993,6 +4008,12 @@ bool SpiderColl::scanListForWinners ( ) {
 			continue;
 
 		int64_t uh48 = sreq->getUrlHash48();
+
+		// reset reply stats if beginning a new url
+		if ( ! srep ) {
+			m_numSuccessReplies = 0;
+			m_numFailedReplies  = 0;
+		}
 
 		// . skip if our twin should add it to doledb
 		// . waiting tree only has firstIps assigned to us so
@@ -4032,19 +4053,25 @@ bool SpiderColl::scanListForWinners ( ) {
 		     ! sreq->m_fakeFirstIp )
 			m_totalNewSpiderRequests++;
 
-		// reset page inlink count on url request change
-		if ( m_lastSreqUh48 != uh48 )
-			m_pageNumInlinks = 1;
-
 		//int32_t  ipdom ( int32_t ip ) { return ip & 0x00ffffff; };
 		int32_t cblock = ipdom ( sreq->m_firstIp );
 
 		bool countIt = true;
 
-		if ( uh48 != m_lastSreqUh48 )
-			countIt = false;
+		// reset page inlink count on url request change
+		if ( m_lastSreqUh48 != uh48 ) {
+			m_pageNumInlinks = 0;
+			m_lastCBlockIp = 0;
+		}
+
+		//if ( uh48 != m_lastSreqUh48 )
+		//	countIt = false;
 
 		if ( cblock == m_lastCBlockIp )
+			countIt = false;
+
+		// do not count manually added spider requests
+		if ( (sreq->m_isAddUrl || sreq->m_isInjecting) )
 			countIt = false;
 
 		// 20 is good enough
@@ -4069,6 +4096,12 @@ bool SpiderColl::scanListForWinners ( ) {
 		// set this now. it does increase with each request. so 
 		// initial requests will not see the full # of inlinks.
 		sreq->m_pageNumInlinks = (uint8_t)m_pageNumInlinks;
+
+		// put these in the spiderequest in doledb so we can
+		// show in the json spider status docs in 
+		// XmlDoc::getSpiderStatusDocMetaList2()
+		sreq->m_reservedc1 = m_numSuccessReplies;
+		sreq->m_reservedc2 = m_numFailedReplies;
 		
 		m_lastSreqUh48 = uh48;
 		m_lastCBlockIp = cblock;
@@ -11032,21 +11065,6 @@ int32_t getUrlFilterNum2 ( SpiderRequest *sreq       ,
 		}
 
 
-		if ( strncmp(p,"numinlinks",10) == 0 ) {
-			// skip for msg20
-			if ( isForMsg20 ) continue;
-			// if no match continue
-			if ( (bool)sreq->m_pageNumInlinks == val) continue;
-			// skip
-			p += 10;
-			// skip to next constraint
-			p = strstr(p, "&&");
-			// all done?
-			if ( ! p ) return i;
-			p += 2;
-			goto checkNextRule;
-		}
-
 		if ( *p=='h' && strncmp(p,"hasauthorityinlink",18) == 0 ) {
 			// skip for msg20
 			if ( isForMsg20 ) continue;
@@ -12308,12 +12326,37 @@ int32_t getUrlFilterNum2 ( SpiderRequest *sreq       ,
 			goto checkNextRule;
 		}
 
+		if ( *p == 'n' && strncmp(p,"numinlinks",10) == 0 ) {
+			// skip for msg20
+			if ( isForMsg20 ) continue;
+			// these are -1 if they are NOT valid
+			int32_t a = sreq->m_pageNumInlinks;
+			// make it point to the priority
+			int32_t b = atoi(s);
+			// compare
+			if ( sign == SIGN_EQ && a != b ) continue;
+			if ( sign == SIGN_NE && a == b ) continue;
+			if ( sign == SIGN_GT && a <= b ) continue;
+			if ( sign == SIGN_LT && a >= b ) continue;
+			if ( sign == SIGN_GE && a <  b ) continue;
+			if ( sign == SIGN_LE && a >  b ) continue;
+			// skip fast
+			p += 10;
+			p = strstr(s, "&&");
+			//if nothing, else then it is a match
+			if ( ! p ) return i;
+			//skip the '&&' and go to next rule
+			p += 2;
+			goto checkNextRule;
+		}
+
 		// siteNumInlinks >= 300 [&&]
 		if ( *p=='s' && strncmp(p, "sitenuminlinks", 14) == 0){
 			// these are -1 if they are NOT valid
 			int32_t a1 = sreq->m_siteNumInlinks;
 			// only assign if valid
-			int32_t a2 = -1; if ( srep ) a2 = srep->m_siteNumInlinks;
+			int32_t a2 = -1; 
+			if ( srep ) a2 = srep->m_siteNumInlinks;
 			// assume a1 is the best
 			int32_t a ;
 			// assign to the first valid one
@@ -13991,7 +14034,7 @@ bool SpiderRequest::setFromAddUrl ( char *url ) {
 	m_isAddUrl     = 1;
 	m_addedTime    = (uint32_t)getTimeGlobal();//now;
 	m_fakeFirstIp   = 1;
-	m_probDocId     = probDocId;
+	//m_probDocId     = probDocId;
 	m_firstIp       = firstIp;
 	m_hopCount      = 0;
 

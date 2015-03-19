@@ -476,6 +476,8 @@ bool Collectiondb::addNewColl ( char *coll ,
 
 
 	if ( customCrawl ) {
+		// always index spider status docs now
+		cr->m_indexSpiderReplies = true;
 		// remember the token
 		cr->m_diffbotToken.set ( token );
 		cr->m_diffbotCrawlName.set ( crawl );

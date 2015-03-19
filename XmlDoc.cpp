@@ -189,6 +189,10 @@ static int64_t s_lastTimeStart = 0LL;
 
 void XmlDoc::reset ( ) {
 
+	m_ipStartTime = 0;
+	m_ipEndTime   = 0;
+	m_diffbotReplyRetries = 0;
+
 	m_isImporting = false;
 	
 	m_printedMenu = false;
@@ -13106,6 +13110,10 @@ int32_t *XmlDoc::getIp ( ) {
 	// update status msg
 	setStatus ( "getting ip" );
 
+	m_ipStartTime = 0;
+	// assume the same in case we get it right away
+	m_ipEndTime = 0;
+
 	// if set from docid and recycling
 	if ( m_recycleContent ) {
 		// get the old xml doc from the old title rec
@@ -13214,6 +13222,8 @@ int32_t *XmlDoc::getIp ( ) {
 	// update status msg
 	setStatus ( "getting ip" );
 
+	m_ipStartTime = gettimeofdayInMillisecondsGlobal();
+
 	// assume valid! if reply handler gets g_errno set then m_masterLoop
 	// should see that and call the final callback
 	//m_ipValid = true;
@@ -13232,6 +13242,9 @@ int32_t *XmlDoc::getIp ( ) {
 void gotIpWrapper ( void *state , int32_t ip ) {
 	// point to us
 	XmlDoc *THIS = (XmlDoc *)state;
+
+	THIS->m_ipEndTime = gettimeofdayInMillisecondsGlobal();
+
 	// wrap it up
 	THIS->gotIp ( true );
 	// . call the master callback
@@ -14307,11 +14320,13 @@ void gotDiffbotReplyWrapper ( void *state , TcpSocket *s ) {
 		// m_diffbotReplyValid to true, below.
 		THIS->m_diffbotReplyError = 0;
 		log("buld: retrying diffbot reply");
+		THIS->m_diffbotReplyRetries++;
 		// resume. this checks g_errno for being set.
 		THIS->m_masterLoop ( THIS->m_masterState );
 		return;
 	}
 		
+	THIS->m_diffbotReplyEndTime = gettimeofdayInMillisecondsGlobal();
 
 	//char *buf = s->m_readBuf;
 	// do not allow TcpServer.cpp to free it since m_diffbotReply
@@ -15454,6 +15469,8 @@ SafeBuf *XmlDoc::getDiffbotReply ( ) {
 	    "diffbot: getting %s headers=%s",m_diffbotUrl.getBufStart(),
 	    additionalHeaders);
 
+	m_diffbotReplyStartTime = gettimeofdayInMillisecondsGlobal();
+
 	if ( ! g_httpServer.getDoc ( m_diffbotUrl.getBufStart() ,
 				     0 , // ip
 				     0 , // offset
@@ -15930,6 +15947,8 @@ char **XmlDoc::getHttpReply2 ( ) {
 		char *xx=NULL;*xx=0; 
 	}
 
+	m_downloadStartTimeValid = true;
+	m_downloadStartTime = gettimeofdayInMillisecondsGlobal();
 
 	if ( ! m_msg13.getDoc ( r , isTestColl,this , gotHttpReplyWrapper ) )
 		// return -1 if blocked
@@ -20091,6 +20110,10 @@ bool XmlDoc::logIt ( SafeBuf *bb ) {
 		int32_t sr = ::getSiteRank ( m_siteNumInlinks );
 		sb->safePrintf("siterank=%"INT32" ", sr );
 	}
+
+	if ( m_sreqValid )
+		sb->safePrintf("pageinlinks=%04"INT32" ",
+			       m_sreq.m_pageNumInlinks);
 
 	// int16_tcut
 	int64_t uh48 = hash64b ( m_firstUrl.m_url );
@@ -25494,7 +25517,7 @@ char *XmlDoc::addOutlinkSpiderRecsToMetaList ( ) {
 		// now we need this so we can share Msg12 spider locks with
 		// query reindex docid-based spider requests. that way
 		// we do not spider the same document at the same time.
-		ksr.m_probDocId = g_titledb.getProbableDocId(&url);
+		//ksr.m_probDocId = g_titledb.getProbableDocId(&url);
 
 		//ksr.m_pageNumInlinks = 0;
 
@@ -27046,7 +27069,10 @@ SafeBuf *XmlDoc::getSpiderStatusDocMetaList ( SpiderReply *reply ) {
 	return mbuf;
 }
 
-// the spider status doc
+// . the spider status doc
+// . TODO:
+//   usedProxy:1
+//   proxyIp:1.2.3.4
 SafeBuf *XmlDoc::getSpiderStatusDocMetaList2 ( SpiderReply *reply ) {	
 
 	setStatus ( "making spider reply meta list");
@@ -27070,6 +27096,21 @@ SafeBuf *XmlDoc::getSpiderStatusDocMetaList2 ( SpiderReply *reply ) {
 	unsigned char *hc = (unsigned char *)getHopCount();
 	if ( ! hc || hc == (void *)-1 ) return (SafeBuf *)hc;
 
+	int32_t *priority = getSpiderPriority();
+	if ( ! priority || priority == (void *)-1 ) return (SafeBuf *)priority;
+
+	int32_t *ufn = getUrlFilterNum();
+	if ( ! ufn || ufn == (void *)-1 ) return (SafeBuf *)ufn;
+
+	CollectionRec *cr = getCollRec();
+	if ( ! cr ) return NULL;
+
+	// sanity
+	if ( ! m_indexCodeValid ) { char *xx=NULL;*xx=0; }
+
+	// why isn't gbhopcount: being indexed consistently?
+	if ( ! m_hopCountValid )  { char *xx=NULL;*xx=0; }
+
 	// reset just in case
 	m_spiderStatusDocMetaList.reset();
 
@@ -27082,30 +27123,230 @@ SafeBuf *XmlDoc::getSpiderStatusDocMetaList2 ( SpiderReply *reply ) {
 		return &m_spiderStatusDocMetaList;
 	}
 
+	// the old doc
+	XmlDoc *od = NULL;
+	if ( m_oldDocValid && m_oldDoc ) od = m_oldDoc;
+
+	Url *fu = &m_firstUrl;
+
+	// . make a little json doc that we'll hash up
+	// . only index the fields in this doc, no extra gbdocid: inurl:
+	//   hash terms
+	SafeBuf jd;
+	jd.safePrintf("{\n");
+
+	// so type:status query works
+	jd.safePrintf("\"type\":\"status\",\n");
+
+	jd.safePrintf("\"gbssUrl\":\"%s\",\n" , fu->getUrl()  );
+
+	if ( ptr_redirUrl ) 
+		jd.safePrintf("\"gbssFinalRedirectUrl\":\"%s\",\n",
+			      ptr_redirUrl);
+
+
+	jd.safePrintf("\"gbssStatusCode\":%i,\n",(int)m_indexCode);
+
+	jd.safePrintf("\"gbssStatusMsg\":\"");
+	jd.jsonEncode (mstrerror(m_indexCode));
+	jd.safePrintf("\",\n");
+
+	if ( m_httpStatusValid )
+		jd.safePrintf("\"gbssHttpStatus\":%"INT32",\n",
+			      (int32_t)m_httpStatus);
+
+	if ( od )
+		jd.safePrintf("\"gbssPreviouslyIndexed\":1,\n");
+	else
+		jd.safePrintf("\"gbssPreviouslyIndexed\":0,\n");
+
+	jd.safePrintf("\"gbssDomain\":\"");
+	jd.safeMemcpy(fu->getDomain(), fu->getDomainLen() );
+	jd.safePrintf("\",\n");
+
+	jd.safePrintf("\"gbssSubdomain\":\"");
+	jd.safeMemcpy(fu->getHost(), fu->getHostLen() );
+	jd.safePrintf("\",\n");
+
+	//if ( m_redirUrlPtr && m_redirUrlValid )
+	jd.safePrintf("\"gbssNumRedirects\":%"INT32",\n",
+		      m_numRedirects);
+
+	jd.safePrintf("\"gbssDocId\":%"INT64",\n", *uqd);
+
+	jd.safePrintf("\"gbssHopCount\":%"INT32",\n",(int32_t)*hc);
+
+	// crawlbot round
+	if ( cr->m_isCustomCrawl )
+		jd.safePrintf("\"gbssCrawlRound\":%"INT32",\n",
+			      cr->m_spiderRoundNum);
+
+	if ( m_isDupValid && m_isDup )
+		jd.safePrintf("\"gbssDupOfDocId:%"INT64",\n",
+			      m_docIdWeAreADupOf);
+
+	// how many spiderings were successful vs. failed
+	if ( m_sreqValid ) {
+		jd.safePrintf("\"gbssPrevTotalNumSpiderAttempts\":%"INT32",\n",
+			      m_sreq.m_reservedc1 + m_sreq.m_reservedc2 );
+		jd.safePrintf("\"gbssPrevTotalNumSpiderSuccesses\":%"INT32",\n",
+			      m_sreq.m_reservedc1);
+		jd.safePrintf("\"gbssPrevTotalNumSpiderFailures\":%"INT32",\n",
+			      m_sreq.m_reservedc2);
+	}
+
+	if ( m_firstIndexedDateValid )
+		jd.safePrintf("\"gbssFirstIndexed\":%"UINT32",\n",
+			      m_firstIndexedDate);
+
+	if ( m_contentHash32Valid )
+		jd.safePrintf("\"gbssContentHash32\":%"UINT32",\n",
+			      m_contentHash32);
+
+	if ( m_downloadStartTimeValid ) {
+		jd.safePrintf("\"gbssDownloadStartTimeMS\":%"INT64",\n",
+			      m_downloadStartTime);
+		jd.safePrintf("\"gbssDownloadStartTime\":%"UINT32",\n",
+			      (uint32_t)(m_downloadStartTime/1000));
+	}
+
+	if ( m_downloadEndTimeValid ) {
+		jd.safePrintf("\"gbssDownloadEndTimeMS\":%"INT64",\n",
+			      m_downloadEndTime);
+		jd.safePrintf("\"gbssDownloadEndTime\":%"UINT32",\n",
+			      (uint32_t)(m_downloadEndTime/1000));
+	}
+
+	if ( m_downloadEndTimeValid ) {
+		int64_t took = m_downloadEndTime - m_downloadStartTime;
+		jd.safePrintf("\"gbssDownloadDurationMS\":%"INT64",\n",took);
+	}
+
+	jd.safePrintf("\"gbssUsedRobotsTxt\":%"INT32",\n",
+		      m_useRobotsTxt);
+
+	//if ( m_numOutlinksAddedValid ) 
+	jd.safePrintf("\"gbssNumOutlinksAdded\":%"INT32",\n",
+		      (int32_t)m_numOutlinksAdded);
+
+	// how many download/indexing errors we've had, including this one
+	// if applicable.
+	jd.safePrintf("\"gbssConsecutiveErrors\":%"INT32",\n",
+		      m_srep.m_errCount);
+
+
+	if ( od )
+		jd.safePrintf("\"gbssLastSuccessfulDownloadEndTime\":"
+			      "%"UINT32",\n",od->m_spideredTime);
+	else
+		jd.safePrintf("\"gbssLastSuccessfulDownloadEndTime\":"
+			      "%"UINT32",\n",0);
+
+	if ( m_ipValid )
+		jd.safePrintf("\"gbssIp\":\"%s\",\n",iptoa(m_ip));
+	else
+		jd.safePrintf("\"gbssIp\":\"0.0.0.0\",\n");
+
+	if ( m_ipEndTime ) {
+		int64_t took = m_ipEndTime - m_ipStartTime;
+		jd.safePrintf("\"gbssIpLookupTimeMS\":%"INT64",\n",took);
+	}
+
+	if ( m_siteNumInlinksValid ) {
+		jd.safePrintf("\"gbssSiteNumInlinks\":%"INT32",\n",
+			      (int32_t)m_siteNumInlinks);
+		char siteRank = getSiteRank();
+		jd.safePrintf("\"gbssSiteRank\":%"INT32",\n",
+			      (int32_t)siteRank);
+	}
+
+	jd.safePrintf("\"gbssContentInjected\":%"INT32",\n",
+		      (int32_t)m_contentInjected);
+
+	if ( m_percentChangedValid && od ) 
+		jd.safePrintf("\"gbssPercentContentChanged\""
+			      ":\"%.01f\"%%,\n",
+			      m_percentChanged);
+
+	jd.safePrintf("\"gbssSpiderPriority\":%"INT32",\n", 
+		      *priority);
+
+	jd.safePrintf("\"gbssMatchingUrlFilter\":\"%s\",\n", 
+		      cr->m_regExs[*ufn].getBufStart());
+
+	if ( m_langIdValid )
+		jd.safePrintf("\"gbssLanguage\":\"%s\",\n",
+			      getLangAbbr(m_langId));
+
+	if ( m_contentTypeValid )
+		jd.safePrintf("\"gbssContentType\":\"%s\",\n",
+			      g_contentTypeStrings[m_contentType]);
+
+	if ( m_contentValid )
+		jd.safePrintf("\"gbssContentLen\":%"INT32",\n",
+			      m_contentLen);
+
+	if (  m_crawlDelayValid )
+		// -1 if none?
+		jd.safePrintf("\"gbssCrawlDelayMS\":%"INT32",\n",
+			      (int32_t)m_crawlDelay);
+		
+	// sent to diffbot?
+	jd.safePrintf("\"gbssSentToDiffbot\":%i,\n",
+		      (int)m_sentToDiffbot);
+
+	if ( m_diffbotReplyValid ) {
+		jd.safePrintf("\"gbssDiffbotReplyCode\":%"INT32",\n",
+			      m_diffbotReplyError);
+		jd.safePrintf("\"gbssDiffbotReplyMsg\":\"");
+		jd.jsonEncode(mstrerror(m_diffbotReplyError));
+		jd.safePrintf("\",\n");		
+		jd.safePrintf("\"gbssDiffbotReplyLen\":%"INT32",\n",
+			      m_diffbotReply.length());
+		int64_t took = m_diffbotReplyEndTime - m_diffbotReplyStartTime;
+		jd.safePrintf("\"gbssDiffbotReplyResponseTimeMS\":%"INT64",\n",
+			      took );
+		jd.safePrintf("\"gbssDiffbotReplyRetries\":%"INT32",\n",
+			      m_diffbotReplyRetries );
+		jd.safePrintf("\"gbssDiffbotReplyNumObjects\":%"INT32",\n",
+			      m_diffbotJSONCount);
+	}	
+
+	// remove last ,\n
+	jd.incrementLength(-2);
+	// end the json spider status doc
+	jd.safePrintf("}\n");
+
+
 	// the posdb table
 	HashTableX tt4;
 	if ( !tt4.set(18,4,256,NULL,0,false,m_niceness,"posdb-spindx"))
 		return NULL;
+
+
+	Json jp;
+	if ( ! jp.parseJsonStringIntoJsonItems ( jd.getBufStart(),m_niceness)){
+		g_errno = EBADJSONPARSER;
+		return NULL;
+	}
 
 	// BEFORE ANY HASHING
 	int32_t savedDist = m_dist;
 	// re-set to 0
 	m_dist = 0;
 
-	// sanity
-	if ( ! m_indexCodeValid ) { char *xx=NULL;*xx=0; }
-
-	// why isn't gbhopcount: being indexed consistently?
-	if ( ! m_hopCountValid )  { char *xx=NULL;*xx=0; }
-
 	// hash like gbstatus:"Tcp Timed out" or gbstatus:"Doc unchanged"
 	HashInfo hi;
 	hi.m_hashGroup = HASHGROUP_INTAG;
 	hi.m_tt = &tt4;
+	hi.m_desc = "json spider status object";
 	hi.m_useCountTable = false;
 	hi.m_useSections = false;
 
+	// fill up tt4. false -> do not hash without field prefixes.
+	hashJSONFields2 ( &tt4 , &hi , &jp , false );
 
+	/*
 	char buf[64];
 	int32_t bufLen;
 
@@ -27120,6 +27361,7 @@ SafeBuf *XmlDoc::getSpiderStatusDocMetaList2 ( SpiderReply *reply ) {
 	hi.m_desc   = "spider error number as string";
 	bufLen = sprintf ( buf , "%"UINT32"", (uint32_t)m_indexCode );
 	if ( ! hashString( buf , &hi ) ) return NULL;
+	*/
 
 	/*
 	logf(LOG_DEBUG,"url: %s",m_firstUrl.m_url);
@@ -27174,6 +27416,7 @@ SafeBuf *XmlDoc::getSpiderStatusDocMetaList2 ( SpiderReply *reply ) {
 	// was here....
 	*/
 
+	/*
 	// gbstatus:"tcp timed out"
 	hi.m_prefix = "gbstatusmsg";
 	hi.m_desc   = "spider error msg";
@@ -27191,6 +27434,7 @@ SafeBuf *XmlDoc::getSpiderStatusDocMetaList2 ( SpiderReply *reply ) {
 
 	// false --> do not hash the gbdoc* terms (CT_STATUS)
 	hashDateNumbers ( &tt4 , true );
+	*/
 
 	// store keys in safebuf then to make our own meta list
 	addTable144 ( &tt4 , *uqd , &m_spiderStatusDocMetaList );
@@ -27230,6 +27474,7 @@ SafeBuf *XmlDoc::getSpiderStatusDocMetaList2 ( SpiderReply *reply ) {
 	int32_t fullsize = &m_dummyEnd - (char *)this;
 	if ( fullsize > 2048 ) { char *xx=NULL;*xx=0; }
 
+	/*
 	// the ptr_* were all zero'd out, put the ones we want to keep back in
 	SafeBuf tmp;
 	// was "Spider Status: %s" but that is unnecessary
@@ -27242,6 +27487,7 @@ SafeBuf *XmlDoc::getSpiderStatusDocMetaList2 ( SpiderReply *reply ) {
 
 	if ( m_redirUrlPtr && m_redirUrlValid )
 		tmp.safePrintf("Redirected to %s<br>",m_redirUrlPtr->getUrl());
+	*/
 
 	// put stats like we log out from logIt
 	//tmp.safePrintf("<div style=max-width:800px;>\n");
@@ -27250,8 +27496,10 @@ SafeBuf *XmlDoc::getSpiderStatusDocMetaList2 ( SpiderReply *reply ) {
 	//tmp.safePrintf("\n</div>");
 
 	// the content is just the title tag above
-	xd->ptr_utf8Content = tmp.getBufStart();
-	xd->size_utf8Content = tmp.length()+1;
+	// xd->ptr_utf8Content = tmp.getBufStart();
+	// xd->size_utf8Content = tmp.length()+1;
+	xd->ptr_utf8Content = jd.getBufStart();
+	xd->size_utf8Content = jd.length()+1;
 
 	// keep the same url as the doc we are the spider reply for
 	xd->ptr_firstUrl = ptr_firstUrl;
@@ -27423,7 +27671,7 @@ int32_t XmlDoc::getIndexedTime() {
 
 // . hash dates for sorting by using gbsortby: and gbrevsortby:
 // . do 'gbsortby:gbspiderdate' as your query to see this in action
-bool XmlDoc::hashDateNumbers ( HashTableX *tt , bool isStatusDoc ) {
+bool XmlDoc::hashDateNumbers ( HashTableX *tt ) { // , bool isStatusDoc ) {
 
 	// stop if already set
 	if ( ! m_spideredTimeValid ) return true;
@@ -27453,7 +27701,7 @@ bool XmlDoc::hashDateNumbers ( HashTableX *tt , bool isStatusDoc ) {
 	// do not index the rest if we are a "spider reply" document
 	// which is like a fake document for seeing spider statuses
 	//if ( isStatusDoc == CT_STATUS ) return true;
-	if ( isStatusDoc ) return true;
+	//if ( isStatusDoc ) return true;
 
 	// now for CT_STATUS spider status "documents" we also index
 	// gbspiderdate so index this so we can just do a 
@@ -27873,7 +28121,7 @@ bool XmlDoc::hashLinksForLinkdb ( HashTableX *dt ) {
 
 // . returns false and sets g_errno on error
 // . copied Url2.cpp into here basically, so we can now dump Url2.cpp
-bool XmlDoc::hashUrl ( HashTableX *tt , bool isStatusDoc ) {
+bool XmlDoc::hashUrl ( HashTableX *tt ) { // , bool isStatusDoc ) {
 
 	setStatus ( "hashing url colon" );
 
@@ -27893,7 +28141,8 @@ bool XmlDoc::hashUrl ( HashTableX *tt , bool isStatusDoc ) {
 	// append a "www." for doing url: searches
 	Url uw; uw.set ( fu->getUrl() , fu->getUrlLen() , true );
 	hi.m_prefix    = "url";
-	if ( isStatusDoc ) hi.m_prefix = "url2";
+	// no longer, we just index json now
+	//if ( isStatusDoc ) hi.m_prefix = "url2";
 	if ( ! hashSingleTerm(uw.getUrl(),uw.getUrlLen(),&hi) ) 
 		return false;
 
@@ -27908,7 +28157,8 @@ bool XmlDoc::hashUrl ( HashTableX *tt , bool isStatusDoc ) {
 	char *s    = fu->getUrl   ();
 	int32_t  slen = fu->getUrlLen();
 	hi.m_prefix = "inurl";
-	if ( isStatusDoc ) hi.m_prefix = "inurl2";
+	// no longer, we just index json now
+	//if ( isStatusDoc ) hi.m_prefix = "inurl2";
 	if ( ! hashString ( s,slen, &hi ) ) return false;
 
 	setStatus ( "hashing ip colon" );
@@ -27923,7 +28173,8 @@ bool XmlDoc::hashUrl ( HashTableX *tt , bool isStatusDoc ) {
 	//char *tmp = iptoa ( m_ip );
 	//int32_t  tlen = gbstrlen(tmp);
 	hi.m_prefix = "ip";
-	if ( isStatusDoc ) hi.m_prefix = "ip2";
+	// no longer, we just index json now
+	//if ( isStatusDoc ) hi.m_prefix = "ip2";
 	if ( ! hashSingleTerm(ipbuf,iplen,&hi) ) return false;
 
 	//
@@ -27993,7 +28244,8 @@ bool XmlDoc::hashUrl ( HashTableX *tt , bool isStatusDoc ) {
 	int32_t blen = sprintf(buf,"%"INT32"",pathDepth);
 	// update parms
 	hi.m_prefix    = "gbpathdepth";
-	if ( isStatusDoc ) hi.m_prefix = "gbpathdepth2";
+	// no longer, we just index json now
+	//if ( isStatusDoc ) hi.m_prefix = "gbpathdepth2";
 	hi.m_hashGroup = HASHGROUP_INTAG;
 	// hash gbpathdepth:X
 	if ( ! hashString ( buf,blen,&hi) ) return false;
@@ -28008,7 +28260,8 @@ bool XmlDoc::hashUrl ( HashTableX *tt , bool isStatusDoc ) {
 	blen = sprintf(buf,"%"INT32"",(int32_t)m_hopCount);
 	// update parms
 	hi.m_prefix    = "gbhopcount";
-	if ( isStatusDoc ) hi.m_prefix = "gbhopcount2";
+	// no longer, we just index json now
+	//if ( isStatusDoc ) hi.m_prefix = "gbhopcount2";
 	hi.m_hashGroup = HASHGROUP_INTAG;
 	// hash gbpathdepth:X
 	if ( ! hashString ( buf,blen,&hi) ) return false;
@@ -28025,7 +28278,8 @@ bool XmlDoc::hashUrl ( HashTableX *tt , bool isStatusDoc ) {
 	else                        hm = "0";
 	// update parms
 	hi.m_prefix = "gbhasfilename";
-	if ( isStatusDoc ) hi.m_prefix = "gbhasfilename2";
+	// no longer, we just index json now
+	//if ( isStatusDoc ) hi.m_prefix = "gbhasfilename2";
 	// hash gbhasfilename:[0|1]
 	if ( ! hashString ( hm,1,&hi) ) return false;
 
@@ -28037,7 +28291,8 @@ bool XmlDoc::hashUrl ( HashTableX *tt , bool isStatusDoc ) {
 	if ( fu->isCgi() ) hm = "1";
 	else               hm = "0";
 	hi.m_prefix = "gbiscgi";
-	if ( isStatusDoc ) hi.m_prefix = "gbiscgi2";
+	// no longer, we just index json now
+	//if ( isStatusDoc ) hi.m_prefix = "gbiscgi2";
 	if ( ! hashString ( hm,1,&hi) ) return false;
 
 
@@ -28051,7 +28306,8 @@ bool XmlDoc::hashUrl ( HashTableX *tt , bool isStatusDoc ) {
 	if ( fu->getExtensionLen() ) hm = "1";
 	else                         hm = "0";
 	hi.m_prefix = "gbhasext";
-	if ( isStatusDoc ) hi.m_prefix = "gbhasext2";
+	// no longer, we just index json now
+	//if ( isStatusDoc ) hi.m_prefix = "gbhasext2";
 	if ( ! hashString ( hm,1,&hi) ) return false;
 
 	//
@@ -28096,7 +28352,8 @@ bool XmlDoc::hashUrl ( HashTableX *tt , bool isStatusDoc ) {
 		*p = '\0';
 		// update hash parms
 		hi.m_prefix    = "site";
-		if ( isStatusDoc ) hi.m_prefix = "site2";
+		// no longer, we just index json now
+		//if ( isStatusDoc ) hi.m_prefix = "site2";
 		hi.m_hashGroup = HASHGROUP_INURL;
 		// this returns false on failure
 		if ( ! hashSingleTerm (buf,p-buf,&hi ) ) return false;
@@ -28120,13 +28377,15 @@ bool XmlDoc::hashUrl ( HashTableX *tt , bool isStatusDoc ) {
 	int32_t  elen = fu->getExtensionLen();
 	// update hash parms
 	hi.m_prefix    = "ext";
-	if ( isStatusDoc ) hi.m_prefix = "ext2";
+	// no longer, we just index json now
+	//if ( isStatusDoc ) hi.m_prefix = "ext2";
 	if ( ! hashSingleTerm(ext,elen,&hi ) ) return false;
 
 
 	setStatus ( "hashing gbdocid" );
 	hi.m_prefix = "gbdocid";
-	if ( isStatusDoc ) hi.m_prefix = "gbdocid2";
+	// no longer, we just index json now
+	//if ( isStatusDoc ) hi.m_prefix = "gbdocid2";
 	char buf2[32];
 	sprintf(buf2,"%"UINT64"",(m_docId) );
 	if ( ! hashSingleTerm(buf2,gbstrlen(buf2),&hi) ) return false;
@@ -28146,12 +28405,13 @@ bool XmlDoc::hashUrl ( HashTableX *tt , bool isStatusDoc ) {
 		// append a "www." as part of normalization
 		uw.set ( fu->getUrl() , p - fu->getUrl() , true );
 		hi.m_prefix    = "gbparenturl";
-		if ( isStatusDoc ) hi.m_prefix = "gbparenturl2";
+		// no longer, we just index json now
+		//if ( isStatusDoc ) hi.m_prefix = "gbparenturl2";
 		if ( ! hashSingleTerm(uw.getUrl(),uw.getUrlLen(),&hi) ) 
 			return false;
 	}
 
-	if ( isStatusDoc ) return true;
+	//if ( isStatusDoc ) return true;
 
 	setStatus ( "hashing SiteGetter terms");
 
@@ -30054,7 +30314,9 @@ Msg20Reply *XmlDoc::getMsg20Reply ( ) {
 		// if we had a facet, get the values it has in the doc
 		if ( qs && *qs ) {
 			// need this for storeFacetValues() if we are json
-			if ( m_contentType == CT_JSON ) {
+			if ( m_contentType == CT_JSON ||
+			     // spider status docs are really json
+			     m_contentType == CT_STATUS ) {
 				Json *jp = getParsedJson();
 				if ( ! jp || jp == (void *)-1)
 					return (Msg20Reply *)jp;
@@ -30576,7 +30838,8 @@ Msg20Reply *XmlDoc::getMsg20Reply ( ) {
 	reply->size_gbAdIds = size_adVector;
 
 	// need full cached page of each search result?
-	if ( m_req->m_includeCachedCopy ) {
+	// include it always for spider status docs.
+	if ( m_req->m_includeCachedCopy || m_contentType == CT_STATUS ) {
 		reply-> ptr_content =  ptr_utf8Content;
 		reply->size_content = size_utf8Content;
 	}
@@ -49681,7 +49944,9 @@ Json *XmlDoc::getParsedJson ( ) {
 	if ( m_jpValid ) return &m_jp;
 
 	// core if not a json object
-	if ( m_contentTypeValid && m_contentType != CT_JSON ) {
+	if ( m_contentTypeValid && m_contentType != CT_JSON &&
+	     // spider status docs are now really json
+	     m_contentType != CT_STATUS ) {
 		char *xx=NULL;*xx=0; }
 
 	// \0 terminated
@@ -49724,7 +49989,15 @@ char *XmlDoc::hashJSONFields ( HashTableX *table ) {
 	// use new json parser
 	Json *jp = getParsedJson();
 	if ( ! jp || jp == (void *)-1 ) return (char *)jp;
+
+	return hashJSONFields2 ( table , &hi , jp , true );
+}
+
 	
+char *XmlDoc::hashJSONFields2 ( HashTableX *table , 
+				HashInfo *hi , Json *jp ,
+				bool hashWithoutFieldNames ) {
+
 	JsonItem *ji = jp->getFirstItem();
 
 	char nb[1024];
@@ -49788,17 +50061,17 @@ char *XmlDoc::hashJSONFields ( HashTableX *table ) {
 		// DIFFBOT special field hacks
 		//
 		char *name = nameBuf.getBufStart();
-		hi.m_hashGroup = HASHGROUP_BODY;
+		hi->m_hashGroup = HASHGROUP_BODY;
 		if ( strstr(name,"title") )
-			hi.m_hashGroup = HASHGROUP_TITLE;
+			hi->m_hashGroup = HASHGROUP_TITLE;
 		if ( strstr(name,"url") )
-			hi.m_hashGroup = HASHGROUP_INURL;
+			hi->m_hashGroup = HASHGROUP_INURL;
 		if ( strstr(name,"resolved_url") )
-			hi.m_hashGroup = HASHGROUP_INURL;
+			hi->m_hashGroup = HASHGROUP_INURL;
 		if ( strstr(name,"tags") )
-			hi.m_hashGroup = HASHGROUP_INTAG;
+			hi->m_hashGroup = HASHGROUP_INTAG;
 		if ( strstr(name,"meta") )
-			hi.m_hashGroup = HASHGROUP_INMETATAG;
+			hi->m_hashGroup = HASHGROUP_INMETATAG;
 		//
 		// now Json.cpp decodes and stores the value into
 		// a buffer, so ji->getValue() should be decoded completely
@@ -49845,7 +50118,7 @@ char *XmlDoc::hashJSONFields ( HashTableX *table ) {
 		// set EDOCUNCHANGED in ::getIndexCode() above.
 		//
 		/*
-		if ( hi.m_hashGroup != HASHGROUP_INURL ) {
+		if ( hi->m_hashGroup != HASHGROUP_INURL ) {
 			// make the content hash so we can set m_contentHash32
 			// for deduping
 			int32_t nh32 = hash32n ( name );
@@ -49858,28 +50131,31 @@ char *XmlDoc::hashJSONFields ( HashTableX *table ) {
 		*/
 
 		// index like "title:whatever"
-		hi.m_prefix = name;
-		hashString ( val , vlen , &hi );
+		hi->m_prefix = name;
+		hashString ( val , vlen , hi );
 
 		// hash gbfieldmatch:some.fieldInJson:"case-sens field Value"
 		if ( name ) 
-			hashFieldMatchTerm ( val , (int32_t)vlen , &hi );
+			hashFieldMatchTerm ( val , (int32_t)vlen , hi );
+
+		if ( ! hashWithoutFieldNames )
+			continue;
 
 		// hash without the field name as well
-		hi.m_prefix = NULL;
-		hashString ( val , vlen , &hi );
+		hi->m_prefix = NULL;
+		hashString ( val , vlen , hi );
 
 		/*
 		// a number? hash special then as well
 		if ( ji->m_type != JT_NUMBER ) continue;
 
 		// use prefix for this though
-		hi.m_prefix = name;
+		hi->m_prefix = name;
 
 		// hash as a number so we can sort search results by
 		// this number and do range constraints
 		float f = ji->m_valueDouble;
-		if ( ! hashNumber2 ( f , &hi ) )
+		if ( ! hashNumber2 ( f , hi ) )
 			return NULL;
 		*/
 	}
@@ -49986,7 +50262,8 @@ bool XmlDoc::storeFacetValues ( char *qs , SafeBuf *sb , FacetValHash_t fvh ) {
 		return storeFacetValuesSections ( qs , sb , fvh );
 
 	// if a json doc, get json field
-	if ( m_contentType == CT_JSON ) 
+	// spider status docs are really json now
+	if ( m_contentType == CT_JSON || m_contentType == CT_STATUS ) 
 		return storeFacetValuesJSON ( qs , sb , fvh );
 
 	if ( m_contentType == CT_HTML ) 

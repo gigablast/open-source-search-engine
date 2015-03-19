@@ -932,7 +932,7 @@ bool Test::injectLoop ( ) {
 	m_sreq.m_domHash32  = fakeIp;
 	m_sreq.m_hostHash32 = fakeIp;
 	m_sreq.m_siteHash32 = fakeIp;
-	m_sreq.m_probDocId = g_titledb.getProbableDocId( m_sreq.m_url );
+	//m_sreq.m_probDocId = g_titledb.getProbableDocId( m_sreq.m_url );
 	// this crap is fake
 	m_sreq.m_isInjecting = 1;
 	// use test-spider subdir for storing pages and spider times?
