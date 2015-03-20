@@ -2183,7 +2183,8 @@ bool CollectionRec::rebuildUrlFilters2 ( ) {
 	m_maxSpidersPerRule  [n] = 99; // max spiders
 	m_spiderIpMaxSpiders [n] = 1; // max spiders per ip
 	m_spiderIpWaits      [n] = 1000; // same ip wait
-	m_spiderPriorities   [n] = -3; // delete!
+	m_spiderPriorities   [n] = 100; // delete!
+	m_forceDelete        [n] = 1;
 	n++;
 
 	// if not in the site list then nuke it
@@ -2193,7 +2194,8 @@ bool CollectionRec::rebuildUrlFilters2 ( ) {
 	m_maxSpidersPerRule  [n] = 99; // max spiders
 	m_spiderIpMaxSpiders [n] = 1; // max spiders per ip
 	m_spiderIpWaits      [n] = 1000; // same ip wait
-	m_spiderPriorities   [n] = -3; // delete!
+	m_spiderPriorities   [n] = 100; 
+	m_forceDelete        [n] = 1;
 	n++;
 
 	m_regExs[n].set("errorcount>=3 && hastmperror");
@@ -2497,7 +2499,8 @@ bool CollectionRec::rebuildLangRules ( char *langStr , char *tldStr ) {
 	m_maxSpidersPerRule  [n] = 99; // max spiders
 	m_spiderIpMaxSpiders [n] = 1; // max spiders per ip
 	m_spiderIpWaits      [n] = 1000; // same ip wait
-	m_spiderPriorities   [n] = -3; // delete!
+	m_spiderPriorities   [n] = 100; // delete!
+	m_forceDelete        [n] = 1;
 	n++;
 
 	// if not in the site list then nuke it
@@ -2507,7 +2510,8 @@ bool CollectionRec::rebuildLangRules ( char *langStr , char *tldStr ) {
 	m_maxSpidersPerRule  [n] = 99; // max spiders
 	m_spiderIpMaxSpiders [n] = 1; // max spiders per ip
 	m_spiderIpWaits      [n] = 1000; // same ip wait
-	m_spiderPriorities   [n] = -3; // delete!
+	m_spiderPriorities   [n] = 100; // delete!
+	m_forceDelete        [n] = 1;
 	n++;
 
 	m_regExs[n].set("errorcount>=3 && hastmperror");
@@ -2903,7 +2907,8 @@ bool CollectionRec::rebuildShallowRules ( ) {
 	m_maxSpidersPerRule  [n] = 99; // max spiders
 	m_spiderIpMaxSpiders [n] = 1; // max spiders per ip
 	m_spiderIpWaits      [n] = 1000; // same ip wait
-	m_spiderPriorities   [n] = -3; // delete!
+	m_spiderPriorities   [n] = 100; // delete!
+	m_forceDelete        [n] = 1;
 	n++;
 
 	// if not in the site list then nuke it
@@ -2913,7 +2918,8 @@ bool CollectionRec::rebuildShallowRules ( ) {
 	m_maxSpidersPerRule  [n] = 99; // max spiders
 	m_spiderIpMaxSpiders [n] = 1; // max spiders per ip
 	m_spiderIpWaits      [n] = 1000; // same ip wait
-	m_spiderPriorities   [n] = -3; // delete!
+	m_spiderPriorities   [n] = 100; // delete!
+	m_forceDelete        [n] = 1;
 	n++;
 
 	m_regExs[n].set("errorcount>=3 && hastmperror");
@@ -3488,8 +3494,9 @@ bool CollectionRec::rebuildUrlFiltersDiffbot() {
 
 	// 2nd default url 
 	m_regExs[i].set("ismedia && !ismanualadd");
-	m_spiderPriorities   [i] = 0;//SPIDER_PRIORITY_FILTERED;
 	m_maxSpidersPerRule  [i] = 0;
+	m_spiderPriorities   [i] = 100; // delete!
+	m_forceDelete        [i] = 1;
 	i++;
 
 	// hopcount filter if asked for
@@ -3531,8 +3538,9 @@ bool CollectionRec::rebuildUrlFiltersDiffbot() {
 	// MDW: even if they supplied a crawl pattern let's restrict to seed
 	// domains 12/15/14
 	m_regExs[i].set("!isonsamedomain && !ismanualadd");
-	m_spiderPriorities   [i] = 0;//SPIDER_PRIORITY_FILTERED;
 	m_maxSpidersPerRule  [i] = 0;
+	m_spiderPriorities   [i] = 100; // delete!
+	m_forceDelete        [i] = 1;
 	i++;
 	//}
 
@@ -3545,8 +3553,9 @@ bool CollectionRec::rebuildUrlFiltersDiffbot() {
 	// only negative patterns then restrict to domains of seeds
 	if ( ucp && ! ucpHasPositive && ! m_hasucr ) {
 		m_regExs[i].set("!isonsamedomain && !ismanualadd");
-		m_spiderPriorities   [i] = 0;//SPIDER_PRIORITY_FILTERED;
 		m_maxSpidersPerRule  [i] = 0;
+		m_spiderPriorities   [i] = 100; // delete!
+		m_forceDelete        [i] = 1;
 		i++;
 	}
 
