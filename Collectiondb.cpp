@@ -2301,7 +2301,7 @@ bool CollectionRec::rebuildUrlFilters2 ( ) {
 	n++;
 
 
-	m_regExs[n].set("parentisrss && isnew");
+	m_regExs[n].set("isparentrss && isnew");
 	m_harvestLinks       [n] = 1;
 	m_spiderFreqs        [n] = 7; // 30 days default
 	m_maxSpidersPerRule  [n] = 9; // max spiders
@@ -2312,7 +2312,7 @@ bool CollectionRec::rebuildUrlFilters2 ( ) {
 		m_spiderFreqs [n] = .00347; // 5 mins
 	n++;
 
-	m_regExs[n].set("parentissitemap && isnew");
+	m_regExs[n].set("isparentsitemap && isnew");
 	m_harvestLinks       [n] = 1;
 	m_spiderFreqs        [n] = 7; // 30 days default
 	m_maxSpidersPerRule  [n] = 9; // max spiders
@@ -2324,7 +2324,7 @@ bool CollectionRec::rebuildUrlFilters2 ( ) {
 	n++;
 
 
-	m_regExs[n].set("parentisrss");
+	m_regExs[n].set("isparentrss");
 	m_harvestLinks       [n] = 1;
 	m_spiderFreqs        [n] = 20.0; // 30 days default
 	m_maxSpidersPerRule  [n] = 9; // max spiders
@@ -2335,7 +2335,7 @@ bool CollectionRec::rebuildUrlFilters2 ( ) {
 		m_spiderFreqs [n] = .00347; // 5 mins
 	n++;
 
-	m_regExs[n].set("parentissitemap");
+	m_regExs[n].set("isparentsitemap");
 	m_harvestLinks       [n] = 1;
 	m_spiderFreqs        [n] = 20.0; // 30 days default
 	m_maxSpidersPerRule  [n] = 9; // max spiders
