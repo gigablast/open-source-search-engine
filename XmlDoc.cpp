@@ -27170,12 +27170,10 @@ SafeBuf *XmlDoc::getSpiderStatusDocMetaList2 ( SpiderReply *reply ) {
 	else
 		jd.safePrintf("\"gbssWasIndexed\":0,\n");
 
+	int32_t now = getTimeGlobal();
 	if ( od )
-		jd.safePrintf("\"gbssPreviousSuccessfulDownloadEndTime\":"
-			      "%"UINT32",\n",od->m_spideredTime);
-	else
-		jd.safePrintf("\"gbssPreviousSuccessfulDownloadEndTime\":"
-			      "%"UINT32",\n",0);
+		jd.safePrintf("\"gbssAgeInIndex\":"
+			      "%"UINT32",\n",now - od->m_spideredTime);
 
 
 	jd.safePrintf("\"gbssDomain\":\"");
@@ -27190,7 +27188,7 @@ SafeBuf *XmlDoc::getSpiderStatusDocMetaList2 ( SpiderReply *reply ) {
 	jd.safePrintf("\"gbssNumRedirects\":%"INT32",\n",
 		      m_numRedirects);
 
-	jd.safePrintf("\"gbssDocId\":%"INT64",\n", *uqd);
+	jd.safePrintf("\"gbssDocId\":%"INT64",\n", m_docId);//*uqd);
 
 	jd.safePrintf("\"gbssHopCount\":%"INT32",\n",(int32_t)*hc);
 
