@@ -22704,12 +22704,14 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 		if ( ! newsr || newsr == (void *)-1 ) return (char *)newsr;
 	}
 
+	bool indexReply = true;
+	if ( ! cr->m_indexSpiderReplies ) indexReply = false;
+	if ( ! m_useSpiderdb ) indexReply = false;
+	// doing it for diffbot throws off smoketests
+	if ( strncmp(cr->m_coll,"crawlbottesting-",16) == 0 ) indexReply=false;
 	// i guess it is safe to do this after getting the spiderreply
 	SafeBuf *spiderStatusDocMetaList = NULL;
-	if ( cr->m_indexSpiderReplies && 
-	     m_useSpiderdb &&
-	     // doing it for diffbot throws off smoketests
-	     ! cr->m_isCustomCrawl ) {
+	if ( indexReply ) {
 		// get the spiderreply ready to be added to the rdbs w/ msg4
 		spiderStatusDocMetaList = getSpiderStatusDocMetaList ( newsr );
 		// block?
@@ -27028,6 +27030,12 @@ SafeBuf *XmlDoc::getSpiderStatusDocMetaList ( SpiderReply *reply ) {
 		return &m_spiderStatusDocMetaList;
 	}
 
+	// do not add a status doc if doing a query delete on a status doc
+	if ( m_contentTypeValid && m_contentType == CT_STATUS ) {
+		m_spiderStatusDocMetaListValid = true;
+		return &m_spiderStatusDocMetaList;
+	}
+
 	// we double add regular html urls in a query reindex because the
 	// json url adds the parent, so the parent gets added twice sometimes,
 	// and for some reason it is adding a spider status doc the 2nd time
@@ -27156,9 +27164,17 @@ SafeBuf *XmlDoc::getSpiderStatusDocMetaList2 ( SpiderReply *reply ) {
 			      (int32_t)m_httpStatus);
 
 	if ( od )
-		jd.safePrintf("\"gbssPreviouslyIndexed\":1,\n");
+		jd.safePrintf("\"gbssWasIndexed\":1,\n");
 	else
-		jd.safePrintf("\"gbssPreviouslyIndexed\":0,\n");
+		jd.safePrintf("\"gbssWasIndexed\":0,\n");
+
+	if ( od )
+		jd.safePrintf("\"gbssPreviousSuccessfulDownloadEndTime\":"
+			      "%"UINT32",\n",od->m_spideredTime);
+	else
+		jd.safePrintf("\"gbssPreviousSuccessfulDownloadEndTime\":"
+			      "%"UINT32",\n",0);
+
 
 	jd.safePrintf("\"gbssDomain\":\"");
 	jd.safeMemcpy(fu->getDomain(), fu->getDomainLen() );
@@ -27187,11 +27203,11 @@ SafeBuf *XmlDoc::getSpiderStatusDocMetaList2 ( SpiderReply *reply ) {
 
 	// how many spiderings were successful vs. failed
 	if ( m_sreqValid ) {
-		jd.safePrintf("\"gbssPrevTotalNumSpiderAttempts\":%"INT32",\n",
+		jd.safePrintf("\"gbssPrevTotalNumIndexAttempts\":%"INT32",\n",
 			      m_sreq.m_reservedc1 + m_sreq.m_reservedc2 );
-		jd.safePrintf("\"gbssPrevTotalNumSpiderSuccesses\":%"INT32",\n",
+		jd.safePrintf("\"gbssPrevTotalNumIndexSuccesses\":%"INT32",\n",
 			      m_sreq.m_reservedc1);
-		jd.safePrintf("\"gbssPrevTotalNumSpiderFailures\":%"INT32",\n",
+		jd.safePrintf("\"gbssPrevTotalNumIndexFailures\":%"INT32",\n",
 			      m_sreq.m_reservedc2);
 	}
 
@@ -27203,44 +27219,37 @@ SafeBuf *XmlDoc::getSpiderStatusDocMetaList2 ( SpiderReply *reply ) {
 		jd.safePrintf("\"gbssContentHash32\":%"UINT32",\n",
 			      m_contentHash32);
 
-	if ( m_downloadStartTimeValid ) {
+	if ( m_downloadStartTimeValid && m_downloadEndTimeValid ) {
 		jd.safePrintf("\"gbssDownloadStartTimeMS\":%"INT64",\n",
 			      m_downloadStartTime);
-		jd.safePrintf("\"gbssDownloadStartTime\":%"UINT32",\n",
-			      (uint32_t)(m_downloadStartTime/1000));
-	}
-
-	if ( m_downloadEndTimeValid ) {
 		jd.safePrintf("\"gbssDownloadEndTimeMS\":%"INT64",\n",
 			      m_downloadEndTime);
+
+		int64_t took = m_downloadEndTime - m_downloadStartTime;
+		jd.safePrintf("\"gbssDownloadDurationMS\":%"INT64",\n",took);
+
+		jd.safePrintf("\"gbssDownloadStartTime\":%"UINT32",\n",
+			      (uint32_t)(m_downloadStartTime/1000));
+
 		jd.safePrintf("\"gbssDownloadEndTime\":%"UINT32",\n",
 			      (uint32_t)(m_downloadEndTime/1000));
 	}
 
-	if ( m_downloadEndTimeValid ) {
-		int64_t took = m_downloadEndTime - m_downloadStartTime;
-		jd.safePrintf("\"gbssDownloadDurationMS\":%"INT64",\n",took);
-	}
 
 	jd.safePrintf("\"gbssUsedRobotsTxt\":%"INT32",\n",
 		      m_useRobotsTxt);
 
 	//if ( m_numOutlinksAddedValid ) 
-	jd.safePrintf("\"gbssNumOutlinksAdded\":%"INT32",\n",
-		      (int32_t)m_numOutlinksAdded);
+	// crap, this is not right because we only call addOutlinksToMetaList()
+	// after we call this function.
+	// jd.safePrintf("\"gbssNumOutlinksAdded\":%"INT32",\n",
+	// 	      (int32_t)m_numOutlinksAdded);
 
 	// how many download/indexing errors we've had, including this one
 	// if applicable.
 	jd.safePrintf("\"gbssConsecutiveErrors\":%"INT32",\n",
 		      m_srep.m_errCount);
 
-
-	if ( od )
-		jd.safePrintf("\"gbssLastSuccessfulDownloadEndTime\":"
-			      "%"UINT32",\n",od->m_spideredTime);
-	else
-		jd.safePrintf("\"gbssLastSuccessfulDownloadEndTime\":"
-			      "%"UINT32",\n",0);
 
 	if ( m_ipValid )
 		jd.safePrintf("\"gbssIp\":\"%s\",\n",iptoa(m_ip));
@@ -27265,7 +27274,7 @@ SafeBuf *XmlDoc::getSpiderStatusDocMetaList2 ( SpiderReply *reply ) {
 
 	if ( m_percentChangedValid && od ) 
 		jd.safePrintf("\"gbssPercentContentChanged\""
-			      ":\"%.01f\"%%,\n",
+			      ":%.01f,\n",
 			      m_percentChanged);
 
 	jd.safePrintf("\"gbssSpiderPriority\":%"INT32",\n", 
@@ -27274,11 +27283,12 @@ SafeBuf *XmlDoc::getSpiderStatusDocMetaList2 ( SpiderReply *reply ) {
 	jd.safePrintf("\"gbssMatchingUrlFilter\":\"%s\",\n", 
 		      cr->m_regExs[*ufn].getBufStart());
 
-	if ( m_langIdValid )
+	// we forced the langid valid above
+	if ( m_langIdValid && m_contentLen )
 		jd.safePrintf("\"gbssLanguage\":\"%s\",\n",
 			      getLangAbbr(m_langId));
 
-	if ( m_contentTypeValid )
+	if ( m_contentTypeValid && m_contentLen )
 		jd.safePrintf("\"gbssContentType\":\"%s\",\n",
 			      g_contentTypeStrings[m_contentType]);
 
@@ -27295,7 +27305,7 @@ SafeBuf *XmlDoc::getSpiderStatusDocMetaList2 ( SpiderReply *reply ) {
 	jd.safePrintf("\"gbssSentToDiffbot\":%i,\n",
 		      (int)m_sentToDiffbot);
 
-	if ( m_diffbotReplyValid ) {
+	if ( m_diffbotReplyValid && m_sentToDiffbot ) {
 		jd.safePrintf("\"gbssDiffbotReplyCode\":%"INT32",\n",
 			      m_diffbotReplyError);
 		jd.safePrintf("\"gbssDiffbotReplyMsg\":\"");

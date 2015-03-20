@@ -4048,12 +4048,21 @@ bool printResult ( State0 *st, int32_t ix , int32_t *numPrintedSoFar ) {
 			sb->safePrintf("<br><hr><br>\n");
 		// skip to gbssurl
 		char *s = strstr ( mr->ptr_content,"\"gbssUrl\":");
-		if ( ! s ) goto badformat;
+		if ( ! s ) {
+			log("results: missing gbssUrl");
+			goto badformat;
+		}
 		// then do two columns after the two urls
 		char *e = strstr ( s , "\"gbssStatusCode\":" );
-		if ( ! e ) goto badformat;
-		char *m = strstr ( e , "\"gbssNumOutlinksAdded\":");
-		if ( ! m ) goto badformat;
+		if ( ! e ) {
+			log("results: missing gbssStatusCode");
+			goto badformat;
+		}
+		char *m = strstr ( e , "\"gbssConsecutiveErrors\":");
+		if ( ! m ) {
+			log("results: missing gbssConsecutiveErrors");
+			goto badformat;
+		}
 		// exclude \0
 		char *end = mr->ptr_content + mr->size_content - 1;
 		// use a table with 2 columns
@@ -5264,7 +5273,8 @@ bool printResult ( State0 *st, int32_t ix , int32_t *numPrintedSoFar ) {
 				"q=gbfieldmatch%%3AgbssUrl%%3A"
 				, coll 
 				);
-		sb->urlEncode ( url , gbstrlen(url) , false );
+		// do not include ending \0
+		sb->urlEncode ( mr->ptr_ubuf , mr->size_ubuf-1 , false );
 		sb->safePrintf ( "\">"
 				 "spider info</a>\n"
 			       );
