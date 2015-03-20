@@ -4874,6 +4874,12 @@ bool isTagTypeUnique ( int32_t tt ) {
 	if ( ! s_initialized ) g_tagdb.setHashTable();
 	// look up in hash table
 	TagDesc *td = *(TagDesc **)s_ht.getValue ( &tt );
+	// do not core for now
+	if ( ! td ) {
+		log("tagdb: got unknown tag type %"INT32" assuming "
+		    "unique",tt);
+		return true;
+	}
 	// if none, that is crazy
 	if ( ! td ) { char *xx=NULL;*xx=0; }
 	// return 
@@ -4888,7 +4894,13 @@ bool isTagTypeIndexable ( int32_t tt ) {
 	if ( ! s_initialized ) g_tagdb.setHashTable();
 	// look up in hash table
 	TagDesc *td = *(TagDesc **)s_ht.getValue ( &tt );
-	// if none, that is crazy
+	// do not core for now
+	if ( ! td ) {
+		log("tagdb: got unknown tag type %"INT32" assuming "
+		    "not indexable",tt);
+		return false;
+	}
+	// if none, that is crazy MDW coring here:
 	if ( ! td ) { char *xx=NULL;*xx=0; }
 	// return false if we should not index it
 	if ( td->m_flags & TDF_NOINDEX ) return false;
