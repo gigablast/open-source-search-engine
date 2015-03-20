@@ -22376,11 +22376,13 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 
 	// . need this if useTitledb is true
 	// . otherwise XmlDoc::getTitleRecBuf() cores because its invalid
-	if ( m_useTitledb ) {
-		LinkInfo *info1 = getLinkInfo1();
-		if ( ! info1 || info1 == (LinkInfo *)-1 ) 
-			return (char *)info1;
-	}
+	// . this cores if rebuilding just posdb because hashAll() needs
+	//   the inlink texts for hashing
+	//if ( m_useTitledb ) {
+	LinkInfo *info1 = getLinkInfo1();
+	if ( ! info1 || info1 == (LinkInfo *)-1 ) 
+		return (char *)info1;
+	//}
 
 	// global debug
 	g_od = od;
