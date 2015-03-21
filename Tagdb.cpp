@@ -4873,8 +4873,14 @@ bool isTagTypeUnique ( int32_t tt ) {
 	// make sure table is valid
 	if ( ! s_initialized ) g_tagdb.setHashTable();
 	// look up in hash table
-	TagDesc *td = *(TagDesc **)s_ht.getValue ( &tt );
+	TagDesc **tdp = (TagDesc **)s_ht.getValue ( &tt );
+	if ( ! tdp ) {
+		log("tagdb: tag desc is NULL for tag type %"INT32" assuming "
+		    "not indexable",tt);
+		return false;
+	}
 	// do not core for now
+	TagDesc *td = *tdp;
 	if ( ! td ) {
 		log("tagdb: got unknown tag type %"INT32" assuming "
 		    "unique",tt);
@@ -4893,10 +4899,16 @@ bool isTagTypeIndexable ( int32_t tt ) {
 	// make sure table is valid
 	if ( ! s_initialized ) g_tagdb.setHashTable();
 	// look up in hash table
-	TagDesc *td = *(TagDesc **)s_ht.getValue ( &tt );
+	TagDesc **tdp = (TagDesc **)s_ht.getValue ( &tt );
 	// do not core for now
-	if ( ! td ) {
+	if ( ! tdp ) {
 		log("tagdb: got unknown tag type %"INT32" assuming "
+		    "not indexable",tt);
+		return false;
+	}
+	TagDesc *td = *tdp;
+	if ( ! td ) {
+		log("tagdb: tag desc is NULL for tag type %"INT32" assuming "
 		    "not indexable",tt);
 		return false;
 	}
