@@ -22751,6 +22751,27 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 	//   we create from the original diffbot reply
 	SafeBuf *tdbr = getTokenizedDiffbotReply();
 	if ( ! tdbr || tdbr == (void *)-1 ) return (char *)tdbr;
+
+
+	bool indexReply = true;
+	if ( ! cr->m_indexSpiderReplies ) indexReply = false;
+	if ( ! m_useSpiderdb ) indexReply = false;
+	// doing it for diffbot throws off smoketests
+	if ( strncmp(cr->m_coll,"crawlbottesting-",16) == 0 ) indexReply=false;
+	// i guess it is safe to do this after getting the spiderreply
+	SafeBuf *spiderStatusDocMetaList = NULL;
+	if ( indexReply ) {
+		// get the spiderreply ready to be added to the rdbs w/ msg4
+		spiderStatusDocMetaList = getSpiderStatusDocMetaList ( newsr );
+		// block?
+		if ( ! spiderStatusDocMetaList ||
+		     spiderStatusDocMetaList == (void *)-1)
+			return (char *)spiderStatusDocMetaList;
+	}
+
+
+
+
 	int32_t tdbrLen = tdbr->length();
 
 	// do not index json items as separate docs if we are page parser
@@ -22924,23 +22945,6 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 	// END the diffbot json object index hack
 	//
 	/////
-
-
-	bool indexReply = true;
-	if ( ! cr->m_indexSpiderReplies ) indexReply = false;
-	if ( ! m_useSpiderdb ) indexReply = false;
-	// doing it for diffbot throws off smoketests
-	if ( strncmp(cr->m_coll,"crawlbottesting-",16) == 0 ) indexReply=false;
-	// i guess it is safe to do this after getting the spiderreply
-	SafeBuf *spiderStatusDocMetaList = NULL;
-	if ( indexReply ) {
-		// get the spiderreply ready to be added to the rdbs w/ msg4
-		spiderStatusDocMetaList = getSpiderStatusDocMetaList ( newsr );
-		// block?
-		if ( ! spiderStatusDocMetaList ||
-		     spiderStatusDocMetaList == (void *)-1)
-			return (char *)spiderStatusDocMetaList;
-	}
 
 
 	//
@@ -27318,8 +27322,9 @@ SafeBuf *XmlDoc::getSpiderStatusDocMetaList2 ( SpiderReply *reply ) {
 			      took );
 		jd.safePrintf("\"gbssDiffbotReplyRetries\":%"INT32",\n",
 			      m_diffbotReplyRetries );
-		jd.safePrintf("\"gbssDiffbotReplyNumObjects\":%"INT32",\n",
-			      m_diffbotJSONCount);
+		// this is not correct at this point we haven't parsed the json
+		// jd.safePrintf("\"gbssDiffbotReplyNumObjects\":%"INT32",\n",
+		// 	      m_diffbotJSONCount);
 	}	
 
 	// remove last ,\n
