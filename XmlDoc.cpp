@@ -26902,6 +26902,18 @@ char *XmlDoc::hashAll ( HashTableX *table ) {
 	// MDW: i think we just inject empty html with a diffbotreply into
 	// global index now, so don't need this... 9/28/2014
 
+	// stop indexing xml docs
+	bool indexDoc = true;
+	if ( cr->m_isCustomCrawl ) indexDoc = false;
+	if ( ! cr->m_indexBody   ) indexDoc = false;
+	if ( cr->m_isCustomCrawl && m_isDiffbotJSONObject )
+		indexDoc = true;
+
+	// global index unless this is a json object in which case it is
+	// hashed above in the call to hashJSON(). this will decrease disk
+	// usage by about half, posdb* files are pretty big.
+	if ( ! indexDoc ) return (char *)1;
+	     
 	// hash json fields
 	if ( *ct == CT_JSON ) {
 		// this hashes both with and without the fieldname
@@ -26916,11 +26928,6 @@ char *XmlDoc::hashAll ( HashTableX *table ) {
 		goto skip;
 	}
 
-	// global index unless this is a json object in which case it is
-	// hashed above in the call to hashJSON(). this will decrease disk
-	// usage by about half, posdb* files are pretty big.
-	if ( cr->m_isCustomCrawl || ! cr->m_indexBody ) return (char *)1;
-	     
 	// hash the body of the doc first so m_dist is 0 to match
 	// the rainbow display of sections
 	if ( ! hashBody2 (table ) ) return NULL;
