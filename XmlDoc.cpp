@@ -22706,23 +22706,6 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 		if ( ! newsr || newsr == (void *)-1 ) return (char *)newsr;
 	}
 
-	bool indexReply = true;
-	if ( ! cr->m_indexSpiderReplies ) indexReply = false;
-	if ( ! m_useSpiderdb ) indexReply = false;
-	// doing it for diffbot throws off smoketests
-	if ( strncmp(cr->m_coll,"crawlbottesting-",16) == 0 ) indexReply=false;
-	// i guess it is safe to do this after getting the spiderreply
-	SafeBuf *spiderStatusDocMetaList = NULL;
-	if ( indexReply ) {
-		// get the spiderreply ready to be added to the rdbs w/ msg4
-		spiderStatusDocMetaList = getSpiderStatusDocMetaList ( newsr );
-		// block?
-		if ( ! spiderStatusDocMetaList ||
-		     spiderStatusDocMetaList == (void *)-1)
-			return (char *)spiderStatusDocMetaList;
-	}
-
-
 	// the site hash for hashing
 	int32_t *sh32 = getSiteHash32();
 	if ( ! sh32 || sh32 == (int32_t *)-1 ) return (char *)sh32;
@@ -22941,6 +22924,23 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 	// END the diffbot json object index hack
 	//
 	/////
+
+
+	bool indexReply = true;
+	if ( ! cr->m_indexSpiderReplies ) indexReply = false;
+	if ( ! m_useSpiderdb ) indexReply = false;
+	// doing it for diffbot throws off smoketests
+	if ( strncmp(cr->m_coll,"crawlbottesting-",16) == 0 ) indexReply=false;
+	// i guess it is safe to do this after getting the spiderreply
+	SafeBuf *spiderStatusDocMetaList = NULL;
+	if ( indexReply ) {
+		// get the spiderreply ready to be added to the rdbs w/ msg4
+		spiderStatusDocMetaList = getSpiderStatusDocMetaList ( newsr );
+		// block?
+		if ( ! spiderStatusDocMetaList ||
+		     spiderStatusDocMetaList == (void *)-1)
+			return (char *)spiderStatusDocMetaList;
+	}
 
 
 	//
