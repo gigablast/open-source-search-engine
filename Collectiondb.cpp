@@ -191,7 +191,8 @@ bool Collectiondb::cleanTrees ( ) {
 	//r = g_indexdb.getRdb();
 	//r->m_tree.cleanTree    ((char **)r->m_bases);
 	r = g_posdb.getRdb();
-	r->m_tree.cleanTree    ();//(char **)r->m_bases);
+	//r->m_tree.cleanTree    ();//(char **)r->m_bases);
+	r->m_buckets.cleanBuckets();
 	//r = g_datedb.getRdb();
 	//r->m_tree.cleanTree    ((char **)r->m_bases);
 
