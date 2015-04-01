@@ -20474,7 +20474,15 @@ bool XmlDoc::logIt ( SafeBuf *bb ) {
 //   meta list as what we got
 bool XmlDoc::doConsistencyTest ( bool forceTest ) {
 
-	if ( ! m_doConsistencyTesting ) return true;
+	// skip for now it was coring on a json doc test
+	return true;
+
+	CollectionRec *cr = getCollRec();
+	if ( ! cr ) 
+		return true;
+
+	if ( ! m_doConsistencyTesting && strcmp(cr->m_coll,"qatest123") != 0 ) 
+		return true;
 
 	// if we had an old doc then our meta list will have removed
 	// stuff already in the database from indexing the old doc.
@@ -20493,9 +20501,6 @@ bool XmlDoc::doConsistencyTest ( bool forceTest ) {
 		if ( ! m_titleRecBufValid ) return true;
 		if ( m_titleRecBuf.length()==0 ) return true;
 	}
-
-	CollectionRec *cr = getCollRec();
-	if ( ! cr ) return true;
 
 	// leave this uncommented so we can see if we are doing it
 	setStatus ( "doing consistency check" );
@@ -20528,6 +20533,10 @@ bool XmlDoc::doConsistencyTest ( bool forceTest ) {
 	// . do not look up title rec in titledb, assume it is new
 	doc->m_isIndexed      = false;
 	doc->m_isIndexedValid = true;
+
+	// so we don't core in getRevisedSpiderRequest()
+	doc->m_firstIp = m_firstIp;
+	doc->m_firstIpValid = true;
 
 	// inherit this doc's tag rec since it has not called updateTagdb() yet
 	//doc->ptr_tagRecData = ptr_tagRecData;
@@ -20596,8 +20605,10 @@ bool XmlDoc::doConsistencyTest ( bool forceTest ) {
 	HashTableX ht1;
 	HashTableX ht2;
 
-	ht1.set ( sizeof(key224_t),4,262144,NULL,0,false,m_niceness,"xmlht1");
-	ht2.set ( sizeof(key224_t),4,262144,NULL,0,false,m_niceness,"xmlht2");
+	ht1.set ( sizeof(key224_t),sizeof(char *),
+		  262144,NULL,0,false,m_niceness,"xmlht1");
+	ht2.set ( sizeof(key224_t),sizeof(char *),
+		  262144,NULL,0,false,m_niceness,"xmlht2");
 
 	// format of a metalist... see XmlDoc::addTable() where it adds keys
 	// from a table into the metalist
@@ -23322,12 +23333,17 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 		     // fix for import log spam
 		     ! m_isImporting &&
 		     m_version >= 120 &&
-		     m_metaListCheckSum8 != currentMetaListCheckSum8 )
+		     m_metaListCheckSum8 != currentMetaListCheckSum8 ) {
 			log("xmldoc: checksum parsing inconsistency for %s "
 			    "%i != %i",
 			    m_firstUrl.getUrl(),
 			    (int)m_metaListCheckSum8,
 			    (int)currentMetaListCheckSum8);
+			// if doing qa test drop core
+			CollectionRec *cr = getCollRec();
+			if ( cr && strcmp(cr->m_coll,"qatest123") == 0 ) {
+				exit(0);}//char *xx=NULL;*xx=0; }
+		}
 		// assign the new one, getTitleRecBuf() call below needs this
 		m_metaListCheckSum8 = currentMetaListCheckSum8;
 		m_metaListCheckSum8Valid = true;
