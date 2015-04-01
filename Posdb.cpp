@@ -4365,6 +4365,9 @@ bool PosdbTable::setQueryTermInfo ( ) {
 		qti->m_qtermNum      = i;
 		// and vice versa
 		qt->m_queryTermInfoNum = nrg;
+		// now we count the total # of docs that have a facet
+		// for doing tf/idf type things
+		//qti->m_numDocsThatHaveFacet = 0;
 		// this is not good enough, we need to count 
 		// non-whitespace punct as 2 units not 1 unit
 		// otherwise qdist gets thrown off and our phrasing fails.
@@ -4963,7 +4966,7 @@ inline bool isInRange2 ( char *recPtr , char *subListEnd, QueryTerm *qt ) {
 // . add a QueryTermInfo for a term (synonym lists,etc) to the docid vote buf
 //   "m_docIdVoteBuf"
 // . this is how we intersect all the docids to end up with the winners
-void PosdbTable::addDocIdVotes ( QueryTermInfo *qti , int32_t   listGroupNum ) {
+void PosdbTable::addDocIdVotes ( QueryTermInfo *qti , int32_t   listGroupNum) {
 
 	// sanity check, we store this in a single byte below for voting
 	if ( listGroupNum >= 256 ) { char *xx=NULL;*xx=0; }
@@ -4994,6 +4997,10 @@ void PosdbTable::addDocIdVotes ( QueryTermInfo *qti , int32_t   listGroupNum ) {
 		isRangeTerm = true;
 	// if ( qt->m_fieldCode == FIELD_GBFIELDMATCH )
 	// 	isRangeTerm = true;
+	bool isFacetTerm = false;
+	if ( qt->m_fieldCode == FIELD_GBFACETSTR ) isFacetTerm = true;
+	if ( qt->m_fieldCode == FIELD_GBFACETINT ) isFacetTerm = true;
+	if ( qt->m_fieldCode == FIELD_GBFACETFLOAT ) isFacetTerm = true;
 
 	// . just scan each sublist vs. the docid list
 	// . a sublist is a termlist for a particular query term, for instance
@@ -5006,7 +5013,7 @@ void PosdbTable::addDocIdVotes ( QueryTermInfo *qti , int32_t   listGroupNum ) {
 	//   the docid vote buf. that is, if the query is "jump car" we
 	//   just add all the docids for "jump" and then intersect with the
 	//   docids for "car".
-	for ( int32_t i = 0 ; i < qti->m_numSubLists && listGroupNum > 0 ; i++ ) {
+	for ( int32_t i = 0 ; i < qti->m_numSubLists && listGroupNum > 0; i++){
 		// get that sublist
 		recPtr     = qti->m_subLists[i]->getList();
 		subListEnd = qti->m_subLists[i]->getListEnd();
@@ -5049,6 +5056,13 @@ void PosdbTable::addDocIdVotes ( QueryTermInfo *qti , int32_t   listGroupNum ) {
 			dp[5] = listGroupNum;
 			// skip it
 			dp += 6;
+
+			// if we are a facet termlist then record the
+			// sheer # of docs that have it.
+			// so just inc by one for this docid even though it
+			// may have multiple keys with this facet.
+			if ( isFacetTerm )
+				qt->m_numDocsThatHaveFacet++;
 			// advance recPtr now
 			break;
 		}
@@ -5121,7 +5135,7 @@ void PosdbTable::addDocIdVotes ( QueryTermInfo *qti , int32_t   listGroupNum ) {
 	for ( int32_t i = 0 ; i < qti->m_numSubLists ; i++ ) {
 		// skip if exhausted
 		if ( ! cursor[i] ) continue;
-		// int16_tcut
+		// shortcut
 		recPtr = cursor[i];
 		// get the min docid
 		if ( ! minRecPtr ) {
@@ -5218,6 +5232,14 @@ void PosdbTable::addDocIdVotes ( QueryTermInfo *qti , int32_t   listGroupNum ) {
 		
 	if ( isRangeTerm && ! inRange )
 		goto getMin;
+
+	// if the facet term is the first termlist...
+	// if we are a facet termlist then record the
+	// sheer # of docs that have it.
+	// so just inc by one for this docid even though it
+	// may have multiple keys with this facet.
+	if ( isFacetTerm )
+		qt->m_numDocsThatHaveFacet++;
 
 	// only update this if we add the docid... that way there can be
 	// a winning "inRange" term in another sublist and the docid will

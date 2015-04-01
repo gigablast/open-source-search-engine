@@ -144,6 +144,7 @@ bool Msg3a::getDocIds ( Msg39Request *r          ,
 	reset();
 	// remember ALL the stuff
 	m_r        = r;
+	// this should be &SearchInput::m_q
 	m_q        = q;
 	m_callback = callback;
 	m_state    = state;
@@ -762,6 +763,16 @@ bool Msg3a::gotAllShardReplies ( ) {
 		//   of posdb...
 		m_numTotalEstimatedHits += mr->m_estimatedHits;
 
+		// accumulate total facet count from all shards for each term
+		int64_t *facetCounts;
+		facetCounts = (int64_t*)mr->ptr_numDocsThatHaveFacetList;
+		for ( int32_t k = 0 ; k < mr->m_nqt ;  k++ ) {
+			QueryTerm *qt = &m_q->m_qterms[k];
+			// sanity. this should never happen.
+			if ( i >= m_q->m_numTerms ) break;
+			qt->m_numDocsThatHaveFacet += facetCounts[k];
+		}
+
 		// debug log stuff
 		if ( ! m_debug ) continue;
 		// cast these for printing out
@@ -772,7 +783,8 @@ bool Msg3a::gotAllShardReplies ( ) {
 			// print out score_t
 			logf( LOG_DEBUG,
 			     "query: msg3a: [%"PTRFMT"] %03"INT32") "
-			     "shard=%"INT32" docId=%012"UINT64" domHash=0x%02"XINT32" "
+			     "shard=%"INT32" docId=%012"UINT64" "
+			      "domHash=0x%02"XINT32" "
 			     "score=%f"                     ,
 			     (PTRTYPE)this                      ,
 			     j                                        , 

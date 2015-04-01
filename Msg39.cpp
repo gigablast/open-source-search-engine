@@ -1452,6 +1452,9 @@ void Msg39::estimateHitsAndSendReply ( ) {
 			need += 4;
 			// then buckets. keys and counts
 			need += (4+sizeof(FacetEntry)) * used;
+			// for # of ALL docs that have this facet, even if
+			// not in search results
+			need += sizeof(int64_t);
 		}
 		// allocate
 		SafeBuf tmp;
@@ -1523,6 +1526,12 @@ void Msg39::estimateHitsAndSendReply ( ) {
 		//
 		/////////////
 
+		// how many docs IN TOTAL had the facet, including all docs
+		// that did not match the query.
+		// it's 1-1 with the query terms.
+		mr.ptr_numDocsThatHaveFacetList  = NULL;
+		mr.size_numDocsThatHaveFacetList = nqt * sizeof(int64_t);
+
 
 		// . that is pretty much it,so serialize it into buffer,"reply"
 		// . mr.ptr_docIds, etc., will point into the buffer so we can
@@ -1548,6 +1557,44 @@ void Msg39::estimateHitsAndSendReply ( ) {
 		topDocIds    = (int64_t *) mr.ptr_docIds;
 		topScores    = (double    *) mr.ptr_scores;
 		topRecs      = (key_t     *) mr.ptr_clusterRecs;
+
+		// sanity
+		if ( nqt != m_msg2.m_numLists )
+			log("query: nqt mismatch for q=%s",m_tmpq.m_orig);
+		int64_t *facetCounts=(int64_t*)mr.ptr_numDocsThatHaveFacetList;
+		for ( int32_t i = 0 ; i < nqt ; i++ ) {
+			QueryTerm *qt = &m_tmpq.m_qterms[i];
+			// default is 0 for non-facet termlists
+			facetCounts[i] = qt->m_numDocsThatHaveFacet;
+		}
+		/*
+		  MDW - no, because some docs have the same facet field
+		  multiple times and we want a doc count. so do it in Posdb.cpp
+		// fill these in now too
+		int64_t *facetCounts=(int64_t*)mr.ptr_numDocsThatHaveFacetList;
+		for ( int32_t i = 0 ; i < nqt ; i++ ) {
+			// default is 0 for non-facet termlists
+			facetCounts[i] = 0;
+			QueryTerm *qt = &m_tmpq.m_qterms[i];
+			// skip if not facet term
+			bool isFacetTerm = false;
+			if ( qt->m_fieldCode == FIELD_GBFACETSTR )
+				isFacetTerm = true;
+			if ( qt->m_fieldCode == FIELD_GBFACETINT )
+				isFacetTerm = true;
+			if ( qt->m_fieldCode == FIELD_GBFACETFLOAT )
+				isFacetTerm = true;
+			if ( ! isFacetTerm )
+				continue;
+			RdbList *list = &m_lists[i];
+			// they should be all 12 bytes except first rec which
+			// is 18 bytes.
+			int64_t count = list->m_listSize;
+			count -= 6;
+			count /= 12;
+			facetCounts[i] = count;
+		}
+		*/	
 	}
 
 	int32_t docCount = 0;

@@ -980,7 +980,8 @@ bool qainject2 ( ) {
 	if ( ! s_flags[33] ) {
 		s_flags[33] = true;
 		if ( ! getUrl ( "/search?c=qatest123&qa=1&format=xml&q="
-				"url2%3Axyz.com%2F-13737921970569011262&xml=1"
+				"gbssUrl%3Axyz.com%2F-13737921970569011262&"
+				"xml=1"
 				,-1405546537 ) )
 			return false;
 	}
@@ -1935,8 +1936,8 @@ bool qaspider1 ( ) {
 	if ( ! s_flags[17] ) {
 		s_flags[17] = true;
 		if ( ! getUrl ( "/search?c=qatest123&qa=1&format=xml&"
-				"q=site2%3Awww.walmart.com+"
-				"gbsortby%3Agbspiderdate",
+				"q=gbssSubdomain%3Awww.walmart.com+"
+				"gbsortbyint%3AgbssDownloadStartTime",
 				999 ) )
 			return false;
 	}
@@ -2450,7 +2451,7 @@ bool qajson ( ) {
 	if ( ! s_flags[12] ) {
 		s_flags[12] = true;
 		if ( ! getUrl ( "/search?c=qatest123&qa=1&format=json&"
-				"q=inurl2%3Aquirksmode.org%2Fm%2F",
+				"q=gbssUrl%3Aquirksmode.org%2Fm%2F",
 				-1310551262 ) )
 			return false;
 	}

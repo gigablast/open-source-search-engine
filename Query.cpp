@@ -5430,6 +5430,7 @@ void QueryTerm::constructor ( ) {
 	m_facetIndexBuf.constructor(); // safebuf
 	m_langIdBits = 0;
 	m_langIdBitsValid = false;
+	m_numDocsThatHaveFacet = 0;
 }
 
 bool QueryTerm::isSplit() {

@@ -6475,9 +6475,12 @@ bool Msg40::printFacetsForTable ( SafeBuf *sb , QueryTerm *qt ) {
 		if ( format == FORMAT_XML ) {
 			sb->safePrintf("\t<facet>\n"
 				       "\t\t<field>%s</field>\n"
-				       "\t\t<value>"
-				       , term
-				       );
+				       , term );
+			sb->safePrintf("\t\t<totalDocsWithField>%"INT64""
+				       "</totalDocsWithField>\n"
+				       , qt->m_numDocsThatHaveFacet );
+			sb->safePrintf("\t\t<value>");
+
 			if ( isString )
 				sb->safePrintf("<![CDATA[%"UINT32",",
 					       (uint32_t)*fvh);
@@ -6577,9 +6580,12 @@ bool Msg40::printFacetsForTable ( SafeBuf *sb , QueryTerm *qt ) {
 		if ( format == FORMAT_JSON ) {
 			sb->safePrintf("{\n"
 				       "\t\"field\":\"%s\",\n"
-				       "\t\"value\":\""
-				       , term
+				       , term 
 				       );
+			sb->safePrintf("\t\"totalDocsWithField\":%"INT64""
+				       ",\n", qt->m_numDocsThatHaveFacet );
+			sb->safePrintf("\t\"value\":\"");
+
 			if (  isString )
 				sb->safePrintf("%"UINT32","
 					       , (uint32_t)*fvh);

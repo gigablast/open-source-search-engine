@@ -560,6 +560,7 @@ class QueryTerm {
 	int64_t m_hash64d;
 	int32_t      m_popWeight;
 
+	uint64_t m_numDocsThatHaveFacet;
 };
 
 //#define MAX_OPSLOTS 256
