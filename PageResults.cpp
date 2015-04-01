@@ -42,7 +42,7 @@ bool replaceParm2 ( char *cgi , SafeBuf *newUrl ,
 		    char *oldUrl , int32_t oldUrlLen ) ;
 
 
-bool printCSVHeaderRow ( SafeBuf *sb , State0 *st ) ;
+bool printCSVHeaderRow ( SafeBuf *sb , State0 *st , int32_t ct ) ;
 
 bool printJsonItemInCSV ( char *json , SafeBuf *sb , class State0 *st ) ;
 
@@ -3917,13 +3917,14 @@ bool printResult ( State0 *st, int32_t ix , int32_t *numPrintedSoFar ) {
 	// ptr_content is set in the msg20reply.
 	if ( si->m_format == FORMAT_CSV &&
 	     mr->ptr_content &&
-	     mr->m_contentType == CT_JSON ) {
+	     // spider STATUS docs are json
+	     (mr->m_contentType == CT_JSON || mr->m_contentType == CT_STATUS)){
 		// parse it up
 		char *json = mr->ptr_content;
 		// only print header row once, so pass in that flag
 		if ( ! st->m_printedHeaderRow ) {
 			sb->reset();
-			printCSVHeaderRow ( sb , st );
+			printCSVHeaderRow ( sb , st , mr->m_contentType );
 			st->m_printedHeaderRow = true;
 		}
 		printJsonItemInCSV ( json , sb , st );
@@ -7905,6 +7906,18 @@ int csvPtrCmp ( const void *a, const void *b ) {
 	if ( strcmp(pb,"product.title") == 0 ) return  1;
 	if ( strcmp(pa,"title") == 0 ) return -1;
 	if ( strcmp(pb,"title") == 0 ) return  1;
+
+	// put url first for spider status docs
+	if ( strcmp(pa,"gbssUrl") == 0 ) return -1;
+	if ( strcmp(pb,"gbssUrl") == 0 ) return  1;
+
+	if ( strcmp(pa,"gbssStatusMsg") == 0 ) return -1;
+	if ( strcmp(pb,"gbssStatusMsg") == 0 ) return  1;
+
+	if ( strcmp(pa,"gbssStatusCode") == 0 ) return -1;
+	if ( strcmp(pb,"gbssStatusCode") == 0 ) return  1;
+
+
 	// otherwise string compare
 	int val = strcmp(pa,pb);
 	return val;
@@ -7916,7 +7929,7 @@ int csvPtrCmp ( const void *a, const void *b ) {
 // 
 // print header row in csv
 //
-bool printCSVHeaderRow ( SafeBuf *sb , State0 *st ) {
+bool printCSVHeaderRow ( SafeBuf *sb , State0 *st , int32_t ct ) {
 
 	Msg40 *msg40 = &st->m_msg40;
  	int32_t numResults = msg40->getNumResults();
@@ -7984,6 +7997,13 @@ bool printCSVHeaderRow ( SafeBuf *sb , State0 *st ) {
 			     strcmp(ji->m_name,"html")==0)
 				continue;
 
+			// for spider status docs skip these
+			if ( ct == CT_STATUS && ji->m_name ) {
+				if (!strcmp(ji->m_name,"") )
+					continue;
+			}
+
+
 			// reset length of buf to 0
 			tmpBuf.reset();
 
@@ -8010,6 +8030,55 @@ bool printCSVHeaderRow ( SafeBuf *sb , State0 *st ) {
 				return false;
 		}
 	}
+
+	// if doing spider status docs not all will have dupofdocid field
+	char *supps [] = { 
+		"gbssFinalRedirectUrl",
+		"gbssHttpStatus",
+		"gbssWasIndexed",
+		"gbssAgeInIndex",
+		"gbssDupOfDocId" ,
+		"gbssPrevTotalNumIndexAttempts",
+		"gbssPrevTotalNumIndexSuccesses",
+		"gbssPrevTotalNumIndexFailures",
+		"gbssDownloadStartTime",
+		"gbssDownloadEndTime",
+		"gbssDownloadStartTimeMS",
+		"gbssDownloadEndTimeMS",
+		"gbssDownloadDurationMS",
+		"gbssIp",
+		"gbssIpLookupTimeMS",
+		"gbssSiteNumInlinks",
+		"gbssSiteRank",
+		"gbssPercentContentChanged",
+		"gbssLanguage",
+		"gbssContentType",
+		"gbssContentLen",
+		"gbssCrawlDelayMS",
+		"gbssDiffbotReplyCode",
+		"gbssDiffbotReplyMsg",
+		"gbssDiffbotLen",
+		"gbssDiffbotReplyResponseTimeMS",
+		"gbssDiffbotReplyRetries",
+		NULL };
+
+	CollectionRec *cr = g_collectiondb.getRec ( st->m_collnum );
+	for ( int32_t i = 0 ; supps[i] ; i++ ) {
+		int64_t h64 = hash64n ( supps[i] );
+		if ( nameTable.isInTable ( &h64 ) ) continue;
+		// only show diffbot column headers for custom (diffbot) crawls
+		if ( strncmp(supps[i],"gbssDiffbot",11) == 0 &&
+		     ( ! cr || ! cr->m_isCustomCrawl ) )
+			break;
+		// record offset of the name for our hash table
+		int32_t nameBufOffset = nameBuf.length();
+		// store the name in our name buffer
+		if ( ! nameBuf.safeStrcpy (supps[i])) return false;
+		if ( ! nameBuf.pushChar ( '\0' ) ) return false;
+		// it's new. add it
+		if ( ! nameTable.addKey ( &h64 ,&nameBufOffset)) return false;
+	}
+	
 
 	// . make array of ptrs to the names so we can sort them
 	// . try to always put title first regardless
@@ -9131,6 +9200,12 @@ bool printSearchFiltersBar ( SafeBuf *sb , HttpRequest *hr ) {
 		s_mi[n].m_menuNum  = 5;
 		s_mi[n].m_title    = "Output JSON";
 		s_mi[n].m_cgi      = "format=json";
+		s_mi[n].m_icon     = NULL;
+		n++;
+
+		s_mi[n].m_menuNum  = 5;
+		s_mi[n].m_title    = "Output CSV";
+		s_mi[n].m_cgi      = "format=csv";
 		s_mi[n].m_icon     = NULL;
 		n++;
 
