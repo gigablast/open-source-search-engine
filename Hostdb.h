@@ -115,7 +115,7 @@ class PingInfo {
 	char m_gbVersionStr[21];
 	char m_repairMode;
 	char m_kernelErrors;
-	
+	uint8_t m_recoveryLevel;
 };
 
 class Host {

@@ -521,9 +521,18 @@ skipReplaceHost:
 		}
 
 		// recovery mode? reocvered from coring?
-		if ((flags & PFLAG_RECOVERYMODE)&& format == FORMAT_HTML )
+		if ((flags & PFLAG_RECOVERYMODE)&& format == FORMAT_HTML ) {
 			fb.safePrintf("<b title=\"Recovered from core"
 				      "\">x</b>");
+			// this is only 8-bits at the moment so it's capped
+			// at 255. this level is 1 the first time we core
+			// and are restarted.
+			if ( h->m_pingInfo.m_recoveryLevel > 1 )
+			fb.safePrintf("<sup>%"INT32"</sup>",
+				      (int32_t)
+				      h->m_pingInfo.m_recoveryLevel);
+		}
+
 		if ((flags & PFLAG_RECOVERYMODE)&& format != FORMAT_HTML )
 			fb.safePrintf("Recovered from core");
 
@@ -1463,7 +1472,8 @@ skipReplaceHost:
 		  "<td>x (status flag)</td>"
 		  "<td>Indicates host has abruptly exited due to a fatal "
 		  "error (cored) and "
-		  "restarted itself."
+		  "restarted itself. The exponent is how many times it has "
+		  "done this. If no exponent, it only did it once."
 		  "</td>"
 		  "</tr>\n"
 

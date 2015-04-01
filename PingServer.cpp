@@ -28,6 +28,7 @@ int32_t klogctl( int, char *,int ) { return 0; }
 
 // from main.cpp. when keepalive script restarts us this is true
 extern bool g_recoveryMode;
+extern int32_t g_recoveryLevel;
 
 // a global class extern'd in .h file
 PingServer g_pingServer;
@@ -490,6 +491,10 @@ void PingServer::pingHost ( Host *h , uint32_t ip , uint16_t port ) {
 	if ( g_dailyMerge.m_mergeMode ==0 || g_dailyMerge.m_mergeMode == 6 )
 		flags |= PFLAG_MERGEMODE0OR6;
 	if ( ! isClockInSync() ) flags |= PFLAG_OUTOFSYNC;
+
+	uint8_t rv8 = (uint8_t)g_recoveryLevel;
+	if ( g_recoveryLevel > 255 ) rv8 = 255;
+	pi->m_recoveryLevel = rv8;
 
 	//*(int32_t *)p = flags; p += 4; // 4 bytes
 	pi->m_flags = flags;
