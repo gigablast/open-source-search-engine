@@ -4974,6 +4974,9 @@ bool printResult ( State0 *st, int32_t ix , int32_t *numPrintedSoFar ) {
 		// . docId for possible cached link
 		// . might have merged a bunch together
 		sb->safePrintf("\t\t<docId>%"INT64"</docId>\n",mr->m_docId );
+	}
+
+	if ( si->m_format == FORMAT_XML && mr->m_contentType != CT_STATUS ) {
 		// . show the site root
 		// . for hompages.com/users/fred/mypage.html this will be
 		//   homepages.com/users/fred/
@@ -5021,6 +5024,9 @@ bool printResult ( State0 *st, int32_t ix , int32_t *numPrintedSoFar ) {
 		// . docId for possible cached link
 		// . might have merged a bunch together
 		sb->safePrintf("\t\t\"docId\":%"INT64",\n",mr->m_docId );
+	}
+
+	if ( si->m_format == FORMAT_JSON && mr->m_contentType != CT_STATUS ) {
 		// . show the site root
 		// . for hompages.com/users/fred/mypage.html this will be
 		//   homepages.com/users/fred/

@@ -184,6 +184,7 @@ void processReply ( char *reply , int32_t replyLen ) {
 	markOut ( content , "spider is done (");
 	markOut ( content , "spider is paused (");
 	markOut ( content , "spider queue empty (");
+	markOut ( content , "spider is active (");
 
 	markOut ( content , "<totalShards>");
 
@@ -201,11 +202,12 @@ void processReply ( char *reply , int32_t replyLen ) {
 	markOut ( content , "\"responseTimeMS\":");
 	markOut ( content , "\"docsInCollection\":");
 
-	markOut ( content , "\"gbssDownloadStartTime\":");
-	markOut ( content , "\"gbssDownloadEndTime\":");
-	markOut ( content , "\"gbssDownloadStartTimeMS\":");
-	markOut ( content , "\"gbssDownloadEndTimeMS\":");
-	markOut ( content , "\"gbssDownloadDurationMS\":");
+	markOut ( content , "\\\"gbssDownloadStartTime\\\":");
+	markOut ( content , "\\\"gbssDownloadEndTime\\\":");
+	markOut ( content , "\\\"gbssDownloadStartTimeMS\\\":");
+	markOut ( content , "\\\"gbssDownloadEndTimeMS\\\":");
+	markOut ( content , "\\\"gbssDownloadDurationMS\\\":");
+	markOut ( content , "\\\"gbssAgeInIndex\\\":");
 
 	// for xml
 	markOut ( content , "<currentTimeUTC>" );
