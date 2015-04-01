@@ -1167,10 +1167,12 @@ bool gotResults ( void *state ) {
 			log("res: socket still in streaming mode. wtf?");
 			st->m_socket->m_streamingMode = false;
 		}
-		log("msg40: done streaming. nuking state=%"PTRFMT" q=%s. "
+		log("msg40: done streaming. nuking state=0x%"PTRFMT" "
+		    "msg40=0x%"PTRFMT" q=%s. "
 		    "msg20sin=%i msg20sout=%i sendsin=%i sendsout=%i "
 		    "numrequests=%i numreplies=%i "
 		    ,(PTRTYPE)st
+		    ,(PTRTYPE)msg40
 		    ,si->m_q.m_orig
 
 		    , msg40->m_numMsg20sIn

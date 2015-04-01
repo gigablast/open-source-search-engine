@@ -108,6 +108,7 @@ Msg40::Msg40() {
 	m_omitCount      = 0;
 	m_printCount = 0;
 	//m_numGigabitInfos = 0;
+	m_numCollsToSearch = 0;
 }
 
 #define MAX2 50
@@ -2116,7 +2117,8 @@ bool Msg40::gotSummary ( ) {
 	//   socket but rather calls doneSendingWrapper() which can call
 	//   this function again to send another chunk
 	// . when we are truly done sending all the data, then we set lastChunk
-	//   to true and TcpServer.cpp will destroy m_socket when done
+	//   to true and TcpServer.cpp will destroy m_socket when done.
+	//   no, actually we just set m_streamingMode to false i guess above
 	if ( sb->length() &&
 	     // did client browser close the socket on us midstream?
 	     ! m_socketHadError &&
