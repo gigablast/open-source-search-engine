@@ -202,12 +202,22 @@ void processReply ( char *reply , int32_t replyLen ) {
 	markOut ( content , "\"responseTimeMS\":");
 	markOut ( content , "\"docsInCollection\":");
 
+	// if the results are in json, then status doc is encoded json
 	markOut ( content , "\\\"gbssDownloadStartTime\\\":");
 	markOut ( content , "\\\"gbssDownloadEndTime\\\":");
 	markOut ( content , "\\\"gbssDownloadStartTimeMS\\\":");
 	markOut ( content , "\\\"gbssDownloadEndTimeMS\\\":");
 	markOut ( content , "\\\"gbssDownloadDurationMS\\\":");
 	markOut ( content , "\\\"gbssAgeInIndex\\\":");
+
+	// if the results are in xml, then the status doc is xml encoded
+	markOut ( content , "\"gbssDownloadStartTime\":");
+	markOut ( content , "\"gbssDownloadEndTime\":");
+	markOut ( content , "\"gbssDownloadStartTimeMS\":");
+	markOut ( content , "\"gbssDownloadEndTimeMS\":");
+	markOut ( content , "\"gbssDownloadDurationMS\":");
+	markOut ( content , "\"gbssAgeInIndex\":");
+
 
 	// for xml
 	markOut ( content , "<currentTimeUTC>" );
