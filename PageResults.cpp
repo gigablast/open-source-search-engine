@@ -1183,6 +1183,15 @@ bool gotResults ( void *state ) {
 		    , msg40->m_numReplies
 
 		    );
+
+		// for some reason the socket still exists and will time out
+		//g_tcpServer.destroySocket ( st->m_socket );
+
+		// just let tcpserver nuke it, but don't double call
+		// the callback, doneSendingWrapper9()... because msg40
+		// will have been deleted!
+		st->m_socket->m_callback = NULL;
+
 		mdelete(st, sizeof(State0), "PageResults2");
 		delete st;
 		return true;
