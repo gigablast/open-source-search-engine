@@ -1069,6 +1069,8 @@ void UdpServer::process_ass ( int64_t now , int32_t maxNiceness) {
 	// bail if no main sock
 	if ( m_sock < 0 ) return ;
 
+	//log("process_ass");
+
 	// if we call this while in the sighandler it crashes since
 	// gettimeofdayInMillisecondsLocal() is not async safe
 	int64_t startTimer;
@@ -1108,6 +1110,7 @@ void UdpServer::process_ass ( int64_t now , int32_t maxNiceness) {
 	// if we read something, try for more
 	if ( something ) { 
 		//if ( slot->m_errno || slot->isTransactionComplete())
+		//log("got something");
 		needCallback = true; 
 		goto loop; 
 	}
@@ -1131,6 +1134,8 @@ void UdpServer::process_ass ( int64_t now , int32_t maxNiceness) {
 	if ( makeCallbacks_ass ( /*niceness level*/ 0 ) ) {
 		// set flag to call low priority callbacks 
 		m_needBottom = true;
+		// note it
+		//log("made callback");
 		// but not now, only when we don't call any high priorities
 		goto bigloop;
 	}
@@ -1140,17 +1145,19 @@ void UdpServer::process_ass ( int64_t now , int32_t maxNiceness) {
 	// gettimeofdayInMillisecondsLocal() is not async safe
 	int64_t elapsed = 0;
 	if ( ! g_inSigHandler )
-		elapsed = gettimeofdayInMillisecondsLocal() - startTimer;
+	 	elapsed = gettimeofdayInMillisecondsLocal() - startTimer;
 	if(elapsed < 10) {
 		// we did not call any, so resort to nice callbacks
-		makeCallbacks_ass ( /*niceness level*/ 1 ) ;
+		// . only go to bigloop if we called a callback
+		if ( makeCallbacks_ass ( /*niceness level*/ 1 ) )
+			goto bigloop;
 		// no longer need to be called
 		// if we did anything loop back up
 		// . but only if we haven't been looping forever,
 		// . if so we need to relinquish control to loop.
 		// 		log(LOG_WARN, "udp: give back control. after %"INT64"", 
 		// 		    elapsed);
-		goto bigloop;	
+		//goto bigloop;	
 	}
 	else {
 		m_needBottom = true;
@@ -1239,12 +1246,19 @@ int32_t UdpServer::readSock_ass ( UdpSlot **slotPtr , int64_t now ) {
 		log("loop: readsock_ass: peekSize=%i m_sock/fd=%i",
 		    peekSize,m_sock);
 
+	//static int s_ss = 0;
+
 	// cancel silly g_errnos and return 0 since we blocked
 	if ( peekSize < 0 ) {
 		g_errno = errno;
 		if ( flipped ) interruptsOn();
-		if ( g_errno == EAGAIN || g_errno == 0 ) { g_errno = 0; return 0; }
-		if ( g_errno == EILSEQ ) { g_errno = 0; return 0; }
+		if ( g_errno == EAGAIN || g_errno == 0 ) { 
+			// if ( s_ss++ == 100 ) {
+			// 	log("foo");char *xx=NULL;*xx=0; }
+			// log("udp: EAGAIN");
+			g_errno = 0; return 0; }
+		if ( g_errno == EILSEQ ) { 
+			g_errno = 0; return 0; }
 		// Interrupted system call (4) (from valgrind)
 #ifdef _VALGRIND_
 		if ( g_errno == 4 ) { g_errno = 0; return 0;}
@@ -1709,7 +1723,7 @@ int32_t UdpServer::readSock_ass ( UdpSlot **slotPtr , int64_t now ) {
 	     // must not be in there already, lest we double add it
 	     ! isInCallbackLinkedList ( slot ) ) {
 		// debug log
-		if ( slot->m_errno )
+		if ( slot->m_errno && g_conf.m_logDebugUdp )
 			log("udp: adding slot with err = %s to callback list"
 			    , mstrerror(slot->m_errno) );
 		if ( g_conf.m_logDebugUdp )
@@ -1742,6 +1756,7 @@ int32_t UdpServer::readSock_ass ( UdpSlot **slotPtr , int64_t now ) {
 	// discard if we should
 	if ( discard ) {
 	       readSize=recvfrom(m_sock,tmpbuf,DGRAM_SIZE_CEILING,0,NULL,NULL);
+	       //log("udp: recvfrom3 = %i",(int)readSize);
 	}
 	// . update stats, just put them all in g_udpServer
 	// . do not count acks
@@ -1925,9 +1940,9 @@ void UdpServer::resume ( ) {
 bool UdpServer::makeCallbacks_ass ( int32_t niceness ) {
 
 	// if nothing to call, forget it
-	if ( ! m_head3 ) return true;
+	if ( ! m_head3 ) return false;
 
- 	if ( g_conf.m_logDebugUdp )
+ 	//if ( g_conf.m_logDebugUdp )
 		log(LOG_DEBUG,"udp: makeCallbacks_ass: start. nice=%"INT32" "
 		    "inquickpoll=%"INT32"",
 		    niceness,(int32_t)g_loop.m_inQuickPoll);
@@ -2443,7 +2458,9 @@ bool UdpServer::makeCallback_ass ( UdpSlot *slot ) {
 		// . if transaction has not fully completed, keep sending
 		// . unless there was an error
 		if ( ! g_errno && ! slot->isTransactionComplete()) {
-			log("udp: why calling handler when not ready?");
+			if ( g_conf.m_logDebugUdp )
+				log("udp: why calling handler "
+				    "when not ready?");
 			return false;
 		}
 		// we should not destroy the slot here on ENOMEM error,

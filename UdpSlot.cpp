@@ -1572,6 +1572,7 @@ bool UdpSlot::readDatagramOrAck ( int        sock    ,
 					 0      ,
 					 NULL   ,
 					 NULL   );
+		//log("udp: recvfrom1 = %i",(int)numRead);
 		// let caller know how much we read for stats purposes
 		*readSize = numRead;
 		// restore what was at the header before we stored it there
@@ -1614,6 +1615,7 @@ bool UdpSlot::readDatagramOrAck ( int        sock    ,
 				   0             , 
 				   NULL          , 
 				   NULL          );
+	//log("udp: recvfrom2 = %i",(int)dgramSize);
 	// bail on error, how could this happen?
 	if ( dgramSize < 0 ) {
 		// valgrind

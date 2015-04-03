@@ -358,7 +358,7 @@ void printUdpTable ( SafeBuf *p, char *title, UdpServer *server ,
 			"<center>"
 			//"<font size=+1>"
 			"<b>%s</b> (%"INT32" transactions)"
-			"(%"INT32" replies ready)"
+			"(%"INT32" reads ready)"
 			//"</font>"
 			"</td></tr>"
 			"<tr bgcolor=#%s>"
