@@ -426,8 +426,8 @@ class UdpSlot {
 	class UdpSlot *m_next2;
 	class UdpSlot *m_prev2;
 	// and for doubly linked list of callback candidates
- 	//class UdpSlot *m_next3;
-	//class UdpSlot *m_prev3;
+ 	class UdpSlot *m_next3;
+	class UdpSlot *m_prev3;
 	// store the key so when returning slot we can remove from hash table
 	key_t m_key;
 

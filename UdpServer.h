@@ -282,6 +282,10 @@ class UdpServer {
 
 	UdpSlot *getActiveHead ( ) { return m_head2; };
 
+	// callback linked list functions (m_head3)
+	bool isInCallbackLinkedList ( UdpSlot *slot );
+	void removeFromCallbackLinkedList ( UdpSlot *slot ) ;
+
 	// cancel a transaction
 	void cancel ( void *state , unsigned char msgType ) ;
 
@@ -434,7 +438,8 @@ class UdpServer {
 	UdpSlot        *m_head2;
 	UdpSlot        *m_tail2;
 	// linked list of callback candidates
-	//UdpSlot        *m_head3;
+	UdpSlot        *m_head3;
+	UdpSlot        *m_tail3;
 
 	int32_t            m_numUsedSlots;
 
