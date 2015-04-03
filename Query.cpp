@@ -4321,6 +4321,16 @@ struct QueryField g_fields[] = {
 	 NULL,
 	 0},
 
+	{"gbssIsDiffbotObject",
+	 FIELD_GENERIC,
+	 false,
+	 "gbssIsDiffbotObject:1",
+	 "This field is only present if the document was an object from "
+	 "a diffbot reply. Use gbssIsDiffbotObject:0 to find the non-diffbot "
+	 "objects.",
+	 NULL,
+	 0},
+
 	{"gbssAgeInIndex",
 	 FIELD_GENERIC,
 	 false,
