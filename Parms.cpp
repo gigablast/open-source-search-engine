@@ -22593,7 +22593,7 @@ bool printUrlExpressionExamples ( SafeBuf *sb ) {
 			  "</td></tr>"
 
 
-			  "<tr class=poo><td>pagenuminlinks&gt;20</td>"
+			  "<tr class=poo><td>numinlinks&gt;20</td>"
 			  "<td>"
 			  "How many inlinks does the URL itself have? "
 			  "We only count one link per unique C-Class IP "
