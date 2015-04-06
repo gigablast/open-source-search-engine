@@ -769,7 +769,7 @@ bool Msg3a::gotAllShardReplies ( ) {
 		for ( int32_t k = 0 ; k < mr->m_nqt ;  k++ ) {
 			QueryTerm *qt = &m_q->m_qterms[k];
 			// sanity. this should never happen.
-			if ( i >= m_q->m_numTerms ) break;
+			if ( k >= m_q->m_numTerms ) break;
 			qt->m_numDocsThatHaveFacet += facetCounts[k];
 		}
 
