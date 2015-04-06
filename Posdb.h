@@ -711,6 +711,8 @@ class PosdbTable {
 
 	void shrinkSubLists ( class QueryTermInfo *qti );
 
+	int64_t countUniqueDocids( QueryTermInfo *qti ) ;
+
 	// for intersecting docids
 	void addDocIdVotes ( class QueryTermInfo *qti , int32_t listGroupNum );
 

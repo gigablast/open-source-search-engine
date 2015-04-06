@@ -398,6 +398,8 @@ class QueryTerm {
 
  public:
 
+	//QueryTerm ( ) { constructor(); };
+
 	void constructor ( ) ;
 
 	// the query word we were derived from

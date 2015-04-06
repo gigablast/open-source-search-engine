@@ -4963,6 +4963,24 @@ inline bool isInRange2 ( char *recPtr , char *subListEnd, QueryTerm *qt ) {
 	return false;
 }
 
+// for a facet
+int64_t PosdbTable::countUniqueDocids( QueryTermInfo *qti ) {
+	// get that sublist. facets should only have one sublist since
+	// they have no synonyms.
+	register char *recPtr     = qti->m_subLists[0]->getList();
+	register char *subListEnd = qti->m_subLists[0]->getListEnd();
+	int64_t count = 0;
+ loop:
+	if ( recPtr >= subListEnd ) return count;
+	// skip that docid record in our termlist. it MUST have been
+	// 12 bytes, a docid heading record.
+	recPtr += 12;
+	// skip any following keys that are 6 bytes, that means they
+	// share the same docid
+	for ( ; recPtr < subListEnd && ((*recPtr)&0x04); recPtr += 6 );
+	goto loop;
+}
+
 // . add a QueryTermInfo for a term (synonym lists,etc) to the docid vote buf
 //   "m_docIdVoteBuf"
 // . this is how we intersect all the docids to end up with the winners
@@ -4997,10 +5015,6 @@ void PosdbTable::addDocIdVotes ( QueryTermInfo *qti , int32_t   listGroupNum) {
 		isRangeTerm = true;
 	// if ( qt->m_fieldCode == FIELD_GBFIELDMATCH )
 	// 	isRangeTerm = true;
-	bool isFacetTerm = false;
-	if ( qt->m_fieldCode == FIELD_GBFACETSTR ) isFacetTerm = true;
-	if ( qt->m_fieldCode == FIELD_GBFACETINT ) isFacetTerm = true;
-	if ( qt->m_fieldCode == FIELD_GBFACETFLOAT ) isFacetTerm = true;
 
 	// . just scan each sublist vs. the docid list
 	// . a sublist is a termlist for a particular query term, for instance
@@ -5057,12 +5071,6 @@ void PosdbTable::addDocIdVotes ( QueryTermInfo *qti , int32_t   listGroupNum) {
 			// skip it
 			dp += 6;
 
-			// if we are a facet termlist then record the
-			// sheer # of docs that have it.
-			// so just inc by one for this docid even though it
-			// may have multiple keys with this facet.
-			if ( isFacetTerm )
-				qt->m_numDocsThatHaveFacet++;
 			// advance recPtr now
 			break;
 		}
@@ -5232,14 +5240,6 @@ void PosdbTable::addDocIdVotes ( QueryTermInfo *qti , int32_t   listGroupNum) {
 		
 	if ( isRangeTerm && ! inRange )
 		goto getMin;
-
-	// if the facet term is the first termlist...
-	// if we are a facet termlist then record the
-	// sheer # of docs that have it.
-	// so just inc by one for this docid even though it
-	// may have multiple keys with this facet.
-	if ( isFacetTerm )
-		qt->m_numDocsThatHaveFacet++;
 
 	// only update this if we add the docid... that way there can be
 	// a winning "inRange" term in another sublist and the docid will
@@ -5773,6 +5773,16 @@ void PosdbTable::intersectLists10_r ( ) {
 		listGroupNum++;
 		// add it
 		addDocIdVotes ( qti , listGroupNum );
+		// if the query term is for a facet then count how many
+		// unique docids are in it. we were trying to do this in 
+		// addDocIdVotes() but it wasn't in the right place i guess.
+		QueryTerm *qt = qti->m_qt;
+		bool isFacetTerm = false;
+		if ( qt->m_fieldCode == FIELD_GBFACETSTR ) isFacetTerm = true;
+		if ( qt->m_fieldCode == FIELD_GBFACETINT ) isFacetTerm = true;
+		if ( qt->m_fieldCode == FIELD_GBFACETFLOAT ) isFacetTerm =true;
+		if ( ! isFacetTerm ) continue;
+		qt->m_numDocsThatHaveFacet = countUniqueDocids ( qti );
 	}
 
 
