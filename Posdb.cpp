@@ -5651,6 +5651,23 @@ void PosdbTable::intersectLists10_r ( ) {
 	//if ( s_special == 2836 )
 	//	log("hey");
 
+	// point to our array of query term infos set in setQueryTermInfos()
+	QueryTermInfo *qip = (QueryTermInfo *)m_qiBuf.getBufStart();
+
+	// if a query term is for a facet (ie gbfacetstr:gbtagsite)
+	// then count how many unique docids are in it. we were trying to 
+	// do this in addDocIdVotes() but it wasn't in the right place i guess.
+	for ( int32_t i = 0 ; i < m_numQueryTermInfos ; i++ ) {
+		QueryTermInfo *qti = &qip[i];
+		QueryTerm *qt = qti->m_qt;
+		bool isFacetTerm = false;
+		if ( qt->m_fieldCode == FIELD_GBFACETSTR ) isFacetTerm = true;
+		if ( qt->m_fieldCode == FIELD_GBFACETINT ) isFacetTerm = true;
+		if ( qt->m_fieldCode == FIELD_GBFACETFLOAT ) isFacetTerm =true;
+		if ( ! isFacetTerm ) continue;
+		qt->m_numDocsThatHaveFacet = countUniqueDocids ( qti );
+	}
+
 
 	// setQueryTermInfos() should have set how many we have
 	if ( m_numQueryTermInfos == 0 ) {
@@ -5685,8 +5702,6 @@ void PosdbTable::intersectLists10_r ( ) {
 
 	int32_t listGroupNum = 0;
 
-	// point to our array of query term infos set in setQueryTermInfos()
-	QueryTermInfo *qip = (QueryTermInfo *)m_qiBuf.getBufStart();
 
 	// if all non-negative query terms are in the same wikiphrase then
 	// we can apply the WIKI_WEIGHT in getMaxPossibleScore() which
@@ -5727,8 +5742,6 @@ void PosdbTable::intersectLists10_r ( ) {
 		makeDocIdVoteBufForBoolQuery_r();
 		goto skip3;
 	}
-
-
 
 	// . create "m_docIdVoteBuf" filled with just the docids from the
 	//   smallest group of sublists 
@@ -5774,16 +5787,6 @@ void PosdbTable::intersectLists10_r ( ) {
 		listGroupNum++;
 		// add it
 		addDocIdVotes ( qti , listGroupNum );
-		// if the query term is for a facet then count how many
-		// unique docids are in it. we were trying to do this in 
-		// addDocIdVotes() but it wasn't in the right place i guess.
-		QueryTerm *qt = qti->m_qt;
-		bool isFacetTerm = false;
-		if ( qt->m_fieldCode == FIELD_GBFACETSTR ) isFacetTerm = true;
-		if ( qt->m_fieldCode == FIELD_GBFACETINT ) isFacetTerm = true;
-		if ( qt->m_fieldCode == FIELD_GBFACETFLOAT ) isFacetTerm =true;
-		if ( ! isFacetTerm ) continue;
-		qt->m_numDocsThatHaveFacet = countUniqueDocids ( qti );
 	}
 
 
