@@ -4967,11 +4967,18 @@ inline bool isInRange2 ( char *recPtr , char *subListEnd, QueryTerm *qt ) {
 int64_t PosdbTable::countUniqueDocids( QueryTermInfo *qti ) {
 	// get that sublist. facets should only have one sublist since
 	// they have no synonyms.
-	register char *recPtr     = qti->m_subLists[0]->getList();
+	char *start = qti->m_subLists[0]->getList();
+	register char *recPtr     = start;
 	register char *subListEnd = qti->m_subLists[0]->getListEnd();
 	int64_t count = 0;
  loop:
-	if ( recPtr >= subListEnd ) return count;
+	if ( recPtr >= subListEnd ) {
+		if ( m_debug )
+			log(LOG_DEBUG,"posdb: term list size of %"
+			    INT32" has %"INT64" unique docids"
+			    , (int32_t)(subListEnd-start),count);
+		return count;
+	}
 	// skip that docid record in our termlist. it MUST have been
 	// 12 bytes, a docid heading record.
 	recPtr += 12;
@@ -5665,7 +5672,7 @@ void PosdbTable::intersectLists10_r ( ) {
 		if ( qt->m_fieldCode == FIELD_GBFACETINT ) isFacetTerm = true;
 		if ( qt->m_fieldCode == FIELD_GBFACETFLOAT ) isFacetTerm =true;
 		if ( ! isFacetTerm ) continue;
-		qt->m_numDocsThatHaveFacet = countUniqueDocids ( qti );
+		qt->m_numDocsThatHaveFacet += countUniqueDocids ( qti );
 	}
 
 
