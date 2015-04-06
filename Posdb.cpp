@@ -4975,6 +4975,7 @@ int64_t PosdbTable::countUniqueDocids( QueryTermInfo *qti ) {
 	// skip that docid record in our termlist. it MUST have been
 	// 12 bytes, a docid heading record.
 	recPtr += 12;
+	count++;
 	// skip any following keys that are 6 bytes, that means they
 	// share the same docid
 	for ( ; recPtr < subListEnd && ((*recPtr)&0x04); recPtr += 6 );
