@@ -26916,7 +26916,10 @@ char *XmlDoc::hashAll ( HashTableX *table ) {
 	bool indexDoc = true;
 	if ( cr->m_isCustomCrawl ) indexDoc = false;
 	if ( ! cr->m_indexBody   ) indexDoc = false;
-	if ( cr->m_isCustomCrawl && m_isDiffbotJSONObject )
+	// if ( cr->m_isCustomCrawl && m_isDiffbotJSONObject )
+	// 	indexDoc = true;
+	// always index diffbot json objects for GI (custom crawl is false)
+	if ( m_isDiffbotJSONObject )
 		indexDoc = true;
 
 	// global index unless this is a json object in which case it is
