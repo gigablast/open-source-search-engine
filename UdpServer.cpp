@@ -2310,8 +2310,13 @@ bool UdpServer::makeCallback_ass ( UdpSlot *slot ) {
 	// callback is non-NULL if we initiated the transaction 
 	if ( slot->m_callback ) { 
 
+		// assume the slot's error when making callback
+		// like EUDPTIMEDOUT
+		if ( ! g_errno ) g_errno = slot->m_errno
+
 		// . if transaction has not fully completed, bail
 		// . unless there was an error
+		// . g_errno could be ECANCELLED
 		if ( ! g_errno && ! slot->isTransactionComplete()) {
 			log("udp: why calling callback when not ready???");
 			return false;
@@ -2344,7 +2349,8 @@ bool UdpServer::makeCallback_ass ( UdpSlot *slot ) {
 			    "niceness=%"INT32" "
 			    "callback=%08"PTRFMT" "
 			    "took %"INT64" ms (%"INT32" Mbps).",
-			    slot->m_transId,msgType,mstrerror(g_errno),
+			    slot->m_transId,msgType,
+			    mstrerror(g_errno),
 			    slot->m_niceness,
 			    (PTRTYPE)slot->m_callback ,
 			    took , Mbps );
@@ -2457,7 +2463,9 @@ bool UdpServer::makeCallback_ass ( UdpSlot *slot ) {
 	if ( slot->m_calledHandler ) {
 		// . if transaction has not fully completed, keep sending
 		// . unless there was an error
-		if ( ! g_errno && ! slot->isTransactionComplete()) {
+		if ( ! g_errno && 
+		     ! slot->isTransactionComplete() &&
+		     ! slot->m_errno ) {
 			if ( g_conf.m_logDebugUdp )
 				log("udp: why calling handler "
 				    "when not ready?");
