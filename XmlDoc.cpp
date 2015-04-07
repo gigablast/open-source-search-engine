@@ -30498,14 +30498,24 @@ Msg20Reply *XmlDoc::getMsg20Reply ( ) {
 
 	// if  shard responsible for tagrec is dead, then
 	// just recycle!
-	if ( m_req && ! m_checkedUrlFilters ) {
+	if ( m_req && ! m_checkedUrlFilters && ! m_tagRecDataValid ) {
 		char *site = getSite();
-		TAGDB_KEY tk = g_tagdb.makeStartKey ( site );
-		uint32_t shardNum = g_hostdb.getShardNum(RDB_TAGDB,&tk);
-		if ( g_hostdb.isShardDead ( shardNum ) ) {
+		TAGDB_KEY tk1 = g_tagdb.makeStartKey ( site );
+		TAGDB_KEY tk2 = g_tagdb.makeDomainStartKey ( &m_firstUrl );
+		uint32_t shardNum1 = g_hostdb.getShardNum(RDB_TAGDB,&tk1);
+		uint32_t shardNum2 = g_hostdb.getShardNum(RDB_TAGDB,&tk2);
+		// shardnum1 and shardnum2 are often different!
+		// log("db: s1=%i s2=%i",(int)shardNum1,(int)shardNum2);
+		if ( g_hostdb.isShardDead ( shardNum1 ) ) {
 			log("query: skipping tagrec lookup for dead shard "
 			    "# %"INT32""
-			    ,shardNum);
+			    ,shardNum1);
+			m_tagRecDataValid = true;
+		}
+		if ( g_hostdb.isShardDead ( shardNum2 ) && m_firstUrlValid ) {
+			log("query: skipping tagrec lookup for dead shard "
+			    "# %"INT32""
+			    ,shardNum2);
 			m_tagRecDataValid = true;
 		}
 	}
