@@ -1105,7 +1105,8 @@ void UdpServer::process_ass ( int64_t now , int32_t maxNiceness) {
 			slot->m_errno = g_errno;
 			// prepare to call the callback by adding it to this
 			// special linked list
-			addToCallbackLinkedList ( slot );
+			if ( g_errno )
+				addToCallbackLinkedList ( slot );
 			// sanity
 			if ( ! g_errno )
 				log("udp: missing g_errno from read error");
@@ -1727,9 +1728,7 @@ int32_t UdpServer::readSock_ass ( UdpSlot **slotPtr , int64_t now ) {
 	     // if we got an error reading the reply (or sending req?) then
 	     // consider it completed too?
 	     // ( slot->isTransactionComplete() || slot->m_errno ) &&
-	     ( slot->isDoneReading() || slot->m_errno ) &&
-	     // must not be in there already, lest we double add it
-	     ! isInCallbackLinkedList ( slot ) ) {
+	    ( slot->isDoneReading() || slot->m_errno ) ) {
 		// prepare to call the callback by adding it to this
 		// special linked list
 		addToCallbackLinkedList ( slot );
@@ -3367,6 +3366,13 @@ void UdpServer::addToCallbackLinkedList ( UdpSlot *slot ) {
 	if ( g_conf.m_logDebugUdp )
 		log("udp: adding slot=%"PTRFMT" to callback list"
 		    ,(PTRTYPE)slot);
+	// must not be in there already, lest we double add it
+	if ( isInCallbackLinkedList ( slot ) ) {
+		if ( g_conf.m_logDebugUdp )
+			log("udp: avoided double add slot=%"PTRFMT
+			    ,(PTRTYPE)slot);
+		return;
+	}
 	slot->m_next3 = NULL;
 	slot->m_prev3 = NULL;
 	if ( ! m_tail3 ) {
