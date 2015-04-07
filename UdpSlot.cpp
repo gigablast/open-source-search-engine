@@ -1502,6 +1502,9 @@ bool UdpSlot::readDatagramOrAck ( int        sock    ,
 	// if its a msg 0x0c reply from a proxy ove roadrunner wireless
 	// they tend to damage our packets for some reason so i repeat
 	// the ip for a total of an 8 byte reply
+	/*
+	  MDW: this seems to be causing problems on local networks
+	  so taking it out. 4/7/2015.
 	if ( m_msgType == 0x0c && msgSize == 12 && peekSize == 24 &&
 	     // must be reply! not request.
 	     m_callback ) {
@@ -1528,6 +1531,7 @@ bool UdpSlot::readDatagramOrAck ( int        sock    ,
 			return true;
 		}
 	}	
+	*/
 
 	// we're doing the call to recvfrom() for sure now
 	*discard = false;

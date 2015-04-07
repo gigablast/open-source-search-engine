@@ -2481,7 +2481,12 @@ bool RdbBase::verifyFileSharding ( ) {
 	if ( g_loop.m_isDoingLoop ) return true;
 
 	// skip for now to speed up startup
-	//return true;
+	static int32_t s_count = 0;
+	s_count++;
+	if ( s_count == 50 )
+		log("db: skipping shard verification for remaining files");
+	if ( s_count >= 50 ) 
+		return true;
 
 	g_threads.disableThreads();
 
