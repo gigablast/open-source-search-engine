@@ -283,6 +283,7 @@ class UdpServer {
 	UdpSlot *getActiveHead ( ) { return m_head2; };
 
 	// callback linked list functions (m_head3)
+	void addToCallbackLinkedList ( UdpSlot *slot ) ;
 	bool isInCallbackLinkedList ( UdpSlot *slot );
 	void removeFromCallbackLinkedList ( UdpSlot *slot ) ;
 

@@ -1101,7 +1101,15 @@ void UdpServer::process_ass ( int64_t now , int32_t maxNiceness) {
 		// if no slot was set, it was a slotless read so keep looping
 		if ( ! slot ) { g_errno = 0; goto readAgain; }
 		// if there was a read error let makeCallback() know about it
-		if ( status == -1 ) slot->m_errno = g_errno;
+		if ( status == -1 ) {
+			slot->m_errno = g_errno;
+			// prepare to call the callback by adding it to this
+			// special linked list
+			addToCallbackLinkedList ( slot );
+			// sanity
+			if ( ! g_errno )
+				log("udp: missing g_errno from read error");
+		}
 		// we read something
 		something = true;
 		// try sending an ACK on the slot we read something from
@@ -1722,27 +1730,9 @@ int32_t UdpServer::readSock_ass ( UdpSlot **slotPtr , int64_t now ) {
 	     ( slot->isDoneReading() || slot->m_errno ) &&
 	     // must not be in there already, lest we double add it
 	     ! isInCallbackLinkedList ( slot ) ) {
-		// debug log
-		if ( slot->m_errno && g_conf.m_logDebugUdp )
-			log("udp: adding slot with err = %s to callback list"
-			    , mstrerror(slot->m_errno) );
-		if ( g_conf.m_logDebugUdp )
-			log("udp: adding slot=%"PTRFMT" to callback list"
-			    ,(PTRTYPE)slot);
 		// prepare to call the callback by adding it to this
 		// special linked list
-		slot->m_next3 = NULL;
-		slot->m_prev3 = NULL;
-		if ( ! m_tail3 ) {
-			m_head3 = slot;
-			m_tail3 = slot;
-		}
-		else {
-			// insert at end of linked list otherwise
-			m_tail3->m_next3 = slot;
-			slot->m_prev3 = m_tail3;
-			m_tail3 = slot;
-		}
+		addToCallbackLinkedList ( slot );
 	}
 
 
@@ -2312,7 +2302,7 @@ bool UdpServer::makeCallback_ass ( UdpSlot *slot ) {
 
 		// assume the slot's error when making callback
 		// like EUDPTIMEDOUT
-		if ( ! g_errno ) g_errno = slot->m_errno
+		if ( ! g_errno ) g_errno = slot->m_errno;
 
 		// . if transaction has not fully completed, bail
 		// . unless there was an error
@@ -2964,6 +2954,9 @@ bool UdpServer::readTimeoutPoll ( int64_t now ) {
 			// . set slot's m_errno field
 			// . makeCallbacks_ass() should call its callback
 			slot->m_errno = EUDPTIMEDOUT;
+			// prepare to call the callback by adding it to this
+			// special linked list
+			addToCallbackLinkedList ( slot );
 			// let caller know we did something
 			something = true;
 			// keep going
@@ -3069,6 +3062,9 @@ bool UdpServer::readTimeoutPoll ( int64_t now ) {
 		     slot->m_callback ) {
 			// should this be ENOACK or something?
 			slot->m_errno = EUDPTIMEDOUT;
+			// prepare to call the callback by adding it to this
+			// special linked list
+			addToCallbackLinkedList ( slot );
 			// let caller know we did something
 			something = true;
 			// note it
@@ -3361,6 +3357,28 @@ UdpSlot *UdpServer::getUdpSlot ( key_t k ) {
 		if ( ++i >= m_numBuckets ) i = 0;
 	// if empty, return NULL
 	return m_ptrs[i];
+}
+
+void UdpServer::addToCallbackLinkedList ( UdpSlot *slot ) {
+	// debug log
+	if ( g_conf.m_logDebugUdp && slot->m_errno )
+		log("udp: adding slot with err = %s to callback list"
+		    , mstrerror(slot->m_errno) );
+	if ( g_conf.m_logDebugUdp )
+		log("udp: adding slot=%"PTRFMT" to callback list"
+		    ,(PTRTYPE)slot);
+	slot->m_next3 = NULL;
+	slot->m_prev3 = NULL;
+	if ( ! m_tail3 ) {
+		m_head3 = slot;
+		m_tail3 = slot;
+	}
+	else {
+		// insert at end of linked list otherwise
+		m_tail3->m_next3 = slot;
+		slot->m_prev3 = m_tail3;
+		m_tail3 = slot;
+	}
 }
 
 bool UdpServer::isInCallbackLinkedList ( UdpSlot *slot ) {
