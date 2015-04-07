@@ -2480,6 +2480,9 @@ bool RdbBase::verifyFileSharding ( ) {
 	// not re-verify file sharding! only do at startup
 	if ( g_loop.m_isDoingLoop ) return true;
 
+	// skip for now to speed up startup
+	//return true;
+
 	g_threads.disableThreads();
 
 	Msg5 msg5;

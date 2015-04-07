@@ -22135,7 +22135,8 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 		//      // the smoketests
 		//      ! cr->m_isCustomCrawl ) {
 		// get the spiderreply ready to be added
-		spiderStatusDocMetaList = getSpiderStatusDocMetaList ( newsr );
+		spiderStatusDocMetaList = getSpiderStatusDocMetaList(newsr ,
+								    forDelete);
 		// error?
 		if ( ! spiderStatusDocMetaList ) return NULL;
 		// blocked?
@@ -22767,7 +22768,7 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 	SafeBuf *spiderStatusDocMetaList = NULL;
 	//if ( indexReply ) {
 	// get the spiderreply ready to be added to the rdbs w/ msg4
-	spiderStatusDocMetaList = getSpiderStatusDocMetaList ( newsr );
+	spiderStatusDocMetaList = getSpiderStatusDocMetaList (newsr,forDelete);
 	// block?
 	if ( ! spiderStatusDocMetaList ||
 	     spiderStatusDocMetaList == (void *)-1)
@@ -27037,7 +27038,8 @@ int32_t XmlDoc::getBoostFromSiteNumInlinks ( int32_t inlinks ) {
 //   are fielded by gberrorstr, gberrornum or gbisreply.
 // . normally we might use a separate xmldoc class for this but i wanted
 //   something more lightweight
-SafeBuf *XmlDoc::getSpiderStatusDocMetaList ( SpiderReply *reply ) {
+SafeBuf *XmlDoc::getSpiderStatusDocMetaList ( SpiderReply *reply ,
+					      bool forDelete ) {
 
 	// set status for this
 	setStatus ( "getting spider reply meta list");
@@ -27048,7 +27050,7 @@ SafeBuf *XmlDoc::getSpiderStatusDocMetaList ( SpiderReply *reply ) {
 	CollectionRec *cr = getCollRec();
 	if ( ! cr ) return NULL;
 
-	if ( ! cr->m_indexSpiderReplies ) {
+	if ( ! cr->m_indexSpiderReplies || forDelete ) {
 		m_spiderStatusDocMetaListValid = true;
 		return &m_spiderStatusDocMetaList;
 	}
@@ -27147,11 +27149,21 @@ SafeBuf *XmlDoc::getSpiderStatusDocMetaList2 ( SpiderReply *reply ) {
 	unsigned char *hc = (unsigned char *)getHopCount();
 	if ( ! hc || hc == (void *)-1 ) return (SafeBuf *)hc;
 
-	int32_t *priority = getSpiderPriority();
-	if ( ! priority || priority == (void *)-1 ) return (SafeBuf *)priority;
+	int32_t tmpVal = -1;
+	int32_t *priority = &tmpVal;
+	int32_t *ufn = &tmpVal;
 
-	int32_t *ufn = getUrlFilterNum();
-	if ( ! ufn || ufn == (void *)-1 ) return (SafeBuf *)ufn;
+	// prevent a core if sreq is not valid, these will freak out
+	// diffbot replies may not have a valid m_sreq
+	if ( m_sreqValid ) {
+		priority = getSpiderPriority();
+		if ( ! priority || priority == (void *)-1 ) 
+			return (SafeBuf *)priority;
+
+		ufn = getUrlFilterNum();
+		if ( ! ufn || ufn == (void *)-1 ) 
+			return (SafeBuf *)ufn;
+	}
 
 	CollectionRec *cr = getCollRec();
 	if ( ! cr ) return NULL;
@@ -27294,8 +27306,11 @@ SafeBuf *XmlDoc::getSpiderStatusDocMetaList2 ( SpiderReply *reply ) {
 
 	// how many download/indexing errors we've had, including this one
 	// if applicable.
-	jd.safePrintf("\"gbssConsecutiveErrors\":%"INT32",\n",
-		      m_srep.m_errCount);
+	if ( m_srepValid )
+		jd.safePrintf("\"gbssConsecutiveErrors\":%"INT32",\n",
+			      m_srep.m_errCount);
+	else
+		jd.safePrintf("\"gbssConsecutiveErrors\":%"INT32",\n",0);
 
 
 	if ( m_ipValid )
@@ -27327,8 +27342,10 @@ SafeBuf *XmlDoc::getSpiderStatusDocMetaList2 ( SpiderReply *reply ) {
 	jd.safePrintf("\"gbssSpiderPriority\":%"INT32",\n", 
 		      *priority);
 
-	jd.safePrintf("\"gbssMatchingUrlFilter\":\"%s\",\n", 
-		      cr->m_regExs[*ufn].getBufStart());
+	// this could be -1, careful
+	if ( *ufn >= 0 )
+		jd.safePrintf("\"gbssMatchingUrlFilter\":\"%s\",\n", 
+			      cr->m_regExs[*ufn].getBufStart());
 
 	// we forced the langid valid above
 	if ( m_langIdValid && m_contentLen )

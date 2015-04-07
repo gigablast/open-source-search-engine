@@ -506,7 +506,8 @@ class XmlDoc {
 	bool setTitleRecBuf ( SafeBuf *buf , int64_t docId, int64_t uh48 );
 	// sets m_titleRecBuf/m_titleRecBufValid/m_titleRecKey[Valid]
 	SafeBuf *getTitleRecBuf ( );
-	SafeBuf *getSpiderStatusDocMetaList ( class SpiderReply *reply ) ;
+	SafeBuf *getSpiderStatusDocMetaList ( class SpiderReply *reply ,
+					      bool forDelete ) ;
 	SafeBuf *getSpiderStatusDocMetaList2 ( class SpiderReply *reply ) ;
 	SafeBuf m_spiderStatusDocMetaList;
 	char *getIsAdult ( ) ;

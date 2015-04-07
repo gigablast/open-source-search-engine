@@ -3044,7 +3044,10 @@ char getKeySizeFromRdbId ( uint8_t rdbId ) {
 		}
 	}
 	// sanity check
-	if ( s_table1[rdbId] == 0 ) { char *xx=NULL;*xx=0; }
+	if ( s_table1[rdbId] == 0 ) { 
+		log("rdb: bad lookup rdbid of %i",(int)rdbId);
+		char *xx=NULL;*xx=0; 
+	}
 	return s_table1[rdbId];
 }
 

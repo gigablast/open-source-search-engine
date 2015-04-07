@@ -10903,6 +10903,10 @@ int32_t getUrlFilterNum2 ( SpiderRequest *sreq       ,
 			   HashTableX   *quotaTable ,
 			   int32_t langIdArg ) {
 
+	if ( ! sreq ) {
+		log("spider: sreq is NULL!");
+	}
+
 	int32_t langId = langIdArg;
 	if ( srep ) langId = srep->m_langId;
 
