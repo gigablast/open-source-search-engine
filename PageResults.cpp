@@ -8075,6 +8075,8 @@ bool printCSVHeaderRow ( SafeBuf *sb , State0 *st , int32_t ct ) {
 
 	CollectionRec *cr = g_collectiondb.getRec ( st->m_collnum );
 	for ( int32_t i = 0 ; supps[i] ; i++ ) {
+		// don't add these column headers to non spider status docs
+		if ( ct != CT_STATUS ) break;
 		int64_t h64 = hash64n ( supps[i] );
 		if ( nameTable.isInTable ( &h64 ) ) continue;
 		// only show diffbot column headers for custom (diffbot) crawls
