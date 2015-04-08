@@ -233,6 +233,7 @@ JsonItem *Json::parseJsonStringIntoJsonItems ( char *json , int32_t niceness ) {
 				// json must start with { or [ i guess
 				// otherwise getFirstItem() won't work!
 				if ( m_sb.m_length==0 ) {
+					log("json: length is 0");
 					g_errno = EBADJSONPARSER;
 					return NULL;
 				}
@@ -367,7 +368,11 @@ JsonItem *Json::parseJsonStringIntoJsonItems ( char *json , int32_t niceness ) {
 
 	// for testing if we realloc
 	char *memEnd = m_sb.getBufStart();
-	if ( mem != memEnd ) { char *xx=NULL;*xx=0; }
+
+	// bitch if we had to do a realloc. should never happen but i
+	// saw it happen once, so do not core on that.
+	if ( mem != memEnd )
+		log("json: json parser reallocated buffer. inefficient.");
 
 	return (JsonItem *)m_sb.getBufStart();
 }
