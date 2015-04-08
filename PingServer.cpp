@@ -509,7 +509,7 @@ void PingServer::pingHost ( Host *h , uint32_t ip , uint16_t port ) {
 
 	pi->m_localHostTimeMS = gettimeofdayInMillisecondsLocal();
 
-	pi->m_udpSlotsInUse = g_udpServer.getNumUsedSlots();
+	pi->m_udpSlotsInUseIncoming = g_udpServer.getNumUsedSlotsIncoming();
 
 	pi->m_tcpSocketsInUse = g_httpServer.m_tcp.m_numUsed;
 

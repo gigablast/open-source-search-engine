@@ -4092,7 +4092,7 @@ bool printRedBox ( SafeBuf *mb , TcpSocket *sock , HttpRequest *hr ) {
 	for ( int32_t i = 1 ; i < g_hostdb.getNumHosts() ; i++ ) {
 		Host *h = &g_hostdb.m_hosts[i];
 		if ( g_hostdb.isDead( h ) ) continue;
-		if ( h->m_pingInfo.m_udpSlotsInUse >= 400 ) jammedHosts++;
+		if ( h->m_pingInfo.m_udpSlotsInUseIncoming>= 400)jammedHosts++;
 	}
 	if ( jammedHosts > 0 ) {
 		if ( adds ) mb->safePrintf("<br>");

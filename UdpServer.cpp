@@ -267,6 +267,7 @@ bool UdpServer::init ( uint16_t port, UdpProtocol *proto, int32_t niceness,
 	log(LOG_DEBUG,"udp: Allocated %"INT32" bytes for table.",m_bufSize);
 
 	m_numUsedSlots   = 0;
+	m_numUsedSlotsIncoming   = 0;
 	// clear this
 	m_isShuttingDown = false;
 	// and this
@@ -555,7 +556,7 @@ bool UdpServer::sendRequest ( char     *msg          ,
 
 	// . create a new slot to control the transmission of this request
 	// . should set g_errno on failure
-	UdpSlot *slot = getEmptyUdpSlot_ass ( key );
+	UdpSlot *slot = getEmptyUdpSlot_ass ( key , false );
 	if ( ! slot ) {
 		if ( flipped ) interruptsOn();
 		return log("udp: All %"INT32" slots are in use.",m_maxSlots);
@@ -1615,7 +1616,7 @@ int32_t UdpServer::readSock_ass ( UdpSlot **slotPtr , int64_t now ) {
 		
 		if ( getSlot ) 
 			// get a new UdpSlot
-			slot = getEmptyUdpSlot_ass ( key );
+			slot = getEmptyUdpSlot_ass ( key , true );
 		// return -1 on failure
 		if ( ! slot ) {
 			// return -1
@@ -3283,7 +3284,7 @@ bool UdpServer::timeoutDeadHosts ( Host *h ) {
 }
 
 // verified that this is not interruptible
-UdpSlot *UdpServer::getEmptyUdpSlot_ass ( key_t k ) {
+UdpSlot *UdpServer::getEmptyUdpSlot_ass ( key_t k , bool incoming ) {
 	// turn em off
 	bool flipped = interruptsOff();
 	// tmp debug
@@ -3329,6 +3330,11 @@ UdpSlot *UdpServer::getEmptyUdpSlot_ass ( key_t k ) {
 	// }
 	// count it
 	m_numUsedSlots++;
+
+	if ( incoming ) m_numUsedSlotsIncoming++;
+
+	slot->m_incoming = incoming;
+
 	// now store ptr in hash table
 	slot->m_key = k;
 	addKey ( k , slot );
@@ -3436,6 +3442,9 @@ void UdpServer::freeUdpSlot_ass ( UdpSlot *slot ) {
 	removeFromCallbackLinkedList ( slot );
 	// discount it
 	m_numUsedSlots--;
+
+	if ( slot->m_incoming ) m_numUsedSlotsIncoming--;
+
 	// add to linked list of available slots
 	slot->m_next = m_head;
 	m_head = slot;

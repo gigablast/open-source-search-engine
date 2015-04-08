@@ -1833,7 +1833,7 @@ bool Hostdb::replaceHost ( int32_t origHostId, int32_t spareHostId ) {
 	oldHost->m_emailCode           = 0;
 	oldHost->m_wasAlive            = false;
 	oldHost->m_pingInfo.m_etryagains          = 0;
-	oldHost->m_pingInfo.m_udpSlotsInUse = 0;
+	oldHost->m_pingInfo.m_udpSlotsInUseIncoming = 0;
 	oldHost->m_pingInfo.m_totalResends        = 0;
 	oldHost->m_errorReplies        = 0;
 	oldHost->m_dgramsTo            = 0;

@@ -562,14 +562,15 @@ skipReplaceHost:
 					,h->m_pingInfo.m_currentSpiders
 					);
 
-		if ( format == FORMAT_HTML && h->m_pingInfo.m_udpSlotsInUse ) {
+		if ( format == FORMAT_HTML && 
+		     h->m_pingInfo.m_udpSlotsInUseIncoming ) {
 			char *f1 = "";
 			char *f2 = "";
-			if ( h->m_pingInfo.m_udpSlotsInUse >= 200 ) {
+			if ( h->m_pingInfo.m_udpSlotsInUseIncoming >= 200 ) {
 				f1 = "<b>";
 				f2 = "</b>";
 			}
-			if ( h->m_pingInfo.m_udpSlotsInUse >= 400 ) {
+			if ( h->m_pingInfo.m_udpSlotsInUseIncoming >= 400 ) {
 				f1 = "<b><font color=red>";
 				f2 = "</font></b>";
 			}
@@ -580,7 +581,7 @@ skipReplaceHost:
 				      "%s"
 				      "</span>"
 				      ,f1
-				      ,h->m_pingInfo.m_udpSlotsInUse
+				      ,h->m_pingInfo.m_udpSlotsInUseIncoming
 				      ,f2
 				      );
 		}
@@ -688,7 +689,7 @@ skipReplaceHost:
 
 			sb.safePrintf("\t\t<udpSlotsInUse>%"INT32""
 				      "</udpSlotsInUse>\n",
-				      h->m_pingInfo.m_udpSlotsInUse);
+				      h->m_pingInfo.m_udpSlotsInUseIncoming);
 
 			sb.safePrintf("\t\t<tcpSocketsInUse>%"INT32""
 				      "</tcpSocketsInUse>\n",
@@ -800,7 +801,7 @@ skipReplaceHost:
 			sb.safePrintf("\t\t\"errorTryAgains\":%"INT32",\n",
 				      h->m_pingInfo.m_etryagains);
 			sb.safePrintf("\t\t\"udpSlotsInUse\":%"INT32",\n",
-				      h->m_pingInfo.m_udpSlotsInUse);
+				      h->m_pingInfo.m_udpSlotsInUseIncoming);
 			sb.safePrintf("\t\t\"tcpSocketsInUse\":%"INT32",\n",
 				      h->m_pingInfo.m_tcpSocketsInUse);
 
