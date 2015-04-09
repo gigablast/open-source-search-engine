@@ -27137,8 +27137,9 @@ SafeBuf *XmlDoc::getSpiderStatusDocMetaList2 ( SpiderReply *reply ) {
 	//int32_t now = getTimeGlobal();
 	//int64_t h = hash64(m_docId, now );
 	// to keep qa test consistent this docid should be consistent
-	// so base it on spidertime of parent doc
-	if ( ! m_spideredTimeValid ) { char *xx=NULL;*xx=0; }
+	// so base it on spidertime of parent doc.
+	// if doc is being force deleted then this is invalid!
+	//if ( ! m_spideredTimeValid ) { char *xx=NULL;*xx=0; }
 	int64_t h = hash64(m_docId, m_spideredTime );
 	// mask it out
 	int64_t d = h & DOCID_MASK;
