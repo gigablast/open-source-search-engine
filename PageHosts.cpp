@@ -1509,7 +1509,8 @@ skipReplaceHost:
 		  "<tr class=poo>"
 		  "<td><nobr>U (status flag)</nobr></td>"
 		  "<td>Indicates the number of active UDP transactions "
-		  "which are either outgoing or incoming requests."
+		  "which are incoming requests. These will pile up if a "
+		  "host can't handle them fast enough."
 		  "</td>"
 		  "</tr>\n"
 

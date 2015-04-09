@@ -4101,8 +4101,8 @@ bool printRedBox ( SafeBuf *mb , TcpSocket *sock , HttpRequest *hr ) {
 		if ( out == 1 ) s = " is";
 		mb->safePrintf("%s",box);
 		mb->safePrintf("%"INT32" host%s jammed with "
-			       "over %"INT32" outstanding "
-			       "udp transactions. "
+			       "over %"INT32" unhandled "
+			       "incoming udp requests. "
 			       "See <a href=/admin/sockets?c=%s>sockets</a>"
 			       " table.",jammedHosts,s,400,coll);
 		mb->safePrintf("%s",boxEnd);
