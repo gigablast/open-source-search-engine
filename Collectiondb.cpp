@@ -285,6 +285,10 @@ bool Collectiondb::addExistingColl ( char *coll, collnum_t collnum ) {
 
 	if ( ! registerCollRec ( cr , false ) ) return false;
 
+	// always index spider status docs now for custom crawls
+	if ( cr->m_isCustomCrawl )
+		cr->m_indexSpiderReplies = true;
+
 	// we need to compile the regular expressions or update the url
 	// filters with new logic that maps crawlbot parms to url filters
 	return cr->rebuildUrlFilters ( );
