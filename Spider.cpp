@@ -4889,9 +4889,10 @@ bool SpiderColl::scanListForWinners ( ) {
 		    "bytes (%"INT32" recs) "
 		    "for winners "
 		    "for firstip=%s. winnerTreeUsedNodes=%"INT32" #newreqs=%"
-		    INT32
+		    INT64
 		    ,list->getListSize(),recCount,iptoa(m_scanningIp),
-		    m_winnerTree.getNumUsedNodes(),m_totalNewSpiderRequests);
+		    m_winnerTree.getNumUsedNodes(),
+		    m_totalNewSpiderRequests);
 	// reset any errno cuz we're just a cache
 	g_errno = 0;
 
