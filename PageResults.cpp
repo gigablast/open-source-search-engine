@@ -545,10 +545,6 @@ bool sendPageResults ( TcpSocket *s , HttpRequest *hr ) {
 	// save this count so we know if TcpServer.cpp calls destroySocket(s)
 	st->m_numDestroys = s->m_numDestroys;
 
-	// you have to say "&header=1" to get back the header for json now.
-	// later on maybe it will default to on.
-	st->m_header = hr->getLong("header",0);
-
 	// . parse it up
 	// . this returns false and sets g_errno and, maybe, g_msg on error
 	SearchInput *si = &st->m_si;
@@ -577,9 +573,15 @@ bool sendPageResults ( TcpSocket *s , HttpRequest *hr ) {
 	if ( cr ) st->m_collnum = cr->m_collnum;
 	else      st->m_collnum = -1;
 
-	// turn this on for json output, unless diffbot collection
-	if ( format == FORMAT_JSON && ! cr->m_isCustomCrawl )
-		st->m_header = 1;
+	int32_t defHdr = 1;
+
+	// default is no header for diffbot only
+	if ( cr->m_isCustomCrawl ||  strcmp(cr->m_coll,"GLOBAL-INDEX") == 0 )
+		defHdr = 0;
+
+	// you have to say "&header=1" to get back the header for json now.
+	// later on maybe it will default to on.
+	st->m_header = hr->getLong("header",defHdr);
 
 	// take this out here as well!
 	// limit here
@@ -1754,6 +1756,8 @@ bool printLeftNavColumn ( SafeBuf &sb, State0 *st ) {
 	// MDW: support gigabits in xml/json format again
 	//if ( format != FORMAT_HTML ) numGigabits = 0;
 
+	if ( ! st->m_header )
+		numGigabits = 0;
 
 	// print gigabits
 	Gigabit *gigabits = (Gigabit *)gbuf->getBufStart();
@@ -2156,6 +2160,7 @@ bool printSearchResultsHeader ( State0 *st ) {
 	// print first [ for json
 	if ( si->m_format == FORMAT_JSON ) {
 		if ( st->m_header ) sb->safePrintf("{\n");
+		// this is just for diffbot really...
 		else                sb->safePrintf("[\n");
 	}
 
@@ -2651,7 +2656,8 @@ bool printSearchResultsHeader ( State0 *st ) {
 
 
 	// when streaming results we lookup the facets last
-	if ( si->m_format != FORMAT_HTML && ! si->m_streamResults ) 
+	if ( si->m_format != FORMAT_HTML && ! si->m_streamResults &&
+	     st->m_header ) 
 		msg40->printFacetTables ( sb );
 
 	// now print gigabits if we are xml/json
@@ -2672,8 +2678,7 @@ bool printSearchResultsHeader ( State0 *st ) {
 		return true;
 	}
 
-	if ( si->m_format == FORMAT_JSON &&
-	     ! cr->m_isCustomCrawl ) {
+	if ( si->m_format == FORMAT_JSON && st->m_header ) {
 		sb->safePrintf("\"results\":[\n");
 		return true;
 	}
@@ -3195,7 +3200,7 @@ bool printSearchResultsTail ( State0 *st ) {
 			sb->m_length -= 2;
 			sb->safePrintf("\n");
 		}
-		// print ending ] for json
+		// print ending ] for json search results
 		sb->safePrintf("]\n");
 
 		// when streaming results we lookup the facets last
