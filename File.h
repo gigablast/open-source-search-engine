@@ -183,6 +183,9 @@ class File {
 	time_t m_st_mtime;  // file last mod date
 	int32_t   m_st_size;   // file size
 	time_t getLastModifiedDate ( ) ;
+
+	class File *m_nextActive;
+	class File *m_prevActive;
 };
 
 

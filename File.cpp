@@ -74,6 +74,8 @@ File::File ( ) {
 	// threaded unlink sets this to true before spawning thread so we
 	// do not try to open it!
 	//m_gone = 0;
+	m_nextActive = NULL;
+	m_prevActive = NULL;
 }
 
 
@@ -127,6 +129,50 @@ bool File::rename ( char *newFilename ) {
 	// set to our new name
 	set ( newFilename );
 	return true;
+}
+
+
+static File *s_activeHead = NULL;
+static File *s_activeTail = NULL;
+
+void rmFileFromLinkedList ( File *f ) {
+	// excise from linked list of active files
+	if ( s_activeHead == f )
+		s_activeHead = f->m_nextActive;
+	if ( s_activeTail == f )
+		s_activeTail = f->m_prevActive;
+	if ( f->m_prevActive ) 
+		f->m_prevActive->m_nextActive = f->m_nextActive;
+	if ( f->m_nextActive ) 
+		f->m_nextActive->m_prevActive = f->m_prevActive;
+	// and so we do not try to re-excise it
+	f->m_prevActive = NULL;
+	f->m_nextActive = NULL;
+}
+
+void addFileToLinkedList ( File *f ) {
+	// must not be in there already, lest we double add it
+	if ( f->m_nextActive ) return;
+	if ( f->m_prevActive ) return;
+	if ( s_activeHead == f ) return;
+
+	f->m_nextActive = NULL;
+	f->m_prevActive = NULL;
+	if ( ! s_activeTail ) {
+		s_activeHead = f;
+		s_activeTail = f;
+		return;
+	}
+	// insert at end of linked list otherwise
+	s_activeTail->m_nextActive = f;
+	f->m_prevActive = s_activeTail;
+	s_activeTail = f;
+}
+
+// update linked list
+void promoteInLinkedList ( File *f ) {
+	rmFileFromLinkedList ( f );
+	addFileToLinkedList  ( f );
 }
 
 // . open the file
@@ -200,6 +246,8 @@ int File::write ( void *buf             ,
 	else              n =  pwrite ( fd , buf , numBytesToWrite , offset );
 	// valgrind
 	if ( n < 0 && errno == EINTR ) goto retry21;	
+	// update linked list
+	promoteInLinkedList ( this );
 	// copy errno to g_errno
 	if ( n < 0 ) g_errno = errno;
 	// cancel blocking errors - not really errors
@@ -228,6 +276,8 @@ int File::read ( void *buf            ,
 	else              n =  pread  ( fd , buf , numBytesToRead , offset );
 	// valgrind
 	if ( n < 0 && errno == EINTR ) goto retry9;	
+	// update linked list
+	promoteInLinkedList ( this );
 	// copy errno to g_errno
 	if ( n < 0 ) g_errno = errno;
 	// cancel blocking errors - not really errors
@@ -340,6 +390,8 @@ void File::close2 ( ) {
 		    "This should never happen. vfd=%i fd=%i.", m_vfd,fd);
 		return;
 	}
+	// excise from linked list of active files
+	rmFileFromLinkedList ( this );
 	// mark this virtual file descriptor as available.
 	s_fds [ m_vfd ] = -2;           
 	// no more virtual file descriptor
@@ -407,6 +459,8 @@ bool File::close ( ) {
 	}
 	// otherwise decrease the # of open files
 	s_numOpenFiles--; 
+	// excise from linked list of active files
+	rmFileFromLinkedList ( this );
 	// return true blue
 	return true; 
 }
@@ -524,6 +578,8 @@ int File::getfd () {
 	s_unlinking [ m_vfd ] = 0;
 	// update the time stamp
 	s_timestamps [ m_vfd ] = gettimeofdayInMillisecondsLocal();
+	// add file to linked list of active files
+	addFileToLinkedList ( this );
 	return fd;
 }
 
@@ -531,10 +587,36 @@ int File::getfd () {
 // we don't touch files opened for writing, however.
 bool File::closeLeastUsed () {
 
-	int64_t min  ;
+	//int64_t min  ;
 	int    mini = -1;
 	int64_t now = gettimeofdayInMillisecondsLocal();
 
+	// use the new linked list of active file descriptors
+	// . file at tail is the most active
+	File *f = s_activeHead;
+
+	// if nothing to do return true
+	if ( ! f ) return true;
+
+	// close the head if not writing
+	for ( ; f ; f = f->m_nextActive ) {
+		mini = f->m_vfd;
+		// how can this be?
+		if ( s_fds [ mini ] < 0 ) { char *xx=NULL;*xx=0; }
+		if ( s_writing [ mini ] ) continue;
+		if ( s_unlinking [ mini ] ) continue;
+		// when we got like 1000 reads queued up, it uses a *lot* of
+		// memory and we can end up never being able to complete a
+		// read because the descriptors are always getting closed on us
+		// so do a hack fix and do not close descriptors that are
+		// about .5 seconds old on avg.
+		if ( s_timestamps [ mini ] >= now - 1 ) return true;
+		break;
+	}
+
+
+
+	/*
 	// get the least used of all the actively opened file descriptors.
 	// we can't get files that were opened for writing!!!
 	int i;
@@ -561,6 +643,7 @@ bool File::closeLeastUsed () {
 			mini = i;
 		}
 	}
+	*/
 
 	// if nothing to free then return false
 	if ( mini == -1 ) 
@@ -603,8 +686,15 @@ bool File::closeLeastUsed () {
 	// we're just conserving file descriptors
 	s_fds [ mini ] = -1;
 
+	
+
 	// if the real close was successful then decrement the # of open files
-	if ( status == 0 ) s_numOpenFiles--;
+	if ( status == 0 ) {
+		s_numOpenFiles--;
+		// excise from linked list of active files
+		rmFileFromLinkedList ( f );
+	}
+
 
 	if ( status == -1 ) 
 		return log("disk: close(%i) : %s", fd , strerror(errno));
