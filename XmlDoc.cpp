@@ -1904,7 +1904,18 @@ void XmlDoc::setStatus ( char *s ) {
 
 	s_last = s;
 
-	if ( ! g_conf.m_logDebugBuild ) return ;
+	bool logIt = g_conf.m_logDebugBuild;
+	CollectionRec *cr = NULL;
+	if ( m_collnumValid ) 
+		cr = g_collectiondb.m_recs[m_collnum];
+	if ( cr && 
+	     cr->m_coll &&
+	     cr->m_coll[0] == 'c' &&
+	     cr->m_coll[1] == 'r' &&
+	     strncmp(cr->m_coll,"crawlbottesting-",16) == 0 ) 
+		logIt = true;
+
+	if ( ! logIt ) return;
 	//return;
 	if ( m_firstUrlValid )
 		logf(LOG_DEBUG,"build: status = %s for %s (this=0x%"PTRFMT")",
