@@ -486,8 +486,13 @@ char *JsonItem::getValueAsString ( int32_t *valueLen ) {
 		return s_numBuf;
 	}
 
-	*valueLen = snprintf ( s_numBuf,255,"%f", m_valueDouble );
-	return s_numBuf;
+	// otherwise return the number as it was written in the json
+	// because it might have too many digits for printing as a double
+	*valueLen = m_valueLen;
+	return (char *)this + sizeof(JsonItem);
+
+	// *valueLen = snprintf ( s_numBuf,255,"%f", m_valueDouble );
+	// return s_numBuf;
 }
 
 bool endsInCurly ( char *s , int32_t slen ) {
