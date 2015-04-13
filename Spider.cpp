@@ -8019,23 +8019,25 @@ bool SpiderLoop::indexedDoc ( XmlDoc *xd ) {
 	// care of g_errno now by clearing it and adding an error spider
 	// reply to release the lock!!
 	if ( g_errno ) {
-		log("spider: ----CRITICAL CRITICAL CRITICAL----");
-		log("spider: ----CRITICAL CRITICAL CRITICAL----");
-		log("spider: ------ *** LOCAL ERROR ***  ------");
-		log("spider: ------ *** LOCAL ERROR ***  ------");
-		log("spider: ------ *** LOCAL ERROR ***  ------");
+		// log("spider: ----CRITICAL CRITICAL CRITICAL----");
+		// log("spider: ----CRITICAL CRITICAL CRITICAL----");
+		// log("spider: ------ *** LOCAL ERROR ***  ------");
+		// log("spider: ------ *** LOCAL ERROR ***  ------");
+		// log("spider: ------ *** LOCAL ERROR ***  ------");
 		log("spider: spidering %s has error: %s. uh48=%"INT64". "
-		    "Respidering "
-		    "in %"INT32" seconds. MAX_LOCK_AGE when lock expires.",
+		    //"Respidering "
+		    //"in %"INT32" seconds. MAX_LOCK_AGE when lock expires. "
+		    "cn=%"INT32"",
 		    xd->m_firstUrl.m_url,
 		    mstrerror(g_errno),
 		    xd->getFirstUrlHash48(),
-		    (int32_t)MAX_LOCK_AGE);
-		log("spider: ------ *** LOCAL ERROR ***  ------");
-		log("spider: ------ *** LOCAL ERROR ***  ------");
-		log("spider: ------ *** LOCAL ERROR ***  ------");
-		log("spider: ----CRITICAL CRITICAL CRITICAL----");
-		log("spider: ----CRITICAL CRITICAL CRITICAL----");
+		    //(int32_t)MAX_LOCK_AGE,
+		    (int32_t)collnum);
+		// log("spider: ------ *** LOCAL ERROR ***  ------");
+		// log("spider: ------ *** LOCAL ERROR ***  ------");
+		// log("spider: ------ *** LOCAL ERROR ***  ------");
+		// log("spider: ----CRITICAL CRITICAL CRITICAL----");
+		// log("spider: ----CRITICAL CRITICAL CRITICAL----");
 		// don't release the lock on it right now. just let the
 		// lock expire on it after MAX_LOCK_AGE seconds. then it will
 		// be retried. we need to debug gb so these things never
@@ -13711,36 +13713,49 @@ void handleRequestc1 ( UdpSlot *slot , int32_t niceness ) {
 
 bool getSpiderStatusMsg ( CollectionRec *cx , SafeBuf *msg , int32_t *status ) {
 
-	if ( ! g_conf.m_spideringEnabled && ! cx->m_isCustomCrawl )
+	if ( ! g_conf.m_spideringEnabled && ! cx->m_isCustomCrawl ) {
+		*status = SP_ADMIN_PAUSED;
 		return msg->safePrintf("Spidering disabled in "
 				       "master controls. You can turn it "
 				       "back on there.");
+	}
 
-	if ( g_conf.m_readOnlyMode ) 
+	if ( g_conf.m_readOnlyMode ) {
+		*status = SP_ADMIN_PAUSED;
 		return msg->safePrintf("In read-only mode. Spidering off.");
+	}
 
-	if ( g_dailyMerge.m_mergeMode )
+	if ( g_dailyMerge.m_mergeMode ) {
+		*status = SP_ADMIN_PAUSED;
 		return msg->safePrintf("Daily merge engaged, spidering "
 				       "paused.");
+	}
 
-	if ( g_udpServer.getNumUsedSlots() >= 1300 ) 
+	if ( g_udpServer.getNumUsedSlots() >= 1300 ) {
+		*status = SP_ADMIN_PAUSED;
 		return msg->safePrintf("Too many UDP slots in use, "
 				       "spidering paused.");
+	}
 
-	if ( g_repairMode ) 
+	if ( g_repairMode ) {
+		*status = SP_ADMIN_PAUSED;
 		return msg->safePrintf("In repair mode, spidering paused.");
+	}
 
 	// do not spider until collections/parms in sync with host #0
-	if ( ! g_parms.m_inSyncWithHost0 )
+	if ( ! g_parms.m_inSyncWithHost0 ) {
+		*status = SP_ADMIN_PAUSED;
 		return msg->safePrintf("Parms not in sync with host #0, "
 				       "spidering paused");
+	}
 
 	// don't spider if not all hosts are up, or they do not all
 	// have the same hosts.conf.
-	if ( g_pingServer.m_hostsConfInDisagreement )
+	if ( g_pingServer.m_hostsConfInDisagreement ) {
+		*status = SP_ADMIN_PAUSED;
 		return msg->safePrintf("Hosts.conf discrepancy, "
 				       "spidering paused.");
-
+	}
 
 	uint32_t now = (uint32_t)getTimeGlobal();
 
