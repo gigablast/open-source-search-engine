@@ -295,10 +295,12 @@ JsonItem *Json::parseJsonStringIntoJsonItems ( char *json , int32_t niceness ) {
 			// what is the length of it?
 			int32_t slen = 4;
 			ji->m_valueLong = 1;
+			ji->m_value64 = 1;
 			ji->m_valueDouble = 1.0;
 			if ( *p == 'f' ) {
 				slen = 5;
 				ji->m_valueLong = 0;
+				ji->m_value64 = 0;
 				ji->m_valueDouble = 0;
 			}
 			// store decoded string right after jsonitem
@@ -343,6 +345,7 @@ JsonItem *Json::parseJsonStringIntoJsonItems ( char *json , int32_t niceness ) {
 			//char c = str[slen];
 			//str[slen] = '\0';
 			ji->m_valueLong = atol(str);
+			ji->m_value64 = atoll(str);
 			ji->m_valueDouble = atof(str);
 			// copy the number as a string as well
 			int32_t curr = m_sb.length();
@@ -475,6 +478,11 @@ char *JsonItem::getValueAsString ( int32_t *valueLen ) {
 	static char s_numBuf[256];
 	if ( (float)m_valueLong == m_valueDouble ) {
 		*valueLen = snprintf ( s_numBuf,255,"%"INT32"", m_valueLong );
+		return s_numBuf;
+	}
+
+	if ( (double)m_value64 == m_valueDouble ) {
+		*valueLen = snprintf ( s_numBuf,255,"%"INT64"", m_value64 );
 		return s_numBuf;
 	}
 
