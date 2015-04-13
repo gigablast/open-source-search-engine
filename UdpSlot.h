@@ -412,11 +412,6 @@ class UdpSlot {
 	// save cpu by not having to call memset() on m_sentBits et al
 	int32_t m_numBitsInitialized;
 
-	// we keep the unused slots in a linked list in UdpServer
-	class UdpSlot *m_next;
-	// and for doubly linked list of used slots
-	class UdpSlot *m_next2;
-	class UdpSlot *m_prev2;
 	// and for doubly linked list of callback candidates
  	class UdpSlot *m_next3;
 	class UdpSlot *m_prev3;
@@ -431,6 +426,12 @@ class UdpSlot {
 	unsigned char m_readBits2    [ (MAX_DGRAMS / 8) + 1 ];
 	unsigned char m_sentAckBits2 [ (MAX_DGRAMS / 8) + 1 ];
 	unsigned char m_readAckBits2 [ (MAX_DGRAMS / 8) + 1 ];
+
+	// we keep the unused slots in a linked list in UdpServer
+	class UdpSlot *m_next;
+	// and for doubly linked list of used slots
+	class UdpSlot *m_next2;
+	class UdpSlot *m_prev2;
 
 	// store the key so when returning slot we can remove from hash table
 	key_t m_key;
