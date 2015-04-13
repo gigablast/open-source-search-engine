@@ -282,6 +282,9 @@ void PingServer::sendPingsToAll ( ) {
 
 // };
 
+// from Loop.cpp
+extern float g_cpuUsage;
+
 // ping host #i
 void PingServer::pingHost ( Host *h , uint32_t ip , uint16_t port ) {
 	// don't ping on interface machines
@@ -512,6 +515,9 @@ void PingServer::pingHost ( Host *h , uint32_t ip , uint16_t port ) {
 	pi->m_udpSlotsInUseIncoming = g_udpServer.getNumUsedSlotsIncoming();
 
 	pi->m_tcpSocketsInUse = g_httpServer.m_tcp.m_numUsed;
+
+	// from Loop.cpp
+	pi->m_cpuUsage = g_cpuUsage;
 
 	// store hd temps
 	// gbmemcpy ( p , me->m_hdtemps , 4 * 2 );

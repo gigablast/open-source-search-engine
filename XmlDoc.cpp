@@ -1905,15 +1905,15 @@ void XmlDoc::setStatus ( char *s ) {
 	s_last = s;
 
 	bool logIt = g_conf.m_logDebugBuild;
-	CollectionRec *cr = NULL;
-	if ( m_collnumValid ) 
-		cr = g_collectiondb.m_recs[m_collnum];
-	if ( cr && 
-	     cr->m_coll &&
-	     cr->m_coll[0] == 'c' &&
-	     cr->m_coll[1] == 'r' &&
-	     strncmp(cr->m_coll,"crawlbottesting-",16) == 0 ) 
-		logIt = true;
+	// CollectionRec *cr = NULL;
+	// if ( m_collnumValid ) 
+	// 	cr = g_collectiondb.m_recs[m_collnum];
+	// if ( cr && 
+	//      cr->m_coll &&
+	//      cr->m_coll[0] == 'c' &&
+	//      cr->m_coll[1] == 'r' &&
+	//      strncmp(cr->m_coll,"crawlbottesting-",16) == 0 ) 
+	// 	logIt = true;
 
 	if ( ! logIt ) return;
 	//return;
@@ -14374,6 +14374,16 @@ void gotDiffbotReplyWrapper ( void *state , TcpSocket *s ) {
 		log("build: diffbot error for url %s",
 		    THIS->m_diffbotUrl.getBufStart());
 
+
+	CollectionRec *cr = THIS->getCollRec();
+
+	if ( cr && strncmp(cr->m_coll,"crawlbottesting-",16) == 0 ) {
+		log("build: diffbot reply for url %s = %s",
+		    THIS->m_diffbotUrl.getBufStart(),
+		    s->m_readBuf);
+	}
+
+
 	if ( retryUrl )
 		goto retry;
 
@@ -14393,8 +14403,6 @@ void gotDiffbotReplyWrapper ( void *state , TcpSocket *s ) {
 		log("xmldoc: diffbot reply was -1");
 		THIS->m_diffbotReplyError = EDIFFBOTINTERNALERROR;
 	}
-
-	CollectionRec *cr = THIS->getCollRec();
 
 
 	// . verify that it contains legit json and has the last field

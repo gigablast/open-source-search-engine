@@ -412,6 +412,13 @@ class UdpSlot {
 	// save cpu by not having to call memset() on m_sentBits et al
 	int32_t m_numBitsInitialized;
 
+	// and for doubly linked list of callback candidates
+ 	class UdpSlot *m_next3;
+	class UdpSlot *m_prev3;
+
+	// memset clears from here and above. so put anything that needs to
+	// be set to zero above this line.
+
 	// . i've discarded the window since msg size is limited
 	// . this way is faster 
 	// . these bits determine what dgrams we've sent/read/sentAck/readAck
@@ -425,9 +432,7 @@ class UdpSlot {
 	// and for doubly linked list of used slots
 	class UdpSlot *m_next2;
 	class UdpSlot *m_prev2;
-	// and for doubly linked list of callback candidates
- 	class UdpSlot *m_next3;
-	class UdpSlot *m_prev3;
+
 	// store the key so when returning slot we can remove from hash table
 	key_t m_key;
 

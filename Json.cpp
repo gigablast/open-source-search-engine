@@ -470,13 +470,15 @@ char *JsonItem::getValueAsString ( int32_t *valueLen ) {
 	}
 
 	// numbers...
-	static char s_numBuf[64];
+	// seems like when this overflowed when it was 64 bytes
+	// it went into s_vbuf in Version.cpp
+	static char s_numBuf[256];
 	if ( (float)m_valueLong == m_valueDouble ) {
-		*valueLen = sprintf ( s_numBuf,"%"INT32"", m_valueLong );
+		*valueLen = snprintf ( s_numBuf,255,"%"INT32"", m_valueLong );
 		return s_numBuf;
 	}
 
-	*valueLen = sprintf ( s_numBuf,"%f", m_valueDouble );
+	*valueLen = snprintf ( s_numBuf,255,"%f", m_valueDouble );
 	return s_numBuf;
 }
 
