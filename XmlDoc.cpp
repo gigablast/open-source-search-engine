@@ -27277,7 +27277,7 @@ SafeBuf *XmlDoc::getSpiderStatusDocMetaList2 ( SpiderReply *reply ) {
 			      cr->m_spiderRoundNum);
 
 	if ( m_isDupValid && m_isDup )
-		jd.safePrintf("\"gbssDupOfDocId:%"INT64",\n",
+		jd.safePrintf("\"gbssDupOfDocId\":%"INT64",\n",
 			      m_docIdWeAreADupOf);
 
 	// how many spiderings were successful vs. failed
@@ -27410,7 +27410,7 @@ SafeBuf *XmlDoc::getSpiderStatusDocMetaList2 ( SpiderReply *reply ) {
 	// remove last ,\n
 	jd.incrementLength(-2);
 	// end the json spider status doc
-	jd.safePrintf("}\n");
+	jd.safePrintf("\n}\n");
 
 
 	// the posdb table

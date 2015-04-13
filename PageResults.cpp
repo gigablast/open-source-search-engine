@@ -4087,7 +4087,10 @@ bool printResult ( State0 *st, int32_t ix , int32_t *numPrintedSoFar ) {
 		// and boldify just the main url, not the redir url!
 		sb->safePrintf("<pre style=display:inline;>"
 			       "\"gbssUrl\":\""
-			       "<b style=color:blue;><a href=/get?d=%"INT64">"
+			       "<b style=color:blue;><a href=/get?"
+			       "c=%s&"
+			       "d=%"INT64">"
+			       , cr->m_coll
 			       , mr->m_docId
 			       );
 		char *s2 = strstr ( s , "\"gbssFinalRedirectUrl\":");
