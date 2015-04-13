@@ -22883,8 +22883,8 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 			sreq.setKey( firstIp,0LL, false );
 			sreq.m_isInjecting   = 1; 
 			sreq.m_isPageInject  = 1;
-			sreq.m_hopCount      = 0;
-			sreq.m_hopCountValid = 1;
+			sreq.m_hopCount      = m_hopCount;
+			sreq.m_hopCountValid = m_hopCountValid;
 			sreq.m_fakeFirstIp   = 1;
 			sreq.m_firstIp       = firstIp;
 			// so we can match url filters' "insitelist" directive
