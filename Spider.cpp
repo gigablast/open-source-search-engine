@@ -13871,6 +13871,7 @@ bool getSpiderStatusMsg ( CollectionRec *cx , SafeBuf *msg , int32_t *status ) {
 	if ( ! cx->m_isCustomCrawl && 
 	     ! cx->m_globalCrawlInfo.m_hasUrlsReadyToSpider ) {
 		//*status = SP_COMPLETED;
+		*status = SP_INPROGRESS;
 		return msg->safePrintf ( "Nothing currently "
 					 "available to spider. "
 					 "Change your url filters, try "
