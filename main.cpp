@@ -3103,7 +3103,7 @@ int main2 ( int argc , char *argv[] ) {
 		if ( pid < 0 ) exit(EXIT_FAILURE);
 		// seems like we core unless parent sets this to NULL.
 		// it does not affect the child.
-		if ( pid > 0 ) g_hostdb.m_myHost = NULL;
+		//if ( pid > 0 ) g_hostdb.m_myHost = NULL;
 		// child gets a 0, parent gets the child's pid, so exit
 		if ( pid > 0 ) exit(EXIT_SUCCESS);
 		// change file mode mask
@@ -4118,7 +4118,7 @@ bool doCmd ( const char *cmd , int32_t hostId , char *filename ,
 	s_r.set ( s_buffer , gbstrlen ( s_buffer ) , &sock );
 	// do not do sig alarms! for now just set this to null so 
 	// the sigalarmhandler doesn't core
-	g_hostdb.m_myHost = NULL;
+	//g_hostdb.m_myHost = NULL;
 	// run the loop
 	if ( ! g_loop.runLoop() ) 
 		return log("INJECT: loop run failed.");
