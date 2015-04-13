@@ -602,6 +602,8 @@ bool UdpServer::sendRequest ( char     *msg          ,
 		return log("udp: Failed to initialize udp socket for "
 			   "sending req: %s",mstrerror(g_errno));
 	}
+
+	if ( slot->m_next3 || slot->m_prev3 ) { char *xx=NULL;*xx=0; }
 	// set this
 	slot->m_maxResends = maxResends;
 	// keep sending dgrams until we have no more or hit ACK_WINDOW limit

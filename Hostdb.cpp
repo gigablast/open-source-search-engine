@@ -66,6 +66,7 @@ Hostdb::Hostdb ( ) {
 	m_crcValid = false;
 	m_crc = 0;
 	m_created = false;
+	m_myHost = NULL;
 }
 
 Hostdb::~Hostdb () {
@@ -108,6 +109,7 @@ bool Hostdb::init ( int32_t hostIdArg , char *netName ,
 	m_myIp             = 0;
 	m_myIpShotgun      = 0;
 	m_myPort           = 0;
+	m_myHost           = NULL;
 	//m_myPort2          = 0;
 	m_numHosts         = 0;
 	m_numHostsPerShard = 0;
