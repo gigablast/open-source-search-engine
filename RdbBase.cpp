@@ -815,6 +815,7 @@ int32_t RdbBase::addFile ( int32_t id , bool isNew , int32_t mergeNum , int32_t 
 		      ff->getFilename() ,
 		      (int64_t)ff->getFileSize(),
 		      (int64_t)MAX_PART_SIZE);
+		exit(0);
 		return -1;
 	}
 

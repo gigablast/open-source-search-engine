@@ -135,6 +135,7 @@ bool File::rename ( char *newFilename ) {
 static File *s_activeHead = NULL;
 static File *s_activeTail = NULL;
 
+/*
 void rmFileFromLinkedList ( File *f ) {
 	// excise from linked list of active files
 	if ( s_activeHead == f )
@@ -174,6 +175,7 @@ void promoteInLinkedList ( File *f ) {
 	rmFileFromLinkedList ( f );
 	addFileToLinkedList  ( f );
 }
+*/
 
 // . open the file
 // . only call once per File after calling set()
@@ -247,7 +249,7 @@ int File::write ( void *buf             ,
 	// valgrind
 	if ( n < 0 && errno == EINTR ) goto retry21;	
 	// update linked list
-	promoteInLinkedList ( this );
+	//promoteInLinkedList ( this );
 	// copy errno to g_errno
 	if ( n < 0 ) g_errno = errno;
 	// cancel blocking errors - not really errors
@@ -277,7 +279,7 @@ int File::read ( void *buf            ,
 	// valgrind
 	if ( n < 0 && errno == EINTR ) goto retry9;	
 	// update linked list
-	promoteInLinkedList ( this );
+	//promoteInLinkedList ( this );
 	// copy errno to g_errno
 	if ( n < 0 ) g_errno = errno;
 	// cancel blocking errors - not really errors
@@ -391,7 +393,7 @@ void File::close2 ( ) {
 		return;
 	}
 	// excise from linked list of active files
-	rmFileFromLinkedList ( this );
+	//rmFileFromLinkedList ( this );
 	// mark this virtual file descriptor as available.
 	s_fds [ m_vfd ] = -2;           
 	// no more virtual file descriptor
@@ -460,7 +462,7 @@ bool File::close ( ) {
 	// otherwise decrease the # of open files
 	s_numOpenFiles--; 
 	// excise from linked list of active files
-	rmFileFromLinkedList ( this );
+	//rmFileFromLinkedList ( this );
 	// return true blue
 	return true; 
 }
@@ -579,7 +581,7 @@ int File::getfd () {
 	// update the time stamp
 	s_timestamps [ m_vfd ] = gettimeofdayInMillisecondsLocal();
 	// add file to linked list of active files
-	addFileToLinkedList ( this );
+	//addFileToLinkedList ( this );
 	return fd;
 }
 
@@ -587,10 +589,11 @@ int File::getfd () {
 // we don't touch files opened for writing, however.
 bool File::closeLeastUsed () {
 
-	//int64_t min  ;
+	int64_t min  ;
 	int    mini = -1;
 	int64_t now = gettimeofdayInMillisecondsLocal();
 
+	/*
 	// use the new linked list of active file descriptors
 	// . file at tail is the most active
 	File *f = s_activeHead;
@@ -610,13 +613,11 @@ bool File::closeLeastUsed () {
 		// read because the descriptors are always getting closed on us
 		// so do a hack fix and do not close descriptors that are
 		// about .5 seconds old on avg.
-		if ( s_timestamps [ mini ] >= now - 1 ) return true;
+		if ( s_timestamps [ mini ] >= now - 1 ) continue;
 		break;
 	}
+	*/
 
-
-
-	/*
 	// get the least used of all the actively opened file descriptors.
 	// we can't get files that were opened for writing!!!
 	int i;
@@ -643,7 +644,6 @@ bool File::closeLeastUsed () {
 			mini = i;
 		}
 	}
-	*/
 
 	// if nothing to free then return false
 	if ( mini == -1 ) 
@@ -692,7 +692,11 @@ bool File::closeLeastUsed () {
 	if ( status == 0 ) {
 		s_numOpenFiles--;
 		// excise from linked list of active files
-		rmFileFromLinkedList ( f );
+		//rmFileFromLinkedList ( f );
+		// getfd() may not execute in time to ince the closeCount
+		// so do it here. test by setting the max open files to like
+		// 10 or so and spidering heavily.
+		//s_closeCounts [ fd ]++;
 	}
 
 
