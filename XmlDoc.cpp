@@ -230,6 +230,8 @@ void XmlDoc::reset ( ) {
 	m_sentToDiffbot = 0;
 	m_gotDiffbotSuccessfulReply = 0;
 
+	m_sentToDiffbotThisTime = false;
+
 	m_loaded = false;
 
 	m_msg4Launched = false;
@@ -15457,6 +15459,8 @@ SafeBuf *XmlDoc::getDiffbotReply ( ) {
 	// mark as tried
 	if ( m_srepValid ) { char *xx=NULL;*xx=0; }
 
+	m_sentToDiffbotThisTime = true;
+
 	// might have been a recall if gotDiffbotReplyWrapper() sensed
 	// g_errno == ECONNRESET and it will retry
 	if ( ! m_sentToDiffbot ) {
@@ -27385,11 +27389,16 @@ SafeBuf *XmlDoc::getSpiderStatusDocMetaList2 ( SpiderReply *reply ) {
 		jd.safePrintf("\"gbssCrawlDelayMS\":%"INT32",\n",
 			      (int32_t)m_crawlDelay);
 		
-	// sent to diffbot?
-	jd.safePrintf("\"gbssSentToDiffbot\":%i,\n",
+	// was this url ever sent to diffbot either now or at a previous
+	// spider time?
+	jd.safePrintf("\"gbssSentToDiffbotAtSomeTime\":%i,\n",
 		      (int)m_sentToDiffbot);
 
-	if ( m_diffbotReplyValid && m_sentToDiffbot ) {
+	// sent to diffbot?
+	jd.safePrintf("\"gbssSentToDiffbotThisTime\":%i,\n",
+		      (int)m_sentToDiffbotThisTime);
+
+	if ( m_diffbotReplyValid && m_sentToDiffbotThisTime ) {
 		jd.safePrintf("\"gbssDiffbotReplyCode\":%"INT32",\n",
 			      m_diffbotReplyError);
 		jd.safePrintf("\"gbssDiffbotReplyMsg\":\"");

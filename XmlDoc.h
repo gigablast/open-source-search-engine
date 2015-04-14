@@ -740,6 +740,8 @@ class XmlDoc {
 	int64_t m_diffbotReplyStartTime;
 	int32_t m_diffbotReplyRetries;
 
+	bool m_sentToDiffbotThisTime;
+
 	uint64_t m_downloadStartTime;
 	//uint64_t m_downloadEndTime;
 
