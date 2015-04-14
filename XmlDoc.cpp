@@ -24789,10 +24789,10 @@ SpiderReply *XmlDoc::getNewSpiderReply ( ) {
 	if ( m_sreqValid && m_sreq.m_isInjecting )
 		m_srep.m_fromInjectionRequest = 1;
 
-	if ( m_sentToDiffbot )
-		m_srep.m_sentToDiffbot = true;
+	if ( m_sentToDiffbotThisTime )
+		m_srep.m_sentToDiffbotThisTime = true;
 	else
-		m_srep.m_sentToDiffbot = false;
+		m_srep.m_sentToDiffbotThisTime = false;
 
 	if ( m_diffbotReplyError )
 		m_srep.m_hadDiffbotError = true;

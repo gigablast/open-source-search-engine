@@ -768,7 +768,7 @@ void StateCD::printSpiderdbList ( RdbList *list,SafeBuf *sb,char **lastKeyPtr){
 			lastSpidered = 0;
 
 		bool isProcessed = false;
-		if ( srep ) isProcessed = srep->m_sentToDiffbot;
+		if ( srep ) isProcessed = srep->m_sentToDiffbotThisTime;
 
 		if ( srep && srep->m_hadDiffbotError )
 			isProcessed = false;

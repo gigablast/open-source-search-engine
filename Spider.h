@@ -931,7 +931,7 @@ class SpiderReply {
 	// was the request an injection request
 	int32_t    m_fromInjectionRequest    :1; 
 	// did we TRY to send it to the diffbot backend filter? might be err?
-	int32_t    m_sentToDiffbot           :1;
+	int32_t    m_sentToDiffbotThisTime   :1;
 	int32_t    m_hadDiffbotError         :1;
 	// . was it in the index when we started?
 	// . we use this with m_isIndexed above to adjust quota counts for
