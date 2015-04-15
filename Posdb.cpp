@@ -686,8 +686,10 @@ PosdbTable::~PosdbTable() {
 }
 
 void PosdbTable::reset() {
+	// we can't reset this because we don't recall allocTopTree()
+	// again when computing search results in docid ranges.
+	//m_hasFacetTerm = false;
 	// has init() been called?
-	m_hasFacetTerm = false;
 	m_initialized          = false;
 	m_estimatedTotalHits   = -1;
 	m_errno                   = 0;
