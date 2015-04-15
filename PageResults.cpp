@@ -7975,20 +7975,21 @@ bool printCSVHeaderRow ( SafeBuf *sb , State0 *st , int32_t ct ) {
 		"00gbssUrl",
 		"01gbssDocId",
 		"02gbssDiscoveredTime",
-		"03gbssDownloadStartTime",
+		"03gbssSpiderTime",
 		"06gbssContentLen",
 		"07gbssDupOfDocId" ,
 		"08gbssNumRedirects",
 		"09gbssFinalRedirectUrl",
-		"10gbssPercentContentChanged",
+		"10gbssCrawlDelayMS",
 		"11gbssCrawlRound",
 		"12gbssHopCount",
-		"13gbssIp",
+		"13gbssStatusMsg",
 		"14gbssSentToDiffbotThisTime",
 		"15gbssDiffbotReplyMsg",
-		"16gbssStatusMsg",
 
-
+		"gbssIp",
+		"gbssPercentContentChanged",
+		"gbssDownloadStartTime",
 		"gbssDownloadEndTime",
 		"gbssContentType",
 		"gbssHttpStatus",
@@ -8004,7 +8005,6 @@ bool printCSVHeaderRow ( SafeBuf *sb , State0 *st , int32_t ct ) {
 		"gbssSiteNumInlinks",
 		"gbssSiteRank",
 		"gbssLanguage",
-		"gbssCrawlDelayMS",
 		"gbssDiffbotReplyCode",
 		"gbssDiffbotLen",
 		"gbssDiffbotReplyResponseTimeMS",
@@ -8169,8 +8169,8 @@ bool printCSVHeaderRow ( SafeBuf *sb , State0 *st , int32_t ct ) {
 		if ( ! strcmp(hdr,"gbssDiscoveredTime") ) // need this!
 			hdr = "Url Discovered Time";
 		// when it was crawled this time
-		if ( ! strcmp(hdr,"gbssDownloadStartTime") ) 
-			hdr = "Download Time";
+		if ( ! strcmp(hdr,"gbssSpiderTime" ) )
+			hdr = "Crawled Time";
 		if ( ! strcmp(hdr,"gbssContentLen") ) 
 			hdr = "Content Length";
 		if ( ! strcmp(hdr,"gbssDupOfDocId") ) 
@@ -8183,6 +8183,8 @@ bool printCSVHeaderRow ( SafeBuf *sb , State0 *st , int32_t ct ) {
 			hdr = "Percent Changed";
 		if ( ! strcmp(hdr,"gbssCrawlRound") ) 
 			hdr = "Crawl Round";
+		if ( ! strcmp(hdr,"gbssCrawlDelay") ) 
+			hdr = "Robots.txt Crawl Delay (ms)";
 		if ( ! strcmp(hdr,"gbssHopCount") ) 
 			hdr = "Hop Count";
 		if ( ! strcmp(hdr,"gbssIp") ) 
@@ -8192,7 +8194,7 @@ bool printCSVHeaderRow ( SafeBuf *sb , State0 *st , int32_t ct ) {
 		if ( ! strcmp(hdr,"gbssDiffbotReplyMsg") )
 			hdr = "Process Response";
 		if ( ! strcmp(hdr,"gbssStatusMsg") ) 
-			hdr = "Status";
+			hdr = "Crawl Status";
 
 		//if ( ! strcmp(hdr,"gbssMatchingUrlFilter") ) 
 		//	hdr = "Matching Expression";

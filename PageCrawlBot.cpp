@@ -288,6 +288,47 @@ bool sendBackDump ( TcpSocket *sock, HttpRequest *hr ) {
 		return sendPageResults ( sock , &hr2 );
 	}
 
+	// . now the urls.csv is also a query on gbss files
+	// . make an httprequest on stack and call it
+	if ( fmt == FORMAT_CSV && rdbId == RDB_SPIDERDB ) {
+		char tmp2[5000];
+		SafeBuf sb2(tmp2,5000);
+		// never dedup
+		int32_t dr = 0;
+		// do not dedup for crawls either it is too confusing!!!!
+		// ppl wonder where the results are!
+		dr = 0;
+		sb2.safePrintf("GET /search?"
+			       // this is not necessary
+			       //"icc=1&"
+			       "format=csv&"
+			       // no site clustering
+			       "sc=0&"
+			       // never dedup.
+			       "dr=0&"
+			       "c=%s&"
+			       "n=10000000&"
+			       // stream it now
+			       "stream=1&"
+			       // no summary similarity dedup, only exact
+			       // doc content hash. otherwise too slow!!
+			       "pss=0&"
+			       // no gigabits
+			       "dsrt=0&"
+			       // do not compute summary. 0 lines.
+			       //"ns=0&"
+			       "q=gbrevsortbyint%%3AgbssSpiderTime+"
+			       "gbssIsDiffbotObject%%3A0"
+			       "&"
+			       //"prepend=type%%3Ajson"
+			       "\r\n\r\n"
+			       , cr->m_coll
+			       );
+		HttpRequest hr2;
+		hr2.set ( sb2.getBufStart() , sb2.length() , sock );
+		return sendPageResults ( sock , &hr2 );
+	}
+
 
 
 	//if ( strncmp ( path ,"/crawlbot/downloadurls",22  ) == 0 )

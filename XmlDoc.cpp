@@ -24584,7 +24584,7 @@ SpiderReply *XmlDoc::getFakeSpiderReply ( ) {
 	//if ( ! cr ) return true;
 }
 
-
+// getSpiderReply()
 SpiderReply *XmlDoc::getNewSpiderReply ( ) {
 
 	if ( m_srepValid ) return &m_srep;
@@ -27303,6 +27303,13 @@ SafeBuf *XmlDoc::getSpiderStatusDocMetaList2 ( SpiderReply *reply ) {
 		jd.safePrintf("\"gbssPrevTotalNumIndexFailures\":%"INT32",\n",
 			      m_sreq.m_reservedc2);
 	}
+
+	if ( m_spideredTimeValid )
+		jd.safePrintf("\"gbssSpiderTime\":%"INT32",\n",
+			      m_spideredTime);
+	else
+		jd.safePrintf("\"gbssSpiderTime\":%"INT32",\n",0);
+
 
 	if ( m_firstIndexedDateValid )
 		jd.safePrintf("\"gbssFirstIndexed\":%"UINT32",\n",

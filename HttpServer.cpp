@@ -2340,7 +2340,7 @@ int32_t getMsgSize ( char *buf, int32_t bufSize, TcpSocket *s ) {
 		// /admin/basic etc
 		if ( pp + 7 < ppend && strncmp ( pp ,"/admin/",7)==0)
 			max = 0x7fffffff;
-		// bulk job. /v2/bulk
+		// bulk job. /v2/bulk or /v3/crawl/download/token-name...
 		if ( pp + 4 < ppend && strncmp ( pp ,"/v",2)==0 &&
 		     // /v2/bulk
 		     ( ( pp[4] == 'b' && pp[5] == 'u' ) ||
