@@ -290,7 +290,13 @@ bool sendBackDump ( TcpSocket *sock, HttpRequest *hr ) {
 
 	// . now the urls.csv is also a query on gbss files
 	// . make an httprequest on stack and call it
-	if ( fmt == FORMAT_CSV && rdbId == RDB_SPIDERDB ) {
+	// . only do this for version 3 
+	//   i.e. GET /v3/crawl/download/token-collectionname_urls.csv
+	if ( fmt == FORMAT_CSV && 
+	     rdbId == RDB_SPIDERDB &&
+	     path[0] == '/' &&
+	     path[1] == 'v' &&
+	     path[2] == '3' ) {
 		char tmp2[5000];
 		SafeBuf sb2(tmp2,5000);
 		// never dedup
