@@ -4540,7 +4540,16 @@ bool SpiderColl::scanListForWinners ( ) {
 					wsreq->m_hopCount = sreq->m_hopCount;
 				if ( wsreq->m_hopCount < sreq->m_hopCount )
 					sreq->m_hopCount = wsreq->m_hopCount;
+				// and the min added time as well!
+				// get the oldest timestamp so
+				// gbssDiscoveryTime will be accurate.
+				if ( sreq->m_addedTime < wsreq->m_addedTime )
+					wsreq->m_addedTime = sreq->m_addedTime;
+				if ( wsreq->m_addedTime < sreq->m_addedTime )
+					sreq->m_addedTime = wsreq->m_addedTime;
 			}
+
+			
 
 			// are we lower priority? (or equal)
 			// smaller keys are HIGHER priority.
@@ -12950,6 +12959,8 @@ void dedupSpiderdbList ( RdbList *list , int32_t niceness , bool removeNegRecs )
 		// url to a different url priority!
 		if ( oldReq->m_siteHash32    != sreq->m_siteHash32    ||
 		     oldReq->m_isNewOutlink  != sreq->m_isNewOutlink  ||
+		     //  use hopcount now too!
+		     oldReq->m_hopCount      != sreq->m_hopCount      ||
 		     // makes a difference as far a m_minPubDate goes, because
 		     // we want to make sure not to delete that request that
 		     // has m_parentPrevSpiderTime
@@ -12966,7 +12977,8 @@ void dedupSpiderdbList ( RdbList *list , int32_t niceness , bool removeNegRecs )
 			goto addIt;
 		// . if the same check who has the most recent added time
 		// . if we are not the most recent, just do not add us
-		if ( sreq->m_addedTime <= oldReq->m_addedTime ) continue;
+		// . no, now i want the oldest so we can do gbssDiscoveryTime
+		if ( sreq->m_addedTime >= oldReq->m_addedTime ) continue;
 		// otherwise, erase over him
 		dst     = restorePoint;
 		lastKey = prevLastKey;

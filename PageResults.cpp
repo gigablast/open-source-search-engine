@@ -7926,15 +7926,18 @@ int csvPtrCmp ( const void *a, const void *b ) {
 	if ( strcmp(pa,"title") == 0 ) return -1;
 	if ( strcmp(pb,"title") == 0 ) return  1;
 
+	// this is now taken care of from the 'supps[]' array below
+	// by prepending two digits before each field name
+
 	// put url first for spider status docs
-	if ( strcmp(pa,"gbssUrl") == 0 ) return -1;
-	if ( strcmp(pb,"gbssUrl") == 0 ) return  1;
+	// if ( strcmp(pa,"gbssUrl") == 0 ) return -1;
+	// if ( strcmp(pb,"gbssUrl") == 0 ) return  1;
 
-	if ( strcmp(pa,"gbssStatusMsg") == 0 ) return -1;
-	if ( strcmp(pb,"gbssStatusMsg") == 0 ) return  1;
+	// if ( strcmp(pa,"gbssStatusMsg") == 0 ) return -1;
+	// if ( strcmp(pb,"gbssStatusMsg") == 0 ) return  1;
 
-	if ( strcmp(pa,"gbssStatusCode") == 0 ) return -1;
-	if ( strcmp(pb,"gbssStatusCode") == 0 ) return  1;
+	// if ( strcmp(pa,"gbssStatusCode") == 0 ) return -1;
+	// if ( strcmp(pb,"gbssStatusCode") == 0 ) return  1;
 
 
 	// otherwise string compare
@@ -8052,30 +8055,40 @@ bool printCSVHeaderRow ( SafeBuf *sb , State0 *st , int32_t ct ) {
 
 	// if doing spider status docs not all will have dupofdocid field
 	char *supps [] = { 
-		"gbssFinalRedirectUrl",
+		"00gbssUrl",
+		"01gbssDocId",
+		"02gbssDiscoveredTime",
+		"03gbssDownloadStartTime",
+		"04gbssDownloadEndTime",
+		"05gbssContentType",
+		"06gbssContentLen",
+		"07gbssDupOfDocId" ,
+		"08gbssNumRedirects",
+		"09gbssFinalRedirectUrl",
+		"10gbssPercentContentChanged",
+		"11gbssCrawlRound",
+		"12gbssHopCount",
+		"13gbssIp",
+		"14gbssSentToDiffbotThisTime",
+		"15gbssDiffbotReplyMsg",
+		"16gbssStatusMsg",
+
+
 		"gbssHttpStatus",
 		"gbssWasIndexed",
 		"gbssAgeInIndex",
-		"gbssDupOfDocId" ,
 		"gbssPrevTotalNumIndexAttempts",
 		"gbssPrevTotalNumIndexSuccesses",
 		"gbssPrevTotalNumIndexFailures",
-		"gbssDownloadStartTime",
-		"gbssDownloadEndTime",
 		"gbssDownloadStartTimeMS",
 		"gbssDownloadEndTimeMS",
 		"gbssDownloadDurationMS",
-		"gbssIp",
 		"gbssIpLookupTimeMS",
 		"gbssSiteNumInlinks",
 		"gbssSiteRank",
-		"gbssPercentContentChanged",
 		"gbssLanguage",
-		"gbssContentType",
-		"gbssContentLen",
 		"gbssCrawlDelayMS",
 		"gbssDiffbotReplyCode",
-		"gbssDiffbotReplyMsg",
 		"gbssDiffbotLen",
 		"gbssDiffbotReplyResponseTimeMS",
 		"gbssDiffbotReplyRetries",
@@ -8085,10 +8098,14 @@ bool printCSVHeaderRow ( SafeBuf *sb , State0 *st , int32_t ct ) {
 	for ( int32_t i = 0 ; supps[i] ; i++ ) {
 		// don't add these column headers to non spider status docs
 		if ( ct != CT_STATUS ) break;
-		int64_t h64 = hash64n ( supps[i] );
+		char *skip = supps[i];
+		// skip over the two order digits
+		if ( is_digit(skip[0]) ) skip += 2;
+		// don't include the order digits in the hash
+		int64_t h64 = hash64n ( skip );
 		if ( nameTable.isInTable ( &h64 ) ) continue;
 		// only show diffbot column headers for custom (diffbot) crawls
-		if ( strncmp(supps[i],"gbssDiffbot",11) == 0 &&
+		if ( strncmp(skip,"gbssDiffbot",11) == 0 &&
 		     ( ! cr || ! cr->m_isCustomCrawl ) )
 			break;
 		// record offset of the name for our hash table
@@ -8124,7 +8141,65 @@ bool printCSVHeaderRow ( SafeBuf *sb , State0 *st , int32_t ct ) {
 	// now print them out as the header row
 	for ( int32_t i = 0 ; i < numPtrs ; i++ ) {
 		if ( i > 0 && ! sb->pushChar(',') ) return false;
-		if ( ! sb->safeStrcpy ( ptrs[i] ) ) return false;
+
+		char *hdr = ptrs[i];
+
+		// skip the two order digits
+		if ( ct == CT_STATUS && is_digit(hdr[0]) ) hdr += 2;
+
+		// now transform the hdr from gbss* into the old way
+		if ( ! cr->m_isCustomCrawl )
+			goto skipTransform;
+
+		if ( ! strcmp(hdr,"gbssUrl") ) 
+			hdr = "Url";
+		if ( ! strcmp(hdr,"gbssDocId") ) 
+			hdr = "Doc ID";
+		// when url was first discovered
+		if ( ! strcmp(hdr,"gbssDiscoveredTime") ) // need this!
+			hdr = "Url Discovered";
+		// when it was crawled this time
+		if ( ! strcmp(hdr,"gbssDownloadStartTime") ) 
+			hdr = "Crawled";
+		if ( ! strcmp(hdr,"gbssContentLen") ) 
+			hdr = "Page Length";
+		if ( ! strcmp(hdr,"gbssDupOfDocId") ) 
+			hdr = "Duplicate Of";
+		if ( ! strcmp(hdr,"gbssNumRedirects") ) 
+			hdr = "Redirects";
+		if ( ! strcmp(hdr,"gbssFinalRedirectUrl") )
+			hdr = "Redirected To";
+		if ( ! strcmp(hdr,"gbssCrawlRound") ) 
+			hdr = "Crawl Round";
+		if ( ! strcmp(hdr,"gbssHopCount") ) 
+			hdr = "Hop Count";
+		if ( ! strcmp(hdr,"gbssIp") ) 
+			hdr = "IP";
+		if ( ! strcmp(hdr,"gbssSentToDiffbotThisTime") ) 
+			hdr = "Process Attempted";
+		if ( ! strcmp(hdr,"gbssDiffbotReplyMsg") )
+			hdr = "Process Response";
+		if ( ! strcmp(hdr,"gbssStatusMsg") ) 
+			hdr = "Status";
+
+		//if ( ! strcmp(hdr,"gbssMatchingUrlFilter") ) 
+		//	hdr = "Matching Expression";
+		// value is 'url ignored', 'will spider next round', 'error' or 
+		// a numeric priority
+		// if ( ! strcmp(hdr,"gbssSpiderPriority") ) 
+		// 	hdr = "Matching Action";
+
+		// new columns
+		// if ( ! strcmp(hdr,"gbssAgeInIndex") ) 
+		// 	hdr = "Age in Index";
+
+		// if not transformed, then do not print it out
+		if ( ! strncmp(hdr,"gbss",4) )
+			continue;
+
+	skipTransform:
+		if ( ! sb->safeStrcpy ( hdr ) ) return false;
+
 		// record the hash of each one for printing out further json
 		// objects in the same order so columns are aligned!
 		int64_t h64 = hash64n ( ptrs[i] );
@@ -8144,6 +8219,8 @@ bool printCSVHeaderRow ( SafeBuf *sb , State0 *st , int32_t ct ) {
 
 // returns false and sets g_errno on error
 bool printJsonItemInCSV ( char *json , SafeBuf *sb , State0 *st ) {
+
+	CollectionRec *cr = g_collectiondb.getRec ( st->m_collnum );
 
 	int32_t niceness = 0;
 
@@ -8203,6 +8280,9 @@ bool printJsonItemInCSV ( char *json , SafeBuf *sb , State0 *st ) {
 		int32_t slot = columnTable->getSlot ( &h64 ) ;
 		// MUST be in there
 		if ( slot < 0 ) { 
+			// we do not transform all gbss fields any more for
+			// diffbot to avoid overpopulating the csv
+			if ( cr && cr->m_isCustomCrawl ) continue;
 			// do not core on this anymore...
 			log("serps: json column not in table : %s",ji->m_name);
 			continue;

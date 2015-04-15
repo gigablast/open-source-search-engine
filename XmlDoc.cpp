@@ -27280,6 +27280,15 @@ SafeBuf *XmlDoc::getSpiderStatusDocMetaList2 ( SpiderReply *reply ) {
 		jd.safePrintf("\"gbssCrawlRound\":%"INT32",\n",
 			      cr->m_spiderRoundNum);
 
+	if ( m_sreqValid ) {
+		// in Spider.cpp we try to set m_sreq's m_addedTime to the
+		// min of all the spider requests, and we try to ensure
+		// that in the case of deduping we preserve the one with
+		// the oldest time.
+		jd.safePrintf("\"gbssDiscoveredTime\":%"INT32",\n",
+			      m_sreq.m_addedTime);
+	}
+
 	if ( m_isDupValid && m_isDup )
 		jd.safePrintf("\"gbssDupOfDocId\":%"INT64",\n",
 			      m_docIdWeAreADupOf);

@@ -132,10 +132,10 @@ bool File::rename ( char *newFilename ) {
 }
 
 
+/*
 static File *s_activeHead = NULL;
 static File *s_activeTail = NULL;
 
-/*
 void rmFileFromLinkedList ( File *f ) {
 	// excise from linked list of active files
 	if ( s_activeHead == f )
