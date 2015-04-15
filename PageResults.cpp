@@ -7942,6 +7942,7 @@ int csvPtrCmp ( const void *a, const void *b ) {
 
 	// otherwise string compare
 	int val = strcmp(pa,pb);
+
 	return val;
 }
 	
@@ -7969,12 +7970,82 @@ bool printCSVHeaderRow ( SafeBuf *sb , State0 *st , int32_t ct ) {
 
 	int32_t niceness = 0;
 
+	// if doing spider status docs not all will have dupofdocid field
+	char *supps [] = { 
+		"00gbssUrl",
+		"01gbssDocId",
+		"02gbssDiscoveredTime",
+		"03gbssDownloadStartTime",
+		"06gbssContentLen",
+		"07gbssDupOfDocId" ,
+		"08gbssNumRedirects",
+		"09gbssFinalRedirectUrl",
+		"10gbssPercentContentChanged",
+		"11gbssCrawlRound",
+		"12gbssHopCount",
+		"13gbssIp",
+		"14gbssSentToDiffbotThisTime",
+		"15gbssDiffbotReplyMsg",
+		"16gbssStatusMsg",
+
+
+		"gbssDownloadEndTime",
+		"gbssContentType",
+		"gbssHttpStatus",
+		"gbssWasIndexed",
+		"gbssAgeInIndex",
+		"gbssPrevTotalNumIndexAttempts",
+		"gbssPrevTotalNumIndexSuccesses",
+		"gbssPrevTotalNumIndexFailures",
+		"gbssDownloadStartTimeMS",
+		"gbssDownloadEndTimeMS",
+		"gbssDownloadDurationMS",
+		"gbssIpLookupTimeMS",
+		"gbssSiteNumInlinks",
+		"gbssSiteRank",
+		"gbssLanguage",
+		"gbssCrawlDelayMS",
+		"gbssDiffbotReplyCode",
+		"gbssDiffbotLen",
+		"gbssDiffbotReplyResponseTimeMS",
+		"gbssDiffbotReplyRetries",
+		NULL };
+
+	CollectionRec *cr = g_collectiondb.getRec ( st->m_collnum );
+	for ( int32_t i = 0 ; supps[i] ; i++ ) {
+		// don't add these column headers to non spider status docs
+		if ( ct != CT_STATUS ) break;
+		char *skip = supps[i];
+		// if custom crawl only show fields in supps with digits
+		if ( cr->m_isCustomCrawl && ! is_digit(skip[0]) ) continue;
+		// skip over the two order digits
+		if ( is_digit(skip[0]) ) skip += 2;
+		// don't include the order digits in the hash
+		int64_t h64 = hash64n ( skip );
+		if ( nameTable.isInTable ( &h64 ) ) continue;
+		// only show diffbot column headers for custom (diffbot) crawls
+		if ( strncmp(skip,"gbssDiffbot",11) == 0 &&
+		     ( ! cr || ! cr->m_isCustomCrawl ) )
+			break;
+		// record offset of the name for our hash table
+		int32_t nameBufOffset = nameBuf.length();
+		// store the name in our name buffer
+		if ( ! nameBuf.safeStrcpy (supps[i])) return false;
+		if ( ! nameBuf.pushChar ( '\0' ) ) return false;
+		// it's new. add it
+		if ( ! nameTable.addKey ( &h64 ,&nameBufOffset)) return false;
+	}
+	
 	// . scan every fucking json item in the search results.
 	// . we still need to deal with the case when there are so many
 	//   search results we have to dump each msg20 reply to disk in
 	//   order. then we'll have to update this code to scan that file.
 
 	for ( int32_t i = 0 ; i < numResults ; i++ ) {
+
+		// if custom crawl urls.csv only show the supps[] from above
+		if ( ct == CT_STATUS && cr->m_isCustomCrawl )
+			break;
 
 		// get the msg20 reply for search result #i
 		Msg20      *m20 = msg40->m_msg20[i];
@@ -8053,71 +8124,6 @@ bool printCSVHeaderRow ( SafeBuf *sb , State0 *st , int32_t ct ) {
 		}
 	}
 
-	// if doing spider status docs not all will have dupofdocid field
-	char *supps [] = { 
-		"00gbssUrl",
-		"01gbssDocId",
-		"02gbssDiscoveredTime",
-		"03gbssDownloadStartTime",
-		"04gbssDownloadEndTime",
-		"05gbssContentType",
-		"06gbssContentLen",
-		"07gbssDupOfDocId" ,
-		"08gbssNumRedirects",
-		"09gbssFinalRedirectUrl",
-		"10gbssPercentContentChanged",
-		"11gbssCrawlRound",
-		"12gbssHopCount",
-		"13gbssIp",
-		"14gbssSentToDiffbotThisTime",
-		"15gbssDiffbotReplyMsg",
-		"16gbssStatusMsg",
-
-
-		"gbssHttpStatus",
-		"gbssWasIndexed",
-		"gbssAgeInIndex",
-		"gbssPrevTotalNumIndexAttempts",
-		"gbssPrevTotalNumIndexSuccesses",
-		"gbssPrevTotalNumIndexFailures",
-		"gbssDownloadStartTimeMS",
-		"gbssDownloadEndTimeMS",
-		"gbssDownloadDurationMS",
-		"gbssIpLookupTimeMS",
-		"gbssSiteNumInlinks",
-		"gbssSiteRank",
-		"gbssLanguage",
-		"gbssCrawlDelayMS",
-		"gbssDiffbotReplyCode",
-		"gbssDiffbotLen",
-		"gbssDiffbotReplyResponseTimeMS",
-		"gbssDiffbotReplyRetries",
-		NULL };
-
-	CollectionRec *cr = g_collectiondb.getRec ( st->m_collnum );
-	for ( int32_t i = 0 ; supps[i] ; i++ ) {
-		// don't add these column headers to non spider status docs
-		if ( ct != CT_STATUS ) break;
-		char *skip = supps[i];
-		// skip over the two order digits
-		if ( is_digit(skip[0]) ) skip += 2;
-		// don't include the order digits in the hash
-		int64_t h64 = hash64n ( skip );
-		if ( nameTable.isInTable ( &h64 ) ) continue;
-		// only show diffbot column headers for custom (diffbot) crawls
-		if ( strncmp(skip,"gbssDiffbot",11) == 0 &&
-		     ( ! cr || ! cr->m_isCustomCrawl ) )
-			break;
-		// record offset of the name for our hash table
-		int32_t nameBufOffset = nameBuf.length();
-		// store the name in our name buffer
-		if ( ! nameBuf.safeStrcpy (supps[i])) return false;
-		if ( ! nameBuf.pushChar ( '\0' ) ) return false;
-		// it's new. add it
-		if ( ! nameTable.addKey ( &h64 ,&nameBufOffset)) return false;
-	}
-	
-
 	// . make array of ptrs to the names so we can sort them
 	// . try to always put title first regardless
 	char *ptrs [ 1024 ];
@@ -8140,12 +8146,16 @@ bool printCSVHeaderRow ( SafeBuf *sb , State0 *st , int32_t ct ) {
 
 	// now print them out as the header row
 	for ( int32_t i = 0 ; i < numPtrs ; i++ ) {
-		if ( i > 0 && ! sb->pushChar(',') ) return false;
 
 		char *hdr = ptrs[i];
 
+		if ( i > 0 && ! sb->pushChar(',') ) return false;
+
 		// skip the two order digits
 		if ( ct == CT_STATUS && is_digit(hdr[0]) ) hdr += 2;
+
+		// save it
+		char *skip = hdr;
 
 		// now transform the hdr from gbss* into the old way
 		if ( ! cr->m_isCustomCrawl )
@@ -8157,18 +8167,20 @@ bool printCSVHeaderRow ( SafeBuf *sb , State0 *st , int32_t ct ) {
 			hdr = "Doc ID";
 		// when url was first discovered
 		if ( ! strcmp(hdr,"gbssDiscoveredTime") ) // need this!
-			hdr = "Url Discovered";
+			hdr = "Url Discovered Time";
 		// when it was crawled this time
 		if ( ! strcmp(hdr,"gbssDownloadStartTime") ) 
-			hdr = "Crawled";
+			hdr = "Download Time";
 		if ( ! strcmp(hdr,"gbssContentLen") ) 
-			hdr = "Page Length";
+			hdr = "Content Length";
 		if ( ! strcmp(hdr,"gbssDupOfDocId") ) 
 			hdr = "Duplicate Of";
 		if ( ! strcmp(hdr,"gbssNumRedirects") ) 
 			hdr = "Redirects";
 		if ( ! strcmp(hdr,"gbssFinalRedirectUrl") )
 			hdr = "Redirected To";
+		if ( ! strcmp(hdr,"gbssPercentContentChanged") )
+			hdr = "Percent Changed";
 		if ( ! strcmp(hdr,"gbssCrawlRound") ) 
 			hdr = "Crawl Round";
 		if ( ! strcmp(hdr,"gbssHopCount") ) 
@@ -8202,7 +8214,7 @@ bool printCSVHeaderRow ( SafeBuf *sb , State0 *st , int32_t ct ) {
 
 		// record the hash of each one for printing out further json
 		// objects in the same order so columns are aligned!
-		int64_t h64 = hash64n ( ptrs[i] );
+		int64_t h64 = hash64n ( skip ); // ptrs[i] );
 		if ( ! columnTable->addKey ( &h64 , &i ) ) 
 			return false;
 	}
