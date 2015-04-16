@@ -7982,10 +7982,11 @@ bool printCSVHeaderRow ( SafeBuf *sb , State0 *st , int32_t ct ) {
 		"09gbssFinalRedirectUrl",
 		"10gbssCrawlDelayMS",
 		"11gbssCrawlRound",
-		"12gbssHopCount",
-		"13gbssStatusMsg",
-		"14gbssSentToDiffbotThisTime",
-		"15gbssDiffbotReplyMsg",
+		"12gbssPrevTotalNumIndexAttempts",
+		"13gbssHopCount",
+		"14gbssStatusMsg",
+		"15gbssSentToDiffbotThisTime",
+		"16gbssDiffbotReplyMsg",
 
 		"gbssIp",
 		"gbssPercentContentChanged",
@@ -7995,7 +7996,6 @@ bool printCSVHeaderRow ( SafeBuf *sb , State0 *st , int32_t ct ) {
 		"gbssHttpStatus",
 		"gbssWasIndexed",
 		"gbssAgeInIndex",
-		"gbssPrevTotalNumIndexAttempts",
 		"gbssPrevTotalNumIndexSuccesses",
 		"gbssPrevTotalNumIndexFailures",
 		"gbssDownloadStartTimeMS",
@@ -8183,6 +8183,8 @@ bool printCSVHeaderRow ( SafeBuf *sb , State0 *st , int32_t ct ) {
 			hdr = "Percent Changed";
 		if ( ! strcmp(hdr,"gbssCrawlRound") ) 
 			hdr = "Crawl Round";
+		if ( ! strcmp(hdr,"gbssPrevTotalNumIndexAttempts") )
+			hdr = "Crawl Try #";
 		if ( ! strcmp(hdr,"gbssCrawlDelay") ) 
 			hdr = "Robots.txt Crawl Delay (ms)";
 		if ( ! strcmp(hdr,"gbssHopCount") ) 
