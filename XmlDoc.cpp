@@ -27401,7 +27401,9 @@ SafeBuf *XmlDoc::getSpiderStatusDocMetaList2 ( SpiderReply *reply ) {
 		jd.safePrintf("\"gbssContentLen\":%"INT32",\n",
 			      m_contentLen);
 
-	if (  m_crawlDelayValid )
+	// do not show the -1 any more, just leave it out then
+	// to make things look prettier
+	if (  m_crawlDelayValid && m_crawlDelay >= 0 )
 		// -1 if none?
 		jd.safePrintf("\"gbssCrawlDelayMS\":%"INT32",\n",
 			      (int32_t)m_crawlDelay);
