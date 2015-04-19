@@ -14100,7 +14100,7 @@ LinkInfo *XmlDoc::getLinkInfo1 ( ) {
 	m_linkInfo1Valid = true;
 	// . validate the hop count thing too
 	// . i took hopcount out of linkdb to put in lower ip byte for steve
-	m_minInlinkerHopCount = -1;//m_msg25.getMinInlinkerHopCount();
+	//m_minInlinkerHopCount = -1;//m_msg25.getMinInlinkerHopCount();
 	// return it
 	return ptr_linkInfo1;
 }
@@ -16580,8 +16580,10 @@ Url **XmlDoc::getCanonicalRedirUrl ( ) {
 		if ( ! rel ) continue;
 		// skip if does not match "canonical"
 		if ( strncasecmp(rel,"canonical",relLen) ) continue;
-		// set base to it. addWWW=true
-		m_canonicalRedirUrl.set(link,linkLen,false);//true
+		// allow for relative urls
+		Url *cu = getCurrentUrl();
+		// set base to it. addWWW=false
+		m_canonicalRedirUrl.set(cu,link,linkLen,false);//true
 		// assume it is not our url
 		bool isMe = false;
 		// if it is us, then skip!
@@ -19451,7 +19453,11 @@ char *XmlDoc::getIsSiteRoot ( ) {
 	// assume valid now
 	m_isSiteRootValid = true;
 	// get it
-	m_isSiteRoot2 = m_isSiteRoot = isSiteRootFunc ( u , site );
+	bool isRoot = isSiteRootFunc ( u , site );
+	// seems like https:://twitter.com/ is not getting set to root
+	if ( m_firstUrl.getPathDepth(true) == 0  && ! m_firstUrl.isCgi() )
+		isRoot = true;
+	m_isSiteRoot2 = m_isSiteRoot = isRoot;
 	return &m_isSiteRoot2;
 }
 
@@ -19507,10 +19513,10 @@ int8_t *XmlDoc::getHopCount ( ) {
 			origHopCount = m_sreq.m_hopCount; 
 		}
 		int32_t hc = -1;
-		if(m_minInlinkerHopCount+1 < hc && m_minInlinkerHopCount >= 0 )
-			hc = m_minInlinkerHopCount + 1;
-		if ( hc == -1 && m_minInlinkerHopCount >= 0 )
-			hc = m_minInlinkerHopCount + 1;
+		// if(m_minInlinkerHopCount+1 < hc && m_minInlinkerHopCount>=0)
+		// 	hc = m_minInlinkerHopCount + 1;
+		// if ( hc == -1 && m_minInlinkerHopCount >= 0 )
+		// 	hc = m_minInlinkerHopCount + 1;
 		if ( origHopCount < hc && origHopCount >= 0 )
 			hc = origHopCount;
 		if ( hc == -1 && origHopCount >= 0 )
@@ -19540,6 +19546,7 @@ int8_t *XmlDoc::getHopCount ( ) {
 	//}
 	// ping servers have 0 hop counts
 	if ( f->isPingServer() ) {
+		log("xmldoc: hc2 is 0 (pingserver)");
 		m_hopCount      = 0;
 		m_hopCountValid = true;
 		return &m_hopCount; 
@@ -19553,6 +19560,7 @@ int8_t *XmlDoc::getHopCount ( ) {
 	char *isSiteRoot = getIsSiteRoot();
 	if (!isSiteRoot ||isSiteRoot==(char *)-1) return (int8_t *)isSiteRoot;
 	if ( *isSiteRoot ) {
+		log("xmldoc: hc1 is 0 (siteroot)");
 		m_hopCount      = 0; 
 		m_hopCountValid = true;
 		return &m_hopCount; 
@@ -19568,12 +19576,14 @@ int8_t *XmlDoc::getHopCount ( ) {
 	int32_t hc = -1;
 	// . BUT use inlinker if better
 	// . if m_linkInfo1Valid is true, then m_minInlinkerHopCount is valid
-	if ( m_minInlinkerHopCount + 1 < hc && m_minInlinkerHopCount >= 0 )
-		hc = m_minInlinkerHopCount + 1;
+	// if ( m_minInlinkerHopCount + 1 < hc && m_minInlinkerHopCount >= 0 )
+	// 	hc = m_minInlinkerHopCount + 1;
 	// or if parent is unknown, but we have a known inlinker with a 
 	// valid hop count, use the inlinker hop count then
-	if ( hc == -1 && m_minInlinkerHopCount >= 0 )
-		hc = m_minInlinkerHopCount + 1;
+	// if ( hc == -1 && m_minInlinkerHopCount >= 0 )
+	// 	hc = m_minInlinkerHopCount + 1;
+	if ( origHopCount == 0 )
+		log("xmldoc: hc3 is 0 (spiderreq)");
 	// or use our hop count from the spider rec if better
 	if ( origHopCount < hc && origHopCount >= 0 )
 		hc = origHopCount;
@@ -20313,6 +20323,10 @@ bool XmlDoc::logIt ( SafeBuf *bb ) {
 	if ( m_siteValid )
 		sb->safePrintf("site=%s ",ptr_site);
 
+	if ( m_isSiteRootValid )
+		sb->safePrintf("siteroot=%"INT32" ",m_isSiteRoot );
+	else
+		sb->safePrintf("siteroot=? ");
 
 	//
 	// . sometimes we print these sometimes we do not
@@ -20459,6 +20473,10 @@ bool XmlDoc::logIt ( SafeBuf *bb ) {
 		if ( m_numRedirects > 2 )
 			sb->safePrintf("numredirs=%"INT32" ",m_numRedirects);
 	}
+
+	if ( m_canonicalRedirUrlValid && m_canonicalRedirUrlPtr )
+		sb->safePrintf("canonredir=%s ",
+			       m_canonicalRedirUrlPtr->getUrl());
 
 	if ( m_httpStatusValid && m_httpStatus != 200 )
 		sb->safePrintf("httpstatus=%"INT32" ",(int32_t)m_httpStatus);
@@ -28318,8 +28336,8 @@ bool XmlDoc::hashUrl ( HashTableX *tt ) { // , bool isStatusDoc ) {
 	//
 	// HASH the url path plain as if in body
 	//
-	// get number of components in the path
-	int32_t pathDepth = fu->getPathDepth();
+	// get number of components in the path. does not include the filename
+	int32_t pathDepth = fu->getPathDepth(false);
 	// make it a density thing
 	//pathScore /= ( pathDepth + 1 );
 	// ensure score positive
@@ -36514,7 +36532,7 @@ bool XmlDoc::printGeneralInfo ( SafeBuf *sb , HttpRequest *hr ) {
 			"<tr><td>language</td><td>%s</td></tr>\n"
 			"<tr><td>country</td><td>%s</td></tr>\n"
 
-			"<tr><td>good inlinks to site"
+			"<tr><td><b>good inlinks to site</b>"
 			"</td><td>%"INT32"</td></tr>\n"
 
 			"<tr><td>unique IP inlinks to site"
@@ -36523,7 +36541,7 @@ bool XmlDoc::printGeneralInfo ( SafeBuf *sb , HttpRequest *hr ) {
 			"<tr><td>unique CBlock inlinks to site"
 			"</td><td>%"INT32"</td></tr>\n"
 
-			"<tr><td>site rank</td><td>%"INT32"</td></tr>\n"
+			"<tr><td><b>site rank</b></td><td>%"INT32"</td></tr>\n"
 
 			"<tr><td>good inlinks to page"
 			"</td><td>%"INT32"</td></tr>\n"

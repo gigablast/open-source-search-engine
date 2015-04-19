@@ -202,7 +202,7 @@ public:
 	char *getShorthandUrl    ( bool rmWWW , int32_t *len );
 
 	// count the path components (root url as 0 path components)
-	int32_t  getPathDepth ( bool countFilename = false );
+	int32_t  getPathDepth ( bool countFilename ); // = false );
 
 	// get path component #num. starts at 0.
 	char *getPathComponent ( int32_t num , int32_t *clen );

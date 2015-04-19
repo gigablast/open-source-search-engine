@@ -1652,7 +1652,7 @@ class XmlDoc {
 	//class LinkInfo *m_linkInfo1Ptr;
 	char     *m_linkInfoColl;
 	//char m_injectedReply;
-	int32_t m_minInlinkerHopCount;
+	//int32_t m_minInlinkerHopCount;
 	//class LinkInfo *m_linkInfo2Ptr;
 	SiteGetter m_siteGetter;
 	int64_t  m_siteHash64;
