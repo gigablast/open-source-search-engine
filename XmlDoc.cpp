@@ -20328,6 +20328,16 @@ bool XmlDoc::logIt ( SafeBuf *bb ) {
 	else
 		sb->safePrintf("siteroot=? ");
 
+	// like how we index it, do not include the filename. so we can
+	// have a bunch of pathdepth 0 urls with filenames like xyz.com/abc.htm
+	if ( m_firstUrlValid ) {
+		int32_t pd = m_firstUrl.getPathDepth(false);
+		sb->safePrintf("pathdepth=%"INT32" ",pd);
+	}
+	else {
+		sb->safePrintf("pathdepth=? ");
+	}
+
 	//
 	// . sometimes we print these sometimes we do not
 	// . put this at the end so we can awk out the above fields reliably
