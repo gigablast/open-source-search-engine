@@ -12947,12 +12947,13 @@ void dedupSpiderdbList ( RdbList *list , int32_t niceness , bool removeNegRecs )
 		}
 
 		// try to kinda grab the min hop count as well
-		if ( sreq->m_hopCountValid && oldReq->m_hopCountValid ) {
-			if ( oldReq->m_hopCount < sreq->m_hopCount )
-				sreq->m_hopCount = oldReq->m_hopCount;
-			else
-				oldReq->m_hopCount = sreq->m_hopCount;
-		}
+		// do not alter spiderdb!
+		// if ( sreq->m_hopCountValid && oldReq->m_hopCountValid ) {
+		// 	if ( oldReq->m_hopCount < sreq->m_hopCount )
+		// 		sreq->m_hopCount = oldReq->m_hopCount;
+		// 	else
+		// 		oldReq->m_hopCount = sreq->m_hopCount;
+		// }
 
 		// if he's essentially different input parms but for the
 		// same url, we want to keep him because he might map the
