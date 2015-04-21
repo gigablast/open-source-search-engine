@@ -17779,7 +17779,8 @@ void Parms::init ( ) {
 	// and we add gbdocspidertime and gbdocindextime terms so you
 	// can use those to sort regular docs and not have spider reply
 	// status docs in the serps.
-	m->m_def   = "0";
+	// back on 4/21/2015 seems pretty stable.
+	m->m_def   = "1";
 	m->m_page  = PAGE_SPIDER;
 	m->m_obj   = OBJ_COLL;
 	m->m_flags = PF_CLONE;
