@@ -19546,7 +19546,7 @@ int8_t *XmlDoc::getHopCount ( ) {
 	//}
 	// ping servers have 0 hop counts
 	if ( f->isPingServer() ) {
-		log("xmldoc: hc2 is 0 (pingserver) %s",m_firstUrl.m_url);
+		// log("xmldoc: hc2 is 0 (pingserver) %s",m_firstUrl.m_url);
 		m_hopCount      = 0;
 		m_hopCountValid = true;
 		return &m_hopCount; 
@@ -19560,7 +19560,7 @@ int8_t *XmlDoc::getHopCount ( ) {
 	char *isSiteRoot = getIsSiteRoot();
 	if (!isSiteRoot ||isSiteRoot==(char *)-1) return (int8_t *)isSiteRoot;
 	if ( *isSiteRoot ) {
-		log("xmldoc: hc1 is 0 (siteroot) %s",m_firstUrl.m_url);
+		// log("xmldoc: hc1 is 0 (siteroot) %s",m_firstUrl.m_url);
 		m_hopCount      = 0; 
 		m_hopCountValid = true;
 		return &m_hopCount; 
@@ -19582,8 +19582,8 @@ int8_t *XmlDoc::getHopCount ( ) {
 	// valid hop count, use the inlinker hop count then
 	// if ( hc == -1 && m_minInlinkerHopCount >= 0 )
 	// 	hc = m_minInlinkerHopCount + 1;
-	if ( origHopCount == 0 )
-		log("xmldoc: hc3 is 0 (spiderreq) %s",m_firstUrl.m_url);
+	// if ( origHopCount == 0 )
+	// 	log("xmldoc: hc3 is 0 (spiderreq) %s",m_firstUrl.m_url);
 	// or use our hop count from the spider rec if better
 	if ( origHopCount < hc && origHopCount >= 0 )
 		hc = origHopCount;
@@ -25609,11 +25609,11 @@ char *XmlDoc::addOutlinkSpiderRecsToMetaList ( ) {
 			//if ( isrss        ) ksr.m_hopCount = 0;
 		}
 
-		log("ksr: url=%s hc=%i (isr=%i ips=%i icv=%i ic=%i mhc=%i)",
-		    url.getUrl(),(int)ksr.m_hopCount,
-		    (int)issiteroot,(int)ispingserver,(int)m_indexCodeValid,
-		    (int)m_indexCode,(int)m_hopCount
-		    );
+		// log("ksr: url=%s hc=%i (isr=%i ips=%i icv=%i ic=%i mhc=%i)",
+		//     url.getUrl(),(int)ksr.m_hopCount,
+		//     (int)issiteroot,(int)ispingserver,(int)m_indexCodeValid,
+		//     (int)m_indexCode,(int)m_hopCount
+		//     );
 
 		// validate it
 		ksr.m_hopCountValid = true;
