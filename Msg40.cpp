@@ -5784,6 +5784,7 @@ bool printHttpMime ( State0 *st ) {
 //
 /////////////////
 
+/*
 // return 1 if a should be before b
 static int csvPtrCmp ( const void *a, const void *b ) {
 	//JsonItem *ja = (JsonItem **)a;
@@ -5801,6 +5802,7 @@ static int csvPtrCmp ( const void *a, const void *b ) {
 	int val = strcmp(pa,pb);
 	return val;
 }
+*/
 	
 #include "Json.h"
 
@@ -5812,11 +5814,9 @@ bool Msg40::printCSVHeaderRow ( SafeBuf *sb ) {
 	//Msg40 *msg40 = &st->m_msg40;
 	//int32_t numResults = msg40->getNumResults();
 
+	/*
 	char tmp1[1024];
 	SafeBuf tmpBuf (tmp1 , 1024);
-
-	char tmp2[1024];
-	SafeBuf nameBuf (tmp2, 1024);
 
 	char nbuf[27000];
 	HashTableX nameTable;
@@ -5915,9 +5915,8 @@ bool Msg40::printCSVHeaderRow ( SafeBuf *sb ) {
 	}
 
 	// sort them
-	qsort ( ptrs , numPtrs , 4 , csvPtrCmp );
+	qsort ( ptrs , numPtrs , sizeof(char *) , csvPtrCmp );
 
-	// set up table to map field name to column for printing the json items
 	HashTableX *columnTable = &m_columnTable;
 	if ( ! columnTable->set ( 8,4, numPtrs * 4,NULL,0,false,0,"coltbl" ) )
 		return false;
@@ -5932,6 +5931,37 @@ bool Msg40::printCSVHeaderRow ( SafeBuf *sb ) {
 		if ( ! columnTable->addKey ( &h64 , &i ) ) 
 			return false;
 	}
+	*/
+
+	Msg20 *msg20s[100];
+	int32_t i;
+	for ( i = 0 ; i < m_needFirstReplies && i < 100 ; i++ ) {
+		Msg20 *m20 = getCompletedSummary(i);
+		if ( ! m20 ) break;
+		msg20s[i] = m20;
+	}
+
+	int32_t numPtrs = 0;
+
+	char tmp2[1024];
+	SafeBuf nameBuf (tmp2, 1024);
+
+	int32_t ct = 0;
+	if ( msg20s[0] ) ct = msg20s[0]->m_r->m_contentType;
+
+	CollectionRec *cr =g_collectiondb.getRec(m_firstCollnum);
+
+	// . set up table to map field name to col for printing the json items
+	// . call this from PageResults.cpp 
+	printCSVHeaderRow2 ( sb , 
+			     ct ,
+			     cr ,
+			     &nameBuf ,
+			     &m_columnTable ,
+			     msg20s ,
+			     i , // numResults ,
+			     &numPtrs 
+			     );
 
 	m_numCSVColumns = numPtrs;
 
@@ -6026,6 +6056,8 @@ bool Msg40::printJsonItemInCSV ( State0 *st , int32_t ix ) {
 
 		// sanity
 		if ( column == -1 ) {//>= numCSVColumns ) { 
+			// don't show it any more...
+			continue;
 			// add a new column...
 			int32_t newColnum = numCSVColumns + 1;
 			// silently drop it if we already have too many cols

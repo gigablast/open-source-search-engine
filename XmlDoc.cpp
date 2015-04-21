@@ -27133,10 +27133,11 @@ SafeBuf *XmlDoc::getSpiderStatusDocMetaList ( SpiderReply *reply ,
 	}
 
 	// doing it for diffbot throws off smoketests
-	if ( strncmp(cr->m_coll,"crawlbottesting-",16) == 0 ) {
-		m_spiderStatusDocMetaListValid = true;
-		return &m_spiderStatusDocMetaList;
-	}
+	// ok, smoketests are updated now, so remove this
+	// if ( strncmp(cr->m_coll,"crawlbottesting-",16) == 0 ) {
+	// 	m_spiderStatusDocMetaListValid = true;
+	// 	return &m_spiderStatusDocMetaList;
+	// }
 
 	// we double add regular html urls in a query reindex because the
 	// json url adds the parent, so the parent gets added twice sometimes,

@@ -1026,6 +1026,7 @@ bool HttpServer::sendReply ( TcpSocket  *s , HttpRequest *r , bool isAdmin) {
 	// "GET /crawlbot/downloadpages"
 	if ( strncmp ( path , "/crawlbot/download/" ,19 ) == 0 ||
 	     // add 4 to length of needle to account for /vXX.
+	     // GET /v3/crawl/download/
 	     (pathLen >= 20 && strnstr(path, "/crawl/download/", 20)) ||
 	     (pathLen >= 19 && strnstr(path, "/bulk/download/", 19)) )
 		return sendBackDump ( s , r );

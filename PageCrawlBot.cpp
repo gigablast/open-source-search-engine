@@ -244,6 +244,7 @@ bool sendBackDump ( TcpSocket *sock, HttpRequest *hr ) {
 			       , dr
 			       , cr->m_coll
 			       );
+		log("crawlbot: %s",sb2.getBufStart());
 		HttpRequest hr2;
 		hr2.set ( sb2.getBufStart() , sb2.length() , sock );
 		return sendPageResults ( sock , &hr2 );
@@ -283,6 +284,7 @@ bool sendBackDump ( TcpSocket *sock, HttpRequest *hr ) {
 			       , dr 
 			       , cr->m_coll
 			       );
+		log("crawlbot: %s",sb2.getBufStart());
 		HttpRequest hr2;
 		hr2.set ( sb2.getBufStart() , sb2.length() , sock );
 		return sendPageResults ( sock , &hr2 );
@@ -315,7 +317,11 @@ bool sendBackDump ( TcpSocket *sock, HttpRequest *hr ) {
 			       "c=%s&"
 			       "n=10000000&"
 			       // stream it now
+			       // can't stream until we fix headers be printed
+			       // in Msg40.cpp. so gbssUrl->Url etc.
+			       // mdw: ok should work now
 			       "stream=1&"
+			       //"stream=0&"
 			       // no summary similarity dedup, only exact
 			       // doc content hash. otherwise too slow!!
 			       "pss=0&"
@@ -330,6 +336,7 @@ bool sendBackDump ( TcpSocket *sock, HttpRequest *hr ) {
 			       "\r\n\r\n"
 			       , cr->m_coll
 			       );
+		log("crawlbot: %s",sb2.getBufStart());
 		HttpRequest hr2;
 		hr2.set ( sb2.getBufStart() , sb2.length() , sock );
 		return sendPageResults ( sock , &hr2 );

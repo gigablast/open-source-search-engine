@@ -7949,19 +7949,19 @@ int csvPtrCmp ( const void *a, const void *b ) {
 
 #include "Json.h"
 
-// 
-// print header row in csv
-//
-bool printCSVHeaderRow ( SafeBuf *sb , State0 *st , int32_t ct ) {
+bool printCSVHeaderRow2 ( SafeBuf *sb ,
+			  int32_t ct ,
+			  CollectionRec *cr ,
+			  SafeBuf *nameBuf ,
+			  HashTableX *columnTable ,
+			  Msg20 **msg20s ,
+			  int32_t numMsg20s ,
+			  int32_t *numPtrsArg ) {
 
-	Msg40 *msg40 = &st->m_msg40;
- 	int32_t numResults = msg40->getNumResults();
+	*numPtrsArg = 0;
 
 	char tmp1[1024];
 	SafeBuf tmpBuf (tmp1 , 1024);
-
-	char tmp2[1024];
-	SafeBuf nameBuf (tmp2, 1024);
 
 	char nbuf[27000];
 	HashTableX nameTable;
@@ -8011,7 +8011,6 @@ bool printCSVHeaderRow ( SafeBuf *sb , State0 *st , int32_t ct ) {
 		"gbssDiffbotReplyRetries",
 		NULL };
 
-	CollectionRec *cr = g_collectiondb.getRec ( st->m_collnum );
 	for ( int32_t i = 0 ; supps[i] ; i++ ) {
 		// don't add these column headers to non spider status docs
 		if ( ct != CT_STATUS ) break;
@@ -8028,10 +8027,10 @@ bool printCSVHeaderRow ( SafeBuf *sb , State0 *st , int32_t ct ) {
 		     ( ! cr || ! cr->m_isCustomCrawl ) )
 			break;
 		// record offset of the name for our hash table
-		int32_t nameBufOffset = nameBuf.length();
+		int32_t nameBufOffset = nameBuf->length();
 		// store the name in our name buffer
-		if ( ! nameBuf.safeStrcpy (supps[i])) return false;
-		if ( ! nameBuf.pushChar ( '\0' ) ) return false;
+		if ( ! nameBuf->safeStrcpy (supps[i])) return false;
+		if ( ! nameBuf->pushChar ( '\0' ) ) return false;
 		// it's new. add it
 		if ( ! nameTable.addKey ( &h64 ,&nameBufOffset)) return false;
 	}
@@ -8041,15 +8040,16 @@ bool printCSVHeaderRow ( SafeBuf *sb , State0 *st , int32_t ct ) {
 	//   search results we have to dump each msg20 reply to disk in
 	//   order. then we'll have to update this code to scan that file.
 
-	for ( int32_t i = 0 ; i < numResults ; i++ ) {
+	for ( int32_t i = 0 ; i < numMsg20s ; i++ ) { // numResults
 
 		// if custom crawl urls.csv only show the supps[] from above
 		if ( ct == CT_STATUS && cr->m_isCustomCrawl )
 			break;
 
 		// get the msg20 reply for search result #i
-		Msg20      *m20 = msg40->m_msg20[i];
-		Msg20Reply *mr  = m20->m_r;
+		//Msg20      *m20 = msg40->m_msg20[i];
+		//Msg20Reply *mr  = m20->m_r;
+		Msg20Reply *mr  = msg20s[i]->m_r;
 
 		if ( ! mr ) {
 			log("results: missing msg20 reply for result #%"INT32"",i);
@@ -8110,12 +8110,12 @@ bool printCSVHeaderRow ( SafeBuf *sb , State0 *st , int32_t ct ) {
 			if ( nameTable.isInTable ( &h64 ) ) continue;
 
 			// record offset of the name for our hash table
-			int32_t nameBufOffset = nameBuf.length();
+			int32_t nameBufOffset = nameBuf->length();
 			
 			// store the name in our name buffer
-			if ( ! nameBuf.safeStrcpy ( tmpBuf.getBufStart() ) )
+			if ( ! nameBuf->safeStrcpy ( tmpBuf.getBufStart() ) )
 				return false;
-			if ( ! nameBuf.pushChar ( '\0' ) )
+			if ( ! nameBuf->pushChar ( '\0' ) )
 				return false;
 
 			// it's new. add it
@@ -8131,16 +8131,19 @@ bool printCSVHeaderRow ( SafeBuf *sb , State0 *st , int32_t ct ) {
 	for ( int32_t i = 0 ; i < nameTable.m_numSlots ; i++ ) {
 		if ( ! nameTable.m_flags[i] ) continue;
 		int32_t off = *(int32_t *)nameTable.getValueFromSlot(i);
-		char *p = nameBuf.getBufStart() + off;
+		char *p = nameBuf->getBufStart() + off;
 		ptrs[numPtrs++] = p;
 		if ( numPtrs >= 1024 ) break;
 	}
+
+	// pass back to caller
+	*numPtrsArg = numPtrs;
 
 	// sort them
 	qsort ( ptrs , numPtrs , sizeof(char *) , csvPtrCmp );
 
 	// set up table to map field name to column for printing the json items
-	HashTableX *columnTable = &st->m_columnTable;
+	//HashTableX *columnTable = &st->m_columnTable;
 	if ( ! columnTable->set ( 8,4, numPtrs * 4,NULL,0,false,0,"coltbl" ) )
 		return false;
 
@@ -8222,6 +8225,34 @@ bool printCSVHeaderRow ( SafeBuf *sb , State0 *st , int32_t ct ) {
 		if ( ! columnTable->addKey ( &h64 , &i ) ) 
 			return false;
 	}
+
+	return true;
+}
+
+// 
+// print header row in csv
+//
+bool printCSVHeaderRow ( SafeBuf *sb , State0 *st , int32_t ct ) {
+
+	Msg40 *msg40 = &st->m_msg40;
+ 	int32_t numResults = msg40->getNumResults();
+
+	char tmp2[1024];
+	SafeBuf nameBuf (tmp2, 1024);
+
+	CollectionRec *cr = g_collectiondb.getRec ( st->m_collnum );
+
+	int32_t numPtrs = 0;
+
+	printCSVHeaderRow2 ( sb , 
+			     ct ,
+			     cr ,
+			     &nameBuf ,
+			     &st->m_columnTable ,
+			     msg40->m_msg20 ,
+			     numResults ,
+			     &numPtrs 
+			     );
 
 	st->m_numCSVColumns = numPtrs;
 

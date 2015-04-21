@@ -341,10 +341,11 @@ bool SearchInput::set ( TcpSocket *sock , HttpRequest *r ) { //, Query *q ) {
 
 
 	if ( m_streamResults &&
-	     tmpFormat != FORMAT_XML && 
+	     tmpFormat != FORMAT_XML &&
+	     tmpFormat != FORMAT_CSV &&
 	     tmpFormat != FORMAT_JSON ) {
 		log("si: streamResults only supported for "
-		    "json/html. disabling");
+		    "xml/csv/json. disabling");
 		m_streamResults = false;
 	}
 
