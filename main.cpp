@@ -618,10 +618,10 @@ int main2 ( int argc , char *argv[] ) {
 			"installtmpgb [hostId]\n"
 			"\tlike above, but install just the gb executable "
 			"as tmpgb (for tmpstart).\n\n"
-
+			*/
 			"installconf [hostId]\n"
-			"\tlike above, but install hosts.conf and gbN.conf\n\n"
-
+			"\tlike above, but install hosts.conf and gb.conf\n\n"
+			/*
 			"installconf2 [hostId]\n"
 			"\tlike above, but install hosts.conf and gbN.conf "
 			"to the secondary IPs.\n\n"
