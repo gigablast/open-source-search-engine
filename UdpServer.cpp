@@ -678,6 +678,9 @@ void UdpServer::sendReply_ass ( char    *msg        ,
 		log(LOG_LOGIC,"udp: sendReply_ass: Callback is non-NULL.");
 		return;
 	}
+	if ( ! msg && msgSize > 0 )
+		log("udp: calling sendreply with null send buffer and "
+		    "positive size! will probably core.");
 	// record some statistics on how long these msg handlers are taking
 	int64_t now = gettimeofdayInMillisecondsLocal();
 	// m_queuedTime should have been set before m_handlers[] was called
