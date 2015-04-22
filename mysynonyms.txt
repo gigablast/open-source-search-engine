@@ -15,6 +15,10 @@ en|nos
 en|at
 en|ats
 
+# it's not good to do love <-> like, as wiktionary does. override it here.
+en|love,loved,loving,loves
+en|like,likes,liked,liking
+
 
 en|sunday,sundays,sun
 en|mon,monday,mondays
