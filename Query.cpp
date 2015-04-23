@@ -4607,11 +4607,21 @@ struct QueryField g_fields[] = {
 	 NULL,
 	 0},
 
-	{"gbssSentToDiffbot",
+	{"gbssSentToDiffbotThisTime",
 	 FIELD_GENERIC,
 	 false,
-	 "gbssSentToDiffbot:1",
-	 "Was the document's url sent to diffbot for processing?",
+	 "gbssSentToDiffbotThisTime:1",
+	 "Was the document's url sent to diffbot for processing this time "
+	 "of spidering the url?",
+	 NULL,
+	 0},
+
+	{"gbssSentToDiffbotAtSomeTime",
+	 FIELD_GENERIC,
+	 false,
+	 "gbssSentToDiffbotAtSomeTime:1",
+	 "Was the document's url sent to diffbot for processing, either this "
+	 "time or some time before?",
 	 NULL,
 	 0},
 
