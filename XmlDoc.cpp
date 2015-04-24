@@ -27228,7 +27228,7 @@ SafeBuf *XmlDoc::getSpiderStatusDocMetaList2 ( SpiderReply *reply ) {
 	if ( ! cr ) return NULL;
 
 	Json *jp1 = NULL;
-	if ( cr->m_isCustomCrawl && m_isDiffbotJSONObject ) {
+	if ( m_isDiffbotJSONObject ) {
 		jp1 = getParsedJson();
 		if ( ! jp1 || jp1 == (void *)-1) return (SafeBuf *)jp1;
 	}
@@ -27293,7 +27293,7 @@ SafeBuf *XmlDoc::getSpiderStatusDocMetaList2 ( SpiderReply *reply ) {
 		jd.safePrintf("\"gbssAgeInIndex\":"
 			      "%"UINT32",\n",now - od->m_spideredTime);
 
-	if ( cr->m_isCustomCrawl && m_isDiffbotJSONObject ) {
+	if ( m_isDiffbotJSONObject ) { // && cr->m_isCustomCrawl
 		jd.safePrintf("\"gbssIsDiffbotObject\":1,\n");
 		JsonItem *jsonItem = NULL;
 		if ( jp1 ) jsonItem = jp1->getItem("diffbotUri");
@@ -27308,7 +27308,7 @@ SafeBuf *XmlDoc::getSpiderStatusDocMetaList2 ( SpiderReply *reply ) {
 			jd.safePrintf("\"gbssDiffbotUri\":"
 				      "\"none\",\n");
 	}
-	else if ( cr->m_isCustomCrawl ) {
+	else { // if ( cr->m_isCustomCrawl ) {
 		jd.safePrintf("\"gbssIsDiffbotObject\":0,\n");
 	}
 
