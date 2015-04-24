@@ -6517,6 +6517,10 @@ bool Msg40::printFacetsForTable ( SafeBuf *sb , QueryTerm *qt ) {
 			sb->safePrintf("\t\t<totalDocsWithField>%"INT64""
 				       "</totalDocsWithField>\n"
 				       , qt->m_numDocsThatHaveFacet );
+			sb->safePrintf("\t\t<totalDocsWithFieldAndValue>"
+				       "%"INT64""
+				       "</totalDocsWithFieldAndValue>\n"
+				       , allCount );
 			sb->safePrintf("\t\t<value>");
 
 			if ( isString )
@@ -6526,10 +6530,6 @@ bool Msg40::printFacetsForTable ( SafeBuf *sb , QueryTerm *qt ) {
 			if ( isString )
 				sb->safePrintf("]]>");
 			sb->safePrintf("</value>\n");
-			sb->safePrintf("\t\t<totalDocsWithFieldAndValue>"
-				       "%"INT64""
-				       "</totalDocsWithFieldAndValue>\n"
-				       , allCount );
 			sb->safePrintf("\t\t<docCount>%"INT32""
 				       "</docCount>\n"
 				       ,count);
@@ -6626,6 +6626,10 @@ bool Msg40::printFacetsForTable ( SafeBuf *sb , QueryTerm *qt ) {
 				       );
 			sb->safePrintf("\t\"totalDocsWithField\":%"INT64""
 				       ",\n", qt->m_numDocsThatHaveFacet );
+			sb->safePrintf("\t\"totalDocsWithFieldAndValue\":"
+				       "%"INT64""
+				       ",\n", 
+				       allCount );
 			sb->safePrintf("\t\"value\":\"");
 
 			if (  isString )
@@ -6637,10 +6641,6 @@ bool Msg40::printFacetsForTable ( SafeBuf *sb , QueryTerm *qt ) {
 			sb->safePrintf("\"");
 			sb->safePrintf(",\n");
 
-			sb->safePrintf("\t\"totalDocsWithFieldAndValue\":"
-				       "%"INT64""
-				       ",\n", 
-				       allCount );
 			sb->safePrintf("\t\"docCount\":%"INT32""
 				       , count );
 			// if it's a # then we print stats after
