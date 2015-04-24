@@ -4967,6 +4967,10 @@ inline bool isInRange2 ( char *recPtr , char *subListEnd, QueryTerm *qt ) {
 
 // for a facet
 int64_t PosdbTable::countUniqueDocids( QueryTermInfo *qti ) {
+
+	QueryTerm *qt = qti->m_qt;
+	HashTableX *ft = &qt->m_facetHashTable;
+
 	// get that sublist. facets should only have one sublist since
 	// they have no synonyms.
 	char *start = qti->m_subLists[0]->getList();
@@ -4981,6 +4985,15 @@ int64_t PosdbTable::countUniqueDocids( QueryTermInfo *qti ) {
 			    , (int32_t)(subListEnd-start),count);
 		return count;
 	}
+
+	// this is a facet term so get the value bits. they can represent
+	// a float32, int32 or stringhash32
+	int32_t val32 = g_posdb.getFacetVal32 ( recPtr );
+	// now just accumulate in our hash table of vals
+	FacetEntry *fe = (FacetEntry *)ft->getValue(&val32);
+	// inc the TOTAL val count
+	if ( fe ) fe->m_outsideSearchResultsCount++;
+
 	// skip that docid record in our termlist. it MUST have been
 	// 12 bytes, a docid heading record.
 	recPtr += 12;
@@ -5666,16 +5679,16 @@ void PosdbTable::intersectLists10_r ( ) {
 	// if a query term is for a facet (ie gbfacetstr:gbtagsite)
 	// then count how many unique docids are in it. we were trying to 
 	// do this in addDocIdVotes() but it wasn't in the right place i guess.
-	for ( int32_t i = 0 ; i < m_numQueryTermInfos ; i++ ) {
-		QueryTermInfo *qti = &qip[i];
-		QueryTerm *qt = qti->m_qt;
-		bool isFacetTerm = false;
-		if ( qt->m_fieldCode == FIELD_GBFACETSTR ) isFacetTerm = true;
-		if ( qt->m_fieldCode == FIELD_GBFACETINT ) isFacetTerm = true;
-		if ( qt->m_fieldCode == FIELD_GBFACETFLOAT ) isFacetTerm =true;
-		if ( ! isFacetTerm ) continue;
-		qt->m_numDocsThatHaveFacet += countUniqueDocids ( qti );
-	}
+	// for ( int32_t i = 0 ; i < m_numQueryTermInfos ; i++ ) {
+	// 	QueryTermInfo *qti = &qip[i];
+	// 	QueryTerm *qt = qti->m_qt;
+	// 	bool isFacetTerm = false;
+	// 	if ( qt->m_fieldCode == FIELD_GBFACETSTR ) isFacetTerm = true;
+	// 	if ( qt->m_fieldCode == FIELD_GBFACETINT ) isFacetTerm = true;
+	// 	if ( qt->m_fieldCode == FIELD_GBFACETFLOAT ) isFacetTerm =true;
+	// 	if ( ! isFacetTerm ) continue;
+	// 	qt->m_numDocsThatHaveFacet += countUniqueDocids ( qti );
+	// }
 
 
 	// setQueryTermInfos() should have set how many we have
@@ -7701,6 +7714,25 @@ void PosdbTable::intersectLists10_r ( ) {
 		log("posdb: # fail = %"INT32" ", fail );
 		log("posdb: # pass = %"INT32" ", pass );
 	}
+
+
+	// if a query term is for a facet (ie gbfacetstr:gbtagsite)
+	// then count how many unique docids are in it. we were trying to 
+	// do this in addDocIdVotes() but it wasn't in the right place i guess.
+	for ( int32_t i = 0 ; i < m_numQueryTermInfos ; i++ ) {
+		QueryTermInfo *qti = &qip[i];
+		QueryTerm *qt = qti->m_qt;
+		bool isFacetTerm = false;
+		if ( qt->m_fieldCode == FIELD_GBFACETSTR ) isFacetTerm = true;
+		if ( qt->m_fieldCode == FIELD_GBFACETINT ) isFacetTerm = true;
+		if ( qt->m_fieldCode == FIELD_GBFACETFLOAT ) isFacetTerm =true;
+		if ( ! isFacetTerm ) continue;
+		// this should also now use the facettable we built up
+		// as we accumulated the facet counts above.
+		qt->m_numDocsThatHaveFacet += countUniqueDocids ( qti );
+	}
+
+
 
 	// get time now
 	now = gettimeofdayInMilliseconds();

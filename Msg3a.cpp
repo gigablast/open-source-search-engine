@@ -1163,6 +1163,12 @@ bool Msg3a::mergeLists ( ) {
 
 			fe2->m_count += fe->m_count;
 
+			// also accumualte count of total docs, not just in
+			// the search results, that have this value for this
+			// facet
+			fe2->m_outsideSearchResultsCount += 
+				fe->m_outsideSearchResultsCount;
+
 			// prefer docid kinda randomly to balance 
 			// lookupFacets() load in Msg40.cpp
 			if ( rand() % 2 )

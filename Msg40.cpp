@@ -6417,8 +6417,12 @@ bool Msg40::printFacetsForTable ( SafeBuf *sb , QueryTerm *qt ) {
 		FacetEntry *fe;
 		fe = (FacetEntry *)fht->getValueFromSlot(j);
 		int32_t count = 0;
+		int64_t allCount = 0;
 		// could be empty if range had no values in it
-		if ( fe ) count = fe->m_count;
+		if ( fe ) {
+			count = fe->m_count;
+			allCount = fe->m_outsideSearchResultsCount;
+		}
 
 		char *text = NULL;
 
@@ -6521,8 +6525,12 @@ bool Msg40::printFacetsForTable ( SafeBuf *sb , QueryTerm *qt ) {
 			sb->cdataEncode ( text );
 			if ( isString )
 				sb->safePrintf("]]>");
-			sb->safePrintf("</value>\n"
-				       "\t\t<docCount>%"INT32""
+			sb->safePrintf("</value>\n");
+			sb->safePrintf("\t\t<totalDocsWithFieldAndValue>"
+				       "%"INT64""
+				       "</totalDocsWithFieldAndValue>\n"
+				       , allCount );
+			sb->safePrintf("\t\t<docCount>%"INT32""
 				       "</docCount>\n"
 				       ,count);
 			// some stats now for floats
@@ -6627,10 +6635,14 @@ bool Msg40::printFacetsForTable ( SafeBuf *sb , QueryTerm *qt ) {
 			//if ( isString )
 			// just use quotes for ranges like "[1-3)" now
 			sb->safePrintf("\"");
-			sb->safePrintf(",\n"
-				       "\t\"docCount\":%"INT32""
-				       , count );
+			sb->safePrintf(",\n");
 
+			sb->safePrintf("\t\"totalDocsWithFieldAndValue\":"
+				       "%"INT64""
+				       ",\n", 
+				       allCount );
+			sb->safePrintf("\t\"docCount\":%"INT32""
+				       , count );
 			// if it's a # then we print stats after
 			if ( isString || fe->m_count == 0 )
 				sb->safePrintf("\n");
