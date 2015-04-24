@@ -2196,6 +2196,15 @@ bool Query::setQWords ( char boolFlag ,
 		// is not in the title: field
 		if ( words.hasSpace(i) && inQuotes && nq>= 2 ) 
 			cancelField = true;
+
+		// likewise for gbsortby operators watch out for boolean
+		// operators at the end of the field. we also check for 
+		// parens below when computing the hash of the value.
+		if ( (fieldCode == FIELD_GBSORTBYINT ||
+		      fieldCode == FIELD_GBSORTBYFLOAT ) &&
+		     ( w[0] == '(' || w[0] == ')' ) )
+			cancelField = true;
+
 		// BUT if we have a quote, and they just got turned off,
 		// and the space is not after the quote, do not cancel field!
 		if ( nq == 1 && cancelField ) {
@@ -2440,8 +2449,10 @@ bool Query::setQWords ( char boolFlag ,
 			int32_t firstComma = -1;
 			// are we a facet term?
 			bool isFacetNumTerm = false;
-			if ( fieldCode == FIELD_GBFACETINT   ) isFacetNumTerm = true;
-			if ( fieldCode == FIELD_GBFACETFLOAT ) isFacetNumTerm = true;
+			if ( fieldCode == FIELD_GBFACETINT   ) 
+				isFacetNumTerm = true;
+			if ( fieldCode == FIELD_GBFACETFLOAT ) 
+				isFacetNumTerm = true;
 			// "w" points to the first alnumword after the field,
 			// so for site:xyz.com "w" points to the 'x' and wlen 
 			// would be 3 in that case sinze xyz is a word of 3 
@@ -2457,10 +2468,18 @@ bool Query::setQWords ( char boolFlag ,
 						firstColonLen = wlen;
 					colonCount++;
 				}
-
+				// fix "gbsortbyint:date)"
+				// these are used as boolean operators
+				// so do not include them in the value.
+				// we also did this above to set cancelField
+				// to true.
+				if ( w[wlen] == '(' || w[wlen] == ')' )
+					break;
 				// hit a comma in something like
 				// gbfacetfloat:price,0-1,1-2.5,2.5-10
-				if ( w[wlen]==',' && isFacetNumTerm && firstComma == -1 )
+				if ( w[wlen]==',' && 
+				     isFacetNumTerm && 
+				     firstComma == -1 )
 					firstComma = wlen;
 
 				wlen++;
@@ -2468,8 +2487,8 @@ bool Query::setQWords ( char boolFlag ,
 			// ignore following words until we hit a space
 			ignoreTilSpace = true;
 			// the hash. keep it case insensitive. only
-			// the fieldmatch stuff should be case-sensitive. this may change
-			// later.
+			// the fieldmatch stuff should be case-sensitive. 
+			// this may change later.
 			uint64_t wid = hash64Lower_utf8 ( w , wlen, 0LL );
 
 			//
@@ -2481,8 +2500,8 @@ bool Query::setQWords ( char boolFlag ,
 			     ( fieldCode == FIELD_GBFACETINT ||
 			       fieldCode == FIELD_GBFACETFLOAT ) )
 				// hash the "price" not the following range lst
-				// crap, since this uses the gbsortby: termlists it is
-				// NOT case-sensitive
+				// crap, since this uses the gbsortby: 
+				// termlists it is NOT case-sensitive
 				wid = hash64Lower_utf8 ( w , firstComma );
 			// now store the range list so we can 
 			// fill up the buckets below
@@ -4588,11 +4607,21 @@ struct QueryField g_fields[] = {
 	 NULL,
 	 0},
 
-	{"gbssSentToDiffbot",
+	{"gbssSentToDiffbotThisTime",
 	 FIELD_GENERIC,
 	 false,
-	 "gbssSentToDiffbot:1",
-	 "Was the document's url sent to diffbot for processing?",
+	 "gbssSentToDiffbotThisTime:1",
+	 "Was the document's url sent to diffbot for processing this time "
+	 "of spidering the url?",
+	 NULL,
+	 0},
+
+	{"gbssSentToDiffbotAtSomeTime",
+	 FIELD_GENERIC,
+	 false,
+	 "gbssSentToDiffbotAtSomeTime:1",
+	 "Was the document's url sent to diffbot for processing, either this "
+	 "time or some time before?",
 	 NULL,
 	 0},
 
