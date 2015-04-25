@@ -339,7 +339,7 @@ class XmlDoc {
 	uint16_t  m_isDiffbotJSONObject:1;
 	uint16_t  m_sentToDiffbot:1;
 	uint16_t  m_gotDiffbotSuccessfulReply:1;
-	uint16_t  m_reserved804:1;
+	uint16_t  m_useTimeAxis:1; // m_reserved804:1;
 	uint16_t  m_reserved805:1;
 	uint16_t  m_reserved806:1;
 	uint16_t  m_reserved807:1;
@@ -799,6 +799,8 @@ class XmlDoc {
 	bool hashContentType ( class HashTableX *table ) ;
 	bool hashDMOZCategories ( class HashTableX *table ) ;
 	bool hashLinks ( class HashTableX *table ) ;
+	bool getUseTimeAxis ( ) ;
+	SafeBuf *getTimeAxisUrl ( );
 	bool hashUrl ( class HashTableX *table );
 	bool hashDateNumbers ( class HashTableX *tt );
 	bool hashSections ( class HashTableX *table ) ;
@@ -1114,6 +1116,8 @@ class XmlDoc {
 	//bool  m_storedVoteCache;
 	//SafeBuf m_cacheRecBuf;
 
+	SafeBuf m_timeAxisUrl;
+
 	HashTableX m_turkVotingTable;
 	HashTableX m_turkBitsTable;
 	uint32_t m_confirmedTitleContentHash ;
@@ -1167,6 +1171,8 @@ class XmlDoc {
 	char     m_siteValid;
 	char     m_startTimeValid;
 	char     m_currentUrlValid;
+	char     m_useTimeAxisValid;
+	char     m_timeAxisUrlValid;
 	char     m_firstUrlValid;
 	char     m_firstUrlHash48Valid;
 	char     m_firstUrlHash64Valid;

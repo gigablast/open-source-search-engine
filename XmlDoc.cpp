@@ -1832,7 +1832,7 @@ bool XmlDoc::setFirstUrl ( char *u , bool addWWW , Url *baseUrl ) {
 
 	//if ( gbstrlen (u) + 1 > MAX_URL_LEN ) 
 	//	m_indexCode = EURLTOOLONG;
-	
+
 	m_firstUrl.set ( baseUrl , u , gbstrlen(u) , addWWW ) ;
 
 	// it is the active url
@@ -11082,6 +11082,17 @@ RdbList *XmlDoc::getOldMetaList ( ) {
 }
 */
 
+SafeBuf *XmlDoc::getTimeAxisUrl ( ) {
+	if ( m_timeAxisUrlValid ) return &m_timeAxisUrl;
+	if ( m_setFromDocId ) return &m_timeAxisUrl;
+	m_timeAxisUrlValid = true;
+	Url *fu = getFirstUrl();
+	int32_t spideredTime = getSpideredTime ();
+	m_timeAxisUrl.reset();
+	m_timeAxisUrl.safePrintf("%s.%u",fu->getUrl(),spideredTime);
+	return &m_timeAxisUrl;
+}
+
 // . look up TitleRec using Msg22 if we need to
 // . set our m_titleRec member from titledb
 // . the twin brother of XmlDoc::getTitleRecBuf() which makes the title rec
@@ -11139,6 +11150,16 @@ char **XmlDoc::getOldTitleRec ( ) {
 	}
 	CollectionRec *cr = getCollRec();
 	if ( ! cr ) return NULL;
+
+	// if using time axis then append the timestamp to the end of
+	// the url. this way Msg22::getAvailDocId() will return a docid
+	// based on that so we don't collide with other instances of this
+	// same url.
+	if ( u && getUseTimeAxis() ) { // g_conf.m_useTimeAxis ) {
+		SafeBuf *tau = getTimeAxisUrl();
+		u = tau->getBufStart();
+	}
+
 	// the title must be local since we're spidering it
 	if ( ! m_msg22a.getTitleRec ( &m_msg22Request      ,
 				      u                    ,
@@ -28295,6 +28316,20 @@ bool XmlDoc::hashLinksForLinkdb ( HashTableX *dt ) {
 	return true;
 }
 
+bool XmlDoc::getUseTimeAxis ( ) {
+	if ( m_useTimeAxisValid )
+		return m_useTimeAxis;
+	if ( m_setFromTitleRec )
+		// return from titlerec header
+		return m_useTimeAxis;
+	CollectionRec *cr = g_collectiondb.getRec ( m_collnum );
+	if ( ! cr ) return false;
+	m_useTimeAxis = cr->m_useTimeAxis;
+	m_useTimeAxisValid = true;
+	return m_useTimeAxis;
+}
+
+
 // . returns false and sets g_errno on error
 // . copied Url2.cpp into here basically, so we can now dump Url2.cpp
 bool XmlDoc::hashUrl ( HashTableX *tt ) { // , bool isStatusDoc ) {
@@ -28322,6 +28357,12 @@ bool XmlDoc::hashUrl ( HashTableX *tt ) { // , bool isStatusDoc ) {
 	if ( ! hashSingleTerm(uw.getUrl(),uw.getUrlLen(),&hi) ) 
 		return false;
 
+	if ( getUseTimeAxis() ) { // g_conf.m_useTimeAxis ) {
+		hi.m_prefix = "gbtimeurl";
+		SafeBuf *tau = getTimeAxisUrl();
+		hashSingleTerm ( tau->getBufStart(),tau->length(),&hi);
+	}
+		
 	// use hash of url as score so we can get a # of docs per site est.
 	//uint16_t score = hash16 ( fu->getUrl() , fu->getUrlLen() );
 

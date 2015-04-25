@@ -16408,6 +16408,19 @@ void Parms::init ( ) {
 	m->m_flags = PF_CLONE;
 	m++; 
 
+	m->m_title = "use time axis";
+	m->m_desc  = "If this is true Gigablast will index the same "
+		"url multiple times if its content varies over time, "
+		"rather than overwriting the older version in the index. "
+		"Useful for archive web pages as they change over time.";
+	m->m_cgi   = "usetimeaxis";
+	m->m_off   = (char *)&cr.m_useTimeAxis - x;
+	m->m_type  = TYPE_BOOL;
+	m->m_def   = "0";
+	m->m_page  = PAGE_SPIDER;
+	m->m_obj   = OBJ_COLL;
+	m->m_flags = PF_CLONE;
+	m++;
 
 	m->m_title = "use robots.txt";
 	m->m_desc  = "If this is true Gigablast will respect "
