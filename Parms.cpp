@@ -17173,6 +17173,7 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&cr.m_doLinkSpamCheck - x;
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "1";
+	m->m_group = 0;
 	m->m_page  = PAGE_SPIDER;
 	m->m_obj   = OBJ_COLL;
 	m->m_flags = PF_CLONE;
@@ -17754,6 +17755,7 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&cr.m_thumbnailMaxWidthHeight - x;
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "250";
+	m->m_group = 0;
 	m->m_page  = PAGE_SPIDER;
 	m->m_obj   = OBJ_COLL;
 	m->m_flags = PF_CLONE;
@@ -17834,6 +17836,7 @@ void Parms::init ( ) {
 	m->m_page  = PAGE_SPIDER;
 	m->m_obj   = OBJ_COLL;
 	m->m_def   = "";
+	m->m_group = 0;
 	m->m_flags = PF_REBUILDURLFILTERS | PF_CLONE;
 	m++;
 
@@ -17848,6 +17851,7 @@ void Parms::init ( ) {
 	m->m_page  = PAGE_SPIDER;
 	m->m_obj   = OBJ_COLL;
 	m->m_def   = "";
+	m->m_group = 0;
 	m->m_flags = PF_REBUILDURLFILTERS | PF_CLONE;
 	m++;
 
@@ -17864,6 +17868,7 @@ void Parms::init ( ) {
 	m->m_page  = PAGE_SPIDER;
 	m->m_obj   = OBJ_COLL;
 	m->m_def   = "";
+	m->m_group = 0;
 	m->m_flags = PF_REBUILDURLFILTERS | PF_CLONE;
 	m++;
 
