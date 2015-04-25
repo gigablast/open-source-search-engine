@@ -27228,7 +27228,12 @@ SafeBuf *XmlDoc::getSpiderStatusDocMetaList2 ( SpiderReply *reply ) {
 	if ( ! cr ) return NULL;
 
 	Json *jp1 = NULL;
-	if ( m_isDiffbotJSONObject ) {
+	// i've seen ptr_utf8Content NULL and content type as html for
+	// some reason when deleting a diffbot object doc so check for that
+	// here and forget it. we don't want getParsedJson() to core.
+	if ( m_isDiffbotJSONObject && 
+	     m_contentType == CT_JSON &&
+	     m_contentTypeValid ) {
 		jp1 = getParsedJson();
 		if ( ! jp1 || jp1 == (void *)-1) return (SafeBuf *)jp1;
 	}
