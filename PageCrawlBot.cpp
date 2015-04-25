@@ -156,10 +156,17 @@ bool sendBackDump ( TcpSocket *sock, HttpRequest *hr ) {
 	bool downloadJSON = false;
 	int32_t fmt;
 	char *xx;
+	char *docType = "json";
 
 	if ( ( xx = strstr ( path , "_data.json" ) ) ) {
 		rdbId = RDB_TITLEDB;
 		fmt = FORMAT_JSON;
+		downloadJSON = true;
+	}
+	else if ( ( xx = strstr ( path , "_html.json" ) ) ) {
+		rdbId = RDB_TITLEDB;
+		fmt = FORMAT_JSON;
+		docType = "html";
 		downloadJSON = true;
 	}
 	else if ( ( xx = strstr ( path , "_data.csv" ) ) ) {
@@ -279,10 +286,11 @@ bool sendBackDump ( TcpSocket *sock, HttpRequest *hr ) {
 			       // do not compute summary. 0 lines.
 			       "ns=0&"
 			      "q=gbsortby%%3Agbspiderdate&"
-			      "prepend=type%%3Ajson"
+			      "prepend=type%%3A%s"
 			      "\r\n\r\n"
 			       , dr 
 			       , cr->m_coll
+			       , docType
 			       );
 		log("crawlbot: %s",sb2.getBufStart());
 		HttpRequest hr2;
