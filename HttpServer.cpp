@@ -1035,6 +1035,35 @@ bool HttpServer::sendReply ( TcpSocket  *s , HttpRequest *r , bool isAdmin) {
 	if ( strncmp ( path , "/download/", 10 ) == 0 )
 		return sendBackDump ( s , r );
 
+	if ( strncmp ( path , "/iagbcoll/" , 10 ) == 0 ) {
+		SafeBuf cmd;
+		char *iaItem = path + 10;
+		char c = iaItem[pathLen];
+		iaItem[pathLen] = '\0';
+		// iaItem is like "webgroup-20100422114008-00011"
+		// print out the warc files as if they were urls
+		// so we can spider them through the spider pipeline as-is
+		cmd.safePrintf("/home/mwells/ia list %s --glob='*arc.gz' | "
+			       "awk '{print \"<a "
+			       "href=http://archive.org/download/"
+			       "%s/\" $1\">\"}' > ./tmpiaout"
+			       ,iaItem
+			       ,iaItem
+			       );
+		iaItem[pathLen] = c;
+		gbsystem ( cmd.getBufStart() );
+		SafeBuf sb;
+		sb.load ( "./tmpiaout" );
+		return g_httpServer.sendDynamicPage(s,
+						    sb.getBufStart(),
+						    sb.length(),
+						    0, false, 
+						    "text/html",
+						    -1, NULL,
+						    "UTF-8");
+	}
+		
+
 	// . is it a diffbot api request, like "GET /api/*"
 	// . ie "/api/startcrawl" or "/api/stopcrawl" etc.?
 	//if ( strncmp ( path , "/api/" , 5 ) == 0 )
