@@ -5759,6 +5759,30 @@ bool Links::addLink ( char *link , int32_t linkLen , int32_t nodeNum ,
 	// we now use everything has is for sites like file.org
 	bool addWWW = false;
 
+	/////
+	//
+	// hack fix. if link has spaces in it convert to +'s
+	// will fix urls like those in anchor tags on
+	// http://www.birmingham-boxes.co.uk/catagory.asp
+	//
+	/////
+	bool hasSpaces = false;
+	char tmp[MAX_URL_LEN+1];
+	for ( int32_t k = 0 ; k < linkLen ; k++ ) {
+		if ( link[k] == ' ' ) hasSpaces = true;
+		// watch out for unterminated quotes
+		if ( link[k] == '>' ) { hasSpaces = false; break; }
+	}
+	for ( int32_t k=0;hasSpaces && linkLen<MAX_URL_LEN && k<linkLen ;k++){
+		tmp[k  ] = link[k];
+		if ( tmp[k] == ' ' ) tmp[k] = '+';
+		tmp[k+1] = '\0';
+	}
+	if ( hasSpaces )
+		link = tmp;
+		
+
+
 	url.set ( m_baseUrl       ,
 		  link            ,
 		  linkLen         ,

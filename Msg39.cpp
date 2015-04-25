@@ -1532,7 +1532,6 @@ void Msg39::estimateHitsAndSendReply ( ) {
 		mr.ptr_numDocsThatHaveFacetList  = NULL;
 		mr.size_numDocsThatHaveFacetList = nqt * sizeof(int64_t);
 
-
 		// . that is pretty much it,so serialize it into buffer,"reply"
 		// . mr.ptr_docIds, etc., will point into the buffer so we can
 		//   re-serialize into it below from the tree

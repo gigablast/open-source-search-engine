@@ -27227,6 +27227,17 @@ SafeBuf *XmlDoc::getSpiderStatusDocMetaList2 ( SpiderReply *reply ) {
 	CollectionRec *cr = getCollRec();
 	if ( ! cr ) return NULL;
 
+	Json *jp1 = NULL;
+	// i've seen ptr_utf8Content NULL and content type as html for
+	// some reason when deleting a diffbot object doc so check for that
+	// here and forget it. we don't want getParsedJson() to core.
+	if ( m_isDiffbotJSONObject && 
+	     m_contentType == CT_JSON &&
+	     m_contentTypeValid ) {
+		jp1 = getParsedJson();
+		if ( ! jp1 || jp1 == (void *)-1) return (SafeBuf *)jp1;
+	}
+
 	// sanity
 	if ( ! m_indexCodeValid ) { char *xx=NULL;*xx=0; }
 
@@ -27287,11 +27298,23 @@ SafeBuf *XmlDoc::getSpiderStatusDocMetaList2 ( SpiderReply *reply ) {
 		jd.safePrintf("\"gbssAgeInIndex\":"
 			      "%"UINT32",\n",now - od->m_spideredTime);
 
-	if ( cr->m_isCustomCrawl ) {
-		if ( m_isDiffbotJSONObject )
-			jd.safePrintf("\"gbssIsDiffbotObject\":1,\n");
+	if ( m_isDiffbotJSONObject ) { // && cr->m_isCustomCrawl
+		jd.safePrintf("\"gbssIsDiffbotObject\":1,\n");
+		JsonItem *jsonItem = NULL;
+		if ( jp1 ) jsonItem = jp1->getItem("diffbotUri");
+		if ( jsonItem ) {
+			jd.safePrintf("\"gbssDiffbotUri\":\"");
+			int32_t vlen;
+			char *val = jsonItem->getValueAsString( &vlen );
+			if ( val ) jd.safeMemcpy ( val , vlen );
+			jd.safePrintf("\",\n");
+		}
 		else
-			jd.safePrintf("\"gbssIsDiffbotObject\":0,\n");
+			jd.safePrintf("\"gbssDiffbotUri\":"
+				      "\"none\",\n");
+	}
+	else { // if ( cr->m_isCustomCrawl ) {
+		jd.safePrintf("\"gbssIsDiffbotObject\":0,\n");
 	}
 
 	jd.safePrintf("\"gbssDomain\":\"");
@@ -27482,8 +27505,8 @@ SafeBuf *XmlDoc::getSpiderStatusDocMetaList2 ( SpiderReply *reply ) {
 		return NULL;
 
 
-	Json jp;
-	if ( ! jp.parseJsonStringIntoJsonItems ( jd.getBufStart(),m_niceness)){
+	Json jp2;
+	if (! jp2.parseJsonStringIntoJsonItems ( jd.getBufStart(),m_niceness)){
 		g_errno = EBADJSONPARSER;
 		return NULL;
 	}
@@ -27502,7 +27525,7 @@ SafeBuf *XmlDoc::getSpiderStatusDocMetaList2 ( SpiderReply *reply ) {
 	hi.m_useSections = false;
 
 	// fill up tt4. false -> do not hash without field prefixes.
-	hashJSONFields2 ( &tt4 , &hi , &jp , false );
+	hashJSONFields2 ( &tt4 , &hi , &jp2 , false );
 
 	/*
 	char buf[64];

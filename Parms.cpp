@@ -17173,6 +17173,7 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&cr.m_doLinkSpamCheck - x;
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "1";
+	m->m_group = 0;
 	m->m_page  = PAGE_SPIDER;
 	m->m_obj   = OBJ_COLL;
 	m->m_flags = PF_CLONE;
@@ -17754,6 +17755,7 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&cr.m_thumbnailMaxWidthHeight - x;
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "250";
+	m->m_group = 0;
 	m->m_page  = PAGE_SPIDER;
 	m->m_obj   = OBJ_COLL;
 	m->m_flags = PF_CLONE;
@@ -17822,6 +17824,54 @@ void Parms::init ( ) {
 	m->m_page  = PAGE_SPIDER;
 	m->m_obj   = OBJ_COLL;
 	m++;
+
+	m->m_cgi   = "urlProcessPatternTwo";
+	m->m_desc  = "Only send urls that match this simple substring "
+		"pattern to Diffbot. Separate substrings with two pipe "
+		"operators, ||. Leave empty for no restrictions.";
+	m->m_xml   = "diffbotUrlProcessPattern";
+	m->m_title = "diffbot url process pattern";
+	m->m_off   = (char *)&cr.m_diffbotUrlProcessPattern - x;
+	m->m_type  = TYPE_SAFEBUF;
+	m->m_page  = PAGE_SPIDER;
+	m->m_obj   = OBJ_COLL;
+	m->m_def   = "";
+	m->m_group = 0;
+	m->m_flags = PF_REBUILDURLFILTERS | PF_CLONE;
+	m++;
+
+	m->m_cgi   = "urlProcessRegExTwo";
+	m->m_desc  = "Only send urls that match this regular expression "
+		"to Diffbot. "
+		"Leave empty for no restrictions.";
+	m->m_xml   = "diffbotUrlProcessRegEx";
+	m->m_title = "diffbot url process regex";
+	m->m_off   = (char *)&cr.m_diffbotUrlProcessRegEx - x;
+	m->m_type  = TYPE_SAFEBUF;
+	m->m_page  = PAGE_SPIDER;
+	m->m_obj   = OBJ_COLL;
+	m->m_def   = "";
+	m->m_group = 0;
+	m->m_flags = PF_REBUILDURLFILTERS | PF_CLONE;
+	m++;
+
+	m->m_cgi   = "pageProcessPatternTwo";
+	m->m_desc  = "Only send urls whose content matches this simple "
+		"substring "
+		"pattern to Diffbot. Separate substrings with two pipe "
+		"operators, ||. "
+		"Leave empty for no restrictions.";
+	m->m_xml   = "diffbotPageProcessPattern";
+	m->m_title = "diffbot page process pattern";
+	m->m_off   = (char *)&cr.m_diffbotPageProcessPattern - x;
+	m->m_type  = TYPE_SAFEBUF;
+	m->m_page  = PAGE_SPIDER;
+	m->m_obj   = OBJ_COLL;
+	m->m_def   = "";
+	m->m_group = 0;
+	m->m_flags = PF_REBUILDURLFILTERS | PF_CLONE;
+	m++;
+
 
 
 	m->m_title = "spider start time";

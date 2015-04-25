@@ -1036,7 +1036,8 @@ bool initSpiderProxyStuff() {
 			       0,
 			       true, // allow dups?
 			       MAX_NICENESS,
-			       "lbtab");
+			       "lbtab",
+			       true); // use key magic to mix things up
 
 }
 

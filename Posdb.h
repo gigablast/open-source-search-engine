@@ -400,7 +400,10 @@ class Posdb {
 
 class FacetEntry {
  public:
+	// # of search results that have this value:
 	int32_t m_count;
+	// # of docs that have this value:
+	int32_t m_outsideSearchResultsCount;
 	int64_t m_docId;
 
 	// cast as double/floats for floats:
