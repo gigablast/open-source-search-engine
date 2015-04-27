@@ -10755,6 +10755,8 @@ XmlDoc **XmlDoc::getOldXmlDoc ( ) {
 		int32_t saved = g_errno;
 		// ok, fix the memleak here
 		mdelete ( m_oldDoc , sizeof(XmlDoc), "odnuke" );
+		delete ( m_oldDoc );
+		//log("xmldoc: nuke xmldoc1=%"PTRFMT"",(PTRTYPE)m_oldDoc);
 		m_oldDoc = NULL;
 		g_errno = saved;
 		return NULL;
