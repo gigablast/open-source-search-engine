@@ -27524,28 +27524,36 @@ SafeBuf *XmlDoc::getSpiderStatusDocMetaList2 ( SpiderReply *reply ) {
 		regex_t *ucr = &cr->m_ucr;
 		if ( ! cr->m_hasucr ) ucr = NULL;
 		if ( ucr && regexec(ucr,url,0,NULL,0) ) match = 0;
-		jd.safePrintf("\"gbssMatchesUrlCrawlRegEx\":%i,\n",match);
+		if ( ucr )
+			jd.safePrintf("\"gbssMatchesUrlCrawlRegEx\":%i,\n",
+				      match);
 
 		// now the substring pattern
 		match = 1;
 		char *ucp = cr->m_diffbotUrlCrawlPattern.getBufStart();
 		if ( ucp && ! ucp[0] ) ucp = NULL;
 		if ( ucp && ! doesStringContainPattern(url,ucp) ) match = 0;
-		jd.safePrintf("\"gbssMatchesUrlCrawlPattern\":%i,\n",match);
+		if ( ucp )
+			jd.safePrintf("\"gbssMatchesUrlCrawlPattern\":%i,\n",
+				      match);
 
 		// now process regex
 		match = 1;
 		regex_t *upr = &cr->m_upr;
 		if ( ! cr->m_hasupr ) upr = NULL;
 		if ( upr && regexec(upr,url,0,NULL,0) ) match = 0;
-		jd.safePrintf("\"gbssMatchesUrlCrawlRegEx\":%i,\n",match);
+		if ( upr ) 
+			jd.safePrintf("\"gbssMatchesUrlCrawlRegEx\":%i,\n",
+				      match);
 
 		// now process pattern
 		match = 1;
 		char *upp = cr->m_diffbotUrlProcessPattern.getBufStart();
 		if ( upp && ! upp[0] ) upp = NULL;
 		if ( upp && ! doesStringContainPattern(url,upp) ) match = 0;
-		jd.safePrintf("\"gbssMatchesUrlProcessPattern\":%i,\n",match);
+		if ( upp ) 
+			jd.safePrintf("\"gbssMatchesUrlProcessPattern\":%i,\n",
+				      match);
 
 	}
 
