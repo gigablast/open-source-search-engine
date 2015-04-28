@@ -559,8 +559,8 @@ class SpiderRequest {
 	/* char    m_onlyDoNotAddLinksLinksLinks   :1; // max hopcount 2 */
 	char    m_ignoreDocUnchangedError:1;//reserved2a:1;
 	char    m_recycleContent:1;//m_reserved2b:1;
-	char    m_reserved2c:1;
-	char    m_reserved2d:1;
+	char    m_hasMediaExtension:1; // reserved2c:1;
+	char    m_hasMediaExtensionValid:1;
 
 	char    m_reserved2e:1;
 	char    m_reserved2f:1;

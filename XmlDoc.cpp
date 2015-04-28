@@ -25608,6 +25608,9 @@ char *XmlDoc::addOutlinkSpiderRecsToMetaList ( ) {
 		//ksr.m_useTestSpiderDir = useTestSpiderDir;
 		ksr.m_parentIsSiteMap = parentIsSiteMap;
 
+		ksr.m_hasMediaExtension = url.hasMediaExtension();
+		ksr.m_hasMediaExtensionValid = 1;
+
 		// now we need this so we can share Msg12 spider locks with
 		// query reindex docid-based spider requests. that way
 		// we do not spider the same document at the same time.
