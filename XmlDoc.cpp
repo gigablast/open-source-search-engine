@@ -27501,6 +27501,48 @@ SafeBuf *XmlDoc::getSpiderStatusDocMetaList2 ( SpiderReply *reply ) {
 	jd.safePrintf("\"gbssSentToDiffbotThisTime\":%i,\n",
 		      (int)m_sentToDiffbotThisTime);
 
+	// page must have been downloaded for this one
+	if ( cr->m_isCustomCrawl && m_utf8ContentValid ) {
+		char match = doesPageContentMatchDiffbotProcessPattern();
+		jd.safePrintf("\"gbssMatchesPageProcessPattern\":%i,\n",
+			      (int)match);
+	}
+	if ( cr->m_isCustomCrawl && m_firstUrlValid ) {
+
+		char *url = getFirstUrl()->getUrl();
+
+		// the crawl regex
+		int match = 1;
+		regex_t *ucr = &cr->m_ucr;
+		if ( ! cr->m_hasucr ) ucr = NULL;
+		if ( ucr && regexec(ucr,url,0,NULL,0) ) match = 0;
+		jd.safePrintf("\"gbssMatchesUrlCrawlRegEx\":%i,\n",match);
+
+		// now the substring pattern
+		match = 1;
+		char *ucp = cr->m_diffbotUrlCrawlPattern.getBufStart();
+		if ( ucp && ! ucp[0] ) ucp = NULL;
+		if ( ucp && ! doesStringContainPattern(url,ucp) ) match = 0;
+		jd.safePrintf("\"gbssMatchesUrlCrawlPattern\":%i,\n",match);
+
+		// now process regex
+		match = 1;
+		regex_t *upr = &cr->m_upr;
+		if ( ! cr->m_hasupr ) upr = NULL;
+		if ( upr && regexec(upr,url,0,NULL,0) ) match = 0;
+		jd.safePrintf("\"gbssMatchesUrlCrawlRegEx\":%i,\n",match);
+
+		// now process pattern
+		match = 1;
+		char *upp = cr->m_diffbotUrlProcessPattern.getBufStart();
+		if ( upp && ! upp[0] ) upp = NULL;
+		if ( upp && ! doesStringContainPattern(url,upp) ) match = 0;
+		jd.safePrintf("\"gbssMatchesUrlProcessPattern\":%i,\n",match);
+
+	}
+
+
+
 	if ( m_diffbotReplyValid && m_sentToDiffbotThisTime ) {
 		jd.safePrintf("\"gbssDiffbotReplyCode\":%"INT32",\n",
 			      m_diffbotReplyError);

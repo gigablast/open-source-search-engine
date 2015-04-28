@@ -5767,16 +5767,27 @@ bool Links::addLink ( char *link , int32_t linkLen , int32_t nodeNum ,
 	//
 	/////
 	bool hasSpaces = false;
-	char tmp[MAX_URL_LEN+1];
+	char tmp[MAX_URL_LEN+2];
 	for ( int32_t k = 0 ; k < linkLen ; k++ ) {
 		if ( link[k] == ' ' ) hasSpaces = true;
 		// watch out for unterminated quotes
 		if ( link[k] == '>' ) { hasSpaces = false; break; }
 	}
-	for ( int32_t k=0;hasSpaces && linkLen<MAX_URL_LEN && k<linkLen ;k++){
+	bool hitQuestionMark = false;
+	int32_t k; for(k=0;hasSpaces && linkLen<MAX_URL_LEN && k<linkLen ;k++){
+		if ( link[k] == '?' ) hitQuestionMark = true;
 		tmp[k  ] = link[k];
-		if ( tmp[k] == ' ' ) tmp[k] = '+';
 		tmp[k+1] = '\0';
+		if ( tmp[k] != ' ' ) continue;
+		// if we are part of the cgi stuff, use +
+		if ( hitQuestionMark ) { tmp[k] = '+'; continue; }
+		// if not enough buffer then we couldn't do the conversion.
+		if ( k+3 >= MAX_URL_LEN ) { hasSpaces = false; break; }
+		// if before the '?' then use %20
+		tmp[k  ] = '%';
+		tmp[k+1] = '2';
+		tmp[k+2] = '0';
+		tmp[k+3] = '\0';
 	}
 	if ( hasSpaces )
 		link = tmp;
