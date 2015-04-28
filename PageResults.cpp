@@ -7985,8 +7985,9 @@ bool printCSVHeaderRow2 ( SafeBuf *sb ,
 		"12gbssPrevTotalNumIndexAttempts",
 		"13gbssHopCount",
 		"14gbssStatusMsg",
-		"15gbssSentToDiffbotThisTime",
-		"16gbssDiffbotReplyMsg",
+		"15gbssDiffbotUri",
+		"16gbssSentToDiffbotThisTime",
+		"17gbssDiffbotReplyMsg",
 
 		"gbssIp",
 		"gbssPercentContentChanged",
@@ -8194,6 +8195,8 @@ bool printCSVHeaderRow2 ( SafeBuf *sb ,
 			hdr = "Hop Count";
 		if ( ! strcmp(hdr,"gbssIp") ) 
 			hdr = "IP";
+		if ( ! strcmp(hdr,"gbssDiffbotUri" ) )
+			hdr = "Diffbot URI";
 		if ( ! strcmp(hdr,"gbssSentToDiffbotThisTime") ) 
 			hdr = "Process Attempted";
 		if ( ! strcmp(hdr,"gbssDiffbotReplyMsg") )

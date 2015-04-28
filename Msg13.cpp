@@ -1950,6 +1950,13 @@ void gotHttpReply2 ( void *state ,
 		if ( --count > 0 && ! err ) {
 			copy          = (char *)mdup(reply,replySize,"msg13d");
 			copyAllocSize = replySize;
+			// oom doing the mdup? i've seen this core us so fix it
+			// because calling sendreply_ass with a NULL 
+			// 'copy' cores it.
+			if ( reply && ! copy ) {
+				copyAllocSize = 0;
+				err = ENOMEM;
+			}
 		}
 		// this is not freeable
 		if ( copy == g_fakeReply ) copyAllocSize = 0;

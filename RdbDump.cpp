@@ -215,7 +215,7 @@ void RdbDump::doneDumping ( ) {
 	// . map verify
 	// . if continueDumping called us with no collectionrec, it got
 	//   deleted so RdbBase::m_map is nuked too i guess
-	if ( saved != ENOCOLLREC )
+	if ( saved != ENOCOLLREC && m_map )
 		log("db: map # pos=%"INT64" neg=%"INT64"",
 		    m_map->getNumPositiveRecs(),
 		    m_map->getNumNegativeRecs()
@@ -230,11 +230,11 @@ void RdbDump::doneDumping ( ) {
 	if ( saved == ENOCOLLREC ) return;
 
 	// save the map to disk
-	m_map->writeMap();
+	if ( m_map ) m_map->writeMap();
 #ifdef GBSANITYCHECK
 	// sanity check
 	log("DOING SANITY CHECK FOR MAP -- REMOVE ME");
-	if ( ! m_map->verifyMap ( m_file ) ) {
+	if ( m_map && ! m_map->verifyMap ( m_file ) ) {
 		char *xx = NULL; *xx = 0; }
 	// now check the whole file for consistency
 	if ( m_ks == 18 ) { // map->m_rdbId == RDB_POSDB ) {
@@ -495,7 +495,7 @@ bool RdbDump::dumpList ( RdbList *list , int32_t niceness , bool recall ) {
 
 	// . SANITY CHECK
 	// . ensure first key is >= last key added to the map map
-	if ( m_offset > 0 ) {
+	if ( m_offset > 0 && m_map ) {
 		//key_t k       = m_list->getCurrentKey();
 		char k[MAX_KEY_BYTES];
 		m_list->getCurrentKey(k);
@@ -748,6 +748,22 @@ void doneReadingForVerifyWrapper ( void *state ) {
 }
 
 bool RdbDump::doneReadingForVerify ( ) {
+
+	// if someone reset/deleted the collection we were dumping...
+	CollectionRec *cr = g_collectiondb.getRec ( m_collnum );
+	// . do not do this for statsdb/catdb which always use collnum of 0
+	// . RdbMerge also calls us but gives a NULL m_rdb so we can't
+	//   set m_isCollectionless to false
+	if ( ! cr && m_doCollCheck ) {
+		g_errno = ENOCOLLREC;
+		// m_file is invalid if collrec got nuked because so did
+		// the Rdbbase which has the files
+		log("db: lost collection while dumping to disk. making "
+		    "map null so we can stop.");
+		m_map = NULL;
+	}
+
+
 	// see if what we wrote is the same as what we read back
 	if ( m_verifyBuf && memcmp(m_verifyBuf,m_buf,m_bytesToWrite) != 0 &&
 	     ! g_errno ) {

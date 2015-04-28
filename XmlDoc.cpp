@@ -603,6 +603,10 @@ void XmlDoc::reset ( ) {
 	}
 
 	if ( m_ubuf ) {
+		// log("xmldoc: delete m_ubuf=%"PTRFMT" this=%"PTRFMT
+		//     , (PTRTYPE) m_ubuf
+		//     , (PTRTYPE) this
+		//     );
 		mfree ( m_ubuf     , m_ubufAlloc         , "ubuf");
 		m_ubuf = NULL;
 	}
@@ -1524,6 +1528,10 @@ bool XmlDoc::set2 ( char    *titleRec ,
 	// make buf space for holding the uncompressed stuff 
 	m_ubufAlloc = m_ubufSize;
 	m_ubuf = (char *) mmalloc ( m_ubufAlloc ,"TitleRecu1");
+	// log("xmldoc: m_ubuf=%"PTRFMT" this=%"PTRFMT
+	//     , (PTRTYPE) m_ubuf
+	//     , (PTRTYPE) this
+	//     );
 	if ( ! m_ubuf ) {
 		// we had bad ubufsizes on gb6, like > 1GB print out key
 		// so we can manually make a titledb.dat file to delete these
@@ -10819,6 +10827,10 @@ XmlDoc **XmlDoc::getOldXmlDoc ( ) {
 		return NULL;
 	}
 	mnew ( m_oldDoc , sizeof(XmlDoc),"xmldoc1");
+	// debug the mem leak
+	// log("xmldoc: xmldoc1=%"PTRFMT" u=%s"
+	//     ,(PTRTYPE)m_oldDoc
+	//     ,m_firstUrl.getUrl());
 	// if title rec is corrupted data uncompress will fail and this
 	// will return false!
 	if ( ! m_oldDoc->set2 ( m_oldTitleRec ,
@@ -10828,6 +10840,11 @@ XmlDoc **XmlDoc::getOldXmlDoc ( ) {
 				m_niceness ) ) {
 		log("build: failed to set old doc for %s",m_firstUrl.m_url);
 		if ( ! g_errno ) { char *xx=NULL;*xx=0; }
+		int32_t saved = g_errno;
+		// ok, fix the memleak here
+		mdelete ( m_oldDoc , sizeof(XmlDoc), "odnuke" );
+		m_oldDoc = NULL;
+		g_errno = saved;
 		return NULL;
 	}
 	m_oldDocValid = true;
@@ -10840,6 +10857,13 @@ XmlDoc **XmlDoc::getOldXmlDoc ( ) {
 void XmlDoc::nukeDoc ( XmlDoc *nd ) {
 	// skip if empty
 	if ( ! nd ) return;
+	// debug the mem leak
+	// if ( nd == m_oldDoc )
+	// 	log("xmldoc: nuke xmldoc1=%"PTRFMT" u=%s this=%"PTRFMT""
+	// 	    ,(PTRTYPE)m_oldDoc
+	// 	    ,m_firstUrl.getUrl()
+	// 	    ,(PTRTYPE)this
+	// 	    );
 	// do not nuke yerself!
 	if ( nd == this ) return;
 	// or root doc!
@@ -27378,7 +27402,12 @@ SafeBuf *XmlDoc::getSpiderStatusDocMetaList2 ( SpiderReply *reply ) {
 	if ( ! cr ) return NULL;
 
 	Json *jp1 = NULL;
-	if ( m_isDiffbotJSONObject ) {
+	// i've seen ptr_utf8Content NULL and content type as html for
+	// some reason when deleting a diffbot object doc so check for that
+	// here and forget it. we don't want getParsedJson() to core.
+	if ( m_isDiffbotJSONObject && 
+	     m_contentType == CT_JSON &&
+	     m_contentTypeValid ) {
 		jp1 = getParsedJson();
 		if ( ! jp1 || jp1 == (void *)-1) return (SafeBuf *)jp1;
 	}
