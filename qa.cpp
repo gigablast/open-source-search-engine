@@ -209,6 +209,8 @@ void processReply ( char *reply , int32_t replyLen ) {
 	markOut ( content , "\\\"gbssDownloadEndTimeMS\\\":");
 	markOut ( content , "\\\"gbssDownloadDurationMS\\\":");
 	markOut ( content , "\\\"gbssAgeInIndex\\\":");
+	markOut ( content , "\\\"gbssDiscoveredTime\\\":");
+
 
 	// if the results are in xml, then the status doc is xml encoded
 	markOut ( content , "\"gbssDownloadStartTime\":");
