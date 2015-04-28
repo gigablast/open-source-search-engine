@@ -1907,7 +1907,11 @@ int64_t gettimeofdayInMillisecondsSynced() {
 		char *xx = NULL; *xx = 0; }
 	// sanity check
 	if ( ! isClockInSync() ) { 
-		log("xml: clock not in sync with host #0 yet!!!!!!");
+		static int s_printed = 0;
+		if ( (s_printed % 100) == 0 ) {
+			s_printed++;
+			log("xml: clock not in sync with host #0 yet!!!!!!");
+		}
 		//char *xx = NULL; *xx = 0; }
 	}
 
