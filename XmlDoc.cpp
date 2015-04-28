@@ -27499,6 +27499,13 @@ SafeBuf *XmlDoc::getSpiderStatusDocMetaList2 ( SpiderReply *reply ) {
 	jd.safePrintf("\"gbssSentToDiffbotThisTime\":%i,\n",
 		      (int)m_sentToDiffbotThisTime);
 
+	// page must have been downloaded for this one
+	if ( cr->m_isCustomCrawl && m_utf8ContentValid ) {
+		char match = doesPageContentMatchDiffbotProcessPattern();
+		jd.safePrintf("\"gbssMatchesPageProcessPattern\":%i,\n",
+			      (int)match);
+	}
+
 	if ( m_diffbotReplyValid && m_sentToDiffbotThisTime ) {
 		jd.safePrintf("\"gbssDiffbotReplyCode\":%"INT32",\n",
 			      m_diffbotReplyError);
