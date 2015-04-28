@@ -21587,6 +21587,7 @@ bool XmlDoc::doesPageContentMatchDiffbotProcessPattern() {
 	char *p = cr->m_diffbotPageProcessPattern.getBufStart();
 	// empty? no pattern matches everything.
 	if ( ! p ) return true;
+	if ( ! m_content ) return false;
 	// how many did we have?
 	return doesStringContainPattern ( m_content , p );
 }
@@ -27502,7 +27503,11 @@ SafeBuf *XmlDoc::getSpiderStatusDocMetaList2 ( SpiderReply *reply ) {
 		      (int)m_sentToDiffbotThisTime);
 
 	// page must have been downloaded for this one
-	if ( cr->m_isCustomCrawl && m_utf8ContentValid ) {
+	if ( cr->m_isCustomCrawl && 
+	     m_utf8ContentValid && 
+	     m_content &&
+	     cr->m_diffbotPageProcessPattern.getBufStart() &&
+	     cr->m_diffbotPageProcessPattern.getBufStart()[0] ) {
 		char match = doesPageContentMatchDiffbotProcessPattern();
 		jd.safePrintf("\"gbssMatchesPageProcessPattern\":%i,\n",
 			      (int)match);
