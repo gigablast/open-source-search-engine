@@ -32,6 +32,8 @@ void Url::reset() {
 	//m_siteLen   = 0;
 	// ip related stuff
 	m_ip          = 0;
+	// m_isWarcValid = false;
+	// m_isArcValid  = false;
 }
 
 // set from another Url, does a copy
@@ -1426,14 +1428,53 @@ bool Url::isBadExtension ( int32_t version ) {
 		s_badExtInitialized = true;
 	}
 
-	
+
 	int myKey = hash64Lower_a(m_extension,m_elen);
 	//zero unless we have a bad extention, otherwise
 	//we return TR version in which it was banned
 	int32_t badVersion = s_badExtTable.getValue(myKey);
 	if (badVersion == 0) return false;
-	if(badVersion <= version) return true;
+	//if(badVersion <= version) return true;
+	if ( badVersion > version ) return false;
+	// exceptions for .gz
+	if ( isCompressedArcOrWarc() ) return false;
+	return true;
+}
+
+bool Url::isCompressedArcOrWarc ( ) {
+
+	// hack to allow for .gz if it is .warc.gz or .arc.gz
+	if ( m_elen == 2 && 
+	     m_extension[0] == 'g' &&
+	     m_extension[1] == 'z' &&
+	     m_ulen > 10 &&
+	     m_extension[-1] == '.' &&
+	     m_extension[-2] == 'c' &&
+	     m_extension[-3] == 'r' &&
+	     m_extension[-4] == 'a' &&
+	     m_extension[-5] == '.' ) {
+		// m_isArc = true;
+		// m_isArcValid = true;
+		return true;
+	}
+
+	if ( m_elen == 2 && 
+	     m_extension[0] == 'g' &&
+	     m_extension[1] == 'z' &&
+	     m_ulen > 10 &&
+	     m_extension[-1] == '.' &&
+	     m_extension[-2] == 'c' &&
+	     m_extension[-3] == 'r' &&
+	     m_extension[-4] == 'a' &&
+	     m_extension[-5] == 'w' &&
+	     m_extension[-6] == '.' ) {
+		// m_isWarc = true;
+		// m_isWarcValid = true;
+		return true;
+	}
+
 	return false;
+
 }
 
 // see Url.h for a description of this.

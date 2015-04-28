@@ -123,6 +123,7 @@ class GigablastRequest {
 	char *m_url; // also for /get
 	char *m_queryToScrape;
 	char *m_contentDelim;
+	bool  m_isMimeDelimeted; // are recs delimeted using Content-Length:
 	char *m_contentTypeStr;
 	char *m_contentFile;
 	char *m_content;

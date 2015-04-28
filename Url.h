@@ -92,6 +92,8 @@ public:
 	bool isBadExtension(int32_t xxx);
 	bool isSet()            { return m_ulen != 0; }
 
+	bool isCompressedArcOrWarc ( ) ;
+
 	// does it end in .xml, .rdb or .rss, etc. kinda thing
 	//bool isRSSFormat ( ) ;
 

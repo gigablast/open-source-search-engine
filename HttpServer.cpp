@@ -1043,14 +1043,16 @@ bool HttpServer::sendReply ( TcpSocket  *s , HttpRequest *r , bool isAdmin) {
 		// iaItem is like "webgroup-20100422114008-00011"
 		// print out the warc files as if they were urls
 		// so we can spider them through the spider pipeline as-is
-		cmd.safePrintf("/home/mwells/ia list %s --glob='*arc.gz' | "
+		cmd.safePrintf("%s/ia list %s --glob='*arc.gz' | "
 			       "awk '{print \"<a "
 			       "href=http://archive.org/download/"
 			       "%s/\" $1\">\"}' > ./tmpiaout"
+			       , g_hostdb.m_dir
 			       ,iaItem
 			       ,iaItem
 			       );
 		iaItem[pathLen] = c;
+		log("system: %s",cmd.getBufStart());
 		gbsystem ( cmd.getBufStart() );
 		SafeBuf sb;
 		sb.load ( "./tmpiaout" );

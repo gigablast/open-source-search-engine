@@ -586,7 +586,39 @@ bool Msg7::inject ( void *state ,
 		// we've saved m_start as "start" above, 
 		// so find the next delimeter after it and set that to m_start
 		// add +1 to avoid infinite loop
-		m_start = strstr(start+1,delim);
+		if ( ! gr->m_isMimeDelimeted )
+			m_start = strstr(start+1,delim);
+
+		// WARC files are mime delimeted. the http reply, which 
+		// contains a mime, as a mime a level above that whose 
+		// content-length: field includes the original http reply mime
+		// as part of its content.
+		if ( gr->m_isMimeDelimeted ) {
+			char *mm = strstr(start,"Content-Length:");
+			char *mmend = NULL;
+			if ( mm ) mmend = strstr (mm,"\n");
+			if ( ! mm || ! mmend ) {
+				log("inject: all done");
+				return true;
+			}
+			char c = *mmend;
+			*mmend = '\0';
+			int64_t recordSize = atoll ( mm + 15 );
+			*mmend = c;
+			// end of mime header
+			char *hend = strstr ( mmend, "\r\n\r\n");
+			if ( ! hend ) {
+				log("inject: could not find header end.");
+				return true;
+			}
+			// skip that 
+			hend += 4;
+			// adjust start to point to start of the content really
+			start = hend;
+			// and over record 
+			m_start = start + recordSize;
+		}
+
 		// for injecting "start" set this to \0
 		if ( m_start ) {
 			// null term it
