@@ -17418,6 +17418,9 @@ char **XmlDoc::getFilteredContent ( ) {
 	// we now support JSON for diffbot
 	if ( *ct == CT_JSON    ) return &m_filteredContent;
 
+	if ( *ct == CT_WARC    ) return &m_filteredContent;
+	if ( *ct == CT_ARC     ) return &m_filteredContent;
+
 	// unknown content types are 0 since it is probably binary... and
 	// we do not want to parse it!!
 	if ( *ct == CT_PDF ) filterable = true;

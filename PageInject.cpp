@@ -538,7 +538,9 @@ bool Msg7::inject ( void *state ,
 	// int16_tcut
 	XmlDoc *xd = &m_xd;
 
-	if ( ! gr->m_url ) {
+	if ( ! gr->m_url &&
+	     ! gr->m_contentDelim &&
+	     ! gr->m_isMimeDelimeted ) {
 		log("inject: no url provied to inject");
 		g_errno = EBADURL;
 		return true;
@@ -595,7 +597,7 @@ bool Msg7::inject ( void *state ,
 		// as part of its content.
 		if ( gr->m_isMimeDelimeted ) {
 			// should have the url as well
-			//char *warcUrl = strstr(start,"URL:");
+			char *warcUrl = strstr(start,"WARCREALURL:");
 
 			char *mm = strstr(start,"Content-Length:");
 			char *mmend = NULL;
