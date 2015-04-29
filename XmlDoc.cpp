@@ -25476,7 +25476,9 @@ char *XmlDoc::addOutlinkSpiderRecsToMetaList ( ) {
 	     //isInSeedBuf(cr,m_firstUrl.getUrl(),m_firstUrl.getUrlLen() ) &&
 	     m_hopCount == 0 &&
 	     m_redirUrlValid &&
+	     m_redirUrlPtr &&
 	     m_redirUrl.getUrlLen() > 0 ) {
+		log("build: seed REDIR: %s",m_redirUrl.getUrl());
 		redirDomHash32  = m_redirUrl.getDomainHash32();
 		redirHostHash32 = m_redirUrl.getHostHash32();
 	}		
