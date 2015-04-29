@@ -5784,13 +5784,15 @@ bool Links::addLink ( char *link , int32_t linkLen , int32_t nodeNum ,
 		// if not enough buffer then we couldn't do the conversion.
 		if ( k+3 >= MAX_URL_LEN ) { hasSpaces = false; break; }
 		// if before the '?' then use %20
-		tmp[k  ] = '%';
-		tmp[k+1] = '2';
-		tmp[k+2] = '0';
-		tmp[k+3] = '\0';
+		tmp[k++] = '%';
+		tmp[k++] = '2';
+		tmp[k  ] = '0';
+		tmp[k+1] = '\0';
 	}
-	if ( hasSpaces )
+	if ( hasSpaces ) {
 		link = tmp;
+		linkLen = k;
+	}
 		
 
 
