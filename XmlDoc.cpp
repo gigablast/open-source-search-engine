@@ -2720,6 +2720,10 @@ bool XmlDoc::indexDoc2 ( ) {
 	// scan it using delimeters. the file consists of multiple documents
 	// separated by this content delimeter.
 	if ( m_firstUrlValid && m_firstUrl.isCompressedArcOrWarc() ) {
+		// we need the doc
+		char **replyPtr = getHttpReply ();
+		if ( ! replyPtr ) return true;
+		if ( replyPtr == (void *)-1 ) return false;
 		// already called inject?
 		if ( m_calledWarcInject )
 			// then we are done
@@ -10196,7 +10200,14 @@ Url **XmlDoc::getRedirUrl() {
 		// http-equiv refresh tag, but that added an element of 
 		// recursion that is just too confusing to deal with. so 
 		// let's just parse out the meta tag by hand
-		if ( ! isRobotsTxt ) {
+		bool checkMeta = true;
+		if ( isRobotsTxt ) checkMeta = false;
+		// warc and arc files have a list of html docs
+		// in them that we need to index, so skip this check
+		// for them as well
+		if ( m_firstUrlValid && m_firstUrl.isCompressedArcOrWarc() )
+			checkMeta = false;
+		if ( checkMeta ) {
 			Url **mrup = getMetaRedirUrl();
 			if ( ! mrup || mrup == (void *)-1) return (Url **)mrup;
 			// set it. might be NULL if not there.

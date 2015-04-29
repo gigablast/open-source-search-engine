@@ -45,6 +45,7 @@ void HttpMime::reset ( ) {
 	m_locationFieldLen = 0;
 	m_contentEncodingPos = NULL;
 	m_contentLengthPos = NULL;
+	m_contentTypePos   = NULL;
 }
 
 // . returns false if could not get a valid mime
@@ -157,8 +158,12 @@ bool HttpMime::parse ( char *mime , int32_t mimeLen , Url *url ) {
 			time_t now = time(NULL);
 			if (m_lastModifiedDate > now) m_lastModifiedDate = now;
 		}
-		else if ( strncasecmp ( p , "Content-Type:"   ,13) == 0 ) 
+		else if ( strncasecmp ( p , "Content-Type:"   ,13) == 0 ) {
 			m_contentType = getContentTypePrivate ( p + 13 );
+			char *s = p + 13;
+			while ( *s == ' ' || *s == '\t' ) s++;
+			m_contentTypePos = s;
+		}
 		else if ( strncasecmp ( p , "Set-Cookie:"   ,10) == 0 ) {
 			m_cookie = p + 11;
 			if ( m_cookie[0] == ' ' ) m_cookie++;
@@ -540,6 +545,7 @@ int32_t getContentTypeFromStr ( char *s ) {
         else if (!strncasecmp(s,"image/",6               ) ) ct = CT_IMAGE;
 	else if (!strcasecmp(s,"application/javascript"  ) ) ct = CT_JS;
 	else if (!strcasecmp(s,"application/x-javascript") ) ct = CT_JS;
+	else if (!strcasecmp(s,"application/x-gzip"      ) ) ct = CT_GZ;
 	else if (!strcasecmp(s,"text/javascript"         ) ) ct = CT_JS;
 	else if (!strcasecmp(s,"text/x-js"               ) ) ct = CT_JS;
 	else if (!strcasecmp(s,"text/js"                 ) ) ct = CT_JS;
@@ -624,6 +630,17 @@ bool s_init = false;
 
 void resetHttpMime ( ) {
 	s_mimeTable.reset();
+}
+
+const char *extensionToContentTypeStr2 ( char *ext , int32_t elen ) {
+	// assume text/html if no extension provided
+	if ( ! ext || ! ext[0] ) return NULL;
+	if ( elen <= 0 ) return NULL;
+	// get hash for table look up
+	int32_t key = hash32 ( ext , elen );
+	char **pp = (char **)s_mimeTable.getValue ( &key );
+	if ( ! pp ) return NULL;
+	return *pp;
 }
 
 const char *HttpMime::getContentTypeFromExtension ( char *ext , int32_t elen) {
@@ -1051,7 +1068,10 @@ static char *s_ext[] = {
      "xwd" , "image/x-xwindowdump",
      "xyz" , "chemical/x-pdb",
       "zip" , "application/zip" ,
-      "xpi", "application/x-xpinstall"
+      "xpi", "application/x-xpinstall",
+      // newstuff
+      "warc", "application/warc",
+      "arc", "application/arc"
 };
 
 // . init s_mimeTable in this call
