@@ -25255,6 +25255,9 @@ void XmlDoc::setSpiderReqForMsg20 ( SpiderRequest *sreq   ,
 		strcpy(sreq->m_url,m_firstUrl.m_url);
 }
 
+// defined in PageCrawlBot.cpp
+int32_t isInSeedBuf ( CollectionRec *cr , char *url, int len ) ;
+
 // . add the spiderdb recs to the meta list
 // . used by XmlDoc::setMetaList()
 // . returns NULL and sets g_errno on error
@@ -25460,6 +25463,21 @@ char *XmlDoc::addOutlinkSpiderRecsToMetaList ( ) {
 	xml->getMetaContent ( mbuf, 16 , tag , tlen );
 	bool ignore = false;
 	if ( mbuf[0] == '1' ) ignore = true;
+
+	// for diffbot crawlbot, if we are a seed url and redirected to a 
+	// different domain... like bn.com --> barnesandnoble.com
+	int32_t redirDomHash32  = 0;
+	int32_t redirHostHash32 = 0;
+	//int32_t redirSiteHash32 = 0;
+	if ( //cr->m_isCustomCrawl == 1 &&
+	     //isInSeedBuf(cr,m_firstUrl.getUrl(),m_firstUrl.getUrlLen() ) &&
+	     m_hopCount == 0 &&
+	     m_redirUrlValid &&
+	     m_redirUrl.getUrlLen() > 0 ) {
+		redirDomHash32  = m_redirUrl.getDomainHash32();
+		redirHostHash32 = m_redirUrl.getHostHash32();
+	}		
+
 
 	//SpiderColl *sc = g_spiderCache.getSpiderCollIffNonNull ( m_collnum );
 
@@ -25735,6 +25753,16 @@ char *XmlDoc::addOutlinkSpiderRecsToMetaList ( ) {
 		// the mere existence of these tags is good
 		if ( gr->getTag("authorityinlink"))ksr.m_hasAuthorityInlink =1;
 		ksr.m_hasAuthorityInlinkValid = true;
+
+		// if our url was a seed and redirected to another domain
+		// allow outlinks on that other domain to be on domain too.
+		// only used for diffbot crawlbot right now.
+		if ( domHash32  == redirDomHash32  && redirDomHash32 ) 
+			ksr.m_sameDom  = 1;
+		if ( hostHash32 == redirHostHash32 && redirHostHash32 ) 
+			ksr.m_sameHost = 1;
+		// if ( linkSiteHashes[i]==redirSiteHash32 && redirSiteHash32) 
+		// 	ksr.m_sameSite = 1;
 
 		// set parent based info
 		if ( domHash32  == m_domHash32   ) ksr.m_sameDom  = 1;
