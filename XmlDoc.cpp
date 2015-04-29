@@ -20230,9 +20230,12 @@ bool XmlDoc::logIt ( SafeBuf *bb ) {
 		sb->safePrintf("hasrssoutlink=%"INT32" ",
 			      (int32_t)m_links.hasRSSOutlink() );
 
-	if ( m_numOutlinksAddedValid ) 
+	if ( m_numOutlinksAddedValid ) {
 		sb->safePrintf("outlinksadded=%04"INT32" ",
 			       (int32_t)m_numOutlinksAdded);
+		sb->safePrintf("outlinksaddedfromsamedomain=%04"INT32" ",
+			       (int32_t)m_numOutlinksAddedFromSameDomain);
+	}
 
 	if ( m_metaListValid ) 
 		sb->safePrintf("addlistsize=%05"INT32" ",
@@ -25673,6 +25676,15 @@ char *XmlDoc::addOutlinkSpiderRecsToMetaList ( ) {
 		ksr.m_parentHostHash32 = hostHash32a;
 		ksr.m_parentDomHash32  = m_domHash32;
 		ksr.m_parentSiteHash32 = m_siteHash32;
+
+		// if a seed/hopcount0 url redirected to a different domain
+		// then use that if it is the same. that way we can satisft
+		// the "isonsamedomain" expression in the url filters table.
+		if ( redirDomHash32 == domHash32 && redirDomHash32 )
+			ksr.m_parentDomHash32 = redirDomHash32;
+		if ( redirHostHash32 == hostHash32 && redirHostHash32 )
+			ksr.m_parentHostHash32 = redirHostHash32;
+
 		//ksr.m_parentFirstIp    = *pfip;//m_ip;
 		ksr.m_pageNumInlinks   = 0;
 
@@ -25921,7 +25933,8 @@ char *XmlDoc::addOutlinkSpiderRecsToMetaList ( ) {
 		// count it
 		numAdded++;
 		// check domain
-		if ( domHash32  == m_domHash32 ) numAddedFromSameDomain++;
+		//if ( domHash32  == m_domHash32 ) numAddedFromSameDomain++;
+		if ( ksr.m_sameDom ) numAddedFromSameDomain++;
 	}
 
 	//
