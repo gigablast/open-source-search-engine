@@ -45,6 +45,8 @@ time_t atotime5   ( char *s ) ;
 #define CT_IMAGE  17
 #define CT_STATUS 18 // an internal type indicating spider reply
 #define CT_GZ     19
+#define CT_ARC    20
+#define CT_WARC   21
 
 #define ET_IDENTITY 0
 #define ET_GZIP 1

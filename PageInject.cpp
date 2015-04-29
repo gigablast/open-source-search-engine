@@ -594,6 +594,9 @@ bool Msg7::inject ( void *state ,
 		// content-length: field includes the original http reply mime
 		// as part of its content.
 		if ( gr->m_isMimeDelimeted ) {
+			// should have the url as well
+			//char *warcUrl = strstr(start,"URL:");
+
 			char *mm = strstr(start,"Content-Length:");
 			char *mmend = NULL;
 			if ( mm ) mmend = strstr (mm,"\n");

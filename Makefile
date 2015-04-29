@@ -89,7 +89,7 @@ OS_DEB := true
 STATIC := -static
 # MDW: i get some parsing inconsistencies when running the first qa injection
 # test if this is -O3. strange.
-XMLDOCOPT := -O0
+XMLDOCOPT := -O2
 endif
 
 

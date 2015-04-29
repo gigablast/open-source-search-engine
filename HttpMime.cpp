@@ -538,6 +538,8 @@ int32_t getContentTypeFromStr ( char *s ) {
 	else if (!strcasecmp(s,"application/vnd.ms-powerpoint")) ct = CT_PPT;
 	else if (!strcasecmp(s,"application/mspowerpoint") ) ct = CT_PPT;
 	else if (!strcasecmp(s,"application/postscript"  ) ) ct = CT_PS;
+	else if (!strcasecmp(s,"application/warc"        ) ) ct = CT_WARC;
+	else if (!strcasecmp(s,"application/arc"         ) ) ct = CT_ARC;
         else if (!strcasecmp(s,"image/gif"               ) ) ct = CT_GIF;
         else if (!strcasecmp(s,"image/jpeg"              ) ) ct = CT_JPG;
         else if (!strcasecmp(s,"image/png"               ) ) ct = CT_PNG;

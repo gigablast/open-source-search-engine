@@ -2915,8 +2915,8 @@ TcpSocket *HttpServer::unzipReply(TcpSocket* s) {
 
 	// change the content type based on the extension before the
 	// .gz extension since we are uncompressing it
-	char *p = s->m_readBuf + 4;
-	char *pend = s->m_readBuf + s->m_readBufSize;
+	char *p = s->m_sendBuf + 4;
+	char *pend = s->m_sendBuf + s->m_sendBufSize;
 	const char *newCT = NULL;
 	char *lastPeriod = NULL;
 	// get the extension, if any, before the .gz
@@ -2927,6 +2927,8 @@ TcpSocket *HttpServer::unzipReply(TcpSocket* s) {
 		if ( ! is_wspace_a(p[3]) ) { lastPeriod = p; continue; }
 		// no prev?
 		if ( ! lastPeriod ) break;
+		// skip period
+		lastPeriod++;
 		// back up
 		newCT = extensionToContentTypeStr2 (lastPeriod,p-lastPeriod);
 		// this is NULL if the file extension is unrecognized
@@ -2974,11 +2976,13 @@ TcpSocket *HttpServer::unzipReply(TcpSocket* s) {
 		pnew += sprintf(pnew," %s",newCT);
 		ptr3 = NULL;
 	}
-	// scan to \r\n at end of that line we replace
-	while ( *src != '\r' && *src != '\n') src++;
 
 	// loop for more
-	if ( nextMin < mimeEnd ) goto subloop;
+	if ( nextMin < mimeEnd ) {
+		// scan to \r\n at end of that line we replace
+		while ( *src != '\r' && *src != '\n') src++;
+		goto subloop;
+	}
 
 
 	// copy the rest
