@@ -87,7 +87,7 @@ XMLDOCOPT := -O2
 else
 OS_DEB := true
 STATIC := -static
-XMLDOCOPT := -O3
+XMLDOCOPT := -O2
 endif
 
 
