@@ -1156,6 +1156,13 @@ bool ipWasBanned ( TcpSocket *ts , const char **msg ) {
 		return true;
 	}
 
+	// proxy returns empty reply not ECONNRESET if it experiences 
+	// a conn reset
+	if ( g_errno == EBADMIME && ts->m_readOffset == 0 ) {
+		*msg = "empty reply";
+		return true;
+	}
+
 	// on other errors do not do the ban check. it might be a
 	// tcp time out or something so we have no reply. but connection resets
 	// are a popular way of saying, hey, don't hit me so hard.
@@ -1228,13 +1235,15 @@ void gotHttpReply9 ( void *state , TcpSocket *ts ) {
 		if ( r->m_hasMoreProxiesToTry )  msg = "Trying another proxy.";
 		char tmpIp[64];
 		sprintf(tmpIp,"%s",iptoa(r->m_urlIp));
-		log("msg13: detected that proxy %s is banned (tries=%"INT32") by "
-		    "url %s %s [%s]. %s"
+		log("msg13: detected that proxy %s is banned "
+		    "(banmsg=%s) "
+		    "(tries=%"INT32") by "
+		    "url %s %s. %s"
 		    , iptoa(r->m_proxyIp) // r->m_banProxyIp
+		    , banMsg
 		    , r->m_proxyTries
 		    , tmpIp
 		    , r->ptr_url 
-		    , banMsg
 		    , msg );
 	}
 
@@ -2946,6 +2955,10 @@ void gotIframeExpandedContent ( void *state ) {
 
 #define DELAYPERBAN 500
 
+// how many milliseconds should spiders use for a crawldelay if
+// ban was detected and no proxies are being used.
+#define AUTOCRAWLDELAY 5000
+
 // returns true if we queue the request to download later
 bool addToHammerQueue ( Msg13Request *r ) {
 
@@ -2985,8 +2998,8 @@ bool addToHammerQueue ( Msg13Request *r ) {
 		// and no proxies are available to use
 		//! canUseProxies ) {
 		// then just back off with a crawldelay of 3 seconds
-		if ( ! canUseProxies && crawlDelayMS < 3000 ) 
-			crawlDelayMS = 3000;
+		if ( ! canUseProxies && crawlDelayMS < AUTOCRAWLDELAY )
+			crawlDelayMS = AUTOCRAWLDELAY;
 		// mark this so we do not retry pointlessly
 		r->m_wasInTableBeforeStarting = true;
 		// and obey crawl delay
