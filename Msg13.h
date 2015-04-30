@@ -110,6 +110,8 @@ public:
 	int32_t  m_foundInCache:1;
 	int32_t  m_forceUseFloaters:1;
 
+	int32_t  m_wasInTableBeforeStarting:1;
+
 	//int32_t  m_testParserEnabled:1;
 	//int32_t  m_testSpiderEnabled:1;
 	//int32_t  m_isPageParser:1;

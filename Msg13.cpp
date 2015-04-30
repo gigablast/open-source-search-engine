@@ -1446,21 +1446,15 @@ void gotHttpReply2 ( void *state ,
 		    "for %s at ip %s",
 		    mstrerror(g_errno),r->ptr_url,iptoa(r->m_urlIp));
 
+	bool inTable = false;
+	// must have a collrec to hold the ips
+	if ( cr && r->m_urlIp != 0 && r->m_urlIp != -1 )
+		inTable = isIpInTwitchyTable ( cr , r->m_urlIp );
+
+	// check if our ip seems banned
 	const char *banMsg = NULL;
-	if ( // must have a collrec to hold the ips
-	     cr &&
-	     r->m_urlIp !=  0 &&
-	     r->m_urlIp != -1 &&
-	     // only if not already in twitchy table
-	     ! isIpInTwitchyTable ( cr , r->m_urlIp ) &&
-	     // if we should use them automatically
-	     // now even if we don't do auto proxies, at least back off if
-	     // an ip is in the list. do a crawl delay.
-	     //cr->m_useProxiesAutomatically &&
-	     // we gotta have some proxies in the list
-	     //g_conf.m_proxyIps.hasDigits() &&
-	     // check if our ip seems banned
-	     ipWasBanned ( ts , &banMsg ) ) {
+	bool banned = ipWasBanned ( ts , &banMsg );
+	if (  banned )
 		// should we turn proxies on for this IP address only?
 		log("msg13: url %s detected as banned (%s), "
 		    "automatically using proxies for ip %s"
@@ -1468,10 +1462,22 @@ void gotHttpReply2 ( void *state ,
 		    , banMsg
 		    , iptoa(r->m_urlIp) 
 		    );
-		// . store in our table of ips we should use proxies for
-		// . also start off with a crawldelay of like 1 sec for this
-		//   which is not normal for using proxies.
+
+	// . add to the table if not in there yet
+	// . store in our table of ips we should use proxies for
+	// . also start off with a crawldelay of like 1 sec for this
+	//   which is not normal for using proxies.
+	if ( ! inTable )
 		addIpToTwitchyTable ( cr , r->m_urlIp );
+
+	// did we detect it as banned?
+	if ( banned && 
+	     // retry iff we haven't already
+	     ! r->m_wasInTableBeforeStarting && 
+	     // but this is not for proxies... only native crawlbot backoff
+	     ! r->m_proxyIp ) {
+		// reset this so we don't endless loop it
+		r->m_wasInTableBeforeStarting = true;
 		/// and retry. it should use the proxy... or at least
 		// use a crawldelay of 3 seconds since we added it to the
 		// twitchy table.
@@ -2959,6 +2965,9 @@ bool addToHammerQueue ( Msg13Request *r ) {
 	// if no proxies listed, then it is pointless
 	if ( ! g_conf.m_proxyIps.hasDigits() ) canUseProxies = false;
 
+	// mark as being NOT in the table
+	r->m_wasInTableBeforeStarting = false;
+
 	// if not using proxies, but the ip is banning us, then at least 
 	// backoff a bit
 	if ( cr && 
@@ -2968,9 +2977,11 @@ bool addToHammerQueue ( Msg13Request *r ) {
 	     isIpInTwitchyTable ( cr , r->m_urlIp ) ) {
 		// and no proxies are available to use
 		//! canUseProxies ) {
-		// then just back off when a crawldelay of 3 seconds
+		// then just back off with a crawldelay of 3 seconds
 		if ( ! canUseProxies && crawlDelayMS < 3000 ) 
 			crawlDelayMS = 3000;
+		// mark this so we do not retry pointlessly
+		r->m_wasInTableBeforeStarting = true;
 	}
 
 
@@ -2985,6 +2996,9 @@ bool addToHammerQueue ( Msg13Request *r ) {
 		if ( crawlDelayMS > MAX_PROXYCRAWLDELAYMS )
 			crawlDelayMS = MAX_PROXYCRAWLDELAYMS;
 	}
+
+	// set the crawldelay we actually used when downloading this
+	//r->m_usedCrawlDelay = crawlDelayMS;
 
 	if ( g_conf.m_logDebugSpider )
 		log(LOG_DEBUG,"spider: got timestamp of %"INT64" from "
@@ -3033,7 +3047,6 @@ bool addToHammerQueue ( Msg13Request *r ) {
 		return true;
 	}
 			
-
 	// if we had it in cache check the wait time
 	if ( last > 0 && waited < crawlDelayMS ) {
 		log("spider: hammering firstIp=%s url=%s "
