@@ -504,6 +504,21 @@ bool Msg13::gotFinalReply ( char *reply, int32_t replySize, int32_t replyAllocSi
 	return true;
 }
 
+bool isIpInTwitchyTable ( CollectionRec *cr , int32_t ip ) {
+	if ( ! cr ) return false;
+	HashTableX *ht = &cr->m_twitchyTable;
+	if ( ht->m_numSlots == 0 ) return false;
+	return ( ht->getSlot ( &ip ) >= 0 );
+}
+
+bool addIpToTwitchyTable ( CollectionRec *cr , int32_t ip ) {
+	if ( ! cr ) return true;
+	HashTableX *ht = &cr->m_twitchyTable;
+	if ( ht->m_numSlots == 0 )
+		ht->set ( 4,0,16,NULL,0,false,MAX_NICENESS,"twitchtbl",true);
+	return ht->addKey ( &ip );
+}
+
 RdbCache s_hammerCache;
 static bool s_flag = false;
 Msg13Request *s_hammerQueueHead = NULL;
@@ -699,6 +714,11 @@ void handleRequest13 ( UdpSlot *slot , int32_t niceness  ) {
 	// do not get .google.com/ crap
 	//if ( strstr(r->ptr_url,".google.com/") ) { char *xx=NULL;*xx=0; }
 
+	CollectionRec *cr = g_collectiondb.getRec ( r->m_collnum );
+
+	// was it in our table of ips that are throttling us?
+	r->m_wasInTableBeforeStarting = isIpInTwitchyTable ( cr , r->m_urlIp );
+
 	downloadTheDocForReals ( r );
 }
 
@@ -728,23 +748,6 @@ void downloadTheDocForReals ( Msg13Request *r ) {
 
 	downloadTheDocForReals2 ( r );
 }
-
-bool isIpInTwitchyTable ( CollectionRec *cr , int32_t ip ) {
-	if ( ! cr ) return false;
-	HashTableX *ht = &cr->m_twitchyTable;
-	if ( ht->m_numSlots == 0 ) return false;
-	return ( ht->getSlot ( &ip ) >= 0 );
-}
-
-bool addIpToTwitchyTable ( CollectionRec *cr , int32_t ip ) {
-	if ( ! cr ) return true;
-	HashTableX *ht = &cr->m_twitchyTable;
-	if ( ht->m_numSlots == 0 )
-		ht->set ( 4,0,16,NULL,0,false,MAX_NICENESS,"twitchtbl",true);
-	return ht->addKey ( &ip );
-}
-
-
 
 // insertion point when we try to get another proxy to use because the one
 // we tried seemed to be ip-banned
@@ -1147,14 +1150,16 @@ void doneReportingStatsWrapper ( void *state, UdpSlot *slot ) {
 
 bool ipWasBanned ( TcpSocket *ts , const char **msg ) {
 
-	bool banCheck = false;
-	if ( ! g_errno ) banCheck = true;
 	// g_errno is 104 for 'connection reset by peer'
-	if ( g_errno == ECONNRESET ) banCheck = true;
+	if ( g_errno == ECONNRESET ) {
+		*msg = "connection reset";
+		return true;
+	}
+
 	// on other errors do not do the ban check. it might be a
 	// tcp time out or something so we have no reply. but connection resets
 	// are a popular way of saying, hey, don't hit me so hard.
-	if ( ! banCheck ) return true;
+	if ( g_errno ) return false;
 
 	// if they closed the socket on us we read 0 bytes, assumed
 	// we were banned...
@@ -1457,7 +1462,7 @@ void gotHttpReply2 ( void *state ,
 	if (  banned )
 		// should we turn proxies on for this IP address only?
 		log("msg13: url %s detected as banned (%s), "
-		    "automatically using proxies for ip %s"
+		    "for ip %s"
 		    , r->ptr_url
 		    , banMsg
 		    , iptoa(r->m_urlIp) 
@@ -1467,15 +1472,18 @@ void gotHttpReply2 ( void *state ,
 	// . store in our table of ips we should use proxies for
 	// . also start off with a crawldelay of like 1 sec for this
 	//   which is not normal for using proxies.
-	if ( ! inTable )
+	if ( banned && ! inTable )
 		addIpToTwitchyTable ( cr , r->m_urlIp );
 
 	// did we detect it as banned?
 	if ( banned && 
-	     // retry iff we haven't already
+	     // retry iff we haven't already, but if we did stop the inf loop
 	     ! r->m_wasInTableBeforeStarting && 
 	     // but this is not for proxies... only native crawlbot backoff
 	     ! r->m_proxyIp ) {
+		// note this as well
+		log("msg13: retrying spider with new crawldelay for %s",
+		    r->ptr_url);
 		// reset this so we don't endless loop it
 		r->m_wasInTableBeforeStarting = true;
 		/// and retry. it should use the proxy... or at least
@@ -1486,7 +1494,9 @@ void gotHttpReply2 ( void *state ,
 		return;
 	}
 
-
+	if ( banned && r->m_wasInTableBeforeStarting )
+		log("msg13: can not retry banned download of %s "
+		    "because we knew ip was banned at start",r->ptr_url);
 
 	// get time now
 	int64_t nowms = gettimeofdayInMilliseconds();
@@ -2965,9 +2975,6 @@ bool addToHammerQueue ( Msg13Request *r ) {
 	// if no proxies listed, then it is pointless
 	if ( ! g_conf.m_proxyIps.hasDigits() ) canUseProxies = false;
 
-	// mark as being NOT in the table
-	r->m_wasInTableBeforeStarting = false;
-
 	// if not using proxies, but the ip is banning us, then at least 
 	// backoff a bit
 	if ( cr && 
@@ -2982,6 +2989,8 @@ bool addToHammerQueue ( Msg13Request *r ) {
 			crawlDelayMS = 3000;
 		// mark this so we do not retry pointlessly
 		r->m_wasInTableBeforeStarting = true;
+		// and obey crawl delay
+		r->m_skipHammerCheck = false;
 	}
 
 
