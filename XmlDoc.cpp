@@ -2021,7 +2021,8 @@ bool XmlDoc::injectDoc ( char *url ,
 			 void (*callback)(void *state) ,
 
 			 uint32_t firstIndexed,
-			 uint32_t lastSpidered ) {
+			 uint32_t lastSpidered ,
+			 int32_t injectDocIp ) {
 
 	// wait until we are synced with host #0
 	if ( ! isClockInSync() ) {
@@ -2045,7 +2046,9 @@ bool XmlDoc::injectDoc ( char *url ,
 		     uu.getUrlLen() );
 
 
-	int32_t contentType = getContentTypeFromStr(contentTypeStr);
+	int32_t contentType = CT_UNKNOWN;
+	if ( contentTypeStr && contentTypeStr[0] )
+		contentType = getContentTypeFromStr(contentTypeStr);
 
 	// use CT_HTML if contentTypeStr is empty or blank. default
 	if ( ! contentTypeStr || ! contentTypeStr[0] )
@@ -2084,7 +2087,7 @@ bool XmlDoc::injectDoc ( char *url ,
 		      // inject this content
 		      content ,
 		      deleteUrl, // false, // deleteFromIndex ,
-		      0,//forcedIp ,
+		      injectDocIp, // 0,//forcedIp ,
 		      contentType ,
 		      lastSpidered,//lastSpidered overide
 		      contentHasMime )) {
@@ -2752,16 +2755,14 @@ bool XmlDoc::indexDoc2 ( ) {
 			}
 			mnew ( m_msg7 , sizeof(Msg7),"xdmsg7");
 		}
+		// reset this
+		m_msg7->m_isDoneInjecting = false;
 		// set the input parms
 		GigablastRequest *gr = &m_msg7->m_gr;
 		// reset it
 		memset ( gr , 0 , sizeof(GigablastRequest) );
 		// now set the parameters
-		gr->m_contentDelim = "WARC/";
-		//if ( isArc ) gr->m_contentDelim = "somethingelse";
-		// let injector know about the mime delimeterization
-		// which uses Content-Length: to indicate record size.
-		gr->m_isMimeDelimeted = true;
+		gr->m_contentDelim = NULL;
 		gr->m_spiderLinks = false;
 		gr->m_injectLinks = false;
 		// what happens if coll gets nuked from under us? use collnum
@@ -2775,14 +2776,22 @@ bool XmlDoc::indexDoc2 ( ) {
 		gr->m_deleteUrl = m_deleteFromIndex;
 		// each subdoc will have a mime since it is a warc
 		gr->m_hasMime = true;
+		// this is what says it all. parse us into subdocuments
+		// that are contained by the WARC file format.
+		gr->m_containerContentType = CT_WARC;
 		// TODO: set these based on the date in the warc mime!!
 		//gr->m_firstIndexed = ;
 		//gr->m_lastSpidered = ;
+	subloop:
+		// breathe
+		QUICKPOLL ( m_niceness );
 		// then process. this will scan over each delimeted 
 		// doc in the arc/warc file and inject each one individually.
 		if ( ! m_msg7->inject ( this , doneInjectingWarc ) )
 			// it would block, callback will be called later
 			return false;
+		// if not done keep inject on this one
+		if ( ! m_msg7->m_isDoneInjecting ) goto subloop;
 		// error?
 		if ( g_errno )
 			log("buid: warc error %s",mstrerror(g_errno));
@@ -10121,6 +10130,12 @@ int64_t XmlDoc::getFirstUrlHash64() {
 	return m_firstUrlHash64;
 }
 
+bool isRobotsTxtFile ( char *u , int32_t ulen ) {
+	if ( ulen > 12 && ! strncmp ( u + ulen - 11 , "/robots.txt" , 11 ) )
+		return true;
+	return false;
+}
+
 // . operates on the latest m_httpReply
 Url **XmlDoc::getRedirUrl() {
 	if ( m_redirUrlValid ) return &m_redirUrlPtr;
@@ -10899,12 +10914,6 @@ void XmlDoc::nukeDoc ( XmlDoc *nd ) {
 		m_ahrefsDocValid     = false;
 		m_ahrefsDoc          = NULL;
 	}
-}
-
-bool XmlDoc::isRobotsTxtFile ( char *u , int32_t ulen ) {
-	if ( ulen > 12 && ! strncmp ( u + ulen - 11 , "/robots.txt" , 11 ) )
-		return true;
-	return false;
 }
 
 static LinkInfo s_dummy;

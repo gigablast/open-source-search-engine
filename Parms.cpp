@@ -1085,6 +1085,9 @@ bool Parms::setGigablastRequest ( TcpSocket *socket ,
 		return false;
 	}
 
+	// just in case
+	memset ( gr , 0 , sizeof(GigablastRequest) );
+
 	gr->m_socket = socket;
 
 	// make a copy of the httprequest because the original is on the stack

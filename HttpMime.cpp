@@ -68,7 +68,12 @@ bool HttpMime::set ( char *buf , int32_t bufLen , Url *url ) {
 	// . return false if we had no mime boundary
 	// . but set m_bufLen to 0 so getMimeLen() will return 0 instead of -1
 	//   thus avoiding a potential buffer overflow
-	if ( m_bufLen < 0 ) { m_bufLen = 0; m_boundaryLen = 0; return false; }
+	if ( m_bufLen < 0 ) { 
+		m_bufLen = 0; 
+		m_boundaryLen = 0; 
+		log("mime: no rnrn boundary detected");
+		return false; 
+	}
 	// set this
 	m_content = buf + m_bufLen;
 	// . parse out m_status, m_contentLen, m_lastModifiedData, contentType

@@ -23,6 +23,7 @@ public:
 	bool m_firstTime;
 	char *m_start;
 	bool  m_fixMe;
+	char  m_saved;
 	int32_t  m_injectCount;
 
 	bool       m_needsSet;
@@ -42,6 +43,8 @@ public:
 	//int32_t m_hackFileId;
 
 	//int32_t m_crawlbotAPI;
+
+	bool m_isDoneInjecting;
 
 	class ImportState *m_importState;
 

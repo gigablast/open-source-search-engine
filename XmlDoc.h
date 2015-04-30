@@ -608,7 +608,7 @@ class XmlDoc {
 	//int32_t *getNumBannedOutlinks ( ) ;
 	uint16_t *getCountryId ( ) ;
 	class XmlDoc **getOldXmlDoc ( ) ;
-	bool isRobotsTxtFile ( char *url , int32_t urlLen ) ;
+	//bool isRobotsTxtFile ( char *url , int32_t urlLen ) ;
 	class XmlDoc **getExtraDoc ( char *url , int32_t maxCacheAge = 0 ) ;
 	bool getIsPageParser ( ) ;
 	class XmlDoc **getRootXmlDoc ( int32_t maxCacheAge = 0 ) ;
@@ -2406,7 +2406,8 @@ class XmlDoc {
 			 void (*callback)(void *state) ,
 
 			 uint32_t firstIndexedTime = 0,
-			 uint32_t lastSpideredDate = 0 );
+			 uint32_t lastSpideredDate = 0 ,
+			 int32_t  injectDocIp = 0 );
 
 
 	bool injectLinks  ( HashTableX *linkDedupTable ,

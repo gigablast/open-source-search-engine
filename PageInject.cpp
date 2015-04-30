@@ -10,6 +10,8 @@
 #include "PageCrawlBot.h"
 #include "HttpRequest.h"
 
+// from XmlDoc.cpp
+bool isRobotsTxtFile ( char *url , int32_t urlLen ) ;
 
 //
 // HTML INJECITON PAGE CODE
@@ -383,7 +385,14 @@ void doneInjectingWrapper9 ( void *state ) {
 	// if we were injecting delimterized documents...
 	char *delim = gr->m_contentDelim;
 	if ( delim && ! delim[0] ) delim = NULL;
-	if ( delim && msg7->m_start ) {
+	bool loopIt = false;
+	if ( delim ) loopIt = true;
+	// by default warc and arc files consist of many subdocuments
+	// that have to be indexed individually as well
+	if ( gr->m_containerContentType == CT_WARC ) loopIt = true;
+	if ( gr->m_containerContentType == CT_ARC  ) loopIt = true;
+
+	if ( loopIt && msg7->m_start ) {
 		// do another injection. returns false if it blocks
 		if ( ! msg7->inject ( msg7->m_state , msg7->m_callback ) )
 			return;
@@ -539,8 +548,13 @@ bool Msg7::inject ( void *state ,
 	XmlDoc *xd = &m_xd;
 
 	if ( ! gr->m_url &&
+	     // if there is a record delimeter, we form a new fake url
+	     // for each record based on content hash
 	     ! gr->m_contentDelim &&
-	     ! gr->m_isMimeDelimeted ) {
+	     // warc and arc files have lists of subdocuments and each
+	     // of those subdocs has its own url
+	     gr->m_containerContentType != CT_WARC &&
+	     gr->m_containerContentType != CT_ARC ) {
 		log("inject: no url provied to inject");
 		g_errno = EBADURL;
 		return true;
@@ -578,59 +592,188 @@ bool Msg7::inject ( void *state ,
 	if ( m_fixMe ) {
 		// we had made the first delim char a \0 to index the
 		// previous document, now put it back to what it was
-		*m_start = *delim;
+		*m_start = m_saved;
 		// i guess unset this
 		m_fixMe = false;
 	}
 
-	// if we had a delimeter...
-	if ( delim ) {
-		// we've saved m_start as "start" above, 
-		// so find the next delimeter after it and set that to m_start
-		// add +1 to avoid infinite loop
-		if ( ! gr->m_isMimeDelimeted )
-			m_start = strstr(start+1,delim);
+	bool advanced = false;
 
-		// WARC files are mime delimeted. the http reply, which 
-		// contains a mime, as a mime a level above that whose 
-		// content-length: field includes the original http reply mime
-		// as part of its content.
-		if ( gr->m_isMimeDelimeted ) {
-			// should have the url as well
-			char *warcUrl = strstr(start,"WARCREALURL:");
+	// we've saved m_start as "start" above, 
+	// so find the next delimeter after it and set that to m_start
+	// add +1 to avoid infinite loop
+	if ( delim ) { // gr->m_containerContentType == CT_UNKNOWN )
+		m_start = strstr(start+1,delim);
+		advanced = true;
+	}
 
-			char *mm = strstr(start,"Content-Length:");
-			char *mmend = NULL;
-			if ( mm ) mmend = strstr (mm,"\n");
-			if ( ! mm || ! mmend ) {
-				log("inject: all done");
-				return true;
-			}
-			char c = *mmend;
-			*mmend = '\0';
-			int64_t recordSize = atoll ( mm + 15 );
-			*mmend = c;
-			// end of mime header
-			char *hend = strstr ( mmend, "\r\n\r\n");
-			if ( ! hend ) {
-				log("inject: could not find header end.");
-				return true;
-			}
-			// skip that 
-			hend += 4;
-			// adjust start to point to start of the content really
-			start = hend;
-			// and over record 
-			m_start = start + recordSize;
+	// WARC files are mime delimeted. the http reply, which 
+	// contains a mime, as a mime a level above that whose 
+	// content-length: field includes the original http reply mime
+	// as part of its content.
+	if ( gr->m_containerContentType == CT_WARC ) {
+		// no setting delim for this!
+		if ( delim ) { char *xx=NULL;*xx=0; }
+		// should have the url as well
+		char *mm = strstr(start,"Content-Length:");
+		char *mmend = NULL;
+		if ( mm ) mmend = strstr (mm,"\n");
+		if ( ! mm || ! mmend ) {
+			log("inject: warc: all done");
+			// XmlDoc.cpp checks for this to stop calling us
+			m_isDoneInjecting = true;
+			return true;
+		}
+		char c = *mmend;
+		*mmend = '\0';
+		int64_t recordSize = atoll ( mm + 15 );
+		*mmend = c;
+
+		// end of mime header
+		char *hend = strstr ( mm, "\r\n\r\n");
+		if ( ! hend ) {
+			log("inject: warc: could no mime header end.");
+			return true;
 		}
 
-		// for injecting "start" set this to \0
-		if ( m_start ) {
-			// null term it
-			*m_start = '\0';
-			// put back the original char on next round...?
-			m_fixMe = true;
+		// tmp \0 that for these strstr() calls
+		c = *hend;
+		*hend = '\0';
+
+		char *warcUrl  = strstr(start,"WARC-Target-URI:");
+		char *warcType = strstr(start,"WARC-Type:");
+		char *warcDate = strstr(start,"WARC-Date:");
+		char *warcIp   = strstr(start,"WARC-IP-Address:");
+
+		// advance
+		if ( warcUrl  ) warcUrl  += 16;
+		if ( warcType ) warcType += 10;
+		if ( warcDate ) warcDate += 10;
+		if ( warcIp   ) warcIp   += 17;
+
+		// restore
+		*hend = c;
+
+		// skip the \r\n\r\n
+		hend += 4;
+
+		// adjust start to point to start of the content really
+		start = hend;
+
+		// and over record 
+		m_start = hend + recordSize;
+		advanced = true;
+
+		if ( ! warcType ) {
+			log("inject: warc: could not find rec type");
+			return true;
 		}
+
+		if ( is_wspace_a(*warcType) ) warcType++;
+		if ( is_wspace_a(*warcType) ) warcType++;
+
+		// WARC-Type:
+		// do not index this record as a doc if it is not a
+		// "WARC-Type: response" record.
+		if ( strncmp(warcType,"response",8) != 0 ) 
+			return true;
+
+		// skip this rec if url-less
+		if ( ! warcUrl ) {
+			log("inject: warc: could not find rec url");
+			return true;
+		}
+		if ( ! warcDate ) {
+			log("inject: warc: could not find rec date");
+			return true;
+		}
+
+		// skip spaces on all
+		if ( warcUrl  && is_wspace_a(*warcUrl ) ) warcUrl++;
+		if ( warcUrl  && is_wspace_a(*warcUrl ) ) warcUrl++;
+		if ( warcDate && is_wspace_a(*warcDate) ) warcDate++;
+		if ( warcDate && is_wspace_a(*warcDate) ) warcDate++;
+		if ( warcIp   && is_wspace_a(*warcIp  ) ) warcIp++;
+		if ( warcIp   && is_wspace_a(*warcIp  ) ) warcIp++;
+
+		// url must start with http:// or https://
+		// it's probably like WARC-Target-URI: dns:www.xyz.com
+		// so it is a dns response
+		if ( strncmp(warcUrl,"http://" ,7) != 0 &&
+		     strncmp(warcUrl,"https://",8) != 0 ) 
+			return true;
+
+		gr->m_injectDocIp = 0;
+
+		// get the record IP address from the warc header if there
+		if ( warcIp ) {
+			// get end of ip
+			char *warcIpEnd = warcIp;
+			// skip digits and periods
+			while ( ! is_wspace_a(*warcIpEnd) ) warcIpEnd++;
+			// we now have the ip address for doing ip: searches
+			// this func is in ip.h
+			gr->m_injectDocIp = atoip ( warcIp, warcIpEnd-warcIp );
+		}
+		
+		// convert date to timestamp
+		int64_t warcTime = 0;
+		if ( warcDate ) warcTime = atotime ( warcDate );
+		gr->m_firstIndexed = warcTime;
+		gr->m_lastSpidered = warcTime;
+		// does this work?
+		gr->m_hopCount     = -1;
+		gr->m_diffbotReply = 0;
+		gr->m_newOnly      = 0;
+		// end of the url
+		char *warcUrlEnd = warcUrl;
+		for ( ; *warcUrlEnd && ! is_wspace_a(*warcUrlEnd) ;
+		      warcUrlEnd++ );
+		// set it to that
+		m_injectUrlBuf.reset();
+		// by default append a -<ch64> to the provided url
+		int32_t warcUrlLen = warcUrlEnd - warcUrl;
+		m_injectUrlBuf.safeMemcpy(warcUrl,warcUrlLen);
+		m_injectUrlBuf.nullTerm();
+		// skip if robots.txt
+		if ( isRobotsTxtFile(m_injectUrlBuf.getBufStart(),
+				     m_injectUrlBuf.getLength() ) )
+			return true;
+		// all warc records have the http mime
+		gr->m_hasMime = true;
+		char *recMime = hend;
+		// and find the next \r\n\r\n
+		char *recMimeEnd = strstr ( recMime , "\r\n\r\n" );
+		if ( ! recMimeEnd ) {
+			log("inject: warc: no http mime.");
+			return true;
+		}
+		// gotta include the \r\n\r\n in the mime length here
+		recMimeEnd += 4;
+		// should be a mime that starts with GET or POST
+		HttpMime mime;
+		if ( ! mime.set ( recMime, recMimeEnd - recMime , NULL ) ) {
+			log("inject: warc: mime set failed ");
+			return true;
+		}
+		// check content type. if bad advance to next rec.
+		int ct = mime.getContentType();
+		if ( ct != CT_HTML &&
+		     ct != CT_TEXT &&
+		     ct != CT_XML &&
+		     ct != CT_JSON )
+			return true;
+	}
+
+
+	// for injecting "start" set this to \0
+	if ( advanced ) { // m_start ) {
+		// save it
+		m_saved = *m_start;
+		// null term it
+		*m_start = '\0';
+		// put back the original char on next round...?
+		m_fixMe = true;
 	}
 
 	// this is the url of the injected content
@@ -707,7 +850,11 @@ bool Msg7::inject ( void *state ,
 
 			       // extra shit
 			       gr->m_firstIndexed,
-			       gr->m_lastSpidered ) )
+			       gr->m_lastSpidered ,
+			       // the ip of the url being injected.
+			       // use 0 if unknown and it won't be valid.
+			       gr->m_injectDocIp
+			       ) )
 		// we blocked...
 		return false;
 
