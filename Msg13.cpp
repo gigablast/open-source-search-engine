@@ -729,6 +729,23 @@ void downloadTheDocForReals ( Msg13Request *r ) {
 	downloadTheDocForReals2 ( r );
 }
 
+bool isIpInTwitchyTable ( CollectionRec *cr , int32_t ip ) {
+	if ( ! cr ) return false;
+	HashTableX *ht = &cr->m_twitchyTable;
+	if ( ht->m_numSlots == 0 ) return false;
+	return ( ht->getSlot ( &ip ) >= 0 );
+}
+
+bool addIpToTwitchyTable ( CollectionRec *cr , int32_t ip ) {
+	if ( ! cr ) return true;
+	HashTableX *ht = &cr->m_twitchyTable;
+	if ( ht->m_numSlots == 0 )
+		ht->set ( 4,0,16,NULL,0,false,MAX_NICENESS,"twitchtbl",true);
+	return ht->addKey ( &ip );
+}
+
+
+
 // insertion point when we try to get another proxy to use because the one
 // we tried seemed to be ip-banned
 void downloadTheDocForReals2 ( Msg13Request *r ) {
@@ -741,10 +758,15 @@ void downloadTheDocForReals2 ( Msg13Request *r ) {
 	// for diffbot turn ON if use robots is off
 	if ( r->m_forceUseFloaters ) useProxies = true;
 
+	CollectionRec *cr = g_collectiondb.getRec ( r->m_collnum );
+
 	// if you turned on automatically use proxies in spider controls...
 	if ( ! useProxies && 
+	     cr &&
+	     r->m_urlIp != 0 &&
+	     r->m_urlIp != -1 &&
 	     cr->m_automaticallyUseProxies &&  
-	     isIpInTwitchyList( cr, r->m_ip ) )
+	     isIpInTwitchyTable( cr, r->m_urlIp ) )
 		useProxies = true;
 
 	// we gotta have some proxy ips that we can use
@@ -1401,15 +1423,20 @@ void gotHttpReply2 ( void *state ,
 	Msg13Request *r    = (Msg13Request *) state;
 	UdpSlot      *slot = r->m_udpSlot;
 
+	CollectionRec *cr = g_collectiondb.getRec ( r->m_collnum );
+
 	// error?
 	if ( g_errno && g_conf.m_logDebugSpider )
 		log("spider: http reply (msg13) had error = %s "
 		    "for %s at ip %s",
 		    mstrerror(g_errno),r->ptr_url,iptoa(r->m_urlIp));
 
-	bool banned = false;
-	char *banMsg = NULL;
+	const char *banMsg = NULL;
 	if ( ! g_errno && 
+	     // must have a collrec to hold the ips
+	     cr &&
+	     r->m_urlIp !=  0 &&
+	     r->m_urlIp != -1 &&
 	     // if we should use them automatically
 	     // now even if we don't do auto proxies, at least back off if
 	     // an ip is in the list. do a crawl delay.
@@ -1421,14 +1448,14 @@ void gotHttpReply2 ( void *state ,
 		// should we turn proxies on for this IP address only?
 		log("msg13: url %s detected as banned (%s), "
 		    "automatically using proxies for ip %s"
-		    , r->m_url
+		    , r->ptr_url
 		    , banMsg
-		    , iptoa(ts->m_ip) 
+		    , iptoa(r->m_urlIp) 
 		    );
 		// . store in our table of ips we should use proxies for
 		// . also start off with a crawldelay of like 1 sec for this
 		//   which is not normal for using proxies.
-		addIpToTwitchyList ( cr , ts->m_ip );
+		addIpToTwitchyTable ( cr , r->m_urlIp );
 		/// and retry. it should use the proxy
 		downloadTheDocForReals2 ( r );
 		// that's it. if it had an error it will send back a reply.
@@ -2905,9 +2932,14 @@ bool addToHammerQueue ( Msg13Request *r ) {
 
 	int32_t crawlDelayMS = r->m_crawlDelayMS;
 
+	CollectionRec *cr = g_collectiondb.getRec ( r->m_collnum );
+
 	// if not using proxies, but the ip is banning us, then at least 
 	// backoff a bit
-	if ( isIpInTwitchyList ( cr , r->m_ip ) )
+	if ( cr && 
+	     r->m_urlIp !=  0 &&
+	     r->m_urlIp != -1 &&
+	     isIpInTwitchyTable ( cr , r->m_urlIp ) )
 		// 1 second = 1000 milliseconds
 		if ( crawlDelayMS < 1000 ) crawlDelayMS = 1000;
 

@@ -16462,8 +16462,8 @@ void Parms::init ( ) {
 		"learn the webserver's spidering policy so that our spiders "
 		"can be more polite. If not proxies are listed on the "
 		"proxies page then this parameter will have no affect.";
-	m->m_cgi   = "autouseproxyips";
-	m->m_off   = (char *)&cr.m_autoUseProxyIps - g;
+	m->m_cgi   = "automaticallyuseproxies";
+	m->m_off   = (char *)&cr.m_automaticallyUseProxies - g;
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "1";
 	m->m_page  = PAGE_SPIDER;

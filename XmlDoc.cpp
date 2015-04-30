@@ -15923,6 +15923,9 @@ char **XmlDoc::getHttpReply2 ( ) {
 	// turn this off too
 	r->m_attemptedIframeExpansion = false;
 
+	r->m_collnum = (collnum_t)-1;
+	if ( m_collnumValid )r->m_collnum = m_collnum;
+
 	// turn off
 	r->m_useCompressionProxy = false;
 	r->m_compressReply       = false;

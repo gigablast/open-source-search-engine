@@ -1936,6 +1936,14 @@ bool CollectionRec::load ( char *coll , int32_t i ) {
 		    m_coll,
 		    (int32_t)m_collnum,
 		    (int32_t)m_globalCrawlInfo.m_hasUrlsReadyToSpider);
+
+	// the list of ip addresses that we have detected as being throttled
+	// and therefore backoff and use proxies for
+	sb.reset();
+	sb.safePrintf("%scoll.%s.%"INT32"/",
+		      g_hostdb.m_dir , m_coll , (int32_t)m_collnum );
+	m_twitchyTable.load ( sb.getBufStart() , "ipstouseproxiesfor.dat" );
+
 	
 
 	////////////
@@ -3206,6 +3214,13 @@ bool CollectionRec::save ( ) {
 		    tmp,mstrerror(g_errno));
 		g_errno = 0;
 	}
+
+	// the list of ip addresses that we have detected as being throttled
+	// and therefore backoff and use proxies for
+	sb.reset();
+	sb.safePrintf("%scoll.%s.%"INT32"/",
+		      g_hostdb.m_dir , m_coll , (int32_t)m_collnum );
+	m_twitchyTable.save ( sb.getBufStart() , "ipstouseproxiesfor.dat" );
 
 	// do not need a save now
 	m_needsSave = false;
