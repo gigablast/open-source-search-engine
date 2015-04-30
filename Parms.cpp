@@ -16467,7 +16467,7 @@ void Parms::init ( ) {
 		"can be more polite. If not proxies are listed on the "
 		"proxies page then this parameter will have no affect.";
 	m->m_cgi   = "automaticallyuseproxies";
-	m->m_off   = (char *)&cr.m_automaticallyUseProxies - g;
+	m->m_off   = (char *)&cr.m_automaticallyUseProxies - x;
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "1";
 	m->m_page  = PAGE_SPIDER;
