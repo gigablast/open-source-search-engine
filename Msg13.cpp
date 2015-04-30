@@ -722,7 +722,7 @@ void downloadTheDocForReals ( Msg13Request *r ) {
 
 	// this means our callback will be called
 	if ( ! firstInLine ) {
-		//log("spider: inlining %s",r->ptr_url);
+		log("spider: waiting in line %s",r->ptr_url);
 		return;
 	}
 
@@ -1913,8 +1913,8 @@ void gotHttpReply2 ( void *state ,
 					 replySize);
 		if(zipErr != Z_OK) {
 			log("spider: had error zipping Msg13 reply. %s "
-			    "(%"INT32")",
-			    zError(zipErr),(int32_t)zipErr);
+			    "(%"INT32") url=%s",
+			    zError(zipErr),(int32_t)zipErr,r->ptr_url);
 			mfree (compressedBuf, need, "Msg13ZipError");
 			g_errno = ECORRUPTDATA;
 			g_udpServer.sendErrorReply(slot,g_errno);
@@ -2934,14 +2934,25 @@ bool addToHammerQueue ( Msg13Request *r ) {
 
 	CollectionRec *cr = g_collectiondb.getRec ( r->m_collnum );
 
+	bool canUseProxies = false;
+	if ( cr->m_automaticallyUseProxies ) canUseProxies = true;
+	if ( r->m_forceUseFloaters         ) canUseProxies = true;
+	if ( g_conf.m_useProxyIps          ) canUseProxies = true;
+	// if no proxies listed, then it is pointless
+	if ( ! g_conf.m_proxyIps.hasDigits() ) canUseProxies = false;
+
 	// if not using proxies, but the ip is banning us, then at least 
 	// backoff a bit
 	if ( cr && 
 	     r->m_urlIp !=  0 &&
 	     r->m_urlIp != -1 &&
-	     isIpInTwitchyTable ( cr , r->m_urlIp ) )
-		// 1 second = 1000 milliseconds
-		if ( crawlDelayMS < 1000 ) crawlDelayMS = 1000;
+	     // and it is in the twitchy table
+	     isIpInTwitchyTable ( cr , r->m_urlIp ) &&
+	     // and no proxies are available to use
+	     ! canUseProxies ) {
+		// then just back off when a crawldelay of 3 seconds
+		if ( crawlDelayMS < 3000 ) crawlDelayMS = 3000;
+	}
 
 
 	if ( g_conf.m_logDebugSpider )

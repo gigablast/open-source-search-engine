@@ -8789,12 +8789,16 @@ void Parms::init ( ) {
 
 	m->m_title = "use spider proxies";
 	m->m_desc  = "Use the spider proxies listed below. If none are "
-		"listed then gb will not use any.";
+		"listed then gb will not use any. Applies to all collections. "
+		"If you want to regulate this on a per collection basis then "
+		"set this to <b>NO</b> here and adjust the controls on the "
+		"<b>spider controls</b> page. If the list of proxy IPs below "
+		"is empty, then of course, no proxies can be used.";
 	m->m_cgi   = "useproxyips";
 	m->m_xml   = "useSpiderProxies";
 	m->m_off   = (char *)&g_conf.m_useProxyIps - g;
 	m->m_type  = TYPE_BOOL;
-	m->m_def   = "1";
+	m->m_def   = "0";
 	m->m_flags = 0;
 	m->m_page  = PAGE_SPIDERPROXIES;
 	m->m_obj   = OBJ_CONF;
@@ -16441,7 +16445,7 @@ void Parms::init ( ) {
 
 
 	m->m_title = "use proxies for spidering";
-	m->m_desc  = "If this is true Gigablast will use the proxies "
+	m->m_desc  = "If this is true Gigablast will ALWAYS use the proxies "
 		"listed on the <a href=/admin/proxies>proxies</a> page for "
 		"spidering for "
 		"this collection regardless whether the proxies are enabled "
