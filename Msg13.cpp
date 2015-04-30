@@ -1437,6 +1437,8 @@ void gotHttpReply2 ( void *state ,
 	     cr &&
 	     r->m_urlIp !=  0 &&
 	     r->m_urlIp != -1 &&
+	     // only if not already in twitchy table
+	     ! isIpInTwitchyTable ( cr , r->m_urlIp ) &&
 	     // if we should use them automatically
 	     // now even if we don't do auto proxies, at least back off if
 	     // an ip is in the list. do a crawl delay.
@@ -1456,7 +1458,9 @@ void gotHttpReply2 ( void *state ,
 		// . also start off with a crawldelay of like 1 sec for this
 		//   which is not normal for using proxies.
 		addIpToTwitchyTable ( cr , r->m_urlIp );
-		/// and retry. it should use the proxy
+		/// and retry. it should use the proxy... or at least
+		// use a crawldelay of 3 seconds since we added it to the
+		// twitchy table.
 		downloadTheDocForReals2 ( r );
 		// that's it. if it had an error it will send back a reply.
 		return;
