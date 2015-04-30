@@ -5774,23 +5774,32 @@ bool Links::addLink ( char *link , int32_t linkLen , int32_t nodeNum ,
 		if ( link[k] == '>' ) { hasSpaces = false; break; }
 	}
 	bool hitQuestionMark = false;
-	int32_t k; for(k=0;hasSpaces && linkLen<MAX_URL_LEN && k<linkLen ;k++){
-		if ( link[k] == '?' ) hitQuestionMark = true;
-		tmp[k  ] = link[k];
-		tmp[k+1] = '\0';
-		if ( tmp[k] != ' ' ) continue;
-		// if we are part of the cgi stuff, use +
-		if ( hitQuestionMark ) { tmp[k] = '+'; continue; }
+	int32_t src = 0;
+	int32_t dst = 0;
+	for ( ;hasSpaces && linkLen<MAX_URL_LEN && src<linkLen ; src++ ){
 		// if not enough buffer then we couldn't do the conversion.
-		if ( k+3 >= MAX_URL_LEN ) { hasSpaces = false; break; }
+		if ( dst+3 >= MAX_URL_LEN ) { hasSpaces = false; break; }
+		if ( link[src] == '?' ) 
+			hitQuestionMark = true;
+		if ( link[src] != ' ' ) {
+			tmp[dst++] = link[src];
+			continue;
+		}
+		// if we are part of the cgi stuff, use +
+		if ( hitQuestionMark ) { 
+			tmp[dst++] = '+'; 
+			continue;
+		}
 		// if before the '?' then use %20
-		tmp[k  ] = '%';
-		tmp[k+1] = '2';
-		tmp[k+2] = '0';
-		tmp[k+3] = '\0';
+		tmp[dst++] = '%';
+		tmp[dst++] = '2';
+		tmp[dst++] = '0';
 	}
-	if ( hasSpaces )
+	if ( hasSpaces ) {
 		link = tmp;
+		linkLen = dst;
+		tmp[dst] = '\0';
+	}
 		
 
 

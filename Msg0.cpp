@@ -964,7 +964,9 @@ void handleRequest0 ( UdpSlot *slot , int32_t netnice ) {
 	//char     *coll               = p;
 	collnum_t collnum = *(collnum_t *)p; p += sizeof(collnum_t);
 
-
+	CollectionRec *xcr = g_collectiondb.getRec ( collnum );
+	if ( ! xcr ) g_errno = ENOCOLLREC;
+	
 	// error set from XmlDoc::cacheTermLists()?
 	if ( g_errno ) {
 		us->sendErrorReply ( slot , EBADRDBID ); return;}

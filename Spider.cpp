@@ -11588,6 +11588,15 @@ int32_t getUrlFilterNum2 ( SpiderRequest *sreq       ,
 		if ( strncmp ( p , "ismedia",7 ) == 0 ) {
 			// skip for msg20
 			if ( isForMsg20 ) continue;
+
+			// the new way is much faster, but support the
+			// old way below for a while since this bit is new
+			if ( sreq->m_hasMediaExtension )
+				goto gotOne;
+			// if that bit is valid, and zero, then we do not match
+			if ( sreq->m_hasMediaExtensionValid )
+				continue;
+
 			// check the extension
 			if ( urlLen<=5 ) continue;
 			ext = url + urlLen - 4;
@@ -11665,6 +11674,19 @@ int32_t getUrlFilterNum2 ( SpiderRequest *sreq       ,
 			//special = strstr(url,".css?");
 			//if ( special ) goto gotOne;
 			//special = strstr(url,"/print/");
+			// try to make detecting .css? super fast
+			if ( ext[0] != '.' &&
+			     ext[1] != '.' &&
+			     urlLen > 10 ) {
+				for(register int32_t k=urlLen-10;k<urlLen;k++){
+					if ( url[k] != '.' ) continue;
+					if ( url[k+1] == 'c' &&
+					     url[k+2] == 's' &&
+					     url[k+3] == 's' &&
+					     url[k+4] == '?' )
+						goto gotOne;
+				}
+			}
 			//if ( special ) goto gotOne;
 			// no match, try the next rule
 			continue;

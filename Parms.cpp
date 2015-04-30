@@ -16478,6 +16478,23 @@ void Parms::init ( ) {
 	m->m_flags = PF_CLONE;
 	m++;
 
+	m->m_title = "automatically use spider proxies";
+	m->m_desc  = "Use the spider proxies listed on the proxies page "
+		"if we detect that "
+		"a webserver is throttling the spiders. This way we can "
+		"learn the webserver's spidering policy so that our spiders "
+		"can be more polite. If not proxies are listed on the "
+		"proxies page then this parameter will have no affect.";
+	m->m_cgi   = "autouseproxyips";
+	m->m_off   = (char *)&cr.m_autoUseProxyIps - g;
+	m->m_type  = TYPE_BOOL;
+	m->m_def   = "1";
+	m->m_page  = PAGE_SPIDER;
+	m->m_obj   = OBJ_COLL;
+	m->m_flags = PF_CLONE;
+	m++;
+
+
 	/*
 	m->m_title = "add url enabled";
 	m->m_desc  = "If this is enabled others can add "

@@ -196,6 +196,8 @@ public:
 	int64_t getUrlHash48    ( ) {
 		return getUrlHash64() & 0x0000ffffffffffffLL; }
 
+	bool hasMediaExtension ( ) ;
+
 	// . store url w/o http://
 	// . without trailing / if path is just "/"
 	// . without "www." if in hostname and "rmWWW" is true

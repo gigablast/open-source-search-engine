@@ -2272,3 +2272,84 @@ bool isHijackerFormat ( char *url ) {
 	if ( p[3] != 0   ) return false;
 	return true;
 }
+
+bool Url::hasMediaExtension ( ) {
+
+	if ( ! m_extension || ! m_elen ) return false;
+
+	char *ext = m_extension;
+
+	if ( to_lower_a(ext[0]) == 'c' &&
+	     to_lower_a(ext[1]) == 's' &&
+	     to_lower_a(ext[2]) == 's' )
+		return true;
+
+	if ( to_lower_a(ext[0]) == 'm' &&
+	     to_lower_a(ext[1]) == 'p' &&
+	     to_lower_a(ext[2]) == 'g' )
+		return true;
+
+	if ( to_lower_a(ext[0]) == 'p' &&
+	     to_lower_a(ext[1]) == 'n' &&
+	     to_lower_a(ext[2]) == 'g' )
+		return true;
+
+	if ( to_lower_a(ext[0]) == 'w' &&
+	     to_lower_a(ext[1]) == 'm' &&
+	     to_lower_a(ext[2]) == 'v' )
+		return true;
+
+	if ( to_lower_a(ext[0]) == 'w' &&
+	     to_lower_a(ext[1]) == 'a' &&
+	     to_lower_a(ext[2]) == 'v' )
+		return true;
+
+	if ( to_lower_a(ext[0]) == 'j' &&
+	     to_lower_a(ext[1]) == 'p' &&
+	     to_lower_a(ext[2]) == 'g' )
+		return true;
+
+	if ( to_lower_a(ext[0]) == 'g' &&
+	     to_lower_a(ext[1]) == 'i' &&
+	     to_lower_a(ext[2]) == 'f' )
+		return true;
+
+	if ( to_lower_a(ext[0]) == 'i' &&
+	     to_lower_a(ext[1]) == 'c' &&
+	     to_lower_a(ext[2]) == 'o' )
+		return true;
+
+	if ( to_lower_a(ext[0]) == 'm' &&
+	     to_lower_a(ext[1]) == 'p' &&
+	     to_lower_a(ext[2]) == '3' )
+		return true;
+
+	if ( to_lower_a(ext[0]) == 'm' &&
+	     to_lower_a(ext[1]) == 'p' &&
+	     to_lower_a(ext[2]) == '4' )
+		return true;
+
+	if ( to_lower_a(ext[0]) == 'm' &&
+	     to_lower_a(ext[1]) == 'o' &&
+	     to_lower_a(ext[2]) == 'v' )
+		return true;
+
+	if ( to_lower_a(ext[0]) == 'a' &&
+	     to_lower_a(ext[1]) == 'v' &&
+	     to_lower_a(ext[2]) == 'i' )
+		return true;
+
+	if ( to_lower_a(ext[0]) == 'm' &&
+	     to_lower_a(ext[1]) == 'p' &&
+	     to_lower_a(ext[2]) == 'e' &&
+	     to_lower_a(ext[3]) == 'g' )
+		return true;
+
+	if ( to_lower_a(ext[0]) == 'j' &&
+	     to_lower_a(ext[1]) == 'p' &&
+	     to_lower_a(ext[2]) == 'e' &&
+	     to_lower_a(ext[3]) == 'g' )
+		return true;
+
+	return false;
+}

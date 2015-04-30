@@ -10768,6 +10768,8 @@ XmlDoc **XmlDoc::getOldXmlDoc ( ) {
 		int32_t saved = g_errno;
 		// ok, fix the memleak here
 		mdelete ( m_oldDoc , sizeof(XmlDoc), "odnuke" );
+		delete ( m_oldDoc );
+		//log("xmldoc: nuke xmldoc1=%"PTRFMT"",(PTRTYPE)m_oldDoc);
 		m_oldDoc = NULL;
 		g_errno = saved;
 		return NULL;
@@ -20259,9 +20261,12 @@ bool XmlDoc::logIt ( SafeBuf *bb ) {
 		sb->safePrintf("hasrssoutlink=%"INT32" ",
 			      (int32_t)m_links.hasRSSOutlink() );
 
-	if ( m_numOutlinksAddedValid ) 
+	if ( m_numOutlinksAddedValid ) {
 		sb->safePrintf("outlinksadded=%04"INT32" ",
 			       (int32_t)m_numOutlinksAdded);
+		sb->safePrintf("outlinksaddedfromsamedomain=%04"INT32" ",
+			       (int32_t)m_numOutlinksAddedFromSameDomain);
+	}
 
 	if ( m_metaListValid ) 
 		sb->safePrintf("addlistsize=%05"INT32" ",
@@ -21616,6 +21621,7 @@ bool XmlDoc::doesPageContentMatchDiffbotProcessPattern() {
 	char *p = cr->m_diffbotPageProcessPattern.getBufStart();
 	// empty? no pattern matches everything.
 	if ( ! p ) return true;
+	if ( ! m_content ) return false;
 	// how many did we have?
 	return doesStringContainPattern ( m_content , p );
 }
@@ -25288,6 +25294,9 @@ void XmlDoc::setSpiderReqForMsg20 ( SpiderRequest *sreq   ,
 		strcpy(sreq->m_url,m_firstUrl.m_url);
 }
 
+// defined in PageCrawlBot.cpp
+int32_t isInSeedBuf ( CollectionRec *cr , char *url, int len ) ;
+
 // . add the spiderdb recs to the meta list
 // . used by XmlDoc::setMetaList()
 // . returns NULL and sets g_errno on error
@@ -25494,6 +25503,23 @@ char *XmlDoc::addOutlinkSpiderRecsToMetaList ( ) {
 	bool ignore = false;
 	if ( mbuf[0] == '1' ) ignore = true;
 
+	// for diffbot crawlbot, if we are a seed url and redirected to a 
+	// different domain... like bn.com --> barnesandnoble.com
+	int32_t redirDomHash32  = 0;
+	int32_t redirHostHash32 = 0;
+	//int32_t redirSiteHash32 = 0;
+	if ( //cr->m_isCustomCrawl == 1 &&
+	     //isInSeedBuf(cr,m_firstUrl.getUrl(),m_firstUrl.getUrlLen() ) &&
+	     m_hopCount == 0 &&
+	     m_redirUrlValid &&
+	     m_redirUrlPtr &&
+	     m_redirUrl.getUrlLen() > 0 ) {
+		log("build: seed REDIR: %s",m_redirUrl.getUrl());
+		redirDomHash32  = m_redirUrl.getDomainHash32();
+		redirHostHash32 = m_redirUrl.getHostHash32();
+	}		
+
+
 	//SpiderColl *sc = g_spiderCache.getSpiderCollIffNonNull ( m_collnum );
 
 	//
@@ -25644,6 +25670,9 @@ char *XmlDoc::addOutlinkSpiderRecsToMetaList ( ) {
 		//ksr.m_useTestSpiderDir = useTestSpiderDir;
 		ksr.m_parentIsSiteMap = parentIsSiteMap;
 
+		ksr.m_hasMediaExtension = url.hasMediaExtension();
+		ksr.m_hasMediaExtensionValid = 1;
+
 		// now we need this so we can share Msg12 spider locks with
 		// query reindex docid-based spider requests. that way
 		// we do not spider the same document at the same time.
@@ -25685,6 +25714,15 @@ char *XmlDoc::addOutlinkSpiderRecsToMetaList ( ) {
 		ksr.m_parentHostHash32 = hostHash32a;
 		ksr.m_parentDomHash32  = m_domHash32;
 		ksr.m_parentSiteHash32 = m_siteHash32;
+
+		// if a seed/hopcount0 url redirected to a different domain
+		// then use that if it is the same. that way we can satisft
+		// the "isonsamedomain" expression in the url filters table.
+		if ( redirDomHash32 == domHash32 && redirDomHash32 )
+			ksr.m_parentDomHash32 = redirDomHash32;
+		if ( redirHostHash32 == hostHash32 && redirHostHash32 )
+			ksr.m_parentHostHash32 = redirHostHash32;
+
 		//ksr.m_parentFirstIp    = *pfip;//m_ip;
 		ksr.m_pageNumInlinks   = 0;
 
@@ -25765,6 +25803,16 @@ char *XmlDoc::addOutlinkSpiderRecsToMetaList ( ) {
 		// the mere existence of these tags is good
 		if ( gr->getTag("authorityinlink"))ksr.m_hasAuthorityInlink =1;
 		ksr.m_hasAuthorityInlinkValid = true;
+
+		// if our url was a seed and redirected to another domain
+		// allow outlinks on that other domain to be on domain too.
+		// only used for diffbot crawlbot right now.
+		if ( domHash32  == redirDomHash32  && redirDomHash32 ) 
+			ksr.m_sameDom  = 1;
+		if ( hostHash32 == redirHostHash32 && redirHostHash32 ) 
+			ksr.m_sameHost = 1;
+		// if ( linkSiteHashes[i]==redirSiteHash32 && redirSiteHash32) 
+		// 	ksr.m_sameSite = 1;
 
 		// set parent based info
 		if ( domHash32  == m_domHash32   ) ksr.m_sameDom  = 1;
@@ -25923,7 +25971,8 @@ char *XmlDoc::addOutlinkSpiderRecsToMetaList ( ) {
 		// count it
 		numAdded++;
 		// check domain
-		if ( domHash32  == m_domHash32 ) numAddedFromSameDomain++;
+		//if ( domHash32  == m_domHash32 ) numAddedFromSameDomain++;
+		if ( ksr.m_sameDom ) numAddedFromSameDomain++;
 	}
 
 	//
@@ -27534,6 +27583,60 @@ SafeBuf *XmlDoc::getSpiderStatusDocMetaList2 ( SpiderReply *reply ) {
 	// sent to diffbot?
 	jd.safePrintf("\"gbssSentToDiffbotThisTime\":%i,\n",
 		      (int)m_sentToDiffbotThisTime);
+
+	// page must have been downloaded for this one
+	if ( cr->m_isCustomCrawl && 
+	     m_utf8ContentValid && 
+	     m_content &&
+	     cr->m_diffbotPageProcessPattern.getBufStart() &&
+	     cr->m_diffbotPageProcessPattern.getBufStart()[0] ) {
+		char match = doesPageContentMatchDiffbotProcessPattern();
+		jd.safePrintf("\"gbssMatchesPageProcessPattern\":%i,\n",
+			      (int)match);
+	}
+	if ( cr->m_isCustomCrawl && m_firstUrlValid ) {
+
+		char *url = getFirstUrl()->getUrl();
+
+		// the crawl regex
+		int match = 1;
+		regex_t *ucr = &cr->m_ucr;
+		if ( ! cr->m_hasucr ) ucr = NULL;
+		if ( ucr && regexec(ucr,url,0,NULL,0) ) match = 0;
+		if ( ucr )
+			jd.safePrintf("\"gbssMatchesUrlCrawlRegEx\":%i,\n",
+				      match);
+
+		// now the substring pattern
+		match = 1;
+		char *ucp = cr->m_diffbotUrlCrawlPattern.getBufStart();
+		if ( ucp && ! ucp[0] ) ucp = NULL;
+		if ( ucp && ! doesStringContainPattern(url,ucp) ) match = 0;
+		if ( ucp )
+			jd.safePrintf("\"gbssMatchesUrlCrawlPattern\":%i,\n",
+				      match);
+
+		// now process regex
+		match = 1;
+		regex_t *upr = &cr->m_upr;
+		if ( ! cr->m_hasupr ) upr = NULL;
+		if ( upr && regexec(upr,url,0,NULL,0) ) match = 0;
+		if ( upr ) 
+			jd.safePrintf("\"gbssMatchesUrlCrawlRegEx\":%i,\n",
+				      match);
+
+		// now process pattern
+		match = 1;
+		char *upp = cr->m_diffbotUrlProcessPattern.getBufStart();
+		if ( upp && ! upp[0] ) upp = NULL;
+		if ( upp && ! doesStringContainPattern(url,upp) ) match = 0;
+		if ( upp ) 
+			jd.safePrintf("\"gbssMatchesUrlProcessPattern\":%i,\n",
+				      match);
+
+	}
+
+
 
 	if ( m_diffbotReplyValid && m_sentToDiffbotThisTime ) {
 		jd.safePrintf("\"gbssDiffbotReplyCode\":%"INT32",\n",

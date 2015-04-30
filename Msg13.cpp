@@ -741,6 +741,12 @@ void downloadTheDocForReals2 ( Msg13Request *r ) {
 	// for diffbot turn ON if use robots is off
 	if ( r->m_forceUseFloaters ) useProxies = true;
 
+	// if you turned on automatically use proxies in spider controls...
+	if ( ! useProxies && 
+	     cr->m_automaticallyUseProxies &&  
+	     isIpInTwitchyList( cr, r->m_ip ) )
+		useProxies = true;
+
 	// we gotta have some proxy ips that we can use
 	if ( ! g_conf.m_proxyIps.hasDigits() ) useProxies = false;
 
@@ -798,6 +804,8 @@ void downloadTheDocForReals2 ( Msg13Request *r ) {
 		if ( ! g_errno ) { char *xx=NULL;*xx=0; }
 		// report it
 		log("spider: msg54 request: %s",mstrerror(g_errno));
+		// crap we gotta send back a reply i guess
+		g_udpServer.sendErrorReply(r->m_udpSlot,g_errno);
 		// g_errno must be set!
 		return;
 	}
@@ -1398,6 +1406,36 @@ void gotHttpReply2 ( void *state ,
 		log("spider: http reply (msg13) had error = %s "
 		    "for %s at ip %s",
 		    mstrerror(g_errno),r->ptr_url,iptoa(r->m_urlIp));
+
+	bool banned = false;
+	char *banMsg = NULL;
+	if ( ! g_errno && 
+	     // if we should use them automatically
+	     // now even if we don't do auto proxies, at least back off if
+	     // an ip is in the list. do a crawl delay.
+	     //cr->m_useProxiesAutomatically &&
+	     // we gotta have some proxies in the list
+	     //g_conf.m_proxyIps.hasDigits() &&
+	     // check if our ip seems banned
+	     ipWasBanned ( ts , &banMsg ) ) {
+		// should we turn proxies on for this IP address only?
+		log("msg13: url %s detected as banned (%s), "
+		    "automatically using proxies for ip %s"
+		    , r->m_url
+		    , banMsg
+		    , iptoa(ts->m_ip) 
+		    );
+		// . store in our table of ips we should use proxies for
+		// . also start off with a crawldelay of like 1 sec for this
+		//   which is not normal for using proxies.
+		addIpToTwitchyList ( cr , ts->m_ip );
+		/// and retry. it should use the proxy
+		downloadTheDocForReals2 ( r );
+		// that's it. if it had an error it will send back a reply.
+		return;
+	}
+
+
 
 	// get time now
 	int64_t nowms = gettimeofdayInMilliseconds();
@@ -2866,6 +2904,13 @@ bool addToHammerQueue ( Msg13Request *r ) {
 	int64_t waited = nowms - last;
 
 	int32_t crawlDelayMS = r->m_crawlDelayMS;
+
+	// if not using proxies, but the ip is banning us, then at least 
+	// backoff a bit
+	if ( isIpInTwitchyList ( cr , r->m_ip ) )
+		// 1 second = 1000 milliseconds
+		if ( crawlDelayMS < 1000 ) crawlDelayMS = 1000;
+
 
 	if ( g_conf.m_logDebugSpider )
 		log(LOG_DEBUG,"spider: got timestamp of %"INT64" from "
