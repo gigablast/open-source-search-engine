@@ -1150,6 +1150,10 @@ void doneReportingStatsWrapper ( void *state, UdpSlot *slot ) {
 
 bool ipWasBanned ( TcpSocket *ts , const char **msg ) {
 
+	// ts will be null if we got a fake reply from a bulk job
+	if ( ! ts )
+		return false;
+
 	// g_errno is 104 for 'connection reset by peer'
 	if ( g_errno == ECONNRESET ) {
 		*msg = "connection reset";
