@@ -348,6 +348,8 @@ void Msg7::reset() {
 	m_injectCount = 0;
 	m_start = NULL;
 	m_sbuf.reset();
+	m_isWarc = false;
+	m_isArc  = false;
 }
 
 // when XmlDoc::inject() complets it calls this
@@ -357,7 +359,6 @@ void doneInjectingWrapper9 ( void *state ) {
 
 	msg7->m_inUse = false;
 	
-	// int16_tcut
 	XmlDoc *xd = &msg7->m_xd;
 
 	GigablastRequest *gr = &msg7->m_gr;
@@ -389,8 +390,8 @@ void doneInjectingWrapper9 ( void *state ) {
 	if ( delim ) loopIt = true;
 	// by default warc and arc files consist of many subdocuments
 	// that have to be indexed individually as well
-	if ( gr->m_containerContentType == CT_WARC ) loopIt = true;
-	if ( gr->m_containerContentType == CT_ARC  ) loopIt = true;
+	if ( msg7->m_isWarc ) loopIt = true;
+	if ( msg7->m_isArc  ) loopIt = true;
 
 	if ( loopIt && msg7->m_start ) {
 		// do another injection. returns false if it blocks
@@ -466,7 +467,6 @@ void handleRequest7 ( UdpSlot *slot , int32_t netnice ) {
 	//m_state = state;
 	//m_callback = callback;
 
-	// int16_tcut
 	XmlDoc *xd;
 	try { xd = new (XmlDoc); }
 	catch ( ... ) { 
@@ -522,6 +522,16 @@ void handleRequest7 ( UdpSlot *slot , int32_t netnice ) {
 	sendReply ( slot );
 }
 
+void gotWarcContentWrapper ( void *state ) {
+	Msg7 *THIS = (Msg7 *)state;
+	// set content to that
+	GigablastRequest *gr = &THIS->m_gr;
+	gr->m_contentBuf.stealBuf (ts->m_readBuf, ts->m_readBufSize );
+	ts->m_readBuf = NULL;
+	gr->m_content = ts->m_readBuf;
+	// continue with injection
+	inject ( THIS->m_state , THIS->m_callback );
+}
 
 // . returns false if blocked and callback will be called, true otherwise
 // . sets g_errno on error
@@ -544,26 +554,19 @@ bool Msg7::inject ( void *state ,
 	m_state = state;
 	m_callback = callback;
 
-	// int16_tcut
+	// shortcut
 	XmlDoc *xd = &m_xd;
 
 	if ( ! gr->m_url &&
 	     // if there is a record delimeter, we form a new fake url
 	     // for each record based on content hash
-	     ! gr->m_contentDelim &&
-	     // warc and arc files have lists of subdocuments and each
-	     // of those subdocs has its own url
-	     gr->m_containerContentType != CT_WARC &&
-	     gr->m_containerContentType != CT_ARC ) {
+	     ! gr->m_contentDelim ) {
 		log("inject: no url provied to inject");
 		g_errno = EBADURL;
 		return true;
 	}
 
 	//char *coll = cr->m_coll;
-
-	// test
-	//diffbotReply = "{\"request\":{\"pageUrl\":\"http://www.washingtonpost.com/2011/03/10/ABe7RaQ_moreresults.html\",\"api\":\"article\",\"version\":3},\"objects\":[{\"icon\":\"http://www.washingtonpost.com/favicon.ico\",\"text\":\"In Case You Missed It\nWeb Hostess Live: The latest from the Web (vForum, May 15, 2014; 3:05 PM)\nGot Plans: Advice from the Going Out Guide (vForum, May 15, 2014; 2:05 PM)\nWhat to Watch: TV chat with Hank Stuever (vForum, May 15, 2014; 1:10 PM)\nColor of Money Live (vForum, May 15, 2014; 1:05 PM)\nWeb Hostess Live: The latest from the Web (vForum, May 15, 2014; 12:25 PM)\nMichael Devine outdoor entertaining and design | Home Front (vForum, May 15, 2014; 12:20 PM)\nThe Answer Sheet: Education chat with Valerie Strauss (vForum, May 14, 2014; 2:00 PM)\nThe Reliable Source Live (vForum, May 14, 2014; 1:05 PM)\nAsk Tom: Rants, raves and questions on the DC dining scene (vForum, May 14, 2014; 12:15 PM)\nOn Parenting with Meghan Leahy (vForum, May 14, 2014; 12:10 PM)\nAsk Aaron: The week in politics (vForum, May 13, 2014; 3:05 PM)\nEugene Robinson Live (vForum, May 13, 2014; 2:05 PM)\nTuesdays with Moron: Chatological Humor Update (vForum, May 13, 2014; 12:00 PM)\nComPost Live with Alexandra Petri (vForum, May 13, 2014; 11:05 AM)\nAsk Boswell: Redskins, Nationals and Washington sports (vForum, May 12, 2014; 1:50 PM)\nAdvice from Slate's 'Dear Prudence' (vForum, May 12, 2014; 1:40 PM)\nDr. Gridlock (vForum, May 12, 2014; 1:35 PM)\nSwitchback: Talking Tech (vForum, May 9, 2014; 12:05 PM)\nThe Fix Live (vForum, May 9, 2014; 12:00 PM)\nWhat to Watch: TV chat with Hank Stuever (vForum, May 8, 2014; 1:10 PM)\nMore News\",\"title\":\"The Washington Post\",\"diffbotUri\":\"article|3|828850106\",\"pageUrl\":\"http://www.washingtonpost.com/2011/03/10/ABe7RaQ_moreresults.html\",\"humanLanguage\":\"en\",\"html\":\"<p>In Case You Missed It<\\/p>\n<p>  <a href=\\\"http://live.washingtonpost.com/web-hostess-140515-new.html\\\">Web Hostess Live: The latest from the Web<\\/a>  <\\/p>\n<p>(vForum, May 15, 2014; 3:05 PM)<\\/p>\n<p>  <a href=\\\"http://live.washingtonpost.com/got-plans-05-15-2014.html\\\">Got Plans: Advice from the Going Out Guide<\\/a>  <\\/p>\n<p>(vForum, May 15, 2014; 2:05 PM)<\\/p>\n<p>  <a href=\\\"http://live.washingtonpost.com/tv-chat-140515.html\\\">What to Watch: TV chat with Hank Stuever<\\/a>  <\\/p>\n<p>(vForum, May 15, 2014; 1:10 PM)<\\/p>\n<p>  <a href=\\\"http://live.washingtonpost.com/color-of-money-live-20140515.html\\\">Color of Money Live<\\/a>  <\\/p>\n<p>(vForum, May 15, 2014; 1:05 PM)<\\/p>\n<p>  <a href=\\\"http://live.washingtonpost.com/web-hostess-140515-new.html\\\">Web Hostess Live: The latest from the Web<\\/a>  <\\/p>\n<p>(vForum, May 15, 2014; 12:25 PM)<\\/p>\n<p>  <a href=\\\"http://live.washingtonpost.com/home-front-0515.html\\\">Michael Devine outdoor entertaining and design | Home Front<\\/a>  <\\/p>\n<p>(vForum, May 15, 2014; 12:20 PM)<\\/p>\n<p>  <a href=\\\"http://live.washingtonpost.com/the-answer-sheet-20140514.html\\\">The Answer Sheet: Education chat with Valerie Strauss<\\/a>  <\\/p>\n<p>(vForum, May 14, 2014; 2:00 PM)<\\/p>\n<p>  <a href=\\\"http://live.washingtonpost.com/the-reliable-source-140514-new.html\\\">The Reliable Source Live<\\/a>  <\\/p>\n<p>(vForum, May 14, 2014; 1:05 PM)<\\/p>\n<p>  <a href=\\\"http://live.washingtonpost.com/ask-tom-5-14-14.html\\\">Ask Tom: Rants, raves and questions on the DC dining scene <\\/a>  <\\/p>\n<p>(vForum, May 14, 2014; 12:15 PM)<\\/p>\n<p>  <a href=\\\"http://live.washingtonpost.com/parenting-0514.html\\\">On Parenting with Meghan Leahy<\\/a>  <\\/p>\n<p>(vForum, May 14, 2014; 12:10 PM)<\\/p>\n<p>  <a href=\\\"http://live.washingtonpost.com/post-politics-ask-aaron-051313.html\\\">Ask Aaron: The week in politics<\\/a>  <\\/p>\n<p>(vForum, May 13, 2014; 3:05 PM)<\\/p>\n<p>  <a href=\\\"http://live.washingtonpost.com/opinion-focus-with-eugene-robinson-20140513.html\\\">Eugene Robinson Live<\\/a>  <\\/p>\n<p>(vForum, May 13, 2014; 2:05 PM)<\\/p>\n<p>  <a href=\\\"http://live.washingtonpost.com/gene-weingarten-140513.html\\\">Tuesdays with Moron: Chatological Humor Update<\\/a>  <\\/p>\n<p>(vForum, May 13, 2014; 12:00 PM)<\\/p>\n<p>  <a href=\\\"http://live.washingtonpost.com/compost-live-140513.html\\\">ComPost Live with Alexandra Petri<\\/a>  <\\/p>\n<p>(vForum, May 13, 2014; 11:05 AM)<\\/p>\n<p>  <a href=\\\"http://live.washingtonpost.com/ask-boswell-1400512.html\\\">Ask Boswell: Redskins, Nationals and Washington sports<\\/a>  <\\/p>\n<p>(vForum, May 12, 2014; 1:50 PM)<\\/p>\n<p>  <a href=\\\"http://live.washingtonpost.com/dear-prudence-140512.html\\\">Advice from Slate's 'Dear Prudence'<\\/a>  <\\/p>\n<p>(vForum, May 12, 2014; 1:40 PM)<\\/p>\n<p>  <a href=\\\"http://live.washingtonpost.com/gridlock-0512.html\\\">Dr. Gridlock <\\/a>  <\\/p>\n<p>(vForum, May 12, 2014; 1:35 PM)<\\/p>\n<p>  <a href=\\\"http://live.washingtonpost.com/switchback-20140509.html\\\">Switchback: Talking Tech<\\/a>  <\\/p>\n<p>(vForum, May 9, 2014; 12:05 PM)<\\/p>\n<p>  <a href=\\\"http://live.washingtonpost.com/live-fix-140509.html\\\">The Fix Live<\\/a>  <\\/p>\n<p>(vForum, May 9, 2014; 12:00 PM)<\\/p>\n<p>  <a href=\\\"http://live.washingtonpost.com/tv-chat-140508.html\\\">What to Watch: TV chat with Hank Stuever<\\/a>  <\\/p>\n<p>(vForum, May 8, 2014; 1:10 PM)<\\/p>\n<p>  <a href=\\\"http://www.washingtonpost.com/2011/03/10/ /2011/03/10/ABe7RaQ_moreresults.html ?startIndex=20&dwxLoid=\\\">More News <\\/a>  <\\/p>\",\"date\":\"Tue, 13 May 2014 00:00:00 GMT\",\"type\":\"article\"}]}";
 
 	if ( g_repairMode ) { g_errno = EREPAIRING; return true; }
 
@@ -574,6 +577,32 @@ bool Msg7::inject ( void *state ,
 	// . this will be NULL if the "content" was empty or not given
 	if ( ! content ) content = gr->m_contentFile;
 
+	// if it is a warc or arc url then download it to fill in the content
+	Url u;
+	if ( gr->m_url )
+		// get the normalized url
+		u.set ( gr->m_url );
+
+	if ( u.isWarc() )
+		m_isWarc = true;
+	if ( u.isArc () )
+		m_isArc  = true;
+
+	// if warc/arc download it and make gr->m_content reference it...
+	// we won't handle redirects though.
+	if ( ! content && ( m_isWarc || m_isArc) ) {
+		// download the warc/arc url
+		if ( ! g_httpServer.getDoc ( &u ,
+					     this ,
+					     gotWarcContentWrapper ) )
+			// we blocked
+			return false;
+		// error?
+		log("inject: %s",mstrerror(g_errno));
+	}
+
+
+		
 	if ( m_firstTime ) {
 		m_firstTime = false;
 		m_start = content;
@@ -611,7 +640,7 @@ bool Msg7::inject ( void *state ,
 	// contains a mime, as a mime a level above that whose 
 	// content-length: field includes the original http reply mime
 	// as part of its content.
-	if ( gr->m_containerContentType == CT_WARC ) {
+	if ( u.isWarc() ) { // gr->m_containerContentType == CT_WARC ) {
 		// no setting delim for this!
 		if ( delim ) { char *xx=NULL;*xx=0; }
 		// should have the url as well
@@ -797,7 +826,7 @@ bool Msg7::inject ( void *state ,
 		// use hash of the content
 		int64_t ch64 = hash64n ( start , 0LL );
 		// normalize it
-		Url u; u.set ( gr->m_url );
+		//Url u; u.set ( gr->m_url );
 		// reset it
 		m_injectUrlBuf.reset();
 		// by default append a -<ch64> to the provided url

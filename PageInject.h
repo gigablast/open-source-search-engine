@@ -44,7 +44,8 @@ public:
 
 	//int32_t m_crawlbotAPI;
 
-	bool m_isDoneInjecting;
+	bool m_isWarc;
+	bool m_isArc;
 
 	class ImportState *m_importState;
 

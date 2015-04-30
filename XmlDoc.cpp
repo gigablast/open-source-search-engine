@@ -114,8 +114,6 @@ XmlDoc::XmlDoc() {
 	m_freed = false;
 	m_contentInjected = false;
 	m_wasContentInjected = false;
-	m_calledWarcInject = false;
-	m_msg7 = NULL;
 	//m_coll  = NULL;
 	m_ubuf = NULL;
 	m_pbuf = NULL;
@@ -191,8 +189,6 @@ static int64_t s_lastTimeStart = 0LL;
 
 void XmlDoc::reset ( ) {
 
-	m_calledWarcInject = false;
-
 	m_ipStartTime = 0;
 	m_ipEndTime   = 0;
 	m_diffbotReplyRetries = 0;
@@ -251,12 +247,6 @@ void XmlDoc::reset ( ) {
 		delete  ( m_dx );
 		m_dx = NULL;
 		//log("diffbot: deleting m_dx2");
-	}
-
-	if ( m_msg7 ) {
-		mdelete ( m_msg7, sizeof(Msg7), "xdmsg7" );
-		delete ( m_msg7 );
-		m_msg7 = NULL;
 	}
 
 	m_isDiffbotJSONObject = false;
@@ -2561,12 +2551,6 @@ bool XmlDoc::indexDoc ( ) {
 	return true;
 }
 
-void doneInjectingWarc ( void *state ) {
-	XmlDoc *THIS = (XmlDoc *)state;
-	// resume the index pipeline
-	THIS->m_masterLoop ( THIS->m_masterState );
-}
-
 // . returns false if blocked, true otherwise
 // . sets g_errno on error and returns true
 bool XmlDoc::indexDoc2 ( ) {
@@ -2718,86 +2702,6 @@ bool XmlDoc::indexDoc2 ( ) {
 		// call it
 		if ( ! injectAhrefsLinks () ) return false;
 	}
-
-	// if we are a warc/arc doc for the internet archive then
-	// scan it using delimeters. the file consists of multiple documents
-	// separated by this content delimeter.
-	if ( m_firstUrlValid && m_firstUrl.isCompressedArcOrWarc() ) {
-		// we need the doc
-		char **replyPtr = getHttpReply ();
-		if ( ! replyPtr ) return true;
-		if ( replyPtr == (void *)-1 ) return false;
-		// already called inject?
-		if ( m_calledWarcInject )
-			// then we are done
-			return true;
-		int8_t *hc = getHopCount();
-		if ( ! hc ) return true;
-		if ( hc == (void *)-1 ) return false;
-		// first download
-		char **warcContent = getUtf8Content();
-		// return true with g_errno set on error
-		if ( ! warcContent ) {
-			if ( ! g_errno ) { char *xx=NULL;*xx=0; }
-			return true;
-		}
-		// would block? return false then
-		if ( warcContent == (void *)-1 )
-			return false;
-		// do not re-call this
-		m_calledWarcInject = true;
-		// need this. it is almost 1MB in size, so alloc it
-		if ( ! m_msg7 ) {
-			try { m_msg7 = new ( Msg7 ); }
-			catch ( ... ) {
-				g_errno = ENOMEM;
-				return true;
-			}
-			mnew ( m_msg7 , sizeof(Msg7),"xdmsg7");
-		}
-		// reset this
-		m_msg7->m_isDoneInjecting = false;
-		// set the input parms
-		GigablastRequest *gr = &m_msg7->m_gr;
-		// reset it
-		memset ( gr , 0 , sizeof(GigablastRequest) );
-		// now set the parameters
-		gr->m_contentDelim = NULL;
-		gr->m_spiderLinks = false;
-		gr->m_injectLinks = false;
-		// what happens if coll gets nuked from under us? use collnum
-		gr->m_coll = cr->m_coll;
-		gr->m_hopCount = *hc + 1;
-		// if ( ! m_collnumValid ) { char *xx=NULL;*xx=0; }
-		// gr->m_collnum = m_collnum;
-		// we could also use m_contentFile if it was on disk
-		gr->m_content = *warcContent;
-		// will this work on a content delimeterized doc?
-		gr->m_deleteUrl = m_deleteFromIndex;
-		// each subdoc will have a mime since it is a warc
-		gr->m_hasMime = true;
-		// this is what says it all. parse us into subdocuments
-		// that are contained by the WARC file format.
-		gr->m_containerContentType = CT_WARC;
-		// TODO: set these based on the date in the warc mime!!
-		//gr->m_firstIndexed = ;
-		//gr->m_lastSpidered = ;
-	subloop:
-		// breathe
-		QUICKPOLL ( m_niceness );
-		// then process. this will scan over each delimeted 
-		// doc in the arc/warc file and inject each one individually.
-		if ( ! m_msg7->inject ( this , doneInjectingWarc ) )
-			// it would block, callback will be called later
-			return false;
-		// if not done keep inject on this one
-		if ( ! m_msg7->m_isDoneInjecting ) goto subloop;
-		// error?
-		if ( g_errno )
-			log("buid: warc error %s",mstrerror(g_errno));
-		return true;
-	}
-		
 
 
 	// . now get the meta list from it to add
@@ -10217,11 +10121,6 @@ Url **XmlDoc::getRedirUrl() {
 		// let's just parse out the meta tag by hand
 		bool checkMeta = true;
 		if ( isRobotsTxt ) checkMeta = false;
-		// warc and arc files have a list of html docs
-		// in them that we need to index, so skip this check
-		// for them as well
-		if ( m_firstUrlValid && m_firstUrl.isCompressedArcOrWarc() )
-			checkMeta = false;
 		if ( checkMeta ) {
 			Url **mrup = getMetaRedirUrl();
 			if ( ! mrup || mrup == (void *)-1) return (Url **)mrup;
@@ -16285,47 +16184,6 @@ char **XmlDoc::gotHttpReply ( ) {
 		m_httpReplyAllocSize = 0;
 	}
 
-	/*
-	// no, we should have encoding type ET_GZIP so httpserver
-	// should have unzipped it already... in HttpServer.cpp
-	//
-	// if we just downloaded a file ending in warc.gz arg.gz or 
-	// whatever.gz then it was statically compressed. so in the case
-	// of warc or arc, at least try to uncompress it so we can index
-	// the documents it contains using PageInject.cpp's injection loop
-	// based on some content delimeter in the file.
-	if ( m_firstUrlValid && m_firstUrl.isCompressedArcOrWarc() ) {
-		// make a buffer to hold it
-		int32_t us = getUncompressedSize (m_httpReply,m_httpReplySize);
-		char *ubuf = (char *)mmalloc ( us , "warcbuf" );
-		int32_t realSize = us;
-		int err = gbuncompress ( (unsigned char *)  ubuf ,
-					 (uint32_t *) &realSize   ,
-					 (unsigned char *)  m_httpReply , 
-					 (uint32_t  ) m_httpReplySize );
-		// free it i guess
-		mfree ( m_httpReply, m_httpReplyAllocSize, "XmlDocHR" );
-		// error uncompressing?
-		if ( err ) {
-			log("build: warc uncompress error %s",
-			    mstrerror(g_errno));
-			mfree ( ubuf , us , "warcbuf" );
-			// and reset it
-			m_httpReplySize      = 0;
-			m_httpReply          = NULL;
-			m_httpReplyAllocSize = 0;
-		}
-		else {
-			// ok, successful.
-			m_httpReply = ubuf;
-			m_httpReplySize = realSize;
-			m_httpReplyAllocSize = us;
-			log("build: warc uncompress successful");
-		}
-	}
-	*/
-
-
 	// if errors were not local, reset g_errno and set m_indexCode
 	//if ( g_errno == ETCPTIMEDOUT ) m_indexCode = ETCPTIMEDOUT;
 	//if ( g_errno == EBADMIME     ) m_indexCode = EBADMIME;
@@ -17427,9 +17285,6 @@ char **XmlDoc::getFilteredContent ( ) {
 	// we now support JSON for diffbot
 	if ( *ct == CT_JSON    ) return &m_filteredContent;
 
-	if ( *ct == CT_WARC    ) return &m_filteredContent;
-	if ( *ct == CT_ARC     ) return &m_filteredContent;
-
 	// unknown content types are 0 since it is probably binary... and
 	// we do not want to parse it!!
 	if ( *ct == CT_PDF ) filterable = true;
@@ -18047,13 +17902,16 @@ char **XmlDoc::getExpandedUtf8Content ( ) {
 		return &m_expandedUtf8Content;
 	}
 
+	bool skip = m_skipIframeExpansion;
+
 	// or if this is set to true
-	if ( m_skipIframeExpansion ) {
+	if ( skip ) {
 		m_expandedUtf8Content     = m_rawUtf8Content;
 		m_expandedUtf8ContentSize = m_rawUtf8ContentSize;
 		m_expandedUtf8ContentValid = true;
 		return &m_expandedUtf8Content;
 	}
+
 
 
 	uint8_t *ct = getContentType();
@@ -23505,9 +23363,12 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 	     // the spider request to spiderdb...
 	     //m_useSpiderdb &&
 	     /// don't add requests like http://xyz.com/xxx-diffbotxyz0 though
-	     ! m_isDiffbotJSONObject )
+	     ! m_isDiffbotJSONObject ) {
 		needSpiderdb3 = m_sreq.getRecSize() + 1;
-
+		// NO! because when injecting a warc and the subdocs
+		// it contains, gb then tries to spider all of them !!! sux...
+		needSpiderdb3 = 0;
+	}
 	// or if we are rebuilding spiderdb
 	else if (m_useSecondaryRdbs && !m_isDiffbotJSONObject && m_useSpiderdb)
 		needSpiderdb3 = sizeof(SpiderRequest) + m_firstUrl.m_ulen+1;
@@ -24031,7 +23892,9 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 
 	// if we are injecting we must add the spider request
 	// we are injecting from so the url can be scheduled to be
-	// spidered again
+	// spidered again. 
+	// NO! because when injecting a warc and the subdocs
+	// it contains, gb then tries to spider all of them !!! sux...
 	if ( needSpiderdb3 ) {
 		// note it
 		setStatus("adding spider request");

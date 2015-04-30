@@ -14856,7 +14856,14 @@ void Parms::init ( ) {
 		"The injection api is described on the "
 		"<a href=/admin/api>api</a> page. "
 		"Make up a fake url if you are injecting content that "
-		"does not have one.";
+		"does not have one."
+		"<br>"
+		"<br>"
+		"If the url ends in .warc or .arc or .warc.gz or .arc.gz "
+		"Gigablast will index the contained documents as individual "
+		"documents, using the appropriate dates and other meta "
+		"information contained in the containing archive file."
+		;
 	m->m_cgi   = "url";
 	//m->m_cgi2  = "u";
 	//m->m_cgi3  = "seed"; // pagerawlbot

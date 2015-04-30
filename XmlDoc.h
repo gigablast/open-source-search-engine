@@ -2342,9 +2342,6 @@ class XmlDoc {
 
 	bool          m_contentInjected;
 
-	bool          m_calledWarcInject;
-	class Msg7   *m_msg7;
-
 	bool          m_recycleContent;
 	//bool        m_loadFromOldTitleRec;
 
