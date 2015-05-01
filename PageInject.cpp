@@ -300,7 +300,8 @@ bool sendReply ( void *state ) {
 		  (gr->m_queryToScrape&&gr->m_queryToScrape[0]) )
 		sb.safePrintf ( "<center><b>Sucessfully injected %s"
 				"</center><br>"
-				, xd->m_firstUrl.m_url
+				, gr->m_url
+				//, xd->m_firstUrl.m_url
 				);
 
 
@@ -666,6 +667,16 @@ bool Msg7::inject ( void *state ,
 
 	char *delim = gr->m_contentDelim;
 	if ( delim && ! delim[0] ) delim = NULL;
+	// delim is sill for warc/arcs so ignore it
+	if ( m_isWarc || m_isArc ) delim = NULL;
+
+
+	// if doing delimeterized injects, hitting a \0 is the end of the road
+	if ( delim && m_fixMe && ! m_saved ) {
+		m_isDoneInjecting = true;
+		return true;
+	}
+
 
 	if ( m_fixMe ) {
 		// we had made the first delim char a \0 to index the
@@ -673,6 +684,7 @@ bool Msg7::inject ( void *state ,
 		*m_start = m_saved;
 		// i guess unset this
 		m_fixMe = false;
+
 	}
 
 	bool advanced = false;
@@ -683,6 +695,10 @@ bool Msg7::inject ( void *state ,
 	if ( delim ) { // gr->m_containerContentType == CT_UNKNOWN )
 		m_start = strstr(start+1,delim);
 		advanced = true;
+		// if m_start is NULL, it couldn't be found so advance
+		// to end of file which should be a \0 already
+		if ( ! m_start ) 
+			m_start = start + gbstrlen(start);
 	}
 
 	// WARC files are mime delimeted. the http reply, which 
