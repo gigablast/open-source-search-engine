@@ -8816,8 +8816,8 @@ void Parms::init ( ) {
 		"proxy controls on the "
 		"<b>spider controls</b> page. If the list of proxy IPs below "
 		"is empty, then of course, no proxies will be used.";
-	m->m_cgi   = "useproxyips";
-	m->m_xml   = "useSpiderProxies";
+	m->m_cgi   = "autouseproxyips";
+	m->m_xml   = "automaticallyUseSpiderProxies";
 	m->m_off   = (char *)&g_conf.m_automaticallyUseProxyIps - g;
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "0";
@@ -16470,10 +16470,13 @@ void Parms::init ( ) {
 
 	m->m_title = "always use spider proxies";
 	m->m_desc  = "If this is true Gigablast will ALWAYS use the proxies "
-		"listed on the <a href=/admin/proxies>proxies</a> page for "
+		"listed on the <a href=/admin/proxies>proxies</a> "
+		"page for "
 		"spidering for "
-		"this collection regardless whether the proxies are enabled "
-		"on the <a href=/admin/proxies>proxies</a> page.";
+		"this collection."
+		//"regardless whether the proxies are enabled "
+		//"on the <a href=/admin/proxies>proxies</a> page."
+		;
 	m->m_cgi   = "useproxies";
 	m->m_off   = (char *)&cr.m_forceUseFloaters - x;
 	m->m_type  = TYPE_BOOL;
@@ -16485,7 +16488,7 @@ void Parms::init ( ) {
 
 	m->m_title = "automatically use spider proxies";
 	m->m_desc  = "Use the spider proxies listed on the proxies page "
-		"if we detect that "
+		"if gb detects that "
 		"a webserver is throttling the spiders. This way we can "
 		"learn the webserver's spidering policy so that our spiders "
 		"can be more polite. If no proxies are listed on the "

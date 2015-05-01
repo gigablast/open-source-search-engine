@@ -756,7 +756,7 @@ void downloadTheDocForReals2 ( Msg13Request *r ) {
 	bool useProxies = true;
 
 	// user can turn off proxy use with this switch
-	if ( ! g_conf.m_useProxyIps ) useProxies = false;
+	//if ( ! g_conf.m_useProxyIps ) useProxies = false;
 
 	// for diffbot turn ON if use robots is off
 	if ( r->m_forceUseFloaters ) useProxies = true;
@@ -769,8 +769,8 @@ void downloadTheDocForReals2 ( Msg13Request *r ) {
 	     r->m_urlIp != 0 &&
 	     r->m_urlIp != -1 &&
 	     // either the global or local setting will work
-	     ( g_conf.m_automaticallyUseProxyIps || 
-	       cr->m_automaticallyUseProxies ) &&
+	     //( g_conf.m_automaticallyUseProxyIps || 
+	     cr->m_automaticallyUseProxies &&
 	     isIpInTwitchyTable( cr, r->m_urlIp ) )
 		useProxies = true;
 
@@ -2990,8 +2990,8 @@ bool addToHammerQueue ( Msg13Request *r ) {
 	bool canUseProxies = false;
 	if ( cr->m_automaticallyUseProxies ) canUseProxies = true;
 	if ( r->m_forceUseFloaters         ) canUseProxies = true;
-	if ( g_conf.m_useProxyIps          ) canUseProxies = true;
-	if ( g_conf.m_automaticallyUseProxyIps ) canUseProxies = true;
+	//if ( g_conf.m_useProxyIps          ) canUseProxies = true;
+	//if ( g_conf.m_automaticallyUseProxyIps ) canUseProxies = true;
 
 	// if no proxies listed, then it is pointless
 	if ( ! g_conf.m_proxyIps.hasDigits() ) canUseProxies = false;
