@@ -402,8 +402,8 @@ void injectLoopWrapper9 ( void *state ) {
 			return;
 	}
 
-	//if ( msg7->m_start && delim ) 
-	if ( ! msg7->m_isDoneInjecting )
+	// if we don't check 'loopIt' here single url injects will loop
+	if ( loopIt && ! msg7->m_isDoneInjecting )
 		goto loop;
 
 	// and we call the original caller
