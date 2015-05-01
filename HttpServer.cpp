@@ -1048,7 +1048,7 @@ bool HttpServer::sendReply ( TcpSocket  *s , HttpRequest *r , bool isAdmin) {
 		cmd.safePrintf("/home/mwells/ia list %s --glob='*arc.gz' | "
 			       "awk '{print \"<a "
 			       "href=http://archive.org/download/"
-			       "%s/\" $1\">\"}' > ./tmpiaout"
+			       "%s/\"$1\">\"$1\"</a><br>\"}' > ./tmpiaout"
 			       //, g_hostdb.m_dir
 			       ,iaItem
 			       ,iaItem
@@ -1057,7 +1057,12 @@ bool HttpServer::sendReply ( TcpSocket  *s , HttpRequest *r , bool isAdmin) {
 		log("system: %s",cmd.getBufStart());
 		gbsystem ( cmd.getBufStart() );
 		SafeBuf sb;
+		sb.safePrintf("<title>%s</title>\n<br>\n",iaItem);
 		sb.load ( "./tmpiaout" );
+		// remove those pesky ^M guys. i guess ia is windows based.
+		sb.safeReplace3("\r","");
+		//log("system: output(%"INT32"=%s",sb.getBufStart(),
+		//sb.length());
 		return g_httpServer.sendDynamicPage(s,
 						    sb.getBufStart(),
 						    sb.length(),
