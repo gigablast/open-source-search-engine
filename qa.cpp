@@ -75,6 +75,127 @@ void markOut ( char *content , char *needle ) {
 	goto loop;
 }
 
+
+void markOut2 ( char *content , char *needle ) {
+
+	if ( ! content ) return;
+
+	int32_t nlen = gbstrlen(needle);
+
+ loop:
+
+	char *s = strstr ( content , needle );
+	if ( ! s ) return;
+
+	// advance over name like "rand64=" to avoid hitting those digits
+	//s += gbstrlen(needle);
+
+	for (int32_t i = 0 ; i < nlen ; i++ )
+		*s++ = ' ';
+
+	//for ( ; *s && ! is_digit(*s); s++ );
+
+	// find end of digit stream
+	//char *end = s;
+	//while ( ; *end && is_digit(*s); end++ );
+	// just bury the digit stream now, zeroing out was not
+	// a consistent LENGTH if we had 10 hits vs 9... making the hash 
+	// different
+
+	// space out digits. including decimal point.
+	//for ( ; *s && (is_digit(*s)||*s=='.'); s++ ) *s = ' ';
+
+	// loop for more for the "rand64=" thing
+	content = s;
+	goto loop;
+}
+
+
+void markOutBuf ( char *content ) {
+
+	// take out <responseTimeMS>
+	markOut ( content , "<currentTimeUTC>");
+	markOut ( content , "<responseTimeMS>");
+
+	// ...from an index of about 429 pages in 0.91 seconds in collection...
+	markOut ( content , " pages in ");
+
+	// until i figure this one out, take it out
+	markOut ( content , "<docsInCollection>");
+
+	markOut ( content , "spider is done (");
+	markOut ( content , "spider is paused (");
+	markOut ( content , "spider queue empty (");
+	markOut ( content , "spider is active (");
+
+	markOut ( content , "<totalShards>");
+
+	// 3 Collections etc.
+	markOut ( content , "/rocket.jpg></div></a></center><br><br><div style=\"width:190px;padding:4px;margin-left:10px;background-color:white;border-top-left-radius:10px;border-bottom-left-radius:10px;border-color:blue;border-width:3px;border-style:solid;margin-right:-3px;border-right-color:white;overflow-y:auto;overflow-x:hidden;line-height:23px;color:black;\"><center><nobr><b>" );
+
+	// until i figure this one out, take it out
+	markOut ( content , "<hits>");
+
+	// for those links in the html pages
+	markOut ( content, "rand64=");
+
+	// for json
+	markOut ( content , "\"currentTimeUTC\":" );
+	markOut ( content , "\"responseTimeMS\":");
+	markOut ( content , "\"docsInCollection\":");
+
+	// if the results are in json, then status doc is encoded json
+	markOut ( content , "\\\"gbssDownloadStartTime\\\":");
+	markOut ( content , "\\\"gbssDownloadEndTime\\\":");
+	markOut ( content , "\\\"gbssDownloadStartTimeMS\\\":");
+	markOut ( content , "\\\"gbssDownloadEndTimeMS\\\":");
+	markOut ( content , "\\\"gbssDownloadDurationMS\\\":");
+	markOut ( content , "\\\"gbssAgeInIndex\\\":");
+	markOut ( content , "\\\"gbssDiscoveredTime\\\":");
+
+
+	// if the results are in xml, then the status doc is xml encoded
+	markOut ( content , "\"gbssDownloadStartTime\":");
+	markOut ( content , "\"gbssDownloadEndTime\":");
+	markOut ( content , "\"gbssDownloadStartTimeMS\":");
+	markOut ( content , "\"gbssDownloadEndTimeMS\":");
+	markOut ( content , "\"gbssDownloadDurationMS\":");
+	markOut ( content , "\"gbssAgeInIndex\":");
+
+
+	// for xml
+	markOut ( content , "<currentTimeUTC>" );
+	markOut ( content , "<responseTimeMS>");
+	markOut ( content , "<docsInCollection>");
+	markOut ( content , "<firstIndexedDateUTC>");
+
+	// indexed 1 day ago
+	markOut ( content,"indexed:");
+	// modified 1 day ago
+	markOut ( content,"modified:");
+
+	// s_gigabitCount... it is perpetually incrementing static counter
+	// in PageResults.cpp
+	markOut(content,"ccc(");
+	markOut(content,"id=fd");
+	markOut(content,"id=sd");
+
+	// for some reason the term freq seems to change a little in
+	// the scoring table
+	markOut(content,"id=tf");
+
+	// # of collections in the admin page: ..."4 Collections"
+	markOut(content,"px;color:black;\"><center><nobr><b>");
+
+	markOut(content,"spider is done (");
+	markOut(content,"spider is paused (");
+	markOut(content,"spider is active (");
+	markOut(content,"spider queue empty (");
+
+	markOut2(content,"bgcolor=#c0c0f0");
+	markOut2(content,"bgcolor=#d0d0e0");
+}
+
 // do not hash 
 int32_t qa_hash32 ( char *s ) {
 	uint32_t h = 0;
@@ -171,84 +292,8 @@ void processReply ( char *reply , int32_t replyLen ) {
 
 	s_content = content;
 
-	// take out <responseTimeMS>
-	markOut ( content , "<currentTimeUTC>");
-	markOut ( content , "<responseTimeMS>");
+	markOutBuf ( content );
 
-	// ...from an index of about 429 pages in 0.91 seconds in collection...
-	markOut ( content , " pages in ");
-
-	// until i figure this one out, take it out
-	markOut ( content , "<docsInCollection>");
-
-	markOut ( content , "spider is done (");
-	markOut ( content , "spider is paused (");
-	markOut ( content , "spider queue empty (");
-	markOut ( content , "spider is active (");
-
-	markOut ( content , "<totalShards>");
-
-	// 3 Collections etc.
-	markOut ( content , "/rocket.jpg></div></a></center><br><br><div style=\"width:190px;padding:4px;margin-left:10px;background-color:white;border-top-left-radius:10px;border-bottom-left-radius:10px;border-color:blue;border-width:3px;border-style:solid;margin-right:-3px;border-right-color:white;overflow-y:auto;overflow-x:hidden;line-height:23px;color:black;\"><center><nobr><b>" );
-
-	// until i figure this one out, take it out
-	markOut ( content , "<hits>");
-
-	// for those links in the html pages
-	markOut ( content, "rand64=");
-
-	// for json
-	markOut ( content , "\"currentTimeUTC\":" );
-	markOut ( content , "\"responseTimeMS\":");
-	markOut ( content , "\"docsInCollection\":");
-
-	// if the results are in json, then status doc is encoded json
-	markOut ( content , "\\\"gbssDownloadStartTime\\\":");
-	markOut ( content , "\\\"gbssDownloadEndTime\\\":");
-	markOut ( content , "\\\"gbssDownloadStartTimeMS\\\":");
-	markOut ( content , "\\\"gbssDownloadEndTimeMS\\\":");
-	markOut ( content , "\\\"gbssDownloadDurationMS\\\":");
-	markOut ( content , "\\\"gbssAgeInIndex\\\":");
-	markOut ( content , "\\\"gbssDiscoveredTime\\\":");
-
-
-	// if the results are in xml, then the status doc is xml encoded
-	markOut ( content , "\"gbssDownloadStartTime\":");
-	markOut ( content , "\"gbssDownloadEndTime\":");
-	markOut ( content , "\"gbssDownloadStartTimeMS\":");
-	markOut ( content , "\"gbssDownloadEndTimeMS\":");
-	markOut ( content , "\"gbssDownloadDurationMS\":");
-	markOut ( content , "\"gbssAgeInIndex\":");
-
-
-	// for xml
-	markOut ( content , "<currentTimeUTC>" );
-	markOut ( content , "<responseTimeMS>");
-	markOut ( content , "<docsInCollection>");
-	markOut ( content , "<firstIndexedDateUTC>");
-
-	// indexed 1 day ago
-	markOut ( content,"indexed:");
-	// modified 1 day ago
-	markOut ( content,"modified:");
-
-	// s_gigabitCount... it is perpetually incrementing static counter
-	// in PageResults.cpp
-	markOut(content,"ccc(");
-	markOut(content,"id=fd");
-	markOut(content,"id=sd");
-
-	// for some reason the term freq seems to change a little in
-	// the scoring table
-	markOut(content,"id=tf");
-
-	// # of collections in the admin page: ..."4 Collections"
-	markOut(content,"px;color:black;\"><center><nobr><b>");
-
-	markOut(content,"spider is done (");
-	markOut(content,"spider is paused (");
-	markOut(content,"spider is active (");
-	markOut(content,"spider queue empty (");
 
 	// make checksum. we ignore back to back spaces so this
 	// hash works for <docsInCollection>10 vs <docsInCollection>9
@@ -361,9 +406,26 @@ void processReply ( char *reply , int32_t replyLen ) {
 	fb1.load(fn1);
 	fb1.nullTerm();
 
+	// markout both
+	markOutBuf ( fb1.getBufStart() );
+	markOutBuf ( fb2.getBufStart() );
+
+	// save temps
+	SafeBuf tmpfn1; 
+	SafeBuf tmpfn2; 
+	tmpfn1.safePrintf("%strash/tmpdiff1.txt",g_hostdb.m_dir); 
+	tmpfn2.safePrintf("%strash/tmpdiff2.txt",g_hostdb.m_dir); 
+	fb1.save(tmpfn1.getBufStart());
+	fb2.save(tmpfn2.getBufStart());
+
 	// do the diff between the two replies so we can see what changed
+	// now do the diffs between the marked out versions so it is less
+	// spammy
 	char cmd[1024];
-	sprintf(cmd,"diff %s %s > /tmp/diffout",fn1,fn2);
+	sprintf(cmd,"diff %s %s > /tmp/diffout",
+		tmpfn1.getBufStart(),
+		tmpfn2.getBufStart());
+	//fn1,fn2);
 	//log("qa: %s\n",cmd);
 	gbsystem(cmd);
 
