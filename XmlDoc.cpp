@@ -24800,6 +24800,7 @@ SpiderReply *XmlDoc::getNewSpiderReply ( ) {
 	// store it
 	m_srep.m_firstIp = firstIp;
 	// assume no error
+	// MDW: not right...
 	m_srep.m_errCount = 0;
 	// otherwise, inherit from oldsr to be safe
 	//if ( m_sreqValid ) 

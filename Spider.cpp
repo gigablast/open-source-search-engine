@@ -797,6 +797,8 @@ bool Spiderdb::verify ( char *coll ) {
 key128_t Spiderdb::makeKey ( int32_t      firstIp     ,
 			     int64_t urlHash48   , 
 			     bool      isRequest   ,
+			     // MDW: now we use timestamp instead of parentdocid
+			     // for spider replies. so they do not dedup...
 			     int64_t parentDocId ,
 			     bool      isDel       ) {
 	key128_t k;
