@@ -27460,14 +27460,19 @@ SafeBuf *XmlDoc::getSpiderStatusDocMetaList2 ( SpiderReply *reply ) {
 			      m_docIdWeAreADupOf);
 
 	// how many spiderings were successful vs. failed
-	if ( m_sreqValid ) {
-		jd.safePrintf("\"gbssPrevTotalNumIndexAttempts\":%"INT32",\n",
-			      m_sreq.m_reservedc1 + m_sreq.m_reservedc2 );
-		jd.safePrintf("\"gbssPrevTotalNumIndexSuccesses\":%"INT32",\n",
-			      m_sreq.m_reservedc1);
-		jd.safePrintf("\"gbssPrevTotalNumIndexFailures\":%"INT32",\n",
-			      m_sreq.m_reservedc2);
-	}
+	// these don't work because we only store one reply
+	// which overwrites any older reply. that's how the 
+	// key is. we can change the key to use the timestamp 
+	// and not parent docid in makeKey() for spider 
+	// replies later.
+	// if ( m_sreqValid ) {
+	// 	jd.safePrintf("\"gbssPrevTotalNumIndexAttempts\":%"INT32",\n",
+	// 		      m_sreq.m_reservedc1 + m_sreq.m_reservedc2 );
+	// 	jd.safePrintf("\"gbssPrevTotalNumIndexSuccesses\":%"INT32",\n",
+	// 		      m_sreq.m_reservedc1);
+	// 	jd.safePrintf("\"gbssPrevTotalNumIndexFailures\":%"INT32",\n",
+	// 		      m_sreq.m_reservedc2);
+	// }
 
 	if ( m_spideredTimeValid )
 		jd.safePrintf("\"gbssSpiderTime\":%"INT32",\n",
