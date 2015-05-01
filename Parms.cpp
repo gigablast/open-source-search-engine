@@ -8801,10 +8801,32 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&g_conf.m_useProxyIps - g;
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "0";
-	m->m_flags = 0;
+	// hide this for now. just make it a per collection parm.
+	m->m_flags = PF_HIDDEN;
 	m->m_page  = PAGE_SPIDERPROXIES;
 	m->m_obj   = OBJ_CONF;
 	m++;
+
+	m->m_title = "automatically use spider proxies for all collections";
+	m->m_desc  = "AUTOMATICALLY use the spider proxies listed below for "
+		"spidering. If none are "
+		"listed then gb will not use any. Applies to all collections. "
+		"If you want to regulate this on a per collection basis then "
+		"set this to <b>NO</b> here and adjust the "
+		"proxy controls on the "
+		"<b>spider controls</b> page. If the list of proxy IPs below "
+		"is empty, then of course, no proxies will be used.";
+	m->m_cgi   = "useproxyips";
+	m->m_xml   = "useSpiderProxies";
+	m->m_off   = (char *)&g_conf.m_automaticallyUseProxyIps - g;
+	m->m_type  = TYPE_BOOL;
+	m->m_def   = "0";
+	// hide this for now. just make it a per collection parm.
+	m->m_flags = PF_HIDDEN;
+	m->m_page  = PAGE_SPIDERPROXIES;
+	m->m_obj   = OBJ_CONF;
+	m++;
+
 
 	m->m_title = "spider proxy ips";
 	m->m_desc  = "List of white space-separated spider proxy IPs. Put "
