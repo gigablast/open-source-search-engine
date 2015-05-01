@@ -25,6 +25,7 @@ public:
 	bool  m_fixMe;
 	char  m_saved;
 	int32_t  m_injectCount;
+	bool m_isDoneInjecting;
 
 	bool       m_needsSet;
 	XmlDoc     m_xd;

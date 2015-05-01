@@ -350,10 +350,12 @@ void Msg7::reset() {
 	m_sbuf.reset();
 	m_isWarc = false;
 	m_isArc  = false;
+	m_isDoneInjecting = false;
 }
 
 // when XmlDoc::inject() complets it calls this
-void doneInjectingWrapper9 ( void *state ) {
+//void doneInjectingWrapper9 ( void *state ) {
+void injectLoopWrapper9 ( void *state ) {
 
 	Msg7 *msg7 = (Msg7 *)state;
 
@@ -367,7 +369,7 @@ void doneInjectingWrapper9 ( void *state ) {
 		// do not re-call
 		gr->m_gotSections = true;
 		// new callback now, same state
-		xd->m_callback1 = doneInjectingWrapper9;
+		xd->m_callback1 = injectLoopWrapper9;
 		// and if it blocks internally, it will call 
 		// getInlineSectionVotingBuf until it completes then it will 
 		// call xd->m_callback
@@ -393,13 +395,14 @@ void doneInjectingWrapper9 ( void *state ) {
 	if ( msg7->m_isWarc ) loopIt = true;
 	if ( msg7->m_isArc  ) loopIt = true;
 
-	if ( loopIt && msg7->m_start ) {
+	if ( loopIt ) { // && msg7->m_start ) {
 		// do another injection. returns false if it blocks
 		if ( ! msg7->inject ( msg7->m_state , msg7->m_callback ) )
 			return;
 	}
 
-	if ( msg7->m_start && delim ) 
+	//if ( msg7->m_start && delim ) 
+	if ( ! msg7->m_isDoneInjecting )
 		goto loop;
 
 	// and we call the original caller
@@ -505,7 +508,7 @@ void handleRequest7 ( UdpSlot *slot , int32_t netnice ) {
 	log("inject: importing %s",xd->m_firstUrl.getUrl());
 	// call this when done indexing
 	//xd->m_masterState = this;
-	//xd->m_masterLoop  = doneInjectingWrapper9;
+	//xd->m_masterLoop  = injectLoopWrapper9;
 	xd->m_state = xd;//this;
 	xd->m_callback1  = doneInjectingWrapper10;
 	xd->m_isImporting = true;
@@ -535,8 +538,8 @@ void gotWarcContentWrapper ( void *state , TcpSocket *ts ) {
 	gr->m_content = ts->m_readBuf;
 	// so tcpserver.cpp doesn't free the ward/arc file
 	ts->m_readBuf = NULL;
-	// continue with injection
-	THIS->inject ( THIS->m_state , THIS->m_callback );
+	// continue with injection loop
+	injectLoopWrapper9 ( THIS );
 }
 
 // . returns false if blocked and callback will be called, true otherwise
@@ -636,7 +639,18 @@ bool Msg7::inject ( void *state ,
 		log("inject: %s",mstrerror(g_errno));
 	}
 
-
+	if ( m_firstTime && m_isWarc ) {
+		// skip over the first http mime header, it is not
+		// part of the warc file per se.
+		content = strstr(content,"\r\n\r\n");
+		if ( ! content ) {
+			log("inject: no mime received from webserver");
+			return true;
+		}
+		// skip over that to point to start of actual warc
+		// file content
+		content += 4;
+	}
 		
 	if ( m_firstTime ) {
 		m_firstTime = false;
@@ -685,7 +699,7 @@ bool Msg7::inject ( void *state ,
 		if ( ! mm || ! mmend ) {
 			log("inject: warc: all done");
 			// XmlDoc.cpp checks for this to stop calling us
-			//m_isDoneInjecting = true;
+			m_isDoneInjecting = true;
 			return true;
 		}
 		char c = *mmend;
@@ -840,8 +854,9 @@ bool Msg7::inject ( void *state ,
 		m_fixMe = true;
 	}
 
-	// this is the url of the injected content
-	m_injectUrlBuf.safeStrcpy ( gr->m_url );
+	if ( ! delim && ! m_isWarc && ! m_isArc ) 
+		// this is the url of the injected content
+		m_injectUrlBuf.safeStrcpy ( gr->m_url );
 
 	bool modifiedUrl = false;
 
@@ -910,7 +925,7 @@ bool Msg7::inject ( void *state ,
 			       gr->m_newOnly, // index iff new
 
 			       this ,
-			       doneInjectingWrapper9 ,
+			       injectLoopWrapper9 ,
 
 			       // extra shit
 			       gr->m_firstIndexed,
