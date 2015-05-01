@@ -16510,7 +16510,7 @@ void Parms::init ( ) {
 		"that an IP is throttling or banning gigabot from crawling "
 		"it. The crawl delay just applies to that IP. "
 		"Such throttling will be logged.";
-	m->m_cgi   = "autobackoff";
+	m->m_cgi   = "automaticallybackoff";
 	m->m_xml   = "automaticallyBackOff";
 	m->m_off   = (char *)&cr.m_automaticallyBackOff - x;
 	m->m_type  = TYPE_BOOL;
