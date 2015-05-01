@@ -16508,7 +16508,8 @@ void Parms::init ( ) {
 	m->m_title = "automatically back off";
 	m->m_desc  = "Set the crawl delay to 5 seconds if gb detects "
 		"that an IP is throttling or banning gigabot from crawling "
-		"it. Such throttling will be logged.";
+		"it. The crawl delay just applies to that IP. "
+		"Such throttling will be logged.";
 	m->m_cgi   = "autobackoff";
 	m->m_xml   = "automaticallyBackOff";
 	m->m_off   = (char *)&cr.m_automaticallyBackOff - x;
