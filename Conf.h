@@ -680,6 +680,7 @@ class Conf {
 	bool  m_logDebugStats   ;
 	bool  m_logDebugSummary ;
 	bool  m_logDebugSpider  ;
+	bool  m_logDebugMsg13   ;
 	bool  m_logDebugUrlAttempts ;
 	bool  m_logDebugTcp     ;
 	bool  m_logDebugThread  ;

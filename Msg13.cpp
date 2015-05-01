@@ -606,7 +606,8 @@ void handleRequest13 ( UdpSlot *slot , int32_t niceness  ) {
 	}
 
 	// log it so we can see if we are hammering
-	if ( g_conf.m_logDebugRobots || g_conf.m_logDebugDownloads )
+	if ( g_conf.m_logDebugRobots || g_conf.m_logDebugDownloads ||
+	     g_conf.m_logDebugMsg13 )
 		logf(LOG_DEBUG,"spider: DOWNLOADING %s firstIp=%s",
 		     r->ptr_url,iptoa(r->m_firstIp));
 
@@ -669,7 +670,7 @@ void handleRequest13 ( UdpSlot *slot , int32_t niceness  ) {
 		int32_t key = ((uint32_t)r->m_firstIp >> 8);
 		// send to host "h"
 		Host *h = g_hostdb.getBestSpiderCompressionProxy(&key);
-		if ( g_conf.m_logDebugSpider )
+		if ( g_conf.m_logDebugSpider || g_conf.m_logDebugMsg13 )
 			log(LOG_DEBUG,"spider: sending to compression proxy "
 			    "%s:%"UINT32"",iptoa(h->m_ip),(uint32_t)h->m_port);
 		// . otherwise, send the request to the key host
@@ -736,6 +737,7 @@ void downloadTheDocForReals ( Msg13Request *r ) {
 	bool firstInLine = s_rt.isEmpty ( &r->m_cacheKey );
 	// wait in line cuz someone else downloading it now
 	if ( ! s_rt.addKey ( &r->m_cacheKey , &r ) ) {
+		log("spider: error adding to waiting table %s",r->ptr_url);
 		g_udpServer.sendErrorReply(r->m_udpSlot,g_errno);
 		return;
 	}
@@ -830,7 +832,8 @@ void downloadTheDocForReals2 ( Msg13Request *r ) {
 		// sanity check
 		if ( ! g_errno ) { char *xx=NULL;*xx=0; }
 		// report it
-		log("spider: msg54 request: %s",mstrerror(g_errno));
+		log("spider: msg54 request1: %s %s",
+		    mstrerror(g_errno),r->ptr_url);
 		// crap we gotta send back a reply i guess
 		g_udpServer.sendErrorReply(r->m_udpSlot,g_errno);
 		// g_errno must be set!
@@ -862,8 +865,8 @@ void gotProxyHostReplyWrapper ( void *state , UdpSlot *slot ) {
 	//int32_t  replyAllocSize = slot->m_readBufMaxSize;
 	// bad reply? ip/port/LBid
 	if ( replySize != sizeof(ProxyReply) ) {
-		log("sproxy: bad 54 reply size of %"INT32" != %"INT32"",
-		    replySize,(int32_t)sizeof(ProxyReply));
+		log("sproxy: bad 54 reply size of %"INT32" != %"INT32" %s",
+		    replySize,(int32_t)sizeof(ProxyReply),r->ptr_url);
 		g_udpServer.sendErrorReply(r->m_udpSlot,g_errno);
 		return;
 	}
@@ -982,7 +985,7 @@ void downloadTheDocForReals3b ( Msg13Request *r ) {
 	// flag this
 	//if ( g_conf.m_qaBuildMode ) r->m_addToTestCache = true;
 	// note it here
-	if ( g_conf.m_logDebugSpider )
+	if ( g_conf.m_logDebugSpider || g_conf.m_logDebugMsg13 )
 		log("spider: downloading %s (%s) (skiphammercheck=%"INT32")",
 		    r->ptr_url,iptoa(r->m_urlIp) ,
 		    (int32_t)r->m_skipHammerCheck);
@@ -1312,7 +1315,8 @@ void gotHttpReply9 ( void *state , TcpSocket *ts ) {
 	// sanity check
 	//if ( ! g_errno ) { char *xx=NULL;*xx=0; }
 	// report it
-	if ( g_errno ) log("spider: msg54 request: %s",mstrerror(g_errno));
+	if ( g_errno ) log("spider: msg54 request2: %s %s",
+			   mstrerror(g_errno),r->ptr_url);
 	// it failed i guess proceed
 	gotHttpReply( state , ts );
 }
@@ -1461,17 +1465,18 @@ void gotHttpReply2 ( void *state ,
 	// 	log("hey");
 
 	// error?
-	if ( g_errno && g_conf.m_logDebugSpider )
+	if ( g_errno && ( g_conf.m_logDebugSpider || g_conf.m_logDebugMsg13 ) )
 		log("spider: http reply (msg13) had error = %s "
 		    "for %s at ip %s",
-		    mstrerror(g_errno),r->ptr_url,iptoa(r->m_urlIp));
+		    mstrerror(savedErr),r->ptr_url,iptoa(r->m_urlIp));
 
 	bool inTable = false;
 	// must have a collrec to hold the ips
 	if ( cr && r->m_urlIp != 0 && r->m_urlIp != -1 )
 		inTable = isIpInTwitchyTable ( cr , r->m_urlIp );
 
-	// check if our ip seems banned
+	// check if our ip seems banned. if g_errno was ECONNRESET that
+	// is an indicator it was throttled/banned.
 	const char *banMsg = NULL;
 	bool banned = ipWasBanned ( ts , &banMsg );
 	if (  banned )
@@ -1501,6 +1506,8 @@ void gotHttpReply2 ( void *state ,
 		    r->ptr_url);
 		// reset this so we don't endless loop it
 		r->m_wasInTableBeforeStarting = true;
+		// reset error
+		g_errno = 0;
 		/// and retry. it should use the proxy... or at least
 		// use a crawldelay of 3 seconds since we added it to the
 		// twitchy table.
@@ -1509,7 +1516,9 @@ void gotHttpReply2 ( void *state ,
 		return;
 	}
 
-	if ( banned && r->m_wasInTableBeforeStarting )
+	// do not print this if we are already using proxies, it is for
+	// the auto crawldelay backoff logic only
+	if ( banned && r->m_wasInTableBeforeStarting && ! r->m_proxyIp )
 		log("msg13: can not retry banned download of %s "
 		    "because we knew ip was banned at start",r->ptr_url);
 
@@ -1535,9 +1544,10 @@ void gotHttpReply2 ( void *state ,
 		    timeToAdd,iptoa(r->m_firstIp),r->ptr_url);
 
 
-	if ( g_conf.m_logDebugSpider )
-		log(LOG_DEBUG,"spider: got http reply for firstip=%s url=%s",
-		    iptoa(r->m_firstIp),r->ptr_url);
+	if ( g_conf.m_logDebugSpider || g_conf.m_logDebugMsg13 )
+		log(LOG_DEBUG,"spider: got http reply for firstip=%s url=%s "
+		    "err=%s",
+		    iptoa(r->m_firstIp),r->ptr_url,mstrerror(savedErr));
 	
 
 	// sanity. this was happening from iframe download
@@ -1563,8 +1573,10 @@ void gotHttpReply2 ( void *state ,
 			     savedErr , r );
 
 	// note it
-	if ( r->m_useTestCache && g_conf.m_logDebugSpider )
-		logf(LOG_DEBUG,"spider: got reply for %s firstIp=%s uh48=%"UINT64"",
+	if ( r->m_useTestCache && 
+	     ( g_conf.m_logDebugSpider || g_conf.m_logDebugMsg13 ) )
+		logf(LOG_DEBUG,"spider: got reply for %s "
+		     "firstIp=%s uh48=%"UINT64"",
 		     r->ptr_url,iptoa(r->m_firstIp),r->m_urlHash48);
 
 	int32_t niceness = r->m_niceness;
@@ -1791,8 +1803,13 @@ void gotHttpReply2 ( void *state ,
 		// . returns false if blocks
 		// . returns true if did not block, sets g_errno on error
 		// . if it blocked it will recall THIS function
-		if ( ! getIframeExpandedContent ( r , ts ) )
+		if ( ! getIframeExpandedContent ( r , ts ) ) {
+			if ( g_conf.m_logDebugMsg13 ||
+			     g_conf.m_logDebugSpider )
+				log("msg13: iframe expansion blocked %s",
+				    r->ptr_url);
 			return;
+		}
 		// ok, did we have an error?
 		if ( g_errno )
 			log("scproxy: xml set for %s had error: %s",
@@ -1946,6 +1963,7 @@ void gotHttpReply2 ( void *state ,
 		char *compressedBuf = (char*)mmalloc(need, "Msg13Zip");
 		if ( ! compressedBuf ) {
 			g_errno = ENOMEM;
+			log("msg13: compression failed1 %s",r->ptr_url);
 			g_udpServer.sendErrorReply(slot,g_errno);
 			return;
 		}
@@ -1966,6 +1984,7 @@ void gotHttpReply2 ( void *state ,
 			    zError(zipErr),(int32_t)zipErr,r->ptr_url);
 			mfree (compressedBuf, need, "Msg13ZipError");
 			g_errno = ECORRUPTDATA;
+			log("msg13: compression failed2 %s",r->ptr_url);
 			g_udpServer.sendErrorReply(slot,g_errno);
 			return;
 		}
@@ -2083,7 +2102,8 @@ void gotHttpReply2 ( void *state ,
 		s_rt.removeSlot ( tableSlot );
 		// send back error?  maybe...
 		if ( err ) {
-			if ( g_conf.m_logDebugSpider )
+			if ( g_conf.m_logDebugSpider ||
+			     g_conf.m_logDebugMsg13 )
 				log("proxy: msg13: sending back error: %s "
 				    "for url %s with ip %s",
 				    mstrerror(err),
@@ -2092,6 +2112,9 @@ void gotHttpReply2 ( void *state ,
 			g_udpServer.sendErrorReply ( slot , err );
 			continue;
 		}
+		// for debug for now
+		if ( g_conf.m_logDebugSpider || g_conf.m_logDebugMsg13 )
+			log("msg13: sending reply for %s",r->ptr_url);
 		// send reply
 		us->sendReply_ass ( copy,replySize,copy,copyAllocSize, slot );
 		// now final udp slot will free the reply, so tcp server
@@ -2112,6 +2135,9 @@ void gotHttpReply2 ( void *state ,
 	// we free it - if it was never sent over a udp slot
 	if ( savedErr && compressed ) 
 		mfree ( reply , replyAllocSize , "msg13ubuf" );
+
+	if ( g_conf.m_logDebugSpider || g_conf.m_logDebugMsg13 )
+		log("msg13: handled reply ok %s",r->ptr_url);
 }
 
 

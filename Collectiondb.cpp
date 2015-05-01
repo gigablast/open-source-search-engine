@@ -1942,7 +1942,9 @@ bool CollectionRec::load ( char *coll , int32_t i ) {
 	sb.reset();
 	sb.safePrintf("%scoll.%s.%"INT32"/",
 		      g_hostdb.m_dir , m_coll , (int32_t)m_collnum );
+	m_twitchyTable.m_allocName = "twittbl";
 	m_twitchyTable.load ( sb.getBufStart() , "ipstouseproxiesfor.dat" );
+
 
 	
 
