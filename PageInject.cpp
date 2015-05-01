@@ -640,7 +640,7 @@ bool Msg7::inject ( void *state ,
 		log("inject: %s",mstrerror(g_errno));
 	}
 
-	if ( m_firstTime && m_isWarc ) {
+	if ( m_firstTime && ( m_isWarc || m_isArc ) ) {
 		// skip over the first http mime header, it is not
 		// part of the warc file per se.
 		content = strstr(content,"\r\n\r\n");
@@ -667,6 +667,7 @@ bool Msg7::inject ( void *state ,
 
 	char *delim = gr->m_contentDelim;
 	if ( delim && ! delim[0] ) delim = NULL;
+
 	// delim is sill for warc/arcs so ignore it
 	if ( m_isWarc || m_isArc ) delim = NULL;
 
@@ -860,6 +861,132 @@ bool Msg7::inject ( void *state ,
 	}
 
 
+	// ARC files have a url on one line and the length on the next line
+	if ( m_isArc ) {
+		// no setting delim for this!
+		if ( delim ) { char *xx=NULL;*xx=0; }
+		// should have the url as well
+		char *arcHeader = strstr(start,"\nhttp");
+		//char *mmend = NULL;
+		//if ( mm ) mmend = strstr (mm,"\n");
+		if ( ! arcHeader ) {  // || ! mmend ) {
+			log("inject: arc: all done");
+			m_isDoneInjecting = true;
+			return true;
+		}
+		// find end of url
+		char *arcHeaderEnd = strstr (arcHeader+1,"\n");
+		if ( ! arcHeaderEnd ) {
+			log("inject: arc: no header end. all done");
+			m_isDoneInjecting = true;
+			return true;
+		}
+		// term it
+		*arcHeaderEnd = '\0';
+		char *arcContent = arcHeaderEnd + 1;
+
+		// parse arc header line
+		char *arcUrl = arcHeader + 1;
+		char *hp = arcUrl;
+		for ( ; *hp && *hp != ' ' ; hp++ );
+		if ( ! *hp ) {
+			log("inject: bad arc header 1.");
+			m_isDoneInjecting = true;
+			return true;
+		}
+		*hp++ = '\0';
+		m_injectUrlBuf.reset();
+		m_injectUrlBuf.safeStrcpy(arcUrl);
+		m_injectUrlBuf.nullTerm();
+
+
+		char *ipStr = hp;
+		for ( ; *hp && *hp != ' ' ; hp++ );
+		if ( ! *hp ) {
+			log("inject: bad arc header 2.");
+			m_isDoneInjecting = true;
+			return true;
+		}
+		*hp++ = '\0';
+		gr->m_injectDocIp = atoip(ipStr);
+
+		char *timeStr = hp;
+
+		for ( ; *hp && *hp != ' ' ; hp++ );
+		if ( ! *hp ) {
+			log("inject: bad arc header 3.");
+			m_isDoneInjecting = true;
+			return true;
+		}
+		*hp++ = '\0'; // null term timeStr
+		char *arcConType = hp;
+
+		for ( ; *hp && *hp != ' ' ; hp++ );
+		if ( ! *hp ) {
+			log("inject: bad arc header 4.");
+			m_isDoneInjecting = true;
+			return true;
+		}
+		*hp++ = '\0'; // null term arcContentType
+
+		char *arcContentLenStr = hp;
+
+		// get arc content len
+		int64_t arcContentLen = atoll(arcContentLenStr);
+		char *arcContentEnd = arcContent + arcContentLen;
+		//uint64_t recSize = (arcContentEnd - realStart); 
+
+		// convert to timestamp
+		int64_t arcTime = 0;
+		// this time structure, once filled, will help yield a time_t
+		struct tm t;
+		// DAY OF MONTH
+		t.tm_mday = atol2 ( timeStr + 6 , 2 );
+		// MONTH
+		t.tm_mon = atol2 ( timeStr + 4  , 2 );
+		// YEAR
+		// # of years since 1900
+		t.tm_year = atol2 ( timeStr     , 4 ) - 1900 ; 
+		// TIME
+		t.tm_hour = atol2 ( timeStr +  8 , 2 );
+		t.tm_min  = atol2 ( timeStr + 10 , 2 );
+		t.tm_sec  = atol2 ( timeStr + 12 , 2 );
+		// unknown if we're in  daylight savings time
+		t.tm_isdst = -1;
+		// translate using mktime
+		arcTime = timegm ( &t );
+
+		gr->m_firstIndexed = arcTime;
+		gr->m_lastSpidered = arcTime;
+
+
+		start = arcContent;
+
+		// assume "start" has the http mime
+		gr->m_hasMime = true;
+
+		// advance to next rec BEFORE we return true below
+		m_start = arcContentEnd;
+		advanced = true;
+
+		// arcConType needs to indexable
+		int32_t ct = getContentTypeFromStr ( arcConType );
+		if ( ct != CT_HTML &&
+		     ct != CT_TEXT &&
+		     ct != CT_XML &&
+		     ct != CT_JSON ) {
+			// read another arc record
+			return true;
+		}
+
+		// skip if robots.txt
+		if ( isRobotsTxtFile(m_injectUrlBuf.getBufStart(),
+				     m_injectUrlBuf.getLength() ) )
+			return true;
+
+	}
+
+
 	// for injecting "start" set this to \0
 	if ( advanced ) { // m_start ) {
 		// save it
@@ -936,6 +1063,9 @@ bool Msg7::inject ( void *state ,
 			       gr->m_charset,
 
 			       gr->m_deleteUrl,
+			       // warcs/arcs include the mime so we don't
+			       // look at this in that case in 
+			       // XmlDoc::injectDoc() when it calls set4()
 			       gr->m_contentTypeStr, // text/html text/xml
 			       gr->m_spiderLinks ,
 			       gr->m_newOnly, // index iff new
