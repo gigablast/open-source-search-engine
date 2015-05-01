@@ -16504,6 +16504,22 @@ void Parms::init ( ) {
 	m++;
 
 
+
+	m->m_title = "automatically back off";
+	m->m_desc  = "Set the crawl delay to 5 seconds if gb detects "
+		"that an IP is throttling or banning gigabot from crawling "
+		"it. Such throttling will be logged.";
+	m->m_cgi   = "autobackoff";
+	m->m_xml   = "automaticallyBackOff";
+	m->m_off   = (char *)&cr.m_automaticallyBackOff - x;
+	m->m_type  = TYPE_BOOL;
+	m->m_def   = "1";
+	m->m_group = 0;
+	m->m_page  = PAGE_SPIDER;
+	m->m_obj   = OBJ_COLL;
+	m->m_flags = PF_CLONE;
+	m++;
+
 	/*
 	m->m_title = "add url enabled";
 	m->m_desc  = "If this is enabled others can add "

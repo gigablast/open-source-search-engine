@@ -753,7 +753,7 @@ void downloadTheDocForReals ( Msg13Request *r ) {
 // we tried seemed to be ip-banned
 void downloadTheDocForReals2 ( Msg13Request *r ) {
 
-	bool useProxies = true;
+	bool useProxies = false;
 
 	// user can turn off proxy use with this switch
 	//if ( ! g_conf.m_useProxyIps ) useProxies = false;
@@ -3001,6 +3001,7 @@ bool addToHammerQueue ( Msg13Request *r ) {
 	if ( cr && 
 	     r->m_urlIp !=  0 &&
 	     r->m_urlIp != -1 &&
+	     cr->m_automaticallyBackOff &&
 	     // and it is in the twitchy table
 	     isIpInTwitchyTable ( cr , r->m_urlIp ) ) {
 		// and no proxies are available to use

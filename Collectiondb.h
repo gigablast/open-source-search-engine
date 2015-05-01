@@ -516,6 +516,7 @@ class CollectionRec {
 	char  m_useRobotsTxt            ;
 	char  m_forceUseFloaters        ;
 	char  m_automaticallyUseProxies ;
+	char  m_automaticallyBackOff    ;
 	//char  m_restrictDomain          ; // say on same domain as seeds?
 	char  m_doTuringTest            ; // for addurl
 	char  m_applyFilterToText       ; // speeds us up
