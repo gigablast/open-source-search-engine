@@ -145,6 +145,7 @@ class GigablastRequest {
 	// older ones
 	uint32_t m_firstIndexed; // firstimdexed
 	uint32_t m_lastSpidered; // lastspidered;
+	SafeBuf  m_contentBuf; // for holding a warc/arc file
 
 
 

@@ -522,15 +522,21 @@ void handleRequest7 ( UdpSlot *slot , int32_t netnice ) {
 	sendReply ( slot );
 }
 
-void gotWarcContentWrapper ( void *state ) {
+void gotWarcContentWrapper ( void *state , TcpSocket *ts ) {
 	Msg7 *THIS = (Msg7 *)state;
 	// set content to that
 	GigablastRequest *gr = &THIS->m_gr;
-	gr->m_contentBuf.stealBuf (ts->m_readBuf, ts->m_readBufSize );
-	ts->m_readBuf = NULL;
+	gr->m_contentBuf.setBuf (ts->m_readBuf, 
+				 ts->m_readBufSize ,
+				 ts->m_readOffset ,
+				 true , // ownBuf?
+				 0 ); // encoding
+	// just ref it
 	gr->m_content = ts->m_readBuf;
+	// so tcpserver.cpp doesn't free the ward/arc file
+	ts->m_readBuf = NULL;
 	// continue with injection
-	inject ( THIS->m_state , THIS->m_callback );
+	THIS->inject ( THIS->m_state , THIS->m_callback );
 }
 
 // . returns false if blocked and callback will be called, true otherwise
@@ -583,19 +589,48 @@ bool Msg7::inject ( void *state ,
 		// get the normalized url
 		u.set ( gr->m_url );
 
-	if ( u.isWarc() )
+	char    *ustr = u.getUrl();
+	int32_t  ulen = u.getUrlLen();
+	char    *uend = ustr + ulen;
+
+	m_isWarc = false;
+	m_isArc  = false;
+
+	if ( ulen>8 && strncmp(uend-8,".warc.gz",8)==0 )
 		m_isWarc = true;
-	if ( u.isArc () )
-		m_isArc  = true;
+	if ( ulen>8 && strncmp(uend-5,".warc"   ,5)==0 )
+		m_isWarc = true;
+
+	if ( ulen>8 && strncmp(uend-7,".arc.gz",7)==0 )
+		m_isArc = true;
+	if ( ulen>8 && strncmp(uend-4,".arc"   ,4)==0 )
+		m_isArc = true;
 
 	// if warc/arc download it and make gr->m_content reference it...
 	// we won't handle redirects though.
 	if ( ! content && ( m_isWarc || m_isArc) ) {
 		// download the warc/arc url
-		if ( ! g_httpServer.getDoc ( &u ,
-					     this ,
-					     gotWarcContentWrapper ) )
-			// we blocked
+		if ( ! g_httpServer.getDoc ( ustr ,
+					     0 , // urlip
+					     0                    , // offset
+					     -1                   ,
+					     0,//r->m_ifModifiedSince ,
+					     this                 , // state
+					     gotWarcContentWrapper ,// callback
+					     30*1000   , // 30 sec timeout
+					     0 , // r->m_proxyIp     ,
+					     0 , // r->m_proxyPort   ,
+					     -1,//r->m_maxTextDocLen   ,
+					     -1,//r->m_maxOtherDocLen  ,
+					     NULL,//agent                ,
+					     DEFAULT_HTTP_PROTO , // "HTTP/1.0"
+					     false , // doPost?
+					     NULL , // cookie
+					     NULL , // additionalHeader
+					     NULL , // our own mime!
+					     NULL , // postContent
+					     NULL))//proxyUsernamePwdAuth ) )
+			// return false if blocked
 			return false;
 		// error?
 		log("inject: %s",mstrerror(g_errno));
@@ -640,7 +675,7 @@ bool Msg7::inject ( void *state ,
 	// contains a mime, as a mime a level above that whose 
 	// content-length: field includes the original http reply mime
 	// as part of its content.
-	if ( u.isWarc() ) { // gr->m_containerContentType == CT_WARC ) {
+	if ( m_isWarc ) { // gr->m_containerContentType == CT_WARC ) {
 		// no setting delim for this!
 		if ( delim ) { char *xx=NULL;*xx=0; }
 		// should have the url as well
@@ -650,7 +685,7 @@ bool Msg7::inject ( void *state ,
 		if ( ! mm || ! mmend ) {
 			log("inject: warc: all done");
 			// XmlDoc.cpp checks for this to stop calling us
-			m_isDoneInjecting = true;
+			//m_isDoneInjecting = true;
 			return true;
 		}
 		char c = *mmend;
