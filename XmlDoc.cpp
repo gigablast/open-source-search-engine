@@ -2391,8 +2391,8 @@ bool XmlDoc::indexDoc ( ) {
 		    "error reply.",
 		    m_firstUrl.m_url,mstrerror(g_errno));
 	else if ( g_errno )
-		log("build: docid=%"INT64" had internal error = %s. adding spider "
-		    "error reply.",
+		log("build: docid=%"INT64" had internal error = %s. "
+		    "adding spider error reply.",
 		    m_docId,mstrerror(g_errno));
 
 	// seems like this was causing a core somehow...
@@ -2415,6 +2415,16 @@ bool XmlDoc::indexDoc ( ) {
 		m_indexCodeValid = true;
 	}
 
+	// this should not be retired either. i am seeing it excessively 
+	// retried from a 
+	// "TitleRec::set: uncompress uncompressed size=-2119348471"
+	// error condition. it also said
+	// "Error spidering for doc http://www.... : Bad cached document"
+	if ( g_errno == EBADTITLEREC ) {
+		m_indexCode = g_errno;
+		m_indexCodeValid = true;
+	}
+
 	// i've seen Multicast got error in reply from hostId 19 (msgType=0x22
 	// transId=496026 nice=1 net=default): Buf too small.
 	// so fix that with this
@@ -2433,7 +2443,7 @@ bool XmlDoc::indexDoc ( ) {
 		m_indexCodeValid = true;
 	}
 
-
+	// default to internal error which will be retried forever otherwise
 	if ( ! m_indexCodeValid ) {
 		m_indexCode = EINTERNALERROR;//g_errno;
 		m_indexCodeValid = true;
