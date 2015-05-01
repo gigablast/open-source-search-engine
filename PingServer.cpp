@@ -3074,8 +3074,17 @@ bool gotMxIp ( EmailInfo *ei ) {
 
 
 static void gotMandrillReplyWrapper ( void *state , TcpSocket *s ) {
-	// log the mandril reply
-	log("email: got mandrill reply: %s",s->m_readBuf);
+	// why core here with s NULL
+	if ( ! s ) {
+		// crap seems like we do not retry so they will not get
+		// the notification... how to fix better?
+		log("email: failed to lookup mandrill ip. sock is null.");
+		g_errno = EBADIP;
+	}
+	else {
+		// log the mandril reply
+		log("email: got mandrill reply: %s",s->m_readBuf);
+	}
 	EmailInfo *ei = (EmailInfo *)state;
 	if ( ei->m_callback ) ei->m_callback ( ei->m_state );
 }

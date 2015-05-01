@@ -600,6 +600,7 @@ class XmlDoc {
 	class Url *getFirstUrl() ;
 	int64_t getFirstUrlHash48();
 	int64_t getFirstUrlHash64();
+	class Url **getLastRedirUrl() ;
 	class Url **getRedirUrl() ;
 	class Url **getMetaRedirUrl() ;
 	class Url **getCanonicalRedirUrl ( ) ;
@@ -1011,6 +1012,7 @@ class XmlDoc {
 
 	Url        m_redirUrl;
 	Url       *m_redirUrlPtr;
+	Url       *m_lastRedirUrlPtr;
 	SafeBuf    m_redirCookieBuf;
 	Url        m_metaRedirUrl;
 	Url       *m_metaRedirUrlPtr;

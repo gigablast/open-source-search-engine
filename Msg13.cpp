@@ -504,6 +504,21 @@ bool Msg13::gotFinalReply ( char *reply, int32_t replySize, int32_t replyAllocSi
 	return true;
 }
 
+bool isIpInTwitchyTable ( CollectionRec *cr , int32_t ip ) {
+	if ( ! cr ) return false;
+	HashTableX *ht = &cr->m_twitchyTable;
+	if ( ht->m_numSlots == 0 ) return false;
+	return ( ht->getSlot ( &ip ) >= 0 );
+}
+
+bool addIpToTwitchyTable ( CollectionRec *cr , int32_t ip ) {
+	if ( ! cr ) return true;
+	HashTableX *ht = &cr->m_twitchyTable;
+	if ( ht->m_numSlots == 0 )
+		ht->set ( 4,0,16,NULL,0,false,MAX_NICENESS,"twitchtbl",true);
+	return ht->addKey ( &ip );
+}
+
 RdbCache s_hammerCache;
 static bool s_flag = false;
 Msg13Request *s_hammerQueueHead = NULL;
@@ -699,6 +714,11 @@ void handleRequest13 ( UdpSlot *slot , int32_t niceness  ) {
 	// do not get .google.com/ crap
 	//if ( strstr(r->ptr_url,".google.com/") ) { char *xx=NULL;*xx=0; }
 
+	CollectionRec *cr = g_collectiondb.getRec ( r->m_collnum );
+
+	// was it in our table of ips that are throttling us?
+	r->m_wasInTableBeforeStarting = isIpInTwitchyTable ( cr , r->m_urlIp );
+
 	downloadTheDocForReals ( r );
 }
 
@@ -722,7 +742,7 @@ void downloadTheDocForReals ( Msg13Request *r ) {
 
 	// this means our callback will be called
 	if ( ! firstInLine ) {
-		//log("spider: inlining %s",r->ptr_url);
+		log("spider: waiting in line %s",r->ptr_url);
 		return;
 	}
 
@@ -733,18 +753,25 @@ void downloadTheDocForReals ( Msg13Request *r ) {
 // we tried seemed to be ip-banned
 void downloadTheDocForReals2 ( Msg13Request *r ) {
 
-	bool useProxies = true;
+	bool useProxies = false;
 
 	// user can turn off proxy use with this switch
-	if ( ! g_conf.m_useProxyIps ) useProxies = false;
+	//if ( ! g_conf.m_useProxyIps ) useProxies = false;
 
 	// for diffbot turn ON if use robots is off
 	if ( r->m_forceUseFloaters ) useProxies = true;
 
+	CollectionRec *cr = g_collectiondb.getRec ( r->m_collnum );
+
 	// if you turned on automatically use proxies in spider controls...
 	if ( ! useProxies && 
-	     cr->m_automaticallyUseProxies &&  
-	     isIpInTwitchyList( cr, r->m_ip ) )
+	     cr &&
+	     r->m_urlIp != 0 &&
+	     r->m_urlIp != -1 &&
+	     // either the global or local setting will work
+	     //( g_conf.m_automaticallyUseProxyIps || 
+	     cr->m_automaticallyUseProxies &&
+	     isIpInTwitchyTable( cr, r->m_urlIp ) )
 		useProxies = true;
 
 	// we gotta have some proxy ips that we can use
@@ -1125,6 +1152,28 @@ void doneReportingStatsWrapper ( void *state, UdpSlot *slot ) {
 
 bool ipWasBanned ( TcpSocket *ts , const char **msg ) {
 
+	// ts will be null if we got a fake reply from a bulk job
+	if ( ! ts )
+		return false;
+
+	// g_errno is 104 for 'connection reset by peer'
+	if ( g_errno == ECONNRESET ) {
+		*msg = "connection reset";
+		return true;
+	}
+
+	// proxy returns empty reply not ECONNRESET if it experiences 
+	// a conn reset
+	if ( g_errno == EBADMIME && ts->m_readOffset == 0 ) {
+		*msg = "empty reply";
+		return true;
+	}
+
+	// on other errors do not do the ban check. it might be a
+	// tcp time out or something so we have no reply. but connection resets
+	// are a popular way of saying, hey, don't hit me so hard.
+	if ( g_errno ) return false;
+
 	// if they closed the socket on us we read 0 bytes, assumed
 	// we were banned...
 	if ( ts->m_readOffset == 0 ) {
@@ -1175,9 +1224,10 @@ void gotHttpReply9 ( void *state , TcpSocket *ts ) {
 	// if we got a 403 Forbidden or an empty reply
 	// then assume the proxy ip got banned so try another.
 	const char *banMsg = NULL;
-	bool banned = false;
-	if ( ! g_errno ) 
-		banned = ipWasBanned ( ts , &banMsg );
+	//bool banned = false;
+
+	//if ( ! g_errno ) 
+	bool banned = ipWasBanned ( ts , &banMsg );
 
 	if ( g_errno )
 		log("msg13: got error from proxy: %s",mstrerror(g_errno));
@@ -1191,13 +1241,15 @@ void gotHttpReply9 ( void *state , TcpSocket *ts ) {
 		if ( r->m_hasMoreProxiesToTry )  msg = "Trying another proxy.";
 		char tmpIp[64];
 		sprintf(tmpIp,"%s",iptoa(r->m_urlIp));
-		log("msg13: detected that proxy %s is banned (tries=%"INT32") by "
-		    "url %s %s [%s]. %s"
+		log("msg13: detected that proxy %s is banned "
+		    "(banmsg=%s) "
+		    "(tries=%"INT32") by "
+		    "url %s %s. %s"
 		    , iptoa(r->m_proxyIp) // r->m_banProxyIp
+		    , banMsg
 		    , r->m_proxyTries
 		    , tmpIp
 		    , r->ptr_url 
-		    , banMsg
 		    , msg );
 	}
 
@@ -1401,41 +1453,65 @@ void gotHttpReply2 ( void *state ,
 	Msg13Request *r    = (Msg13Request *) state;
 	UdpSlot      *slot = r->m_udpSlot;
 
+	CollectionRec *cr = g_collectiondb.getRec ( r->m_collnum );
+
+	// ' connection reset' debug stuff
+	// log("spider: httpreplysize=%i",(int)replySize);
+	// if ( replySize == 0 )
+	// 	log("hey");
+
 	// error?
 	if ( g_errno && g_conf.m_logDebugSpider )
 		log("spider: http reply (msg13) had error = %s "
 		    "for %s at ip %s",
 		    mstrerror(g_errno),r->ptr_url,iptoa(r->m_urlIp));
 
-	bool banned = false;
-	char *banMsg = NULL;
-	if ( ! g_errno && 
-	     // if we should use them automatically
-	     // now even if we don't do auto proxies, at least back off if
-	     // an ip is in the list. do a crawl delay.
-	     //cr->m_useProxiesAutomatically &&
-	     // we gotta have some proxies in the list
-	     //g_conf.m_proxyIps.hasDigits() &&
-	     // check if our ip seems banned
-	     ipWasBanned ( ts , &banMsg ) ) {
+	bool inTable = false;
+	// must have a collrec to hold the ips
+	if ( cr && r->m_urlIp != 0 && r->m_urlIp != -1 )
+		inTable = isIpInTwitchyTable ( cr , r->m_urlIp );
+
+	// check if our ip seems banned
+	const char *banMsg = NULL;
+	bool banned = ipWasBanned ( ts , &banMsg );
+	if (  banned )
 		// should we turn proxies on for this IP address only?
 		log("msg13: url %s detected as banned (%s), "
-		    "automatically using proxies for ip %s"
-		    , r->m_url
+		    "for ip %s"
+		    , r->ptr_url
 		    , banMsg
-		    , iptoa(ts->m_ip) 
+		    , iptoa(r->m_urlIp) 
 		    );
-		// . store in our table of ips we should use proxies for
-		// . also start off with a crawldelay of like 1 sec for this
-		//   which is not normal for using proxies.
-		addIpToTwitchyList ( cr , ts->m_ip );
-		/// and retry. it should use the proxy
+
+	// . add to the table if not in there yet
+	// . store in our table of ips we should use proxies for
+	// . also start off with a crawldelay of like 1 sec for this
+	//   which is not normal for using proxies.
+	if ( banned && ! inTable )
+		addIpToTwitchyTable ( cr , r->m_urlIp );
+
+	// did we detect it as banned?
+	if ( banned && 
+	     // retry iff we haven't already, but if we did stop the inf loop
+	     ! r->m_wasInTableBeforeStarting && 
+	     // but this is not for proxies... only native crawlbot backoff
+	     ! r->m_proxyIp ) {
+		// note this as well
+		log("msg13: retrying spider with new crawldelay for %s",
+		    r->ptr_url);
+		// reset this so we don't endless loop it
+		r->m_wasInTableBeforeStarting = true;
+		/// and retry. it should use the proxy... or at least
+		// use a crawldelay of 3 seconds since we added it to the
+		// twitchy table.
 		downloadTheDocForReals2 ( r );
 		// that's it. if it had an error it will send back a reply.
 		return;
 	}
 
-
+	if ( banned && r->m_wasInTableBeforeStarting )
+		log("msg13: can not retry banned download of %s "
+		    "because we knew ip was banned at start",r->ptr_url);
 
 	// get time now
 	int64_t nowms = gettimeofdayInMilliseconds();
@@ -1886,8 +1962,8 @@ void gotHttpReply2 ( void *state ,
 					 replySize);
 		if(zipErr != Z_OK) {
 			log("spider: had error zipping Msg13 reply. %s "
-			    "(%"INT32")",
-			    zError(zipErr),(int32_t)zipErr);
+			    "(%"INT32") url=%s",
+			    zError(zipErr),(int32_t)zipErr,r->ptr_url);
 			mfree (compressedBuf, need, "Msg13ZipError");
 			g_errno = ECORRUPTDATA;
 			g_udpServer.sendErrorReply(slot,g_errno);
@@ -2885,6 +2961,10 @@ void gotIframeExpandedContent ( void *state ) {
 
 #define DELAYPERBAN 500
 
+// how many milliseconds should spiders use for a crawldelay if
+// ban was detected and no proxies are being used.
+#define AUTOCRAWLDELAY 5000
+
 // returns true if we queue the request to download later
 bool addToHammerQueue ( Msg13Request *r ) {
 
@@ -2905,17 +2985,36 @@ bool addToHammerQueue ( Msg13Request *r ) {
 
 	int32_t crawlDelayMS = r->m_crawlDelayMS;
 
+	CollectionRec *cr = g_collectiondb.getRec ( r->m_collnum );
+
+	bool canUseProxies = false;
+	if ( cr->m_automaticallyUseProxies ) canUseProxies = true;
+	if ( r->m_forceUseFloaters         ) canUseProxies = true;
+	//if ( g_conf.m_useProxyIps          ) canUseProxies = true;
+	//if ( g_conf.m_automaticallyUseProxyIps ) canUseProxies = true;
+
+	// if no proxies listed, then it is pointless
+	if ( ! g_conf.m_proxyIps.hasDigits() ) canUseProxies = false;
+
 	// if not using proxies, but the ip is banning us, then at least 
 	// backoff a bit
-	if ( isIpInTwitchyList ( cr , r->m_ip ) )
-		// 1 second = 1000 milliseconds
-		if ( crawlDelayMS < 1000 ) crawlDelayMS = 1000;
+	if ( cr && 
+	     r->m_urlIp !=  0 &&
+	     r->m_urlIp != -1 &&
+	     cr->m_automaticallyBackOff &&
+	     // and it is in the twitchy table
+	     isIpInTwitchyTable ( cr , r->m_urlIp ) ) {
+		// and no proxies are available to use
+		//! canUseProxies ) {
+		// then just back off with a crawldelay of 3 seconds
+		if ( ! canUseProxies && crawlDelayMS < AUTOCRAWLDELAY )
+			crawlDelayMS = AUTOCRAWLDELAY;
+		// mark this so we do not retry pointlessly
+		r->m_wasInTableBeforeStarting = true;
+		// and obey crawl delay
+		r->m_skipHammerCheck = false;
+	}
 
-
-	if ( g_conf.m_logDebugSpider )
-		log(LOG_DEBUG,"spider: got timestamp of %"INT64" from "
-		    "hammercache (waited=%"INT64") for %s",last,waited,
-		    iptoa(r->m_firstIp));
 
 	// . if we got a proxybackoff base it on # of banned proxies for urlIp
 	// . try to be more sensitive for more sensitive website policies
@@ -2928,6 +3027,18 @@ bool addToHammerQueue ( Msg13Request *r ) {
 		if ( crawlDelayMS > MAX_PROXYCRAWLDELAYMS )
 			crawlDelayMS = MAX_PROXYCRAWLDELAYMS;
 	}
+
+	// set the crawldelay we actually used when downloading this
+	//r->m_usedCrawlDelay = crawlDelayMS;
+
+	if ( g_conf.m_logDebugSpider )
+		log(LOG_DEBUG,"spider: got timestamp of %"INT64" from "
+		    "hammercache (waited=%"INT64" crawlDelayMS=%"INT32") "
+		    "for %s"
+		    ,last
+		    ,waited
+		    ,crawlDelayMS
+		    ,iptoa(r->m_firstIp));
 
 	bool queueIt = false;
 	if ( last > 0 && waited < crawlDelayMS ) queueIt = true;
@@ -2946,11 +3057,15 @@ bool addToHammerQueue ( Msg13Request *r ) {
 	if ( queueIt ) {
 		// debug
 		log(LOG_INFO,
-		    "spider: adding %s to crawldelayqueue cd=%"INT32"ms",
-		    r->ptr_url,crawlDelayMS);
+		    "spider: adding %s to crawldelayqueue cd=%"INT32"ms "
+		    "ip=%s",
+		    r->ptr_url,crawlDelayMS,iptoa(r->m_urlIp));
 		// save this
 		//r->m_udpSlot = slot; // this is already saved!
 		r->m_nextLink = NULL;
+		// we gotta update the crawldelay here in case we modified
+		// it in the above logic.
+		r->m_crawlDelayMS = crawlDelayMS;
 		// add it to queue
 		if ( ! s_hammerQueueHead ) {
 			s_hammerQueueHead = r;
@@ -2963,7 +3078,6 @@ bool addToHammerQueue ( Msg13Request *r ) {
 		return true;
 	}
 			
-
 	// if we had it in cache check the wait time
 	if ( last > 0 && waited < crawlDelayMS ) {
 		log("spider: hammering firstIp=%s url=%s "

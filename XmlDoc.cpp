@@ -187,7 +187,12 @@ XmlDoc::~XmlDoc() {
 
 static int64_t s_lastTimeStart = 0LL;
 
+// for debugging
+class XmlDoc *g_xd;
+
 void XmlDoc::reset ( ) {
+
+	m_redirUrl.reset();
 
 	m_ipStartTime = 0;
 	m_ipEndTime   = 0;
@@ -10040,6 +10045,18 @@ bool isRobotsTxtFile ( char *u , int32_t ulen ) {
 	return false;
 }
 
+Url **XmlDoc::getLastRedirUrl() {
+
+	Url **ru = getRedirUrl();
+	if ( ! ru || ru == (void *)-1 ) return ru;
+
+	// m_redirUrlPtr will be NULL in all cases, however, the
+	// last redir url we actually got will be set in
+	// m_redirUrl.m_url so return that.
+	m_lastRedirUrlPtr = &m_redirUrl;
+	return &m_lastRedirUrlPtr;
+}
+
 // . operates on the latest m_httpReply
 Url **XmlDoc::getRedirUrl() {
 	if ( m_redirUrlValid ) return &m_redirUrlPtr;
@@ -15932,6 +15949,9 @@ char **XmlDoc::getHttpReply2 ( ) {
 
 	// turn this off too
 	r->m_attemptedIframeExpansion = false;
+
+	r->m_collnum = (collnum_t)-1;
+	if ( m_collnumValid )r->m_collnum = m_collnum;
 
 	// turn off
 	r->m_useCompressionProxy = false;
@@ -25512,7 +25532,9 @@ char *XmlDoc::addOutlinkSpiderRecsToMetaList ( ) {
 	     //isInSeedBuf(cr,m_firstUrl.getUrl(),m_firstUrl.getUrlLen() ) &&
 	     m_hopCount == 0 &&
 	     m_redirUrlValid &&
-	     m_redirUrlPtr &&
+	     ptr_redirUrl &&
+	     //m_redirUrlPtr && (this gets reset to NULL as being LAST redir)
+	     // this is the last non-empty redir here:
 	     m_redirUrl.getUrlLen() > 0 ) {
 		log("build: seed REDIR: %s",m_redirUrl.getUrl());
 		redirDomHash32  = m_redirUrl.getDomainHash32();
@@ -27547,11 +27569,12 @@ SafeBuf *XmlDoc::getSpiderStatusDocMetaList2 ( SpiderReply *reply ) {
 			      ":%.01f,\n",
 			      m_percentChanged);
 
-	jd.safePrintf("\"gbssSpiderPriority\":%"INT32",\n", 
-		      *priority);
+	if ( ! m_isDiffbotJSONObject )
+		jd.safePrintf("\"gbssSpiderPriority\":%"INT32",\n", 
+			      *priority);
 
 	// this could be -1, careful
-	if ( *ufn >= 0 )
+	if ( *ufn >= 0 && ! m_isDiffbotJSONObject )
 		jd.safePrintf("\"gbssMatchingUrlFilter\":\"%s\",\n", 
 			      cr->m_regExs[*ufn].getBufStart());
 
@@ -27570,31 +27593,36 @@ SafeBuf *XmlDoc::getSpiderStatusDocMetaList2 ( SpiderReply *reply ) {
 
 	// do not show the -1 any more, just leave it out then
 	// to make things look prettier
-	if (  m_crawlDelayValid && m_crawlDelay >= 0 )
+	if (  m_crawlDelayValid && m_crawlDelay >= 0 &&
+	      ! m_isDiffbotJSONObject )
 		// -1 if none?
 		jd.safePrintf("\"gbssCrawlDelayMS\":%"INT32",\n",
 			      (int32_t)m_crawlDelay);
 		
 	// was this url ever sent to diffbot either now or at a previous
 	// spider time?
-	jd.safePrintf("\"gbssSentToDiffbotAtSomeTime\":%i,\n",
-		      (int)m_sentToDiffbot);
+	if ( ! m_isDiffbotJSONObject ) {
+		jd.safePrintf("\"gbssSentToDiffbotAtSomeTime\":%i,\n",
+			      (int)m_sentToDiffbot);
 
-	// sent to diffbot?
-	jd.safePrintf("\"gbssSentToDiffbotThisTime\":%i,\n",
-		      (int)m_sentToDiffbotThisTime);
+		// sent to diffbot?
+		jd.safePrintf("\"gbssSentToDiffbotThisTime\":%i,\n",
+			      (int)m_sentToDiffbotThisTime);
+	}
 
 	// page must have been downloaded for this one
 	if ( cr->m_isCustomCrawl && 
 	     m_utf8ContentValid && 
+	     ! m_isDiffbotJSONObject &&
 	     m_content &&
+	     m_contentValid &&
 	     cr->m_diffbotPageProcessPattern.getBufStart() &&
 	     cr->m_diffbotPageProcessPattern.getBufStart()[0] ) {
 		char match = doesPageContentMatchDiffbotProcessPattern();
 		jd.safePrintf("\"gbssMatchesPageProcessPattern\":%i,\n",
 			      (int)match);
 	}
-	if ( cr->m_isCustomCrawl && m_firstUrlValid ) {
+	if ( cr->m_isCustomCrawl && m_firstUrlValid && !m_isDiffbotJSONObject){
 
 		char *url = getFirstUrl()->getUrl();
 
@@ -27638,7 +27666,8 @@ SafeBuf *XmlDoc::getSpiderStatusDocMetaList2 ( SpiderReply *reply ) {
 
 
 
-	if ( m_diffbotReplyValid && m_sentToDiffbotThisTime ) {
+	if ( m_diffbotReplyValid && m_sentToDiffbotThisTime &&
+	     ! m_isDiffbotJSONObject ) {
 		jd.safePrintf("\"gbssDiffbotReplyCode\":%"INT32",\n",
 			      m_diffbotReplyError);
 		jd.safePrintf("\"gbssDiffbotReplyMsg\":\"");

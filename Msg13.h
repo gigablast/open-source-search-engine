@@ -36,6 +36,8 @@ public:
 	char  m_opCode;
 	char  m_lastHack;
 
+	collnum_t m_collnum;
+
 	// not part of the proxy request, but set from ProxyReply:
 	int32_t  m_numBannedProxies;
 	// . if using proxies, how many proxies have we tried to download 
@@ -108,6 +110,8 @@ public:
 	int32_t  m_foundInCache:1;
 	int32_t  m_forceUseFloaters:1;
 
+	int32_t  m_wasInTableBeforeStarting:1;
+
 	//int32_t  m_testParserEnabled:1;
 	//int32_t  m_testSpiderEnabled:1;
 	//int32_t  m_isPageParser:1;
@@ -153,6 +157,7 @@ public:
 		m_maxTextDocLen  = -1; // no limit
 		m_maxOtherDocLen = -1; // no limit
 		m_crawlDelayMS   = -1; // unknown or none
+		m_collnum = (collnum_t)-1;
 	};
 };
 
