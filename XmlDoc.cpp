@@ -2135,7 +2135,8 @@ bool XmlDoc::injectDoc ( char *url ,
 		m_hopCountValid = true;
 	}
 
-	if ( charset != -1 && charset != csUnknown ) {
+	// PageInject calls memset on gigablastrequest so add '!= 0' here
+	if ( charset != -1 && charset != csUnknown && charset != 0 ) {
 		m_charset = charset;
 		m_charsetValid = true;
 	}
@@ -3264,6 +3265,7 @@ bool XmlDoc::indexArc ( ) {
 
 	// assume "start" has the http mime
 	gr->m_hasMime = true;
+	gr->m_url     = arcUrl;
 
 	// arcConType needs to indexable
 	int32_t ct = getContentTypeFromStr ( arcConType );
@@ -17879,6 +17881,9 @@ char **XmlDoc::getFilteredContent ( ) {
 
 	// we now support JSON for diffbot
 	if ( *ct == CT_JSON    ) return &m_filteredContent;
+
+	if ( *ct == CT_ARC     ) return &m_filteredContent;
+	if ( *ct == CT_WARC    ) return &m_filteredContent;
 
 	// unknown content types are 0 since it is probably binary... and
 	// we do not want to parse it!!

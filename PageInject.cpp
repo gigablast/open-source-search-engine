@@ -535,8 +535,9 @@ bool Msg7::inject2 ( void *state ,
 
 	GigablastRequest *gr = &m_gr;
 
-	char *coll2 = gr->m_coll;
-	CollectionRec *cr = g_collectiondb.getRec ( coll2 );
+	// char *coll2 = gr->m_coll;
+	// CollectionRec *cr = g_collectiondb.getRec ( coll2 );
+	CollectionRec *cr = g_collectiondb.getRec ( gr->m_collnum );
 
 	if ( ! cr ) {
 		g_errno = ENOCOLLREC;
