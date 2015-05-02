@@ -349,8 +349,6 @@ void Msg7::reset() {
 	m_injectCount = 0;
 	m_start = NULL;
 	m_sbuf.reset();
-	m_isWarc = false;
-	m_isArc  = false;
 	m_isDoneInjecting = false;
 }
 
@@ -391,10 +389,6 @@ void injectLoopWrapper9 ( void *state ) {
 	if ( delim && ! delim[0] ) delim = NULL;
 	bool loopIt = false;
 	if ( delim ) loopIt = true;
-	// by default warc and arc files consist of many subdocuments
-	// that have to be indexed individually as well
-	if ( msg7->m_isWarc ) loopIt = true;
-	if ( msg7->m_isArc  ) loopIt = true;
 
 	if ( loopIt ) { // && msg7->m_start ) {
 		// do another injection. returns false if it blocks
@@ -526,22 +520,6 @@ void handleRequest7 ( UdpSlot *slot , int32_t netnice ) {
 	sendReply ( slot );
 }
 
-void gotWarcContentWrapper ( void *state , TcpSocket *ts ) {
-	Msg7 *THIS = (Msg7 *)state;
-	// set content to that
-	GigablastRequest *gr = &THIS->m_gr;
-	gr->m_contentBuf.setBuf (ts->m_readBuf, 
-				 ts->m_readBufSize ,
-				 ts->m_readOffset ,
-				 true , // ownBuf?
-				 0 ); // encoding
-	// just ref it
-	gr->m_content = ts->m_readBuf;
-	// so tcpserver.cpp doesn't free the ward/arc file
-	ts->m_readBuf = NULL;
-	// continue with injection loop
-	injectLoopWrapper9 ( THIS );
-}
 
 // . returns false if blocked and callback will be called, true otherwise
 // . sets g_errno on error
@@ -593,66 +571,6 @@ bool Msg7::inject ( void *state ,
 		// get the normalized url
 		u.set ( gr->m_url );
 
-	char    *ustr = u.getUrl();
-	int32_t  ulen = u.getUrlLen();
-	char    *uend = ustr + ulen;
-
-	m_isWarc = false;
-	m_isArc  = false;
-
-	if ( ulen>8 && strncmp(uend-8,".warc.gz",8)==0 )
-		m_isWarc = true;
-	if ( ulen>8 && strncmp(uend-5,".warc"   ,5)==0 )
-		m_isWarc = true;
-
-	if ( ulen>8 && strncmp(uend-7,".arc.gz",7)==0 )
-		m_isArc = true;
-	if ( ulen>8 && strncmp(uend-4,".arc"   ,4)==0 )
-		m_isArc = true;
-
-	// if warc/arc download it and make gr->m_content reference it...
-	// we won't handle redirects though.
-	if ( ! content && ( m_isWarc || m_isArc) ) {
-		// download the warc/arc url
-		if ( ! g_httpServer.getDoc ( ustr ,
-					     0 , // urlip
-					     0                    , // offset
-					     -1                   ,
-					     0,//r->m_ifModifiedSince ,
-					     this                 , // state
-					     gotWarcContentWrapper ,// callback
-					     30*1000   , // 30 sec timeout
-					     0 , // r->m_proxyIp     ,
-					     0 , // r->m_proxyPort   ,
-					     -1,//r->m_maxTextDocLen   ,
-					     -1,//r->m_maxOtherDocLen  ,
-					     NULL,//agent                ,
-					     DEFAULT_HTTP_PROTO , // "HTTP/1.0"
-					     false , // doPost?
-					     NULL , // cookie
-					     NULL , // additionalHeader
-					     NULL , // our own mime!
-					     NULL , // postContent
-					     NULL))//proxyUsernamePwdAuth ) )
-			// return false if blocked
-			return false;
-		// error?
-		log("inject: %s",mstrerror(g_errno));
-	}
-
-	if ( m_firstTime && ( m_isWarc || m_isArc ) ) {
-		// skip over the first http mime header, it is not
-		// part of the warc file per se.
-		content = strstr(content,"\r\n\r\n");
-		if ( ! content ) {
-			log("inject: no mime received from webserver");
-			return true;
-		}
-		// skip over that to point to start of actual warc
-		// file content
-		content += 4;
-	}
-		
 	if ( m_firstTime ) {
 		m_firstTime = false;
 		m_start = content;
@@ -667,10 +585,6 @@ bool Msg7::inject ( void *state ,
 
 	char *delim = gr->m_contentDelim;
 	if ( delim && ! delim[0] ) delim = NULL;
-
-	// delim is sill for warc/arcs so ignore it
-	if ( m_isWarc || m_isArc ) delim = NULL;
-
 
 	// if doing delimeterized injects, hitting a \0 is the end of the road
 	if ( delim && m_fixMe && ! m_saved ) {
@@ -702,290 +616,6 @@ bool Msg7::inject ( void *state ,
 			m_start = start + gbstrlen(start);
 	}
 
-	// WARC files are mime delimeted. the http reply, which 
-	// contains a mime, as a mime a level above that whose 
-	// content-length: field includes the original http reply mime
-	// as part of its content.
-	if ( m_isWarc ) { // gr->m_containerContentType == CT_WARC ) {
-		// no setting delim for this!
-		if ( delim ) { char *xx=NULL;*xx=0; }
-		// should have the url as well
-		char *mm = strstr(start,"Content-Length:");
-		char *mmend = NULL;
-		if ( mm ) mmend = strstr (mm,"\n");
-		if ( ! mm || ! mmend ) {
-			log("inject: warc: all done");
-			// XmlDoc.cpp checks for this to stop calling us
-			m_isDoneInjecting = true;
-			return true;
-		}
-		char c = *mmend;
-		*mmend = '\0';
-		int64_t recordSize = atoll ( mm + 15 );
-		*mmend = c;
-
-		// end of mime header
-		char *hend = strstr ( mm, "\r\n\r\n");
-		if ( ! hend ) {
-			log("inject: warc: could no mime header end.");
-			return true;
-		}
-
-		// tmp \0 that for these strstr() calls
-		c = *hend;
-		*hend = '\0';
-
-		char *warcUrl  = strstr(start,"WARC-Target-URI:");
-		char *warcType = strstr(start,"WARC-Type:");
-		char *warcDate = strstr(start,"WARC-Date:");
-		char *warcIp   = strstr(start,"WARC-IP-Address:");
-
-		// advance
-		if ( warcUrl  ) warcUrl  += 16;
-		if ( warcType ) warcType += 10;
-		if ( warcDate ) warcDate += 10;
-		if ( warcIp   ) warcIp   += 17;
-
-		// restore
-		*hend = c;
-
-		// skip the \r\n\r\n
-		hend += 4;
-
-		// adjust start to point to start of the content really
-		start = hend;
-
-		// and over record 
-		m_start = hend + recordSize;
-		advanced = true;
-
-		if ( ! warcType ) {
-			log("inject: warc: could not find rec type");
-			return true;
-		}
-
-		if ( is_wspace_a(*warcType) ) warcType++;
-		if ( is_wspace_a(*warcType) ) warcType++;
-
-		// WARC-Type:
-		// do not index this record as a doc if it is not a
-		// "WARC-Type: response" record.
-		if ( strncmp(warcType,"response",8) != 0 ) 
-			return true;
-
-		// skip this rec if url-less
-		if ( ! warcUrl ) {
-			log("inject: warc: could not find rec url");
-			return true;
-		}
-		if ( ! warcDate ) {
-			log("inject: warc: could not find rec date");
-			return true;
-		}
-
-		// skip spaces on all
-		if ( warcUrl  && is_wspace_a(*warcUrl ) ) warcUrl++;
-		if ( warcUrl  && is_wspace_a(*warcUrl ) ) warcUrl++;
-		if ( warcDate && is_wspace_a(*warcDate) ) warcDate++;
-		if ( warcDate && is_wspace_a(*warcDate) ) warcDate++;
-		if ( warcIp   && is_wspace_a(*warcIp  ) ) warcIp++;
-		if ( warcIp   && is_wspace_a(*warcIp  ) ) warcIp++;
-
-		// url must start with http:// or https://
-		// it's probably like WARC-Target-URI: dns:www.xyz.com
-		// so it is a dns response
-		if ( strncmp(warcUrl,"http://" ,7) != 0 &&
-		     strncmp(warcUrl,"https://",8) != 0 ) 
-			return true;
-
-		gr->m_injectDocIp = 0;
-
-		// get the record IP address from the warc header if there
-		if ( warcIp ) {
-			// get end of ip
-			char *warcIpEnd = warcIp;
-			// skip digits and periods
-			while ( ! is_wspace_a(*warcIpEnd) ) warcIpEnd++;
-			// we now have the ip address for doing ip: searches
-			// this func is in ip.h
-			gr->m_injectDocIp = atoip ( warcIp, warcIpEnd-warcIp );
-		}
-		
-		// convert date to timestamp
-		int64_t warcTime = 0;
-		if ( warcDate ) warcTime = atotime ( warcDate );
-		gr->m_firstIndexed = warcTime;
-		gr->m_lastSpidered = warcTime;
-		// does this work?
-		gr->m_hopCount     = -1;
-		gr->m_diffbotReply = 0;
-		gr->m_newOnly      = 0;
-		// end of the url
-		char *warcUrlEnd = warcUrl;
-		for ( ; *warcUrlEnd && ! is_wspace_a(*warcUrlEnd) ;
-		      warcUrlEnd++ );
-		// set it to that
-		m_injectUrlBuf.reset();
-		// by default append a -<ch64> to the provided url
-		int32_t warcUrlLen = warcUrlEnd - warcUrl;
-		m_injectUrlBuf.safeMemcpy(warcUrl,warcUrlLen);
-		m_injectUrlBuf.nullTerm();
-		// skip if robots.txt
-		if ( isRobotsTxtFile(m_injectUrlBuf.getBufStart(),
-				     m_injectUrlBuf.getLength() ) )
-			return true;
-		// all warc records have the http mime
-		gr->m_hasMime = true;
-		char *recMime = hend;
-		// and find the next \r\n\r\n
-		char *recMimeEnd = strstr ( recMime , "\r\n\r\n" );
-		if ( ! recMimeEnd ) {
-			log("inject: warc: no http mime.");
-			return true;
-		}
-		// gotta include the \r\n\r\n in the mime length here
-		recMimeEnd += 4;
-		// should be a mime that starts with GET or POST
-		HttpMime mime;
-		if ( ! mime.set ( recMime, recMimeEnd - recMime , NULL ) ) {
-			log("inject: warc: mime set failed ");
-			return true;
-		}
-		// check content type. if bad advance to next rec.
-		int ct = mime.getContentType();
-		if ( ct != CT_HTML &&
-		     ct != CT_TEXT &&
-		     ct != CT_XML &&
-		     ct != CT_JSON )
-			return true;
-	}
-
-
-	// ARC files have a url on one line and the length on the next line
-	if ( m_isArc ) {
-		// no setting delim for this!
-		if ( delim ) { char *xx=NULL;*xx=0; }
-		// should have the url as well
-		char *arcHeader = strstr(start,"\nhttp");
-		//char *mmend = NULL;
-		//if ( mm ) mmend = strstr (mm,"\n");
-		if ( ! arcHeader ) {  // || ! mmend ) {
-			log("inject: arc: all done");
-			m_isDoneInjecting = true;
-			return true;
-		}
-		// find end of url
-		char *arcHeaderEnd = strstr (arcHeader+1,"\n");
-		if ( ! arcHeaderEnd ) {
-			log("inject: arc: no header end. all done");
-			m_isDoneInjecting = true;
-			return true;
-		}
-		// term it
-		*arcHeaderEnd = '\0';
-		char *arcContent = arcHeaderEnd + 1;
-
-		// parse arc header line
-		char *arcUrl = arcHeader + 1;
-		char *hp = arcUrl;
-		for ( ; *hp && *hp != ' ' ; hp++ );
-		if ( ! *hp ) {
-			log("inject: bad arc header 1.");
-			m_isDoneInjecting = true;
-			return true;
-		}
-		*hp++ = '\0';
-		m_injectUrlBuf.reset();
-		m_injectUrlBuf.safeStrcpy(arcUrl);
-		m_injectUrlBuf.nullTerm();
-
-
-		char *ipStr = hp;
-		for ( ; *hp && *hp != ' ' ; hp++ );
-		if ( ! *hp ) {
-			log("inject: bad arc header 2.");
-			m_isDoneInjecting = true;
-			return true;
-		}
-		*hp++ = '\0';
-		gr->m_injectDocIp = atoip(ipStr);
-
-		char *timeStr = hp;
-
-		for ( ; *hp && *hp != ' ' ; hp++ );
-		if ( ! *hp ) {
-			log("inject: bad arc header 3.");
-			m_isDoneInjecting = true;
-			return true;
-		}
-		*hp++ = '\0'; // null term timeStr
-		char *arcConType = hp;
-
-		for ( ; *hp && *hp != ' ' ; hp++ );
-		if ( ! *hp ) {
-			log("inject: bad arc header 4.");
-			m_isDoneInjecting = true;
-			return true;
-		}
-		*hp++ = '\0'; // null term arcContentType
-
-		char *arcContentLenStr = hp;
-
-		// get arc content len
-		int64_t arcContentLen = atoll(arcContentLenStr);
-		char *arcContentEnd = arcContent + arcContentLen;
-		//uint64_t recSize = (arcContentEnd - realStart); 
-
-		// convert to timestamp
-		int64_t arcTime = 0;
-		// this time structure, once filled, will help yield a time_t
-		struct tm t;
-		// DAY OF MONTH
-		t.tm_mday = atol2 ( timeStr + 6 , 2 );
-		// MONTH
-		t.tm_mon = atol2 ( timeStr + 4  , 2 );
-		// YEAR
-		// # of years since 1900
-		t.tm_year = atol2 ( timeStr     , 4 ) - 1900 ; 
-		// TIME
-		t.tm_hour = atol2 ( timeStr +  8 , 2 );
-		t.tm_min  = atol2 ( timeStr + 10 , 2 );
-		t.tm_sec  = atol2 ( timeStr + 12 , 2 );
-		// unknown if we're in  daylight savings time
-		t.tm_isdst = -1;
-		// translate using mktime
-		arcTime = timegm ( &t );
-
-		gr->m_firstIndexed = arcTime;
-		gr->m_lastSpidered = arcTime;
-
-
-		start = arcContent;
-
-		// assume "start" has the http mime
-		gr->m_hasMime = true;
-
-		// advance to next rec BEFORE we return true below
-		m_start = arcContentEnd;
-		advanced = true;
-
-		// arcConType needs to indexable
-		int32_t ct = getContentTypeFromStr ( arcConType );
-		if ( ct != CT_HTML &&
-		     ct != CT_TEXT &&
-		     ct != CT_XML &&
-		     ct != CT_JSON ) {
-			// read another arc record
-			return true;
-		}
-
-		// skip if robots.txt
-		if ( isRobotsTxtFile(m_injectUrlBuf.getBufStart(),
-				     m_injectUrlBuf.getLength() ) )
-			return true;
-
-	}
-
 
 	// for injecting "start" set this to \0
 	if ( advanced ) { // m_start ) {
@@ -997,7 +627,7 @@ bool Msg7::inject ( void *state ,
 		m_fixMe = true;
 	}
 
-	if ( ! delim && ! m_isWarc && ! m_isArc ) 
+	if ( ! delim )
 		// this is the url of the injected content
 		m_injectUrlBuf.safeStrcpy ( gr->m_url );
 

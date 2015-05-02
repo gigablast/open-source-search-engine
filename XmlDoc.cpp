@@ -114,6 +114,8 @@ XmlDoc::XmlDoc() {
 	m_freed = false;
 	m_contentInjected = false;
 	m_wasContentInjected = false;
+	m_msg7 = NULL;
+	m_warcContentPtr = NULL;
 	//m_coll  = NULL;
 	m_ubuf = NULL;
 	m_pbuf = NULL;
@@ -191,6 +193,13 @@ static int64_t s_lastTimeStart = 0LL;
 class XmlDoc *g_xd;
 
 void XmlDoc::reset ( ) {
+
+	if ( m_msg7 ) {
+		mdelete ( m_msg7 , sizeof(Msg7) , "xdmsg7" );
+		delete ( m_msg7 );
+		m_msg7 = NULL;
+	}
+	m_warcContentPtr = NULL;
 
 	m_redirUrl.reset();
 
@@ -2709,6 +2718,32 @@ bool XmlDoc::indexDoc2 ( ) {
 	}
 
 
+	// handle docs that consist of subdocs that need to be injected
+	// or indexed individually.
+	if ( m_firstUrlValid && m_firstUrl.isWarc() ) {
+		// this returns false if it would block and callback will be called
+		if ( ! indexWarc () )
+			return false;
+		// all done! no need to add the parent doc.
+		return true;
+	}
+
+	if ( m_firstUrlValid && m_firstUrl.isArc() ) {
+		// this returns false if it would block and callback will be called
+		if ( ! indexArc () )
+			return false;
+		// all done! no need to add the parent doc.
+		return true;
+	}
+
+	if ( m_isContainerDoc ) {
+		// m_delimeter should be set!
+		if ( ! indexContainerDoc () )
+			return false;
+		// all done! no need to add the parent doc.
+		return true;
+	}
+
 	// . now get the meta list from it to add
 	// . returns NULL and sets g_errno on error
 	char *metaList = getMetaList ( );
@@ -2957,6 +2992,447 @@ bool XmlDoc::indexDoc2 ( ) {
 	return logIt();
 	*/
 }
+
+// returns false if would block, true otherwise. returns true and sets g_errno on err
+bool XmlDoc::indexArc ( ) {
+
+	int8_t *hc = getHopCount();
+	if ( ! hc ) return true; // error?
+	if ( hc == (void *)-1 ) return false;
+	// first download
+	char **arcContent = getUtf8Content();
+	// return true with g_errno set on error
+	if ( ! arcContent ) {
+		if ( ! g_errno ) { char *xx=NULL;*xx=0; }
+		return true;
+	}
+	// would block? return false then
+	if ( arcContent == (void *)-1 )
+		return false;
+
+	// need this. it is almost 1MB in size, so alloc it
+	if ( ! m_msg7 ) {
+		try { m_msg7 = new ( Msg7 ); }
+		catch ( ... ) {
+			g_errno = ENOMEM;
+			return true;
+		}
+		mnew ( m_msg7 , sizeof(Msg7),"xdmsg7");
+	}
+
+	// inject input parms:
+	GigablastRequest *gr = &m_msg7->m_gr;
+	// the cursor for scanning the subdocs
+	if ( ! m_arcContentPtr ) {
+
+		// init the content cursor to point to the first subdoc
+		m_arcContentPtr = arcContent;
+
+		// init the input parms
+		memset ( gr , 0 , sizeof(GigablastRequest) );
+		// reset it
+		gr->m_spiderLinks = false;
+		gr->m_injectLinks = false;
+		// what happens if coll gets nuked from under us? use collnum
+		gr->m_coll = cr->m_coll;
+		gr->m_hopCount = *hc + 1;
+		// if ( ! m_collnumValid ) { char *xx=NULL;*xx=0; }
+		gr->m_collnum = m_collnum;
+		// will this work on a content delimeterized doc?
+		gr->m_deleteUrl = m_deleteFromIndex;
+		// each subdoc will have a mime since it is an arc
+		gr->m_hasMime = true;
+
+	}
+
+ subdocLoop:
+
+	QUICKPOLL ( m_niceness );
+
+	// we had \0 terminated the end of the previous record, so put back
+	if ( m_savedChar && ! *m_arcContentPtr ) *m_arcContentPtr = m_savedChar;
+
+	// . should have the url as well.
+	// . the url, ip etc. are on a single \n terminated line for an arc!
+	char *arcHeader = strstr(m_arcContentPtr,"\nhttp");
+	if ( ! arcHeader ) {
+		log("inject: arc: all done");
+		return true;
+	}
+	// find end of url
+	char *arcHeaderEnd = strstr (arcHeader+1,"\n");
+	if ( ! arcHeaderEnd ) {
+		log("inject: arc: no header end. all done");
+		return true;
+	}
+	// term it
+	*arcHeaderEnd = '\0';
+
+	char *arcRecord = arcHeaderEnd + 1;
+
+
+	// parse arc header line
+	char *arcUrl = arcHeader + 1;
+	char *hp = arcUrl;
+	for ( ; *hp && *hp != ' ' ; hp++ );
+	if ( ! *hp ) {
+		log("inject: bad arc header 1.");
+		return true;
+	}
+	*hp++ = '\0';
+	m_injectUrlBuf.reset();
+	m_injectUrlBuf.safeStrcpy(arcUrl);
+	m_injectUrlBuf.nullTerm();
+
+
+	char *ipStr = hp;
+	for ( ; *hp && *hp != ' ' ; hp++ );
+	if ( ! *hp ) {
+		log("inject: bad arc header 2.");
+		return true;
+	}
+	*hp++ = '\0';
+	gr->m_injectDocIp = atoip(ipStr);
+
+	char *timeStr = hp;
+
+	for ( ; *hp && *hp != ' ' ; hp++ );
+	if ( ! *hp ) {
+		log("inject: bad arc header 3.");
+		return true;
+	}
+	*hp++ = '\0'; // null term timeStr
+	char *arcConType = hp;
+
+	for ( ; *hp && *hp != ' ' ; hp++ );
+	if ( ! *hp ) {
+		log("inject: bad arc header 4.");
+		return true;
+	}
+	*hp++ = '\0'; // null term arcContentType
+
+	char *arcRecLenStr = hp;
+
+	// get arc content len
+	int64_t arcRecLen = atoll(arcContentLenStr);
+	char *arcRecEnd = arcContent + arcContentLen;
+
+	// we could also use m_contentFile if it was on disk
+	gr->m_content = m_arcContentPtr;
+
+	// advance for loop
+	m_arcContentPtr = arcRecEnd;
+
+	// null term this record
+	m_savedChar = *m_arcContentPtr;  *m_arcContentPtr = '\0';
+
+
+	// convert to timestamp
+	int64_t arcTime = 0;
+	// this time structure, once filled, will help yield a time_t
+	struct tm t;
+	// DAY OF MONTH
+	t.tm_mday = atol2 ( timeStr + 6 , 2 );
+	// MONTH
+	t.tm_mon = atol2 ( timeStr + 4  , 2 );
+	// YEAR
+	// # of years since 1900
+	t.tm_year = atol2 ( timeStr     , 4 ) - 1900 ; 
+	// TIME
+	t.tm_hour = atol2 ( timeStr +  8 , 2 );
+	t.tm_min  = atol2 ( timeStr + 10 , 2 );
+	t.tm_sec  = atol2 ( timeStr + 12 , 2 );
+	// unknown if we're in  daylight savings time
+	t.tm_isdst = -1;
+	// translate using mktime
+	arcTime = timegm ( &t );
+
+	gr->m_firstIndexed = arcTime;
+	gr->m_lastSpidered = arcTime;
+
+	// assume "start" has the http mime
+	gr->m_hasMime = true;
+
+	// arcConType needs to indexable
+	int32_t ct = getContentTypeFromStr ( arcConType );
+	if ( ct != CT_HTML &&
+	     ct != CT_TEXT &&
+	     ct != CT_XML &&
+	     ct != CT_JSON ) {
+		// read another arc record
+		goto subdocLoop;
+	}
+
+	// skip if robots.txt
+	if ( isRobotsTxtFile(m_injectUrlBuf.getBufStart(),
+			     m_injectUrlBuf.getLength() ) )
+		goto subdocLoop;
+
+	QUICKPOLL ( m_niceness );
+
+	// TODO: set these based on the date in the warc mime!!
+	//gr->m_firstIndexed = ;
+	//gr->m_lastSpidered = ;
+	// then process. this will scan over each delimeted 
+	// doc in the arc/warc file and inject each one individually.
+	if ( ! m_msg7->inject ( m_masterCallback , m_masterState ) )
+		// it would block, callback will be called later
+		return false;
+
+	QUICKPOLL ( m_niceness );
+
+	// error?
+	if ( g_errno ) {
+		log("build: index arc error %s",mstrerror(g_errno));
+		return NULL;
+	}
+	// loop it up
+	goto subdocLoop;
+}
+
+
+
+// returns false if would block, true otherwise. returns true and sets g_errno on err
+bool XmlDoc::indexWarc ( ) {
+
+	int8_t *hc = getHopCount();
+	if ( ! hc ) return true; // error?
+	if ( hc == (void *)-1 ) return false;
+	// first download
+	char **warcContent = getUtf8Content();
+	// return true with g_errno set on error
+	if ( ! warcContent ) {
+		if ( ! g_errno ) { char *xx=NULL;*xx=0; }
+		return true;
+	}
+	// would block? return false then
+	if ( warcContent == (void *)-1 )
+		return false;
+
+	// need this. it is almost 1MB in size, so alloc it
+	if ( ! m_msg7 ) {
+		try { m_msg7 = new ( Msg7 ); }
+		catch ( ... ) {
+			g_errno = ENOMEM;
+			return true;
+		}
+		mnew ( m_msg7 , sizeof(Msg7),"xdmsg7");
+	}
+
+	// inject input parms:
+	GigablastRequest *gr = &m_msg7->m_gr;
+	// the cursor for scanning the subdocs
+	if ( ! m_warcContentPtr ) {
+
+		// init the content cursor to point to the first subdoc
+		m_warcContentPtr = warcContent;
+		//m_warcContentEnd = warcContent + size_utf8Content;
+
+		// init the input parms
+		memset ( gr , 0 , sizeof(GigablastRequest) );
+		// reset it
+		gr->m_spiderLinks = false;
+		gr->m_injectLinks = false;
+		// what happens if coll gets nuked from under us? use collnum
+		gr->m_coll = cr->m_coll;
+		gr->m_hopCount = *hc + 1;
+		if ( ! m_collnumValid ) { char *xx=NULL;*xx=0; }
+		gr->m_collnum = m_collnum;
+		// will this work on a content delimeterized doc?
+		gr->m_deleteUrl = m_deleteFromIndex;
+		// each subdoc will have a mime since it is a warc
+		gr->m_hasMime = true;
+
+	}
+
+ subdocLoop:
+
+	QUICKPOLL ( m_niceness );
+
+	// we had \0 terminated the end of the previous record, so put back
+	if ( m_savedChar && ! *m_warcContentPtr ) *m_warcContentPtr = m_savedChar;
+
+	// find size of this warc record. parse this warc record
+	char *mm = strstr(m_warcContentPtr,"Content-Length:");
+	char *mmend = NULL;
+	if ( mm ) mmend = strstr (mm,"\n");
+	if ( ! mm || ! mmend ) {
+		log("build: warc: all done");
+		// XmlDoc.cpp checks for this to stop calling us
+		//m_isDoneInjecting = true;
+		return true;
+	}
+	// set 'recordSize' to the content-length
+	char c = *mmend;
+	*mmend = '\0';
+	int64_t recordSize = atoll ( mm + 15 );
+	*mmend = c;
+	// set 'hend' to the end of this mime header
+	char *warcMimeEnd = strstr ( mm, "\r\n\r\n");
+	if ( ! warcMimeEnd ) {
+		log("build: warc: could no mime header end. stopping.");
+		// this is critical, so we gotta stop
+		return true;
+	}
+	// tmp \0 that for these strstr() calls in the mime so if they miss
+	// we don't scan a 1GB warc for them
+	c = *warcMimeEnd;
+	*warcMimeEnd = '\0';
+
+	char *warcUrl  = strstr(m_warcContentPtr,"WARC-Target-URI:");
+	char *warcType = strstr(m_warcContentPtr,"WARC-Type:");
+	char *warcDate = strstr(m_warcContentPtr,"WARC-Date:");
+	char *warcIp   = strstr(m_warcContentPtr,"WARC-IP-Address:");
+
+	// advance
+	if ( warcUrl  ) warcUrl  += 16;
+	if ( warcType ) warcType += 10;
+	if ( warcDate ) warcDate += 10;
+	if ( warcIp   ) warcIp   += 17;
+
+	// restore
+	*warcMimeEnd = c;
+
+	// skip the \r\n\r\n at the end of this subdoc's http mime
+	warcMimeEnd += 4;
+
+	// we could also use m_contentFile if it was on disk
+	gr->m_content = m_warcContentPtr;
+
+	// and point to the mime of the NEXT subdoc
+	// before we call goto subdocLoop anywhere.
+	m_warcContentPtr = warcMimeEnd + recordSize;
+
+	// null term end of this subdoc before injecting
+	m_savedChar = *m_warcContentPtr;
+	*m_warcContentPtr = '\0';
+
+	if ( ! warcType ) {
+		log("inject: warc: could not find rec type");
+		goto subdocLoop;
+	}
+
+	if ( is_wspace_a(*warcType) ) warcType++;
+	if ( is_wspace_a(*warcType) ) warcType++;
+
+	// WARC-Type:
+	// do not index this record as a doc if it is not a
+	// "WARC-Type: response" record.
+	if ( strncmp(warcType,"response",8) != 0 ) 
+		goto subdocLoop;
+
+	// skip this rec if url-less
+	if ( ! warcUrl ) {
+		log("inject: warc: could not find rec url");
+		goto subdocLoop;
+	}
+	if ( ! warcDate ) {
+		log("inject: warc: could not find rec date");
+		goto subdocLoop;
+	}
+
+	// skip spaces on all
+	if ( warcUrl  && is_wspace_a(*warcUrl ) ) warcUrl++;
+	if ( warcUrl  && is_wspace_a(*warcUrl ) ) warcUrl++;
+	if ( warcDate && is_wspace_a(*warcDate) ) warcDate++;
+	if ( warcDate && is_wspace_a(*warcDate) ) warcDate++;
+	if ( warcIp   && is_wspace_a(*warcIp  ) ) warcIp++;
+	if ( warcIp   && is_wspace_a(*warcIp  ) ) warcIp++;
+
+	// url must start with http:// or https://
+	// it's probably like WARC-Target-URI: dns:www.xyz.com
+	// so it is a dns response
+	if ( strncmp(warcUrl,"http://" ,7) != 0 &&
+	     strncmp(warcUrl,"https://",8) != 0 ) 
+		goto subdocLoop;
+
+	gr->m_injectDocIp = 0;
+
+	// get the record IP address from the warc header if there
+	if ( warcIp ) {
+		// get end of ip
+		char *warcIpEnd = warcIp;
+		// skip digits and periods
+		while ( ! is_wspace_a(*warcIpEnd) ) warcIpEnd++;
+		// we now have the ip address for doing ip: searches
+		// this func is in ip.h
+		gr->m_injectDocIp = atoip ( warcIp, warcIpEnd-warcIp );
+	}
+		
+	// convert date to timestamp
+	int64_t warcTime = 0;
+	if ( warcDate ) warcTime = atotime ( warcDate );
+	gr->m_firstIndexed = warcTime;
+	gr->m_lastSpidered = warcTime;
+	// does this work?
+	gr->m_hopCount     = -1;
+	gr->m_diffbotReply = 0;
+	gr->m_newOnly      = 0;
+	// end of the url
+	char *warcUrlEnd = warcUrl;
+	for ( ; *warcUrlEnd && ! is_wspace_a(*warcUrlEnd) ;
+	      warcUrlEnd++ );
+	// set it to that
+	m_injectUrlBuf.reset();
+	// by default append a -<ch64> to the provided url
+	int32_t warcUrlLen = warcUrlEnd - warcUrl;
+	m_injectUrlBuf.safeMemcpy(warcUrl,warcUrlLen);
+	m_injectUrlBuf.nullTerm();
+	// skip if robots.txt
+	if ( isRobotsTxtFile(m_injectUrlBuf.getBufStart(),
+			     m_injectUrlBuf.getLength() ) )
+		goto subdocLoop;
+	// all warc records have the http mime
+	gr->m_hasMime = true;
+
+	// point to subdoc's mime again, not the warc mime for it, which is above it
+	char *recMime = warcMimeEnd;
+	// and find the next \r\n\r\n
+	char *recMimeEnd = strstr ( recMime , "\r\n\r\n" );
+	if ( ! recMimeEnd ) {
+		log("inject: warc: no http mime.");
+		goto subdocLoop;
+	}
+	// gotta include the \r\n\r\n in the mime length here otherwise mime.set fail
+	recMimeEnd += 4;
+	// should be a mime that starts with GET or POST
+	HttpMime mime;
+	if ( ! mime.set ( recMime, recMimeEnd - recMime , NULL ) ) {
+		log("inject: warc: mime set failed ");
+		goto subdocLoop;
+	}
+	// check content type. if bad advance to next rec.
+	int ct = mime.getContentType();
+	if ( ct != CT_HTML &&
+	     ct != CT_TEXT &&
+	     ct != CT_XML &&
+	     ct != CT_JSON )
+		goto subdocLoop;
+
+	QUICKPOLL ( m_niceness );
+
+	// TODO: set these based on the date in the warc mime!!
+	//gr->m_firstIndexed = ;
+	//gr->m_lastSpidered = ;
+	// then process. this will scan over each delimeted 
+	// doc in the arc/warc file and inject each one individually.
+	if ( ! m_msg7->inject ( m_masterCallback , m_masterState ) )
+		// it would block, callback will be called later
+		return false;
+
+	QUICKPOLL ( m_niceness );
+
+	// error?
+	if ( g_errno ) {
+		log("build: index warc error %s",mstrerror(g_errno));
+		return NULL;
+	}
+	// loop it up
+	goto subdocLoop;
+}
+              
+ 
+			
 
 void getTitleRecBufWrapper ( void *state ) {
 	XmlDoc *THIS = (XmlDoc *)state;
@@ -10138,6 +10614,9 @@ Url **XmlDoc::getRedirUrl() {
 		// let's just parse out the meta tag by hand
 		bool checkMeta = true;
 		if ( isRobotsTxt ) checkMeta = false;
+		// if we are a doc that consists of a sequence of sub-docs that
+		// we are indexing/injecting then don't do this check.
+		if ( isContainerDoc() ) checkMeta = false;
 		if ( checkMeta ) {
 			Url **mrup = getMetaRedirUrl();
 			if ( ! mrup || mrup == (void *)-1) return (Url **)mrup;
@@ -17925,6 +18404,11 @@ char **XmlDoc::getExpandedUtf8Content ( ) {
 	}
 
 	bool skip = m_skipIframeExpansion;
+
+	// if we are a warc, arc or doc that consists of a sequence of
+	// sub-docs that we are indexing/injecting then skip iframe expansion
+	if ( isContainerDoc() )
+		skip = true;
 
 	// or if this is set to true
 	if ( skip ) {

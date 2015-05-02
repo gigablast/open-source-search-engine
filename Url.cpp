@@ -1441,22 +1441,24 @@ bool Url::isBadExtension ( int32_t version ) {
 	return true;
 }
 
-bool Url::isCompressedArcOrWarc ( ) {
+bool Url::isWarc ( ) {
 
-	// hack to allow for .gz if it is .warc.gz or .arc.gz
-	if ( m_elen == 2 && 
-	     m_extension[0] == 'g' &&
-	     m_extension[1] == 'z' &&
-	     m_ulen > 10 &&
-	     m_extension[-1] == '.' &&
-	     m_extension[-2] == 'c' &&
-	     m_extension[-3] == 'r' &&
-	     m_extension[-4] == 'a' &&
-	     m_extension[-5] == '.' ) {
-		// m_isArc = true;
-		// m_isArcValid = true;
+	// if ( ulen>8 && strncmp(uend-8,".warc.gz",8)==0 )
+	// 	m_isWarc = true;
+	// if ( ulen>8 && strncmp(uend-5,".warc"   ,5)==0 )
+	// 	m_isWarc = true;
+
+	// if ( ulen>8 && strncmp(uend-7,".arc.gz",7)==0 )
+	// 	m_isArc = true;
+	// if ( ulen>8 && strncmp(uend-4,".arc"   ,4)==0 )
+	// 	m_isArc = true;
+
+	if ( m_elen == 4 &&
+	     m_extenion[0] == 'w' &&
+	     m_extenion[1] == 'a' &&
+	     m_extenion[2] == 'r' &&
+	     m_extenion[3] == 'c' )
 		return true;
-	}
 
 	if ( m_elen == 2 && 
 	     m_extension[0] == 'g' &&
@@ -1474,7 +1476,32 @@ bool Url::isCompressedArcOrWarc ( ) {
 	}
 
 	return false;
+}
 
+bool Url::isArc ( ) {
+
+	if ( m_elen == 3 &&
+	     m_extenion[0] == 'a' &&
+	     m_extenion[1] == 'r' &&
+	     m_extenion[2] == 'c' )
+		return true;
+	     
+	// hack to allow for .gz if it is .warc.gz or .arc.gz
+	if ( m_elen == 2 && 
+	     m_extension[0] == 'g' &&
+	     m_extension[1] == 'z' &&
+	     m_ulen > 10 &&
+	     m_extension[-1] == '.' &&
+	     m_extension[-2] == 'c' &&
+	     m_extension[-3] == 'r' &&
+	     m_extension[-4] == 'a' &&
+	     m_extension[-5] == '.' ) {
+		// m_isArc = true;
+		// m_isArcValid = true;
+		return true;
+	}
+
+	return false;
 }
 
 // see Url.h for a description of this.

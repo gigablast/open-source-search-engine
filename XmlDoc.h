@@ -499,6 +499,8 @@ class XmlDoc {
 	void getRebuiltSpiderRequest ( class SpiderRequest *sreq ) ;
 	bool indexDoc ( );
 	bool indexDoc2 ( );
+	bool indexArc ( ) ;
+	bool indexWarc ( ) ;
 	key_t *getTitleRecKey() ;
 	//char *getSkipIndexing ( );
 	char *prepareToMakeTitleRec ( ) ;
@@ -1047,6 +1049,9 @@ class XmlDoc {
 	SafeBuf  m_metaList2;
 	SafeBuf  m_zbuf;
 	SafeBuf  m_kbuf;
+
+	class Msg7 *m_msg7;
+	char *m_warcContentPtr;
 
 	// . same thing, a little more complicated
 	// . these classes are only set on demand
