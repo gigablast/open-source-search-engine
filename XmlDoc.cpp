@@ -2758,6 +2758,7 @@ bool XmlDoc::indexDoc2 ( ) {
 		// called
 		if ( ! indexWarc () )
 			return false;
+		logIt();
 		// all done! no need to add the parent doc.
 		return true;
 	}
@@ -2767,6 +2768,7 @@ bool XmlDoc::indexDoc2 ( ) {
 		// called
 		if ( ! indexArc () )
 			return false;
+		logIt();
 		// all done! no need to add the parent doc.
 		return true;
 	}
@@ -2775,6 +2777,7 @@ bool XmlDoc::indexDoc2 ( ) {
 		// m_delimeter should be set!
 		if ( ! indexContainerDoc () )
 			return false;
+		logIt();
 		// all done! no need to add the parent doc.
 		return true;
 	}
@@ -3221,6 +3224,11 @@ bool XmlDoc::indexArc ( ) {
 	if ( acp == (void *)-1 )
 		return false;
 
+	if ( *acp == NULL ) {
+		log("build: arc content was empty. did not index.");
+		return true;
+	}
+
 	// need this. it is almost 1MB in size, so alloc it
 	if ( ! m_msg7 ) {
 		try { m_msg7 = new ( Msg7 ); }
@@ -3413,6 +3421,11 @@ bool XmlDoc::indexWarc ( ) {
 	if ( wcp == (void *)-1 )
 		return false;
 
+	if ( *wcp == NULL ) {
+		log("build: warc content was empty. did not index.");
+		return true;
+	}
+
 	// need this. it is almost 1MB in size, so alloc it
 	if ( ! m_msg7 ) {
 		try { m_msg7 = new ( Msg7 ); }
@@ -3455,7 +3468,7 @@ bool XmlDoc::indexWarc ( ) {
 	char *mmend = NULL;
 	if ( mm ) mmend = strstr (mm,"\n");
 	if ( ! mm || ! mmend ) {
-		log("build: warc: all done");
+		log("build: warc: no 'content-length' found. all done");
 		// XmlDoc.cpp checks for this to stop calling us
 		//m_isDoneInjecting = true;
 		return true;
@@ -14321,6 +14334,16 @@ bool *XmlDoc::getIsAllowed ( ) {
 		return &m_isAllowed;
 	}
 
+	// HACK: so we can spider archive.org warcs and arcs internally
+	if ( m_firstUrlValid &&
+	     m_firstUrl.getDomainLen() == 11 &&
+	     strncmp ( m_firstUrl.getDomain() , "archive.org" , 11 ) == 0 ) {
+		m_isAllowed      = true;
+		m_isAllowedValid = true;
+		return &m_isAllowed;
+	}
+		
+
 	// double get?
 	if ( m_crawlDelayValid ) { char *xx=NULL;*xx=0; }
 
@@ -20940,6 +20963,11 @@ bool XmlDoc::logIt ( SafeBuf *bb ) {
 
 	if ( m_robotsTxtLenValid )
 		sb->safePrintf("robotstxtlen=%04"INT32" ",m_robotsTxtLen );
+
+	if ( m_isAllowedValid )
+		sb->safePrintf("robotsallowed=%i ", (int)m_isAllowed);
+	else
+		sb->safePrintf("robotsallowed=? " );
 
 	if ( m_contentHash32Valid )
 		sb->safePrintf("ch32=%010"UINT32" ",m_contentHash32);
