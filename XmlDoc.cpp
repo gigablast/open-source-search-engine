@@ -3403,8 +3403,8 @@ bool XmlDoc::indexWarc ( ) {
 	// skip the \r\n\r\n at the end of this subdoc's http mime
 	warcMimeEnd += 4;
 
-	// we could also use m_contentFile if it was on disk
-	gr->m_content = m_warcContentPtr;
+	// point to the mime following the warc mime, that's the original http mime
+	gr->m_content = warcMimeEnd;
 
 	// and point to the mime of the NEXT subdoc
 	// before we call goto subdocLoop anywhere.
@@ -3484,8 +3484,6 @@ bool XmlDoc::indexWarc ( ) {
 	// skip if robots.txt
 	if ( isRobotsTxtFile( warcUrl , warcUrlLen ) )
 		goto subdocLoop;
-	// all warc records have the http mime
-	gr->m_hasMime = true;
 
 	// point to subdoc's mime again, not the warc mime for it, which is above it
 	char *recMime = warcMimeEnd;
@@ -3510,6 +3508,13 @@ bool XmlDoc::indexWarc ( ) {
 	     ct != CT_XML &&
 	     ct != CT_JSON )
 		goto subdocLoop;
+
+	// make the url so it ends in \0
+	*warcUrlEnd = '\0';
+
+	// all warc records have the http mime
+	gr->m_hasMime = true;
+	gr->m_url     = warcUrl;
 
 	QUICKPOLL ( m_niceness );
 
