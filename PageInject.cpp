@@ -550,7 +550,7 @@ bool Msg7::inject2 ( void *state ,
 	// shortcut
 	XmlDoc *xd = &m_xd;
 
-	if ( ! gr->m_url ) {
+	if ( ! gr->m_url || ! gr->m_url[0] ) {
 	     // if there is a record delimeter, we form a new fake url
 	     // for each record based on content hash
 	     //! gr->m_contentDelim ) {
@@ -692,6 +692,8 @@ bool Msg7::inject2 ( void *state ,
 			       cr ,
 			       content , // start , // content ,
 			       gr->m_diffbotReply,
+			       // if this doc is a 'container doc' then
+			       // hasMime applies to the SUBDOCS only!!
 			       gr->m_hasMime, // content starts with http mime?
 			       gr->m_hopCount,
 			       gr->m_charset,
@@ -714,7 +716,8 @@ bool Msg7::inject2 ( void *state ,
 			       gr->m_lastSpidered ,
 			       // the ip of the url being injected.
 			       // use 0 if unknown and it won't be valid.
-			       gr->m_injectDocIp
+			       gr->m_injectDocIp ,
+			       gr->m_contentDelim
 			       ) )
 		// we blocked...
 		return false;

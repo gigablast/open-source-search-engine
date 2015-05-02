@@ -473,7 +473,9 @@ class XmlDoc {
 		    int32_t             forcedIp = 0 ,
 		    uint8_t          contentType = CT_HTML ,
 		    uint32_t           spideredTime = 0 , // time_t
-		    bool             contentHasMime = false ) ;
+		    bool             contentHasMime = false ,
+		    // for container docs, what is the separator of subdocs?
+		    char            *contentDelim = NULL ) ;
 
 	// we now call this right away rather than at download time!
 	int32_t getSpideredTime();
@@ -1057,6 +1059,8 @@ class XmlDoc {
 	char *m_arcContentPtr;
 	char *m_anyContentPtr;
 	char *m_contentDelim;
+	SafeBuf m_injectUrlBuf;
+	bool m_subDocsHaveMime;
 
 	// . same thing, a little more complicated
 	// . these classes are only set on demand
@@ -1181,6 +1185,7 @@ class XmlDoc {
 	char     m_addedSpiderReplySizeValid;
 	char     m_addedStatusDocSizeValid;
 	char     m_downloadStartTimeValid;
+	char     m_contentDelimValid;
 	//char   m_docQualityValid;
 	char     m_siteValid;
 	char     m_startTimeValid;
@@ -2418,7 +2423,9 @@ class XmlDoc {
 
 			 uint32_t firstIndexedTime = 0,
 			 uint32_t lastSpideredDate = 0 ,
-			 int32_t  injectDocIp = 0 );
+			 int32_t  injectDocIp = 0 ,
+			 // for container docs consisting of subdocs to inject
+			 char *contentDelim = NULL );
 
 
 	bool injectLinks  ( HashTableX *linkDedupTable ,

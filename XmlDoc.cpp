@@ -1154,7 +1154,8 @@ bool XmlDoc::set4 ( SpiderRequest *sreq      ,
 		    int32_t           forcedIp ,
 		    uint8_t        contentType ,
 		    uint32_t         spideredTime ,
-		    bool           contentHasMime ) {
+		    bool           contentHasMimeArg ,
+		    char          *contentDelim ) {
 
 	// sanity check
 	if ( sreq->m_dataSize == 0 ) { char *xx=NULL;*xx=0; }
@@ -1178,6 +1179,21 @@ bool XmlDoc::set4 ( SpiderRequest *sreq      ,
 	// PageReindex.cpp will set this in the spider request
 	if ( sreq->m_forceDelete )
 		m_deleteFromIndex = true;
+
+	// if we are a container doc then we need the content delimeter,
+	// unless if we are a warc or arc, then we know how those delimit
+	// already.
+	m_contentDelim = contentDelim;
+	m_contentDelimValid = true;
+
+	bool contentHasMime = contentHasMimeArg;
+	// but if we are a container doc then this parm applies to each subdoc
+	// not to us, so turn it off for this part.
+	if ( isContainerDoc() )	{
+		contentHasMime    = false;
+		m_subDocsHaveMime = contentHasMimeArg;
+	}
+
 
 	char *utf8Content = utf8ContentArg;
 
@@ -2016,7 +2032,7 @@ bool XmlDoc::injectDoc ( char *url ,
 			 CollectionRec *cr ,
 			 char *content ,
 			 char *diffbotReply, // usually null
-			 bool contentHasMime ,
+			 bool contentHasMimeArg ,
 			 int32_t hopCount,
 			 int32_t charset,
 
@@ -2030,7 +2046,8 @@ bool XmlDoc::injectDoc ( char *url ,
 
 			 uint32_t firstIndexed,
 			 uint32_t lastSpidered ,
-			 int32_t injectDocIp ) {
+			 int32_t injectDocIp ,
+			 char *contentDelim ) {
 
 	// wait until we are synced with host #0
 	if ( ! isClockInSync() ) {
@@ -2098,7 +2115,8 @@ bool XmlDoc::injectDoc ( char *url ,
 		      injectDocIp, // 0,//forcedIp ,
 		      contentType ,
 		      lastSpidered,//lastSpidered overide
-		      contentHasMime )) {
+		      contentHasMimeArg ,
+		      contentDelim )) {
 		// g_errno should be set if that returned false
 		if ( ! g_errno ) { char *xx=NULL;*xx=0; }
 		return true;
@@ -2726,7 +2744,8 @@ bool XmlDoc::indexDoc2 ( ) {
 	// handle docs that consist of subdocs that need to be injected
 	// or indexed individually.
 	if ( m_firstUrlValid && m_firstUrl.isWarc() ) {
-		// this returns false if it would block and callback will be called
+		// this returns false if it would block and callback will be 
+		// called
 		if ( ! indexWarc () )
 			return false;
 		// all done! no need to add the parent doc.
@@ -2734,7 +2753,8 @@ bool XmlDoc::indexDoc2 ( ) {
 	}
 
 	if ( m_firstUrlValid && m_firstUrl.isArc() ) {
-		// this returns false if it would block and callback will be called
+		// this returns false if it would block and callback will be 
+		// called
 		if ( ! indexArc () )
 			return false;
 		// all done! no need to add the parent doc.
@@ -3009,6 +3029,7 @@ bool isRobotsTxtFile ( char *u , int32_t ulen ) {
 bool XmlDoc::isContainerDoc ( ) {
 	if ( m_firstUrlValid && m_firstUrl.isWarc() ) return true;
 	if ( m_firstUrlValid && m_firstUrl.isArc () ) return true;
+	if ( ! m_contentDelimValid ) { char *xx=NULL;*xx=0; }
 	if ( m_contentDelim ) return true;
 	return false;
 }
@@ -3052,6 +3073,11 @@ bool XmlDoc::indexContainerDoc ( ) {
 	if ( ! m_anyContentPtr ) {
 		// init the content cursor to point to the first subdoc
 		m_anyContentPtr = *cpp;
+		// but skip over initial separator if there. that is a
+		// faux pau
+		int32_t dlen = gbstrlen(m_contentDelim);
+		if ( strncmp(m_anyContentPtr,m_contentDelim,dlen) == 0 )
+			m_anyContentPtr += dlen;
 		// init the input parms
 		memset ( gr , 0 , sizeof(GigablastRequest) );
 		// reset it
@@ -3063,12 +3089,16 @@ bool XmlDoc::indexContainerDoc ( ) {
 		// will this work on a content delimeterized doc?
 		gr->m_deleteUrl = m_deleteFromIndex;
 		// each subdoc will have a mime since it is an arc
-		gr->m_hasMime = true;
+		gr->m_hasMime = m_subDocsHaveMime;//true;
 	}
 
  subdocLoop:
 
 	QUICKPOLL ( m_niceness );
+
+	// EOF?
+	if ( m_anyContentPtr == (char *)-1 ) 
+		return true;
 
 	// we had \0 terminated the end of the previous record, so put back
 	if ( m_savedChar && ! *m_anyContentPtr ) {
@@ -3076,25 +3106,76 @@ bool XmlDoc::indexContainerDoc ( ) {
 		m_anyContentPtr += gbstrlen(m_contentDelim);
 	}
 
-	// EOF?
-	if ( ! *m_anyContentPtr ) return true;
-
-	// . should have the url as well.
-	// . the url, ip etc. are on a single \n terminated line for an arc!
-	char *separator = strstr(m_anyContentPtr,m_contentDelim);
 
 	// index this subdoc
 	gr->m_content = m_anyContentPtr;
 
-	// these are not defined. will be autoset in set4() i guess.
-	gr->m_firstIndexed = 0;
-	gr->m_lastSpidered = 0;
+	// . should have the url as well.
+	// . the url, ip etc. are on a single \n terminated line for an arc!
+	char *separator = strstr(m_anyContentPtr,m_contentDelim);
 
 	if ( separator ) {
 		m_savedChar = *separator;
 		m_anyContentPtr = separator;
 		*m_anyContentPtr = '\0';
 	}
+
+	// if no separator found, this is our last injection
+	if ( ! separator )
+		m_anyContentPtr = (char *)-1;
+
+	// these are not defined. will be autoset in set4() i guess.
+	gr->m_firstIndexed = 0;
+	gr->m_lastSpidered = 0;
+
+	bool setUrl = false;
+
+	// HOWEVER, if an hasmime is true and an http:// follows
+	// the delimeter then use that as the url...
+	// this way we can specify our own urls.
+	if ( gr->m_hasMime ) {
+		char *du = gr->m_content;
+		//du += gbstrlen(delim);
+		if ( du && is_wspace_a ( *du ) ) du++;
+		if ( du && is_wspace_a ( *du ) ) du++;
+		if ( du && is_wspace_a ( *du ) ) du++;
+		if ( gr->m_hasMime && 
+		     (strncasecmp( du,"http://",7) == 0 ||
+		      strncasecmp( du,"https://",8) == 0 ) ) {
+			// flag it
+			setUrl = true;
+			// find end of it
+			char *uend = du + 7;
+			for ( ; *uend && ! is_wspace_a(*uend) ; uend++ );
+			// inject that then
+			m_injectUrlBuf.reset();
+			m_injectUrlBuf.safeMemcpy ( du , uend - du );
+			m_injectUrlBuf.nullTerm();
+			// and point to the actual http mime then
+			// well, skip that space, right
+			gr->m_content = uend + 1;
+			gr->m_url = m_injectUrlBuf.getBufStart();
+		}
+	}
+
+
+	QUICKPOLL ( m_niceness );
+
+	// make the url from parent url
+	// use hash of the content
+	int64_t ch64 = hash64n ( gr->m_content , 0LL );
+
+	QUICKPOLL ( m_niceness );
+
+	if ( ! setUrl ) {
+		// reset it
+		m_injectUrlBuf.reset();
+		// by default append a -<ch64> to the provided url
+		m_injectUrlBuf.safePrintf("%s-%"UINT64"",
+					  m_firstUrl.getUrl(),ch64);
+		gr->m_url = m_injectUrlBuf.getBufStart();
+	}
+
 
 	if ( ! m_msg7->inject2 ( m_masterState , m_masterLoop ) )
 		// it would block, callback will be called later
