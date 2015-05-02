@@ -281,6 +281,12 @@ bool Msg13::forwardRequest ( ) {
 	//
 	int32_t nh     = g_hostdb.m_numHosts;
 	int32_t hostId = hash32h(((uint32_t)r->m_firstIp >> 8), 0) % nh;
+
+	// avoid host #0 for diffbot hack which is dropping some requests
+	// because of the streaming bug methinks
+	if ( hostId == 0 && nh >= 2 && g_conf.m_diffbotMsg13Hack ) 
+		hostId = 1;
+
 	// get host to send to from hostId
 	Host *h = NULL;
 	// . pick first alive host, starting with "hostId" as the hostId
