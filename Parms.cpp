@@ -16519,11 +16519,14 @@ void Parms::init ( ) {
 		"that an IP is throttling or banning gigabot from crawling "
 		"it. The crawl delay just applies to that IP. "
 		"Such throttling will be logged.";
-	m->m_cgi   = "autobackoff";
+	m->m_cgi   = "automaticallybackoff";
 	m->m_xml   = "automaticallyBackOff";
 	m->m_off   = (char *)&cr.m_automaticallyBackOff - x;
 	m->m_type  = TYPE_BOOL;
-	m->m_def   = "1";
+	// a lot of pages have recaptcha links but they have valid content
+	// so leave this off for now... they have it in a hidden div which
+	// popups to email the article link or whatever to someone.
+	m->m_def   = "0";
 	m->m_group = 0;
 	m->m_page  = PAGE_SPIDER;
 	m->m_obj   = OBJ_COLL;
@@ -19545,6 +19548,16 @@ void Parms::init ( ) {
 	m->m_title = "log debug spider messages";
 	m->m_cgi   = "ldspid";
 	m->m_off   = (char *)&g_conf.m_logDebugSpider - g;
+	m->m_type  = TYPE_BOOL;
+	m->m_def   = "0";
+	m->m_priv  = 1;
+	m->m_page  = PAGE_LOG;
+	m->m_obj   = OBJ_CONF;
+	m++;
+
+	m->m_title = "log debug msg13 messages";
+	m->m_cgi   = "ldspmth";
+	m->m_off   = (char *)&g_conf.m_logDebugMsg13 - g;
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "0";
 	m->m_priv  = 1;

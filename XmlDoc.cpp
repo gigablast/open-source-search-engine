@@ -2426,8 +2426,8 @@ bool XmlDoc::indexDoc ( ) {
 		    "error reply.",
 		    m_firstUrl.m_url,mstrerror(g_errno));
 	else if ( g_errno )
-		log("build: docid=%"INT64" had internal error = %s. adding spider "
-		    "error reply.",
+		log("build: docid=%"INT64" had internal error = %s. "
+		    "adding spider error reply.",
 		    m_docId,mstrerror(g_errno));
 
 	// seems like this was causing a core somehow...
@@ -2450,6 +2450,16 @@ bool XmlDoc::indexDoc ( ) {
 		m_indexCodeValid = true;
 	}
 
+	// this should not be retired either. i am seeing it excessively 
+	// retried from a 
+	// "TitleRec::set: uncompress uncompressed size=-2119348471"
+	// error condition. it also said
+	// "Error spidering for doc http://www.... : Bad cached document"
+	if ( g_errno == EBADTITLEREC ) {
+		m_indexCode = g_errno;
+		m_indexCodeValid = true;
+	}
+
 	// i've seen Multicast got error in reply from hostId 19 (msgType=0x22
 	// transId=496026 nice=1 net=default): Buf too small.
 	// so fix that with this
@@ -2468,7 +2478,7 @@ bool XmlDoc::indexDoc ( ) {
 		m_indexCodeValid = true;
 	}
 
-
+	// default to internal error which will be retried forever otherwise
 	if ( ! m_indexCodeValid ) {
 		m_indexCode = EINTERNALERROR;//g_errno;
 		m_indexCodeValid = true;
@@ -25494,6 +25504,7 @@ SpiderReply *XmlDoc::getNewSpiderReply ( ) {
 	// store it
 	m_srep.m_firstIp = firstIp;
 	// assume no error
+	// MDW: not right...
 	m_srep.m_errCount = 0;
 	// otherwise, inherit from oldsr to be safe
 	//if ( m_sreqValid ) 
@@ -28153,14 +28164,19 @@ SafeBuf *XmlDoc::getSpiderStatusDocMetaList2 ( SpiderReply *reply ) {
 			      m_docIdWeAreADupOf);
 
 	// how many spiderings were successful vs. failed
-	if ( m_sreqValid ) {
-		jd.safePrintf("\"gbssPrevTotalNumIndexAttempts\":%"INT32",\n",
-			      m_sreq.m_reservedc1 + m_sreq.m_reservedc2 );
-		jd.safePrintf("\"gbssPrevTotalNumIndexSuccesses\":%"INT32",\n",
-			      m_sreq.m_reservedc1);
-		jd.safePrintf("\"gbssPrevTotalNumIndexFailures\":%"INT32",\n",
-			      m_sreq.m_reservedc2);
-	}
+	// these don't work because we only store one reply
+	// which overwrites any older reply. that's how the 
+	// key is. we can change the key to use the timestamp 
+	// and not parent docid in makeKey() for spider 
+	// replies later.
+	// if ( m_sreqValid ) {
+	// 	jd.safePrintf("\"gbssPrevTotalNumIndexAttempts\":%"INT32",\n",
+	// 		      m_sreq.m_reservedc1 + m_sreq.m_reservedc2 );
+	// 	jd.safePrintf("\"gbssPrevTotalNumIndexSuccesses\":%"INT32",\n",
+	// 		      m_sreq.m_reservedc1);
+	// 	jd.safePrintf("\"gbssPrevTotalNumIndexFailures\":%"INT32",\n",
+	// 		      m_sreq.m_reservedc2);
+	// }
 
 	if ( m_spideredTimeValid )
 		jd.safePrintf("\"gbssSpiderTime\":%"INT32",\n",

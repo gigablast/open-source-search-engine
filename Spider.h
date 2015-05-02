@@ -1155,8 +1155,13 @@ class SpiderColl {
 	int32_t      m_tailHopCount;
 	int64_t m_minFutureTimeMS;
 
-	int32_t m_numSuccessReplies;
-	int32_t m_numFailedReplies;
+	// these don't work because we only store one reply
+	// which overwrites any older reply. that's how the 
+	// key is. we can change the key to use the timestamp 
+	// and not parent docid in makeKey() for spider 
+	// replies later.
+	// int32_t m_numSuccessReplies;
+	// int32_t m_numFailedReplies;
 
 	// . do not re-send CrawlInfoLocal for a coll if not update
 	// . we store the flags in here as true if we should send our

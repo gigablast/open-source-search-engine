@@ -797,6 +797,8 @@ bool Spiderdb::verify ( char *coll ) {
 key128_t Spiderdb::makeKey ( int32_t      firstIp     ,
 			     int64_t urlHash48   , 
 			     bool      isRequest   ,
+			     // MDW: now we use timestamp instead of parentdocid
+			     // for spider replies. so they do not dedup...
 			     int64_t parentDocId ,
 			     bool      isDel       ) {
 	key128_t k;
@@ -814,6 +816,9 @@ key128_t Spiderdb::makeKey ( int32_t      firstIp     ,
 	if ( isRequest ) k.n0 |= 0x01;
 	// parent docid
 	k.n0 <<= 38;
+	// if we are making a spider reply key just leave the parentdocid as 0
+	// so we only store one reply per url. the last reply we got.
+	// if ( isRequest ) k.n0 |= parentDocId & DOCID_MASK;
 	k.n0 |= parentDocId & DOCID_MASK;
 	// reserved (padding)
 	k.n0 <<= 8;
@@ -1802,8 +1807,13 @@ void SpiderColl::clearLocks ( ) {
 
 void SpiderColl::reset ( ) {
 
-	m_numSuccessReplies = 0;
-	m_numFailedReplies  = 0;
+	// these don't work because we only store one reply
+	// which overwrites any older reply. that's how the 
+	// key is. we can change the key to use the timestamp 
+	// and not parent docid in makeKey() for spider 
+	// replies later.
+	// m_numSuccessReplies = 0;
+	// m_numFailedReplies  = 0;
 
 	// reset these for SpiderLoop;
 	m_nextDoledbKey.setMin();
@@ -3980,15 +3990,65 @@ bool SpiderColl::scanListForWinners ( ) {
 			// see if this is the most recent one
 			SpiderReply *tmp = (SpiderReply *)rec;
 
-			// reset reply stats if beginning a new url
-			if ( srepUh48 != tmp->getUrlHash48() ) {
-				m_numSuccessReplies = 0;
-				m_numFailedReplies  = 0;
+			// . MDW: we have to detect corrupt replies up here so
+			//   they do not become the winning reply because
+			//   their date is in the future!!
+
+			// . this is -1 on corruption
+			// . i've seen -31757, 21... etc for bad http replies
+			//   in the qatest123 doc cache... so turn off for that
+			if ( tmp->m_httpStatus >= 1000 ) {
+				if ( m_cr->m_spiderCorruptCount == 0 ) {
+					log("spider: got corrupt 3 "
+					    "spiderReply in "
+					    "scan "
+					    "uh48=%"INT64" "
+					    "httpstatus=%"INT32" "
+					    "(cn=%"INT32")",
+					    tmp->getUrlHash48(),
+					    (int32_t)tmp->m_httpStatus,
+					    (int32_t)m_collnum);
+				}
+				m_cr->m_spiderCorruptCount++;
+				// don't nuke it just for that...
+				//srep = NULL;
+				continue;
+			}
+			// bad langid?
+			if ( ! getLanguageAbbr (tmp->m_langId) ) {
+				log("spider: got corrupt 4 spiderReply in "
+				    "scan uh48=%"INT64" "
+				    "langid=%"INT32" (cn=%"INT32")",
+				    tmp->getUrlHash48(),
+				    (int32_t)tmp->m_langId,
+				    (int32_t)m_collnum);
+				m_cr->m_spiderCorruptCount++;
+				//srep = NULL;
+				// if ( tmp->getUrlHash48() == 
+				//      271713196158770LL )
+				// 	log("hey");
+				continue;
 			}
 
+			// reset reply stats if beginning a new url
+			// these don't work because we only store one reply
+			// which overwrites any older reply. that's how the 
+			// key is. we can change the key to use the timestamp 
+			// and not parent docid in makeKey() for spider 
+			// replies later.
+			// if ( srepUh48 != tmp->getUrlHash48() ) {
+			// 	m_numSuccessReplies = 0;
+			// 	m_numFailedReplies  = 0;
+			// }
+
 			// inc stats
-			if ( tmp->m_errCode == 0 ) m_numSuccessReplies++;
-			else                       m_numFailedReplies ++;
+			// these don't work because we only store one reply
+			// which overwrites any older reply. that's how the 
+			// key is. we can change the key to use the timestamp 
+			// and not parent docid in makeKey() for spider 
+			// replies later.
+			// if ( tmp->m_errCode == 0 ) m_numSuccessReplies++;
+			// else                       m_numFailedReplies ++;
 
 			// if we have a more recent reply already, skip this 
 			if ( srep && 
@@ -4010,10 +4070,14 @@ bool SpiderColl::scanListForWinners ( ) {
 		int64_t uh48 = sreq->getUrlHash48();
 
 		// reset reply stats if beginning a new url
-		if ( ! srep ) {
-			m_numSuccessReplies = 0;
-			m_numFailedReplies  = 0;
-		}
+		// these don't work because we only store one reply
+		// which overwrites any older reply. that's how the key is.
+		// we can change the key to use the timestamp and not
+		// parent docid in makeKey() for spider replies later.
+		// if ( ! srep ) {
+		// 	m_numSuccessReplies = 0;
+		// 	m_numFailedReplies  = 0;
+		// }
 
 		// . skip if our twin should add it to doledb
 		// . waiting tree only has firstIps assigned to us so
@@ -4100,8 +4164,13 @@ bool SpiderColl::scanListForWinners ( ) {
 		// put these in the spiderequest in doledb so we can
 		// show in the json spider status docs in 
 		// XmlDoc::getSpiderStatusDocMetaList2()
-		sreq->m_reservedc1 = m_numSuccessReplies;
-		sreq->m_reservedc2 = m_numFailedReplies;
+		// these don't work because we only store one reply
+		// which overwrites any older reply. that's how the 
+		// key is. we can change the key to use the timestamp 
+		// and not parent docid in makeKey() for spider 
+		// replies later.
+		// sreq->m_reservedc1 = m_numSuccessReplies;
+		// sreq->m_reservedc2 = m_numFailedReplies;
 		
 		m_lastSreqUh48 = uh48;
 		m_lastCBlockIp = cblock;
@@ -4256,28 +4325,6 @@ bool SpiderColl::scanListForWinners ( ) {
 			// if we tried it before
 			sreq->m_hadReply = true;
 		}
-		// . this is -1 on corruption
-		// . i've seen -31757, 21... etc for bad http replies
-		//   in the qatest123 doc cache... so turn off for that
-		if ( srep && srep->m_httpStatus >= 1000 ) {
-			if ( m_cr->m_spiderCorruptCount == 0 ) {
-				log("spider: got corrupt 3 spiderReply in "
-				    "scan httpstatus=%"INT32" (cn=%"INT32")",
-				    (int32_t)srep->m_httpStatus,
-				    (int32_t)m_collnum);
-			}
-			m_cr->m_spiderCorruptCount++;
-			// don't nuke it just for that...
-			//srep = NULL;
-		}
-		// bad langid?
-		if ( srep && ! getLanguageAbbr (srep->m_langId) ) {
-			log("spider: got corrupt 4 spiderReply in scan "
-			    "langid=%"INT32" (cn=%"INT32")",
-			    (int32_t)srep->m_langId,
-			    (int32_t)m_collnum);
-			srep = NULL;
-		}
 
 		// . get the url filter we match
 		// . if this is slow see the TODO below in dedupSpiderdbList()
@@ -4310,7 +4357,8 @@ bool SpiderColl::scanListForWinners ( ) {
 		if ( priority >= MAX_SPIDER_PRIORITIES) {char *xx=NULL;*xx=0;}
 
 		if ( g_conf.m_logDebugSpider )
-			log("spider: got ufn=%"INT32" for %s",ufn,sreq->m_url);
+			log("spider: got ufn=%"INT32" for %s (%"INT64"",
+			    ufn,sreq->m_url,sreq->getUrlHash48());
 
 		if ( g_conf.m_logDebugSpider && srep )
 			log("spider: lastspidered=%"UINT32"",
