@@ -2861,6 +2861,10 @@ int TcpServer::sslHandshake ( TcpSocket *s ) {
 		    (int32_t)sslError,r,iptoa(s->m_ip),sslMsg);
 
 		g_errno = ESSLERROR;
+		// note in log
+		log("tcp: ssl: try running "
+		    "'openssl s_client -connect www.hostnamehere.com:443 "
+		    "-debug' to debug the webserver on the other side.");
 		// make sure read callback is registered
 		// g_loop.registerReadCallback (s->m_sd,this,readSocketWrapper,
 		// 			     s->m_niceness);
