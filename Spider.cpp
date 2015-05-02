@@ -11711,11 +11711,14 @@ int32_t getUrlFilterNum2 ( SpiderRequest *sreq       ,
 					goto gotOne;
 			}
 			// two letter extensions
-			else if ( ext[1] == '.' ) {
-				if ( to_lower_a(ext[2]) == 'g' &&
-				     to_lower_a(ext[3]) == 'z' )
-					goto gotOne;
-			}
+			// .warc.gz and .arc.gz is ok
+			// take this out for now
+			// else if ( ext[1] == '.' ) {
+			// 	if ( to_lower_a(ext[2]) == 'g' &&
+			// 	     to_lower_a(ext[3]) == 'z' )
+			// 		goto gotOne;
+			// }
+
 			// check for ".css?" substring
 			// these two suck up a lot of time:
 			// take them out for now. MDW 2/21/2015
