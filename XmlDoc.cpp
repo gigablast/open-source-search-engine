@@ -3043,9 +3043,9 @@ bool XmlDoc::indexContainerDoc ( ) {
 		return true;
 	}
 
-	int8_t *hc = getHopCount();
-	if ( ! hc ) return true; // error?
-	if ( hc == (void *)-1 ) return false;
+	// int8_t *hc = getHopCount();
+	// if ( ! hc ) return true; // error?
+	// if ( hc == (void *)-1 ) return false;
 	// first download
 	char **cpp = getUtf8Content();
 	// return true with g_errno set on error
@@ -3083,7 +3083,7 @@ bool XmlDoc::indexContainerDoc ( ) {
 		// reset it
 		gr->m_spiderLinks = false;
 		gr->m_injectLinks = false;
-		gr->m_hopCount = *hc + 1;
+		gr->m_hopCount = 0;//*hc + 1;
 		if ( ! m_collnumValid ) { char *xx=NULL;*xx=0; }
 		gr->m_collnum = m_collnum;
 		// will this work on a content delimeterized doc?
