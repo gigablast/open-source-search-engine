@@ -200,6 +200,10 @@ void XmlDoc::reset ( ) {
 		m_msg7 = NULL;
 	}
 	m_warcContentPtr = NULL;
+	m_arcContentPtr = NULL;
+	m_anyContentPtr = NULL;
+	m_savedChar = '\0';
+	m_contentDelim = NULL;
 
 	m_redirUrl.reset();
 
@@ -2736,7 +2740,7 @@ bool XmlDoc::indexDoc2 ( ) {
 		return true;
 	}
 
-	if ( m_isContainerDoc ) {
+	if ( isContainerDoc() ) {
 		// m_delimeter should be set!
 		if ( ! indexContainerDoc () )
 			return false;
@@ -2993,6 +2997,121 @@ bool XmlDoc::indexDoc2 ( ) {
 	*/
 }
 
+bool isRobotsTxtFile ( char *u , int32_t ulen ) {
+	if ( ulen > 12 && ! strncmp ( u + ulen - 11 , "/robots.txt" , 11 ) )
+		return true;
+	return false;
+}
+
+// does this doc consist of a sequence of smaller sub-docs?
+// if so we'll index the subdocs and not the container doc itself.
+bool XmlDoc::isContainerDoc ( ) {
+	if ( m_firstUrlValid && m_firstUrl.isWarc() ) return true;
+	if ( m_firstUrlValid && m_firstUrl.isArc () ) return true;
+	if ( m_contentDelim ) return true;
+	return false;
+}
+
+// returns false if would block, true otherwise. returns true and sets g_errno on err
+bool XmlDoc::indexContainerDoc ( ) {
+
+	if ( ! m_contentDelim ) { 
+		log("build: can not index container doc. no delimeter.");
+		g_errno = EBADENGINEER;
+		return true;
+	}
+
+	int8_t *hc = getHopCount();
+	if ( ! hc ) return true; // error?
+	if ( hc == (void *)-1 ) return false;
+	// first download
+	char **cpp = getUtf8Content();
+	// return true with g_errno set on error
+	if ( ! cpp ) {
+		if ( ! g_errno ) { char *xx=NULL;*xx=0; }
+		return true;
+	}
+	// would block? return false then
+	if ( cpp == (void *)-1 )
+		return false;
+
+	// need this. it is almost 1MB in size, so alloc it
+	if ( ! m_msg7 ) {
+		try { m_msg7 = new ( Msg7 ); }
+		catch ( ... ) {
+			g_errno = ENOMEM;
+			return true;
+		}
+		mnew ( m_msg7 , sizeof(Msg7),"xdmsg7");
+	}
+
+	// inject input parms:
+	GigablastRequest *gr = &m_msg7->m_gr;
+	// the cursor for scanning the subdocs
+	if ( ! m_anyContentPtr ) {
+		// init the content cursor to point to the first subdoc
+		m_anyContentPtr = *cpp;
+		// init the input parms
+		memset ( gr , 0 , sizeof(GigablastRequest) );
+		// reset it
+		gr->m_spiderLinks = false;
+		gr->m_injectLinks = false;
+		gr->m_hopCount = *hc + 1;
+		if ( ! m_collnumValid ) { char *xx=NULL;*xx=0; }
+		gr->m_collnum = m_collnum;
+		// will this work on a content delimeterized doc?
+		gr->m_deleteUrl = m_deleteFromIndex;
+		// each subdoc will have a mime since it is an arc
+		gr->m_hasMime = true;
+	}
+
+ subdocLoop:
+
+	QUICKPOLL ( m_niceness );
+
+	// we had \0 terminated the end of the previous record, so put back
+	if ( m_savedChar && ! *m_anyContentPtr ) {
+		*m_anyContentPtr = m_savedChar;
+		m_anyContentPtr += gbstrlen(m_contentDelim);
+	}
+
+	// EOF?
+	if ( ! *m_anyContentPtr ) return true;
+
+	// . should have the url as well.
+	// . the url, ip etc. are on a single \n terminated line for an arc!
+	char *separator = strstr(m_anyContentPtr,m_contentDelim);
+
+	// index this subdoc
+	gr->m_content = m_anyContentPtr;
+
+	// these are not defined. will be autoset in set4() i guess.
+	gr->m_firstIndexed = 0;
+	gr->m_lastSpidered = 0;
+
+	if ( separator ) {
+		m_savedChar = *separator;
+		m_anyContentPtr = separator;
+		*m_anyContentPtr = '\0';
+	}
+
+	if ( ! m_msg7->inject2 ( m_masterState , m_masterLoop ) )
+		// it would block, callback will be called later
+		return false;
+
+	QUICKPOLL ( m_niceness );
+
+	// error?
+	if ( g_errno ) {
+		log("build: index arc error %s",mstrerror(g_errno));
+		return NULL;
+	}
+	// loop it up
+	goto subdocLoop;
+
+}
+
+
 // returns false if would block, true otherwise. returns true and sets g_errno on err
 bool XmlDoc::indexArc ( ) {
 
@@ -3000,14 +3119,14 @@ bool XmlDoc::indexArc ( ) {
 	if ( ! hc ) return true; // error?
 	if ( hc == (void *)-1 ) return false;
 	// first download
-	char **arcContent = getUtf8Content();
+	char **acp = getUtf8Content();
 	// return true with g_errno set on error
-	if ( ! arcContent ) {
+	if ( ! acp ) {
 		if ( ! g_errno ) { char *xx=NULL;*xx=0; }
 		return true;
 	}
 	// would block? return false then
-	if ( arcContent == (void *)-1 )
+	if ( acp == (void *)-1 )
 		return false;
 
 	// need this. it is almost 1MB in size, so alloc it
@@ -3024,25 +3143,20 @@ bool XmlDoc::indexArc ( ) {
 	GigablastRequest *gr = &m_msg7->m_gr;
 	// the cursor for scanning the subdocs
 	if ( ! m_arcContentPtr ) {
-
 		// init the content cursor to point to the first subdoc
-		m_arcContentPtr = arcContent;
-
+		m_arcContentPtr = *acp;
 		// init the input parms
 		memset ( gr , 0 , sizeof(GigablastRequest) );
 		// reset it
 		gr->m_spiderLinks = false;
 		gr->m_injectLinks = false;
-		// what happens if coll gets nuked from under us? use collnum
-		gr->m_coll = cr->m_coll;
 		gr->m_hopCount = *hc + 1;
-		// if ( ! m_collnumValid ) { char *xx=NULL;*xx=0; }
+		if ( ! m_collnumValid ) { char *xx=NULL;*xx=0; }
 		gr->m_collnum = m_collnum;
 		// will this work on a content delimeterized doc?
 		gr->m_deleteUrl = m_deleteFromIndex;
 		// each subdoc will have a mime since it is an arc
 		gr->m_hasMime = true;
-
 	}
 
  subdocLoop:
@@ -3068,10 +3182,9 @@ bool XmlDoc::indexArc ( ) {
 	// term it
 	*arcHeaderEnd = '\0';
 
-	char *arcRecord = arcHeaderEnd + 1;
+	//char *arcRecord = arcHeaderEnd + 1;
 
-
-	// parse arc header line
+	// get url
 	char *arcUrl = arcHeader + 1;
 	char *hp = arcUrl;
 	for ( ; *hp && *hp != ' ' ; hp++ );
@@ -3080,11 +3193,8 @@ bool XmlDoc::indexArc ( ) {
 		return true;
 	}
 	*hp++ = '\0';
-	m_injectUrlBuf.reset();
-	m_injectUrlBuf.safeStrcpy(arcUrl);
-	m_injectUrlBuf.nullTerm();
 
-
+	// get ip
 	char *ipStr = hp;
 	for ( ; *hp && *hp != ' ' ; hp++ );
 	if ( ! *hp ) {
@@ -3094,34 +3204,36 @@ bool XmlDoc::indexArc ( ) {
 	*hp++ = '\0';
 	gr->m_injectDocIp = atoip(ipStr);
 
+	// get time
 	char *timeStr = hp;
-
 	for ( ; *hp && *hp != ' ' ; hp++ );
 	if ( ! *hp ) {
 		log("inject: bad arc header 3.");
 		return true;
 	}
-	*hp++ = '\0'; // null term timeStr
-	char *arcConType = hp;
+	*hp++ = '\0';
 
+	// get content type
+	char *arcConType = hp;
 	for ( ; *hp && *hp != ' ' ; hp++ );
 	if ( ! *hp ) {
 		log("inject: bad arc header 4.");
 		return true;
 	}
-	*hp++ = '\0'; // null term arcContentType
+	*hp++ = '\0';
 
-	char *arcRecLenStr = hp;
+	// get length of following doc in bytes, it's already \0 terminated
+	// since it is the last thing on the line
+	char *arcConLenStr = hp;
 
-	// get arc content len
-	int64_t arcRecLen = atoll(arcContentLenStr);
-	char *arcRecEnd = arcContent + arcContentLen;
+	// convert to number
+	int64_t arcRecLen = atoll(arcConLenStr);
 
 	// we could also use m_contentFile if it was on disk
-	gr->m_content = m_arcContentPtr;
+	gr->m_content = arcHeaderEnd + 1;
 
 	// advance for loop
-	m_arcContentPtr = arcRecEnd;
+	m_arcContentPtr = arcHeaderEnd + 1 + arcRecLen;
 
 	// null term this record
 	m_savedChar = *m_arcContentPtr;  *m_arcContentPtr = '\0';
@@ -3164,8 +3276,7 @@ bool XmlDoc::indexArc ( ) {
 	}
 
 	// skip if robots.txt
-	if ( isRobotsTxtFile(m_injectUrlBuf.getBufStart(),
-			     m_injectUrlBuf.getLength() ) )
+	if ( isRobotsTxtFile(arcUrl,gbstrlen(arcUrl) ) )
 		goto subdocLoop;
 
 	QUICKPOLL ( m_niceness );
@@ -3175,7 +3286,7 @@ bool XmlDoc::indexArc ( ) {
 	//gr->m_lastSpidered = ;
 	// then process. this will scan over each delimeted 
 	// doc in the arc/warc file and inject each one individually.
-	if ( ! m_msg7->inject ( m_masterCallback , m_masterState ) )
+	if ( ! m_msg7->inject2 ( m_masterState , m_masterLoop ) )
 		// it would block, callback will be called later
 		return false;
 
@@ -3199,14 +3310,14 @@ bool XmlDoc::indexWarc ( ) {
 	if ( ! hc ) return true; // error?
 	if ( hc == (void *)-1 ) return false;
 	// first download
-	char **warcContent = getUtf8Content();
+	char **wcp = getUtf8Content();
 	// return true with g_errno set on error
-	if ( ! warcContent ) {
+	if ( ! wcp ) {
 		if ( ! g_errno ) { char *xx=NULL;*xx=0; }
 		return true;
 	}
 	// would block? return false then
-	if ( warcContent == (void *)-1 )
+	if ( wcp == (void *)-1 )
 		return false;
 
 	// need this. it is almost 1MB in size, so alloc it
@@ -3223,18 +3334,13 @@ bool XmlDoc::indexWarc ( ) {
 	GigablastRequest *gr = &m_msg7->m_gr;
 	// the cursor for scanning the subdocs
 	if ( ! m_warcContentPtr ) {
-
 		// init the content cursor to point to the first subdoc
-		m_warcContentPtr = warcContent;
-		//m_warcContentEnd = warcContent + size_utf8Content;
-
+		m_warcContentPtr = *wcp;
 		// init the input parms
 		memset ( gr , 0 , sizeof(GigablastRequest) );
 		// reset it
 		gr->m_spiderLinks = false;
 		gr->m_injectLinks = false;
-		// what happens if coll gets nuked from under us? use collnum
-		gr->m_coll = cr->m_coll;
 		gr->m_hopCount = *hc + 1;
 		if ( ! m_collnumValid ) { char *xx=NULL;*xx=0; }
 		gr->m_collnum = m_collnum;
@@ -3242,7 +3348,6 @@ bool XmlDoc::indexWarc ( ) {
 		gr->m_deleteUrl = m_deleteFromIndex;
 		// each subdoc will have a mime since it is a warc
 		gr->m_hasMime = true;
-
 	}
 
  subdocLoop:
@@ -3372,15 +3477,10 @@ bool XmlDoc::indexWarc ( ) {
 	char *warcUrlEnd = warcUrl;
 	for ( ; *warcUrlEnd && ! is_wspace_a(*warcUrlEnd) ;
 	      warcUrlEnd++ );
-	// set it to that
-	m_injectUrlBuf.reset();
 	// by default append a -<ch64> to the provided url
 	int32_t warcUrlLen = warcUrlEnd - warcUrl;
-	m_injectUrlBuf.safeMemcpy(warcUrl,warcUrlLen);
-	m_injectUrlBuf.nullTerm();
 	// skip if robots.txt
-	if ( isRobotsTxtFile(m_injectUrlBuf.getBufStart(),
-			     m_injectUrlBuf.getLength() ) )
+	if ( isRobotsTxtFile( warcUrl , warcUrlLen ) )
 		goto subdocLoop;
 	// all warc records have the http mime
 	gr->m_hasMime = true;
@@ -3416,7 +3516,7 @@ bool XmlDoc::indexWarc ( ) {
 	//gr->m_lastSpidered = ;
 	// then process. this will scan over each delimeted 
 	// doc in the arc/warc file and inject each one individually.
-	if ( ! m_msg7->inject ( m_masterCallback , m_masterState ) )
+	if ( ! m_msg7->inject2 ( m_masterState , m_masterLoop ) )
 		// it would block, callback will be called later
 		return false;
 
@@ -10513,12 +10613,6 @@ int64_t XmlDoc::getFirstUrlHash64() {
 	m_firstUrlHash64 = hash64b ( m_firstUrl.m_url );
 	m_firstUrlHash64Valid = true;
 	return m_firstUrlHash64;
-}
-
-bool isRobotsTxtFile ( char *u , int32_t ulen ) {
-	if ( ulen > 12 && ! strncmp ( u + ulen - 11 , "/robots.txt" , 11 ) )
-		return true;
-	return false;
 }
 
 Url **XmlDoc::getLastRedirUrl() {

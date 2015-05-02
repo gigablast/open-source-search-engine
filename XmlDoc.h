@@ -499,6 +499,8 @@ class XmlDoc {
 	void getRebuiltSpiderRequest ( class SpiderRequest *sreq ) ;
 	bool indexDoc ( );
 	bool indexDoc2 ( );
+	bool isContainerDoc ( );
+	bool indexContainerDoc ( );
 	bool indexArc ( ) ;
 	bool indexWarc ( ) ;
 	key_t *getTitleRecKey() ;
@@ -1052,6 +1054,9 @@ class XmlDoc {
 
 	class Msg7 *m_msg7;
 	char *m_warcContentPtr;
+	char *m_arcContentPtr;
+	char *m_anyContentPtr;
+	char *m_contentDelim;
 
 	// . same thing, a little more complicated
 	// . these classes are only set on demand
@@ -1164,6 +1169,8 @@ class XmlDoc {
 
 	class SafeBuf     *m_savedSb;
 	class HttpRequest *m_savedHr;
+
+	char m_savedChar;
 
 
 	// validity flags. on reset() all these are set to false.

@@ -61,8 +61,10 @@ bool sendPageInject ( TcpSocket *sock , HttpRequest *hr ) {
 
 	char format = hr->getReplyFormat();
 
+	char *coll = hr->getString("c",NULL);
+
 	// no url parm?
-	if ( format != FORMAT_HTML && ! hr->getString("c",NULL) ) {
+	if ( format != FORMAT_HTML && ! coll ) {//hr->getString("c",NULL) ) {
 		g_errno = ENOCOLLREC;
 		char *msg = mstrerror(g_errno);
 		return g_httpServer.sendErrorReply(sock,g_errno,msg,NULL);
@@ -94,7 +96,7 @@ bool sendPageInject ( TcpSocket *sock , HttpRequest *hr ) {
 	if ( ! content ) gr->m_contentDelim = NULL;
 
 	// get collection rec
-	CollectionRec *cr = g_collectiondb.getRec ( gr->m_coll );
+	CollectionRec *cr = g_collectiondb.getRec ( coll );
 	// bitch if no collection rec found
 	if ( ! cr ) {
 		g_errno = ENOCOLLREC;
@@ -105,8 +107,8 @@ bool sendPageInject ( TcpSocket *sock , HttpRequest *hr ) {
 		return sendReply ( msg7 );
 	}
 
-
-
+	// use this, is more reliable, "coll" can disappear from under us
+	gr->m_collnum = cr->m_collnum;
 
 	// a scrape request?
 	if ( gr->m_queryToScrape && gr->m_queryToScrape[0] ) {
@@ -131,7 +133,7 @@ bool sendPageInject ( TcpSocket *sock , HttpRequest *hr ) {
 	}
 
 	// call sendReply() when inject completes
-	if ( ! msg7->inject ( msg7 , sendReplyWrapper ) )
+	if ( ! msg7->inject2 ( msg7 , sendReplyWrapper ) )
 		return false;
 
 	// it did not block, i gues we are done
@@ -344,16 +346,17 @@ Msg7::~Msg7 () {
 
 void Msg7::reset() { 
 	m_round = 0;
-	m_firstTime = true;
-	m_fixMe = false;
-	m_injectCount = 0;
-	m_start = NULL;
+	//m_firstTime = true;
+	//m_fixMe = false;
+	//m_injectCount = 0;
+	//m_start = NULL;
 	m_sbuf.reset();
-	m_isDoneInjecting = false;
+	//m_isDoneInjecting = false;
 }
 
 // when XmlDoc::inject() complets it calls this
 //void doneInjectingWrapper9 ( void *state ) {
+/*
 void injectLoopWrapper9 ( void *state ) {
 
 	Msg7 *msg7 = (Msg7 *)state;
@@ -403,6 +406,7 @@ void injectLoopWrapper9 ( void *state ) {
 	// and we call the original caller
 	msg7->m_callback ( msg7->m_state );
 }
+*/
 
 bool Msg7::inject ( char *coll ,
 		    char *proxiedUrl ,
@@ -431,7 +435,7 @@ bool Msg7::inject ( char *coll ,
 	
 	gr->m_hasMime = true;
 
-	return inject ( state , callback );
+	return inject2 ( state , callback );
 }
 
 // returns false if would block
@@ -523,7 +527,7 @@ void handleRequest7 ( UdpSlot *slot , int32_t netnice ) {
 
 // . returns false if blocked and callback will be called, true otherwise
 // . sets g_errno on error
-bool Msg7::inject ( void *state ,
+bool Msg7::inject2 ( void *state ,
 		    void (*callback)(void *state) 
 		    //int32_t spiderLinksDefault ,
 		    //char *collOveride ) {
@@ -545,10 +549,10 @@ bool Msg7::inject ( void *state ,
 	// shortcut
 	XmlDoc *xd = &m_xd;
 
-	if ( ! gr->m_url &&
+	if ( ! gr->m_url ) {
 	     // if there is a record delimeter, we form a new fake url
 	     // for each record based on content hash
-	     ! gr->m_contentDelim ) {
+	     //! gr->m_contentDelim ) {
 		log("inject: no url provied to inject");
 		g_errno = EBADURL;
 		return true;
@@ -571,67 +575,67 @@ bool Msg7::inject ( void *state ,
 		// get the normalized url
 		u.set ( gr->m_url );
 
-	if ( m_firstTime ) {
-		m_firstTime = false;
-		m_start = content;
-	}
+	// if ( m_firstTime ) {
+	// 	m_firstTime = false;
+	// 	m_start = content;
+	// }
 
 	// save current start since we update it next
-	char *start = m_start;
+	//char *start = m_start;
 
 	// if this is empty we are done
 	//if ( ! start ) 
 	//	return true;
 
-	char *delim = gr->m_contentDelim;
-	if ( delim && ! delim[0] ) delim = NULL;
+	// char *delim = gr->m_contentDelim;
+	// if ( delim && ! delim[0] ) delim = NULL;
 
 	// if doing delimeterized injects, hitting a \0 is the end of the road
-	if ( delim && m_fixMe && ! m_saved ) {
-		m_isDoneInjecting = true;
-		return true;
-	}
+	// if ( delim && m_fixMe && ! m_saved ) {
+	// 	m_isDoneInjecting = true;
+	// 	return true;
+	// }
 
 
-	if ( m_fixMe ) {
-		// we had made the first delim char a \0 to index the
-		// previous document, now put it back to what it was
-		*m_start = m_saved;
-		// i guess unset this
-		m_fixMe = false;
+	// if ( m_fixMe ) {
+	// 	// we had made the first delim char a \0 to index the
+	// 	// previous document, now put it back to what it was
+	// 	*m_start = m_saved;
+	// 	// i guess unset this
+	// 	m_fixMe = false;
+	// }
 
-	}
-
-	bool advanced = false;
+	// bool advanced = false;
 
 	// we've saved m_start as "start" above, 
 	// so find the next delimeter after it and set that to m_start
 	// add +1 to avoid infinite loop
-	if ( delim ) { // gr->m_containerContentType == CT_UNKNOWN )
-		m_start = strstr(start+1,delim);
-		advanced = true;
-		// if m_start is NULL, it couldn't be found so advance
-		// to end of file which should be a \0 already
-		if ( ! m_start ) 
-			m_start = start + gbstrlen(start);
-	}
+	// if ( delim ) { // gr->m_containerContentType == CT_UNKNOWN )
+	// 	m_start = strstr(start+1,delim);
+	// 	advanced = true;
+	// 	// if m_start is NULL, it couldn't be found so advance
+	// 	// to end of file which should be a \0 already
+	// 	if ( ! m_start ) 
+	// 		m_start = start + gbstrlen(start);
+	// }
 
 
 	// for injecting "start" set this to \0
-	if ( advanced ) { // m_start ) {
-		// save it
-		m_saved = *m_start;
-		// null term it
-		*m_start = '\0';
-		// put back the original char on next round...?
-		m_fixMe = true;
-	}
+	// if ( advanced ) { // m_start ) {
+	// 	// save it
+	// 	m_saved = *m_start;
+	// 	// null term it
+	// 	*m_start = '\0';
+	// 	// put back the original char on next round...?
+	// 	m_fixMe = true;
+	// }
 
-	if ( ! delim )
-		// this is the url of the injected content
-		m_injectUrlBuf.safeStrcpy ( gr->m_url );
+	//if ( ! delim )
 
-	bool modifiedUrl = false;
+	// this is the url of the injected content
+	//m_injectUrlBuf.safeStrcpy ( gr->m_url );
+
+	//bool modifiedUrl = false;
 
 	// if we had a delimeter we must make a fake url
 	// if ( delim ) {
@@ -645,48 +649,47 @@ bool Msg7::inject ( void *state ,
 
 	// if we had a delimeter thus denoting multiple items/documents to
 	// be injected, we must create unique urls for each item.
-	if ( delim && ! modifiedUrl ) {
-		// use hash of the content
-		int64_t ch64 = hash64n ( start , 0LL );
-		// normalize it
-		//Url u; u.set ( gr->m_url );
-		// reset it
-		m_injectUrlBuf.reset();
-		// by default append a -<ch64> to the provided url
-		m_injectUrlBuf.safePrintf("%s-%"UINT64"",u.getUrl(),ch64);
+	// if ( delim && ! modifiedUrl ) {
+	// 	// use hash of the content
+	// 	int64_t ch64 = hash64n ( start , 0LL );
+	// 	// normalize it
+	// 	//Url u; u.set ( gr->m_url );
+	// 	// reset it
+	// 	m_injectUrlBuf.reset();
+	// 	// by default append a -<ch64> to the provided url
+	// 	m_injectUrlBuf.safePrintf("%s-%"UINT64"",u.getUrl(),ch64);
 
-		// HOWEVER, if an hasmime is true and an http:// follows
-		// the delimeter then use that as the url...
-		// this way we can specify our own urls.
-		char *du = start;
-		du += gbstrlen(delim);
-		if ( du && is_wspace_a ( *du ) ) du++;
-		if ( du && is_wspace_a ( *du ) ) du++;
-		if ( du && is_wspace_a ( *du ) ) du++;
-		if ( gr->m_hasMime && 
-		     (strncasecmp( du,"http://",7) == 0 ||
-		      strncasecmp( du,"https://",8) == 0 ) ) {
-			// find end of it
-			char *uend = du + 7;
-			for ( ; *uend && ! is_wspace_a(*uend) ; uend++ );
-			// inject that then
-			m_injectUrlBuf.reset();
-			m_injectUrlBuf.safeMemcpy ( du , uend - du );
-			m_injectUrlBuf.nullTerm();
-			// and point to the actual http mime then
-			start = uend;
-		}
-
-	}
+	// 	// HOWEVER, if an hasmime is true and an http:// follows
+	// 	// the delimeter then use that as the url...
+	// 	// this way we can specify our own urls.
+	// 	char *du = start;
+	// 	du += gbstrlen(delim);
+	// 	if ( du && is_wspace_a ( *du ) ) du++;
+	// 	if ( du && is_wspace_a ( *du ) ) du++;
+	// 	if ( du && is_wspace_a ( *du ) ) du++;
+	// 	if ( gr->m_hasMime && 
+	// 	     (strncasecmp( du,"http://",7) == 0 ||
+	// 	      strncasecmp( du,"https://",8) == 0 ) ) {
+	// 		// find end of it
+	// 		char *uend = du + 7;
+	// 		for ( ; *uend && ! is_wspace_a(*uend) ; uend++ );
+	// 		// inject that then
+	// 		m_injectUrlBuf.reset();
+	// 		m_injectUrlBuf.safeMemcpy ( du , uend - du );
+	// 		m_injectUrlBuf.nullTerm();
+	// 		// and point to the actual http mime then
+	// 		start = uend;
+	// 	}
+	// }
 
 	// count them
-	m_injectCount++;
+	//m_injectCount++;
 
 	m_inUse = true;
 
-	if ( ! xd->injectDoc ( m_injectUrlBuf.getBufStart() ,
+	if ( ! xd->injectDoc ( gr->m_url , // m_injectUrlBuf.getBufStart() ,
 			       cr ,
-			       start , // content ,
+			       content , // start , // content ,
 			       gr->m_diffbotReply,
 			       gr->m_hasMime, // content starts with http mime?
 			       gr->m_hopCount,
@@ -700,8 +703,10 @@ bool Msg7::inject ( void *state ,
 			       gr->m_spiderLinks ,
 			       gr->m_newOnly, // index iff new
 
-			       this ,
-			       injectLoopWrapper9 ,
+			       //this ,
+			       //injectLoopWrapper9 ,
+			       m_state ,
+			       m_callback ,
 
 			       // extra shit
 			       gr->m_firstIndexed,

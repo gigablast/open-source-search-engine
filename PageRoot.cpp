@@ -2529,7 +2529,7 @@ bool sendPageAddUrl ( TcpSocket *sock , HttpRequest *hr ) {
 
 	// . pass in the cleaned url
 	// . returns false if blocked, true otherwise
-	if ( ! st1->m_msg7.inject ( //s ,
+	if ( ! st1->m_msg7.inject2 ( //s ,
 				    //r ,
 				    st1 ,
 				    doneInjectingWrapper3 ) )

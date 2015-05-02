@@ -1436,8 +1436,8 @@ bool Url::isBadExtension ( int32_t version ) {
 	if (badVersion == 0) return false;
 	//if(badVersion <= version) return true;
 	if ( badVersion > version ) return false;
-	// exceptions for .gz
-	if ( isCompressedArcOrWarc() ) return false;
+	// exceptions for .warc.gz .warc .arc .argc.gz
+	if ( isWarc() || isArc() ) return false;
 	return true;
 }
 
@@ -1454,10 +1454,10 @@ bool Url::isWarc ( ) {
 	// 	m_isArc = true;
 
 	if ( m_elen == 4 &&
-	     m_extenion[0] == 'w' &&
-	     m_extenion[1] == 'a' &&
-	     m_extenion[2] == 'r' &&
-	     m_extenion[3] == 'c' )
+	     m_extension[0] == 'w' &&
+	     m_extension[1] == 'a' &&
+	     m_extension[2] == 'r' &&
+	     m_extension[3] == 'c' )
 		return true;
 
 	if ( m_elen == 2 && 
@@ -1481,9 +1481,9 @@ bool Url::isWarc ( ) {
 bool Url::isArc ( ) {
 
 	if ( m_elen == 3 &&
-	     m_extenion[0] == 'a' &&
-	     m_extenion[1] == 'r' &&
-	     m_extenion[2] == 'c' )
+	     m_extension[0] == 'a' &&
+	     m_extension[1] == 'r' &&
+	     m_extension[2] == 'c' )
 		return true;
 	     
 	// hack to allow for .gz if it is .warc.gz or .arc.gz

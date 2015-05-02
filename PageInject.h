@@ -19,13 +19,13 @@ class Msg7 {
 public:
 
 	GigablastRequest m_gr;
-	SafeBuf m_injectUrlBuf;
-	bool m_firstTime;
-	char *m_start;
-	bool  m_fixMe;
-	char  m_saved;
-	int32_t  m_injectCount;
-	bool m_isDoneInjecting;
+	//SafeBuf m_injectUrlBuf;
+	//bool m_firstTime;
+	//char *m_start;
+	//bool  m_fixMe;
+	//char  m_saved;
+	//int32_t  m_injectCount;
+	//bool m_isDoneInjecting;
 
 	bool       m_needsSet;
 	XmlDoc     m_xd;
@@ -63,8 +63,8 @@ public:
 		      void *state ,
 		      void (*callback)(void *state) );
 
-	bool inject ( void *state ,
-		      void (*callback)(void *state) );
+	bool inject2 ( void *state ,
+		       void (*callback)(void *state) );
 
 
 	//bool injectTitleRec ( void *state ,

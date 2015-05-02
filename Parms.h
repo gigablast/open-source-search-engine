@@ -142,6 +142,7 @@ class GigablastRequest {
 	char  m_gotSections;
 	int32_t  m_charset;
 	int32_t  m_hopCount; // hopcount
+	collnum_t m_collnum; // more reliable than m_coll
 	// older ones
 	uint32_t m_firstIndexed; // firstimdexed
 	uint32_t m_lastSpidered; // lastspidered;
