@@ -40801,6 +40801,9 @@ bool XmlDoc::injectLinks (HashTableX *linkDedupTablePtr ,
 	// INJECT 10 at a time. xmldoc is 1MB.
 	int32_t i; for ( i = 0 ; i < MAX_XML_DOCS ; i++ ) {
 		XmlDoc *nd;
+		// continue if already set it. this was overwriting it
+		// and causing a mem leak before
+		if ( m_xmlDocs[i] ) continue;
 		try { nd = new ( XmlDoc ); }
 		catch ( ... ) {
 			g_errno = ENOMEM;

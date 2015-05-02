@@ -191,7 +191,13 @@ bool sendReply ( void *state ) {
 		am.safePrintf("\t<statusMsg><![CDATA[");
 		am.cdataEncode(mstrerror(g_errno));
 		am.safePrintf("]]></statusMsg>\n");
-		am.safePrintf("\t<docId>%"INT64"</docId>\n",xd->m_docId);
+		// if xmldoc was a container of subdocs that XmlDoc::indexDoc()
+		// indirectly called Msg7::inject2() on each one, then the
+		// container doc will not have been indexed or have a docid.
+		// in that case print it, but as zero
+		int64_t docId = xd->m_docId;
+		if ( ! xd->m_docIdValid ) docId = 0;
+		am.safePrintf("\t<docId>%"INT64"</docId>\n",docId);
 		if ( gr->m_getSections ) {
 			SafeBuf *secBuf = xd->getInlineSectionVotingBuf();
 			am.safePrintf("\t<htmlSrc><![CDATA[");
