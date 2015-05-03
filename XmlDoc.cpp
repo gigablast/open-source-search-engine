@@ -19043,6 +19043,8 @@ char **XmlDoc::getExpandedUtf8Content ( ) {
 	return &m_expandedUtf8Content;
 }
 
+static SafeBuf s_cookieBuf;
+
 void *systemStartWrapper_r ( void *state , ThreadEntry *t ) {
 
 	XmlDoc *THIS = (XmlDoc *)state;
@@ -19055,7 +19057,8 @@ void *systemStartWrapper_r ( void *state , ThreadEntry *t ) {
 	char cmd[MAX_URL_LEN+256];
 	snprintf( cmd,
 		  MAX_URL_LEN+256,
-		  "wget \"%s\" -O %s" ,
+		  "wget --cookie=\"%s\" \"%s\" -O %s" ,
+		  s_cookieBuf.getBufStart() ,
 		  THIS->m_firstUrl.getUrl() ,
 		  filename );
 
@@ -19090,6 +19093,72 @@ File *XmlDoc::getUtf8ContentInFile ( int32_t *fileSize ) {
 		m_fileSize = m_file.getFileSize();
 		m_fileValid = true;
 		return &m_file;
+	}
+
+	// before calling the system wget thread we gotta set the cookiebuf
+	// HACK: for archive.org
+	// if getting a page from archive.org then append the cookie
+	// so we have the proper permissions
+	static bool s_triedToLoadCookie = false;
+	char *x = m_firstUrl.getUrl();
+	// only go out 20 chars looking for start of .archive.org/
+	char *xend = x + 25;
+	bool isArchiveOrg = false;
+	for ( ; x < xend && *x ; x++ ) {
+		if ( x[ 0] != '.' && x[0] != '/' ) continue; // /archive.org?
+		if ( x[ 1] != 'a' ) continue;
+		if ( x[ 2] != 'r' ) continue;
+		if ( x[ 3] != 'c' ) continue;
+		if ( x[ 4] != 'h' ) continue;
+		if ( x[ 5] != 'i' ) continue;
+		if ( x[ 6] != 'v' ) continue;
+		if ( x[ 7] != 'e' ) continue;
+		if ( x[ 8] != '.' ) continue;
+		if ( x[ 9] != 'o' ) continue;
+		if ( x[10] != 'r' ) continue;
+		if ( x[11] != 'g' ) continue;
+		if ( x[12] != '/' ) continue;
+		isArchiveOrg = true;
+		break;
+	}
+
+	if ( isArchiveOrg && ! s_triedToLoadCookie ) {
+		// try to load it up if haven't tried yet
+		s_triedToLoadCookie = true;
+		SafeBuf tmp;
+		tmp.load ( "/home/mwells/.config/internetarchive.yml");
+		char *s = tmp.getBufStart();
+		char *line;
+		char *lineEnd;
+		line = strstr ( s , "logged-in-user: " );
+		if ( line ) lineEnd = strstr(line,"\n");
+		if ( lineEnd ) {
+			s_cookieBuf.safePrintf("logged-in-user=");
+			line += 16;
+			s_cookieBuf.safeMemcpy(line,lineEnd-line);
+			s_cookieBuf.pushChar(';');
+			s_cookieBuf.pushChar(' ');
+			s_cookieBuf.nullTerm();
+		}
+		line = strstr ( s , "logged-in-sig: " );
+		if ( line ) lineEnd = strstr(line,"\n");
+		if ( lineEnd ) {
+			s_cookieBuf.safePrintf("logged-in-sig=");
+			line += 15;
+			s_cookieBuf.safeMemcpy(line,lineEnd-line);
+			//s_cookieBuf.pushChar(';');
+			//s_cookieBuf.pushChar(' ');
+			s_cookieBuf.nullTerm();
+		}
+	}
+
+	// if we loaded something use it
+	if ( isArchiveOrg && s_cookieBuf.length() ) {
+		//cookie = s_cookieBuf.getBufStart();
+		log("http: using archive cookie %s",s_cookieBuf.getBufStart());
+		// and set user-agent too
+		// userAgent = "python-requests/2.3.0 "
+		// 	"CPython/2.7.3 Linux/3.5.0-32-generic";
 	}
 
 	m_calledWgetThread = true;
