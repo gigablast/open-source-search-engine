@@ -3435,8 +3435,8 @@ bool XmlDoc::indexArc ( ) {
 void doneInjectingWarcRec ( void *state ) {
 	XmlDoc *THIS = (XmlDoc *)state;
 	THIS->m_numInjectionsOut--;
+	log("build: warc: injection thread returned");
 	THIS->m_masterLoop ( THIS );
-	log("build: warc: injection returned");
 }
 
 
@@ -3454,7 +3454,7 @@ bool XmlDoc::indexWarc ( ) {
 	// first download the warc into a file on disk. because it can be
 	// so big we can fit it in memory. just do a wget then gunzip 
 	// then open it. use a system call in a thread.
-	int64_t fileSize;
+	int64_t fileSize = -1;
 	File *file = getUtf8ContentInFile( &fileSize );
 	// return true with g_errno set on error
 	if ( ! file ) {
@@ -3481,14 +3481,14 @@ bool XmlDoc::indexWarc ( ) {
 	if ( m_doneInjectingWarc ) {
 	warcDone:
 		m_doneInjectingWarc = true;
-		log("build: done parsing %"INT64 " bytes of warc file.",
-		    fileSize);
+		log("build: done parsing %"INT64 " bytes of warc file %s.",
+		    fileSize,file->getFilename());
 		// return if all injects have returned.
 		if ( m_numInjectionsOut == 0 ) {
 			g_errno = m_warcError;
 			return true;
 		}
-		log("build: waiting for injects to return.");
+		log("build: waiting for injection threads to return.");
 		// we would block
 		return false;
 	}
@@ -3567,10 +3567,9 @@ bool XmlDoc::indexWarc ( ) {
 
 	// find "WARC/1.0" or whatever
 	char *whp = m_fptr;
-	// look for ARC/ not WARC/ since we null terminate http reply below
-	// it overwrites the 'w'
+	// we do terminate last warc rec with \0 so be aware of that...
 	int32_t maxCount = 10;
-	for ( ; *whp && strncmp(whp,"ARC/",5) && --maxCount>0; whp++ );
+	for ( ; *whp && strncmp(whp,"WARC/",5) && --maxCount>0; whp++ );
 	// none?
 	if ( ! *whp ) {
 		log("build: could not find WARC/1 header start for file=%s",
@@ -3761,8 +3760,6 @@ bool XmlDoc::indexWarc ( ) {
 	// init the input parms
 	//memset ( gr , 0 , sizeof(GigablastRequest) );
 	// reset it
-	gr->m_spiderLinks = false;
-	gr->m_injectLinks = false;
 	gr->m_hopCount = *hc + 1;
 	if ( ! m_collnumValid ) { char *xx=NULL;*xx=0; }
 	gr->m_collnum = m_collnum;
@@ -3770,6 +3767,25 @@ bool XmlDoc::indexWarc ( ) {
 	gr->m_deleteUrl = m_deleteFromIndex;
 	// each subdoc will have a mime since it is a warc
 	gr->m_hasMime = true;
+	// it has a mime so we shouldn't need to set this
+	gr->m_contentTypeStr = NULL;
+	// we are injecting a single page, not a container file
+	gr->m_contentDelim = NULL;
+	// miscelleaneous. faster than memsetting the whole gr class (32k)
+	gr->m_getSections = 0;
+	gr->m_gotSections = 0;
+	gr->m_queryToScrape = NULL;
+	gr->m_contentFile = NULL;
+	gr->m_diffbotReply = NULL;
+	gr->m_spiderLinks = false;
+	gr->m_injectLinks = false;
+	gr->m_shortReply = false;
+	gr->m_newOnly = false;
+	gr->m_recycle = false;
+	gr->m_dedup = true;
+	gr->m_doConsistencyTesting = false;
+	gr->m_charset = 0;
+
 
 	//
 	// set 'timestamp' for injection
@@ -3796,13 +3812,23 @@ bool XmlDoc::indexWarc ( ) {
 		gr->m_injectDocIp = atoip ( warcIp, warcIpEnd-warcIp );
 	}
 
+	// we end up repopulating m_fileBuf to read the next warc sometimes
+	// so do not destroy the content we are injecting from the original
+	// m_fileBuf. so we have to copy it.
+	gr->m_contentBuf.reset();
+	gr->m_contentBuf.reserve ( httpReplySize + 1 );
+	gr->m_contentBuf.safeMemcpy ( httpReply , httpReplySize );
+	gr->m_contentBuf.nullTerm();
+
 	//
 	// set 'content' for injection
 	//
-	gr->m_content = httpReply;
+	gr->m_content = gr->m_contentBuf.getBufStart();
 
 	// null term it and hope it doesn't hurt anything!!!!!
-	httpReply [ httpReplySize ] = '\0';
+	//httpReply [ httpReplySize ] = '\0';
+	// skip over that '\0' with this too
+	//m_fptr++;
 
 
 	// set the rest of the injection parms
@@ -3812,6 +3838,7 @@ bool XmlDoc::indexWarc ( ) {
 	// all warc records have the http mime
 	gr->m_hasMime      = true;
 	gr->m_url          = warcUrl;
+
 
 	// log it
 	log("build: warc: injecting WARC url %s",warcUrl);
@@ -19111,7 +19138,10 @@ void systemDoneWrapper ( void *state , ThreadEntry *t ) {
 // we download large files to a file on disk, like warcs and arcs
 File *XmlDoc::getUtf8ContentInFile ( int64_t *fileSizeArg ) {
 
-	if ( m_fileValid ) return &m_file;
+	if ( m_fileValid ) {
+		*fileSizeArg = m_fileSize;
+		return &m_file;
+	}
 
 	if ( m_calledWgetThread ) {
 
