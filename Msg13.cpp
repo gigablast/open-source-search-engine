@@ -3020,7 +3020,7 @@ bool addToHammerQueue ( Msg13Request *r ) {
 	CollectionRec *cr = g_collectiondb.getRec ( r->m_collnum );
 
 	bool canUseProxies = false;
-	if ( cr->m_automaticallyUseProxies ) canUseProxies = true;
+	if ( cr && cr->m_automaticallyUseProxies ) canUseProxies = true;
 	if ( r->m_forceUseFloaters         ) canUseProxies = true;
 	//if ( g_conf.m_useProxyIps          ) canUseProxies = true;
 	//if ( g_conf.m_automaticallyUseProxyIps ) canUseProxies = true;
