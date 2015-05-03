@@ -19565,6 +19565,16 @@ void Parms::init ( ) {
 	m->m_obj   = OBJ_CONF;
 	m++;
 
+	m->m_title = "disable host0 for msg13 reception hack";
+	m->m_cgi   = "dmth";
+	m->m_off   = (char *)&g_conf.m_diffbotMsg13Hack - g;
+	m->m_type  = TYPE_BOOL;
+	m->m_def   = "0";
+	m->m_priv  = 1;
+	m->m_page  = PAGE_LOG;
+	m->m_obj   = OBJ_CONF;
+	m++;
+
 	m->m_title = "log debug spider proxies";
 	m->m_cgi   = "ldspr";
 	m->m_off   = (char *)&g_conf.m_logDebugProxies - g;

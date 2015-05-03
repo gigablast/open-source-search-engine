@@ -1469,10 +1469,12 @@ bool Process::shutdown2 ( ) {
 	if ( g_threads.amThread() ) return true;
 
 	if ( m_urgent )
-		log(LOG_INFO,"gb: Shutting down urgently. Try #%"INT32".",
+		log(LOG_INFO,"gb: Shutting down urgently. "
+		    "Timed try #%"INT32".",
 		    m_try++);
 	else
-		log(LOG_INFO,"gb: Shutting down. Try #%"INT32".",m_try++);
+		log(LOG_INFO,"gb: Shutting down. Timed try #%"INT32".",
+		    m_try++);
 
 
 	// switch to urgent if having problems

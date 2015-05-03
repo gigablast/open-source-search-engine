@@ -281,6 +281,12 @@ bool Msg13::forwardRequest ( ) {
 	//
 	int32_t nh     = g_hostdb.m_numHosts;
 	int32_t hostId = hash32h(((uint32_t)r->m_firstIp >> 8), 0) % nh;
+
+	// avoid host #0 for diffbot hack which is dropping some requests
+	// because of the streaming bug methinks
+	if ( hostId == 0 && nh >= 2 && g_conf.m_diffbotMsg13Hack ) 
+		hostId = 1;
+
 	// get host to send to from hostId
 	Host *h = NULL;
 	// . pick first alive host, starting with "hostId" as the hostId
@@ -1473,14 +1479,19 @@ void gotHttpReply2 ( void *state ,
 		    mstrerror(savedErr),r->ptr_url,iptoa(r->m_urlIp));
 
 	bool inTable = false;
+	bool checkIfBanned = false;
+	if ( cr && cr->m_automaticallyBackOff    ) checkIfBanned = true;
+	if ( cr && cr->m_automaticallyUseProxies ) checkIfBanned = true;
 	// must have a collrec to hold the ips
-	if ( cr && r->m_urlIp != 0 && r->m_urlIp != -1 )
+	if ( checkIfBanned && cr && r->m_urlIp != 0 && r->m_urlIp != -1 )
 		inTable = isIpInTwitchyTable ( cr , r->m_urlIp );
 
 	// check if our ip seems banned. if g_errno was ECONNRESET that
 	// is an indicator it was throttled/banned.
 	const char *banMsg = NULL;
-	bool banned = ipWasBanned ( ts , &banMsg );
+	bool banned = false;
+	if ( checkIfBanned )
+		banned = ipWasBanned ( ts , &banMsg );
 	if (  banned )
 		// should we turn proxies on for this IP address only?
 		log("msg13: url %s detected as banned (%s), "
@@ -1500,7 +1511,9 @@ void gotHttpReply2 ( void *state ,
 	// did we detect it as banned?
 	if ( banned && 
 	     // retry iff we haven't already, but if we did stop the inf loop
-	     ! r->m_wasInTableBeforeStarting && 
+	     ! r->m_wasInTableBeforeStarting &&
+	     cr &&
+	     cr->m_automaticallyBackOff &&
 	     // but this is not for proxies... only native crawlbot backoff
 	     ! r->m_proxyIp ) {
 		// note this as well
@@ -2075,7 +2088,10 @@ void gotHttpReply2 ( void *state ,
 			     err != EINLINESECTIONS &&
 			     // connection reset by peer
 			     err != ECONNRESET ) {
-				char*xx=NULL;*xx=0;}
+				log("http: bad error from httpserver get doc: %s",
+				    mstrerror(err));
+				char*xx=NULL;*xx=0;
+			}
 		}
 		// replicate the reply. might return NULL and set g_errno
 		char *copy          = reply;
@@ -3016,8 +3032,8 @@ bool addToHammerQueue ( Msg13Request *r ) {
 	CollectionRec *cr = g_collectiondb.getRec ( r->m_collnum );
 
 	bool canUseProxies = false;
-	if ( cr->m_automaticallyUseProxies ) canUseProxies = true;
-	if ( r->m_forceUseFloaters         ) canUseProxies = true;
+	if ( cr && cr->m_automaticallyUseProxies ) canUseProxies = true;
+	if ( r->m_forceUseFloaters               ) canUseProxies = true;
 	//if ( g_conf.m_useProxyIps          ) canUseProxies = true;
 	//if ( g_conf.m_automaticallyUseProxyIps ) canUseProxies = true;
 
