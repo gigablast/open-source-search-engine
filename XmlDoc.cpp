@@ -3435,7 +3435,8 @@ bool XmlDoc::indexArc ( ) {
 void doneInjectingWarcRec ( void *state ) {
 	XmlDoc *THIS = (XmlDoc *)state;
 	THIS->m_numInjectionsOut--;
-	log("build: warc: injection thread returned");
+	log("build: warc: injection thread returned. %"INT32" out now.",
+	    THIS->m_numInjectionsOut);
 	THIS->m_masterLoop ( THIS );
 }
 
@@ -19101,7 +19102,7 @@ void *systemStartWrapper_r ( void *state , ThreadEntry *t ) {
 	XmlDoc *THIS = (XmlDoc *)state;
 
 	char filename[2048];
-	snprintf(filename,2048,"%sfile%"UINT32".gz",
+	snprintf(filename,2048,"%sgbwarcfile%"UINT32".gz",
 		 g_hostdb.m_dir,
 		 (int32_t)(int64_t)THIS);
 
@@ -19148,7 +19149,7 @@ File *XmlDoc::getUtf8ContentInFile ( int64_t *fileSizeArg ) {
 		char filename[2048];
 		snprintf ( filename,
 			   2048,
-			   "%sfile%"UINT32"",
+			   "%sgbwarcfile%"UINT32"",
 			   g_hostdb.m_dir,
 			   (int32_t)(int64_t)this);
 
