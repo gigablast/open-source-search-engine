@@ -249,6 +249,8 @@ public:
 
 #define MAX_XML_DOCS 4
 
+#define MAXMSG7S 50
+
 class XmlDoc {
 
  public:
@@ -694,7 +696,7 @@ class XmlDoc {
 	char **getExpandedUtf8Content ( ) ;
 	char **getUtf8Content ( ) ;
 	// we download large files to a file on disk, like warcs and arcs
-	File *getUtf8ContentInFile ( int32_t *fileSize );
+	File *getUtf8ContentInFile ( int64_t *fileSizeArg );
 	int32_t *getContentHash32 ( ) ;
 	int32_t *getContentHashJson32 ( ) ;
 	//int32_t *getTagHash32 ( ) ;
@@ -1058,6 +1060,7 @@ class XmlDoc {
 
 	// warc parsing member vars
 	class Msg7 *m_msg7;
+	class Msg7 *m_msg7s[MAXMSG7S];
 	char *m_warcContentPtr;
 	char *m_arcContentPtr;
 	char *m_anyContentPtr;
@@ -1069,7 +1072,6 @@ class XmlDoc {
 	bool m_doneInjectingWarc ;
 	bool m_doneInjectingArc ;
 	int64_t m_fileOff ;
-	int32_t m_outstandingInjects ;
 	char *m_fileBuf ;
 	int32_t m_fileBufAllocSize;
 	char *m_fptr ;

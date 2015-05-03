@@ -109,6 +109,7 @@ char *getFirstJSONObject ( char *p ,
 char *getJSONObjectEnd ( char *p , int32_t niceness ) ;
 
 XmlDoc::XmlDoc() { 
+	for ( int32_t i = 0 ; i < MAXMSG7S ; i++ ) m_msg7s[i] = NULL;
 	m_esbuf.setLabel("exputfbuf");
 	for ( int32_t i = 0 ; i < MAX_XML_DOCS ; i++ ) m_xmlDocs[i] = NULL;
 	m_freed = false;
@@ -207,8 +208,21 @@ class XmlDoc *g_xd;
 
 void XmlDoc::reset ( ) {
 
+	if ( m_fileValid ) {
+		m_file.close();
+		m_file.unlink();
+	}
+
 	if ( m_fileBuf )
 		mfree ( m_fileBuf , m_fileBufAllocSize , "fbdd");
+
+	for ( int i = 0 ; i < MAXMSG7S ; i++ ) {
+		Msg7 *msg7 = m_msg7s[i];
+		if ( ! msg7 ) continue;
+		mdelete ( m_msg7 , sizeof(Msg7) , "xdmsg7" );
+		delete ( m_msg7 );
+		m_msg7s[i] = NULL;
+	}		
 
 	if ( m_msg7 ) {
 		mdelete ( m_msg7 , sizeof(Msg7) , "xdmsg7" );
@@ -3418,6 +3432,13 @@ bool XmlDoc::indexArc ( ) {
 	goto subdocLoop;
 }
 
+void doneInjectingWarcRec ( void *state ) {
+	XmlDoc *THIS = (XmlDoc *)state;
+	THIS->m_numInjectionsOut--;
+	THIS->m_masterLoop ( THIS );
+	log("build: warc: injection returned");
+}
+
 
 #define MAXWARCRECSIZE 1000000
 
@@ -3433,7 +3454,7 @@ bool XmlDoc::indexWarc ( ) {
 	// first download the warc into a file on disk. because it can be
 	// so big we can fit it in memory. just do a wget then gunzip 
 	// then open it. use a system call in a thread.
-	int32_t fileSize;
+	int64_t fileSize;
 	File *file = getUtf8ContentInFile( &fileSize );
 	// return true with g_errno set on error
 	if ( ! file ) {
@@ -3449,36 +3470,6 @@ bool XmlDoc::indexWarc ( ) {
 	// 	return true;
 	// }
 
-	// need this. it is almost 1MB in size, so alloc it
-	if ( ! m_msg7 ) {
-		try { m_msg7 = new ( Msg7 ); }
-		catch ( ... ) {
-			g_errno = ENOMEM;
-			return true;
-		}
-		mnew ( m_msg7 , sizeof(Msg7),"xdmsg7");
-	}
-
-	// inject input parms:
-	GigablastRequest *gr = &m_msg7->m_gr;
-	// the cursor for scanning the subdocs
-	if ( m_fileOff == 0 ) { 
-		// init the content cursor to point to the first subdoc
-		//m_warcContentPtr = *wcp;
-		// init the input parms
-		memset ( gr , 0 , sizeof(GigablastRequest) );
-		// reset it
-		gr->m_spiderLinks = false;
-		gr->m_injectLinks = false;
-		gr->m_hopCount = *hc + 1;
-		if ( ! m_collnumValid ) { char *xx=NULL;*xx=0; }
-		gr->m_collnum = m_collnum;
-		// will this work on a content delimeterized doc?
-		gr->m_deleteUrl = m_deleteFromIndex;
-		// each subdoc will have a mime since it is a warc
-		gr->m_hasMime = true;
-	}
-
 	QUICKPOLL ( m_niceness );
 
 	// MDW BEGIN
@@ -3490,9 +3481,10 @@ bool XmlDoc::indexWarc ( ) {
 	if ( m_doneInjectingWarc ) {
 	warcDone:
 		m_doneInjectingWarc = true;
-		log("build: done parsing warc file.");
+		log("build: done parsing %"INT64 " bytes of warc file.",
+		    fileSize);
 		// return if all injects have returned.
-		if ( m_outstandingInjects == 0 ) {
+		if ( m_numInjectionsOut == 0 ) {
 			g_errno = m_warcError;
 			return true;
 		}
@@ -3519,7 +3511,7 @@ bool XmlDoc::indexWarc ( ) {
 		// it must be < 1MB or we faulter.
 		if ( ! m_fileBuf ) {
 			m_fileBufAllocSize = MAXWARCRECSIZE + 1;
-			m_fileBuf = (char *)mmalloc ( m_fileBufAllocSize ,"sibuf");
+			m_fileBuf=(char *)mmalloc(m_fileBufAllocSize ,"sibuf");
 		}
 		if ( ! m_fileBuf ) {
 			log("build: failed to alloc buf to read warc file.");
@@ -3560,6 +3552,7 @@ bool XmlDoc::indexWarc ( ) {
 	QUICKPOLL ( m_niceness );
 
 	int32_t max = g_hostdb.m_numHosts * 2;
+	if ( max > MAXMSG7S ) max = MAXMSG7S;
 
 	// wait for one to come back before launching another msg7
 	if ( m_numInjectionsOut > max ) return false;
@@ -3574,11 +3567,17 @@ bool XmlDoc::indexWarc ( ) {
 
 	// find "WARC/1.0" or whatever
 	char *whp = m_fptr;
-	for ( ; *whp && strncmp(whp,"WARC/",5) ; whp++ );
+	// look for ARC/ not WARC/ since we null terminate http reply below
+	// it overwrites the 'w'
+	int32_t maxCount = 10;
+	for ( ; *whp && strncmp(whp,"ARC/",5) && --maxCount>0; whp++ );
 	// none?
 	if ( ! *whp ) {
 		log("build: could not find WARC/1 header start for file=%s",
 		    file->getFilename());
+		// we don't really need this and since we force the http
+		// reply to end in \0 before calling inject2() on it it
+		// gets messed up
 		goto warcDone;
 	}
 
@@ -3741,11 +3740,43 @@ bool XmlDoc::indexWarc ( ) {
 		goto loop;
 
 
+	// grab an available msg7
+	Msg7 *msg7 = NULL;
+	for ( int32_t i = 0 ; i < MAXMSG7S ; i++ ) {
+		msg7 = m_msg7s[i];
+		// if we got an available one stop
+		if ( msg7 && ! msg7->m_inUse ) break;
+		// ok, create one, 1MB each about
+		try { msg7 = new ( Msg7 ); }
+		catch ( ... ) {g_errno=ENOMEM;m_warcError=g_errno;return true;}
+		mnew ( msg7 , sizeof(Msg7),"xdmsgs7");
+		// store it for re-use
+		m_msg7s[i] = msg7;
+		break;
+	}
+
+
+	// inject input parms:
+	GigablastRequest *gr = &msg7->m_gr;
+	// init the input parms
+	//memset ( gr , 0 , sizeof(GigablastRequest) );
+	// reset it
+	gr->m_spiderLinks = false;
+	gr->m_injectLinks = false;
+	gr->m_hopCount = *hc + 1;
+	if ( ! m_collnumValid ) { char *xx=NULL;*xx=0; }
+	gr->m_collnum = m_collnum;
+	// will this work on a content delimeterized doc?
+	gr->m_deleteUrl = m_deleteFromIndex;
+	// each subdoc will have a mime since it is a warc
+	gr->m_hasMime = true;
+
 	//
 	// set 'timestamp' for injection
 	//
 	int64_t warcTime = 0;
 	if ( warcDate ) warcTime = atotime ( warcDate );
+
 	gr->m_firstIndexed = warcTime;
 	gr->m_lastSpidered = warcTime;
 
@@ -3785,16 +3816,9 @@ bool XmlDoc::indexWarc ( ) {
 	// log it
 	log("build: warc: injecting WARC url %s",warcUrl);
 
-	// grab an available msg7
-	Msg7 *msg7 = NULL;
-	for ( int32_t i = 0 ; i < 30 ; i++ ) {
-		msg7 = &m_msg7[i];
-		if ( ! msg7->m_inUse ) break;
-	}
-
 	QUICKPOLL ( m_niceness );
 
-	if ( ! msg7->inject2 ( m_masterState , m_masterLoop ) ) 
+	if ( ! msg7->inject2 ( this , doneInjectingWarcRec ) )
 		m_numInjectionsOut++;
 	else
 		log("build: index warc: msg7: %s",mstrerror(g_errno));
@@ -19050,21 +19074,30 @@ void *systemStartWrapper_r ( void *state , ThreadEntry *t ) {
 	XmlDoc *THIS = (XmlDoc *)state;
 
 	char filename[2048];
-	snprintf(filename,2048,"%sfile%"UINT32"",
+	snprintf(filename,2048,"%sfile%"UINT32".gz",
 		 g_hostdb.m_dir,
 		 (int32_t)(int64_t)THIS);
 
 	char cmd[MAX_URL_LEN+256];
 	snprintf( cmd,
 		  MAX_URL_LEN+256,
-		  "wget --cookie=\"%s\" \"%s\" -O %s" ,
+		  "wget --header=\"Cookie: %s\" \"%s\" -O %s" ,
 		  s_cookieBuf.getBufStart() ,
 		  THIS->m_firstUrl.getUrl() ,
 		  filename );
 
-	int ret = system(cmd);
+	int ret;
+
+	ret = system(cmd);
 	if ( ret == -1 )
 		log("build: wget system failed: %s",mstrerror(errno));
+
+	// unzip it now
+	snprintf ( cmd , MAX_URL_LEN+256, "gunzip -f %s" , filename );
+	ret = system(cmd);
+	if ( ret == -1 )
+		log("build: gunzip system failed: %s",mstrerror(errno));
+
 
 	return NULL;
 }
@@ -19076,7 +19109,7 @@ void systemDoneWrapper ( void *state , ThreadEntry *t ) {
 }
 
 // we download large files to a file on disk, like warcs and arcs
-File *XmlDoc::getUtf8ContentInFile ( int32_t *fileSize ) {
+File *XmlDoc::getUtf8ContentInFile ( int64_t *fileSizeArg ) {
 
 	if ( m_fileValid ) return &m_file;
 
@@ -19092,6 +19125,8 @@ File *XmlDoc::getUtf8ContentInFile ( int32_t *fileSize ) {
 		m_file.set ( filename );
 		m_fileSize = m_file.getFileSize();
 		m_fileValid = true;
+		*fileSizeArg = m_fileSize;
+		m_file.open(O_RDONLY);
 		return &m_file;
 	}
 
