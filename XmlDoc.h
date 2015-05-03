@@ -506,7 +506,7 @@ class XmlDoc {
 	bool isContainerDoc ( );
 	bool indexContainerDoc ( );
 	bool indexArc ( ) ;
-	bool indexWarc ( ) ;
+	bool indexWarcOrArc ( char ct ) ;
 	key_t *getTitleRecKey() ;
 	//char *getSkipIndexing ( );
 	char *prepareToMakeTitleRec ( ) ;
