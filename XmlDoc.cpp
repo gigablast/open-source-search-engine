@@ -114,6 +114,8 @@ XmlDoc::XmlDoc() {
 	m_freed = false;
 	m_contentInjected = false;
 	m_wasContentInjected = false;
+
+	// warc parsing stuff
 	m_msg7 = NULL;
 	m_warcError = 0;
 	m_arcError = 0;
@@ -125,6 +127,8 @@ XmlDoc::XmlDoc() {
 	m_fptrEnd = NULL;
 	m_fileBuf = NULL;
 	m_warcContentPtr = NULL;
+	m_calledWgetThread = false;
+
 	//m_coll  = NULL;
 	m_ubuf = NULL;
 	m_pbuf = NULL;
@@ -3417,7 +3421,9 @@ bool XmlDoc::indexArc ( ) {
 
 #define MAXWARCRECSIZE 1000000
 
-// returns false if would block, true otherwise. returns true and sets g_errno on err
+// . returns false if would block, true otherwise. 
+// . returns true and sets g_errno on err
+// . injectwarc
 bool XmlDoc::indexWarc ( ) {
 
 	int8_t *hc = getHopCount();
@@ -19037,8 +19043,68 @@ char **XmlDoc::getExpandedUtf8Content ( ) {
 	return &m_expandedUtf8Content;
 }
 
+void *systemStartWrapper_r ( void *state , ThreadEntry *t ) {
+
+	XmlDoc *THIS = (XmlDoc *)state;
+
+	char filename[2048];
+	snprintf(filename,2048,"%sfile%"UINT32"",
+		 g_hostdb.m_dir,
+		 (int32_t)(int64_t)THIS);
+
+	char cmd[MAX_URL_LEN+256];
+	snprintf( cmd,
+		  MAX_URL_LEN+256,
+		  "wget \"%s\" -O %s" ,
+		  THIS->m_firstUrl.getUrl() ,
+		  filename );
+
+	int ret = system(cmd);
+	if ( ret == -1 )
+		log("build: wget system failed: %s",mstrerror(errno));
+
+	return NULL;
+}
+
+// come back here
+void systemDoneWrapper ( void *state , ThreadEntry *t ) {
+	XmlDoc *THIS = (XmlDoc *)state;
+	THIS->m_masterLoop ( THIS->m_masterState );
+}
+
 // we download large files to a file on disk, like warcs and arcs
 File *XmlDoc::getUtf8ContentInFile ( int32_t *fileSize ) {
+
+	if ( m_fileValid ) return &m_file;
+
+	if ( m_calledWgetThread ) {
+
+		char filename[2048];
+		snprintf ( filename,
+			   2048,
+			   "%sfile%"UINT32"",
+			   g_hostdb.m_dir,
+			   (int32_t)(int64_t)this);
+
+		m_file.set ( filename );
+		m_fileSize = m_file.getFileSize();
+		m_fileValid = true;
+		return &m_file;
+	}
+
+	m_calledWgetThread = true;
+
+	// . call thread to call popen
+	// . callThread returns true on success, in which case we block
+	if ( g_threads.call ( FILTER_THREAD        ,
+			      MAX_NICENESS         ,
+			      (void *)this                 , // this
+			      systemDoneWrapper    ,
+			      systemStartWrapper_r ) ) 
+		// would block, wait for thread
+		return (File *)-1;
+	// failed?
+	log("build: failed to launch wget thread");
 	return NULL;
 }
 

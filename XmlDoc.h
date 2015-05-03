@@ -1078,6 +1078,7 @@ class XmlDoc {
 	int64_t m_fileSize;
 	bool m_hasMoreToRead;
 	int32_t m_numInjectionsOut;
+	bool m_calledWgetThread;
 
 	// . same thing, a little more complicated
 	// . these classes are only set on demand
@@ -1203,6 +1204,7 @@ class XmlDoc {
 	char     m_addedStatusDocSizeValid;
 	char     m_downloadStartTimeValid;
 	char     m_contentDelimValid;
+	char     m_fileValid;
 	//char   m_docQualityValid;
 	char     m_siteValid;
 	char     m_startTimeValid;
