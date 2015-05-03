@@ -115,6 +115,15 @@ XmlDoc::XmlDoc() {
 	m_contentInjected = false;
 	m_wasContentInjected = false;
 	m_msg7 = NULL;
+	m_warcError = 0;
+	m_arcError = 0;
+	m_doneInjectingWarc = false;
+	m_doneInjectingArc = false;
+	m_fileOff = 0;
+	m_numInjectionsOut = 0;
+	m_fptr = NULL;
+	m_fptrEnd = NULL;
+	m_fileBuf = NULL;
 	m_warcContentPtr = NULL;
 	//m_coll  = NULL;
 	m_ubuf = NULL;
@@ -193,6 +202,9 @@ static int64_t s_lastTimeStart = 0LL;
 class XmlDoc *g_xd;
 
 void XmlDoc::reset ( ) {
+
+	if ( m_fileBuf )
+		mfree ( m_fileBuf , m_fileBufAllocSize , "fbdd");
 
 	if ( m_msg7 ) {
 		mdelete ( m_msg7 , sizeof(Msg7) , "xdmsg7" );
@@ -3403,6 +3415,7 @@ bool XmlDoc::indexArc ( ) {
 }
 
 
+#define MAXWARCRECSIZE 1000000
 
 // returns false if would block, true otherwise. returns true and sets g_errno on err
 bool XmlDoc::indexWarc ( ) {
@@ -3410,21 +3423,25 @@ bool XmlDoc::indexWarc ( ) {
 	int8_t *hc = getHopCount();
 	if ( ! hc ) return true; // error?
 	if ( hc == (void *)-1 ) return false;
-	// first download
-	char **wcp = getUtf8Content();
+
+	// first download the warc into a file on disk. because it can be
+	// so big we can fit it in memory. just do a wget then gunzip 
+	// then open it. use a system call in a thread.
+	int32_t fileSize;
+	File *file = getUtf8ContentInFile( &fileSize );
 	// return true with g_errno set on error
-	if ( ! wcp ) {
+	if ( ! file ) {
 		if ( ! g_errno ) { char *xx=NULL;*xx=0; }
 		return true;
 	}
 	// would block? return false then
-	if ( wcp == (void *)-1 )
+	if ( file == (void *)-1 )
 		return false;
 
-	if ( *wcp == NULL ) {
-		log("build: warc content was empty. did not index.");
-		return true;
-	}
+	// if ( *wcp == NULL ) {
+	// 	log("build: warc content was empty. did not index.");
+	// 	return true;
+	// }
 
 	// need this. it is almost 1MB in size, so alloc it
 	if ( ! m_msg7 ) {
@@ -3439,9 +3456,9 @@ bool XmlDoc::indexWarc ( ) {
 	// inject input parms:
 	GigablastRequest *gr = &m_msg7->m_gr;
 	// the cursor for scanning the subdocs
-	if ( ! m_warcContentPtr ) {
+	if ( m_fileOff == 0 ) { 
 		// init the content cursor to point to the first subdoc
-		m_warcContentPtr = *wcp;
+		//m_warcContentPtr = *wcp;
 		// init the input parms
 		memset ( gr , 0 , sizeof(GigablastRequest) );
 		// reset it
@@ -3456,109 +3473,281 @@ bool XmlDoc::indexWarc ( ) {
 		gr->m_hasMime = true;
 	}
 
- subdocLoop:
+	QUICKPOLL ( m_niceness );
+
+	// MDW BEGIN
+
+	bool needReadMore = false;
+	if ( ! m_fptr ) needReadMore = true;
+
+	// did an inject return?
+	if ( m_doneInjectingWarc ) {
+	warcDone:
+		m_doneInjectingWarc = true;
+		log("build: done parsing warc file.");
+		// return if all injects have returned.
+		if ( m_outstandingInjects == 0 ) {
+			g_errno = m_warcError;
+			return true;
+		}
+		log("build: waiting for injects to return.");
+		// we would block
+		return false;
+	}
+
+
+ readMore:
+
+	if ( needReadMore ) {
+
+		log("build: reading %"INT64" bytes more of warc file"
+		    ,(int64_t)MAXWARCRECSIZE);
+
+		// are we done?
+		if ( m_fileOff >= fileSize ) {
+			log("build: hit end of warc file. done.");
+			goto warcDone;
+		}
+
+		// read 1MB of data into this buf to get the first WARC record
+		// it must be < 1MB or we faulter.
+		if ( ! m_fileBuf ) {
+			m_fileBufAllocSize = MAXWARCRECSIZE + 1;
+			m_fileBuf = (char *)mmalloc ( m_fileBufAllocSize ,"sibuf");
+		}
+		if ( ! m_fileBuf ) {
+			log("build: failed to alloc buf to read warc file.");
+			return true;
+		}
+
+		int32_t maxToRead = MAXWARCRECSIZE;
+		int32_t toRead = maxToRead;
+		m_hasMoreToRead = true;
+		if ( m_fileOff + toRead > fileSize ) {
+			toRead = fileSize - m_fileOff;
+			m_hasMoreToRead = false;
+		}
+		int32_t bytesRead = file->read (m_fileBuf, toRead, m_fileOff);
+		if ( bytesRead != toRead ) {
+			log("build: read of %s failed at offset "
+			    "%"INT64"", file->getFilename(), m_fileOff);
+			if ( ! g_errno ) g_errno = EBADENGINEER;
+			m_warcError = g_errno;
+			goto warcDone;
+		}
+		// null term what we read
+		m_fileBuf[bytesRead] = '\0';
+
+		// if not enough to constitute a WARC record probably just 
+		// new lines
+		if ( toRead < 20 ) {
+			log("build: done processing warc file.");
+			goto warcDone;
+		}
+		// point to what we read
+		m_fptr = m_fileBuf;
+		m_fptrEnd = m_fileBuf + bytesRead;
+	}
+
+ loop:
 
 	QUICKPOLL ( m_niceness );
 
-	// we had \0 terminated the end of the previous record, so put back
-	if ( m_savedChar && ! *m_warcContentPtr ) *m_warcContentPtr = m_savedChar;
+	int32_t max = g_hostdb.m_numHosts * 2;
 
-	// find size of this warc record. parse this warc record
-	char *mm = strstr(m_warcContentPtr,"Content-Length:");
-	char *mmend = NULL;
-	if ( mm ) mmend = strstr (mm,"\n");
-	if ( ! mm || ! mmend ) {
-		log("build: warc: no 'content-length' found. all done");
-		// XmlDoc.cpp checks for this to stop calling us
-		//m_isDoneInjecting = true;
-		return true;
-	}
-	// set 'recordSize' to the content-length
-	char c = *mmend;
-	*mmend = '\0';
-	int64_t recordSize = atoll ( mm + 15 );
-	*mmend = c;
-	// set 'hend' to the end of this mime header
-	char *warcMimeEnd = strstr ( mm, "\r\n\r\n");
-	if ( ! warcMimeEnd ) {
-		log("build: warc: could no mime header end. stopping.");
-		// this is critical, so we gotta stop
-		return true;
-	}
-	// tmp \0 that for these strstr() calls in the mime so if they miss
-	// we don't scan a 1GB warc for them
-	c = *warcMimeEnd;
-	*warcMimeEnd = '\0';
+	// wait for one to come back before launching another msg7
+	if ( m_numInjectionsOut > max ) return false;
 
-	char *warcUrl  = strstr(m_warcContentPtr,"WARC-Target-URI:");
-	char *warcType = strstr(m_warcContentPtr,"WARC-Type:");
-	char *warcDate = strstr(m_warcContentPtr,"WARC-Date:");
-	char *warcIp   = strstr(m_warcContentPtr,"WARC-IP-Address:");
+	char *realStart = m_fptr;
+
+	// need at least say 100k for warc header
+	if ( m_fptr + 100000 > m_fptrEnd && m_hasMoreToRead )  {
+		needReadMore = true;
+		goto readMore;
+	}
+
+	// find "WARC/1.0" or whatever
+	char *whp = m_fptr;
+	for ( ; *whp && strncmp(whp,"WARC/",5) ; whp++ );
+	// none?
+	if ( ! *whp ) {
+		log("build: could not find WARC/1 header start for file=%s",
+		    file->getFilename());
+		goto warcDone;
+	}
+
+	char *warcHeader = whp;
+
+	// find end of warc mime HEADER not the content
+	char *warcHeaderEnd = strstr(warcHeader,"\r\n\r\n");
+	if ( ! warcHeaderEnd ) {
+		log("build: could not find end of WARC header for file=%s.",
+		    file->getFilename());
+		goto warcDone;
+	}
+	// \0 term for strstrs below
+	*warcHeaderEnd = '\0';
+	//warcHeaderEnd += 4;
+
+	char *warcLen  = strstr(warcHeader,"Content-Length:");
+	char *warcUrl  = strstr(warcHeader,"WARC-Target-URI:");
+	char *warcType = strstr(warcHeader,"WARC-Type:");
+	char *warcDate = strstr(warcHeader,"WARC-Date:");
+	char *warcIp   = strstr(warcHeader,"WARC-IP-Address:");
+	char *warcCon  = strstr(warcHeader,"Content-Type:");
 
 	// advance
+	if ( warcLen  ) warcLen  += 15;
 	if ( warcUrl  ) warcUrl  += 16;
 	if ( warcType ) warcType += 10;
-	if ( warcDate ) warcDate += 10;
 	if ( warcIp   ) warcIp   += 17;
+	if ( warcCon  ) warcCon  += 13;
+	if ( warcDate ) warcDate += 10;
 
-	// restore
-	*warcMimeEnd = c;
+	// skip initial spaces spaces
+	for ( ; warcUrl  && is_wspace_a(*warcUrl ) ; warcUrl ++ );
+	for ( ; warcLen  && is_wspace_a(*warcLen ) ; warcLen ++ );
+	for ( ; warcType && is_wspace_a(*warcType) ; warcType++ );
+	for ( ; warcDate && is_wspace_a(*warcDate) ; warcDate++ );
+	for ( ; warcIp   && is_wspace_a(*warcIp  ) ; warcIp  ++ );
+	for ( ; warcCon  && is_wspace_a(*warcCon ) ; warcCon ++ );
 
-	// skip the \r\n\r\n at the end of this subdoc's http mime
-	warcMimeEnd += 4;
+	// get Content-Length: of WARC header for its content
+	if ( ! warcLen ) {
+		// this is a critical stop.
+		log("build: could not find WARC Content-Length:");
+		goto warcDone;
+	}
 
-	// point to the mime following the warc mime, that's the original http mime
-	gr->m_content = warcMimeEnd;
+	//
+	// advance m_fptr to point to the next warc record in case we
+	// end up calling 'goto loop' below
+	//
+	char    *warcContent    = warcHeaderEnd + 4;
+	int64_t  warcContentLen = atoll(warcLen);
+	char    *warcContentEnd = warcContent + warcContentLen;
+	uint64_t recSize = (warcContentEnd - realStart); 
 
-	// and point to the mime of the NEXT subdoc
-	// before we call goto subdocLoop anywhere.
-	m_warcContentPtr = warcMimeEnd + recordSize;
+	// point to the next warc record
+	m_fptr += recSize;
 
-	// null term end of this subdoc before injecting
-	m_savedChar = *m_warcContentPtr;
-	*m_warcContentPtr = '\0';
+	uint64_t oldOff = m_fileOff;
 
+	// advance the file offset to the next record as well
+	m_fileOff += recSize;
+
+
+	// get WARC-Type:
+	// revisit  (if url was already done before)
+	// request (making a GET or DNS request)
+	// response (reponse to a GET or dns request)
+	// warcinfo (crawling parameters, robots: obey, etc)
+	// metadata (fetchTimeMs: 263, hopsFromSeed:P,outlink:)
 	if ( ! warcType ) {
-		log("inject: warc: could not find rec type");
-		goto subdocLoop;
+		log("build: could not find WARC-Type:");
+		goto loop;
 	}
 
-	if ( is_wspace_a(*warcType) ) warcType++;
-	if ( is_wspace_a(*warcType) ) warcType++;
+	// get Content-Type: 
+	// application/warc-fields (fetch time, hops from seed)
+	// application/http; msgtype=request  (the GET request)
+	// application/http; msgtype=response (the GET reply)
+	if ( ! warcCon ) {
+		log("build: could not find Content-Type:");
+		goto loop;
+	}
 
-	// WARC-Type:
-	// do not index this record as a doc if it is not a
-	// "WARC-Type: response" record.
-	if ( strncmp(warcType,"response",8) != 0 ) 
-		goto subdocLoop;
-
-	// skip this rec if url-less
 	if ( ! warcUrl ) {
-		log("inject: warc: could not find rec url");
-		goto subdocLoop;
-	}
-	if ( ! warcDate ) {
-		log("inject: warc: could not find rec date");
-		goto subdocLoop;
+		// no URI?
+		goto loop;
 	}
 
-	// skip spaces on all
-	if ( warcUrl  && is_wspace_a(*warcUrl ) ) warcUrl++;
-	if ( warcUrl  && is_wspace_a(*warcUrl ) ) warcUrl++;
-	if ( warcDate && is_wspace_a(*warcDate) ) warcDate++;
-	if ( warcDate && is_wspace_a(*warcDate) ) warcDate++;
-	if ( warcIp   && is_wspace_a(*warcIp  ) ) warcIp++;
-	if ( warcIp   && is_wspace_a(*warcIp  ) ) warcIp++;
+	// if WARC-Type: is not response, skip it. so if it
+	// is a revisit then skip it i guess.
+	if ( strncmp ( warcType,"response", 8 ) != 0 ) {
+		// read another warc record
+		goto loop;
+	}
 
+	// warcConType needs to be 
+	// application/http; msgtype=response
+	if ( strncmp(warcCon,"application/http; msgtype=response", 34) ) {
+		// read another warc record
+		goto loop;
+	}
+
+	// must be http not dns:
 	// url must start with http:// or https://
 	// it's probably like WARC-Target-URI: dns:www.xyz.com
 	// so it is a dns response
 	if ( strncmp(warcUrl,"http://" ,7) != 0 &&
 	     strncmp(warcUrl,"https://",8) != 0 ) 
-		goto subdocLoop;
+		goto loop;
 
+	// get length of it, null term it
+	char *warcUrlEnd = warcUrl;
+	for ( ; *warcUrlEnd && ! is_wspace_a(*warcUrlEnd) ; warcUrlEnd++ );
+	int32_t warcUrlLen = warcUrlEnd - warcUrl;
+	*warcUrlEnd = '\0';
+
+	// skip if robots.txt
+	if ( isRobotsTxtFile( warcUrl , warcUrlLen ) )
+		goto loop;
+
+	// how can there be no more to read?
+	if ( m_fptr > m_fptrEnd && ! m_hasMoreToRead ) {
+		log("build: warc file exceeded file length.");
+		goto loop;
+	}
+
+	// if we fall outside of the current read buf, read next rec if too big
+	if ( m_fptr > m_fptrEnd && recSize > MAXWARCRECSIZE ) {
+		log("build: skipping warc file of %"INT64" "
+		    "bytes which is too big",recSize);
+		needReadMore = true;
+		goto readMore;
+	}
+
+	// don't read the next record, read THIS one again, we can fit it
+	if ( m_fptr > m_fptrEnd ) {
+		m_fileOff -= recSize; // backpedal to point to THIS rec
+		needReadMore = true;
+		goto readMore;
+	}
+
+	char    *httpReply     = warcContent;
+	int64_t  httpReplySize = warcContentLen;
+
+	// should be a mime that starts with GET or POST
+	HttpMime m;
+	if ( ! m.set ( httpReply , httpReplySize , NULL ) ) {
+		log("build: warc: failed to set http mime at %"INT64" in file"
+		    ,oldOff);
+		goto loop;
+	}
+
+	// check content type
+	int ct = m.getContentType();
+	if ( ct != CT_HTML &&
+	     ct != CT_TEXT &&
+	     ct != CT_XML &&
+	     ct != CT_JSON )
+		goto loop;
+
+
+	//
+	// set 'timestamp' for injection
+	//
+	int64_t warcTime = 0;
+	if ( warcDate ) warcTime = atotime ( warcDate );
+	gr->m_firstIndexed = warcTime;
+	gr->m_lastSpidered = warcTime;
+
+
+	//
+	// set 'ip' for injection
+	//
 	gr->m_injectDocIp = 0;
-
 	// get the record IP address from the warc header if there
 	if ( warcIp ) {
 		// get end of ip
@@ -3569,77 +3758,42 @@ bool XmlDoc::indexWarc ( ) {
 		// this func is in ip.h
 		gr->m_injectDocIp = atoip ( warcIp, warcIpEnd-warcIp );
 	}
-		
-	// convert date to timestamp
-	int64_t warcTime = 0;
-	if ( warcDate ) warcTime = atotime ( warcDate );
-	gr->m_firstIndexed = warcTime;
-	gr->m_lastSpidered = warcTime;
-	// does this work?
+
+	//
+	// set 'content' for injection
+	//
+	gr->m_content = httpReply;
+
+	// null term it and hope it doesn't hurt anything!!!!!
+	httpReply [ httpReplySize ] = '\0';
+
+
+	// set the rest of the injection parms
 	gr->m_hopCount     = -1;
 	gr->m_diffbotReply = 0;
 	gr->m_newOnly      = 0;
-	// end of the url
-	char *warcUrlEnd = warcUrl;
-	for ( ; *warcUrlEnd && ! is_wspace_a(*warcUrlEnd) ;
-	      warcUrlEnd++ );
-	// by default append a -<ch64> to the provided url
-	int32_t warcUrlLen = warcUrlEnd - warcUrl;
-	// skip if robots.txt
-	if ( isRobotsTxtFile( warcUrl , warcUrlLen ) )
-		goto subdocLoop;
-
-	// point to subdoc's mime again, not the warc mime for it, which is above it
-	char *recMime = warcMimeEnd;
-	// and find the next \r\n\r\n
-	char *recMimeEnd = strstr ( recMime , "\r\n\r\n" );
-	if ( ! recMimeEnd ) {
-		log("inject: warc: no http mime.");
-		goto subdocLoop;
-	}
-	// gotta include the \r\n\r\n in the mime length here otherwise mime.set fail
-	recMimeEnd += 4;
-	// should be a mime that starts with GET or POST
-	HttpMime mime;
-	if ( ! mime.set ( recMime, recMimeEnd - recMime , NULL ) ) {
-		log("inject: warc: mime set failed ");
-		goto subdocLoop;
-	}
-	// check content type. if bad advance to next rec.
-	int ct = mime.getContentType();
-	if ( ct != CT_HTML &&
-	     ct != CT_TEXT &&
-	     ct != CT_XML &&
-	     ct != CT_JSON )
-		goto subdocLoop;
-
-	// make the url so it ends in \0
-	*warcUrlEnd = '\0';
-
 	// all warc records have the http mime
-	gr->m_hasMime = true;
-	gr->m_url     = warcUrl;
+	gr->m_hasMime      = true;
+	gr->m_url          = warcUrl;
 
-	QUICKPOLL ( m_niceness );
+	// log it
+	log("build: warc: injecting WARC url %s",warcUrl);
 
-	// TODO: set these based on the date in the warc mime!!
-	//gr->m_firstIndexed = ;
-	//gr->m_lastSpidered = ;
-	// then process. this will scan over each delimeted 
-	// doc in the arc/warc file and inject each one individually.
-	if ( ! m_msg7->inject2 ( m_masterState , m_masterLoop ) )
-		// it would block, callback will be called later
-		return false;
-
-	QUICKPOLL ( m_niceness );
-
-	// error?
-	if ( g_errno ) {
-		log("build: index warc error %s",mstrerror(g_errno));
-		return NULL;
+	// grab an available msg7
+	Msg7 *msg7 = NULL;
+	for ( int32_t i = 0 ; i < 30 ; i++ ) {
+		msg7 = &m_msg7[i];
+		if ( ! msg7->m_inUse ) break;
 	}
-	// loop it up
-	goto subdocLoop;
+
+	QUICKPOLL ( m_niceness );
+
+	if ( ! msg7->inject2 ( m_masterState , m_masterLoop ) ) 
+		m_numInjectionsOut++;
+	else
+		log("build: index warc: msg7: %s",mstrerror(g_errno));
+
+	goto loop;
 }
               
  
@@ -18881,6 +19035,11 @@ char **XmlDoc::getExpandedUtf8Content ( ) {
 
 	m_expandedUtf8ContentValid = true;
 	return &m_expandedUtf8Content;
+}
+
+// we download large files to a file on disk, like warcs and arcs
+File *XmlDoc::getUtf8ContentInFile ( int32_t *fileSize ) {
+	return NULL;
 }
 
 // . get the final utf8 content of the document

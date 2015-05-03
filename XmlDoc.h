@@ -693,6 +693,8 @@ class XmlDoc {
 	char **getRawUtf8Content ( ) ;
 	char **getExpandedUtf8Content ( ) ;
 	char **getUtf8Content ( ) ;
+	// we download large files to a file on disk, like warcs and arcs
+	File *getUtf8ContentInFile ( int32_t *fileSize );
 	int32_t *getContentHash32 ( ) ;
 	int32_t *getContentHashJson32 ( ) ;
 	//int32_t *getTagHash32 ( ) ;
@@ -1054,6 +1056,7 @@ class XmlDoc {
 	SafeBuf  m_zbuf;
 	SafeBuf  m_kbuf;
 
+	// warc parsing member vars
 	class Msg7 *m_msg7;
 	char *m_warcContentPtr;
 	char *m_arcContentPtr;
@@ -1061,6 +1064,20 @@ class XmlDoc {
 	char *m_contentDelim;
 	SafeBuf m_injectUrlBuf;
 	bool m_subDocsHaveMime;
+	int32_t m_warcError ;
+	int32_t m_arcError ;
+	bool m_doneInjectingWarc ;
+	bool m_doneInjectingArc ;
+	int64_t m_fileOff ;
+	int32_t m_outstandingInjects ;
+	char *m_fileBuf ;
+	int32_t m_fileBufAllocSize;
+	char *m_fptr ;
+	char *m_fptrEnd ;
+	File m_file;
+	int64_t m_fileSize;
+	bool m_hasMoreToRead;
+	int32_t m_numInjectionsOut;
 
 	// . same thing, a little more complicated
 	// . these classes are only set on demand
