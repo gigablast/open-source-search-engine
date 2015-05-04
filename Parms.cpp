@@ -32,7 +32,7 @@
 #include "Test.h"
 #include "Rebalance.h"
 #include "SpiderProxy.h" // buildProxyTable()
-#include "PageInject.h"
+#include "PageInject.h" // InjectionRequest
 
 // width of input box in characters for url filter expression
 #define REGEX_TXT_MAX 80
@@ -4885,6 +4885,8 @@ void Parms::init ( ) {
 
 
 	GigablastRequest gr;
+
+	InjectionRequest ir;
 
 	/*
 	m->m_title = "delete collection";
@@ -14896,45 +14898,45 @@ void Parms::init ( ) {
 	//m->m_cgi2  = "u";
 	//m->m_cgi3  = "seed"; // pagerawlbot
 	//m->m_cgi4  = "injecturl";
-	m->m_obj   = OBJ_GBREQUEST;
+	m->m_obj   = OBJ_IR;
 	m->m_type  = TYPE_CHARPTR;
 	m->m_def   = NULL;
 	m->m_flags = PF_API | PF_REQUIRED;
 	m->m_page  = PAGE_INJECT;
-	m->m_off   = (char *)&gr.m_url - (char *)&gr;
+	m->m_off   = (char *)&ir.ptr_url - (char *)&ir;
 	m++;
 
 	// alias #1
 	m->m_title = "url";
 	m->m_cgi   = "u";
-	m->m_obj   = OBJ_GBREQUEST;
+	m->m_obj   = OBJ_IR;
 	m->m_type  = TYPE_CHARPTR;
 	m->m_def   = NULL;
 	m->m_flags = PF_HIDDEN;
 	m->m_page  = PAGE_INJECT;
-	m->m_off   = (char *)&gr.m_url - (char *)&gr;
+	m->m_off   = (char *)&ir.ptr_url - (char *)&ir;
 	m++;
 
 	// alias #2
 	m->m_title = "url";
 	m->m_cgi   = "seed";
-	m->m_obj   = OBJ_GBREQUEST;
+	m->m_obj   = OBJ_IR;
 	m->m_type  = TYPE_CHARPTR;
 	m->m_def   = NULL;
 	m->m_flags = PF_HIDDEN | PF_DIFFBOT;
 	m->m_page  = PAGE_INJECT;
-	m->m_off   = (char *)&gr.m_url - (char *)&gr;
+	m->m_off   = (char *)&ir.ptr_url - (char *)&ir;
 	m++;
 
 	// alias #3
 	m->m_title = "url";
 	m->m_cgi   = "injecturl";
-	m->m_obj   = OBJ_GBREQUEST;
+	m->m_obj   = OBJ_IR;
 	m->m_type  = TYPE_CHARPTR;
 	m->m_def   = NULL;
 	m->m_flags = PF_HIDDEN;
 	m->m_page  = PAGE_INJECT;
-	m->m_off   = (char *)&gr.m_url - (char *)&gr;
+	m->m_off   = (char *)&ir.ptr_url - (char *)&ir;
 	m++;
 
 
@@ -14943,24 +14945,24 @@ void Parms::init ( ) {
 		"and inject their links. You are not required to supply "
 		"the <i>url</i> parm if you supply this parm.";
 	m->m_cgi   = "qts";
-	m->m_obj   = OBJ_GBREQUEST;
+	m->m_obj   = OBJ_IR;
 	m->m_type  = TYPE_CHARPTR;
 	m->m_def   = NULL;
 	m->m_flags = PF_API;
 	m->m_page  = PAGE_INJECT;
-	m->m_off   = (char *)&gr.m_queryToScrape - (char *)&gr;
+	m->m_off   = (char *)&ir.ptr_queryToScrape - (char *)&ir;
 	m++;
 
 	m->m_title = "inject links";
 	m->m_desc  = "Should we inject the links found in the injected "
 		"content as well?";
 	m->m_cgi   = "injectlinks";
-	m->m_obj   = OBJ_GBREQUEST;
+	m->m_obj   = OBJ_IR;
 	m->m_type  = TYPE_CHECKBOX;
 	m->m_def   = "0";
 	m->m_flags = PF_API;
 	m->m_page  = PAGE_INJECT;
-	m->m_off   = (char *)&gr.m_injectLinks - (char *)&gr;
+	m->m_off   = (char *)&ir.m_injectLinks - (char *)&ir;
 	m++;
 
 
@@ -14968,47 +14970,47 @@ void Parms::init ( ) {
 	m->m_desc  = "Add the outlinks of the injected content into spiderdb "
 		"for spidering?";
 	m->m_cgi   = "spiderlinks";
-	m->m_obj   = OBJ_GBREQUEST;
+	m->m_obj   = OBJ_IR;
 	m->m_type  = TYPE_CHECKBOX;
 	// leave off because could start spidering whole web unintentionally
 	m->m_def   = "0";
 	m->m_flags = PF_API;
 	m->m_page  = PAGE_INJECT;
-	m->m_off   = (char *)&gr.m_spiderLinks - (char *)&gr;
+	m->m_off   = (char *)&ir.m_spiderLinks - (char *)&ir;
 	m++;
 	
-	m->m_title = "int16_t reply";
-	m->m_desc  = "Should the injection response be int16_t and simple?";
+	m->m_title = "short reply";
+	m->m_desc  = "Should the injection response be short and simple?";
 	m->m_cgi   = "quick";
-	m->m_obj   = OBJ_GBREQUEST;
+	m->m_obj   = OBJ_IR;
 	m->m_type  = TYPE_CHECKBOX;
 	m->m_def   = "0";
 	m->m_flags = PF_HIDDEN;
 	m->m_page  = PAGE_INJECT;
-	m->m_off   = (char *)&gr.m_shortReply - (char *)&gr;
+	m->m_off   = (char *)&ir.m_shortReply - (char *)&ir;
 	m++;
 
 	m->m_title = "only inject content if new";
 	m->m_desc  = "If the specified url is already in the index then "
 		"skip the injection.";
 	m->m_cgi   = "newonly";
-	m->m_obj   = OBJ_GBREQUEST;
+	m->m_obj   = OBJ_IR;
 	m->m_type  = TYPE_CHECKBOX;
 	m->m_def   = "0";
 	m->m_flags = PF_API;
 	m->m_page  = PAGE_INJECT;
-	m->m_off   = (char *)&gr.m_newOnly - (char *)&gr;
+	m->m_off   = (char *)&ir.m_newOnly - (char *)&ir;
 	m++;
 
 	m->m_title = "delete from index";
 	m->m_desc  = "Delete the specified url from the index.";
 	m->m_cgi   = "deleteurl";
-	m->m_obj   = OBJ_GBREQUEST;
+	m->m_obj   = OBJ_IR;
 	m->m_type  = TYPE_CHECKBOX;
 	m->m_def   = "0";
 	m->m_flags = PF_API;
 	m->m_page  = PAGE_INJECT;
-	m->m_off   = (char *)&gr.m_deleteUrl - (char *)&gr;
+	m->m_off   = (char *)&ir.m_deleteUrl - (char *)&ir;
 	m++;
 
 	m->m_title = "recycle content";
@@ -15016,68 +15018,68 @@ void Parms::init ( ) {
 		"re-download the content, just use the content that was "
 		"stored in the cache from last time.";
 	m->m_cgi   = "recycle";
-	m->m_obj   = OBJ_GBREQUEST;
+	m->m_obj   = OBJ_IR;
 	m->m_type  = TYPE_CHECKBOX;
 	m->m_def   = "0";
 	m->m_flags = PF_API;
 	m->m_page  = PAGE_INJECT;
-	m->m_off   = (char *)&gr.m_recycle - (char *)&gr;
+	m->m_off   = (char *)&ir.m_recycle - (char *)&ir;
 	m++;
 
 	m->m_title = "dedup url";
 	m->m_desc  = "Do not index the url if there is already another "
 		"url in the index with the same content.";
 	m->m_cgi   = "dedup";
-	m->m_obj   = OBJ_GBREQUEST;
+	m->m_obj   = OBJ_IR;
 	m->m_type  = TYPE_CHECKBOX;
 	m->m_def   = "0";
 	m->m_flags = PF_API;
 	m->m_page  = PAGE_INJECT;
-	m->m_off   = (char *)&gr.m_dedup - (char *)&gr;
+	m->m_off   = (char *)&ir.m_dedup - (char *)&ir;
 	m++;
 
 	m->m_title = "do consistency checking";
 	m->m_desc  = "Turn this on for debugging.";
 	m->m_cgi   = "consist";
-	m->m_obj   = OBJ_GBREQUEST;
+	m->m_obj   = OBJ_IR;
 	m->m_type  = TYPE_CHECKBOX;
 	m->m_def   = "0";
 	m->m_flags = PF_HIDDEN; // | PF_API
 	m->m_page  = PAGE_INJECT;
-	m->m_off   = (char *)&gr.m_doConsistencyTesting - (char *)&gr;
+	m->m_off   = (char *)&ir.m_doConsistencyTesting - (char *)&ir;
 	m++;
 
 	m->m_title = "hop count";
 	m->m_desc  = "Use this hop count when injecting the page.";
 	m->m_cgi   = "hopcount";
-	m->m_obj   = OBJ_GBREQUEST;
+	m->m_obj   = OBJ_IR;
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "0";
 	m->m_flags = PF_HIDDEN; // | PF_API
 	m->m_page  = PAGE_INJECT;
-	m->m_off   = (char *)&gr.m_hopCount - (char *)&gr;
+	m->m_off   = (char *)&ir.m_hopCount - (char *)&ir;
 	m++;
 
 	m->m_title = "last spider time";
 	m->m_desc  = "Override last time spidered";
 	m->m_cgi   = "lastspidered";
-	m->m_obj   = OBJ_GBREQUEST;
+	m->m_obj   = OBJ_IR;
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "0";
 	m->m_flags = PF_HIDDEN; // | PF_API
 	m->m_page  = PAGE_INJECT;
-	m->m_off   = (char *)&gr.m_lastSpidered - (char *)&gr;
+	m->m_off   = (char *)&ir.m_lastSpidered - (char *)&ir;
 	m++;
 
 	m->m_title = "first indexed";
 	m->m_desc  = "Override first indexed time";
 	m->m_cgi   = "firstindexed";
-	m->m_obj   = OBJ_GBREQUEST;
+	m->m_obj   = OBJ_IR;
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "0";
 	m->m_flags = PF_HIDDEN; // | PF_API
 	m->m_page  = PAGE_INJECT;
-	m->m_off   = (char *)&gr.m_firstIndexed - (char *)&gr;
+	m->m_off   = (char *)&ir.m_firstIndexed - (char *)&ir;
 	m++;
 
 
@@ -15085,12 +15087,12 @@ void Parms::init ( ) {
 	m->m_desc  = "If the content of the url is provided below, does "
 		"it begin with an HTTP mime header?";
 	m->m_cgi   = "hasmime";
-	m->m_obj   = OBJ_GBREQUEST;
+	m->m_obj   = OBJ_IR;
 	m->m_type  = TYPE_CHECKBOX;
 	m->m_def   = "0";
 	m->m_flags = PF_API;
 	m->m_page  = PAGE_INJECT;
-	m->m_off   = (char *)&gr.m_hasMime - (char *)&gr;
+	m->m_off   = (char *)&ir.m_hasMime - (char *)&ir;
 	m++;
 
 	m->m_title = "content delimeter";
@@ -15104,12 +15106,12 @@ void Parms::init ( ) {
 		"injected url. Otherwise it will append numbers to the "
 		"url you provide above.";
 	m->m_cgi   = "delim";
-	m->m_obj   = OBJ_GBREQUEST;
+	m->m_obj   = OBJ_IR;
 	m->m_type  = TYPE_CHARPTR;
 	m->m_def   = NULL;
 	m->m_flags = PF_API;
 	m->m_page  = PAGE_INJECT;
-	m->m_off   = (char *)&gr.m_contentDelim - (char *)&gr;
+	m->m_off   = (char *)&ir.ptr_contentDelim - (char *)&ir;
 	m++;
 
 
@@ -15120,12 +15122,12 @@ void Parms::init ( ) {
 		"Possible values: <b>text/html text/plain text/xml "
 		"application/json</b>";
 	m->m_cgi   = "contenttype";
-	m->m_obj   = OBJ_GBREQUEST;
+	m->m_obj   = OBJ_IR;
 	m->m_type  = TYPE_CHARPTR; //text/html application/json application/xml
 	m->m_def   = "text/html";
 	m->m_flags = PF_API;
 	m->m_page  = PAGE_INJECT;
-	m->m_off   = (char *)&gr.m_contentTypeStr - (char *)&gr;
+	m->m_off   = (char *)&ir.ptr_contentTypeStr - (char *)&ir;
 	m++;
 
 	m->m_title = "content charset";
@@ -15135,24 +15137,24 @@ void Parms::init ( ) {
 		"which is 106. "
 		"See iana_charset.h for the numeric values.";
 	m->m_cgi   = "charset";
-	m->m_obj   = OBJ_GBREQUEST;
+	m->m_obj   = OBJ_IR;
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "106";
 	m->m_flags = PF_API;
 	m->m_page  = PAGE_INJECT;
-	m->m_off   = (char *)&gr.m_charset - (char *)&gr;
+	m->m_off   = (char *)&ir.m_charset - (char *)&ir;
 	m++;
 
 	m->m_title = "upload content file";
 	m->m_desc  = "Instead of specifying the content to be injected in "
 		"the text box below, upload this file for it.";
 	m->m_cgi   = "file";
-	m->m_obj   = OBJ_GBREQUEST;
+	m->m_obj   = OBJ_IR;
 	m->m_type  = TYPE_FILEUPLOADBUTTON;
 	m->m_def   = NULL;
 	m->m_flags = PF_NOAPI;
 	m->m_page  = PAGE_INJECT;
-	m->m_off   = (char *)&gr.m_contentFile - (char *)&gr;
+	m->m_off   = (char *)&ir.ptr_contentFile - (char *)&ir;
 	m++;
 
 	m->m_title = "content";
@@ -15166,35 +15168,35 @@ void Parms::init ( ) {
 		"inject empty content, otherwise the content will "
 		"be downloaded from the url.";
 	m->m_cgi   = "content";
-	m->m_obj   = OBJ_GBREQUEST;
+	m->m_obj   = OBJ_IR;
 	m->m_type  = TYPE_CHARPTR;
 	m->m_def   = NULL;
 	m->m_flags = PF_API|PF_TEXTAREA;
 	m->m_page  = PAGE_INJECT;
-	m->m_off   = (char *)&gr.m_content - (char *)&gr;
+	m->m_off   = (char *)&ir.ptr_content - (char *)&ir;
 	m++;
 
 	m->m_title = "get sectiondb voting info";
 	m->m_desc = "Return section information of injected content for "
 		"the injected subdomain. ";
 	m->m_cgi   = "sections";
-	m->m_obj   = OBJ_GBREQUEST;
+	m->m_obj   = OBJ_IR;
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "0";
 	m->m_flags = PF_API|PF_NOHTML;
 	m->m_page  = PAGE_INJECT;
-	m->m_off   = (char *)&gr.m_getSections - (char *)&gr;
+	m->m_off   = (char *)&ir.m_getSections - (char *)&ir;
 	m++;
 
 	m->m_title = "diffbot reply";
 	m->m_desc = "Used exclusively by diffbot. Do not use.";
 	m->m_cgi   = "diffbotreply";
-	m->m_obj   = OBJ_GBREQUEST;
+	m->m_obj   = OBJ_IR;
 	m->m_type  = TYPE_CHARPTR;
 	m->m_def   = NULL;
 	m->m_flags = PF_API|PF_TEXTAREA|PF_NOHTML; // do not show in our api
 	m->m_page  = PAGE_INJECT;
-	m->m_off   = (char *)&gr.m_diffbotReply - (char *)&gr;
+	m->m_off   = (char *)&ir.ptr_diffbotReply - (char *)&ir;
 	m++;
 
 

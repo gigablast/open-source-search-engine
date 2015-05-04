@@ -62,6 +62,7 @@ class Msg7 {
 public:
 
 	//GigablastRequest m_gr;
+	InjectionRequest m_injectionRequest;
 
 	//SafeBuf m_injectUrlBuf;
 	//bool m_firstTime;
@@ -71,6 +72,9 @@ public:
 	//int32_t  m_injectCount;
 	//bool m_isDoneInjecting;
 
+	char *m_sir;
+	int32_t m_sirSize;
+
 	bool       m_needsSet;
 	XmlDoc    *m_xd;
 	TcpSocket *m_socket;
@@ -78,6 +82,9 @@ public:
 	char m_round;
 	char m_useAhrefs;
 	HashTableX m_linkDedupTable;
+
+	// referenced by InjectionRequest::ptr_content
+	SafeBuf m_contentBuf;
 
 	SafeBuf m_sbuf; // for holding entire titlerec for importing
 
@@ -94,7 +101,9 @@ public:
 	//void constructor();
 	Msg7 ();
 	~Msg7 ();
-	//bool m_inUse;
+	bool m_inUse;
+
+	class XmlDoc *m_stashxd;
 
 	void reset();
 

@@ -13,10 +13,6 @@
 // from XmlDoc.cpp
 bool isRobotsTxtFile ( char *url , int32_t urlLen ) ;
 
-//
-// HTML INJECITON PAGE CODE
-//
-
 static bool sendHttpReply        ( void *state );
 static void sendHttpReplyWrapper ( void *state ) ;
 
@@ -26,7 +22,7 @@ static void sendHttpReplyWrapper ( void *state ) ;
 // but if we call serialize() then it makes news ones into its own blob.
 // so we gotta know our first and last ptr_* pointers for serialize/deseria().
 // kinda like how search input works
-bool setInjectionRequestFromParms ( TcpSocket *sock , 
+void setInjectionRequestFromParms ( TcpSocket *sock , 
 				    HttpRequest *hr ,
 				    CollectionRec *cr ,
 				    InjectionRequest *ir ) {
@@ -40,61 +36,61 @@ bool setInjectionRequestFromParms ( TcpSocket *sock ,
 	// scan the parms
 	for ( int i = 0 ; i < numParms ; i++ ) {
 		Parm *m = &m_parms[i];
-		if ( m->m_objType != OBJ_INJECTION ) continue;
+		if ( m->m_obj != OBJ_IR ) continue;
 		// get it
-		if ( m->m_type == TYPE_STRING ) {
-			char *str = hr->getString(m->m_parmName,m->m_parmDef);
+		if ( m->m_type == TYPE_CHARPTR ||
+		     m->m_type == TYPE_FILEUPLOADBUTTON ) {
+			char *str = hr->getString(m->m_cgi,m->m_def);
 			// serialize it as a string
-			char **ptrPtr = m->m_off + (char *)ir;
+			char **ptrPtr = &((char *)ir + m->m_off);
 			// store the ptr pointing into hr buf for now
 			*ptrPtr = str;
 			// how many strings are we past ptr_url?
 			int32_t count = ptrPtr - &ir->ptr_url;
 			// and length. include \0
 			int32_t *sizePtr = &ir->size_url + count;
-			*sizePtr = gbstrlen(str) + 1;
+			if ( str ) *sizePtr = gbstrlen(str) + 1;
+			else *sizePtr = 0;
 			continue;
 		}
 		// numbers are easy
-		if ( m->m_type == TYPE_INT ) {
-			int32_t *ii = (int32_t *)(m->m_off + (char *)ir);
-			*ii = hr->getLong(m->m_parmName,m->m_parmDef );
+		else if ( m->m_type == TYPE_LONG ) {
+			int32_t *ii = (int32_t *)((char *)ir + m->m_off);
+			int32_t def = atoll(m->m_def);
+			*ii = hr->getLong(m->m_cgi,def);
 		}
-		if ( m->m_type == TYPE_CHAR ) {
-			char *ii = (char *)(m->m_off + (char *)ir);
-			*ii = (char)hr->getLong(m->m_parmName,m->m_parmDef );
+		else if ( m->m_type == TYPE_CHECKBOX || 
+			  m->m_type == TYPE_BOOL ) {
+			char *ii = (char *)((char *)ir + m->m_off);
+			int32_t def = atoll(m->m_def);
+			*ii = (char)hr->getLong(m->m_cgi,def);
 		}
-		if ( m->m_type == TYPE_FLOAT ) {
-			float *ii = (float *)(m->m_off + (char *)ir);
-			*ii = hr->getFloat(m->m_parmName,m->m_parmDef );
-		}
+		// if unsupported let developer know
+		else { char *xx=NULL;*xx=0; }
 	}
 
 
 	// if content is "" make it NULL so XmlDoc will download it
 	// if user really wants empty content they can put a space in there
 	// TODO: update help then...
-	if ( ir->m_content && ! ir->m_content[0]  )
-		ir->m_content = NULL;
+	if ( ir->ptr_content && ! ir->ptr_content[0]  )
+		ir->ptr_content = NULL;
 
-	if ( ir->m_contentFile && ! ir->m_contentFile[0]  )
-		ir->m_contentFile = NULL;
+	if ( ir->ptr_contentFile && ! ir->ptr_contentFile[0]  )
+		ir->ptr_contentFile = NULL;
 
-	if ( ir->m_contentDelim && ! ir->m_contentDelim[0] )
-		ir->m_contentDelim = NULL;
+	if ( ir->ptr_contentDelim && ! ir->ptr_contentDelim[0] )
+		ir->ptr_contentDelim = NULL;
 
 	if ( ir->ptr_queryToScrape && ! ir->ptr_queryToScrape[0] ) 
 		ir->ptr_queryToScrape = NULL;
 
-	if ( ir->m_url && ! ir->m_url[0] ) 
-		ir->m_url = NULL;
+	if ( ir->ptr_url && ! ir->ptr_url[0] ) 
+		ir->ptr_url = NULL;
 
 	// if we had a delimeter but not content, zero it out...
-	char *content = ir->m_content;
-	if ( ! content ) content = ir->m_contentFile;
-	if ( ! content ) ir->m_contentDelim = NULL;
-
-	return true;
+	if ( ! ir->ptr_content && ! ir->ptr_contentFile ) 
+		ir->ptr_contentDelim = NULL;
 }
 
 // void doneLocalInjectWrapper ( void *state ) {
@@ -131,13 +127,31 @@ Host *getHostToHandleInjection ( char *url ) {
 // . "sir" is the serialized injectionrequest
 // . this is called from the http interface, as well as from
 //   XmlDoc::indexWarcOrArc() to inject individual recs/docs from the warc/arc
-bool sendInjectionRequestToHost ( InjectionRequest *sir , 
-				  nt32_t sirSize ,
-				  void *state ,
-				  void (* callback)(void *) ) {
+// . returns false and sets g_errno on error, true on success
+bool Msg7::sendInjectionRequestToHost ( InjectionRequest *ir , 
+					void *state ,
+					void (* callback)(void *) ) {
+
+	// ensure it is our own
+	if ( &m_injectionRequest != ir ) { char *xx=NULL;*xx=0; }
+
+	int32_t sirSize = 0;
+	char *sir = serializeMsg2 ( ir ,
+				    sizeof(InjectionRequest),
+				    &ir->ptr_url,
+				    &ir->size_url ,
+				    &sirSize );
+	// oom?
+	if ( ! sir ) 
+		return log("inject: failed to serialize request");
+
+
+	// save it for freeing later
+	m_sir = sir;
+	m_sirSize = sirSize;
 
 	// forward it to another shard?
-	Host *host = getHostToHandleInjection ( sir->ptr_url );
+	Host *host = getHostToHandleInjection ( ir->ptr_url );
 
 	// . ok, forward it to another host now
 	// . and call got gotForwardedReplyWrapper when reply comes in
@@ -245,24 +259,24 @@ bool sendPageInject ( TcpSocket *sock , HttpRequest *hr ) {
 	}
 
 	// if no url do not inject
-	if ( ! ir->m_url ) {
+	if ( ! ir->ptr_url ) {
 		log("inject: no url provied to inject");
 		g_errno = EBADURL;
 		return sendHttpReply ( msg7 );
 	}
 
 
-	InjectionRequest *ir = &m_ir;
+	InjectionRequest *ir = &msg7->m_injectionRequest;
 
 	m_state = state;
 	m_callback = callback;
 
 	// this will be NULL if the "content" was empty or not given
-	char *content = ir->m_content;
+	char *content = ir->ptr_content;
 
 	// . try the uploaded file if nothing in the text area
 	// . this will be NULL if the "content" was empty or not given
-	if ( ! content ) content = ir->m_contentFile;
+	if ( ! content ) content = ir->ptr_contentFile;
 
 	// forward it to another shard?
 	//Host *host = getHostToHandleInjection ( ir->ptr_url );
@@ -281,20 +295,8 @@ bool sendPageInject ( TcpSocket *sock , HttpRequest *hr ) {
 	// 	return g_httpServer.sendErrorReply(sock,g_errno,msg,NULL);
 	// }
 
-	int32_t sirSize = 0;
-	InjectionRequest *sir = ir->serializeMsg ( &sirSize );
-	if ( ! sir ) {
-		// oom?
-		log("inject: error serializing injection request",
-		    mstrerror(g_errno));
-		return sendHttpReply ( msg7 );
-	}
-
 	// when we receive the udp reply then send back the http reply
-	if ( ! sendInjectionRequestToHost ( sir , 
-					    sirSize ,
-					    msg7 , 
-					    sendHttpReplyWrapper ) ) 
+	if ( ! msg7->sendInjectionRequestToHost (ir, msg7 , sendHttpReplyWrapper ) ) 
 		return false;
 
 	// error?
@@ -328,7 +330,7 @@ bool sendHttpReply ( void *state ) {
 	char format = msg7->m_format;
 
 	// no url parm?
-	if ( ! g_errno && ! ir->m_url && format != FORMAT_HTML )
+	if ( ! g_errno && ! ir->ptr_url && format != FORMAT_HTML )
 		g_errno = EMISSINGINPUT;
 
 	if ( g_errno && g_errno != EDOCUNCHANGED ) {
@@ -434,7 +436,7 @@ bool sendHttpReply ( void *state ) {
 	// end debug
 	//
 
-	char *url = ir->m_url;
+	char *url = ir->ptr_url;
 	
 	// . if we're talking w/ a robot he doesn't care about this crap
 	// . send him back the error code (0 means success)
@@ -466,11 +468,11 @@ bool sendHttpReply ( void *state ) {
 		sb.safePrintf ( "<center>Error injecting url: <b>%s[%i]</b>"
 				"</center>", 
 				mstrerror(g_errno) , g_errno);
-	else if ( (ir->m_url&&ir->m_url[0]) ||
-		  (ir->m_queryToScrape&&ir->m_queryToScrape[0]) )
+	else if ( (ir->ptr_url && ir->ptr_url[0]) ||
+		  (ir->ptr_queryToScrape&&ir->ptr_queryToScrape[0]) )
 		sb.safePrintf ( "<center><b>Sucessfully injected %s"
 				"</center><br>"
-				, ir->m_url
+				, ir->ptr_url
 				//, xd->m_firstUrl.m_url
 				);
 
@@ -580,6 +582,8 @@ void handleRequest7 ( UdpSlot *slot , int32_t netnice ) {
 
 Msg7::Msg7 () {
 	m_xd = NULL;
+	m_sir = NULL;
+	m_inUse = false;
 	reset();
 }
 
@@ -593,6 +597,7 @@ Msg7::~Msg7 () {
 
 void Msg7::reset() { 
 	m_round = 0;
+	//if ( m_inUse ) { char *xx=NULL;*xx=0; }
 	//m_firstTime = true;
 	//m_fixMe = false;
 	//m_injectCount = 0;
@@ -603,6 +608,10 @@ void Msg7::reset() {
 		mdelete ( m_xd, sizeof(XmlDoc) , "PageInject" );
 		delete (m_xd);
 		m_xd = NULL;
+	}
+	if ( m_sir ) {
+		mfree ( m_sir , m_sirSize , "m7ir" );
+		m_sir = NULL;
 	}
 }
 
@@ -853,7 +862,7 @@ bool Msg7::scrapeQuery ( ) {
 	GigablastRequest *ir = &m_ir;
 
 	// error?
-	char *qts = ir->m_queryToScrape;
+	char *qts = ir->ptr_queryToScrape;
 	if ( ! qts ) { char *xx=NULL;*xx=0; }
 
 	if ( gbstrlen(qts) > 500 ) {
@@ -907,8 +916,8 @@ bool Msg7::scrapeQuery ( ) {
 	// parent docid is 0
 	sreq.setKey(firstIp,0LL,false);
 
-	char *coll2 = ir->m_coll;
-	CollectionRec *cr = g_collectiondb.getRec ( coll2 );
+	//char *coll2 = ir->m_coll;
+	CollectionRec *cr = g_collectiondb.getRec ( ir->m_collnum );//coll2 );
 
 	// forceDEl = false, niceness = 0
 	m_xd.set4 ( &sreq , NULL , cr->m_coll , NULL , 0 ); 

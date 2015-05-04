@@ -3238,8 +3238,10 @@ bool XmlDoc::indexContainerDoc ( ) {
 
 
 void doneInjectingArchiveRec ( void *state ) {
-	XmlDoc *THIS = (XmlDoc *)state;
-	THIS->m_numInjectionsOut--;
+	Msg7 *THIS = (Msg7 *)state;
+	XmlDoc *xd = THIS->m_stashxd;
+	THIS->m_inUse = false;
+	xd->m_numInjectionsOut--;
 	log("build: archive: injection thread returned. %"INT32" out now.",
 	    THIS->m_numInjectionsOut);
 	THIS->m_masterLoop ( THIS );
@@ -3681,48 +3683,47 @@ bool XmlDoc::indexWarcOrArc ( char ctype ) {
 
 
 	// inject input parms:
-	GigablastRequest *gr = &msg7->m_gr;
-	// init the input parms
-	//memset ( gr , 0 , sizeof(GigablastRequest) );
+	InjectionRequest *ir = &msg7->m_injectionRequest;
 	// reset it
-	gr->m_hopCount = *hc + 1;
+	ir->m_hopCount = *hc + 1;
 	if ( ! m_collnumValid ) { char *xx=NULL;*xx=0; }
-	gr->m_collnum = m_collnum;
+	ir->m_collnum = m_collnum;
 	// will this work on a content delimeterized doc?
-	gr->m_deleteUrl = m_deleteFromIndex;
+	ir->m_deleteUrl = m_deleteFromIndex;
 	// each subdoc will have a mime since it is a warc
-	gr->m_hasMime = true;
+	ir->m_hasMime = true;
 	// it has a mime so we shouldn't need to set this
-	gr->m_contentTypeStr = NULL;
+	ir->ptr_contentTypeStr = NULL;
 	// we are injecting a single page, not a container file
-	gr->m_contentDelim = NULL;
+	ir->ptr_contentDelim = NULL;
 	// miscelleaneous. faster than memsetting the whole gr class (32k)
-	gr->m_getSections = 0;
-	gr->m_gotSections = 0;
-	gr->m_queryToScrape = NULL;
-	gr->m_contentFile = NULL;
-	gr->m_diffbotReply = NULL;
-	gr->m_spiderLinks = false;
-	gr->m_injectLinks = false;
-	gr->m_shortReply = false;
-	gr->m_newOnly = false;
-	gr->m_recycle = false;
-	gr->m_dedup = true;
-	gr->m_doConsistencyTesting = false;
-	gr->m_charset = 0;
+	ir->m_getSections = 0;
+	ir->m_gotSections = 0;
+	ir->m_spiderLinks = false;
+	ir->m_injectLinks = false;
+	ir->m_shortReply = false;
+	ir->m_newOnly = false;
+	ir->m_recycle = false;
+	ir->m_dedup = true;
+	ir->m_doConsistencyTesting = false;
+	ir->m_charset = 0;
+
+	ir->ptr_queryToScrape = NULL;
+	ir->ptr_contentFile = NULL;
+	ir->ptr_diffbotReply = NULL;
 
 
 	//
 	// set 'timestamp' for injection
 	//
-	gr->m_firstIndexed = recTime;
-	gr->m_lastSpidered = recTime;
+	ir->m_firstIndexed = recTime;
+	ir->m_lastSpidered = recTime;
 
 
 	//
 	// set 'ip' for injection
 	//
-	gr->m_injectDocIp = 0;
+	ir->m_injectDocIp = 0;
 	// get the record IP address from the warc header if there
 	if ( recIp ) {
 		// get end of ip
@@ -3731,21 +3732,21 @@ bool XmlDoc::indexWarcOrArc ( char ctype ) {
 		while ( *ipEnd && ! is_wspace_a(*ipEnd) ) ipEnd++;
 		// we now have the ip address for doing ip: searches
 		// this func is in ip.h
-		gr->m_injectDocIp = atoip ( recIp, ipEnd-recIp );
+		ir->m_injectDocIp = atoip ( recIp, ipEnd-recIp );
 	}
 
 	// we end up repopulating m_fileBuf to read the next warc sometimes
 	// so do not destroy the content we are injecting from the original
 	// m_fileBuf. so we have to copy it.
-	gr->m_contentBuf.reset();
-	gr->m_contentBuf.reserve ( httpReplySize + 1 );
-	gr->m_contentBuf.safeMemcpy ( httpReply , httpReplySize );
-	gr->m_contentBuf.nullTerm();
+	msg7->m_contentBuf.reset();
+	msg7->m_contentBuf.reserve ( httpReplySize + 1 );
+	msg7->m_contentBuf.safeMemcpy ( httpReply , httpReplySize );
+	msg7->m_contentBuf.nullTerm();
 
 	//
 	// set 'content' for injection
 	//
-	gr->m_content = gr->m_contentBuf.getBufStart();
+	ir->ptr_content = msg7->m_contentBuf.getBufStart();
 
 	// null term it and hope it doesn't hurt anything!!!!!
 	//httpReply [ httpReplySize ] = '\0';
@@ -3754,25 +3755,30 @@ bool XmlDoc::indexWarcOrArc ( char ctype ) {
 
 
 	// set the rest of the injection parms
-	gr->m_hopCount     = -1;
-	gr->m_diffbotReply = 0;
-	gr->m_newOnly      = 0;
+	ir->m_hopCount     = -1;
+	ir->m_newOnly        = 0;
 	// all warc records have the http mime
-	gr->m_hasMime      = true;
-	gr->m_url          = recUrl;
+	ir->m_hasMime        = true;
+	ir->ptr_url          = recUrl;
 
-	// load balance over the shards
-	gr->m_forwardRequest = 1;
+	// stash this
+	m_msg7->m_stashxd = this;
+
+	QUICKPOLL ( m_niceness );
 
 	// log it
 	log("build: archive: injecting archive url %s",recUrl);
 
 	QUICKPOLL ( m_niceness );
 
-	if ( ! msg7->inject2 ( this , doneInjectingArchiveRec ) )
+	if (msg7->sendInjectionRequestToHost(ir,msg7,doneInjectingArchiveRec)){
 		m_numInjectionsOut++;
-	else
-		log("build: index archive: msg7: %s",mstrerror(g_errno));
+		msg7->m_inUse = true;
+		goto loop;
+	}
+
+	log("build: index archive: msg7 inject: %s",
+	    mstrerror(g_errno));
 
 	goto loop;
 }

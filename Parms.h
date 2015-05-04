@@ -39,6 +39,7 @@ enum {
 	OBJ_COLL        ,
 	OBJ_SI          , // SearchInput class
 	OBJ_GBREQUEST   , // for GigablastRequest class of parms
+	OBJ_IR          , // InjectionRequest class from PageInject.h
 	OBJ_NONE
 };
 
