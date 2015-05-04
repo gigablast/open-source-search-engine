@@ -556,6 +556,8 @@ void sendUdpReply7 ( void *state ) {
 
 	XmlDoc *xd = (XmlDoc *)state;
 	UdpSlot *slot = xd->m_injectionSlot;
+	// injecting a warc seems to not set m_indexCodeValid to true
+	// for the container doc... hmmm...
 	int32_t indexCode = -1;
 	int64_t docId = 0;
 	if ( xd && xd->m_indexCodeValid ) indexCode = xd->m_indexCode;
@@ -566,8 +568,8 @@ void sendUdpReply7 ( void *state ) {
 		g_udpServer.sendErrorReply(slot,g_errno);
 		return;
 	}
-	// just send back the 4 byte indexcode, which is 0 on success, otherwise
-	// it is the errno
+	// just send back the 4 byte indexcode, which is 0 on success,
+	// otherwise it is the errno
 	char *tmp = slot->m_tmpBuf;
 	char *p = tmp;
 	memcpy ( p , (char *)&indexCode , 4 );
@@ -982,6 +984,20 @@ bool Msg7::scrapeQuery ( ) {
 
 	//char *coll2 = ir->m_coll;
 	CollectionRec *cr = g_collectiondb.getRec ( ir->m_collnum );//coll2 );
+
+	// need to make a new one now
+	XmlDoc *xd;
+	try { xd = new (XmlDoc); }
+	catch ( ... ) { 
+		g_errno = ENOMEM;
+		log("PageInject: scrape failed: new(%i): %s", 
+		    (int)sizeof(XmlDoc),mstrerror(g_errno));
+		return true;
+	}
+	mnew ( xd, sizeof(XmlDoc) , "PageInject" );
+
+	// save it
+	m_xd = xd;
 
 	// forceDEl = false, niceness = 0
 	m_xd->set4 ( &sreq , NULL , cr->m_coll , NULL , 0 ); 

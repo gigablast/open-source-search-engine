@@ -3140,8 +3140,11 @@ bool XmlDoc::indexContainerDoc ( ) {
 	QUICKPOLL ( m_niceness );
 
 	// EOF?
-	if ( m_anyContentPtr == (char *)-1 ) 
+	if ( m_anyContentPtr == (char *)-1 ) {
+		m_indexCode = 0;//m_warcError;
+		m_indexCodeValid = true;
 		return true;
+	}
 
 	// we had \0 terminated the end of the previous record, so put back
 	if ( m_savedChar && ! *m_anyContentPtr ) {
@@ -3163,13 +3166,12 @@ bool XmlDoc::indexContainerDoc ( ) {
 		m_savedChar = *separator;
 		m_anyContentPtr = separator;
 		*m_anyContentPtr = '\0';
-		ir->size_content = separator - ir->ptr_content;
+		//ir->size_content = separator - ir->ptr_content;
 	}
 
 	// if no separator found, this is our last injection
 	if ( ! separator ) {
 		m_anyContentPtr = (char *)-1;
-		ir->size_content = gbstrlen(ir->ptr_content);// improve this?
 	}
 
 
@@ -3214,6 +3216,10 @@ bool XmlDoc::indexContainerDoc ( ) {
 	// make the url from parent url
 	// use hash of the content
 	int64_t ch64 = hash64n ( ir->ptr_content , 0LL );
+
+	// need this for an injection
+	ir->size_content = gbstrlen(ir->ptr_content) + 1;// improve this?
+
 
 	QUICKPOLL ( m_niceness );
 
@@ -3310,6 +3316,8 @@ bool XmlDoc::indexWarcOrArc ( char ctype ) {
 		// return if all injects have returned.
 		if ( m_numInjectionsOut == 0 ) {
 			g_errno = m_warcError;
+			m_indexCode = m_warcError;
+			m_indexCodeValid = true;
 			return true;
 		}
 		log("build: waiting for injection threads to return.");
@@ -3760,6 +3768,7 @@ bool XmlDoc::indexWarcOrArc ( char ctype ) {
 	// set 'content' for injection
 	//
 	ir->ptr_content = msg7->m_contentBuf.getBufStart();
+	ir->size_content = msg7->m_contentBuf.getLength()+1;
 
 	// null term it and hope it doesn't hurt anything!!!!!
 	//httpReply [ httpReplySize ] = '\0';
@@ -3772,10 +3781,12 @@ bool XmlDoc::indexWarcOrArc ( char ctype ) {
 	ir->m_newOnly        = 0;
 	// all warc records have the http mime
 	ir->m_hasMime        = true;
+
 	ir->ptr_url          = recUrl;
+	ir->size_url         = recUrlLen+1;
 
 	// stash this
-	m_msg7->m_stashxd = this;
+	msg7->m_stashxd = this;
 
 	QUICKPOLL ( m_niceness );
 

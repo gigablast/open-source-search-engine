@@ -14,7 +14,7 @@ void saveImportStates ( ) ;
 
 #include "XmlDoc.h"
 #include "Users.h"
-#include "Parms.h" // GigablastRequest
+#include "Parms.h"
 
 
 void setInjectionRequestFromParms ( class TcpSocket *sock , 

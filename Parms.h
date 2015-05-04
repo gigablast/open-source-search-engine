@@ -122,33 +122,32 @@ class GigablastRequest {
 	////////////
 	// these all reference into m_hr or into the Parm::m_def string!
 	char *m_url; // also for /get
-	char *m_queryToScrape;
-	char *m_contentDelim;
-	char m_forwardRequest;
+	//char *m_queryToScrape;
+	//char *m_contentDelim;
 	//char  m_containerContentType; // CT_UNKNOWN, CT_WARC, CT_ARC
-	int32_t m_injectDocIp;
-	char *m_contentTypeStr;
-	char *m_contentFile;
-	char *m_content;
-	char *m_diffbotReply; // secret thing from dan
-	char  m_injectLinks;
-	char  m_spiderLinks;
-	char  m_shortReply;
-	char  m_newOnly;
-	char  m_deleteUrl;
-	char  m_recycle;
-	char  m_dedup;
-	char  m_hasMime;
-	char  m_doConsistencyTesting;
-	char  m_getSections;
-	char  m_gotSections;
-	int32_t  m_charset;
-	int32_t  m_hopCount; // hopcount
-	collnum_t m_collnum; // more reliable than m_coll
+	//int32_t m_injectDocIp;
+	//char *m_contentTypeStr;
+	//char *m_contentFile;
+	//char *m_content;
+	//char *m_diffbotReply; // secret thing from dan
+	//char  m_injectLinks;
+	//char  m_spiderLinks;
+	//char  m_shortReply;
+	//char  m_newOnly;
+	//char  m_deleteUrl;
+	//char  m_recycle;
+	//char  m_dedup;
+	//char  m_hasMime;
+	//char  m_doConsistencyTesting;
+	//char  m_getSections;
+	//char  m_gotSections;
+	//int32_t  m_charset;
+	//int32_t  m_hopCount; // hopcount
+	//collnum_t m_collnum; // more reliable than m_coll
 	// older ones
-	uint32_t m_firstIndexed; // firstimdexed
-	uint32_t m_lastSpidered; // lastspidered;
-	SafeBuf  m_contentBuf; // for holding a warc/arc file
+	//uint32_t m_firstIndexed; // firstimdexed
+	//uint32_t m_lastSpidered; // lastspidered;
+	//SafeBuf  m_contentBuf; // for holding a warc/arc file
 
 
 
