@@ -3111,7 +3111,7 @@ bool XmlDoc::indexContainerDoc ( ) {
 	}
 
 	// inject input parms:
-	GigablastRequest *gr = &m_msg7->m_gr;
+	InjectionRequest *ir = &m_msg7->m_injectionRequest;
 	// the cursor for scanning the subdocs
 	if ( ! m_anyContentPtr ) {
 		// init the content cursor to point to the first subdoc
@@ -3122,17 +3122,17 @@ bool XmlDoc::indexContainerDoc ( ) {
 		if ( strncmp(m_anyContentPtr,m_contentDelim,dlen) == 0 )
 			m_anyContentPtr += dlen;
 		// init the input parms
-		memset ( gr , 0 , sizeof(GigablastRequest) );
+		memset ( ir , 0 , sizeof(InjectionRequest) );
 		// reset it
-		gr->m_spiderLinks = false;
-		gr->m_injectLinks = false;
-		gr->m_hopCount = 0;//*hc + 1;
+		ir->m_spiderLinks = false;
+		ir->m_injectLinks = false;
+		ir->m_hopCount = 0;//*hc + 1;
 		if ( ! m_collnumValid ) { char *xx=NULL;*xx=0; }
-		gr->m_collnum = m_collnum;
+		ir->m_collnum = m_collnum;
 		// will this work on a content delimeterized doc?
-		gr->m_deleteUrl = m_deleteFromIndex;
+		ir->m_deleteUrl = m_deleteFromIndex;
 		// each subdoc will have a mime since it is an arc
-		gr->m_hasMime = m_subDocsHaveMime;//true;
+		ir->m_hasMime = m_subDocsHaveMime;//true;
 	}
 
  subdocLoop:
@@ -3151,38 +3151,44 @@ bool XmlDoc::indexContainerDoc ( ) {
 
 
 	// index this subdoc
-	gr->m_content = m_anyContentPtr;
+	ir->ptr_content = m_anyContentPtr;
 
 	// . should have the url as well.
 	// . the url, ip etc. are on a single \n terminated line for an arc!
 	char *separator = strstr(m_anyContentPtr,m_contentDelim);
 
+
+
 	if ( separator ) {
 		m_savedChar = *separator;
 		m_anyContentPtr = separator;
 		*m_anyContentPtr = '\0';
+		ir->size_content = separator - ir->ptr_content;
 	}
 
 	// if no separator found, this is our last injection
-	if ( ! separator )
+	if ( ! separator ) {
 		m_anyContentPtr = (char *)-1;
+		ir->size_content = gbstrlen(ir->ptr_content);// improve this?
+	}
+
 
 	// these are not defined. will be autoset in set4() i guess.
-	gr->m_firstIndexed = 0;
-	gr->m_lastSpidered = 0;
+	ir->m_firstIndexed = 0;
+	ir->m_lastSpidered = 0;
 
 	bool setUrl = false;
 
 	// HOWEVER, if an hasmime is true and an http:// follows
 	// the delimeter then use that as the url...
 	// this way we can specify our own urls.
-	if ( gr->m_hasMime ) {
-		char *du = gr->m_content;
+	if ( ir->m_hasMime ) {
+		char *du = ir->ptr_content;
 		//du += gbstrlen(delim);
 		if ( du && is_wspace_a ( *du ) ) du++;
 		if ( du && is_wspace_a ( *du ) ) du++;
 		if ( du && is_wspace_a ( *du ) ) du++;
-		if ( gr->m_hasMime && 
+		if ( ir->m_hasMime && 
 		     (strncasecmp( du,"http://",7) == 0 ||
 		      strncasecmp( du,"https://",8) == 0 ) ) {
 			// flag it
@@ -3196,8 +3202,9 @@ bool XmlDoc::indexContainerDoc ( ) {
 			m_injectUrlBuf.nullTerm();
 			// and point to the actual http mime then
 			// well, skip that space, right
-			gr->m_content = uend + 1;
-			gr->m_url = m_injectUrlBuf.getBufStart();
+			ir->ptr_content = uend + 1;
+			ir->ptr_url = m_injectUrlBuf.getBufStart();
+			ir->size_url = m_injectUrlBuf.length()+1; // include \0
 		}
 	}
 
@@ -3206,7 +3213,7 @@ bool XmlDoc::indexContainerDoc ( ) {
 
 	// make the url from parent url
 	// use hash of the content
-	int64_t ch64 = hash64n ( gr->m_content , 0LL );
+	int64_t ch64 = hash64n ( ir->ptr_content , 0LL );
 
 	QUICKPOLL ( m_niceness );
 
@@ -3216,11 +3223,14 @@ bool XmlDoc::indexContainerDoc ( ) {
 		// by default append a -<ch64> to the provided url
 		m_injectUrlBuf.safePrintf("%s-%"UINT64"",
 					  m_firstUrl.getUrl(),ch64);
-		gr->m_url = m_injectUrlBuf.getBufStart();
+		ir->ptr_url = m_injectUrlBuf.getBufStart();
+		ir->size_url = m_injectUrlBuf.length()+1; // include \0
 	}
 
 
-	if ( ! m_msg7->inject2 ( m_masterState , m_masterLoop ) )
+	if ( m_msg7->sendInjectionRequestToHost ( ir ,
+						  m_masterState ,
+						  m_masterLoop ) )
 		// it would block, callback will be called later
 		return false;
 
@@ -3228,9 +3238,12 @@ bool XmlDoc::indexContainerDoc ( ) {
 
 	// error?
 	if ( g_errno ) {
-		log("build: index arc error %s",mstrerror(g_errno));
+		log("build: index flatfile error %s",mstrerror(g_errno));
 		return NULL;
 	}
+	else
+		log("build: index flatfile did not block");
+
 	// loop it up
 	goto subdocLoop;
 
@@ -3239,12 +3252,12 @@ bool XmlDoc::indexContainerDoc ( ) {
 
 void doneInjectingArchiveRec ( void *state ) {
 	Msg7 *THIS = (Msg7 *)state;
-	XmlDoc *xd = THIS->m_stashxd;
 	THIS->m_inUse = false;
+	XmlDoc *xd = THIS->m_stashxd;
 	xd->m_numInjectionsOut--;
 	log("build: archive: injection thread returned. %"INT32" out now.",
-	    THIS->m_numInjectionsOut);
-	THIS->m_masterLoop ( THIS );
+	    xd->m_numInjectionsOut);
+	xd->m_masterLoop ( xd );
 }
 
 

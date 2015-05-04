@@ -2408,6 +2408,60 @@ char *serializeMsg ( int32_t  baseSize ,
 	return buf;
 }
 
+char *serializeMsg2 ( void *thisPtr ,
+		      int32_t objSize ,
+		      char **firstStrPtr ,
+		      int32_t *firstSizeParm ,
+		      int32_t *retSize ) {
+
+	// make a buffer to serialize into
+	char *buf  = NULL;
+	int32_t baseSize = (char *)firstStrPtr - (char *)thisPtr;
+	int nptrs=((char *)firstSizeParm-(char *)firstStrPtr)/sizeof(char *);
+	int32_t need = baseSize;
+	need += nptrs * sizeof(char *);
+	need += nptrs * sizeof(int32_t);
+	// alloc if we should
+	if ( ! buf ) buf = (char *)mmalloc ( need , "sm2" );
+	// bail on error, g_errno should be set
+	if ( ! buf ) return NULL;
+	// set how many bytes we will serialize into
+	*retSize = need;
+	// copy the easy stuff
+	char *p = buf;
+	gbmemcpy ( p , (char *)thisPtr , baseSize );
+	p += baseSize;
+	// then store the strings!
+	int32_t  *sizePtr = firstSizeParm;
+	char **strPtr  = firstStrPtr;//getFirstStrPtr  (); // &ptr_qbuf;
+	int count = 0;
+	for ( ; count < nptrs ; count++ ) {
+		// if we are NULL, we are a "bookmark", so
+		// we alloc'd space for it, but don't copy into
+		// the space until after this call toe serialize()
+		if ( ! *strPtr ) goto skip;
+		// if size is 0 use gbstrlen. helps with InjectionRequest
+		// where we set ptr_url or ptr_content but not size_url, etc.
+		if ( ! *sizePtr )
+			*sizePtr = gbstrlen(*strPtr);
+		// sanity check -- cannot copy onto ourselves
+		if ( p > *strPtr && p < *strPtr + *sizePtr ) {
+			char *xx = NULL; *xx = 0; }
+		// copy the string into the buffer
+		gbmemcpy ( p , *strPtr , *sizePtr );
+	skip:
+		// make it point into the buffer now
+		*strPtr = p;
+		// advance our destination ptr
+		p += *sizePtr;
+		// advance both ptrs to next string
+		sizePtr++;
+		strPtr++;
+	}
+	return buf;
+}
+
+
 // convert offsets back into ptrs
 int32_t deserializeMsg ( int32_t  baseSize ,
 		      int32_t *firstSizeParm ,
@@ -2437,17 +2491,15 @@ int32_t deserializeMsg ( int32_t  baseSize ,
 	return baseSize + (p - stringBuf);//getStringBuf());
 }
 
-void deserializeMsg2 ( //int32_t  baseSize ,
-		      char    **firstStrPtr , // ptr_url
-		      int32_t  *firstSizeParm ) { // size_url
-	              //char *stringBuf ) {
+void deserializeMsg2 ( char    **firstStrPtr , // ptr_url
+		       int32_t  *firstSizeParm ) { // size_url
+	int nptrs=((char *)firstSizeParm-(char *)firstStrPtr)/sizeof(char *);
 	// point to our string buffer
-	char *p = stringBuf;//getStringBuf(); // m_buf;
+	char *p = ((char *)firstSizeParm + sizeof(int32_t)*nptrs);
 	// then store the strings!
 	int32_t  *sizePtr = firstSizeParm;//getFirstSizeParm(); // &size_qbuf;
 	//int32_t  *sizeEnd = lastSizeParm;//getLastSizeParm (); // &size_displ
 	char **strPtr  = firstStrPtr;//getFirstStrPtr  (); // &ptr_qbuf;
-	int nptrs=((char *)firstSizeParm-(char *)firstStrPtr)/sizeof(char *);
 	int count = 0;
 	for ( ; count < nptrs ; count++ ) { // sizePtr <= sizeEnd ;  ) {
 		// convert the offset to a ptr
