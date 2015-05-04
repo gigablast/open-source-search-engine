@@ -1253,11 +1253,15 @@ void gotHttpReply9 ( void *state , TcpSocket *ts ) {
 	const char *banMsg = NULL;
 	//bool banned = false;
 
+	if ( g_errno )
+		log("msg13: got error from proxy: %s",mstrerror(g_errno));
+
+	if ( g_conf.m_logDebugSpider )
+		log("msg13: got proxy reply for %s",r->ptr_url);
+
 	//if ( ! g_errno ) 
 	bool banned = ipWasBanned ( ts , &banMsg , r );
 
-	if ( g_errno )
-		log("msg13: got error from proxy: %s",mstrerror(g_errno));
 
 	// inc this every time we try
 	r->m_proxyTries++;
@@ -1529,11 +1533,11 @@ void gotHttpReply2 ( void *state ,
 	     // retry iff we haven't already, but if we did stop the inf loop
 	     ! r->m_wasInTableBeforeStarting &&
 	     cr &&
-	     cr->m_automaticallyBackOff &&
+	     ( cr->m_automaticallyBackOff || cr->m_automaticallyUseProxies ) &&
 	     // but this is not for proxies... only native crawlbot backoff
 	     ! r->m_proxyIp ) {
 		// note this as well
-		log("msg13: retrying spider with new crawldelay for %s",
+		log("msg13: retrying spidered page with new logic for %s",
 		    r->ptr_url);
 		// reset this so we don't endless loop it
 		r->m_wasInTableBeforeStarting = true;
