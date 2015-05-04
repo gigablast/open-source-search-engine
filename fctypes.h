@@ -619,4 +619,9 @@ int32_t deserializeMsg ( int32_t  baseSize ,
 		      char **firstStrPtr ,
 		      char *stringBuf ) ;
 
+int32_t deserializeMsg2 ( int32_t  baseSize ,
+			  char **firstStrPtr ,
+			  char **lastStrPtr ,
+			  char *stringBuf ) ;
+
 #endif 

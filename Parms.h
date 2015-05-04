@@ -123,6 +123,7 @@ class GigablastRequest {
 	char *m_url; // also for /get
 	char *m_queryToScrape;
 	char *m_contentDelim;
+	char m_forwardRequest;
 	//char  m_containerContentType; // CT_UNKNOWN, CT_WARC, CT_ARC
 	int32_t m_injectDocIp;
 	char *m_contentTypeStr;

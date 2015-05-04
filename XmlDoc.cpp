@@ -3272,6 +3272,8 @@ bool XmlDoc::indexWarcOrArc ( char ctype ) {
 	if ( file == (void *)-1 )
 		return false;
 
+	setStatus ("injecting archive records");
+
 	// if ( *wcp == NULL ) {
 	// 	log("build: warc content was empty. did not index.");
 	// 	return true;
@@ -3759,6 +3761,8 @@ bool XmlDoc::indexWarcOrArc ( char ctype ) {
 	gr->m_hasMime      = true;
 	gr->m_url          = recUrl;
 
+	// load balance over the shards
+	gr->m_forwardRequest = 1;
 
 	// log it
 	log("build: archive: injecting archive url %s",recUrl);
@@ -19033,6 +19037,8 @@ void *systemStartWrapper_r ( void *state , ThreadEntry *t ) {
 		  THIS->m_firstUrl.getUrl() ,
 		  filename );
 
+	log("build: wget: %s",cmd );
+
 	int ret;
 
 	ret = system(cmd);
@@ -19041,10 +19047,15 @@ void *systemStartWrapper_r ( void *state , ThreadEntry *t ) {
 
 	// unzip it now
 	snprintf ( cmd , MAX_URL_LEN+256, "gunzip -f %s" , filename );
+
+	log("build: wget begin: %s",cmd );
+
 	ret = system(cmd);
 	if ( ret == -1 )
 		log("build: gunzip system failed: %s",mstrerror(errno));
 
+
+	log("build: done with gunzip");
 
 	return NULL;
 }
@@ -19062,6 +19073,8 @@ File *XmlDoc::getUtf8ContentInFile ( int64_t *fileSizeArg ) {
 		*fileSizeArg = m_fileSize;
 		return &m_file;
 	}
+
+	setStatus ("wgetting archive file");
 
 	if ( m_calledWgetThread ) {
 

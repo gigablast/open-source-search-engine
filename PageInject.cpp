@@ -17,11 +17,147 @@ bool isRobotsTxtFile ( char *url , int32_t urlLen ) ;
 // HTML INJECITON PAGE CODE
 //
 
-static bool sendReply        ( void *state );
+static bool sendHttpReply        ( void *state );
+static void sendHttpReplyWrapper ( void *state ) ;
 
-static void sendReplyWrapper ( void *state ) {
-	sendReply ( state );
-};
+// scan each parm for OBJ_IR (injection request)
+// and set it from the hr class then.
+// use ptr_string/size_string stuff to point into the hr buf.
+// but if we call serialize() then it makes news ones into its own blob.
+// so we gotta know our first and last ptr_* pointers for serialize/deseria().
+// kinda like how search input works
+bool setInjectionRequestFromParms ( TcpSocket *sock , 
+				    HttpRequest *hr ,
+				    CollectionRec *cr ,
+				    InjectionRequest *ir ) {
+
+	// just in case set all to zero
+	memset ( ir , 0 , sizeof(InjectionRequest ));
+
+	// use this, is more reliable, "coll" can disappear from under us
+	ir->m_collnum = cr->m_collnum;
+
+	// scan the parms
+	for ( int i = 0 ; i < numParms ; i++ ) {
+		Parm *m = &m_parms[i];
+		if ( m->m_objType != OBJ_INJECTION ) continue;
+		// get it
+		if ( m->m_type == TYPE_STRING ) {
+			char *str = hr->getString(m->m_parmName,m->m_parmDef);
+			// serialize it as a string
+			char **ptrPtr = m->m_off + (char *)ir;
+			// store the ptr pointing into hr buf for now
+			*ptrPtr = str;
+			// how many strings are we past ptr_url?
+			int32_t count = ptrPtr - &ir->ptr_url;
+			// and length. include \0
+			int32_t *sizePtr = &ir->size_url + count;
+			*sizePtr = gbstrlen(str) + 1;
+			continue;
+		}
+		// numbers are easy
+		if ( m->m_type == TYPE_INT ) {
+			int32_t *ii = (int32_t *)(m->m_off + (char *)ir);
+			*ii = hr->getLong(m->m_parmName,m->m_parmDef );
+		}
+		if ( m->m_type == TYPE_CHAR ) {
+			char *ii = (char *)(m->m_off + (char *)ir);
+			*ii = (char)hr->getLong(m->m_parmName,m->m_parmDef );
+		}
+		if ( m->m_type == TYPE_FLOAT ) {
+			float *ii = (float *)(m->m_off + (char *)ir);
+			*ii = hr->getFloat(m->m_parmName,m->m_parmDef );
+		}
+	}
+
+
+	// if content is "" make it NULL so XmlDoc will download it
+	// if user really wants empty content they can put a space in there
+	// TODO: update help then...
+	if ( ir->m_content && ! ir->m_content[0]  )
+		ir->m_content = NULL;
+
+	if ( ir->m_contentFile && ! ir->m_contentFile[0]  )
+		ir->m_contentFile = NULL;
+
+	if ( ir->m_contentDelim && ! ir->m_contentDelim[0] )
+		ir->m_contentDelim = NULL;
+
+	if ( ir->ptr_queryToScrape && ! ir->ptr_queryToScrape[0] ) 
+		ir->ptr_queryToScrape = NULL;
+
+	if ( ir->m_url && ! ir->m_url[0] ) 
+		ir->m_url = NULL;
+
+	// if we had a delimeter but not content, zero it out...
+	char *content = ir->m_content;
+	if ( ! content ) content = ir->m_contentFile;
+	if ( ! content ) ir->m_contentDelim = NULL;
+
+	return true;
+}
+
+// void doneLocalInjectWrapper ( void *state ) {
+// 	XmlDoc *xd = (XmlDoc *)state;
+// 	Msg7 *msg7 = (Msg7 *)THIS->m_injectionState;
+// 	void (* callback ) (void *) = xd->m_injectionCallback;
+// 	void *state = xd->m_injectionState;
+// 	mdelete ( xd, sizeof(XmlDoc) , "PageInject" );
+// 	delete (xd);
+// 	// now call the callback since the local inject is done
+// 	callback ( state );
+// }
+
+Host *getHostToHandleInjection ( char *url ) {
+	Url norm;
+	norm.set ( url );
+	int64_t docId = g_titledb.getProbableDocId ( &norm );
+	// get iroupId from docId
+	uint32_t shardNum = getShardNumFromDocId ( docId );
+	// from Msg22.cpp
+	Host *group = g_hostdb.getShard ( shardNum );
+	int32_t hostNum = docId % g_hostdb.m_numHostsPerShard;
+	Host *host = &group[hostNum];
+	return host;
+}
+
+// void gotForwardedReplyWrapper ( void *state ) {
+// 	Msg7 *THIS = (Msg7 *)state;
+// 	if ( g_errno ) 
+// 		log("inject: error from remote host: %s",mstrerror(g_errno));
+// 	THIS->m_callback ( THIS->m_state );
+// }
+
+// . "sir" is the serialized injectionrequest
+// . this is called from the http interface, as well as from
+//   XmlDoc::indexWarcOrArc() to inject individual recs/docs from the warc/arc
+bool sendInjectionRequestToHost ( InjectionRequest *sir , 
+				  nt32_t sirSize ,
+				  void *state ,
+				  void (* callback)(void *) ) {
+
+	// forward it to another shard?
+	Host *host = getHostToHandleInjection ( sir->ptr_url );
+
+	// . ok, forward it to another host now
+	// . and call got gotForwardedReplyWrapper when reply comes in
+	return g_udpServer.sendRequest ( sir , // req ,
+					 sirSize,
+					 0x07 , // msgtype
+					 host->m_ip , // ip
+					 host->m_port , // port
+					 host->m_hostId,
+					 NULL, // retslot
+					 state,
+					 callback,
+					 99999999 , // timeout
+					 -1 , // backoff
+					 -1 , // maxwait
+					 NULL, // replybuf
+					 0, // replybufmaxsize
+					 MAX_NICENESS // niceness
+					 );
+}
 
 // . returns false if blocked, true otherwise
 // . sets g_errno on error
@@ -43,9 +179,39 @@ bool sendPageInject ( TcpSocket *sock , HttpRequest *hr ) {
 						   "controls");
 	}
 
+	char format = hr->getReplyFormat();
+	char *coll  = hr->getString("c",NULL);
 
+	// no url parm?
+	if ( format != FORMAT_HTML && ! coll ) {//hr->getString("c",NULL) ) {
+		g_errno = ENOCOLLREC;
+		char *msg = mstrerror(g_errno);
+		return g_httpServer.sendErrorReply(sock,g_errno,msg,NULL);
+	}
 
-	// get the collection
+	if ( g_repairMode ) { 
+		g_errno = EREPAIRING;
+		char *msg = mstrerror(g_errno);
+		return g_httpServer.sendErrorReply(sock,g_errno,msg,NULL);
+	}
+
+	// get collection rec
+	CollectionRec *cr = g_collectiondb.getRec ( coll );
+	if ( ! cr ) {
+		g_errno = ENOCOLLREC;
+		char *msg = mstrerror(g_errno);
+		return g_httpServer.sendErrorReply(sock,g_errno,msg,NULL);
+	}
+
+	// no permmission?
+	bool isMasterAdmin = g_conf.isMasterAdmin ( sock , hr );
+	bool isCollAdmin = g_conf.isCollAdmin ( sock , hr );
+	if ( ! isMasterAdmin && ! isCollAdmin ) {
+		g_errno = ENOPERM;
+		char *msg = mstrerror(g_errno);
+		return g_httpServer.sendErrorReply(sock,g_errno,msg,NULL);
+	}
+
 	// make a new state
 	Msg7 *msg7;
 	try { msg7= new (Msg7); }
@@ -57,105 +223,101 @@ bool sendPageInject ( TcpSocket *sock , HttpRequest *hr ) {
 	}
 	mnew ( msg7, sizeof(Msg7) , "PageInject" );
 
+	// save some state info into msg7 directly
 	msg7->m_socket = sock;
+	msg7->m_format = format;
+	msg7->m_hr.copy ( &hr );
 
-	char format = hr->getReplyFormat();
-
-	char *coll = hr->getString("c",NULL);
-
-	// no url parm?
-	if ( format != FORMAT_HTML && ! coll ) {//hr->getString("c",NULL) ) {
-		g_errno = ENOCOLLREC;
-		char *msg = mstrerror(g_errno);
-		return g_httpServer.sendErrorReply(sock,g_errno,msg,NULL);
-	}
-
-	// set this. also sets gr->m_hr
-	GigablastRequest *gr = &msg7->m_gr;
-	// this will fill in GigablastRequest so all the parms we need are set
-	g_parms.setGigablastRequest ( sock , hr , gr );
-
-	// if content is "" make it NULL so XmlDoc will download it
-	// if user really wants empty content they can put a space in there
-	// TODO: update help then...
-	if ( gr->m_content && ! gr->m_content[0]  )
-		gr->m_content = NULL;
-
-	if ( gr->m_contentFile && ! gr->m_contentFile[0]  )
-		gr->m_contentFile = NULL;
-
-	if ( gr->m_contentDelim && ! gr->m_contentDelim[0] )
-		gr->m_contentDelim = NULL;
-
-	// set this to  false
-	gr->m_gotSections = false;
-
-	// if we had a delimeter but not content, zero it out...
-	char *content = gr->m_content;
-	if ( ! content ) content = gr->m_contentFile;
-	if ( ! content ) gr->m_contentDelim = NULL;
-
-	// get collection rec
-	CollectionRec *cr = g_collectiondb.getRec ( coll );
-	// bitch if no collection rec found
-	if ( ! cr ) {
-		g_errno = ENOCOLLREC;
-		//log("build: Injection from %s failed. "
-		//    "Collection \"%s\" does not exist.",
-		//    iptoa(s->m_ip),coll);
-		// g_errno should be set so it will return an error response
-		return sendReply ( msg7 );
-	}
-
-	// use this, is more reliable, "coll" can disappear from under us
-	gr->m_collnum = cr->m_collnum;
+	// use Parms.cpp like how we set GigablastRequest to initialize parms
+	// from the http request. i.e. setGigablastRequest(). 
+	// the InjectionRequest::ptr_*  members will reference into
+	// msg7->m_hr buffers so they should be ok.
+	InjectionRequest *ir = &msg7->m_injectionRequest;
+	setInjectionRequestFromParms (sock, &msg7->m_hr, cr, &ir );
 
 	// a scrape request?
-	if ( gr->m_queryToScrape && gr->m_queryToScrape[0] ) {
+	if ( ir->ptr_queryToScrape ) {
 		//char *uf="http://www.google.com/search?num=50&"
 		//	"q=%s&scoring=d&filter=0";
 		msg7->m_linkDedupTable.set(4,0,512,NULL,0,false,0,"ldtab");
 		if ( ! msg7->scrapeQuery ( ) ) return false;
-		return sendReply ( msg7 );
+		return sendHttpReply ( msg7 );
 	}
 
 	// if no url do not inject
-	if ( ! gr->m_url || gr->m_url[0] == '\0' ) 
-		return sendReply ( msg7 );
-
-	// no permmission?
-	bool isMasterAdmin = g_conf.isMasterAdmin ( sock , hr );
-	bool isCollAdmin = g_conf.isCollAdmin ( sock , hr );
-	if ( ! isMasterAdmin &&
-	     ! isCollAdmin ) {
-		g_errno = ENOPERM;
-		return sendReply ( msg7 );
+	if ( ! ir->m_url ) {
+		log("inject: no url provied to inject");
+		g_errno = EBADURL;
+		return sendHttpReply ( msg7 );
 	}
 
-	// call sendReply() when inject completes
-	if ( ! msg7->inject2 ( msg7 , sendReplyWrapper ) )
+
+	InjectionRequest *ir = &m_ir;
+
+	m_state = state;
+	m_callback = callback;
+
+	// this will be NULL if the "content" was empty or not given
+	char *content = ir->m_content;
+
+	// . try the uploaded file if nothing in the text area
+	// . this will be NULL if the "content" was empty or not given
+	if ( ! content ) content = ir->m_contentFile;
+
+	// forward it to another shard?
+	//Host *host = getHostToHandleInjection ( ir->ptr_url );
+	// if we are the responsible host, continue onwards with the injection
+	// if ( host == g_hostdb.m_myHost ) {
+	// 	// just do it now
+	// 	if ( ! injectForReals ( ir , this , doneLocalInjectWrapper ) ) 
+	// 		// if it would block, return false
+	// 		return false;
+	// 	// all done already...
+	// 	log("inject: did not block");
+	// 	mdelete ( msg7, sizeof(Msg7) , "PageInject" );
+	// 	delete (msg7);
+	// 	g_errno = EBADENGINEER;
+	// 	char *msg = mstrerror(g_errno);
+	// 	return g_httpServer.sendErrorReply(sock,g_errno,msg,NULL);
+	// }
+
+	int32_t sirSize = 0;
+	InjectionRequest *sir = ir->serializeMsg ( &sirSize );
+	if ( ! sir ) {
+		// oom?
+		log("inject: error serializing injection request",
+		    mstrerror(g_errno));
+		return sendHttpReply ( msg7 );
+	}
+
+	// when we receive the udp reply then send back the http reply
+	if ( ! sendInjectionRequestToHost ( sir , 
+					    sirSize ,
+					    msg7 , 
+					    sendHttpReplyWrapper ) ) 
 		return false;
 
+	// error?
+	log("inject: error forwarding reply: %s",  mstrerror(g_errno));
 	// it did not block, i gues we are done
-	return sendReply ( msg7 );
+	return sendHttpReply ( msg7 );
 }
 
-bool sendReply ( void *state ) {
+void sendHttpReplyWrapper ( void *state ) {
+	sendHttpReply ( state );
+}
+
+bool sendHttpReply ( void *state ) {
 	// get the state properly
 	Msg7 *msg7= (Msg7 *) state;
 
-	GigablastRequest *gr = &msg7->m_gr;
+	InjectionRequest *ir = &msg7->m_injectionRequest;
 
 	// extract info from state
-	TcpSocket *sock = gr->m_socket;
+	TcpSocket *sock = msg7->m_socket;
 
 	XmlDoc *xd = &msg7->m_xd;
-	// log it
-	//if ( msg7->m_url[0] ) xd->logIt();
 
-	// msg7 has the docid for what we injected, iff g_errno is not set
-	//int64_t docId  = msg7->m_msg7.m_docId;
-	//int32_t      hostId = msg7->m_msg7.m_hostId;
 	int64_t docId  = xd->m_docId;
 	int32_t      hostId = 0;//msg7->m_msg7.m_hostId;
 
@@ -163,10 +325,10 @@ bool sendReply ( void *state ) {
 	if ( xd->m_indexCodeValid && xd->m_indexCode && ! g_errno )
 		g_errno = xd->m_indexCode;
 
-	char format = gr->m_hr.getReplyFormat();
+	char format = msg7->m_format;
 
 	// no url parm?
-	if ( ! g_errno && ! gr->m_url && format != FORMAT_HTML )
+	if ( ! g_errno && ! ir->m_url && format != FORMAT_HTML )
 		g_errno = EMISSINGINPUT;
 
 	if ( g_errno && g_errno != EDOCUNCHANGED ) {
@@ -192,13 +354,12 @@ bool sendReply ( void *state ) {
 		am.cdataEncode(mstrerror(g_errno));
 		am.safePrintf("]]></statusMsg>\n");
 		// if xmldoc was a container of subdocs that XmlDoc::indexDoc()
-		// indirectly called Msg7::inject2() on each one, then the
-		// container doc will not have been indexed or have a docid.
-		// in that case print it, but as zero
+		// call indexWarcOrArc() on then docid is not valid since
+		// we do not index container docs.
 		int64_t docId = xd->m_docId;
 		if ( ! xd->m_docIdValid ) docId = 0;
 		am.safePrintf("\t<docId>%"INT64"</docId>\n",docId);
-		if ( gr->m_getSections ) {
+		if ( ir->m_getSections ) {
 			SafeBuf *secBuf = xd->getInlineSectionVotingBuf();
 			am.safePrintf("\t<htmlSrc><![CDATA[");
 			if ( secBuf->length() ) 
@@ -216,7 +377,7 @@ bool sendReply ( void *state ) {
 		am.jsonEncode(mstrerror(g_errno));
 		am.safePrintf("\",\n");
 		am.safePrintf("\t\"docId\":%"INT64",\n",xd->m_docId);
-		if ( gr->m_getSections ) {
+		if ( ir->m_getSections ) {
 			SafeBuf *secBuf = xd->getInlineSectionVotingBuf();
 			am.safePrintf("\t\"htmlSrc\":\"");
 			if ( secBuf->length() ) 
@@ -273,17 +434,18 @@ bool sendReply ( void *state ) {
 	// end debug
 	//
 
-	char *url = gr->m_url;
+	char *url = ir->m_url;
 	
 	// . if we're talking w/ a robot he doesn't care about this crap
 	// . send him back the error code (0 means success)
-	if ( url && gr->m_shortReply ) {
+	if ( url && ir->m_shortReply ) {
 		char buf[1024*32];
 		char *p = buf;
 		// return docid and hostid
 		if ( ! g_errno ) p += sprintf ( p , 
-					   "0,docId=%"INT64",hostId=%"INT32"," , 
-					   docId , hostId );
+						"0,docId=%"INT64","
+						"hostId=%"INT32"," , 
+						docId , hostId );
 		// print error number here
 		else  p += sprintf ( p , "%"INT32",0,0,", (int32_t)g_errno );
 		// print error msg out, too or "Success"
@@ -297,24 +459,24 @@ bool sendReply ( void *state ) {
 	SafeBuf sb;
 
 	// print admin bar
-	g_pages.printAdminTop ( &sb, sock , &gr->m_hr );
+	g_pages.printAdminTop ( &sb, sock , &msg7->m_hr );
 
 	// print a response msg if rendering the page after a submission
 	if ( g_errno )
 		sb.safePrintf ( "<center>Error injecting url: <b>%s[%i]</b>"
 				"</center>", 
 				mstrerror(g_errno) , g_errno);
-	else if ( (gr->m_url&&gr->m_url[0]) ||
-		  (gr->m_queryToScrape&&gr->m_queryToScrape[0]) )
+	else if ( (ir->m_url&&ir->m_url[0]) ||
+		  (ir->m_queryToScrape&&ir->m_queryToScrape[0]) )
 		sb.safePrintf ( "<center><b>Sucessfully injected %s"
 				"</center><br>"
-				, gr->m_url
+				, ir->m_url
 				//, xd->m_firstUrl.m_url
 				);
 
 
 	// print the table of injection parms
-	g_parms.printParmTable ( &sb , sock , &gr->m_hr );
+	g_parms.printParmTable ( &sb , sock , &msg7->m_hr );
 
 
 	// clear g_errno, if any, so our reply send goes through
@@ -334,16 +496,95 @@ bool sendReply ( void *state ) {
 					     -1/*cachetime*/);
 }
 
+/////////////
 //
-// END HTML INJECTION PAGE CODE
+// HANDLE INCOMING UDP INJECTION REQUEST
 //
+////////////
 
+// send back a reply to the originator of the msg7 injection request
+void sendUdpReply7 ( void *state ) {
+	XmlDoc *xd = (XmlDoc *)state;
+	UdpSlot *slot = (UdpSlot *)THIS->m_injectionSlot;
+	mdelete ( xd, sizeof(XmlDoc) , "PageInject" );
+	delete (xd);
+	if ( g_errno )
+		g_udpServer.sendErrorReply(slot,g_errno);
+	else
+		g_udpServer.sendReply_ass(NULL,0,NULL,0,slot);
+}
+	
+
+void handleRequest7 ( UdpSlot *slot , int32_t netnice ) {
+	InjectRequest *ir = (InjectionRequest *)slot->m_readBuf;
+
+	// now just supply the first guy's char ** and size ptr
+	deserializeMsg2 ( &ir->ptr_url, &ir->size_url );
+
+	XmlDoc *xd;
+	try { xd = new (XmlDoc); }
+	catch ( ... ) { 
+		g_errno = ENOMEM;
+		log("PageInject: import failed: new(%i): %s", 
+		    (int)sizeof(XmlDoc),mstrerror(g_errno));
+		sendUdpReply ( slot );
+		return;
+	}
+	mnew ( xd, sizeof(XmlDoc) , "PageInject" );
+
+	xd->m_injectionSlot = slot;
+
+	if ( ! xd->injectDoc ( ir->ptr_url , // m_injectUrlBuf.getBufStart() ,
+			       cr ,
+			       ir->ptr_content , // start , // content ,
+			       ir->ptr_diffbotReply,
+			       // if this doc is a 'container doc' then
+			       // hasMime applies to the SUBDOCS only!!
+			       ir->m_hasMime, // content starts with http mime?
+			       ir->m_hopCount,
+			       ir->m_charset,
+
+			       ir->m_deleteUrl,
+			       // warcs/arcs include the mime so we don't
+			       // look at this in that case in 
+			       // XmlDoc::injectDoc() when it calls set4()
+			       ir->ptr_contentTypeStr, // text/html text/xml
+			       ir->m_spiderLinks ,
+			       ir->m_newOnly, // index iff new
+
+			       xd, // state ,
+			       sendUdpReply7 ,
+
+			       // extra shit
+			       ir->m_firstIndexed,
+			       ir->m_lastSpidered ,
+			       // the ip of the url being injected.
+			       // use 0 if unknown and it won't be valid.
+			       ir->m_injectDocIp ,
+			       ir->ptr_contentDelim
+			       ) )
+		// we blocked...
+		return false;
+
+	// if injected without blocking, send back reply
+	sendUdpReply7 ( xd );
+}
+
+
+
+//////////////////
+//
+// TITLEREC INJECT IMPORT CODE
+//
+//////////////////
 
 Msg7::Msg7 () {
+	m_xd = NULL;
 	reset();
 }
 
 Msg7::~Msg7 () {
+	reset();
 }
 
 //void Msg7::constructor () {
@@ -358,6 +599,11 @@ void Msg7::reset() {
 	//m_start = NULL;
 	m_sbuf.reset();
 	//m_isDoneInjecting = false;
+	if ( m_xd ) {
+		mdelete ( m_xd, sizeof(XmlDoc) , "PageInject" );
+		delete (m_xd);
+		m_xd = NULL;
+	}
 }
 
 // when XmlDoc::inject() complets it calls this
@@ -414,6 +660,7 @@ void injectLoopWrapper9 ( void *state ) {
 }
 */
 
+/*
 bool Msg7::inject ( char *coll ,
 		    char *proxiedUrl ,
 		    int32_t  proxiedUrlLen ,
@@ -443,6 +690,7 @@ bool Msg7::inject ( char *coll ,
 
 	return inject2 ( state , callback );
 }
+*/
 
 // returns false if would block
 // bool Msg7::injectTitleRec ( void *state ,
@@ -450,7 +698,7 @@ bool Msg7::inject ( char *coll ,
 // 			    CollectionRec *cr ) {
 
 
-static void sendReply ( UdpSlot *slot ) {
+static void sendUdpReply ( UdpSlot *slot ) {
 
 	if ( g_errno )
 		g_udpServer.sendErrorReply(slot,g_errno);
@@ -467,10 +715,10 @@ void doneInjectingWrapper10 ( void *state ) {
 	mdelete ( xd, sizeof(XmlDoc) , "PageInject" );
 	delete (xd);
 	g_errno = err;
-	sendReply ( slot );
+	sendUdpReply ( slot );
 }
 
-void handleRequest7 ( UdpSlot *slot , int32_t netnice ) {
+void handleRequest7Import ( UdpSlot *slot , int32_t netnice ) {
 
 	//m_state = state;
 	//m_callback = callback;
@@ -481,7 +729,7 @@ void handleRequest7 ( UdpSlot *slot , int32_t netnice ) {
 		g_errno = ENOMEM;
 		log("PageInject: import failed: new(%i): %s", 
 		    (int)sizeof(XmlDoc),mstrerror(g_errno));
-		sendReply(slot);
+		sendUdpReply(slot);
 		return;
 	}
 	mnew ( xd, sizeof(XmlDoc) , "PageInject" );
@@ -497,7 +745,7 @@ void handleRequest7 ( UdpSlot *slot , int32_t netnice ) {
 
 	CollectionRec *cr = g_collectiondb.m_recs[collnum];
 	if ( ! cr ) {
-		sendReply(slot);
+		sendUdpReply(slot);
 		return;
 	}
 
@@ -527,212 +775,9 @@ void handleRequest7 ( UdpSlot *slot , int32_t netnice ) {
 
 	// all done?
 	//return true;
-	sendReply ( slot );
+	sendUdpReply ( slot );
 }
 
-
-// . returns false if blocked and callback will be called, true otherwise
-// . sets g_errno on error
-bool Msg7::inject2 ( void *state ,
-		    void (*callback)(void *state) 
-		    //int32_t spiderLinksDefault ,
-		    //char *collOveride ) {
-		    ) {
-
-	GigablastRequest *gr = &m_gr;
-
-	// char *coll2 = gr->m_coll;
-	// CollectionRec *cr = g_collectiondb.getRec ( coll2 );
-	CollectionRec *cr = g_collectiondb.getRec ( gr->m_collnum );
-
-	if ( ! cr ) {
-		g_errno = ENOCOLLREC;
-		return true;
-	}
-
-	m_state = state;
-	m_callback = callback;
-
-	// shortcut
-	XmlDoc *xd = &m_xd;
-
-	if ( ! gr->m_url || ! gr->m_url[0] ) {
-	     // if there is a record delimeter, we form a new fake url
-	     // for each record based on content hash
-	     //! gr->m_contentDelim ) {
-		log("inject: no url provied to inject");
-		g_errno = EBADURL;
-		return true;
-	}
-
-	//char *coll = cr->m_coll;
-
-	if ( g_repairMode ) { g_errno = EREPAIRING; return true; }
-
-	// this will be NULL if the "content" was empty or not given
-	char *content = gr->m_content;
-
-	// . try the uploaded file if nothing in the text area
-	// . this will be NULL if the "content" was empty or not given
-	if ( ! content ) content = gr->m_contentFile;
-
-	// if it is a warc or arc url then download it to fill in the content
-	Url u;
-	if ( gr->m_url )
-		// get the normalized url
-		u.set ( gr->m_url );
-
-	// if ( m_firstTime ) {
-	// 	m_firstTime = false;
-	// 	m_start = content;
-	// }
-
-	// save current start since we update it next
-	//char *start = m_start;
-
-	// if this is empty we are done
-	//if ( ! start ) 
-	//	return true;
-
-	// char *delim = gr->m_contentDelim;
-	// if ( delim && ! delim[0] ) delim = NULL;
-
-	// if doing delimeterized injects, hitting a \0 is the end of the road
-	// if ( delim && m_fixMe && ! m_saved ) {
-	// 	m_isDoneInjecting = true;
-	// 	return true;
-	// }
-
-
-	// if ( m_fixMe ) {
-	// 	// we had made the first delim char a \0 to index the
-	// 	// previous document, now put it back to what it was
-	// 	*m_start = m_saved;
-	// 	// i guess unset this
-	// 	m_fixMe = false;
-	// }
-
-	// bool advanced = false;
-
-	// we've saved m_start as "start" above, 
-	// so find the next delimeter after it and set that to m_start
-	// add +1 to avoid infinite loop
-	// if ( delim ) { // gr->m_containerContentType == CT_UNKNOWN )
-	// 	m_start = strstr(start+1,delim);
-	// 	advanced = true;
-	// 	// if m_start is NULL, it couldn't be found so advance
-	// 	// to end of file which should be a \0 already
-	// 	if ( ! m_start ) 
-	// 		m_start = start + gbstrlen(start);
-	// }
-
-
-	// for injecting "start" set this to \0
-	// if ( advanced ) { // m_start ) {
-	// 	// save it
-	// 	m_saved = *m_start;
-	// 	// null term it
-	// 	*m_start = '\0';
-	// 	// put back the original char on next round...?
-	// 	m_fixMe = true;
-	// }
-
-	//if ( ! delim )
-
-	// this is the url of the injected content
-	//m_injectUrlBuf.safeStrcpy ( gr->m_url );
-
-	//bool modifiedUrl = false;
-
-	// if we had a delimeter we must make a fake url
-	// if ( delim ) {
-	//  	// if user had a <url> or <doc> or <docid> field use that
-	//  	char *hint = strcasestr ( start , "<url>" );
-	//  	if ( hint ) {
-	// 		modifiedUrl = true;
-	// 		...
-	// 	}
-	// }
-
-	// if we had a delimeter thus denoting multiple items/documents to
-	// be injected, we must create unique urls for each item.
-	// if ( delim && ! modifiedUrl ) {
-	// 	// use hash of the content
-	// 	int64_t ch64 = hash64n ( start , 0LL );
-	// 	// normalize it
-	// 	//Url u; u.set ( gr->m_url );
-	// 	// reset it
-	// 	m_injectUrlBuf.reset();
-	// 	// by default append a -<ch64> to the provided url
-	// 	m_injectUrlBuf.safePrintf("%s-%"UINT64"",u.getUrl(),ch64);
-
-	// 	// HOWEVER, if an hasmime is true and an http:// follows
-	// 	// the delimeter then use that as the url...
-	// 	// this way we can specify our own urls.
-	// 	char *du = start;
-	// 	du += gbstrlen(delim);
-	// 	if ( du && is_wspace_a ( *du ) ) du++;
-	// 	if ( du && is_wspace_a ( *du ) ) du++;
-	// 	if ( du && is_wspace_a ( *du ) ) du++;
-	// 	if ( gr->m_hasMime && 
-	// 	     (strncasecmp( du,"http://",7) == 0 ||
-	// 	      strncasecmp( du,"https://",8) == 0 ) ) {
-	// 		// find end of it
-	// 		char *uend = du + 7;
-	// 		for ( ; *uend && ! is_wspace_a(*uend) ; uend++ );
-	// 		// inject that then
-	// 		m_injectUrlBuf.reset();
-	// 		m_injectUrlBuf.safeMemcpy ( du , uend - du );
-	// 		m_injectUrlBuf.nullTerm();
-	// 		// and point to the actual http mime then
-	// 		start = uend;
-	// 	}
-	// }
-
-	// count them
-	//m_injectCount++;
-
-	m_inUse = true;
-
-	if ( ! xd->injectDoc ( gr->m_url , // m_injectUrlBuf.getBufStart() ,
-			       cr ,
-			       content , // start , // content ,
-			       gr->m_diffbotReply,
-			       // if this doc is a 'container doc' then
-			       // hasMime applies to the SUBDOCS only!!
-			       gr->m_hasMime, // content starts with http mime?
-			       gr->m_hopCount,
-			       gr->m_charset,
-
-			       gr->m_deleteUrl,
-			       // warcs/arcs include the mime so we don't
-			       // look at this in that case in 
-			       // XmlDoc::injectDoc() when it calls set4()
-			       gr->m_contentTypeStr, // text/html text/xml
-			       gr->m_spiderLinks ,
-			       gr->m_newOnly, // index iff new
-
-			       //this ,
-			       //injectLoopWrapper9 ,
-			       m_state ,
-			       m_callback ,
-
-			       // extra shit
-			       gr->m_firstIndexed,
-			       gr->m_lastSpidered ,
-			       // the ip of the url being injected.
-			       // use 0 if unknown and it won't be valid.
-			       gr->m_injectDocIp ,
-			       gr->m_contentDelim
-			       ) )
-		// we blocked...
-		return false;
-
-
-	m_inUse = false;
-
-	return true;
-}
 
 
 ///////////////
@@ -805,10 +850,10 @@ bool Msg7::scrapeQuery ( ) {
 	// advance round now in case we return early
 	m_round++;
 
-	GigablastRequest *gr = &m_gr;
+	GigablastRequest *ir = &m_ir;
 
 	// error?
-	char *qts = gr->m_queryToScrape;
+	char *qts = ir->m_queryToScrape;
 	if ( ! qts ) { char *xx=NULL;*xx=0; }
 
 	if ( gbstrlen(qts) > 500 ) {
@@ -862,7 +907,7 @@ bool Msg7::scrapeQuery ( ) {
 	// parent docid is 0
 	sreq.setKey(firstIp,0LL,false);
 
-	char *coll2 = gr->m_coll;
+	char *coll2 = ir->m_coll;
 	CollectionRec *cr = g_collectiondb.getRec ( coll2 );
 
 	// forceDEl = false, niceness = 0
@@ -882,7 +927,7 @@ bool Msg7::scrapeQuery ( ) {
 	if ( m_useAhrefs )
 		m_xd.m_useAhrefs = true;
 
-	m_xd.m_reallyInjectLinks = true;//gr->m_injectLinks;
+	m_xd.m_reallyInjectLinks = true;//ir->m_injectLinks;
 
 	//
 	// rather than just add the links of the page to spiderdb,

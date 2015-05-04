@@ -1081,6 +1081,9 @@ class XmlDoc {
 	int32_t m_numInjectionsOut;
 	bool m_calledWgetThread;
 
+	// used by msg7 to store udp slot
+	class UdpSlot *m_injectionSlot;
+
 	// . same thing, a little more complicated
 	// . these classes are only set on demand
 	Xml        m_xml;

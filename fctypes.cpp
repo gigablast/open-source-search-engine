@@ -2437,6 +2437,35 @@ int32_t deserializeMsg ( int32_t  baseSize ,
 	return baseSize + (p - stringBuf);//getStringBuf());
 }
 
+void deserializeMsg2 ( //int32_t  baseSize ,
+		      char    **firstStrPtr , // ptr_url
+		      int32_t  *firstSizeParm ) { // size_url
+	              //char *stringBuf ) {
+	// point to our string buffer
+	char *p = stringBuf;//getStringBuf(); // m_buf;
+	// then store the strings!
+	int32_t  *sizePtr = firstSizeParm;//getFirstSizeParm(); // &size_qbuf;
+	//int32_t  *sizeEnd = lastSizeParm;//getLastSizeParm (); // &size_displ
+	char **strPtr  = firstStrPtr;//getFirstStrPtr  (); // &ptr_qbuf;
+	int nptrs=((char *)firstSizeParm-(char *)firstStrPtr)/sizeof(char *);
+	int count = 0;
+	for ( ; count < nptrs ; count++ ) { // sizePtr <= sizeEnd ;  ) {
+		// convert the offset to a ptr
+		*strPtr = p;
+		// make it NULL if size is 0 though
+		if ( *sizePtr == 0 ) *strPtr = NULL;
+		// sanity check
+		if ( *sizePtr < 0 ) { char *xx = NULL; *xx =0; }
+		// advance our destination ptr
+		p += *sizePtr;
+		// advance both ptrs to next string
+		sizePtr++;
+		strPtr++;
+	}
+	// return how many bytes we processed
+	//return baseSize + (p - stringBuf);//getStringBuf());
+}
+
 // print it to stdout for debugging Dates.cpp
 int32_t printTime ( time_t ttt ) {
 	//char *s = ctime(&ttt);
