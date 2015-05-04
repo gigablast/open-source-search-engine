@@ -45,10 +45,13 @@ void setInjectionRequestFromParms ( TcpSocket *sock ,
 		if ( m->m_type == TYPE_CHARPTR ||
 		     m->m_type == TYPE_FILEUPLOADBUTTON ) {
 			int32_t stringLen;
-			char *str = hr->getString(m->m_cgi,&stringLen,m->m_def);
+			char *str =hr->getString(m->m_cgi,&stringLen,m->m_def);
+			// avoid overwriting the "url" parm with the "u" parm
+			// since it is just an alias
+			if ( ! str ) continue;
 			// serialize it as a string
 			char *foo = (char *)ir + m->m_off;
-			char **ptrPtr = &foo;
+			char **ptrPtr = (char **)foo;
 			// store the ptr pointing into hr buf for now
 			*ptrPtr = str;
 			// how many strings are we past ptr_url?
@@ -136,6 +139,10 @@ void gotUdpReplyWrapper ( void *state , UdpSlot *slot ) {
 }
 
 void Msg7::gotUdpReply ( UdpSlot *slot ) {
+
+	// dont' free the sendbuf that is Msg7::m_sir/m_sirSize. msg7 will
+	// free it. 
+	slot->m_sendBufAlloc = NULL;
 
 	m_replyIndexCode = EBADENGINEER;
 	if ( slot && slot->m_readBuf && slot->m_readBufSize >= 12 ) {
@@ -274,6 +281,9 @@ bool sendPageInject ( TcpSocket *sock , HttpRequest *hr ) {
 	// save some state info into msg7 directly
 	msg7->m_socket = sock;
 	msg7->m_format = format;
+	msg7->m_replyIndexCode = 0;
+	msg7->m_replyDocId = 0;
+	
 	msg7->m_hr.copy ( hr );
 
 	// use Parms.cpp like how we set GigablastRequest to initialize parms
@@ -293,18 +303,15 @@ bool sendPageInject ( TcpSocket *sock , HttpRequest *hr ) {
 	}
 
 	// if no url do not inject
-	if ( ! ir->ptr_url ) {
-		log("inject: no url provied to inject");
-		g_errno = EBADURL;
+	if ( ! ir->ptr_url )
 		return sendHttpReply ( msg7 );
-	}
 
 	// this will be NULL if the "content" was empty or not given
-	char *content = ir->ptr_content;
+	//char *content = ir->ptr_content;
 
 	// . try the uploaded file if nothing in the text area
 	// . this will be NULL if the "content" was empty or not given
-	if ( ! content ) content = ir->ptr_contentFile;
+	//if ( ! content ) content = ir->ptr_contentFile;
 
 	// forward it to another shard?
 	//Host *host = getHostToHandleInjection ( ir->ptr_url );
@@ -324,7 +331,7 @@ bool sendPageInject ( TcpSocket *sock , HttpRequest *hr ) {
 	// }
 
 	// when we receive the udp reply then send back the http reply
-	if ( ! msg7->sendInjectionRequestToHost(ir,msg7,sendHttpReplyWrapper)) 
+	if ( msg7->sendInjectionRequestToHost(ir,msg7,sendHttpReplyWrapper)) 
 		return false;
 
 	// error?
@@ -546,6 +553,7 @@ bool sendHttpReply ( void *state ) {
 
 // send back a reply to the originator of the msg7 injection request
 void sendUdpReply7 ( void *state ) {
+
 	XmlDoc *xd = (XmlDoc *)state;
 	UdpSlot *slot = xd->m_injectionSlot;
 	int32_t indexCode = -1;

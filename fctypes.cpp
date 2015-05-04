@@ -2421,42 +2421,65 @@ char *serializeMsg2 ( void *thisPtr ,
 	int32_t need = baseSize;
 	need += nptrs * sizeof(char *);
 	need += nptrs * sizeof(int32_t);
+	// tally up the string sizes
+	int32_t  *srcSizePtr = (int32_t *)firstSizeParm;
+	char **srcStrPtr  = (char **)firstStrPtr;
+	int32_t totalStringSizes = 0;
+	for ( int i = 0 ; i < nptrs ; i++ ) {
+		if ( srcStrPtr[i] == NULL ) continue;
+		totalStringSizes += srcSizePtr[i];
+	}
+	int32_t stringBufferOffset = need;
+	need += totalStringSizes;
 	// alloc if we should
 	if ( ! buf ) buf = (char *)mmalloc ( need , "sm2" );
 	// bail on error, g_errno should be set
 	if ( ! buf ) return NULL;
 	// set how many bytes we will serialize into
 	*retSize = need;
-	// copy the easy stuff
+	// copy everything over except strings themselves
 	char *p = buf;
-	gbmemcpy ( p , (char *)thisPtr , baseSize );
-	p += baseSize;
+	gbmemcpy ( p , (char *)thisPtr , stringBufferOffset );//need );
+	// point to the string buffer
+	p += stringBufferOffset;
 	// then store the strings!
-	int32_t  *sizePtr = firstSizeParm;
-	char **strPtr  = firstStrPtr;//getFirstStrPtr  (); // &ptr_qbuf;
-	int count = 0;
-	for ( ; count < nptrs ; count++ ) {
+	char **dstStrPtr = (char **)(buf + baseSize );
+	int32_t *dstSizePtr = (int32_t *)(buf + baseSize+sizeof(char *)*nptrs);
+	for ( int count = 0 ; count < nptrs ; count++ ) {
+		// copy ptrs
+		//*dstStrPtr = *srcStrPtr;
+		//*dstSizePtr = *srcSizePtr;
 		// if we are NULL, we are a "bookmark", so
 		// we alloc'd space for it, but don't copy into
 		// the space until after this call toe serialize()
-		if ( ! *strPtr ) goto skip;
+		if ( ! *srcStrPtr )
+			goto skip;
+		// if this is valid then size can't be 0! fix upstream.
+		if ( ! *srcSizePtr ) { char *xx=NULL;*xx=0; }
 		// if size is 0 use gbstrlen. helps with InjectionRequest
 		// where we set ptr_url or ptr_content but not size_url, etc.
-		if ( ! *sizePtr )
-			*sizePtr = gbstrlen(*strPtr);
+		//if ( ! *srcSizePtr )
+		//	*srcSizePtr = gbstrlen(*strPtr);
 		// sanity check -- cannot copy onto ourselves
-		if ( p > *strPtr && p < *strPtr + *sizePtr ) {
+		if ( p > *srcStrPtr && p < *srcStrPtr + *srcSizePtr ) {
 			char *xx = NULL; *xx = 0; }
 		// copy the string into the buffer
-		gbmemcpy ( p , *strPtr , *sizePtr );
+		gbmemcpy ( p , *srcStrPtr , *srcSizePtr );
 	skip:
-		// make it point into the buffer now
-		*strPtr = p;
+		// point it now into the string buffer
+		*dstStrPtr = p;
+		// if it is 0 length, make ptr NULL in destination
+		if ( *srcSizePtr == 0 || *srcStrPtr == NULL ) {
+			*dstStrPtr = NULL;
+			*dstSizePtr = 0;
+		}
 		// advance our destination ptr
-		p += *sizePtr;
+		p += *dstSizePtr;
 		// advance both ptrs to next string
-		sizePtr++;
-		strPtr++;
+		srcSizePtr++;
+		srcStrPtr++;
+		dstSizePtr++;
+		dstStrPtr++;
 	}
 	return buf;
 }

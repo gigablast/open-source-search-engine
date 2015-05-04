@@ -1801,6 +1801,8 @@ bool Parms::printParms2 ( SafeBuf* sb ,
 	GigablastRequest gr;
 	g_parms.setToDefault ( (char *)&gr , OBJ_GBREQUEST , NULL);
     
+	InjectionRequest ir;
+	g_parms.setToDefault ( (char *)&ir , OBJ_IR , NULL);	
 
 	// Begin "parms":[]
 	if (format == FORMAT_JSON ) {     
@@ -1844,6 +1846,8 @@ bool Parms::printParms2 ( SafeBuf* sb ,
 		}
 		if ( m->m_obj == OBJ_GBREQUEST )
 			THIS = (char *)&gr;
+		if ( m->m_obj == OBJ_IR )
+			THIS = (char *)&ir;
 		// might have an array, do not exceed the array size
 		int32_t  jend = m->m_max;
 		int32_t  size = jend ;
@@ -2240,6 +2244,7 @@ bool Parms::printParm ( SafeBuf* sb,
 	// test it
 	if ( m->m_def && 
 	     m->m_obj != OBJ_NONE &&
+	     m->m_obj != OBJ_IR && // do not do for injectionrequest
 	     m->m_obj != OBJ_GBREQUEST && // do not do for GigablastRequest
 	     strcmp ( val1.getBufStart() , m->m_def ) )
 		// put non-default valued parms in orange!
@@ -20109,6 +20114,7 @@ void Parms::overlapTest ( char step ) {
 
 	SearchInput   tmpsi;
 	GigablastRequest tmpgr;
+	InjectionRequest tmpir;
 	CollectionRec tmpcr;
 	Conf          tmpconf;
 	char          b;
@@ -20134,6 +20140,7 @@ void Parms::overlapTest ( char step ) {
 		if ( m_parms[i].m_obj == OBJ_CONF ) p1 = (char *)&tmpconf;
 		if ( m_parms[i].m_obj == OBJ_SI   ) p1 = (char *)&tmpsi;
 		if ( m_parms[i].m_obj == OBJ_GBREQUEST   ) p1 = (char *)&tmpgr;
+		if ( m_parms[i].m_obj == OBJ_IR   ) p1 = (char *)&tmpir;
 		if ( p1 ) p1 += m_parms[i].m_off;
 		p2 = NULL;
 		int32_t size = m_parms[i].m_size;
@@ -20182,6 +20189,7 @@ void Parms::overlapTest ( char step ) {
 		if ( m_parms[i].m_obj == OBJ_CONF ) p1 = (char *)&tmpconf;
 		if ( m_parms[i].m_obj == OBJ_SI   ) p1 = (char *)&tmpsi;
 		if ( m_parms[i].m_obj == OBJ_GBREQUEST ) p1 = (char *)&tmpgr;
+		if ( m_parms[i].m_obj == OBJ_IR   ) p1 = (char *)&tmpir;
 		if ( p1 ) p1 += m_parms[i].m_off;
 		p2 = NULL;
 		int32_t size = m_parms[i].m_size;
@@ -20209,6 +20217,8 @@ void Parms::overlapTest ( char step ) {
 				objStr = "SearchInput.h";
 			if ( m_parms[i].m_obj == OBJ_GBREQUEST )
 				objStr = "GigablastRequest/Parms.h";
+			if ( m_parms[i].m_obj == OBJ_IR )
+				objStr = "InjectionRequest/PageInject.h";
 			// save it
 			infringerB = p1[j];
 			savedi = i;
