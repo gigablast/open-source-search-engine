@@ -15834,6 +15834,16 @@ char **XmlDoc::getHttpReply2 ( ) {
 	//strcpy ( r->m_url , cu->getUrl() );
 	r->ptr_url  = cu->getUrl();
 	r->size_url = cu->getUrlLen()+1;
+
+	// caution: m_sreq.m_hopCountValid is false sometimes for page parser
+	// this is used for Msg13.cpp's ipWasBanned()
+	// we use hopcount now instead of isInSeedBuf(cr,r->ptr_url)
+	bool isInjecting = getIsInjecting();
+	if ( ! isInjecting && m_sreqValid     && m_sreq.m_hopCount == 0 )
+		r->m_isRootSeedUrl = 1;
+	if ( ! isInjecting && m_hopCountValid && m_hopCount        == 0 )
+		r->m_isRootSeedUrl = 1;
+
 	// sanity check
 	if ( ! m_firstIpValid ) { char *xx=NULL;*xx=0; }
 	// max to download in bytes. currently 1MB.

@@ -111,6 +111,7 @@ public:
 	int32_t  m_forceUseFloaters:1;
 
 	int32_t  m_wasInTableBeforeStarting:1;
+	int32_t  m_isRootSeedUrl:1;
 
 	//int32_t  m_testParserEnabled:1;
 	//int32_t  m_testSpiderEnabled:1;
