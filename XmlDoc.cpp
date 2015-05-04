@@ -24501,6 +24501,8 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 			// if doing qa test drop core
 			CollectionRec *cr = getCollRec();
 			if ( cr && strcmp(cr->m_coll,"qatest123") == 0 ) {
+				log("xmldoc: sleep 1000");
+				sleep(1000);
 				exit(0);}//char *xx=NULL;*xx=0; }
 		}
 		// assign the new one, getTitleRecBuf() call below needs this
