@@ -7985,8 +7985,9 @@ bool printCSVHeaderRow2 ( SafeBuf *sb ,
 		"12gbssPrevTotalNumIndexAttempts",
 		"13gbssHopCount",
 		"14gbssStatusMsg",
-		"15gbssSentToDiffbotThisTime",
-		"16gbssDiffbotReplyMsg",
+		"15gbssDiffbotUri",
+		"16gbssSentToDiffbotThisTime",
+		"17gbssDiffbotReplyMsg",
 
 		"gbssIp",
 		"gbssPercentContentChanged",
@@ -8194,6 +8195,8 @@ bool printCSVHeaderRow2 ( SafeBuf *sb ,
 			hdr = "Hop Count";
 		if ( ! strcmp(hdr,"gbssIp") ) 
 			hdr = "IP";
+		if ( ! strcmp(hdr,"gbssDiffbotUri" ) )
+			hdr = "Diffbot URI";
 		if ( ! strcmp(hdr,"gbssSentToDiffbotThisTime") ) 
 			hdr = "Process Attempted";
 		if ( ! strcmp(hdr,"gbssDiffbotReplyMsg") )
@@ -8371,6 +8374,7 @@ bool printJsonItemInCSV ( char *json , SafeBuf *sb , State0 *st ) {
 		//
 		// get value and print otherwise
 		//
+		/*
 		if ( ji->m_type == JT_NUMBER ) {
 			// print numbers without double quotes
 			if ( ji->m_valueDouble *10000000.0 == 
@@ -8380,11 +8384,15 @@ bool printJsonItemInCSV ( char *json , SafeBuf *sb , State0 *st ) {
 				sb->safePrintf("%f",ji->m_valueDouble);
 			continue;
 		}
+		*/
+
+		int32_t vlen;
+		char *str = ji->getValueAsString ( &vlen );
 
 		// print the value
 		sb->pushChar('\"');
 		// get the json item to print out
-		int32_t  vlen = ji->getValueLen();
+		//int32_t  vlen = ji->getValueLen();
 		// truncate
 		char *truncStr = NULL;
 		if ( vlen > 32000 ) {
@@ -8394,7 +8402,7 @@ bool printJsonItemInCSV ( char *json , SafeBuf *sb , State0 *st ) {
 				"JSON to get untruncated data.";
 		}
 		// print it out
-		sb->csvEncode ( ji->getValue() , vlen );
+		sb->csvEncode ( str , vlen ); // ji->getValue() , vlen );
 		// print truncate msg?
 		if ( truncStr ) sb->safeStrcpy ( truncStr );
 		// end the CSV

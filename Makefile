@@ -87,6 +87,8 @@ XMLDOCOPT := -O2
 else
 OS_DEB := true
 STATIC := -static
+# MDW: i get some parsing inconsistencies when running the first qa injection
+# test if this is -O3. strange.
 # now debian jesse doesn't like -O3, it will core right away when spidering
 # so change this to -O2 from -O3 as well.
 XMLDOCOPT := -O2

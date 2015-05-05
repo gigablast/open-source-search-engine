@@ -187,7 +187,12 @@ XmlDoc::~XmlDoc() {
 
 static int64_t s_lastTimeStart = 0LL;
 
+// for debugging
+class XmlDoc *g_xd;
+
 void XmlDoc::reset ( ) {
+
+	m_redirUrl.reset();
 
 	m_ipStartTime = 0;
 	m_ipEndTime   = 0;
@@ -593,6 +598,10 @@ void XmlDoc::reset ( ) {
 	}
 
 	if ( m_ubuf ) {
+		// log("xmldoc: delete m_ubuf=%"PTRFMT" this=%"PTRFMT
+		//     , (PTRTYPE) m_ubuf
+		//     , (PTRTYPE) this
+		//     );
 		mfree ( m_ubuf     , m_ubufAlloc         , "ubuf");
 		m_ubuf = NULL;
 	}
@@ -1514,6 +1523,10 @@ bool XmlDoc::set2 ( char    *titleRec ,
 	// make buf space for holding the uncompressed stuff 
 	m_ubufAlloc = m_ubufSize;
 	m_ubuf = (char *) mmalloc ( m_ubufAlloc ,"TitleRecu1");
+	// log("xmldoc: m_ubuf=%"PTRFMT" this=%"PTRFMT
+	//     , (PTRTYPE) m_ubuf
+	//     , (PTRTYPE) this
+	//     );
 	if ( ! m_ubuf ) {
 		// we had bad ubufsizes on gb6, like > 1GB print out key
 		// so we can manually make a titledb.dat file to delete these
@@ -2378,8 +2391,8 @@ bool XmlDoc::indexDoc ( ) {
 		    "error reply.",
 		    m_firstUrl.m_url,mstrerror(g_errno));
 	else if ( g_errno )
-		log("build: docid=%"INT64" had internal error = %s. adding spider "
-		    "error reply.",
+		log("build: docid=%"INT64" had internal error = %s. "
+		    "adding spider error reply.",
 		    m_docId,mstrerror(g_errno));
 
 	// seems like this was causing a core somehow...
@@ -2402,6 +2415,16 @@ bool XmlDoc::indexDoc ( ) {
 		m_indexCodeValid = true;
 	}
 
+	// this should not be retired either. i am seeing it excessively 
+	// retried from a 
+	// "TitleRec::set: uncompress uncompressed size=-2119348471"
+	// error condition. it also said
+	// "Error spidering for doc http://www.... : Bad cached document"
+	if ( g_errno == EBADTITLEREC ) {
+		m_indexCode = g_errno;
+		m_indexCodeValid = true;
+	}
+
 	// i've seen Multicast got error in reply from hostId 19 (msgType=0x22
 	// transId=496026 nice=1 net=default): Buf too small.
 	// so fix that with this
@@ -2420,7 +2443,7 @@ bool XmlDoc::indexDoc ( ) {
 		m_indexCodeValid = true;
 	}
 
-
+	// default to internal error which will be retried forever otherwise
 	if ( ! m_indexCodeValid ) {
 		m_indexCode = EINTERNALERROR;//g_errno;
 		m_indexCodeValid = true;
@@ -10021,6 +10044,19 @@ int64_t XmlDoc::getFirstUrlHash64() {
 	return m_firstUrlHash64;
 }
 
+Url **XmlDoc::getLastRedirUrl() {
+
+	Url **ru = getRedirUrl();
+	if ( ! ru || ru == (void *)-1 ) return ru;
+
+	// m_redirUrlPtr will be NULL in all cases, however, the
+	// last redir url we actually got will be set in
+	// m_redirUrl.m_url so return that.
+	m_lastRedirUrlPtr = &m_redirUrl;
+	return &m_lastRedirUrlPtr;
+}
+
+
 // . operates on the latest m_httpReply
 Url **XmlDoc::getRedirUrl() {
 	if ( m_redirUrlValid ) return &m_redirUrlPtr;
@@ -10731,6 +10767,10 @@ XmlDoc **XmlDoc::getOldXmlDoc ( ) {
 		return NULL;
 	}
 	mnew ( m_oldDoc , sizeof(XmlDoc),"xmldoc1");
+	// debug the mem leak
+	// log("xmldoc: xmldoc1=%"PTRFMT" u=%s"
+	//     ,(PTRTYPE)m_oldDoc
+	//     ,m_firstUrl.getUrl());
 	// if title rec is corrupted data uncompress will fail and this
 	// will return false!
 	if ( ! m_oldDoc->set2 ( m_oldTitleRec ,
@@ -10740,6 +10780,13 @@ XmlDoc **XmlDoc::getOldXmlDoc ( ) {
 				m_niceness ) ) {
 		log("build: failed to set old doc for %s",m_firstUrl.m_url);
 		if ( ! g_errno ) { char *xx=NULL;*xx=0; }
+		int32_t saved = g_errno;
+		// ok, fix the memleak here
+		mdelete ( m_oldDoc , sizeof(XmlDoc), "odnuke" );
+		delete ( m_oldDoc );
+		//log("xmldoc: nuke xmldoc1=%"PTRFMT"",(PTRTYPE)m_oldDoc);
+		m_oldDoc = NULL;
+		g_errno = saved;
 		return NULL;
 	}
 	m_oldDocValid = true;
@@ -10752,6 +10799,13 @@ XmlDoc **XmlDoc::getOldXmlDoc ( ) {
 void XmlDoc::nukeDoc ( XmlDoc *nd ) {
 	// skip if empty
 	if ( ! nd ) return;
+	// debug the mem leak
+	// if ( nd == m_oldDoc )
+	// 	log("xmldoc: nuke xmldoc1=%"PTRFMT" u=%s this=%"PTRFMT""
+	// 	    ,(PTRTYPE)m_oldDoc
+	// 	    ,m_firstUrl.getUrl()
+	// 	    ,(PTRTYPE)this
+	// 	    );
 	// do not nuke yerself!
 	if ( nd == this ) return;
 	// or root doc!
@@ -15780,6 +15834,16 @@ char **XmlDoc::getHttpReply2 ( ) {
 	//strcpy ( r->m_url , cu->getUrl() );
 	r->ptr_url  = cu->getUrl();
 	r->size_url = cu->getUrlLen()+1;
+
+	// caution: m_sreq.m_hopCountValid is false sometimes for page parser
+	// this is used for Msg13.cpp's ipWasBanned()
+	// we use hopcount now instead of isInSeedBuf(cr,r->ptr_url)
+	bool isInjecting = getIsInjecting();
+	if ( ! isInjecting && m_sreqValid     && m_sreq.m_hopCount == 0 )
+		r->m_isRootSeedUrl = 1;
+	if ( ! isInjecting && m_hopCountValid && m_hopCount        == 0 )
+		r->m_isRootSeedUrl = 1;
+
 	// sanity check
 	if ( ! m_firstIpValid ) { char *xx=NULL;*xx=0; }
 	// max to download in bytes. currently 1MB.
@@ -15878,6 +15942,9 @@ char **XmlDoc::getHttpReply2 ( ) {
 
 	// turn this off too
 	r->m_attemptedIframeExpansion = false;
+
+	r->m_collnum = (collnum_t)-1;
+	if ( m_collnumValid )r->m_collnum = m_collnum;
 
 	// turn off
 	r->m_useCompressionProxy = false;
@@ -20204,9 +20271,12 @@ bool XmlDoc::logIt ( SafeBuf *bb ) {
 		sb->safePrintf("hasrssoutlink=%"INT32" ",
 			      (int32_t)m_links.hasRSSOutlink() );
 
-	if ( m_numOutlinksAddedValid ) 
+	if ( m_numOutlinksAddedValid ) {
 		sb->safePrintf("outlinksadded=%04"INT32" ",
 			       (int32_t)m_numOutlinksAdded);
+		sb->safePrintf("outlinksaddedfromsamedomain=%04"INT32" ",
+			       (int32_t)m_numOutlinksAddedFromSameDomain);
+	}
 
 	if ( m_metaListValid ) 
 		sb->safePrintf("addlistsize=%05"INT32" ",
@@ -21561,6 +21631,7 @@ bool XmlDoc::doesPageContentMatchDiffbotProcessPattern() {
 	char *p = cr->m_diffbotPageProcessPattern.getBufStart();
 	// empty? no pattern matches everything.
 	if ( ! p ) return true;
+	if ( ! m_content ) return false;
 	// how many did we have?
 	return doesStringContainPattern ( m_content , p );
 }
@@ -24739,6 +24810,7 @@ SpiderReply *XmlDoc::getNewSpiderReply ( ) {
 	// store it
 	m_srep.m_firstIp = firstIp;
 	// assume no error
+	// MDW: not right...
 	m_srep.m_errCount = 0;
 	// otherwise, inherit from oldsr to be safe
 	//if ( m_sreqValid ) 
@@ -25228,6 +25300,9 @@ void XmlDoc::setSpiderReqForMsg20 ( SpiderRequest *sreq   ,
 		strcpy(sreq->m_url,m_firstUrl.m_url);
 }
 
+// defined in PageCrawlBot.cpp
+int32_t isInSeedBuf ( CollectionRec *cr , char *url, int len ) ;
+
 // . add the spiderdb recs to the meta list
 // . used by XmlDoc::setMetaList()
 // . returns NULL and sets g_errno on error
@@ -25434,6 +25509,25 @@ char *XmlDoc::addOutlinkSpiderRecsToMetaList ( ) {
 	bool ignore = false;
 	if ( mbuf[0] == '1' ) ignore = true;
 
+	// for diffbot crawlbot, if we are a seed url and redirected to a 
+	// different domain... like bn.com --> barnesandnoble.com
+	int32_t redirDomHash32  = 0;
+	int32_t redirHostHash32 = 0;
+	//int32_t redirSiteHash32 = 0;
+	if ( //cr->m_isCustomCrawl == 1 &&
+	     //isInSeedBuf(cr,m_firstUrl.getUrl(),m_firstUrl.getUrlLen() ) &&
+	     m_hopCount == 0 &&
+	     m_redirUrlValid &&
+	     ptr_redirUrl &&
+	     //m_redirUrlPtr && (this gets reset to NULL as being LAST redir)
+	     // this is the last non-empty redir here:
+	     m_redirUrl.getUrlLen() > 0 ) {
+		log("build: seed REDIR: %s",m_redirUrl.getUrl());
+		redirDomHash32  = m_redirUrl.getDomainHash32();
+		redirHostHash32 = m_redirUrl.getHostHash32();
+	}		
+
+
 	//SpiderColl *sc = g_spiderCache.getSpiderCollIffNonNull ( m_collnum );
 
 	//
@@ -25584,6 +25678,9 @@ char *XmlDoc::addOutlinkSpiderRecsToMetaList ( ) {
 		//ksr.m_useTestSpiderDir = useTestSpiderDir;
 		ksr.m_parentIsSiteMap = parentIsSiteMap;
 
+		ksr.m_hasMediaExtension = url.hasMediaExtension();
+		ksr.m_hasMediaExtensionValid = 1;
+
 		// now we need this so we can share Msg12 spider locks with
 		// query reindex docid-based spider requests. that way
 		// we do not spider the same document at the same time.
@@ -25625,6 +25722,15 @@ char *XmlDoc::addOutlinkSpiderRecsToMetaList ( ) {
 		ksr.m_parentHostHash32 = hostHash32a;
 		ksr.m_parentDomHash32  = m_domHash32;
 		ksr.m_parentSiteHash32 = m_siteHash32;
+
+		// if a seed/hopcount0 url redirected to a different domain
+		// then use that if it is the same. that way we can satisft
+		// the "isonsamedomain" expression in the url filters table.
+		if ( redirDomHash32 == domHash32 && redirDomHash32 )
+			ksr.m_parentDomHash32 = redirDomHash32;
+		if ( redirHostHash32 == hostHash32 && redirHostHash32 )
+			ksr.m_parentHostHash32 = redirHostHash32;
+
 		//ksr.m_parentFirstIp    = *pfip;//m_ip;
 		ksr.m_pageNumInlinks   = 0;
 
@@ -25705,6 +25811,16 @@ char *XmlDoc::addOutlinkSpiderRecsToMetaList ( ) {
 		// the mere existence of these tags is good
 		if ( gr->getTag("authorityinlink"))ksr.m_hasAuthorityInlink =1;
 		ksr.m_hasAuthorityInlinkValid = true;
+
+		// if our url was a seed and redirected to another domain
+		// allow outlinks on that other domain to be on domain too.
+		// only used for diffbot crawlbot right now.
+		if ( domHash32  == redirDomHash32  && redirDomHash32 ) 
+			ksr.m_sameDom  = 1;
+		if ( hostHash32 == redirHostHash32 && redirHostHash32 ) 
+			ksr.m_sameHost = 1;
+		// if ( linkSiteHashes[i]==redirSiteHash32 && redirSiteHash32) 
+		// 	ksr.m_sameSite = 1;
 
 		// set parent based info
 		if ( domHash32  == m_domHash32   ) ksr.m_sameDom  = 1;
@@ -25863,7 +25979,8 @@ char *XmlDoc::addOutlinkSpiderRecsToMetaList ( ) {
 		// count it
 		numAdded++;
 		// check domain
-		if ( domHash32  == m_domHash32 ) numAddedFromSameDomain++;
+		//if ( domHash32  == m_domHash32 ) numAddedFromSameDomain++;
+		if ( ksr.m_sameDom ) numAddedFromSameDomain++;
 	}
 
 	//
@@ -27227,6 +27344,17 @@ SafeBuf *XmlDoc::getSpiderStatusDocMetaList2 ( SpiderReply *reply ) {
 	CollectionRec *cr = getCollRec();
 	if ( ! cr ) return NULL;
 
+	Json *jp1 = NULL;
+	// i've seen ptr_utf8Content NULL and content type as html for
+	// some reason when deleting a diffbot object doc so check for that
+	// here and forget it. we don't want getParsedJson() to core.
+	if ( m_isDiffbotJSONObject && 
+	     m_contentType == CT_JSON &&
+	     m_contentTypeValid ) {
+		jp1 = getParsedJson();
+		if ( ! jp1 || jp1 == (void *)-1) return (SafeBuf *)jp1;
+	}
+
 	// sanity
 	if ( ! m_indexCodeValid ) { char *xx=NULL;*xx=0; }
 
@@ -27287,11 +27415,23 @@ SafeBuf *XmlDoc::getSpiderStatusDocMetaList2 ( SpiderReply *reply ) {
 		jd.safePrintf("\"gbssAgeInIndex\":"
 			      "%"UINT32",\n",now - od->m_spideredTime);
 
-	if ( cr->m_isCustomCrawl ) {
-		if ( m_isDiffbotJSONObject )
-			jd.safePrintf("\"gbssIsDiffbotObject\":1,\n");
+	if ( m_isDiffbotJSONObject ) { // && cr->m_isCustomCrawl
+		jd.safePrintf("\"gbssIsDiffbotObject\":1,\n");
+		JsonItem *jsonItem = NULL;
+		if ( jp1 ) jsonItem = jp1->getItem("diffbotUri");
+		if ( jsonItem ) {
+			jd.safePrintf("\"gbssDiffbotUri\":\"");
+			int32_t vlen;
+			char *val = jsonItem->getValueAsString( &vlen );
+			if ( val ) jd.safeMemcpy ( val , vlen );
+			jd.safePrintf("\",\n");
+		}
 		else
-			jd.safePrintf("\"gbssIsDiffbotObject\":0,\n");
+			jd.safePrintf("\"gbssDiffbotUri\":"
+				      "\"none\",\n");
+	}
+	else { // if ( cr->m_isCustomCrawl ) {
+		jd.safePrintf("\"gbssIsDiffbotObject\":0,\n");
 	}
 
 	jd.safePrintf("\"gbssDomain\":\"");
@@ -27330,14 +27470,19 @@ SafeBuf *XmlDoc::getSpiderStatusDocMetaList2 ( SpiderReply *reply ) {
 			      m_docIdWeAreADupOf);
 
 	// how many spiderings were successful vs. failed
-	if ( m_sreqValid ) {
-		jd.safePrintf("\"gbssPrevTotalNumIndexAttempts\":%"INT32",\n",
-			      m_sreq.m_reservedc1 + m_sreq.m_reservedc2 );
-		jd.safePrintf("\"gbssPrevTotalNumIndexSuccesses\":%"INT32",\n",
-			      m_sreq.m_reservedc1);
-		jd.safePrintf("\"gbssPrevTotalNumIndexFailures\":%"INT32",\n",
-			      m_sreq.m_reservedc2);
-	}
+	// these don't work because we only store one reply
+	// which overwrites any older reply. that's how the 
+	// key is. we can change the key to use the timestamp 
+	// and not parent docid in makeKey() for spider 
+	// replies later.
+	// if ( m_sreqValid ) {
+	// 	jd.safePrintf("\"gbssPrevTotalNumIndexAttempts\":%"INT32",\n",
+	// 		      m_sreq.m_reservedc1 + m_sreq.m_reservedc2 );
+	// 	jd.safePrintf("\"gbssPrevTotalNumIndexSuccesses\":%"INT32",\n",
+	// 		      m_sreq.m_reservedc1);
+	// 	jd.safePrintf("\"gbssPrevTotalNumIndexFailures\":%"INT32",\n",
+	// 		      m_sreq.m_reservedc2);
+	// }
 
 	if ( m_spideredTimeValid )
 		jd.safePrintf("\"gbssSpiderTime\":%"INT32",\n",
@@ -27415,11 +27560,12 @@ SafeBuf *XmlDoc::getSpiderStatusDocMetaList2 ( SpiderReply *reply ) {
 			      ":%.01f,\n",
 			      m_percentChanged);
 
-	jd.safePrintf("\"gbssSpiderPriority\":%"INT32",\n", 
-		      *priority);
+	if ( ! m_isDiffbotJSONObject )
+		jd.safePrintf("\"gbssSpiderPriority\":%"INT32",\n", 
+			      *priority);
 
 	// this could be -1, careful
-	if ( *ufn >= 0 )
+	if ( *ufn >= 0 && ! m_isDiffbotJSONObject )
 		jd.safePrintf("\"gbssMatchingUrlFilter\":\"%s\",\n", 
 			      cr->m_regExs[*ufn].getBufStart());
 
@@ -27438,21 +27584,81 @@ SafeBuf *XmlDoc::getSpiderStatusDocMetaList2 ( SpiderReply *reply ) {
 
 	// do not show the -1 any more, just leave it out then
 	// to make things look prettier
-	if (  m_crawlDelayValid && m_crawlDelay >= 0 )
+	if (  m_crawlDelayValid && m_crawlDelay >= 0 &&
+	      ! m_isDiffbotJSONObject )
 		// -1 if none?
 		jd.safePrintf("\"gbssCrawlDelayMS\":%"INT32",\n",
 			      (int32_t)m_crawlDelay);
 		
 	// was this url ever sent to diffbot either now or at a previous
 	// spider time?
-	jd.safePrintf("\"gbssSentToDiffbotAtSomeTime\":%i,\n",
-		      (int)m_sentToDiffbot);
+	if ( ! m_isDiffbotJSONObject ) {
+		jd.safePrintf("\"gbssSentToDiffbotAtSomeTime\":%i,\n",
+			      (int)m_sentToDiffbot);
 
-	// sent to diffbot?
-	jd.safePrintf("\"gbssSentToDiffbotThisTime\":%i,\n",
-		      (int)m_sentToDiffbotThisTime);
+		// sent to diffbot?
+		jd.safePrintf("\"gbssSentToDiffbotThisTime\":%i,\n",
+			      (int)m_sentToDiffbotThisTime);
+	}
 
-	if ( m_diffbotReplyValid && m_sentToDiffbotThisTime ) {
+	// page must have been downloaded for this one
+	if ( cr->m_isCustomCrawl && 
+	     m_utf8ContentValid && 
+	     ! m_isDiffbotJSONObject &&
+	     m_content &&
+	     m_contentValid &&
+	     cr->m_diffbotPageProcessPattern.getBufStart() &&
+	     cr->m_diffbotPageProcessPattern.getBufStart()[0] ) {
+		char match = doesPageContentMatchDiffbotProcessPattern();
+		jd.safePrintf("\"gbssMatchesPageProcessPattern\":%i,\n",
+			      (int)match);
+	}
+	if ( cr->m_isCustomCrawl && m_firstUrlValid && !m_isDiffbotJSONObject){
+
+		char *url = getFirstUrl()->getUrl();
+
+		// the crawl regex
+		int match = 1;
+		regex_t *ucr = &cr->m_ucr;
+		if ( ! cr->m_hasucr ) ucr = NULL;
+		if ( ucr && regexec(ucr,url,0,NULL,0) ) match = 0;
+		if ( ucr )
+			jd.safePrintf("\"gbssMatchesUrlCrawlRegEx\":%i,\n",
+				      match);
+
+		// now the substring pattern
+		match = 1;
+		char *ucp = cr->m_diffbotUrlCrawlPattern.getBufStart();
+		if ( ucp && ! ucp[0] ) ucp = NULL;
+		if ( ucp && ! doesStringContainPattern(url,ucp) ) match = 0;
+		if ( ucp )
+			jd.safePrintf("\"gbssMatchesUrlCrawlPattern\":%i,\n",
+				      match);
+
+		// now process regex
+		match = 1;
+		regex_t *upr = &cr->m_upr;
+		if ( ! cr->m_hasupr ) upr = NULL;
+		if ( upr && regexec(upr,url,0,NULL,0) ) match = 0;
+		if ( upr ) 
+			jd.safePrintf("\"gbssMatchesUrlCrawlRegEx\":%i,\n",
+				      match);
+
+		// now process pattern
+		match = 1;
+		char *upp = cr->m_diffbotUrlProcessPattern.getBufStart();
+		if ( upp && ! upp[0] ) upp = NULL;
+		if ( upp && ! doesStringContainPattern(url,upp) ) match = 0;
+		if ( upp ) 
+			jd.safePrintf("\"gbssMatchesUrlProcessPattern\":%i,\n",
+				      match);
+
+	}
+
+
+
+	if ( m_diffbotReplyValid && m_sentToDiffbotThisTime &&
+	     ! m_isDiffbotJSONObject ) {
 		jd.safePrintf("\"gbssDiffbotReplyCode\":%"INT32",\n",
 			      m_diffbotReplyError);
 		jd.safePrintf("\"gbssDiffbotReplyMsg\":\"");
@@ -27482,8 +27688,8 @@ SafeBuf *XmlDoc::getSpiderStatusDocMetaList2 ( SpiderReply *reply ) {
 		return NULL;
 
 
-	Json jp;
-	if ( ! jp.parseJsonStringIntoJsonItems ( jd.getBufStart(),m_niceness)){
+	Json jp2;
+	if (! jp2.parseJsonStringIntoJsonItems ( jd.getBufStart(),m_niceness)){
 		g_errno = EBADJSONPARSER;
 		return NULL;
 	}
@@ -27502,7 +27708,7 @@ SafeBuf *XmlDoc::getSpiderStatusDocMetaList2 ( SpiderReply *reply ) {
 	hi.m_useSections = false;
 
 	// fill up tt4. false -> do not hash without field prefixes.
-	hashJSONFields2 ( &tt4 , &hi , &jp , false );
+	hashJSONFields2 ( &tt4 , &hi , &jp2 , false );
 
 	/*
 	char buf[64];

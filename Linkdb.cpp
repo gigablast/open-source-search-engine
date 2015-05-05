@@ -5759,6 +5759,50 @@ bool Links::addLink ( char *link , int32_t linkLen , int32_t nodeNum ,
 	// we now use everything has is for sites like file.org
 	bool addWWW = false;
 
+	/////
+	//
+	// hack fix. if link has spaces in it convert to +'s
+	// will fix urls like those in anchor tags on
+	// http://www.birmingham-boxes.co.uk/catagory.asp
+	//
+	/////
+	bool hasSpaces = false;
+	char tmp[MAX_URL_LEN+2];
+	for ( int32_t k = 0 ; k < linkLen ; k++ ) {
+		if ( link[k] == ' ' ) hasSpaces = true;
+		// watch out for unterminated quotes
+		if ( link[k] == '>' ) { hasSpaces = false; break; }
+	}
+	bool hitQuestionMark = false;
+	int32_t src = 0;
+	int32_t dst = 0;
+	for ( ;hasSpaces && linkLen<MAX_URL_LEN && src<linkLen ; src++ ){
+		// if not enough buffer then we couldn't do the conversion.
+		if ( dst+3 >= MAX_URL_LEN ) { hasSpaces = false; break; }
+		if ( link[src] == '?' ) 
+			hitQuestionMark = true;
+		if ( link[src] != ' ' ) {
+			tmp[dst++] = link[src];
+			continue;
+		}
+		// if we are part of the cgi stuff, use +
+		if ( hitQuestionMark ) { 
+			tmp[dst++] = '+'; 
+			continue;
+		}
+		// if before the '?' then use %20
+		tmp[dst++] = '%';
+		tmp[dst++] = '2';
+		tmp[dst++] = '0';
+	}
+	if ( hasSpaces ) {
+		link = tmp;
+		linkLen = dst;
+		tmp[dst] = '\0';
+	}
+		
+
+
 	url.set ( m_baseUrl       ,
 		  link            ,
 		  linkLen         ,

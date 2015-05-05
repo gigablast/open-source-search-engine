@@ -559,8 +559,8 @@ class SpiderRequest {
 	/* char    m_onlyDoNotAddLinksLinksLinks   :1; // max hopcount 2 */
 	char    m_ignoreDocUnchangedError:1;//reserved2a:1;
 	char    m_recycleContent:1;//m_reserved2b:1;
-	char    m_reserved2c:1;
-	char    m_reserved2d:1;
+	char    m_hasMediaExtension:1; // reserved2c:1;
+	char    m_hasMediaExtensionValid:1;
 
 	char    m_reserved2e:1;
 	char    m_reserved2f:1;
@@ -1155,8 +1155,13 @@ class SpiderColl {
 	int32_t      m_tailHopCount;
 	int64_t m_minFutureTimeMS;
 
-	int32_t m_numSuccessReplies;
-	int32_t m_numFailedReplies;
+	// these don't work because we only store one reply
+	// which overwrites any older reply. that's how the 
+	// key is. we can change the key to use the timestamp 
+	// and not parent docid in makeKey() for spider 
+	// replies later.
+	// int32_t m_numSuccessReplies;
+	// int32_t m_numFailedReplies;
 
 	// . do not re-send CrawlInfoLocal for a coll if not update
 	// . we store the flags in here as true if we should send our

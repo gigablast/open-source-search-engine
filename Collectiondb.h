@@ -394,6 +394,9 @@ class CollectionRec {
 	// for diffbot crawl or bulk jobs
 	bool rebuildUrlFiltersDiffbot();
 
+	// rebuild the regexes related to diffbot, such as the one for the URL pattern
+	bool rebuildDiffbotRegexes();
+
 	bool rebuildLangRules( char *lang , char *tld );
 
 	bool rebuildShallowRules();
@@ -425,6 +428,10 @@ class CollectionRec {
 	bool m_swappedOut;
 
 	int64_t m_spiderCorruptCount;
+
+	// holds ips that have been detected as being throttled and we need
+	// to backoff and use proxies on
+	HashTableX m_twitchyTable;
 
 	//
 	// CLOUD SEARCH ENGINE SUPPORT
@@ -511,6 +518,8 @@ class CollectionRec {
 	char  m_doIpLookups             ; // considered iff using proxy
 	char  m_useRobotsTxt            ;
 	char  m_forceUseFloaters        ;
+	char  m_automaticallyUseProxies ;
+	char  m_automaticallyBackOff    ;
 	//char  m_restrictDomain          ; // say on same domain as seeds?
 	char  m_doTuringTest            ; // for addurl
 	char  m_applyFilterToText       ; // speeds us up

@@ -797,6 +797,8 @@ bool Spiderdb::verify ( char *coll ) {
 key128_t Spiderdb::makeKey ( int32_t      firstIp     ,
 			     int64_t urlHash48   , 
 			     bool      isRequest   ,
+			     // MDW: now we use timestamp instead of parentdocid
+			     // for spider replies. so they do not dedup...
 			     int64_t parentDocId ,
 			     bool      isDel       ) {
 	key128_t k;
@@ -814,6 +816,9 @@ key128_t Spiderdb::makeKey ( int32_t      firstIp     ,
 	if ( isRequest ) k.n0 |= 0x01;
 	// parent docid
 	k.n0 <<= 38;
+	// if we are making a spider reply key just leave the parentdocid as 0
+	// so we only store one reply per url. the last reply we got.
+	// if ( isRequest ) k.n0 |= parentDocId & DOCID_MASK;
 	k.n0 |= parentDocId & DOCID_MASK;
 	// reserved (padding)
 	k.n0 <<= 8;
@@ -1802,8 +1807,13 @@ void SpiderColl::clearLocks ( ) {
 
 void SpiderColl::reset ( ) {
 
-	m_numSuccessReplies = 0;
-	m_numFailedReplies  = 0;
+	// these don't work because we only store one reply
+	// which overwrites any older reply. that's how the 
+	// key is. we can change the key to use the timestamp 
+	// and not parent docid in makeKey() for spider 
+	// replies later.
+	// m_numSuccessReplies = 0;
+	// m_numFailedReplies  = 0;
 
 	// reset these for SpiderLoop;
 	m_nextDoledbKey.setMin();
@@ -3980,15 +3990,65 @@ bool SpiderColl::scanListForWinners ( ) {
 			// see if this is the most recent one
 			SpiderReply *tmp = (SpiderReply *)rec;
 
-			// reset reply stats if beginning a new url
-			if ( srepUh48 != tmp->getUrlHash48() ) {
-				m_numSuccessReplies = 0;
-				m_numFailedReplies  = 0;
+			// . MDW: we have to detect corrupt replies up here so
+			//   they do not become the winning reply because
+			//   their date is in the future!!
+
+			// . this is -1 on corruption
+			// . i've seen -31757, 21... etc for bad http replies
+			//   in the qatest123 doc cache... so turn off for that
+			if ( tmp->m_httpStatus >= 1000 ) {
+				if ( m_cr->m_spiderCorruptCount == 0 ) {
+					log("spider: got corrupt 3 "
+					    "spiderReply in "
+					    "scan "
+					    "uh48=%"INT64" "
+					    "httpstatus=%"INT32" "
+					    "(cn=%"INT32")",
+					    tmp->getUrlHash48(),
+					    (int32_t)tmp->m_httpStatus,
+					    (int32_t)m_collnum);
+				}
+				m_cr->m_spiderCorruptCount++;
+				// don't nuke it just for that...
+				//srep = NULL;
+				continue;
+			}
+			// bad langid?
+			if ( ! getLanguageAbbr (tmp->m_langId) ) {
+				log("spider: got corrupt 4 spiderReply in "
+				    "scan uh48=%"INT64" "
+				    "langid=%"INT32" (cn=%"INT32")",
+				    tmp->getUrlHash48(),
+				    (int32_t)tmp->m_langId,
+				    (int32_t)m_collnum);
+				m_cr->m_spiderCorruptCount++;
+				//srep = NULL;
+				// if ( tmp->getUrlHash48() == 
+				//      271713196158770LL )
+				// 	log("hey");
+				continue;
 			}
 
+			// reset reply stats if beginning a new url
+			// these don't work because we only store one reply
+			// which overwrites any older reply. that's how the 
+			// key is. we can change the key to use the timestamp 
+			// and not parent docid in makeKey() for spider 
+			// replies later.
+			// if ( srepUh48 != tmp->getUrlHash48() ) {
+			// 	m_numSuccessReplies = 0;
+			// 	m_numFailedReplies  = 0;
+			// }
+
 			// inc stats
-			if ( tmp->m_errCode == 0 ) m_numSuccessReplies++;
-			else                       m_numFailedReplies ++;
+			// these don't work because we only store one reply
+			// which overwrites any older reply. that's how the 
+			// key is. we can change the key to use the timestamp 
+			// and not parent docid in makeKey() for spider 
+			// replies later.
+			// if ( tmp->m_errCode == 0 ) m_numSuccessReplies++;
+			// else                       m_numFailedReplies ++;
 
 			// if we have a more recent reply already, skip this 
 			if ( srep && 
@@ -4010,10 +4070,14 @@ bool SpiderColl::scanListForWinners ( ) {
 		int64_t uh48 = sreq->getUrlHash48();
 
 		// reset reply stats if beginning a new url
-		if ( ! srep ) {
-			m_numSuccessReplies = 0;
-			m_numFailedReplies  = 0;
-		}
+		// these don't work because we only store one reply
+		// which overwrites any older reply. that's how the key is.
+		// we can change the key to use the timestamp and not
+		// parent docid in makeKey() for spider replies later.
+		// if ( ! srep ) {
+		// 	m_numSuccessReplies = 0;
+		// 	m_numFailedReplies  = 0;
+		// }
 
 		// . skip if our twin should add it to doledb
 		// . waiting tree only has firstIps assigned to us so
@@ -4100,8 +4164,13 @@ bool SpiderColl::scanListForWinners ( ) {
 		// put these in the spiderequest in doledb so we can
 		// show in the json spider status docs in 
 		// XmlDoc::getSpiderStatusDocMetaList2()
-		sreq->m_reservedc1 = m_numSuccessReplies;
-		sreq->m_reservedc2 = m_numFailedReplies;
+		// these don't work because we only store one reply
+		// which overwrites any older reply. that's how the 
+		// key is. we can change the key to use the timestamp 
+		// and not parent docid in makeKey() for spider 
+		// replies later.
+		// sreq->m_reservedc1 = m_numSuccessReplies;
+		// sreq->m_reservedc2 = m_numFailedReplies;
 		
 		m_lastSreqUh48 = uh48;
 		m_lastCBlockIp = cblock;
@@ -4256,28 +4325,6 @@ bool SpiderColl::scanListForWinners ( ) {
 			// if we tried it before
 			sreq->m_hadReply = true;
 		}
-		// . this is -1 on corruption
-		// . i've seen -31757, 21... etc for bad http replies
-		//   in the qatest123 doc cache... so turn off for that
-		if ( srep && srep->m_httpStatus >= 1000 ) {
-			if ( m_cr->m_spiderCorruptCount == 0 ) {
-				log("spider: got corrupt 3 spiderReply in "
-				    "scan httpstatus=%"INT32" (cn=%"INT32")",
-				    (int32_t)srep->m_httpStatus,
-				    (int32_t)m_collnum);
-			}
-			m_cr->m_spiderCorruptCount++;
-			// don't nuke it just for that...
-			//srep = NULL;
-		}
-		// bad langid?
-		if ( srep && ! getLanguageAbbr (srep->m_langId) ) {
-			log("spider: got corrupt 4 spiderReply in scan "
-			    "langid=%"INT32" (cn=%"INT32")",
-			    (int32_t)srep->m_langId,
-			    (int32_t)m_collnum);
-			srep = NULL;
-		}
 
 		// . get the url filter we match
 		// . if this is slow see the TODO below in dedupSpiderdbList()
@@ -4310,7 +4357,8 @@ bool SpiderColl::scanListForWinners ( ) {
 		if ( priority >= MAX_SPIDER_PRIORITIES) {char *xx=NULL;*xx=0;}
 
 		if ( g_conf.m_logDebugSpider )
-			log("spider: got ufn=%"INT32" for %s",ufn,sreq->m_url);
+			log("spider: got ufn=%"INT32" for %s (%"INT64"",
+			    ufn,sreq->m_url,sreq->getUrlHash48());
 
 		if ( g_conf.m_logDebugSpider && srep )
 			log("spider: lastspidered=%"UINT32"",
@@ -7592,10 +7640,23 @@ bool SpiderLoop::spiderUrl9 ( SpiderRequest *sreq ,
 	int32_t node = g_doledb.m_rdb.m_tree.deleteNode(m_collnum,
 							(char *)m_doledbKey,
 							true);
-	if ( node == -1 ) { char *xx=NULL;*xx=0; }
 
 	if ( g_conf.m_logDebugSpider )
 		log("spider: deleting doledb tree node %"INT32,node);
+
+	// if url filters rebuilt then doledb gets reset and i've seen us hit
+	// this node == -1 condition here... so maybe ignore it... just log
+	// what happened? i think we did a quickpoll somewhere between here
+	// and the call to spiderDoledUrls() and it the url filters changed
+	// so it reset doledb's tree. so in that case we should bail on this
+	// url.
+	if ( node == -1 ) { 
+		g_errno = EADMININTERFERENCE;
+		log("spider: lost url about to spider from url filters "
+		    "and doledb tree reset. %s",mstrerror(g_errno));
+		return true;
+	}
+
 
 	// now remove from doleiptable since we removed from doledb
 	m_sc->removeFromDoledbTable ( sreq->m_firstIp );
@@ -11588,6 +11649,15 @@ int32_t getUrlFilterNum2 ( SpiderRequest *sreq       ,
 		if ( strncmp ( p , "ismedia",7 ) == 0 ) {
 			// skip for msg20
 			if ( isForMsg20 ) continue;
+
+			// the new way is much faster, but support the
+			// old way below for a while since this bit is new
+			if ( sreq->m_hasMediaExtension )
+				goto gotOne;
+			// if that bit is valid, and zero, then we do not match
+			if ( sreq->m_hasMediaExtensionValid )
+				continue;
+
 			// check the extension
 			if ( urlLen<=5 ) continue;
 			ext = url + urlLen - 4;
@@ -11665,6 +11735,19 @@ int32_t getUrlFilterNum2 ( SpiderRequest *sreq       ,
 			//special = strstr(url,".css?");
 			//if ( special ) goto gotOne;
 			//special = strstr(url,"/print/");
+			// try to make detecting .css? super fast
+			if ( ext[0] != '.' &&
+			     ext[1] != '.' &&
+			     urlLen > 10 ) {
+				for(register int32_t k=urlLen-10;k<urlLen;k++){
+					if ( url[k] != '.' ) continue;
+					if ( url[k+1] == 'c' &&
+					     url[k+2] == 's' &&
+					     url[k+3] == 's' &&
+					     url[k+4] == '?' )
+						goto gotOne;
+				}
+			}
 			//if ( special ) goto gotOne;
 			// no match, try the next rule
 			continue;

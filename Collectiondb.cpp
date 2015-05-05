@@ -1936,6 +1936,16 @@ bool CollectionRec::load ( char *coll , int32_t i ) {
 		    m_coll,
 		    (int32_t)m_collnum,
 		    (int32_t)m_globalCrawlInfo.m_hasUrlsReadyToSpider);
+
+	// the list of ip addresses that we have detected as being throttled
+	// and therefore backoff and use proxies for
+	sb.reset();
+	sb.safePrintf("%scoll.%s.%"INT32"/",
+		      g_hostdb.m_dir , m_coll , (int32_t)m_collnum );
+	m_twitchyTable.m_allocName = "twittbl";
+	m_twitchyTable.load ( sb.getBufStart() , "ipstouseproxiesfor.dat" );
+
+
 	
 
 	////////////
@@ -2173,6 +2183,9 @@ bool CollectionRec::rebuildUrlFilters2 ( ) {
 	m_harvestLinks[n] = 1;
 	*/
 
+	// max spiders per ip
+	int32_t ipms = 7;
+
 	m_regExs[n].set("isreindex");
 	m_harvestLinks       [n] = 1;
 	m_spiderFreqs        [n] = 0; // 30 days default
@@ -2228,7 +2241,7 @@ bool CollectionRec::rebuildUrlFilters2 ( ) {
 	m_harvestLinks       [n] = 1;
 	m_spiderFreqs        [n] = 7; // 30 days default
 	m_maxSpidersPerRule  [n] = 99; // max spiders
-	m_spiderIpMaxSpiders [n] = 7; // max spiders per ip
+	m_spiderIpMaxSpiders [n] = ipms; // max spiders per ip
 	m_spiderIpWaits      [n] = 1000; // same ip wait
 	m_spiderPriorities   [n] = 85;
 	if ( ! strcmp(s,"news") )
@@ -2240,7 +2253,7 @@ bool CollectionRec::rebuildUrlFilters2 ( ) {
 	m_harvestLinks       [n] = 1;
 	m_spiderFreqs        [n] = 7; // 30 days default
 	m_maxSpidersPerRule  [n] = 9; // max spiders
-	m_spiderIpMaxSpiders [n] = 7; // max spiders per ip
+	m_spiderIpMaxSpiders [n] = ipms; // max spiders per ip
 	m_spiderIpWaits      [n] = 1000; // same ip wait
 	m_spiderPriorities   [n] = 52;
 	if ( ! strcmp(s,"news") )
@@ -2252,7 +2265,7 @@ bool CollectionRec::rebuildUrlFilters2 ( ) {
 	m_harvestLinks       [n] = 1;
 	m_spiderFreqs        [n] = 7; // 30 days default
 	m_maxSpidersPerRule  [n] = 9; // max spiders
-	m_spiderIpMaxSpiders [n] = 7; // max spiders per ip
+	m_spiderIpMaxSpiders [n] = ipms; // max spiders per ip
 	m_spiderIpWaits      [n] = 1000; // same ip wait
 	m_spiderPriorities   [n] = 51;
 	if ( ! strcmp(s,"news") )
@@ -2265,7 +2278,7 @@ bool CollectionRec::rebuildUrlFilters2 ( ) {
 	m_harvestLinks       [n] = 1;
 	m_spiderFreqs        [n] = 7; // 30 days default
 	m_maxSpidersPerRule  [n] = 9; // max spiders
-	m_spiderIpMaxSpiders [n] = 7; // max spiders per ip
+	m_spiderIpMaxSpiders [n] = ipms; // max spiders per ip
 	m_spiderIpWaits      [n] = 1000; // same ip wait
 	m_spiderPriorities   [n] = 50;
 	if ( ! strcmp(s,"news") )
@@ -2276,7 +2289,7 @@ bool CollectionRec::rebuildUrlFilters2 ( ) {
 	m_harvestLinks       [n] = 1;
 	m_spiderFreqs        [n] = 7.0; // days b4 respider
 	m_maxSpidersPerRule  [n] = 9; // max spiders
-	m_spiderIpMaxSpiders [n] = 7; // max spiders per ip
+	m_spiderIpMaxSpiders [n] = ipms; // max spiders per ip
 	m_spiderIpWaits      [n] = 1000; // same ip wait
 	m_spiderPriorities   [n] = 48;
 	if ( ! strcmp(s,"news") )
@@ -2287,7 +2300,7 @@ bool CollectionRec::rebuildUrlFilters2 ( ) {
 	m_harvestLinks       [n] = 1;
 	m_spiderFreqs        [n] = 7.0;
 	m_maxSpidersPerRule  [n] = 9; // max spiders
-	m_spiderIpMaxSpiders [n] = 7; // max spiders per ip
+	m_spiderIpMaxSpiders [n] = ipms; // max spiders per ip
 	m_spiderIpWaits      [n] = 1000; // same ip wait
 	m_spiderPriorities   [n] = 49;
 	if ( ! strcmp(s,"news") )
@@ -2298,7 +2311,7 @@ bool CollectionRec::rebuildUrlFilters2 ( ) {
 	m_harvestLinks       [n] = 1;
 	m_spiderFreqs        [n] = 10.0;
 	m_maxSpidersPerRule  [n] = 9; // max spiders
-	m_spiderIpMaxSpiders [n] = 7; // max spiders per ip
+	m_spiderIpMaxSpiders [n] = ipms; // max spiders per ip
 	m_spiderIpWaits      [n] = 1000; // same ip wait
 	m_spiderPriorities   [n] = 47;
 	if ( ! strcmp(s,"news") )
@@ -2310,7 +2323,7 @@ bool CollectionRec::rebuildUrlFilters2 ( ) {
 	m_harvestLinks       [n] = 1;
 	m_spiderFreqs        [n] = 7; // 30 days default
 	m_maxSpidersPerRule  [n] = 9; // max spiders
-	m_spiderIpMaxSpiders [n] = 7; // max spiders per ip
+	m_spiderIpMaxSpiders [n] = ipms; // max spiders per ip
 	m_spiderIpWaits      [n] = 1000; // same ip wait
 	m_spiderPriorities   [n] = 45;
 	if ( ! strcmp(s,"news") )
@@ -2321,7 +2334,7 @@ bool CollectionRec::rebuildUrlFilters2 ( ) {
 	m_harvestLinks       [n] = 1;
 	m_spiderFreqs        [n] = 7; // 30 days default
 	m_maxSpidersPerRule  [n] = 9; // max spiders
-	m_spiderIpMaxSpiders [n] = 7; // max spiders per ip
+	m_spiderIpMaxSpiders [n] = ipms; // max spiders per ip
 	m_spiderIpWaits      [n] = 1000; // same ip wait
 	m_spiderPriorities   [n] = 44;
 	if ( ! strcmp(s,"news") )
@@ -2333,7 +2346,7 @@ bool CollectionRec::rebuildUrlFilters2 ( ) {
 	m_harvestLinks       [n] = 1;
 	m_spiderFreqs        [n] = 20.0; // 30 days default
 	m_maxSpidersPerRule  [n] = 9; // max spiders
-	m_spiderIpMaxSpiders [n] = 7; // max spiders per ip
+	m_spiderIpMaxSpiders [n] = ipms; // max spiders per ip
 	m_spiderIpWaits      [n] = 1000; // same ip wait
 	m_spiderPriorities   [n] = 43;
 	if ( ! strcmp(s,"news") )
@@ -2344,7 +2357,7 @@ bool CollectionRec::rebuildUrlFilters2 ( ) {
 	m_harvestLinks       [n] = 1;
 	m_spiderFreqs        [n] = 20.0; // 30 days default
 	m_maxSpidersPerRule  [n] = 9; // max spiders
-	m_spiderIpMaxSpiders [n] = 7; // max spiders per ip
+	m_spiderIpMaxSpiders [n] = ipms; // max spiders per ip
 	m_spiderIpWaits      [n] = 1000; // same ip wait
 	m_spiderPriorities   [n] = 42;
 	if ( ! strcmp(s,"news") )
@@ -2358,7 +2371,7 @@ bool CollectionRec::rebuildUrlFilters2 ( ) {
 	m_harvestLinks       [n] = 1;
 	m_spiderFreqs        [n] = 20.0;
 	m_maxSpidersPerRule  [n] = 9; // max spiders
-	m_spiderIpMaxSpiders [n] = 7; // max spiders per ip
+	m_spiderIpMaxSpiders [n] = ipms; // max spiders per ip
 	m_spiderIpWaits      [n] = 1000; // same ip wait
 	m_spiderPriorities   [n] = 40;
 	if ( ! strcmp(s,"news") )
@@ -2369,7 +2382,7 @@ bool CollectionRec::rebuildUrlFilters2 ( ) {
 	m_harvestLinks       [n] = 1;
 	m_spiderFreqs        [n] = 20.0;
 	m_maxSpidersPerRule  [n] = 9; // max spiders
-	m_spiderIpMaxSpiders [n] = 7; // max spiders per ip
+	m_spiderIpMaxSpiders [n] = ipms; // max spiders per ip
 	m_spiderIpWaits      [n] = 1000; // same ip wait
 	m_spiderPriorities   [n] = 39;
 	if ( ! strcmp(s,"news") )
@@ -2380,7 +2393,7 @@ bool CollectionRec::rebuildUrlFilters2 ( ) {
 	m_harvestLinks       [n] = 1;
 	m_spiderFreqs        [n] = 40;
 	m_maxSpidersPerRule  [n] = 9; // max spiders
-	m_spiderIpMaxSpiders [n] = 7; // max spiders per ip
+	m_spiderIpMaxSpiders [n] = ipms; // max spiders per ip
 	m_spiderIpWaits      [n] = 1000; // same ip wait
 	m_spiderPriorities   [n] = 30;
 	// do not harvest links if we are spiderings NEWS
@@ -2394,7 +2407,7 @@ bool CollectionRec::rebuildUrlFilters2 ( ) {
 	m_harvestLinks       [n] = 1;
 	m_spiderFreqs        [n] = 40;
 	m_maxSpidersPerRule  [n] = 9; // max spiders
-	m_spiderIpMaxSpiders [n] = 7; // max spiders per ip
+	m_spiderIpMaxSpiders [n] = ipms; // max spiders per ip
 	m_spiderIpWaits      [n] = 1000; // same ip wait
 	m_spiderPriorities   [n] = 29;
 	// do not harvest links if we are spiderings NEWS
@@ -2408,7 +2421,7 @@ bool CollectionRec::rebuildUrlFilters2 ( ) {
 	m_harvestLinks       [n] = 1;
 	m_spiderFreqs        [n] = 60;
 	m_maxSpidersPerRule  [n] = 9; // max spiders
-	m_spiderIpMaxSpiders [n] = 7; // max spiders per ip
+	m_spiderIpMaxSpiders [n] = ipms; // max spiders per ip
 	m_spiderIpWaits      [n] = 1000; // same ip wait
 	m_spiderPriorities   [n] = 20;
 	// turn off spidering if hopcount is too big and we are spiderings NEWS
@@ -2424,7 +2437,7 @@ bool CollectionRec::rebuildUrlFilters2 ( ) {
 	m_harvestLinks       [n] = 1;
 	m_spiderFreqs        [n] = 60;
 	m_maxSpidersPerRule  [n] = 9; // max spiders
-	m_spiderIpMaxSpiders [n] = 7; // max spiders per ip
+	m_spiderIpMaxSpiders [n] = ipms; // max spiders per ip
 	m_spiderIpWaits      [n] = 1000; // same ip wait
 	m_spiderPriorities   [n] = 19;
 	// turn off spidering if hopcount is too big and we are spiderings NEWS
@@ -2451,7 +2464,7 @@ bool CollectionRec::rebuildUrlFilters2 ( ) {
 	m_harvestLinks       [n] = 1;
 	m_spiderFreqs        [n] = 60;
 	m_maxSpidersPerRule  [n] = 9; // max spiders
-	m_spiderIpMaxSpiders [n] = 7; // max spiders per ip
+	m_spiderIpMaxSpiders [n] = ipms; // max spiders per ip
 	m_spiderIpWaits      [n] = 1000; // same ip wait
 	m_spiderPriorities   [n] = 1;
 	if ( ! strcmp(s,"news") ) {
@@ -2487,6 +2500,9 @@ bool CollectionRec::rebuildUrlFilters2 ( ) {
 
 bool CollectionRec::rebuildLangRules ( char *langStr , char *tldStr ) {
 
+	// max spiders per ip
+	int32_t ipms = 7;
+
 	int32_t n = 0;
 
 	m_regExs[n].set("isreindex");
@@ -2542,7 +2558,7 @@ bool CollectionRec::rebuildLangRules ( char *langStr , char *tldStr ) {
 	m_harvestLinks       [n] = 1;
 	m_spiderFreqs        [n] = 7; // 30 days default
 	m_maxSpidersPerRule  [n] = 99; // max spiders
-	m_spiderIpMaxSpiders [n] = 7; // max spiders per ip
+	m_spiderIpMaxSpiders [n] = ipms; // max spiders per ip
 	m_spiderIpWaits      [n] = 1000; // same ip wait
 	m_spiderPriorities   [n] = 85;
 	n++;
@@ -2553,7 +2569,7 @@ bool CollectionRec::rebuildLangRules ( char *langStr , char *tldStr ) {
 	m_harvestLinks       [n] = 1;
 	m_spiderFreqs        [n] = 7; // 30 days default
 	m_maxSpidersPerRule  [n] = 9; // max spiders
-	m_spiderIpMaxSpiders [n] = 7; // max spiders per ip
+	m_spiderIpMaxSpiders [n] = ipms; // max spiders per ip
 	m_spiderIpWaits      [n] = 1000; // same ip wait
 	m_spiderPriorities   [n] = 50;
 	n++;
@@ -2565,7 +2581,7 @@ bool CollectionRec::rebuildLangRules ( char *langStr , char *tldStr ) {
 	m_harvestLinks       [n] = 1;
 	m_spiderFreqs        [n] = 7; // 30 days default
 	m_maxSpidersPerRule  [n] = 9; // max spiders
-	m_spiderIpMaxSpiders [n] = 7; // max spiders per ip
+	m_spiderIpMaxSpiders [n] = ipms; // max spiders per ip
 	m_spiderIpWaits      [n] = 1000; // same ip wait
 	m_spiderPriorities   [n] = 50;
 	n++;
@@ -2574,7 +2590,7 @@ bool CollectionRec::rebuildLangRules ( char *langStr , char *tldStr ) {
 	// m_harvestLinks       [n] = 1;
 	// m_spiderFreqs        [n] = 7; // 30 days default
 	// m_maxSpidersPerRule  [n] = 9; // max spiders
-	// m_spiderIpMaxSpiders [n] = 7; // max spiders per ip
+	// m_spiderIpMaxSpiders [n] = ipms; // max spiders per ip
 	// m_spiderIpWaits      [n] = 1000; // same ip wait
 	// m_spiderPriorities   [n] = 20;
 	// n++;
@@ -2586,7 +2602,7 @@ bool CollectionRec::rebuildLangRules ( char *langStr , char *tldStr ) {
 	m_harvestLinks       [n] = 1;
 	m_spiderFreqs        [n] = 7.0; // days b4 respider
 	m_maxSpidersPerRule  [n] = 9; // max spiders
-	m_spiderIpMaxSpiders [n] = 7; // max spiders per ip
+	m_spiderIpMaxSpiders [n] = ipms; // max spiders per ip
 	m_spiderIpWaits      [n] = 1000; // same ip wait
 	m_spiderPriorities   [n] = 48;
 	n++;
@@ -2597,7 +2613,7 @@ bool CollectionRec::rebuildLangRules ( char *langStr , char *tldStr ) {
 	m_harvestLinks       [n] = 1;
 	m_spiderFreqs        [n] = 7.0; // days b4 respider
 	m_maxSpidersPerRule  [n] = 9; // max spiders
-	m_spiderIpMaxSpiders [n] = 7; // max spiders per ip
+	m_spiderIpMaxSpiders [n] = ipms; // max spiders per ip
 	m_spiderIpWaits      [n] = 1000; // same ip wait
 	m_spiderPriorities   [n] = 48;
 	n++;
@@ -2606,7 +2622,7 @@ bool CollectionRec::rebuildLangRules ( char *langStr , char *tldStr ) {
 	m_harvestLinks       [n] = 1;
 	m_spiderFreqs        [n] = 7.0; // days b4 respider
 	m_maxSpidersPerRule  [n] = 9; // max spiders
-	m_spiderIpMaxSpiders [n] = 7; // max spiders per ip
+	m_spiderIpMaxSpiders [n] = ipms; // max spiders per ip
 	m_spiderIpWaits      [n] = 1000; // same ip wait
 	m_spiderPriorities   [n] = 19;
 	n++;
@@ -2620,7 +2636,7 @@ bool CollectionRec::rebuildLangRules ( char *langStr , char *tldStr ) {
 	m_harvestLinks       [n] = 1;
 	m_spiderFreqs        [n] = 7.0;
 	m_maxSpidersPerRule  [n] = 9; // max spiders
-	m_spiderIpMaxSpiders [n] = 7; // max spiders per ip
+	m_spiderIpMaxSpiders [n] = ipms; // max spiders per ip
 	m_spiderIpWaits      [n] = 1000; // same ip wait
 	m_spiderPriorities   [n] = 49;
 	n++;
@@ -2631,7 +2647,7 @@ bool CollectionRec::rebuildLangRules ( char *langStr , char *tldStr ) {
 	m_harvestLinks       [n] = 1;
 	m_spiderFreqs        [n] = 7.0;
 	m_maxSpidersPerRule  [n] = 9; // max spiders
-	m_spiderIpMaxSpiders [n] = 7; // max spiders per ip
+	m_spiderIpMaxSpiders [n] = ipms; // max spiders per ip
 	m_spiderIpWaits      [n] = 1000; // same ip wait
 	m_spiderPriorities   [n] = 49;
 	n++;
@@ -2640,7 +2656,7 @@ bool CollectionRec::rebuildLangRules ( char *langStr , char *tldStr ) {
 	m_harvestLinks       [n] = 1;
 	m_spiderFreqs        [n] = 7.0;
 	m_maxSpidersPerRule  [n] = 9; // max spiders
-	m_spiderIpMaxSpiders [n] = 7; // max spiders per ip
+	m_spiderIpMaxSpiders [n] = ipms; // max spiders per ip
 	m_spiderIpWaits      [n] = 1000; // same ip wait
 	m_spiderPriorities   [n] = 18;
 	n++;
@@ -2652,7 +2668,7 @@ bool CollectionRec::rebuildLangRules ( char *langStr , char *tldStr ) {
 	m_harvestLinks       [n] = 1;
 	m_spiderFreqs        [n] = 10.0;
 	m_maxSpidersPerRule  [n] = 9; // max spiders
-	m_spiderIpMaxSpiders [n] = 7; // max spiders per ip
+	m_spiderIpMaxSpiders [n] = ipms; // max spiders per ip
 	m_spiderIpWaits      [n] = 1000; // same ip wait
 	m_spiderPriorities   [n] = 47;
 	n++;
@@ -2662,7 +2678,7 @@ bool CollectionRec::rebuildLangRules ( char *langStr , char *tldStr ) {
 	m_harvestLinks       [n] = 1;
 	m_spiderFreqs        [n] = 10.0;
 	m_maxSpidersPerRule  [n] = 9; // max spiders
-	m_spiderIpMaxSpiders [n] = 7; // max spiders per ip
+	m_spiderIpMaxSpiders [n] = ipms; // max spiders per ip
 	m_spiderIpWaits      [n] = 1000; // same ip wait
 	m_spiderPriorities   [n] = 47;
 	n++;
@@ -2671,7 +2687,7 @@ bool CollectionRec::rebuildLangRules ( char *langStr , char *tldStr ) {
 	m_harvestLinks       [n] = 1;
 	m_spiderFreqs        [n] = 10.0;
 	m_maxSpidersPerRule  [n] = 9; // max spiders
-	m_spiderIpMaxSpiders [n] = 7; // max spiders per ip
+	m_spiderIpMaxSpiders [n] = ipms; // max spiders per ip
 	m_spiderIpWaits      [n] = 1000; // same ip wait
 	m_spiderPriorities   [n] = 17;
 	n++;
@@ -2684,7 +2700,7 @@ bool CollectionRec::rebuildLangRules ( char *langStr , char *tldStr ) {
 	m_harvestLinks       [n] = 1;
 	m_spiderFreqs        [n] = 20.0;
 	m_maxSpidersPerRule  [n] = 9; // max spiders
-	m_spiderIpMaxSpiders [n] = 7; // max spiders per ip
+	m_spiderIpMaxSpiders [n] = ipms; // max spiders per ip
 	m_spiderIpWaits      [n] = 1000; // same ip wait
 	m_spiderPriorities   [n] = 40;
 	n++;
@@ -2695,7 +2711,7 @@ bool CollectionRec::rebuildLangRules ( char *langStr , char *tldStr ) {
 	m_harvestLinks       [n] = 1;
 	m_spiderFreqs        [n] = 20.0;
 	m_maxSpidersPerRule  [n] = 9; // max spiders
-	m_spiderIpMaxSpiders [n] = 7; // max spiders per ip
+	m_spiderIpMaxSpiders [n] = ipms; // max spiders per ip
 	m_spiderIpWaits      [n] = 1000; // same ip wait
 	m_spiderPriorities   [n] = 40;
 	n++;
@@ -2704,7 +2720,7 @@ bool CollectionRec::rebuildLangRules ( char *langStr , char *tldStr ) {
 	m_harvestLinks       [n] = 1;
 	m_spiderFreqs        [n] = 20.0;
 	m_maxSpidersPerRule  [n] = 9; // max spiders
-	m_spiderIpMaxSpiders [n] = 7; // max spiders per ip
+	m_spiderIpMaxSpiders [n] = ipms; // max spiders per ip
 	m_spiderIpWaits      [n] = 1000; // same ip wait
 	m_spiderPriorities   [n] = 16;
 	n++;
@@ -2716,7 +2732,7 @@ bool CollectionRec::rebuildLangRules ( char *langStr , char *tldStr ) {
 	m_harvestLinks       [n] = 1;
 	m_spiderFreqs        [n] = 20.0;
 	m_maxSpidersPerRule  [n] = 9; // max spiders
-	m_spiderIpMaxSpiders [n] = 7; // max spiders per ip
+	m_spiderIpMaxSpiders [n] = ipms; // max spiders per ip
 	m_spiderIpWaits      [n] = 1000; // same ip wait
 	m_spiderPriorities   [n] = 39;
 	n++;
@@ -2726,7 +2742,7 @@ bool CollectionRec::rebuildLangRules ( char *langStr , char *tldStr ) {
 	m_harvestLinks       [n] = 1;
 	m_spiderFreqs        [n] = 20.0;
 	m_maxSpidersPerRule  [n] = 9; // max spiders
-	m_spiderIpMaxSpiders [n] = 7; // max spiders per ip
+	m_spiderIpMaxSpiders [n] = ipms; // max spiders per ip
 	m_spiderIpWaits      [n] = 1000; // same ip wait
 	m_spiderPriorities   [n] = 39;
 	n++;
@@ -2735,7 +2751,7 @@ bool CollectionRec::rebuildLangRules ( char *langStr , char *tldStr ) {
 	m_harvestLinks       [n] = 1;
 	m_spiderFreqs        [n] = 20.0;
 	m_maxSpidersPerRule  [n] = 9; // max spiders
-	m_spiderIpMaxSpiders [n] = 7; // max spiders per ip
+	m_spiderIpMaxSpiders [n] = ipms; // max spiders per ip
 	m_spiderIpWaits      [n] = 1000; // same ip wait
 	m_spiderPriorities   [n] = 15;
 	n++;
@@ -2747,7 +2763,7 @@ bool CollectionRec::rebuildLangRules ( char *langStr , char *tldStr ) {
 	m_harvestLinks       [n] = 1;
 	m_spiderFreqs        [n] = 40;
 	m_maxSpidersPerRule  [n] = 9; // max spiders
-	m_spiderIpMaxSpiders [n] = 7; // max spiders per ip
+	m_spiderIpMaxSpiders [n] = ipms; // max spiders per ip
 	m_spiderIpWaits      [n] = 1000; // same ip wait
 	m_spiderPriorities   [n] = 30;
 	n++;
@@ -2758,7 +2774,7 @@ bool CollectionRec::rebuildLangRules ( char *langStr , char *tldStr ) {
 	m_harvestLinks       [n] = 1;
 	m_spiderFreqs        [n] = 40;
 	m_maxSpidersPerRule  [n] = 9; // max spiders
-	m_spiderIpMaxSpiders [n] = 7; // max spiders per ip
+	m_spiderIpMaxSpiders [n] = ipms; // max spiders per ip
 	m_spiderIpWaits      [n] = 1000; // same ip wait
 	m_spiderPriorities   [n] = 30;
 	n++;
@@ -2767,7 +2783,7 @@ bool CollectionRec::rebuildLangRules ( char *langStr , char *tldStr ) {
 	m_harvestLinks       [n] = 1;
 	m_spiderFreqs        [n] = 40;
 	m_maxSpidersPerRule  [n] = 9; // max spiders
-	m_spiderIpMaxSpiders [n] = 7; // max spiders per ip
+	m_spiderIpMaxSpiders [n] = ipms; // max spiders per ip
 	m_spiderIpWaits      [n] = 1000; // same ip wait
 	m_spiderPriorities   [n] = 14;
 	n++;
@@ -2780,7 +2796,7 @@ bool CollectionRec::rebuildLangRules ( char *langStr , char *tldStr ) {
 	m_harvestLinks       [n] = 1;
 	m_spiderFreqs        [n] = 40;
 	m_maxSpidersPerRule  [n] = 9; // max spiders
-	m_spiderIpMaxSpiders [n] = 7; // max spiders per ip
+	m_spiderIpMaxSpiders [n] = ipms; // max spiders per ip
 	m_spiderIpWaits      [n] = 1000; // same ip wait
 	m_spiderPriorities   [n] = 29;
 	n++;
@@ -2790,7 +2806,7 @@ bool CollectionRec::rebuildLangRules ( char *langStr , char *tldStr ) {
 	m_harvestLinks       [n] = 1;
 	m_spiderFreqs        [n] = 40;
 	m_maxSpidersPerRule  [n] = 9; // max spiders
-	m_spiderIpMaxSpiders [n] = 7; // max spiders per ip
+	m_spiderIpMaxSpiders [n] = ipms; // max spiders per ip
 	m_spiderIpWaits      [n] = 1000; // same ip wait
 	m_spiderPriorities   [n] = 29;
 	n++;
@@ -2799,7 +2815,7 @@ bool CollectionRec::rebuildLangRules ( char *langStr , char *tldStr ) {
 	m_harvestLinks       [n] = 1;
 	m_spiderFreqs        [n] = 40;
 	m_maxSpidersPerRule  [n] = 9; // max spiders
-	m_spiderIpMaxSpiders [n] = 7; // max spiders per ip
+	m_spiderIpMaxSpiders [n] = ipms; // max spiders per ip
 	m_spiderIpWaits      [n] = 1000; // same ip wait
 	m_spiderPriorities   [n] = 13;
 	n++;
@@ -2812,7 +2828,7 @@ bool CollectionRec::rebuildLangRules ( char *langStr , char *tldStr ) {
 	m_harvestLinks       [n] = 1;
 	m_spiderFreqs        [n] = 60;
 	m_maxSpidersPerRule  [n] = 9; // max spiders
-	m_spiderIpMaxSpiders [n] = 7; // max spiders per ip
+	m_spiderIpMaxSpiders [n] = ipms; // max spiders per ip
 	m_spiderIpWaits      [n] = 1000; // same ip wait
 	m_spiderPriorities   [n] = 22;
 	n++;
@@ -2823,7 +2839,7 @@ bool CollectionRec::rebuildLangRules ( char *langStr , char *tldStr ) {
 	m_harvestLinks       [n] = 1;
 	m_spiderFreqs        [n] = 60;
 	m_maxSpidersPerRule  [n] = 9; // max spiders
-	m_spiderIpMaxSpiders [n] = 7; // max spiders per ip
+	m_spiderIpMaxSpiders [n] = ipms; // max spiders per ip
 	m_spiderIpWaits      [n] = 1000; // same ip wait
 	m_spiderPriorities   [n] = 22;
 	n++;
@@ -2832,7 +2848,7 @@ bool CollectionRec::rebuildLangRules ( char *langStr , char *tldStr ) {
 	m_harvestLinks       [n] = 1;
 	m_spiderFreqs        [n] = 60;
 	m_maxSpidersPerRule  [n] = 9; // max spiders
-	m_spiderIpMaxSpiders [n] = 7; // max spiders per ip
+	m_spiderIpMaxSpiders [n] = ipms; // max spiders per ip
 	m_spiderIpWaits      [n] = 1000; // same ip wait
 	m_spiderPriorities   [n] = 12;
 	n++;
@@ -2845,7 +2861,7 @@ bool CollectionRec::rebuildLangRules ( char *langStr , char *tldStr ) {
 	m_harvestLinks       [n] = 1;
 	m_spiderFreqs        [n] = 60;
 	m_maxSpidersPerRule  [n] = 9; // max spiders
-	m_spiderIpMaxSpiders [n] = 7; // max spiders per ip
+	m_spiderIpMaxSpiders [n] = ipms; // max spiders per ip
 	m_spiderIpWaits      [n] = 1000; // same ip wait
 	m_spiderPriorities   [n] = 21;
 	n++;
@@ -2855,7 +2871,7 @@ bool CollectionRec::rebuildLangRules ( char *langStr , char *tldStr ) {
 	m_harvestLinks       [n] = 1;
 	m_spiderFreqs        [n] = 60;
 	m_maxSpidersPerRule  [n] = 9; // max spiders
-	m_spiderIpMaxSpiders [n] = 7; // max spiders per ip
+	m_spiderIpMaxSpiders [n] = ipms; // max spiders per ip
 	m_spiderIpWaits      [n] = 1000; // same ip wait
 	m_spiderPriorities   [n] = 21;
 	n++;
@@ -2864,7 +2880,7 @@ bool CollectionRec::rebuildLangRules ( char *langStr , char *tldStr ) {
 	m_harvestLinks       [n] = 1;
 	m_spiderFreqs        [n] = 60;
 	m_maxSpidersPerRule  [n] = 9; // max spiders
-	m_spiderIpMaxSpiders [n] = 7; // max spiders per ip
+	m_spiderIpMaxSpiders [n] = ipms; // max spiders per ip
 	m_spiderIpWaits      [n] = 1000; // same ip wait
 	m_spiderPriorities   [n] = 11;
 	n++;
@@ -2875,7 +2891,7 @@ bool CollectionRec::rebuildLangRules ( char *langStr , char *tldStr ) {
 	m_harvestLinks       [n] = 1;
 	m_spiderFreqs        [n] = 60;
 	m_maxSpidersPerRule  [n] = 9; // max spiders
-	m_spiderIpMaxSpiders [n] = 7; // max spiders per ip
+	m_spiderIpMaxSpiders [n] = ipms; // max spiders per ip
 	m_spiderIpWaits      [n] = 1000; // same ip wait
 	m_spiderPriorities   [n] = 1;
 	n++;
@@ -2895,6 +2911,9 @@ bool CollectionRec::rebuildLangRules ( char *langStr , char *tldStr ) {
 
 bool CollectionRec::rebuildShallowRules ( ) {
 
+	// max spiders per ip
+	int32_t ipms = 7;
+
 	int32_t n = 0;
 
 	m_regExs[n].set("isreindex");
@@ -2950,7 +2969,7 @@ bool CollectionRec::rebuildShallowRules ( ) {
 	m_harvestLinks       [n] = 1;
 	m_spiderFreqs        [n] = 7; // 30 days default
 	m_maxSpidersPerRule  [n] = 99; // max spiders
-	m_spiderIpMaxSpiders [n] = 7; // max spiders per ip
+	m_spiderIpMaxSpiders [n] = ipms; // max spiders per ip
 	m_spiderIpWaits      [n] = 1000; // same ip wait
 	m_spiderPriorities   [n] = 85;
 	n++;
@@ -2965,7 +2984,7 @@ bool CollectionRec::rebuildShallowRules ( ) {
 	m_harvestLinks       [n] = 1;
 	m_spiderFreqs        [n] = 40;
 	m_maxSpidersPerRule  [n] = 0; // max spiders
-	m_spiderIpMaxSpiders [n] = 7; // max spiders per ip
+	m_spiderIpMaxSpiders [n] = ipms; // max spiders per ip
 	m_spiderIpWaits      [n] = 1000; // same ip wait
 	m_spiderPriorities   [n] = 30;
 	n++;
@@ -2976,7 +2995,7 @@ bool CollectionRec::rebuildShallowRules ( ) {
 	m_harvestLinks       [n] = 1;
 	m_spiderFreqs        [n] = 40;
 	m_maxSpidersPerRule  [n] = 0; // max spiders
-	m_spiderIpMaxSpiders [n] = 7; // max spiders per ip
+	m_spiderIpMaxSpiders [n] = ipms; // max spiders per ip
 	m_spiderIpWaits      [n] = 1000; // same ip wait
 	m_spiderPriorities   [n] = 30;
 	n++;
@@ -2988,7 +3007,7 @@ bool CollectionRec::rebuildShallowRules ( ) {
 	m_harvestLinks       [n] = 1;
 	m_spiderFreqs        [n] = 7; // 30 days default
 	m_maxSpidersPerRule  [n] = 9; // max spiders
-	m_spiderIpMaxSpiders [n] = 7; // max spiders per ip
+	m_spiderIpMaxSpiders [n] = ipms; // max spiders per ip
 	m_spiderIpWaits      [n] = 1000; // same ip wait
 	m_spiderPriorities   [n] = 50;
 	n++;
@@ -2997,7 +3016,7 @@ bool CollectionRec::rebuildShallowRules ( ) {
 	m_harvestLinks       [n] = 1;
 	m_spiderFreqs        [n] = 7.0; // days b4 respider
 	m_maxSpidersPerRule  [n] = 9; // max spiders
-	m_spiderIpMaxSpiders [n] = 7; // max spiders per ip
+	m_spiderIpMaxSpiders [n] = ipms; // max spiders per ip
 	m_spiderIpWaits      [n] = 1000; // same ip wait
 	m_spiderPriorities   [n] = 48;
 	n++;
@@ -3009,7 +3028,7 @@ bool CollectionRec::rebuildShallowRules ( ) {
 	m_harvestLinks       [n] = 1;
 	m_spiderFreqs        [n] = 7.0;
 	m_maxSpidersPerRule  [n] = 9; // max spiders
-	m_spiderIpMaxSpiders [n] = 7; // max spiders per ip
+	m_spiderIpMaxSpiders [n] = ipms; // max spiders per ip
 	m_spiderIpWaits      [n] = 1000; // same ip wait
 	m_spiderPriorities   [n] = 49;
 	n++;
@@ -3021,7 +3040,7 @@ bool CollectionRec::rebuildShallowRules ( ) {
 	m_harvestLinks       [n] = 1;
 	m_spiderFreqs        [n] = 10.0;
 	m_maxSpidersPerRule  [n] = 9; // max spiders
-	m_spiderIpMaxSpiders [n] = 7; // max spiders per ip
+	m_spiderIpMaxSpiders [n] = ipms; // max spiders per ip
 	m_spiderIpWaits      [n] = 1000; // same ip wait
 	m_spiderPriorities   [n] = 47;
 	n++;
@@ -3034,7 +3053,7 @@ bool CollectionRec::rebuildShallowRules ( ) {
 	m_harvestLinks       [n] = 1;
 	m_spiderFreqs        [n] = 20.0;
 	m_maxSpidersPerRule  [n] = 9; // max spiders
-	m_spiderIpMaxSpiders [n] = 7; // max spiders per ip
+	m_spiderIpMaxSpiders [n] = ipms; // max spiders per ip
 	m_spiderIpWaits      [n] = 1000; // same ip wait
 	m_spiderPriorities   [n] = 40;
 	n++;
@@ -3044,7 +3063,7 @@ bool CollectionRec::rebuildShallowRules ( ) {
 	m_harvestLinks       [n] = 1;
 	m_spiderFreqs        [n] = 20.0;
 	m_maxSpidersPerRule  [n] = 9; // max spiders
-	m_spiderIpMaxSpiders [n] = 7; // max spiders per ip
+	m_spiderIpMaxSpiders [n] = ipms; // max spiders per ip
 	m_spiderIpWaits      [n] = 1000; // same ip wait
 	m_spiderPriorities   [n] = 39;
 	n++;
@@ -3056,7 +3075,7 @@ bool CollectionRec::rebuildShallowRules ( ) {
 	m_harvestLinks       [n] = 1;
 	m_spiderFreqs        [n] = 40;
 	m_maxSpidersPerRule  [n] = 9; // max spiders
-	m_spiderIpMaxSpiders [n] = 7; // max spiders per ip
+	m_spiderIpMaxSpiders [n] = ipms; // max spiders per ip
 	m_spiderIpWaits      [n] = 1000; // same ip wait
 	m_spiderPriorities   [n] = 30;
 	n++;
@@ -3065,7 +3084,7 @@ bool CollectionRec::rebuildShallowRules ( ) {
 	m_harvestLinks       [n] = 1;
 	m_spiderFreqs        [n] = 40;
 	m_maxSpidersPerRule  [n] = 9; // max spiders
-	m_spiderIpMaxSpiders [n] = 7; // max spiders per ip
+	m_spiderIpMaxSpiders [n] = ipms; // max spiders per ip
 	m_spiderIpWaits      [n] = 1000; // same ip wait
 	m_spiderPriorities   [n] = 29;
 	n++;
@@ -3077,7 +3096,7 @@ bool CollectionRec::rebuildShallowRules ( ) {
 	m_harvestLinks       [n] = 1;
 	m_spiderFreqs        [n] = 60;
 	m_maxSpidersPerRule  [n] = 9; // max spiders
-	m_spiderIpMaxSpiders [n] = 7; // max spiders per ip
+	m_spiderIpMaxSpiders [n] = ipms; // max spiders per ip
 	m_spiderIpWaits      [n] = 1000; // same ip wait
 	m_spiderPriorities   [n] = 22;
 	n++;
@@ -3086,7 +3105,7 @@ bool CollectionRec::rebuildShallowRules ( ) {
 	m_harvestLinks       [n] = 1;
 	m_spiderFreqs        [n] = 60;
 	m_maxSpidersPerRule  [n] = 9; // max spiders
-	m_spiderIpMaxSpiders [n] = 7; // max spiders per ip
+	m_spiderIpMaxSpiders [n] = ipms; // max spiders per ip
 	m_spiderIpWaits      [n] = 1000; // same ip wait
 	m_spiderPriorities   [n] = 21;
 	n++;
@@ -3097,7 +3116,7 @@ bool CollectionRec::rebuildShallowRules ( ) {
 	m_harvestLinks       [n] = 1;
 	m_spiderFreqs        [n] = 60;
 	m_maxSpidersPerRule  [n] = 9; // max spiders
-	m_spiderIpMaxSpiders [n] = 7; // max spiders per ip
+	m_spiderIpMaxSpiders [n] = ipms; // max spiders per ip
 	m_spiderIpWaits      [n] = 1000; // same ip wait
 	m_spiderPriorities   [n] = 1;
 	n++;
@@ -3206,6 +3225,13 @@ bool CollectionRec::save ( ) {
 		    tmp,mstrerror(g_errno));
 		g_errno = 0;
 	}
+
+	// the list of ip addresses that we have detected as being throttled
+	// and therefore backoff and use proxies for
+	sb.reset();
+	sb.safePrintf("%scoll.%s.%"INT32"/",
+		      g_hostdb.m_dir , m_coll , (int32_t)m_collnum );
+	m_twitchyTable.save ( sb.getBufStart() , "ipstouseproxiesfor.dat" );
 
 	// do not need a save now
 	m_needsSave = false;
@@ -3356,86 +3382,95 @@ bool CollectionRec::hasSearchPermission ( TcpSocket *s , int32_t encapIp ) {
 bool expandRegExShortcuts ( SafeBuf *sb ) ;
 void nukeDoledb ( collnum_t collnum );
 
-bool CollectionRec::rebuildUrlFiltersDiffbot() {
-  
-	//logf(LOG_DEBUG,"db: rebuilding url filters");
+// rebuild the regexes related to diffbot, such as the one for the URL pattern
+bool CollectionRec::rebuildDiffbotRegexes() {
+		//logf(LOG_DEBUG,"db: rebuilding url filters");
+		char *ucp = m_diffbotUrlCrawlPattern.getBufStart();
+		if ( ucp && ! ucp[0] ) ucp = NULL;
 
+		// get the regexes
+		if ( ! ucp ) ucp = m_diffbotUrlCrawlRegEx.getBufStart();
+		if ( ucp && ! ucp[0] ) ucp = NULL;
+		char *upp = m_diffbotUrlProcessPattern.getBufStart();
+		if ( upp && ! upp[0] ) upp = NULL;
+
+		if ( ! upp ) upp = m_diffbotUrlProcessRegEx.getBufStart();
+		if ( upp && ! upp[0] ) upp = NULL;
+		char *ppp = m_diffbotPageProcessPattern.getBufStart();
+		if ( ppp && ! ppp[0] ) ppp = NULL;
+
+		// recompiling regexes starts now
+		if ( m_hasucr ) {
+			regfree ( &m_ucr );
+			m_hasucr = false;
+		}
+		if ( m_hasupr ) {
+			regfree ( &m_upr );
+			m_hasupr = false;
+		}
+
+		// copy into tmpbuf
+		SafeBuf tmp;
+		char *rx = m_diffbotUrlCrawlRegEx.getBufStart();
+		if ( rx && ! rx[0] ) rx = NULL;
+		if ( rx ) {
+			tmp.reset();
+			tmp.safeStrcpy ( rx );
+			expandRegExShortcuts ( &tmp );
+			m_hasucr = true;
+		}
+		if ( rx && regcomp ( &m_ucr , tmp.getBufStart() ,
+				     REG_EXTENDED| //REG_ICASE|
+				     REG_NEWLINE ) ) { // |REG_NOSUB) ) {
+			// error!
+			log("coll: regcomp %s failed: %s. "
+				   "Ignoring.",
+				   rx,mstrerror(errno));
+			regfree ( &m_ucr );
+			m_hasucr = false;
+		}
+
+
+		rx = m_diffbotUrlProcessRegEx.getBufStart();
+		if ( rx && ! rx[0] ) rx = NULL;
+		if ( rx ) m_hasupr = true;
+		if ( rx ) {
+			tmp.reset();
+			tmp.safeStrcpy ( rx );
+			expandRegExShortcuts ( &tmp );
+			m_hasupr = true;
+		}
+		if ( rx && regcomp ( &m_upr , tmp.getBufStart() ,
+				     REG_EXTENDED| // REG_ICASE|
+				     REG_NEWLINE ) ) { // |REG_NOSUB) ) {
+			// error!
+			log("coll: regcomp %s failed: %s. "
+			    "Ignoring.",
+			    rx,mstrerror(errno));
+			regfree ( &m_upr );
+			m_hasupr = false;
+		}
+		return true;
+
+}
+
+bool CollectionRec::rebuildUrlFiltersDiffbot() {
+
+	//logf(LOG_DEBUG,"db: rebuilding url filters");
 	char *ucp = m_diffbotUrlCrawlPattern.getBufStart();
 	if ( ucp && ! ucp[0] ) ucp = NULL;
 
 	// if we had a regex, that works for this purpose as well
 	if ( ! ucp ) ucp = m_diffbotUrlCrawlRegEx.getBufStart();
 	if ( ucp && ! ucp[0] ) ucp = NULL;
-
 	char *upp = m_diffbotUrlProcessPattern.getBufStart();
 	if ( upp && ! upp[0] ) upp = NULL;
 
 	// if we had a regex, that works for this purpose as well
 	if ( ! upp ) upp = m_diffbotUrlProcessRegEx.getBufStart();
 	if ( upp && ! upp[0] ) upp = NULL;
-
 	char *ppp = m_diffbotPageProcessPattern.getBufStart();
 	if ( ppp && ! ppp[0] ) ppp = NULL;
-
-	///////
-	//
-	// recompile regular expressions
-	//
-	///////
-
-
-	if ( m_hasucr ) {
-		regfree ( &m_ucr );
-		m_hasucr = false;
-	}
-
-	if ( m_hasupr ) {
-		regfree ( &m_upr );
-		m_hasupr = false;
-	}
-
-	// copy into tmpbuf
-	SafeBuf tmp;
-
-	char *rx = m_diffbotUrlCrawlRegEx.getBufStart();
-	if ( rx && ! rx[0] ) rx = NULL;
-	if ( rx ) {
-		tmp.reset();
-		tmp.safeStrcpy ( rx );
-		expandRegExShortcuts ( &tmp );
-		m_hasucr = true;
-	}
-	if ( rx && regcomp ( &m_ucr , tmp.getBufStart() ,
-			     REG_EXTENDED| //REG_ICASE|
-			     REG_NEWLINE ) ) { // |REG_NOSUB) ) {
-		// error!
-		log("coll: regcomp %s failed: %s. "
-			   "Ignoring.",
-			   rx,mstrerror(errno));
-		regfree ( &m_ucr );
-		m_hasucr = false;
-	}
-
-
-	rx = m_diffbotUrlProcessRegEx.getBufStart();
-	if ( rx && ! rx[0] ) rx = NULL;
-	if ( rx ) m_hasupr = true;
-	if ( rx ) {
-		tmp.reset();
-		tmp.safeStrcpy ( rx );
-		expandRegExShortcuts ( &tmp );
-		m_hasupr = true;
-	}
-	if ( rx && regcomp ( &m_upr , tmp.getBufStart() ,
-			     REG_EXTENDED| // REG_ICASE|
-			     REG_NEWLINE ) ) { // |REG_NOSUB) ) {
-		// error!
-		log("coll: regcomp %s failed: %s. "
-		    "Ignoring.",
-		    rx,mstrerror(errno));
-		regfree ( &m_upr );
-		m_hasupr = false;
-	}
 
 
 	// what diffbot url to use for processing
@@ -3837,9 +3872,15 @@ bool CollectionRec::rebuildUrlFilters ( ) {
 	}
 
 
-	// the code beow is only for diffbot custom crawls
-	if ( ! m_isCustomCrawl ) return true; //!= 1 && // crawl api
+	// If the crawl is not generated by crawlbot, then we will just update
+	// the regexes concerning the urls to process
+	rebuildDiffbotRegexes();
+	if ( ! m_isCustomCrawl ){
+		return true;
+	}
 
+	// on the other hand, if it is a crawlbot job, then by convention the url filters are all set
+	// to some default ones.
 	return rebuildUrlFiltersDiffbot();
 }
 

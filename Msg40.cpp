@@ -6092,6 +6092,7 @@ bool Msg40::printJsonItemInCSV ( State0 *st , int32_t ix ) {
 		//
 		// get value and print otherwise
 		//
+		/*
 		if ( ji->m_type == JT_NUMBER ) {
 			// print numbers without double quotes
 			if ( ji->m_valueDouble *10000000.0 == 
@@ -6101,11 +6102,15 @@ bool Msg40::printJsonItemInCSV ( State0 *st , int32_t ix ) {
 				sb->safePrintf("%f",ji->m_valueDouble);
 			continue;
 		}
+		*/
+
+		int32_t vlen;
+		char *str = ji->getValueAsString ( &vlen );
 
 		// print the value
 		sb->pushChar('\"');
 		// get the json item to print out
-		int32_t  vlen = ji->getValueLen();
+		//int32_t  vlen = ji->getValueLen();
 		// truncate
 		char *truncStr = NULL;
 		if ( vlen > 32000 ) {
@@ -6115,7 +6120,8 @@ bool Msg40::printJsonItemInCSV ( State0 *st , int32_t ix ) {
 				"JSON to get untruncated data.";
 		}
 		// print it out
-		sb->csvEncode ( ji->getValue() , vlen );
+		//sb->csvEncode ( ji->getValue() , vlen );
+		sb->csvEncode ( str , vlen );
 		// print truncate msg?
 		if ( truncStr ) sb->safeStrcpy ( truncStr );
 		// end the CSV
@@ -6461,8 +6467,12 @@ bool Msg40::printFacetsForTable ( SafeBuf *sb , QueryTerm *qt ) {
 		FacetEntry *fe;
 		fe = (FacetEntry *)fht->getValueFromSlot(j);
 		int32_t count = 0;
+		int64_t allCount = 0;
 		// could be empty if range had no values in it
-		if ( fe ) count = fe->m_count;
+		if ( fe ) {
+			count = fe->m_count;
+			allCount = fe->m_outsideSearchResultsCount;
+		}
 
 		char *text = NULL;
 
@@ -6557,6 +6567,10 @@ bool Msg40::printFacetsForTable ( SafeBuf *sb , QueryTerm *qt ) {
 			sb->safePrintf("\t\t<totalDocsWithField>%"INT64""
 				       "</totalDocsWithField>\n"
 				       , qt->m_numDocsThatHaveFacet );
+			sb->safePrintf("\t\t<totalDocsWithFieldAndValue>"
+				       "%"INT64""
+				       "</totalDocsWithFieldAndValue>\n"
+				       , allCount );
 			sb->safePrintf("\t\t<value>");
 
 			if ( isString )
@@ -6565,8 +6579,8 @@ bool Msg40::printFacetsForTable ( SafeBuf *sb , QueryTerm *qt ) {
 			sb->cdataEncode ( text );
 			if ( isString )
 				sb->safePrintf("]]>");
-			sb->safePrintf("</value>\n"
-				       "\t\t<docCount>%"INT32""
+			sb->safePrintf("</value>\n");
+			sb->safePrintf("\t\t<docCount>%"INT32""
 				       "</docCount>\n"
 				       ,count);
 			// some stats now for floats
@@ -6645,6 +6659,10 @@ bool Msg40::printFacetsForTable ( SafeBuf *sb , QueryTerm *qt ) {
 				       );
 			sb->safePrintf("\t\"totalDocsWithField\":%"INT64""
 				       ",\n", qt->m_numDocsThatHaveFacet );
+			sb->safePrintf("\t\"totalDocsWithFieldAndValue\":"
+				       "%"INT64""
+				       ",\n", 
+				       allCount );
 			sb->safePrintf("\t\"value\":\"");
 
 			if (  isString )
@@ -6654,10 +6672,10 @@ bool Msg40::printFacetsForTable ( SafeBuf *sb , QueryTerm *qt ) {
 			//if ( isString )
 			// just use quotes for ranges like "[1-3)" now
 			sb->safePrintf("\"");
-			sb->safePrintf(",\n"
-				       "\t\"docCount\":%"INT32""
-				       , count );
+			sb->safePrintf(",\n");
 
+			sb->safePrintf("\t\"docCount\":%"INT32""
+				       , count );
 			// if it's a # then we print stats after
 			if ( isString || fe->m_count == 0 )
 				sb->safePrintf("\n");

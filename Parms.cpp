@@ -1077,7 +1077,6 @@ bool Parms::setGigablastRequest ( TcpSocket *socket ,
 	int32_t page = g_pages.getDynamicPageNumber ( hrArg );
 	// is it a collection?
 	char *THIS = (char *)gr;
-
 	// ensure valid
 	if ( ! THIS ) {
 		// it is null when no collection explicitly specified...
@@ -8787,18 +8786,46 @@ void Parms::init ( ) {
 	//  
 	///////////////////////////////////////////
 
-	m->m_title = "use spider proxies";
-	m->m_desc  = "Use the spider proxies listed below. If none are "
-		"listed then gb will not use any.";
+	m->m_title = "always use spider proxies for all collections";
+	m->m_desc  = "ALWAYS Use the spider proxies listed below for "
+		"spidering. If none are "
+		"listed then gb will not use any. Applies to all collections. "
+		"If you want to regulate this on a per collection basis then "
+		"set this to <b>NO</b> here and adjust the "
+		"proxy controls on the "
+		"<b>spider controls</b> page. If the list of proxy IPs below "
+		"is empty, then of course, no proxies will be used.";
 	m->m_cgi   = "useproxyips";
 	m->m_xml   = "useSpiderProxies";
 	m->m_off   = (char *)&g_conf.m_useProxyIps - g;
 	m->m_type  = TYPE_BOOL;
-	m->m_def   = "1";
-	m->m_flags = 0;
+	m->m_def   = "0";
+	// hide this for now. just make it a per collection parm.
+	m->m_flags = PF_HIDDEN;
 	m->m_page  = PAGE_SPIDERPROXIES;
 	m->m_obj   = OBJ_CONF;
 	m++;
+
+	m->m_title = "automatically use spider proxies for all collections";
+	m->m_desc  = "AUTOMATICALLY use the spider proxies listed below for "
+		"spidering. If none are "
+		"listed then gb will not use any. Applies to all collections. "
+		"If you want to regulate this on a per collection basis then "
+		"set this to <b>NO</b> here and adjust the "
+		"proxy controls on the "
+		"<b>spider controls</b> page. If the list of proxy IPs below "
+		"is empty, then of course, no proxies will be used.";
+	m->m_cgi   = "autouseproxyips";
+	m->m_xml   = "automaticallyUseSpiderProxies";
+	m->m_off   = (char *)&g_conf.m_automaticallyUseProxyIps - g;
+	m->m_type  = TYPE_BOOL;
+	m->m_def   = "0";
+	// hide this for now. just make it a per collection parm.
+	m->m_flags = PF_HIDDEN;
+	m->m_page  = PAGE_SPIDERPROXIES;
+	m->m_obj   = OBJ_CONF;
+	m++;
+
 
 	m->m_title = "spider proxy ips";
 	m->m_desc  = "List of white space-separated spider proxy IPs. Put "
@@ -16440,16 +16467,57 @@ void Parms::init ( ) {
 	m++;
 
 
-	m->m_title = "use proxies for spidering";
-	m->m_desc  = "If this is true Gigablast will use the proxies "
-		"listed on the <a href=/admin/proxies>proxies</a> page for "
+	m->m_title = "always use spider proxies";
+	m->m_desc  = "If this is true Gigablast will ALWAYS use the proxies "
+		"listed on the <a href=/admin/proxies>proxies</a> "
+		"page for "
 		"spidering for "
-		"this collection regardless whether the proxies are enabled "
-		"on the <a href=/admin/proxies>proxies</a> page.";
+		"this collection."
+		//"regardless whether the proxies are enabled "
+		//"on the <a href=/admin/proxies>proxies</a> page."
+		;
 	m->m_cgi   = "useproxies";
 	m->m_off   = (char *)&cr.m_forceUseFloaters - x;
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "0";
+	m->m_page  = PAGE_SPIDER;
+	m->m_obj   = OBJ_COLL;
+	m->m_flags = PF_CLONE;
+	m++;
+
+	m->m_title = "automatically use spider proxies";
+	m->m_desc  = "Use the spider proxies listed on the proxies page "
+		"if gb detects that "
+		"a webserver is throttling the spiders. This way we can "
+		"learn the webserver's spidering policy so that our spiders "
+		"can be more polite. If no proxies are listed on the "
+		"proxies page then this parameter will have no effect.";
+	m->m_cgi   = "automaticallyuseproxies";
+	m->m_off   = (char *)&cr.m_automaticallyUseProxies - x;
+	m->m_type  = TYPE_BOOL;
+	m->m_def   = "0";
+	m->m_group = 0;
+	m->m_page  = PAGE_SPIDER;
+	m->m_obj   = OBJ_COLL;
+	m->m_flags = PF_CLONE;
+	m++;
+
+
+
+	m->m_title = "automatically back off";
+	m->m_desc  = "Set the crawl delay to 5 seconds if gb detects "
+		"that an IP is throttling or banning gigabot from crawling "
+		"it. The crawl delay just applies to that IP. "
+		"Such throttling will be logged.";
+	m->m_cgi   = "automaticallybackoff";
+	m->m_xml   = "automaticallyBackOff";
+	m->m_off   = (char *)&cr.m_automaticallyBackOff - x;
+	m->m_type  = TYPE_BOOL;
+	// a lot of pages have recaptcha links but they have valid content
+	// so leave this off for now... they have it in a hidden div which
+	// popups to email the article link or whatever to someone.
+	m->m_def   = "0";
+	m->m_group = 0;
 	m->m_page  = PAGE_SPIDER;
 	m->m_obj   = OBJ_COLL;
 	m->m_flags = PF_CLONE;
@@ -17173,6 +17241,7 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&cr.m_doLinkSpamCheck - x;
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "1";
+	m->m_group = 0;
 	m->m_page  = PAGE_SPIDER;
 	m->m_obj   = OBJ_COLL;
 	m->m_flags = PF_CLONE;
@@ -17754,6 +17823,7 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&cr.m_thumbnailMaxWidthHeight - x;
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "250";
+	m->m_group = 0;
 	m->m_page  = PAGE_SPIDER;
 	m->m_obj   = OBJ_COLL;
 	m->m_flags = PF_CLONE;
@@ -17822,6 +17892,54 @@ void Parms::init ( ) {
 	m->m_page  = PAGE_SPIDER;
 	m->m_obj   = OBJ_COLL;
 	m++;
+
+	m->m_cgi   = "urlProcessPatternTwo";
+	m->m_desc  = "Only send urls that match this simple substring "
+		"pattern to Diffbot. Separate substrings with two pipe "
+		"operators, ||. Leave empty for no restrictions.";
+	m->m_xml   = "diffbotUrlProcessPattern";
+	m->m_title = "diffbot url process pattern";
+	m->m_off   = (char *)&cr.m_diffbotUrlProcessPattern - x;
+	m->m_type  = TYPE_SAFEBUF;
+	m->m_page  = PAGE_SPIDER;
+	m->m_obj   = OBJ_COLL;
+	m->m_def   = "";
+	m->m_group = 0;
+	m->m_flags = PF_REBUILDURLFILTERS | PF_CLONE;
+	m++;
+
+	m->m_cgi   = "urlProcessRegExTwo";
+	m->m_desc  = "Only send urls that match this regular expression "
+		"to Diffbot. "
+		"Leave empty for no restrictions.";
+	m->m_xml   = "diffbotUrlProcessRegEx";
+	m->m_title = "diffbot url process regex";
+	m->m_off   = (char *)&cr.m_diffbotUrlProcessRegEx - x;
+	m->m_type  = TYPE_SAFEBUF;
+	m->m_page  = PAGE_SPIDER;
+	m->m_obj   = OBJ_COLL;
+	m->m_def   = "";
+	m->m_group = 0;
+	m->m_flags = PF_REBUILDURLFILTERS | PF_CLONE;
+	m++;
+
+	m->m_cgi   = "pageProcessPatternTwo";
+	m->m_desc  = "Only send urls whose content matches this simple "
+		"substring "
+		"pattern to Diffbot. Separate substrings with two pipe "
+		"operators, ||. "
+		"Leave empty for no restrictions.";
+	m->m_xml   = "diffbotPageProcessPattern";
+	m->m_title = "diffbot page process pattern";
+	m->m_off   = (char *)&cr.m_diffbotPageProcessPattern - x;
+	m->m_type  = TYPE_SAFEBUF;
+	m->m_page  = PAGE_SPIDER;
+	m->m_obj   = OBJ_COLL;
+	m->m_def   = "";
+	m->m_group = 0;
+	m->m_flags = PF_REBUILDURLFILTERS | PF_CLONE;
+	m++;
+
 
 
 	m->m_title = "spider start time";
@@ -19406,6 +19524,26 @@ void Parms::init ( ) {
 	m->m_title = "log debug spider messages";
 	m->m_cgi   = "ldspid";
 	m->m_off   = (char *)&g_conf.m_logDebugSpider - g;
+	m->m_type  = TYPE_BOOL;
+	m->m_def   = "0";
+	m->m_priv  = 1;
+	m->m_page  = PAGE_LOG;
+	m->m_obj   = OBJ_CONF;
+	m++;
+
+	m->m_title = "log debug msg13 messages";
+	m->m_cgi   = "ldspmth";
+	m->m_off   = (char *)&g_conf.m_logDebugMsg13 - g;
+	m->m_type  = TYPE_BOOL;
+	m->m_def   = "0";
+	m->m_priv  = 1;
+	m->m_page  = PAGE_LOG;
+	m->m_obj   = OBJ_CONF;
+	m++;
+
+	m->m_title = "disable host0 for msg13 reception hack";
+	m->m_cgi   = "dmth";
+	m->m_off   = (char *)&g_conf.m_diffbotMsg13Hack - g;
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "0";
 	m->m_priv  = 1;
