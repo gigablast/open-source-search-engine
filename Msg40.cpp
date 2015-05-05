@@ -6386,7 +6386,7 @@ bool Msg40::printFacetTables ( SafeBuf *sb ) {
                 sb->safePrintf("\"facets\":[");
 	}
 
-        int numFacets = 0;
+        int numTablesPrinted = 0;
 	for ( int32_t i = 0 ; i < m_si->m_q.getNumTerms() ; i++ ) {
 		// only for html for now i guess
 		//if ( m_si->m_format != FORMAT_HTML ) break;
@@ -6398,16 +6398,23 @@ bool Msg40::printFacetTables ( SafeBuf *sb ) {
 			continue;
 
 		// if had facet ranges, print them out
-		printFacetsForTable ( sb , qt );;
-                numFacets++;
+		if ( printFacetsForTable ( sb , qt ) > 0 )
+			numTablesPrinted++;
 	}
 
         // If josn, print end of json array
         if ( format == FORMAT_JSON ) {
-                if (numFacets > 0) {
+                if ( numTablesPrinted > 0 ) {
                         sb->m_length -= 2; // hack off trailing comma
+			sb->safePrintf("],\n"); // close off json array
 	        }
-		sb->safePrintf("],\n"); // close off json array
+		// if no facets then do not print "facets":[]\n,
+		else {
+			// revert string buf to original length
+			sb->m_length = saved;
+			// and cap the string buf just in case
+			sb->nullTerm();
+		}
         }
 
 	// if json, remove ending ,\n and make it just \n
@@ -6430,7 +6437,7 @@ bool Msg40::printFacetTables ( SafeBuf *sb ) {
 	return true;
 }
 
-bool Msg40::printFacetsForTable ( SafeBuf *sb , QueryTerm *qt ) {
+int32_t Msg40::printFacetsForTable ( SafeBuf *sb , QueryTerm *qt ) {
 
 	//QueryWord *qw = qt->m_qword;
 	//if ( qw->m_numFacetRanges > 0 )
@@ -6439,6 +6446,9 @@ bool Msg40::printFacetsForTable ( SafeBuf *sb , QueryTerm *qt ) {
 	
 	int32_t *ptrs = (int32_t *)qt->m_facetIndexBuf.getBufStart();
 	int32_t numPtrs = qt->m_facetIndexBuf.length() / sizeof(int32_t);
+
+	if ( numPtrs == 0 )
+		return 0;
 
 	// now scan the slots and print out
 	HttpRequest *hr = &m_si->m_hr;
@@ -6829,5 +6839,5 @@ bool Msg40::printFacetsForTable ( SafeBuf *sb , QueryTerm *qt ) {
 	if ( ! needTable && format == FORMAT_HTML ) 
 		sb->safePrintf("</table></div><br>\n");
 
-	return true;
+	return numPtrs;
 }
