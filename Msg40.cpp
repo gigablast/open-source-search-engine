@@ -108,6 +108,7 @@ Msg40::Msg40() {
 	m_omitCount      = 0;
 	m_printCount = 0;
 	//m_numGigabitInfos = 0;
+	m_numCollsToSearch = 0;
 }
 
 #define MAX2 50
@@ -140,6 +141,14 @@ void Msg40::resetBuf2 ( ) {
 }
 
 Msg40::~Msg40() {
+	// free tmp msg3as now
+	for ( int32_t i = 0 ; i < m_numCollsToSearch ; i++ ) {
+		if ( ! m_msg3aPtrs[i] ) continue;
+		if ( m_msg3aPtrs[i] == &m_msg3a ) continue;
+		mdelete ( m_msg3aPtrs[i] , sizeof(Msg3a), "tmsg3a");
+		delete  ( m_msg3aPtrs[i] );
+		m_msg3aPtrs[i] = NULL;
+	}
 	if ( m_buf  ) mfree ( m_buf  , m_bufMaxSize  , "Msg40" );
 	m_buf  = NULL;
 	resetBuf2();
@@ -2108,7 +2117,8 @@ bool Msg40::gotSummary ( ) {
 	//   socket but rather calls doneSendingWrapper() which can call
 	//   this function again to send another chunk
 	// . when we are truly done sending all the data, then we set lastChunk
-	//   to true and TcpServer.cpp will destroy m_socket when done
+	//   to true and TcpServer.cpp will destroy m_socket when done.
+	//   no, actually we just set m_streamingMode to false i guess above
 	if ( sb->length() &&
 	     // did client browser close the socket on us midstream?
 	     ! m_socketHadError &&
@@ -5774,6 +5784,7 @@ bool printHttpMime ( State0 *st ) {
 //
 /////////////////
 
+/*
 // return 1 if a should be before b
 static int csvPtrCmp ( const void *a, const void *b ) {
 	//JsonItem *ja = (JsonItem **)a;
@@ -5791,6 +5802,7 @@ static int csvPtrCmp ( const void *a, const void *b ) {
 	int val = strcmp(pa,pb);
 	return val;
 }
+*/
 	
 #include "Json.h"
 
@@ -5802,11 +5814,9 @@ bool Msg40::printCSVHeaderRow ( SafeBuf *sb ) {
 	//Msg40 *msg40 = &st->m_msg40;
 	//int32_t numResults = msg40->getNumResults();
 
+	/*
 	char tmp1[1024];
 	SafeBuf tmpBuf (tmp1 , 1024);
-
-	char tmp2[1024];
-	SafeBuf nameBuf (tmp2, 1024);
 
 	char nbuf[27000];
 	HashTableX nameTable;
@@ -5905,9 +5915,8 @@ bool Msg40::printCSVHeaderRow ( SafeBuf *sb ) {
 	}
 
 	// sort them
-	qsort ( ptrs , numPtrs , 4 , csvPtrCmp );
+	qsort ( ptrs , numPtrs , sizeof(char *) , csvPtrCmp );
 
-	// set up table to map field name to column for printing the json items
 	HashTableX *columnTable = &m_columnTable;
 	if ( ! columnTable->set ( 8,4, numPtrs * 4,NULL,0,false,0,"coltbl" ) )
 		return false;
@@ -5922,6 +5931,37 @@ bool Msg40::printCSVHeaderRow ( SafeBuf *sb ) {
 		if ( ! columnTable->addKey ( &h64 , &i ) ) 
 			return false;
 	}
+	*/
+
+	Msg20 *msg20s[100];
+	int32_t i;
+	for ( i = 0 ; i < m_needFirstReplies && i < 100 ; i++ ) {
+		Msg20 *m20 = getCompletedSummary(i);
+		if ( ! m20 ) break;
+		msg20s[i] = m20;
+	}
+
+	int32_t numPtrs = 0;
+
+	char tmp2[1024];
+	SafeBuf nameBuf (tmp2, 1024);
+
+	int32_t ct = 0;
+	if ( msg20s[0] ) ct = msg20s[0]->m_r->m_contentType;
+
+	CollectionRec *cr =g_collectiondb.getRec(m_firstCollnum);
+
+	// . set up table to map field name to col for printing the json items
+	// . call this from PageResults.cpp 
+	printCSVHeaderRow2 ( sb , 
+			     ct ,
+			     cr ,
+			     &nameBuf ,
+			     &m_columnTable ,
+			     msg20s ,
+			     i , // numResults ,
+			     &numPtrs 
+			     );
 
 	m_numCSVColumns = numPtrs;
 
@@ -6016,6 +6056,8 @@ bool Msg40::printJsonItemInCSV ( State0 *st , int32_t ix ) {
 
 		// sanity
 		if ( column == -1 ) {//>= numCSVColumns ) { 
+			// don't show it any more...
+			continue;
 			// add a new column...
 			int32_t newColnum = numCSVColumns + 1;
 			// silently drop it if we already have too many cols
@@ -6467,9 +6509,12 @@ bool Msg40::printFacetsForTable ( SafeBuf *sb , QueryTerm *qt ) {
 		if ( format == FORMAT_XML ) {
 			sb->safePrintf("\t<facet>\n"
 				       "\t\t<field>%s</field>\n"
-				       "\t\t<value>"
-				       , term
-				       );
+				       , term );
+			sb->safePrintf("\t\t<totalDocsWithField>%"INT64""
+				       "</totalDocsWithField>\n"
+				       , qt->m_numDocsThatHaveFacet );
+			sb->safePrintf("\t\t<value>");
+
 			if ( isString )
 				sb->safePrintf("<![CDATA[%"UINT32",",
 					       (uint32_t)*fvh);
@@ -6569,9 +6614,12 @@ bool Msg40::printFacetsForTable ( SafeBuf *sb , QueryTerm *qt ) {
 		if ( format == FORMAT_JSON ) {
 			sb->safePrintf("{\n"
 				       "\t\"field\":\"%s\",\n"
-				       "\t\"value\":\""
-				       , term
+				       , term 
 				       );
+			sb->safePrintf("\t\"totalDocsWithField\":%"INT64""
+				       ",\n", qt->m_numDocsThatHaveFacet );
+			sb->safePrintf("\t\"value\":\"");
+
 			if (  isString )
 				sb->safePrintf("%"UINT32","
 					       , (uint32_t)*fvh);

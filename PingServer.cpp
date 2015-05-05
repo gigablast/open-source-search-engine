@@ -28,6 +28,7 @@ int32_t klogctl( int, char *,int ) { return 0; }
 
 // from main.cpp. when keepalive script restarts us this is true
 extern bool g_recoveryMode;
+extern int32_t g_recoveryLevel;
 
 // a global class extern'd in .h file
 PingServer g_pingServer;
@@ -281,6 +282,9 @@ void PingServer::sendPingsToAll ( ) {
 
 // };
 
+// from Loop.cpp
+extern float g_cpuUsage;
+
 // ping host #i
 void PingServer::pingHost ( Host *h , uint32_t ip , uint16_t port ) {
 	// don't ping on interface machines
@@ -491,6 +495,10 @@ void PingServer::pingHost ( Host *h , uint32_t ip , uint16_t port ) {
 		flags |= PFLAG_MERGEMODE0OR6;
 	if ( ! isClockInSync() ) flags |= PFLAG_OUTOFSYNC;
 
+	uint8_t rv8 = (uint8_t)g_recoveryLevel;
+	if ( g_recoveryLevel > 255 ) rv8 = 255;
+	pi->m_recoveryLevel = rv8;
+
 	//*(int32_t *)p = flags; p += 4; // 4 bytes
 	pi->m_flags = flags;
 
@@ -504,9 +512,12 @@ void PingServer::pingHost ( Host *h , uint32_t ip , uint16_t port ) {
 
 	pi->m_localHostTimeMS = gettimeofdayInMillisecondsLocal();
 
-	pi->m_udpSlotsInUse = g_udpServer.getNumUsedSlots();
+	pi->m_udpSlotsInUseIncoming = g_udpServer.getNumUsedSlotsIncoming();
 
 	pi->m_tcpSocketsInUse = g_httpServer.m_tcp.m_numUsed;
+
+	// from Loop.cpp
+	pi->m_cpuUsage = g_cpuUsage;
 
 	// store hd temps
 	// gbmemcpy ( p , me->m_hdtemps , 4 * 2 );

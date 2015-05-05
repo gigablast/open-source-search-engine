@@ -1625,6 +1625,11 @@ bool printDropDown ( int32_t n , SafeBuf* sb, char *name, int32_t select,
 	// . by default, minus 2 includes minus 3, the new "FILTERED" priority
 	// . it is link "BANNED" but does not mean the url is low quality necessarily
 	if ( includeMinusTwo ) i = -3;
+
+	// no more DELETE, etc.
+	i = 0;
+	if ( select < 0 ) select = 0;
+
 	for ( ; i < n ; i++ ) {
 		if ( i == select ) s = " selected";
 		else               s = "";
@@ -3446,8 +3451,11 @@ bool Parms::setFromFile ( void *THIS        ,
 	Xml xml;
 	//char buf [ MAX_XML_CONF ];
 	SafeBuf sb;
-	if ( filename&&!setXmlFromFile(&xml,filename,&sb))//buf,MAX_XML_CONF) )
+	if ( filename&&!setXmlFromFile(&xml,filename,&sb)){//buf,MAX_XML_CONF))
+		log("parms: error setting from file %s: %s",filename,
+		    mstrerror(g_errno));
 		return false;
+	}
 
 	// . all the collectionRecs have the same default file in
 	//   the workingDir/collections/default.conf
@@ -3499,7 +3507,7 @@ bool Parms::setFromFile ( void *THIS        ,
 		if ( m->m_type == TYPE_CONSTANT ) continue;
 		// these are special commands really
 		if ( m->m_type == TYPE_BOOL2    ) continue;
-		//if ( strcmp ( m->m_xml , "users" ) == 0 )
+		//if ( strcmp ( m->m_xml , "forceDeleteUrls" ) == 0 )
 		//	log("got it");
 		// we did not get one from first xml file yet
 		bool first = true;
@@ -12985,11 +12993,15 @@ void Parms::init ( ) {
 		"expressions. "
 		"Use the <i>&&</i> operator to string multiple expressions "
 		"together in the same expression text box. "
-		"A <i>spider priority</i> of "
+		"If you check the <i>delete</i> checkbox then urls matching "
+		"that row will be deleted if already indexed, otherwise, "
+		"they just won't be indexed."
+		//"A <i>spider priority</i> of "
 		//"<i>FILTERED</i> or <i>BANNED</i> "
-		"<i>DELETE</i> "
-		"will cause the URL to not be spidered, or if it has already "
-		"been indexed, it will be deleted when it is respidered."
+		// "<i>DELETE</i> "
+		// "will cause the URL to not be spidered, "
+		// "or if it has already "
+		// "been indexed, it will be deleted when it is respidered."
 		"<br><br>";
 		
 		/*
@@ -13158,6 +13170,19 @@ void Parms::init ( ) {
 	m->m_rowid = 1;
 	m++;
 	*/
+
+	m->m_title = "delete";
+	m->m_cgi   = "fdu";
+	m->m_xml   = "forceDeleteUrls";
+	m->m_max   = MAX_FILTERS;
+	m->m_off   = (char *)cr.m_forceDelete - x;
+	m->m_type  = TYPE_CHECKBOX;
+	m->m_def   = "0";
+	m->m_page  = PAGE_FILTERS;
+	m->m_rowid = 1;
+	m->m_flags = PF_REBUILDURLFILTERS | PF_CLONE;
+	m->m_obj   = OBJ_COLL;
+	m++;
 
 	m->m_title = "spider priority";
 	m->m_cgi   = "fsp";
@@ -17754,7 +17779,8 @@ void Parms::init ( ) {
 	// and we add gbdocspidertime and gbdocindextime terms so you
 	// can use those to sort regular docs and not have spider reply
 	// status docs in the serps.
-	m->m_def   = "0";
+	// back on 4/21/2015 seems pretty stable.
+	m->m_def   = "1";
 	m->m_page  = PAGE_SPIDER;
 	m->m_obj   = OBJ_COLL;
 	m->m_flags = PF_CLONE;
@@ -22006,6 +22032,41 @@ bool Parms::updateParm ( char *rec , WaitEntry *we ) {
 			cr->m_localCrawlInfo.m_lastSpiderAttempt = 0;
 		}
 	}
+
+	//
+	// if user changed the crawl/process max then reset here so
+	// spiders will resume
+	// 
+	if ( base == cr && 
+	     dst == (char *)&cr->m_maxToCrawl &&
+	     cr->m_spiderStatus == SP_MAXTOCRAWL ) {
+		// reset this for rebuilding of active spider collections
+		// so this collection can be in the linked list again
+		cr->m_spiderStatus = SP_INPROGRESS;
+		// rebuild list of active spider collections then
+		g_spiderLoop.m_activeListValid = false;
+	}
+
+	if ( base == cr && 
+	     dst == (char *)&cr->m_maxToProcess &&
+	     cr->m_spiderStatus == SP_MAXTOPROCESS ) {
+		// reset this for rebuilding of active spider collections
+		// so this collection can be in the linked list again
+		cr->m_spiderStatus = SP_INPROGRESS;
+		// rebuild list of active spider collections then
+		g_spiderLoop.m_activeListValid = false;
+	}
+
+	if ( base == cr && 
+	     dst == (char *)&cr->m_maxCrawlRounds &&
+	     cr->m_spiderStatus == SP_MAXROUNDS ) {
+		// reset this for rebuilding of active spider collections
+		// so this collection can be in the linked list again
+		cr->m_spiderStatus = SP_INPROGRESS;
+		// rebuild list of active spider collections then
+		g_spiderLoop.m_activeListValid = false;
+	}
+
 	//
 	// END HACK
 	//
@@ -22287,11 +22348,18 @@ bool printUrlExpressionExamples ( SafeBuf *sb ) {
 
 
 			  "<tr class=poo><td>isrss | !isrss</td>"
-			  "<td>Matches if document is an rss feed. "
-			  "When harvesting outlinks we <i>guess</i> if they "
-			  "are an rss feed by seeing if their file extension "
-			  "is xml, rss or rdf. Or if they are in an "
-			  "alternative link tag.</td></tr>"
+			  "<td>Matches if document is an RSS feed. Will "
+			  "only match this rule if the document has been "
+			  "successfully spidered before, because it requires "
+			  "downloading the document content to see if it "
+			  "truly is an RSS feed.."
+			  "</td></tr>"
+
+			  "<tr class=poo><td>isrssext | !isrssext</td>"
+			  "<td>Matches if url ends in .xml .rss or .atom. "
+			  "TODO: Or if the link was in an "
+			  "alternative link tag."
+			  "</td></tr>"
 
 			  //"<tr class=poo><td>!isrss</td>"
 			  //"<td>Matches if document is NOT an rss feed."
@@ -22452,6 +22520,13 @@ bool printUrlExpressionExamples ( SafeBuf *sb ) {
 			  "then this will be matched."
 			  "</td></tr>"
 
+			  "<tr class=poo><td>isparentsitemap | "
+			  "!isparentsitemap</td>"
+			  "<td>"
+			  "If a parent of the URL was a sitemap.xml page "
+			  "then this will be matched."
+			  "</td></tr>"
+
 			  /*
 			  "<tr class=poo><td>parentisnew | !parentisnew</td>"
 			  "<td>"
@@ -22517,6 +22592,20 @@ bool printUrlExpressionExamples ( SafeBuf *sb ) {
 			  "once."
 			  "Can use <, >, <=, >=, ==, != comparison operators. "
 			  "</td></tr>"
+
+
+			  "<tr class=poo><td>numinlinks&gt;20</td>"
+			  "<td>"
+			  "How many inlinks does the URL itself have? "
+			  "We only count one link per unique C-Class IP "
+			  "address "
+			  "so that a webmaster who owns an entire C-Class "
+			  "of IP addresses will only have her inlinks counted "
+			  "once."
+			  "Can use <, >, <=, >=, ==, != comparison operators. "
+			  "This is useful for spidering popular URLs quickly."
+			  "</td></tr>"
+
 
 			  "<tr class=poo><td>httpstatus==404</td>"
 			  "<td>"
@@ -22648,6 +22737,14 @@ bool printUrlExpressionExamples ( SafeBuf *sb ) {
 			  "and so would <i>abc.com</i>, but "
 			  "<i>foo.somesite.com</i> would NOT match."
 			  "</td></tr>"
+
+
+			  "<tr class=poo><td>isroot | !isroot</td>"
+			  "<td>Matches if the URL is a root URL. Like if "
+			  "its path is just '/'. Example: http://www.abc.com "
+			  "is a root ur but http://www.abc.com/foo is not. "
+			  "</td></tr>"
+
 
 			  "<tr class=poo><td>isonsamedomain | !isonsamedomain</td>"
 			  "<td>"

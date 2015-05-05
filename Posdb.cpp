@@ -686,8 +686,10 @@ PosdbTable::~PosdbTable() {
 }
 
 void PosdbTable::reset() {
+	// we can't reset this because we don't recall allocTopTree()
+	// again when computing search results in docid ranges.
+	//m_hasFacetTerm = false;
 	// has init() been called?
-	m_hasFacetTerm = false;
 	m_initialized          = false;
 	m_estimatedTotalHits   = -1;
 	m_errno                   = 0;
@@ -4365,6 +4367,9 @@ bool PosdbTable::setQueryTermInfo ( ) {
 		qti->m_qtermNum      = i;
 		// and vice versa
 		qt->m_queryTermInfoNum = nrg;
+		// now we count the total # of docs that have a facet
+		// for doing tf/idf type things
+		//qti->m_numDocsThatHaveFacet = 0;
 		// this is not good enough, we need to count 
 		// non-whitespace punct as 2 units not 1 unit
 		// otherwise qdist gets thrown off and our phrasing fails.
@@ -4960,10 +4965,36 @@ inline bool isInRange2 ( char *recPtr , char *subListEnd, QueryTerm *qt ) {
 	return false;
 }
 
+// for a facet
+int64_t PosdbTable::countUniqueDocids( QueryTermInfo *qti ) {
+	// get that sublist. facets should only have one sublist since
+	// they have no synonyms.
+	char *start = qti->m_subLists[0]->getList();
+	register char *recPtr     = start;
+	register char *subListEnd = qti->m_subLists[0]->getListEnd();
+	int64_t count = 0;
+ loop:
+	if ( recPtr >= subListEnd ) {
+		if ( m_debug )
+			log(LOG_DEBUG,"posdb: term list size of %"
+			    INT32" has %"INT64" unique docids"
+			    , (int32_t)(subListEnd-start),count);
+		return count;
+	}
+	// skip that docid record in our termlist. it MUST have been
+	// 12 bytes, a docid heading record.
+	recPtr += 12;
+	count++;
+	// skip any following keys that are 6 bytes, that means they
+	// share the same docid
+	for ( ; recPtr < subListEnd && ((*recPtr)&0x04); recPtr += 6 );
+	goto loop;
+}
+
 // . add a QueryTermInfo for a term (synonym lists,etc) to the docid vote buf
 //   "m_docIdVoteBuf"
 // . this is how we intersect all the docids to end up with the winners
-void PosdbTable::addDocIdVotes ( QueryTermInfo *qti , int32_t   listGroupNum ) {
+void PosdbTable::addDocIdVotes ( QueryTermInfo *qti , int32_t   listGroupNum) {
 
 	// sanity check, we store this in a single byte below for voting
 	if ( listGroupNum >= 256 ) { char *xx=NULL;*xx=0; }
@@ -5006,7 +5037,7 @@ void PosdbTable::addDocIdVotes ( QueryTermInfo *qti , int32_t   listGroupNum ) {
 	//   the docid vote buf. that is, if the query is "jump car" we
 	//   just add all the docids for "jump" and then intersect with the
 	//   docids for "car".
-	for ( int32_t i = 0 ; i < qti->m_numSubLists && listGroupNum > 0 ; i++ ) {
+	for ( int32_t i = 0 ; i < qti->m_numSubLists && listGroupNum > 0; i++){
 		// get that sublist
 		recPtr     = qti->m_subLists[i]->getList();
 		subListEnd = qti->m_subLists[i]->getListEnd();
@@ -5049,6 +5080,7 @@ void PosdbTable::addDocIdVotes ( QueryTermInfo *qti , int32_t   listGroupNum ) {
 			dp[5] = listGroupNum;
 			// skip it
 			dp += 6;
+
 			// advance recPtr now
 			break;
 		}
@@ -5121,7 +5153,7 @@ void PosdbTable::addDocIdVotes ( QueryTermInfo *qti , int32_t   listGroupNum ) {
 	for ( int32_t i = 0 ; i < qti->m_numSubLists ; i++ ) {
 		// skip if exhausted
 		if ( ! cursor[i] ) continue;
-		// int16_tcut
+		// shortcut
 		recPtr = cursor[i];
 		// get the min docid
 		if ( ! minRecPtr ) {
@@ -5628,6 +5660,23 @@ void PosdbTable::intersectLists10_r ( ) {
 	//if ( s_special == 2836 )
 	//	log("hey");
 
+	// point to our array of query term infos set in setQueryTermInfos()
+	QueryTermInfo *qip = (QueryTermInfo *)m_qiBuf.getBufStart();
+
+	// if a query term is for a facet (ie gbfacetstr:gbtagsite)
+	// then count how many unique docids are in it. we were trying to 
+	// do this in addDocIdVotes() but it wasn't in the right place i guess.
+	for ( int32_t i = 0 ; i < m_numQueryTermInfos ; i++ ) {
+		QueryTermInfo *qti = &qip[i];
+		QueryTerm *qt = qti->m_qt;
+		bool isFacetTerm = false;
+		if ( qt->m_fieldCode == FIELD_GBFACETSTR ) isFacetTerm = true;
+		if ( qt->m_fieldCode == FIELD_GBFACETINT ) isFacetTerm = true;
+		if ( qt->m_fieldCode == FIELD_GBFACETFLOAT ) isFacetTerm =true;
+		if ( ! isFacetTerm ) continue;
+		qt->m_numDocsThatHaveFacet += countUniqueDocids ( qti );
+	}
+
 
 	// setQueryTermInfos() should have set how many we have
 	if ( m_numQueryTermInfos == 0 ) {
@@ -5662,8 +5711,6 @@ void PosdbTable::intersectLists10_r ( ) {
 
 	int32_t listGroupNum = 0;
 
-	// point to our array of query term infos set in setQueryTermInfos()
-	QueryTermInfo *qip = (QueryTermInfo *)m_qiBuf.getBufStart();
 
 	// if all non-negative query terms are in the same wikiphrase then
 	// we can apply the WIKI_WEIGHT in getMaxPossibleScore() which
@@ -5704,8 +5751,6 @@ void PosdbTable::intersectLists10_r ( ) {
 		makeDocIdVoteBufForBoolQuery_r();
 		goto skip3;
 	}
-
-
 
 	// . create "m_docIdVoteBuf" filled with just the docids from the
 	//   smallest group of sublists 

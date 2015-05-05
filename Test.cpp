@@ -932,11 +932,12 @@ bool Test::injectLoop ( ) {
 	m_sreq.m_domHash32  = fakeIp;
 	m_sreq.m_hostHash32 = fakeIp;
 	m_sreq.m_siteHash32 = fakeIp;
-	m_sreq.m_probDocId = g_titledb.getProbableDocId( m_sreq.m_url );
+	//m_sreq.m_probDocId = g_titledb.getProbableDocId( m_sreq.m_url );
 	// this crap is fake
 	m_sreq.m_isInjecting = 1;
 	// use test-spider subdir for storing pages and spider times?
-	if ( g_conf.m_testSpiderEnabled ) m_sreq.m_useTestSpiderDir = 1;
+	// MDW: this was replaced by m_isParentSiteMap bit.
+	//if ( g_conf.m_testSpiderEnabled ) m_sreq.m_useTestSpiderDir = 1;
 	// use this later
 	m_sreq.m_hasContent = 0;
 	// injected requests use this as the spider time i guess

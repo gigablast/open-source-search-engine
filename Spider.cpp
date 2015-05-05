@@ -127,7 +127,8 @@ int32_t SpiderRequest::print ( SafeBuf *sbarg ) {
 	strftime ( time , 256 , "%b %e %T %Y UTC", timeStruct );
 	sb->safePrintf("addedTime=%s(%"UINT32") ",time,(uint32_t)m_addedTime );
 
-	sb->safePrintf("parentFirstIp=%s ",iptoa(m_parentFirstIp) );
+	//sb->safePrintf("parentFirstIp=%s ",iptoa(m_parentFirstIp) );
+	sb->safePrintf("pageNumInlinks=%i ",(int)m_pageNumInlinks);
 	sb->safePrintf("parentHostHash32=0x%"XINT32" ",m_parentHostHash32 );
 	sb->safePrintf("parentDomHash32=0x%"XINT32" ",m_parentDomHash32 );
 	sb->safePrintf("parentSiteHash32=0x%"XINT32" ",m_parentSiteHash32 );
@@ -174,6 +175,7 @@ int32_t SpiderRequest::print ( SafeBuf *sbarg ) {
 	if ( m_parentIsRSS ) sb->safePrintf("PARENTISRSS ");
 	if ( m_parentIsPermalink ) sb->safePrintf("PARENTISPERMALINK ");
 	if ( m_parentIsPingServer ) sb->safePrintf("PARENTISPINGSERVER ");
+	if ( m_parentIsSiteMap ) sb->safePrintf("PARENTISSITEMAP ");
 	if ( m_isMenuOutlink ) sb->safePrintf("MENUOUTLINK ");
 
 	if ( m_parentHasAddress ) sb->safePrintf("PARENTHASADDRESS ");
@@ -355,7 +357,7 @@ int32_t SpiderRequest::printToTable ( SafeBuf *sb , char *status ,
 
 	//sb->safePrintf(" <td>%s(%"UINT32")</td>\n",mstrerror(m_errCode),m_errCode);
 	//sb->safePrintf(" <td>%"INT32"ms</td>\n",m_crawlDelay );
-	sb->safePrintf(" <td>%s</td>\n",iptoa(m_parentFirstIp) );
+	sb->safePrintf(" <td>%i</td>\n",(int)m_pageNumInlinks);
 	sb->safePrintf(" <td>%"UINT64"</td>\n",getParentDocId() );
 
 	//sb->safePrintf(" <td>0x%"XINT32"</td>\n",m_parentHostHash32);
@@ -387,6 +389,7 @@ int32_t SpiderRequest::printToTable ( SafeBuf *sb , char *status ,
 	if ( m_parentIsRSS ) sb->safePrintf("PARENTISRSS ");
 	if ( m_parentIsPermalink ) sb->safePrintf("PARENTISPERMALINK ");
 	if ( m_parentIsPingServer ) sb->safePrintf("PARENTISPINGSERVER ");
+	if ( m_parentIsSiteMap ) sb->safePrintf("PARENTISSITEMAP ");
 	if ( m_isMenuOutlink ) sb->safePrintf("MENUOUTLINK ");
 
 	if ( m_parentHasAddress ) sb->safePrintf("PARENTHASADDRESS ");
@@ -1209,6 +1212,7 @@ CollectionRec *SpiderColl::getCollectionRec ( ) {
 SpiderColl::SpiderColl () {
 	m_overflowList = NULL;
 	m_lastOverflowFirstIp = 0;
+	m_lastPrinted = 0;
 	m_deleteMyself = false;
 	m_isLoading = false;
 	m_gettingList1 = false;
@@ -1798,6 +1802,9 @@ void SpiderColl::clearLocks ( ) {
 
 void SpiderColl::reset ( ) {
 
+	m_numSuccessReplies = 0;
+	m_numFailedReplies  = 0;
+
 	// reset these for SpiderLoop;
 	m_nextDoledbKey.setMin();
 	//m_didRound = false;
@@ -2309,14 +2316,16 @@ bool SpiderColl::addSpiderRequest ( SpiderRequest *sreq ,
 	if ( priority >= MAX_SPIDER_PRIORITIES) {char *xx=NULL;*xx=0;}
 
 	// do not add to doledb if bad
-	if ( priority == SPIDER_PRIORITY_FILTERED ) {
+	//if ( priority == SPIDER_PRIORITY_FILTERED ) {
+	if ( m_cr->m_forceDelete[ufn] ) {
 		if ( g_conf.m_logDebugSpider )
 			log("spider: request %s is filtered ufn=%"INT32"",
 			    sreq->m_url,ufn);
 		return true;
 	}
 
-	if ( priority == SPIDER_PRIORITY_BANNED   ) {
+	//if ( priority == SPIDER_PRIORITY_BANNED   ) {
+	if ( m_cr->m_forceDelete[ufn] ) {
 		if ( g_conf.m_logDebugSpider )
 			log("spider: request %s is banned ufn=%"INT32"",
 			    sreq->m_url,ufn);
@@ -2370,7 +2379,7 @@ bool SpiderColl::addSpiderRequest ( SpiderRequest *sreq ,
 	     "spider: %s request to waiting tree %s "
 	     "uh48=%"UINT64" "
 	     "firstIp=%s "
-	     "parentFirstIp=%"UINT32" "
+	     "pageNumInlinks=%"UINT32" "
 	     "parentdocid=%"UINT64" "
 	     "isinjecting=%"INT32" "
 	     "ispagereindex=%"INT32" "
@@ -2383,7 +2392,7 @@ bool SpiderColl::addSpiderRequest ( SpiderRequest *sreq ,
 	     sreq->m_url,
 	     sreq->getUrlHash48(),
 	     iptoa(sreq->m_firstIp),
-	     (uint32_t)sreq->m_parentFirstIp,
+	     (uint32_t)sreq->m_pageNumInlinks,//(uint32_t)sreq->m_parentFirstIp
 	     sreq->getParentDocId(),
 	     (int32_t)(bool)sreq->m_isInjecting,
 	     (int32_t)(bool)sreq->m_isPageReindex,
@@ -2786,6 +2795,27 @@ int32_t SpiderColl::getNextIpFromWaitingTree ( ) {
 	// all done
 	return firstIp;
 }
+
+uint64_t SpiderColl::getNextSpiderTimeFromWaitingTree ( ) {
+	// if nothing to scan, bail
+	if ( m_waitingTree.isEmpty() ) return 0LL;
+	// the key
+	key_t mink; mink.setMin();
+	// set node from wait tree key. this way we can resume from a prev key
+	int32_t node = m_waitingTree.getNextNode (0,(char *)&mink );
+	// if empty, stop
+	if ( node < 0 ) return 0LL;
+	// get the key
+	key_t *wk = (key_t *)m_waitingTree.getKey ( node );
+	// time from that
+	uint64_t spiderTimeMS = (wk->n1);
+	spiderTimeMS <<= 32;
+	spiderTimeMS |= ((wk->n0) >> 32);
+	// stop if need to wait for this one
+	return spiderTimeMS;
+}
+	
+
 
 static void gotSpiderdbListWrapper2( void *state , RdbList *list,Msg5 *msg5) {
 
@@ -3535,6 +3565,11 @@ bool SpiderColl::evalIpLoop ( ) {
 		m_didRead = true;
 		// reset some stuff
 		m_lastScanningIp = 0;
+
+		// reset these that need to keep track of requests for
+		// the same url that might span two spiderdb lists or more
+		m_lastSreqUh48 = 0LL;
+
 		// do a read. if it blocks it will recall this loop
 		if ( ! readListFromSpiderdb () ) return false;
 	}
@@ -3941,8 +3976,20 @@ bool SpiderColl::scanListForWinners ( ) {
 		}
 		// if its a SpiderReply set it for an upcoming requests
 		if ( ! g_spiderdb.isSpiderRequest ( (key128_t *)rec ) ) {
+
 			// see if this is the most recent one
 			SpiderReply *tmp = (SpiderReply *)rec;
+
+			// reset reply stats if beginning a new url
+			if ( srepUh48 != tmp->getUrlHash48() ) {
+				m_numSuccessReplies = 0;
+				m_numFailedReplies  = 0;
+			}
+
+			// inc stats
+			if ( tmp->m_errCode == 0 ) m_numSuccessReplies++;
+			else                       m_numFailedReplies ++;
+
 			// if we have a more recent reply already, skip this 
 			if ( srep && 
 			     srep->getUrlHash48() == tmp->getUrlHash48() &&
@@ -3961,6 +4008,12 @@ bool SpiderColl::scanListForWinners ( ) {
 			continue;
 
 		int64_t uh48 = sreq->getUrlHash48();
+
+		// reset reply stats if beginning a new url
+		if ( ! srep ) {
+			m_numSuccessReplies = 0;
+			m_numFailedReplies  = 0;
+		}
 
 		// . skip if our twin should add it to doledb
 		// . waiting tree only has firstIps assigned to us so
@@ -4000,7 +4053,58 @@ bool SpiderColl::scanListForWinners ( ) {
 		     ! sreq->m_fakeFirstIp )
 			m_totalNewSpiderRequests++;
 
+		//int32_t  ipdom ( int32_t ip ) { return ip & 0x00ffffff; };
+		int32_t cblock = ipdom ( sreq->m_firstIp );
+
+		bool countIt = true;
+
+		// reset page inlink count on url request change
+		if ( m_lastSreqUh48 != uh48 ) {
+			m_pageNumInlinks = 0;
+			m_lastCBlockIp = 0;
+		}
+
+		//if ( uh48 != m_lastSreqUh48 )
+		//	countIt = false;
+
+		if ( cblock == m_lastCBlockIp )
+			countIt = false;
+
+		// do not count manually added spider requests
+		if ( (sreq->m_isAddUrl || sreq->m_isInjecting) )
+			countIt = false;
+
+		// 20 is good enough
+		if ( m_pageNumInlinks >= 20 )
+			countIt = false;
+
+		if ( countIt ) {
+			int32_t ca;
+			for ( ca = 0 ; ca < m_pageNumInlinks ; ca++ ) 
+				if ( m_cblocks[ca] == cblock ) break;
+			// if found in our list, do not count it, already did
+			if ( ca < m_pageNumInlinks )
+				countIt = false;
+		}
+
+		if ( countIt ) {
+			m_cblocks[m_pageNumInlinks] = cblock;
+			m_pageNumInlinks++;
+			if ( m_pageNumInlinks > 20 ) { char *xx=NULL;*xx=0;}
+		}
+
+		// set this now. it does increase with each request. so 
+		// initial requests will not see the full # of inlinks.
+		sreq->m_pageNumInlinks = (uint8_t)m_pageNumInlinks;
+
+		// put these in the spiderequest in doledb so we can
+		// show in the json spider status docs in 
+		// XmlDoc::getSpiderStatusDocMetaList2()
+		sreq->m_reservedc1 = m_numSuccessReplies;
+		sreq->m_reservedc2 = m_numFailedReplies;
+		
 		m_lastSreqUh48 = uh48;
+		m_lastCBlockIp = cblock;
 
 		// only add firstip if manually added and not fake
 		
@@ -4198,8 +4302,11 @@ bool SpiderColl::scanListForWinners ( ) {
 		}
 		// set the priority (might be the same as old)
 		int32_t priority = m_cr->m_spiderPriorities[ufn];
+		// now get rid of negative priorities since we added a
+		// separate force delete checkbox in the url filters
+		if ( priority < 0 ) priority = 0;
 		// sanity checks
-		if ( priority == -1 ) { char *xx=NULL;*xx=0; }
+		//if ( priority == -1 ) { char *xx=NULL;*xx=0; }
 		if ( priority >= MAX_SPIDER_PRIORITIES) {char *xx=NULL;*xx=0;}
 
 		if ( g_conf.m_logDebugSpider )
@@ -4214,12 +4321,21 @@ bool SpiderColl::scanListForWinners ( ) {
 		//if ( ! m_cr->m_spidersEnabled[ufn] ) continue;
 		if ( m_cr->m_maxSpidersPerRule[ufn] <= 0 ) continue;
 
-		// skip if banned
-		if ( priority == SPIDER_PRIORITY_FILTERED ) continue;
-		if ( priority == SPIDER_PRIORITY_BANNED   ) continue;
+		// skip if banned (unless need to delete from index)
+		bool skip = false;
+		// if ( priority == SPIDER_PRIORITY_FILTERED ) skip = true;
+		// if ( priority == SPIDER_PRIORITY_BANNED   ) skip = true;
+		if ( m_cr->m_forceDelete[ufn] ) skip = true;
+		// but if it is currently indexed we have to delete it
+		if ( skip && srep && srep->m_isIndexed ) skip = false;
+		if ( skip ) continue;
 
 		// temp debug
 		//char *xx=NULL;*xx=0;
+
+		if ( m_cr->m_forceDelete[ufn] )
+			// force it to a delete
+			sreq->m_forceDelete = true;
 
 		int64_t spiderTimeMS;
 		spiderTimeMS = getSpiderTimeMS ( sreq,ufn,srep,nowGlobalMS );
@@ -4227,13 +4343,15 @@ bool SpiderColl::scanListForWinners ( ) {
 		//int32_t maxSpidersPerIp = m_cr->m_spiderIpMaxSpiders[ufn];
 		// sanity
 		if ( (int64_t)spiderTimeMS < 0 ) { 
-			log("spider: got corrupt 2 spiderRequest in scan (cn=%"INT32")",
+			log("spider: got corrupt 2 spiderRequest in "
+			    "scan (cn=%"INT32")",
 			    (int32_t)m_collnum);
 			continue;
 		}
 		// more corruption detection
 		if ( sreq->m_hopCount < -1 ) {
-			log("spider: got corrupt 5 spiderRequest in scan (cn=%"INT32")",
+			log("spider: got corrupt 5 spiderRequest in "
+			    "scan (cn=%"INT32")",
 			    (int32_t)m_collnum);
 			continue;
 		}
@@ -4245,8 +4363,8 @@ bool SpiderColl::scanListForWinners ( ) {
 
 		// if it is in future, skip it and just set m_futureTime and
 		// and we will update the waiting tree
-		// with an entry based on that future time if the winnerTree turns
-		// out to be empty after we've completed our scan
+		// with an entry based on that future time if the winnerTree 
+		// turns out to be empty after we've completed our scan
 		if ( spiderTimeMS > nowGlobalMS ) {
 			// if futuretime is zero set it to this time
 			if ( ! m_minFutureTimeMS ) 
@@ -4422,7 +4540,16 @@ bool SpiderColl::scanListForWinners ( ) {
 					wsreq->m_hopCount = sreq->m_hopCount;
 				if ( wsreq->m_hopCount < sreq->m_hopCount )
 					sreq->m_hopCount = wsreq->m_hopCount;
+				// and the min added time as well!
+				// get the oldest timestamp so
+				// gbssDiscoveryTime will be accurate.
+				if ( sreq->m_addedTime < wsreq->m_addedTime )
+					wsreq->m_addedTime = sreq->m_addedTime;
+				if ( wsreq->m_addedTime < sreq->m_addedTime )
+					sreq->m_addedTime = wsreq->m_addedTime;
 			}
+
+			
 
 			// are we lower priority? (or equal)
 			// smaller keys are HIGHER priority.
@@ -4770,9 +4897,11 @@ bool SpiderColl::scanListForWinners ( ) {
 		log("spider: Checked list of %"INT32" spiderdb "
 		    "bytes (%"INT32" recs) "
 		    "for winners "
-		    "for firstip=%s. winnerTreeUsedNodes=%"INT32"",
-		    list->getListSize(),recCount,iptoa(m_scanningIp),
-		    m_winnerTree.getNumUsedNodes());
+		    "for firstip=%s. winnerTreeUsedNodes=%"INT32" #newreqs=%"
+		    INT64
+		    ,list->getListSize(),recCount,iptoa(m_scanningIp),
+		    m_winnerTree.getNumUsedNodes(),
+		    m_totalNewSpiderRequests);
 	// reset any errno cuz we're just a cache
 	g_errno = 0;
 
@@ -6126,6 +6255,9 @@ void SpiderLoop::spiderDoledUrls ( ) {
 	if ( ! m_activeListValid ) {
 		buildActiveList();
 		m_crx = m_activeList;
+		// recompute every 3 seconds, it seems kinda buggy!!
+		m_recalcTime = nowGlobal + 3;
+		m_recalcTimeValid = true;
 	}
 
 	// start again at head
@@ -7896,23 +8028,25 @@ bool SpiderLoop::indexedDoc ( XmlDoc *xd ) {
 	// care of g_errno now by clearing it and adding an error spider
 	// reply to release the lock!!
 	if ( g_errno ) {
-		log("spider: ----CRITICAL CRITICAL CRITICAL----");
-		log("spider: ----CRITICAL CRITICAL CRITICAL----");
-		log("spider: ------ *** LOCAL ERROR ***  ------");
-		log("spider: ------ *** LOCAL ERROR ***  ------");
-		log("spider: ------ *** LOCAL ERROR ***  ------");
+		// log("spider: ----CRITICAL CRITICAL CRITICAL----");
+		// log("spider: ----CRITICAL CRITICAL CRITICAL----");
+		// log("spider: ------ *** LOCAL ERROR ***  ------");
+		// log("spider: ------ *** LOCAL ERROR ***  ------");
+		// log("spider: ------ *** LOCAL ERROR ***  ------");
 		log("spider: spidering %s has error: %s. uh48=%"INT64". "
-		    "Respidering "
-		    "in %"INT32" seconds. MAX_LOCK_AGE when lock expires.",
+		    //"Respidering "
+		    //"in %"INT32" seconds. MAX_LOCK_AGE when lock expires. "
+		    "cn=%"INT32"",
 		    xd->m_firstUrl.m_url,
 		    mstrerror(g_errno),
 		    xd->getFirstUrlHash48(),
-		    (int32_t)MAX_LOCK_AGE);
-		log("spider: ------ *** LOCAL ERROR ***  ------");
-		log("spider: ------ *** LOCAL ERROR ***  ------");
-		log("spider: ------ *** LOCAL ERROR ***  ------");
-		log("spider: ----CRITICAL CRITICAL CRITICAL----");
-		log("spider: ----CRITICAL CRITICAL CRITICAL----");
+		    //(int32_t)MAX_LOCK_AGE,
+		    (int32_t)collnum);
+		// log("spider: ------ *** LOCAL ERROR ***  ------");
+		// log("spider: ------ *** LOCAL ERROR ***  ------");
+		// log("spider: ------ *** LOCAL ERROR ***  ------");
+		// log("spider: ----CRITICAL CRITICAL CRITICAL----");
+		// log("spider: ----CRITICAL CRITICAL CRITICAL----");
 		// don't release the lock on it right now. just let the
 		// lock expire on it after MAX_LOCK_AGE seconds. then it will
 		// be retried. we need to debug gb so these things never
@@ -10782,6 +10916,10 @@ int32_t getUrlFilterNum2 ( SpiderRequest *sreq       ,
 			   HashTableX   *quotaTable ,
 			   int32_t langIdArg ) {
 
+	if ( ! sreq ) {
+		log("spider: sreq is NULL!");
+	}
+
 	int32_t langId = langIdArg;
 	if ( srep ) langId = srep->m_langId;
 
@@ -11264,6 +11402,57 @@ int32_t getUrlFilterNum2 ( SpiderRequest *sreq       ,
 			goto checkNextRule;
 		}
 
+		if ( strncmp(p,"isparentsitemap",15) == 0 ) {
+			// skip for msg20
+			if ( isForMsg20 ) continue;
+			// if no match continue
+			if ( (bool)sreq->m_parentIsSiteMap == val) continue;
+			// skip
+			p += 15;
+			// skip to next constraint
+			p = strstr(p, "&&");
+			// all done?
+			if ( ! p ) return i;
+			p += 2;
+			goto checkNextRule;
+		}
+
+		// does it have an rss inlink? we want to expedite indexing
+		// of such pages. i.e. that we gather from an rss feed that
+		// we got from a pingserver...
+		if ( strncmp(p,"isroot",6) == 0 ) {
+			// skip for msg20
+			//if ( isForMsg20 ) continue;
+			// this is a docid only url, no actual url, so skip
+			if ( sreq->m_isPageReindex ) continue;
+			// a fast check
+			char *u = sreq->m_url;
+			// skip http
+			u += 4;
+			// then optional s for https
+			if ( *u == 's' ) u++;
+			// then ://
+			u += 3;
+			// scan until \0 or /
+			for ( ; *u && *u !='/' ; u++ );
+			// if \0 we are root
+			bool isRoot = true;
+			if ( *u == '/' ) {
+				u++;
+				if ( *u ) isRoot = false;
+			}
+			// if we are not root
+			if ( isRoot == val ) continue;
+			// skip
+			p += 6;
+			// skip to next constraint
+			p = strstr(p, "&&");
+			// all done?
+			if ( ! p ) return i;
+			p += 2;
+			goto checkNextRule;
+		}
+
 		/*
 		if ( strncmp(p,"isparentindexed",16) == 0 ) {
 			// skip for msg20
@@ -11506,6 +11695,21 @@ int32_t getUrlFilterNum2 ( SpiderRequest *sreq       ,
 			goto checkNextRule;
 		}
 
+		// check for "isrss" aka "rss"
+		if ( strncmp(p,"isrssext",8) == 0 ) {
+			// if we are not rss, we do not match this rule
+			if ( (bool)sreq->m_isRSSExt == val ) continue; 
+			// skip it
+			p += 8;
+			// check for &&
+			p = strstr(p, "&&");
+			// if nothing, else then it is a match
+			if ( ! p ) return i;
+			// skip the '&&' and go to next rule
+			p += 2;
+			goto checkNextRule;
+		}
+
 		// check for permalinks. for new outlinks we *guess* if its
 		// a permalink by calling isPermalink() function.
 		if (!strncmp(p,"ispermalink",11) ) {
@@ -11602,10 +11806,9 @@ int32_t getUrlFilterNum2 ( SpiderRequest *sreq       ,
 		}
 		// iswww, means url is like www.xyz.com/...
 		if ( strncmp(p,"iswww", 5) == 0 ) {
-			// now this is a bit
-			if ( (bool)sreq->m_isWWWSubdomain == (bool)val ) 
-				continue;
-			/*
+			// now this is a bit - doesn't seem to be working yet
+			//if ( (bool)sreq->m_isWWWSubdomain == (bool)val ) 
+			//	continue;
 			// skip "iswww"
 			p += 5;
 			// skip over http:// or https://
@@ -11619,7 +11822,6 @@ int32_t getUrlFilterNum2 ( SpiderRequest *sreq       ,
 			    u[2] == 'w' ) isWWW = 1;
 			// skip if no match
 			if ( isWWW == val ) continue;
-			*/
 			// TODO: fix www.knightstown.skepter.com
 			// maybe just have a bit in the spider request
 			// another rule?
@@ -12141,12 +12343,37 @@ int32_t getUrlFilterNum2 ( SpiderRequest *sreq       ,
 			goto checkNextRule;
 		}
 
+		if ( *p == 'n' && strncmp(p,"numinlinks",10) == 0 ) {
+			// skip for msg20
+			if ( isForMsg20 ) continue;
+			// these are -1 if they are NOT valid
+			int32_t a = sreq->m_pageNumInlinks;
+			// make it point to the priority
+			int32_t b = atoi(s);
+			// compare
+			if ( sign == SIGN_EQ && a != b ) continue;
+			if ( sign == SIGN_NE && a == b ) continue;
+			if ( sign == SIGN_GT && a <= b ) continue;
+			if ( sign == SIGN_LT && a >= b ) continue;
+			if ( sign == SIGN_GE && a <  b ) continue;
+			if ( sign == SIGN_LE && a >  b ) continue;
+			// skip fast
+			p += 10;
+			p = strstr(s, "&&");
+			//if nothing, else then it is a match
+			if ( ! p ) return i;
+			//skip the '&&' and go to next rule
+			p += 2;
+			goto checkNextRule;
+		}
+
 		// siteNumInlinks >= 300 [&&]
 		if ( *p=='s' && strncmp(p, "sitenuminlinks", 14) == 0){
 			// these are -1 if they are NOT valid
 			int32_t a1 = sreq->m_siteNumInlinks;
 			// only assign if valid
-			int32_t a2 = -1; if ( srep ) a2 = srep->m_siteNumInlinks;
+			int32_t a2 = -1; 
+			if ( srep ) a2 = srep->m_siteNumInlinks;
 			// assume a1 is the best
 			int32_t a ;
 			// assign to the first valid one
@@ -12720,18 +12947,21 @@ void dedupSpiderdbList ( RdbList *list , int32_t niceness , bool removeNegRecs )
 		}
 
 		// try to kinda grab the min hop count as well
-		if ( sreq->m_hopCountValid && oldReq->m_hopCountValid ) {
-			if ( oldReq->m_hopCount < sreq->m_hopCount )
-				sreq->m_hopCount = oldReq->m_hopCount;
-			else
-				oldReq->m_hopCount = sreq->m_hopCount;
-		}
+		// do not alter spiderdb!
+		// if ( sreq->m_hopCountValid && oldReq->m_hopCountValid ) {
+		// 	if ( oldReq->m_hopCount < sreq->m_hopCount )
+		// 		sreq->m_hopCount = oldReq->m_hopCount;
+		// 	else
+		// 		oldReq->m_hopCount = sreq->m_hopCount;
+		// }
 
 		// if he's essentially different input parms but for the
 		// same url, we want to keep him because he might map the
 		// url to a different url priority!
 		if ( oldReq->m_siteHash32    != sreq->m_siteHash32    ||
 		     oldReq->m_isNewOutlink  != sreq->m_isNewOutlink  ||
+		     //  use hopcount now too!
+		     oldReq->m_hopCount      != sreq->m_hopCount      ||
 		     // makes a difference as far a m_minPubDate goes, because
 		     // we want to make sure not to delete that request that
 		     // has m_parentPrevSpiderTime
@@ -12748,7 +12978,8 @@ void dedupSpiderdbList ( RdbList *list , int32_t niceness , bool removeNegRecs )
 			goto addIt;
 		// . if the same check who has the most recent added time
 		// . if we are not the most recent, just do not add us
-		if ( sreq->m_addedTime <= oldReq->m_addedTime ) continue;
+		// . no, now i want the oldest so we can do gbssDiscoveryTime
+		if ( sreq->m_addedTime >= oldReq->m_addedTime ) continue;
 		// otherwise, erase over him
 		dst     = restorePoint;
 		lastKey = prevLastKey;
@@ -13342,6 +13573,8 @@ void handleRequestc1 ( UdpSlot *slot , int32_t niceness ) {
 
 	uint32_t now = (uint32_t)getTimeGlobalNoCore();
 
+	uint64_t nowMS = gettimeofdayInMillisecondsGlobalNoCore();
+
 	//SpiderColl *sc = g_spiderCache.getSpiderColl(collnum);
 
 	for ( int32_t i = 0 ; i < g_collectiondb.m_numRecs ; i++ ) {
@@ -13395,6 +13628,44 @@ void handleRequestc1 ( UdpSlot *slot , int32_t niceness ) {
 		     //g_conf.m_spideringEnabled &&
 		     ci->m_lastSpiderAttempt - ci->m_lastSpiderCouldLaunch > 
 		     spiderDoneTimer ) {
+
+			// break it here for our collnum to see if
+			// doledb was just lagging or not.
+			bool printIt = true;
+			if ( now < sc->m_lastPrinted ) printIt = false;
+			if ( printIt ) sc->m_lastPrinted = now + 5;
+
+			// doledb must be empty
+			if ( ! sc->m_doleIpTable.isEmpty() ) {
+				if ( printIt )
+				log("spider: not ending crawl because "
+				    "doledb not empty for coll=%s",cr->m_coll);
+				goto doNotEnd;
+			}
+
+			uint64_t nextTimeMS ;
+			nextTimeMS = sc->getNextSpiderTimeFromWaitingTree ( );
+
+			// and no ips awaiting scans to get into doledb
+			// except for ips needing scans 60+ seconds from now
+			if ( nextTimeMS &&  nextTimeMS < nowMS + 60000 ) {
+				if ( printIt )
+				log("spider: not ending crawl because "
+				    "waiting tree key is ready for scan "
+				    "%"INT64" ms from now for coll=%s",
+				    nextTimeMS - nowMS,cr->m_coll );
+				goto doNotEnd;
+			}
+
+			// maybe wait for waiting tree population to finish
+			if ( sc->m_waitingTreeNeedsRebuild ) {
+				if ( printIt )
+				log("spider: not ending crawl because "
+				    "waiting tree is building for coll=%s",
+				    cr->m_coll );
+				goto doNotEnd;
+			}
+
 			// this is the MOST IMPORTANT variable so note it
 			log(LOG_INFO,
 			    "spider: coll %s has no more urls to spider",
@@ -13407,6 +13678,7 @@ void handleRequestc1 ( UdpSlot *slot , int32_t niceness ) {
 			cr->m_needsSave = true;
 		}
 
+	doNotEnd:
 
 		int32_t hostId = slot->m_host->m_hostId;
 
@@ -13454,38 +13726,63 @@ void handleRequestc1 ( UdpSlot *slot , int32_t niceness ) {
 
 bool getSpiderStatusMsg ( CollectionRec *cx , SafeBuf *msg , int32_t *status ) {
 
-	if ( ! g_conf.m_spideringEnabled && ! cx->m_isCustomCrawl )
+	if ( ! g_conf.m_spideringEnabled && ! cx->m_isCustomCrawl ) {
+		*status = SP_ADMIN_PAUSED;
 		return msg->safePrintf("Spidering disabled in "
 				       "master controls. You can turn it "
 				       "back on there.");
+	}
 
-	if ( g_conf.m_readOnlyMode ) 
+	if ( g_conf.m_readOnlyMode ) {
+		*status = SP_ADMIN_PAUSED;
 		return msg->safePrintf("In read-only mode. Spidering off.");
+	}
 
-	if ( g_dailyMerge.m_mergeMode )
+	if ( g_dailyMerge.m_mergeMode ) {
+		*status = SP_ADMIN_PAUSED;
 		return msg->safePrintf("Daily merge engaged, spidering "
 				       "paused.");
+	}
 
-	if ( g_udpServer.getNumUsedSlots() >= 1300 ) 
+	if ( g_udpServer.getNumUsedSlots() >= 1300 ) {
+		*status = SP_ADMIN_PAUSED;
 		return msg->safePrintf("Too many UDP slots in use, "
 				       "spidering paused.");
+	}
 
-	if ( g_repairMode ) 
+	if ( g_repairMode ) {
+		*status = SP_ADMIN_PAUSED;
 		return msg->safePrintf("In repair mode, spidering paused.");
+	}
 
 	// do not spider until collections/parms in sync with host #0
-	if ( ! g_parms.m_inSyncWithHost0 )
+	if ( ! g_parms.m_inSyncWithHost0 ) {
+		*status = SP_ADMIN_PAUSED;
 		return msg->safePrintf("Parms not in sync with host #0, "
 				       "spidering paused");
+	}
 
 	// don't spider if not all hosts are up, or they do not all
 	// have the same hosts.conf.
-	if ( g_pingServer.m_hostsConfInDisagreement )
+	if ( g_pingServer.m_hostsConfInDisagreement ) {
+		*status = SP_ADMIN_PAUSED;
 		return msg->safePrintf("Hosts.conf discrepancy, "
 				       "spidering paused.");
-
+	}
 
 	uint32_t now = (uint32_t)getTimeGlobal();
+
+	// try to fix crawlbot nightly test complaining about job status
+	// for TestRepeatCrawlWithMaxToCrawl
+	if ( (cx->m_spiderStatus == SP_MAXTOCRAWL ||
+	      cx->m_spiderStatus == SP_MAXTOPROCESS ) &&
+	     cx->m_collectiveRespiderFrequency > 0.0 &&
+	     now < cx->m_spiderRoundStartTime &&
+	     cx->m_spiderRoundNum >= cx->m_maxCrawlRounds ) {
+		*status = SP_MAXROUNDS;
+		return msg->safePrintf ( "Job has reached maxRounds "
+					 "limit." );
+	}		
 
 	// . 0 means not to RE-crawl
 	// . indicate if we are WAITING for next round...
@@ -13587,6 +13884,7 @@ bool getSpiderStatusMsg ( CollectionRec *cx , SafeBuf *msg , int32_t *status ) {
 	if ( ! cx->m_isCustomCrawl && 
 	     ! cx->m_globalCrawlInfo.m_hasUrlsReadyToSpider ) {
 		//*status = SP_COMPLETED;
+		*status = SP_INPROGRESS;
 		return msg->safePrintf ( "Nothing currently "
 					 "available to spider. "
 					 "Change your url filters, try "
@@ -13783,7 +14081,7 @@ bool SpiderRequest::setFromAddUrl ( char *url ) {
 	m_isAddUrl     = 1;
 	m_addedTime    = (uint32_t)getTimeGlobal();//now;
 	m_fakeFirstIp   = 1;
-	m_probDocId     = probDocId;
+	//m_probDocId     = probDocId;
 	m_firstIp       = firstIp;
 	m_hopCount      = 0;
 
@@ -13893,10 +14191,12 @@ void SpiderLoop::buildActiveList ( ) {
 		//
 		if ( nowGlobal < cr->m_spiderRoundStartTime ) {
 			active = false;
-			if ( cr->m_spiderRoundStartTime < m_recalcTime ) {
-				m_recalcTime = cr->m_spiderRoundStartTime;
-				m_recalcTimeValid = true;
-			}
+			// no need to do this now since we recalc every
+			// 3 seconds anyway...
+			// if ( cr->m_spiderRoundStartTime < m_recalcTime ) {
+			// 	m_recalcTime = cr->m_spiderRoundStartTime;
+			// 	m_recalcTimeValid = true;
+			// }
 		}
 
 		if ( ! active ) continue;

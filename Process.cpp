@@ -1471,6 +1471,11 @@ bool Process::shutdown2 ( ) {
 	else
 		log(LOG_INFO,"gb: Shutting down. Try #%"INT32".",m_try++);
 
+
+	// switch to urgent if having problems
+	if ( m_try >= 10 )
+		m_urgent = true;
+
 	// turn off statsdb so it does not try to add records for these writes
 	g_statsdb.m_disabled = true;
 
@@ -1861,7 +1866,7 @@ bool Process::saveBlockingFiles1 ( ) {
 	if ( g_conf.m_readOnlyMode ) return true;
 
 	// save user accounting files. 3 of them.
-	if ( g_hostdb.m_myHost->m_isProxy )
+	if ( g_hostdb.m_myHost && g_hostdb.m_myHost->m_isProxy )
 		g_proxy.saveUserBufs();
 
 	// save the Conf file now

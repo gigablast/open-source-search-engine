@@ -32,6 +32,11 @@ void Query::constructor ( ) {
 	m_qwords               = NULL;
 	m_numTerms = 0;
 	m_containingParent = NULL;
+	m_st0Ptr = NULL;
+	// we have to manually call this because Query::constructor()
+	// might have been called explicitly
+	for ( int32_t i = 0 ; i < MAX_QUERY_TERMS ; i++ )
+		m_qterms[i].constructor();
 	//m_expressions          = NULL;
 	reset ( );
 }
@@ -48,10 +53,15 @@ void Query::reset ( ) {
 
 	// if Query::constructor() was called explicitly then we have to
 	// call destructors explicitly as well...
+	// essentially call QueryTerm::reset() on each query term
 	for ( long i = 0 ; i < m_numTerms ; i++ ) {
 	 	// get it
 		QueryTerm *qt = &m_qterms[i];
 		HashTableX *ht = &qt->m_facetHashTable;
+		// debug note
+		// log("results: free fhtqt of %"PTRFMT" for q=%"PTRFMT 
+		//     " st0=%"PTRFMT,
+		//     (PTRTYPE)ht->m_buf,(PTRTYPE)this,(PTRTYPE)m_st0Ptr);
 		ht->reset();
 		qt->m_facetIndexBuf.purge();
 	}
@@ -1285,6 +1295,7 @@ bool Query::setQTerms ( Words &words , Phrases &phrases ) {
 			qt->m_isPhrase  = false ;
 			qt->m_isUORed   = false;
 			qt->m_UORedTerm = NULL;
+			qt->m_langIdBits = 0;
 			// synonym of this term...
 			qt->m_synonymOf = origTerm;
 			// nuke this crap since it was done above and we
@@ -2568,6 +2579,11 @@ bool Query::setQWords ( char boolFlag ,
 				// Expression::isTruth() will ignore it and we
 				// fix '(A OR B) gbsortby:offperice' query
 				qw->m_ignoreWordInBoolQuery = true;
+			}
+
+			// this seems case sensitive now, gbfacetstr:humanLang
+			if ( fieldCode == FIELD_GBFACETSTR ) {
+				wid = hash64 ( w , wlen , 0LL );
 			}
 
 			if ( fieldCode == FIELD_GBFIELDMATCH ) {
@@ -4105,8 +4121,10 @@ struct QueryField g_fields[] = {
 	 false,
 	 "gbdocspiderdate:1400081479",
 	 "Matches documents that have "
-	 "that spider date timestamp (UTC). Does not include the "
-	 "special spider status documents. This is the time the document "
+	 "that spider date timestamp (UTC). "
+	 //"Does not include the "
+	 //"special spider status documents. "
+	 "This is the time the document "
 	 "completed downloading.",
 	 "Date Related Query Operators",
 	 QTF_BEGINNEWTABLE},
@@ -4116,7 +4134,8 @@ struct QueryField g_fields[] = {
 	 FIELD_GENERIC,
 	 false,
 	 "gbspiderdate:1400081479",
-	 "Like above, but DOES include the special spider status documents.",
+	 "Like above.",
+	 //, but DOES include the special spider status documents.",
 	 NULL,
 	 0},
 
@@ -4126,8 +4145,8 @@ struct QueryField g_fields[] = {
 	 "gbdocindexdate:1400081479",
 	 "Like above, but is the time the document was last indexed. "
 	 "This time is "
-	 "slightly greater than or equal to the spider date. Does not "
-	 "include the special spider status documents.",
+	 "slightly greater than or equal to the spider date.",//Does not "
+	 //"include the special spider status documents.",
 	 NULL,
 	 0},
 
@@ -4136,8 +4155,8 @@ struct QueryField g_fields[] = {
 	 FIELD_GENERIC,
 	 false,
 	 "gbindexdate:1400081479",
-	 "Like above, but it does include the special spider status "
-	 "documents.",
+	 "Like above.",//, but it does include the special spider status "
+	 //"documents.",
 	 NULL,
 	 0},
 
@@ -4251,6 +4270,384 @@ struct QueryField g_fields[] = {
 	//
 	// spider status docs queries
 	//
+
+	{"gbssUrl",
+	 FIELD_GENERIC,
+	 false,
+	 "gbssUrl:com",
+	 "Query the url of a spider status document.",
+	 "Spider Status Documents", // title
+	 QTF_BEGINNEWTABLE},
+
+
+	{"gbssFinalRedirectUrl",
+	 FIELD_GENERIC,
+	 false,
+	 "gbssFinalRedirectUrl:abc.com/page2.html",
+	 "Query on the last url redirect to, if any.",
+	 NULL, // title
+	 0},
+
+	{"gbssStatusCode",
+	 FIELD_GENERIC,
+	 false,
+	 "gbssStatusCode:0",
+	 "Query on the status code of the index attempt. 0 means no error.",
+	 NULL,
+	 0},
+
+	{"gbssStatusMsg",
+	 FIELD_GENERIC,
+	 false,
+	 "gbssStatusMsg:\"Tcp timed\"",
+	 "Like gbssStatusCode but a textual representation.",
+	 NULL,
+	 0},
+
+	{"gbssHttpStatus",
+	 FIELD_GENERIC,
+	 false,
+	 "gbssHttpStatus:200",
+	 "Query on the HTTP status returned from the web server.",
+	 NULL,
+	 0},
+
+	{"gbssWasIndexed",
+	 FIELD_GENERIC,
+	 false,
+	 "gbssWasIndexed:0",
+	 "Was the document in the index before attempting to index? Use 0 "
+	 " or 1 to find all documents that were not or were, respectively.",
+	 NULL,
+	 0},
+
+	{"gbssIsDiffbotObject",
+	 FIELD_GENERIC,
+	 false,
+	 "gbssIsDiffbotObject:1",
+	 "This field is only present if the document was an object from "
+	 "a diffbot reply. Use gbssIsDiffbotObject:0 to find the non-diffbot "
+	 "objects.",
+	 NULL,
+	 0},
+
+	{"gbssAgeInIndex",
+	 FIELD_GENERIC,
+	 false,
+	 "gbsortby:gbssAgeInIndex",
+	 "If the document was in the index at the time we attempted to "
+	 "reindex it, how long has it been since it was last indexed?",
+	 NULL,
+	 0},
+
+	{"gbssDomain",
+	 FIELD_GENERIC,
+	 false,
+	 "gbssDomain:yahoo.com",
+	 "Query on the domain of the url.",
+	 NULL,
+	 0},
+
+	{"gbssSubdomain",
+	 FIELD_GENERIC,
+	 false,
+	 "gbssSubdomain:www.yahoo.com",
+	 "Query on the subdomain of the url.",
+	 NULL,
+	 0},
+
+	{"gbssNumRedirects",
+	 FIELD_GENERIC,
+	 false,
+	 "gbfacetint:gbssNumRedirects",
+	 "Query on the number of times the url redirect when attempting to "
+	 "index it.",
+	 NULL,
+	 0},
+
+	{"gbssDocId",
+	 FIELD_GENERIC,
+	 false,
+	 "gbssDocId:1234567",
+	 "Show all the spider status docs for the document with this docId.",
+	 NULL,
+	 0},
+
+	{"gbssHopCount",
+	 FIELD_GENERIC,
+	 false,
+	 "gbfacetint:gbssHopCount",
+	 "Query on the hop count of the document.",
+	 NULL,
+	 0},
+
+	{"gbssCrawlRound",
+	 FIELD_GENERIC,
+	 false,
+	 "gbfacetint:gbssCrawlRound",
+	 "Query on the crawl round number.",
+	 NULL,
+	 0},
+
+	{"gbssDupOfDocId",
+	 FIELD_GENERIC,
+	 false,
+	 "gbssDupOfDocId:123456",
+	 "Show all the documents that were considered dups of this docId.",
+	 NULL,
+	 0},
+
+	{"gbssPrevTotalNumIndexAttempts",
+	 FIELD_GENERIC,
+	 false,
+	 "gbssPrevTotalNumIndexAttempts:1",
+	 "Before this index attempt, how many attempts were there?",
+	 NULL,
+	 0},
+
+	{"gbssPrevTotalNumIndexSuccesses",
+	 FIELD_GENERIC,
+	 false,
+	 "gbssPrevTotalNumIndexSuccesses:1",
+	 "Before this index attempt, how many successful attempts were there?",
+	 NULL,
+	 0},
+
+	{"gbssPrevTotalNumIndexFailures",
+	 FIELD_GENERIC,
+	 false,
+	 "gbssPrevTotalNumIndexFailures:1",
+	 "Before this index attempt, how many failed attempts were there?",
+	 NULL,
+	 0},
+
+	{"gbssFirstIndexed",
+	 FIELD_GENERIC,
+	 false,
+	 "gbrevsortbyint:gbssFirsIndexed",
+	 "The date in utc that the document was first indexed.",
+	 NULL,
+	 0},
+
+	{"gbssContentHash32",
+	 FIELD_GENERIC,
+	 false,
+	 "gbfacetint:gbssContentHash32",
+	 "The hash of the document content, excluding dates and times. Used "
+	 "internally for deduping.",
+	 NULL,
+	 0},
+
+	{"gbssDownloadDurationMS",
+	 FIELD_GENERIC,
+	 false,
+	 "gbsortbyint:gbssDownloadDurationMS",
+	 "How long it took in millisecons to download the document.",
+	 NULL,
+	 0},
+
+	{"gbssDownloadStartTime",
+	 FIELD_GENERIC,
+	 false,
+	 "gbsortbyint:gbssDownloadStartTime",
+	 "When the download started, in seconds since the epoch, UTC.",
+	 NULL,
+	 0},
+
+	{"gbssDownloadEndTime",
+	 FIELD_GENERIC,
+	 false,
+	 "gbsortbyint:gbssDownloadEndTime",
+	 "When the download ended, in seconds since the epoch, UTC.",
+	 NULL,
+	 0},
+
+	{"gbssUsedRobotsTxt",
+	 FIELD_GENERIC,
+	 false,
+	 "gbfacetint:gbssUsedRobotsTxt",
+	 "This is 0 or 1 depending on if robots.txt was not obeyed or obeyed, "
+	 "respectively.",
+	 NULL,
+	 0},
+
+	{"gbssConsecutiveErrors",
+	 FIELD_GENERIC,
+	 false,
+	 "gbfacetint:gbssConsecutiveErrors",
+	 "For the last set of indexing attempts how many were errors?",
+	 NULL,
+	 0},
+
+	{"gbssIp",
+	 FIELD_GENERIC,
+	 false,
+	 "gbssIp:1.2.3.4",
+	 "The IP address of the document being indexed. Is 0.0.0.0 "
+	 "if unknown.",
+	 NULL,
+	 0},
+
+	{"gbssIpLookupTimeMS",
+	 FIELD_GENERIC,
+	 false,
+	 "gbsortby:gbssIpLookupTimeMS",
+	 "How long it took to lookup the IP of the document. Might have been "
+	 "in the cache.",
+	 NULL,
+	 0},
+
+	{"gbssSiteNumInlinks",
+	 FIELD_GENERIC,
+	 false,
+	 "gbsortby:gbssSiteNumInlinks",
+	 "How many good inlinks the document's site had.",
+	 NULL,
+	 0},
+
+	{"gbssSiteRank",
+	 FIELD_GENERIC,
+	 false,
+	 "gbsortby:gbssSiteRank",
+	 "The site rank of the document. Based directly "
+	 "on the number of inlinks the site had.",
+	 NULL,
+	 0},
+
+	{"gbssContentInjected",
+	 FIELD_GENERIC,
+	 false,
+	 "gbfacetint:gbssContentInjected",
+	 "This is 0 or 1 if the content was not injected or injected, "
+	 "respectively.",
+	 NULL,
+	 0},
+
+	{"gbssPercentContentChanged",
+	 FIELD_GENERIC,
+	 false,
+	 "gbfacetfloat:gbssPercentContentChanged",
+	 "A float between 0 and 100, inclusive. Represents how much "
+	 "the document has changed since the last time we indexed it. This is "
+	 "only valid if the document was successfully indexed this time."
+	 "respectively.",
+	 NULL,
+	 0},
+
+	{"gbssSpiderPriority",
+	 FIELD_GENERIC,
+	 false,
+	 "gbfacetint:gbssSpiderPriority",
+	 "The spider priority, from 0 to 127, inclusive, of the document "
+	 "according to the url filters table.",
+	 NULL,
+	 0},
+
+	{"gbssMatchingUrlFilter",
+	 FIELD_GENERIC,
+	 false,
+	 "gbfacetstr:gbssMatchingUrlFilter",
+	 "The url filter expression the document matched.",
+	 NULL,
+	 0},
+
+	{"gbssLanguage",
+	 FIELD_GENERIC,
+	 false,
+	 "gbfacetstr:gbssLanguage",
+	 "The language of the document. If document was empty or not "
+	 "downloaded then this will not be present. Uses xx to mean "
+	 "unknown language. Uses the language abbreviations found at the "
+	 "bottom of the url filters page.",
+	 NULL,
+	 0},
+
+	{"gbssContentType",
+	 FIELD_GENERIC,
+	 false,
+	 "gbfacetstr:gbssContentType",
+	 "The content type of the document. Like html, xml, json, pdf, etc. "
+	 "This field is not present if unknown.",
+	 NULL,
+	 0},
+
+	{"gbssContentLen",
+	 FIELD_GENERIC,
+	 false,
+	 "gbsortbyint:gbssContentLen",
+	 "The content length of the document. 0 if empty or not downloaded.",
+	 NULL,
+	 0},
+
+	{"gbssCrawlDelayMS",
+	 FIELD_GENERIC,
+	 false,
+	 "gbfacetint:gbssCrawlDelay",
+	 "The crawl delay according to the robots.txt of the document. "
+	 "This is -1 if not specified in the robots.txt or not found.",
+	 NULL,
+	 0},
+
+	{"gbssSentToDiffbot",
+	 FIELD_GENERIC,
+	 false,
+	 "gbssSentToDiffbot:1",
+	 "Was the document's url sent to diffbot for processing?",
+	 NULL,
+	 0},
+
+	{"gbssDiffbotReplyCode",
+	 FIELD_GENERIC,
+	 false,
+	 "gbssDiffbotReplyCode:0",
+	 "The reply received from diffbot. 0 means success, otherwise, it "
+	 "indicates an error code.",
+	 NULL,
+	 0},
+
+	{"gbssDiffbotReplyMsg",
+	 FIELD_GENERIC,
+	 false,
+	 "gbfacetstr:gbssDiffbotReplyMsg:0",
+	 "The reply received from diffbot represented in text.",
+	 NULL,
+	 0},
+
+	{"gbssDiffbotReplyLen",
+	 FIELD_GENERIC,
+	 false,
+	 "gbsortbyint:gbssDiffbotReplyLen",
+	 "The length of the reply received from diffbot.",
+	 NULL,
+	 0},
+
+	{"gbssDiffbotReplyResponseTimeMS",
+	 FIELD_GENERIC,
+	 false,
+	 "gbsortbyint:gbssDiffbotReplyResponseTimeMS",
+	 "The time in milliseconds it took to get a reply from diffbot.",
+	 NULL,
+	 0},
+
+	{"gbssDiffbotReplyRetries",
+	 FIELD_GENERIC,
+	 false,
+	 "gbfacetint:gbssDiffbotReplyRetries",
+	 "The number of times we had to resend the request to diffbot "
+	 "because diffbot returned a 504 gateway timed out error.",
+	 NULL,
+	 0},
+
+	{"gbssDiffbotReplyNumObjects",
+	 FIELD_GENERIC,
+	 false,
+	 "gbfacetint:gbssDiffbotReplyNumObjects",
+	 "The number of JSON objects diffbot excavated from the provided url.",
+	 NULL,
+	 0},
+
+
+	/*
 	{"gbstatus",
 	 FIELD_GENERIC,
 	 false,
@@ -4362,7 +4759,7 @@ struct QueryField g_fields[] = {
 	 "spider status documents.",
 	 NULL,
 	 0},
-
+	*/
 
 
 	// they don't need to know about this
@@ -5036,6 +5433,14 @@ bool Query::isSplit() {
 	for(int32_t i = 0; i < m_numTerms; i++) 
 		if(m_qterms[i].isSplit()) return true;
 	return false;
+}
+
+void QueryTerm::constructor ( ) {
+	m_facetHashTable.constructor(); // hashtablex
+	m_facetIndexBuf.constructor(); // safebuf
+	m_langIdBits = 0;
+	m_langIdBitsValid = false;
+	m_numDocsThatHaveFacet = 0;
 }
 
 bool QueryTerm::isSplit() {

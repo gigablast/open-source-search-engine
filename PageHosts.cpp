@@ -521,9 +521,18 @@ skipReplaceHost:
 		}
 
 		// recovery mode? reocvered from coring?
-		if ((flags & PFLAG_RECOVERYMODE)&& format == FORMAT_HTML )
+		if ((flags & PFLAG_RECOVERYMODE)&& format == FORMAT_HTML ) {
 			fb.safePrintf("<b title=\"Recovered from core"
 				      "\">x</b>");
+			// this is only 8-bits at the moment so it's capped
+			// at 255. this level is 1 the first time we core
+			// and are restarted.
+			if ( h->m_pingInfo.m_recoveryLevel > 1 )
+			fb.safePrintf("<sup>%"INT32"</sup>",
+				      (int32_t)
+				      h->m_pingInfo.m_recoveryLevel);
+		}
+
 		if ((flags & PFLAG_RECOVERYMODE)&& format != FORMAT_HTML )
 			fb.safePrintf("Recovered from core");
 
@@ -553,14 +562,15 @@ skipReplaceHost:
 					,h->m_pingInfo.m_currentSpiders
 					);
 
-		if ( format == FORMAT_HTML && h->m_pingInfo.m_udpSlotsInUse ) {
+		if ( format == FORMAT_HTML && 
+		     h->m_pingInfo.m_udpSlotsInUseIncoming ) {
 			char *f1 = "";
 			char *f2 = "";
-			if ( h->m_pingInfo.m_udpSlotsInUse >= 200 ) {
+			if ( h->m_pingInfo.m_udpSlotsInUseIncoming >= 200 ) {
 				f1 = "<b>";
 				f2 = "</b>";
 			}
-			if ( h->m_pingInfo.m_udpSlotsInUse >= 400 ) {
+			if ( h->m_pingInfo.m_udpSlotsInUseIncoming >= 400 ) {
 				f1 = "<b><font color=red>";
 				f2 = "</font></b>";
 			}
@@ -571,7 +581,7 @@ skipReplaceHost:
 				      "%s"
 				      "</span>"
 				      ,f1
-				      ,h->m_pingInfo.m_udpSlotsInUse
+				      ,h->m_pingInfo.m_udpSlotsInUseIncoming
 				      ,f2
 				      );
 		}
@@ -679,7 +689,7 @@ skipReplaceHost:
 
 			sb.safePrintf("\t\t<udpSlotsInUse>%"INT32""
 				      "</udpSlotsInUse>\n",
-				      h->m_pingInfo.m_udpSlotsInUse);
+				      h->m_pingInfo.m_udpSlotsInUseIncoming);
 
 			sb.safePrintf("\t\t<tcpSocketsInUse>%"INT32""
 				      "</tcpSocketsInUse>\n",
@@ -791,7 +801,7 @@ skipReplaceHost:
 			sb.safePrintf("\t\t\"errorTryAgains\":%"INT32",\n",
 				      h->m_pingInfo.m_etryagains);
 			sb.safePrintf("\t\t\"udpSlotsInUse\":%"INT32",\n",
-				      h->m_pingInfo.m_udpSlotsInUse);
+				      h->m_pingInfo.m_udpSlotsInUseIncoming);
 			sb.safePrintf("\t\t\"tcpSocketsInUse\":%"INT32",\n",
 				      h->m_pingInfo.m_tcpSocketsInUse);
 
@@ -1463,7 +1473,8 @@ skipReplaceHost:
 		  "<td>x (status flag)</td>"
 		  "<td>Indicates host has abruptly exited due to a fatal "
 		  "error (cored) and "
-		  "restarted itself."
+		  "restarted itself. The exponent is how many times it has "
+		  "done this. If no exponent, it only did it once."
 		  "</td>"
 		  "</tr>\n"
 
@@ -1498,7 +1509,8 @@ skipReplaceHost:
 		  "<tr class=poo>"
 		  "<td><nobr>U (status flag)</nobr></td>"
 		  "<td>Indicates the number of active UDP transactions "
-		  "which are either outgoing or incoming requests."
+		  "which are incoming requests. These will pile up if a "
+		  "host can't handle them fast enough."
 		  "</td>"
 		  "</tr>\n"
 

@@ -233,6 +233,7 @@ JsonItem *Json::parseJsonStringIntoJsonItems ( char *json , int32_t niceness ) {
 				// json must start with { or [ i guess
 				// otherwise getFirstItem() won't work!
 				if ( m_sb.m_length==0 ) {
+					log("json: length is 0");
 					g_errno = EBADJSONPARSER;
 					return NULL;
 				}
@@ -294,10 +295,12 @@ JsonItem *Json::parseJsonStringIntoJsonItems ( char *json , int32_t niceness ) {
 			// what is the length of it?
 			int32_t slen = 4;
 			ji->m_valueLong = 1;
+			ji->m_value64 = 1;
 			ji->m_valueDouble = 1.0;
 			if ( *p == 'f' ) {
 				slen = 5;
 				ji->m_valueLong = 0;
+				ji->m_value64 = 0;
 				ji->m_valueDouble = 0;
 			}
 			// store decoded string right after jsonitem
@@ -342,6 +345,7 @@ JsonItem *Json::parseJsonStringIntoJsonItems ( char *json , int32_t niceness ) {
 			//char c = str[slen];
 			//str[slen] = '\0';
 			ji->m_valueLong = atol(str);
+			ji->m_value64 = atoll(str);
 			ji->m_valueDouble = atof(str);
 			// copy the number as a string as well
 			int32_t curr = m_sb.length();
@@ -367,7 +371,11 @@ JsonItem *Json::parseJsonStringIntoJsonItems ( char *json , int32_t niceness ) {
 
 	// for testing if we realloc
 	char *memEnd = m_sb.getBufStart();
-	if ( mem != memEnd ) { char *xx=NULL;*xx=0; }
+
+	// bitch if we had to do a realloc. should never happen but i
+	// saw it happen once, so do not core on that.
+	if ( mem != memEnd )
+		log("json: json parser reallocated buffer. inefficient.");
 
 	return (JsonItem *)m_sb.getBufStart();
 }
@@ -465,14 +473,26 @@ char *JsonItem::getValueAsString ( int32_t *valueLen ) {
 	}
 
 	// numbers...
-	static char s_numBuf[64];
+	// seems like when this overflowed when it was 64 bytes
+	// it went into s_vbuf in Version.cpp
+	static char s_numBuf[256];
 	if ( (float)m_valueLong == m_valueDouble ) {
-		*valueLen = sprintf ( s_numBuf,"%"INT32"", m_valueLong );
+		*valueLen = snprintf ( s_numBuf,255,"%"INT32"", m_valueLong );
 		return s_numBuf;
 	}
 
-	*valueLen = sprintf ( s_numBuf,"%f", m_valueDouble );
-	return s_numBuf;
+	if ( (double)m_value64 == m_valueDouble ) {
+		*valueLen = snprintf ( s_numBuf,255,"%"INT64"", m_value64 );
+		return s_numBuf;
+	}
+
+	// otherwise return the number as it was written in the json
+	// because it might have too many digits for printing as a double
+	*valueLen = m_valueLen;
+	return (char *)this + sizeof(JsonItem);
+
+	// *valueLen = snprintf ( s_numBuf,255,"%f", m_valueDouble );
+	// return s_numBuf;
 }
 
 bool endsInCurly ( char *s , int32_t slen ) {

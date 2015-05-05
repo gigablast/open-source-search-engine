@@ -42,7 +42,7 @@ bool replaceParm2 ( char *cgi , SafeBuf *newUrl ,
 		    char *oldUrl , int32_t oldUrlLen ) ;
 
 
-bool printCSVHeaderRow ( SafeBuf *sb , State0 *st ) ;
+bool printCSVHeaderRow ( SafeBuf *sb , State0 *st , int32_t ct ) ;
 
 bool printJsonItemInCSV ( char *json , SafeBuf *sb , class State0 *st ) ;
 
@@ -127,6 +127,8 @@ bool sendReply ( State0 *st , char *reply ) {
 	//bool xml = si->m_xml;
 
 	g_stats.logAvgQueryTime(st->m_startTime);
+
+	//log("results: debug: in sendReply deleting st=%"PTRFMT,(PTRTYPE)st);
 
 	if ( ! savedErr ) { // g_errno ) {
 		g_stats.m_numSuccess++;
@@ -543,10 +545,6 @@ bool sendPageResults ( TcpSocket *s , HttpRequest *hr ) {
 	// save this count so we know if TcpServer.cpp calls destroySocket(s)
 	st->m_numDestroys = s->m_numDestroys;
 
-	// you have to say "&header=1" to get back the header for json now.
-	// later on maybe it will default to on.
-	st->m_header = hr->getLong("header",0);
-
 	// . parse it up
 	// . this returns false and sets g_errno and, maybe, g_msg on error
 	SearchInput *si = &st->m_si;
@@ -563,6 +561,9 @@ bool sendPageResults ( TcpSocket *s , HttpRequest *hr ) {
 		return sendReply ( st, NULL );
 	}
 
+	// for debug
+	si->m_q.m_st0Ptr = (char *)st;
+
 	int32_t  codeLen = 0;
 	char *code = hr->getString("code", &codeLen, NULL);
 	// allow up to 1000 results per query for paying clients
@@ -572,9 +573,15 @@ bool sendPageResults ( TcpSocket *s , HttpRequest *hr ) {
 	if ( cr ) st->m_collnum = cr->m_collnum;
 	else      st->m_collnum = -1;
 
-	// turn this on for json output, unless diffbot collection
-	if ( format == FORMAT_JSON && ! cr->m_isCustomCrawl )
-		st->m_header = 1;
+	int32_t defHdr = 1;
+
+	// default is no header for diffbot only
+	if ( cr->m_isCustomCrawl ||  strcmp(cr->m_coll,"GLOBAL-INDEX") == 0 )
+		defHdr = 0;
+
+	// you have to say "&header=1" to get back the header for json now.
+	// later on maybe it will default to on.
+	st->m_header = hr->getLong("header",defHdr);
 
 	// take this out here as well!
 	// limit here
@@ -635,7 +642,13 @@ bool sendPageResults ( TcpSocket *s , HttpRequest *hr ) {
 		return sendReply(st,NULL);
 	}
 
-
+	// filter that one query causing the memleak for now
+	// if ( strstr(si->m_q.m_orig,
+	// 	    "type:json AND ((((query=humanLanguage:en") ) {
+	// 	g_errno = EQUERYINGDISABLED;
+	// 	return sendReply(st,NULL);
+	// }
+		
 	// LAUNCH ADS
 	// . now get the ad space for this query
 	// . don't get ads if we're not on the first page of results
@@ -691,6 +704,8 @@ bool sendPageResults ( TcpSocket *s , HttpRequest *hr ) {
 	st->m_gotResults=st->m_msg40.getResults(si,false,st,gotResultsWrapper);
 	// save error
 	st->m_errno = g_errno;
+
+	//log("results: debug: new state=%"PTRFMT,(PTRTYPE)st);
 
 	// wait for ads and spellcheck and results?
 	if ( !st->m_gotAds || !st->m_gotSpell || !st->m_gotResults )
@@ -1128,6 +1143,7 @@ bool gotResults ( void *state ) {
 	// record that
 	st->m_took = took;
 
+	//log("results: debug: in gotResults state=%"PTRFMT,(PTRTYPE)st);
 
 	// grab the query
 	Msg40 *msg40 = &(st->m_msg40);
@@ -1153,10 +1169,12 @@ bool gotResults ( void *state ) {
 			log("res: socket still in streaming mode. wtf?");
 			st->m_socket->m_streamingMode = false;
 		}
-		log("msg40: done streaming. nuking state=%"PTRFMT" q=%s. "
+		log("msg40: done streaming. nuking state=0x%"PTRFMT" "
+		    "msg40=0x%"PTRFMT" q=%s. "
 		    "msg20sin=%i msg20sout=%i sendsin=%i sendsout=%i "
 		    "numrequests=%i numreplies=%i "
 		    ,(PTRTYPE)st
+		    ,(PTRTYPE)msg40
 		    ,si->m_q.m_orig
 
 		    , msg40->m_numMsg20sIn
@@ -1167,6 +1185,15 @@ bool gotResults ( void *state ) {
 		    , msg40->m_numReplies
 
 		    );
+
+		// for some reason the socket still exists and will time out
+		//g_tcpServer.destroySocket ( st->m_socket );
+
+		// just let tcpserver nuke it, but don't double call
+		// the callback, doneSendingWrapper9()... because msg40
+		// will have been deleted!
+		st->m_socket->m_callback = NULL;
+
 		mdelete(st, sizeof(State0), "PageResults2");
 		delete st;
 		return true;
@@ -1729,6 +1756,8 @@ bool printLeftNavColumn ( SafeBuf &sb, State0 *st ) {
 	// MDW: support gigabits in xml/json format again
 	//if ( format != FORMAT_HTML ) numGigabits = 0;
 
+	if ( ! st->m_header )
+		numGigabits = 0;
 
 	// print gigabits
 	Gigabit *gigabits = (Gigabit *)gbuf->getBufStart();
@@ -2131,6 +2160,7 @@ bool printSearchResultsHeader ( State0 *st ) {
 	// print first [ for json
 	if ( si->m_format == FORMAT_JSON ) {
 		if ( st->m_header ) sb->safePrintf("{\n");
+		// this is just for diffbot really...
 		else                sb->safePrintf("[\n");
 	}
 
@@ -2626,7 +2656,8 @@ bool printSearchResultsHeader ( State0 *st ) {
 
 
 	// when streaming results we lookup the facets last
-	if ( si->m_format != FORMAT_HTML && ! si->m_streamResults ) 
+	if ( si->m_format != FORMAT_HTML && ! si->m_streamResults &&
+	     st->m_header ) 
 		msg40->printFacetTables ( sb );
 
 	// now print gigabits if we are xml/json
@@ -2647,8 +2678,7 @@ bool printSearchResultsHeader ( State0 *st ) {
 		return true;
 	}
 
-	if ( si->m_format == FORMAT_JSON &&
-	     ! cr->m_isCustomCrawl ) {
+	if ( si->m_format == FORMAT_JSON && st->m_header ) {
 		sb->safePrintf("\"results\":[\n");
 		return true;
 	}
@@ -3170,7 +3200,7 @@ bool printSearchResultsTail ( State0 *st ) {
 			sb->m_length -= 2;
 			sb->safePrintf("\n");
 		}
-		// print ending ] for json
+		// print ending ] for json search results
 		sb->safePrintf("]\n");
 
 		// when streaming results we lookup the facets last
@@ -3903,13 +3933,14 @@ bool printResult ( State0 *st, int32_t ix , int32_t *numPrintedSoFar ) {
 	// ptr_content is set in the msg20reply.
 	if ( si->m_format == FORMAT_CSV &&
 	     mr->ptr_content &&
-	     mr->m_contentType == CT_JSON ) {
+	     // spider STATUS docs are json
+	     (mr->m_contentType == CT_JSON || mr->m_contentType == CT_STATUS)){
 		// parse it up
 		char *json = mr->ptr_content;
 		// only print header row once, so pass in that flag
 		if ( ! st->m_printedHeaderRow ) {
 			sb->reset();
-			printCSVHeaderRow ( sb , st );
+			printCSVHeaderRow ( sb , st , mr->m_contentType );
 			st->m_printedHeaderRow = true;
 		}
 		printJsonItemInCSV ( json , sb , st );
@@ -4025,6 +4056,83 @@ bool printResult ( State0 *st, int32_t ix , int32_t *numPrintedSoFar ) {
 		sb->jsonEncode ( mr->ptr_content );
 		sb->safePrintf("\",\n");
 	}
+
+	// print spider status pages special
+	if ( mr->ptr_content && 
+	     si->m_format == FORMAT_HTML &&
+	     mr->m_contentType == CT_STATUS ) {
+		if ( *numPrintedSoFar )
+			sb->safePrintf("<br><hr><br>\n");
+		// skip to gbssurl
+		char *s = strstr ( mr->ptr_content,"\"gbssUrl\":");
+		if ( ! s ) {
+			log("results: missing gbssUrl");
+			goto badformat;
+		}
+		// then do two columns after the two urls
+		char *e = strstr ( s , "\"gbssStatusCode\":" );
+		if ( ! e ) {
+			log("results: missing gbssStatusCode");
+			goto badformat;
+		}
+		char *m = strstr ( e , "\"gbssConsecutiveErrors\":");
+		if ( ! m ) {
+			log("results: missing gbssConsecutiveErrors");
+			goto badformat;
+		}
+		// exclude \0
+		char *end = mr->ptr_content + mr->size_content - 1;
+		// use a table with 2 columns
+		// so we can use \n to separate lines and don't have to add brs
+		// and boldify just the main url, not the redir url!
+		sb->safePrintf("<pre style=display:inline;>"
+			       "\"gbssUrl\":\""
+			       "<b style=color:blue;><a href=/get?"
+			       "c=%s&"
+			       "d=%"INT64">"
+			       , cr->m_coll
+			       , mr->m_docId
+			       );
+		char *s2 = strstr ( s , "\"gbssFinalRedirectUrl\":");
+		char *bend = e - 3;
+		if ( s2 ) bend = s2 - 3;
+		sb->safeMemcpy ( s+11 , bend - (s+11));
+		sb->safePrintf("</a></b></pre>\",<br>");
+		// now print redir url if there
+		if ( s2 ) {
+			sb->safePrintf("<pre style=display:inline;>");
+			sb->safeMemcpy ( s2 , e-s2 );
+			sb->removeLastChar('\n');
+			sb->safePrintf("</pre>");
+		}
+		sb->safePrintf("<table border=0 cellpadding=0 cellspacing=0>"
+			       "<tr><td>");
+		sb->safePrintf("<pre>");
+		//int32_t off = sb->length();
+		sb->safeMemcpy ( e , m - e );
+		sb->safePrintf("</pre>");
+		sb->safePrintf("</td><td>");
+		sb->safePrintf("<pre>");
+		sb->safeMemcpy ( m , end - m );
+		// remove last \n
+		sb->removeLastChar('\n');
+		sb->removeLastChar('}');
+		sb->removeLastChar('\n');
+		sb->safePrintf("</pre>\n");
+		sb->safePrintf("</td></tr></table>");
+		// replace \n with <br>
+		// sb->safeReplace2 ( "\n" , 1 ,
+		// 		   "<br>" , 4 ,
+		// 		   0,//niceness ,
+		// 		   off );
+		// inc it
+		*numPrintedSoFar = *numPrintedSoFar + 1;
+		// just in case
+		sb->nullTerm();
+		return true;
+	}
+
+	badformat:
 
 	Highlight hi;
 
@@ -4358,7 +4466,6 @@ bool printResult ( State0 *st, int32_t ix , int32_t *numPrintedSoFar ) {
 	// PRINT THE TITLE
 	//
 	///////
-
 
 	// the a href tag
 	if ( si->m_format == FORMAT_HTML ) {
@@ -4887,6 +4994,9 @@ bool printResult ( State0 *st, int32_t ix , int32_t *numPrintedSoFar ) {
 		// . docId for possible cached link
 		// . might have merged a bunch together
 		sb->safePrintf("\t\t<docId>%"INT64"</docId>\n",mr->m_docId );
+	}
+
+	if ( si->m_format == FORMAT_XML && mr->m_contentType != CT_STATUS ) {
 		// . show the site root
 		// . for hompages.com/users/fred/mypage.html this will be
 		//   homepages.com/users/fred/
@@ -4934,6 +5044,9 @@ bool printResult ( State0 *st, int32_t ix , int32_t *numPrintedSoFar ) {
 		// . docId for possible cached link
 		// . might have merged a bunch together
 		sb->safePrintf("\t\t\"docId\":%"INT64",\n",mr->m_docId );
+	}
+
+	if ( si->m_format == FORMAT_JSON && mr->m_contentType != CT_STATUS ) {
 		// . show the site root
 		// . for hompages.com/users/fred/mypage.html this will be
 		//   homepages.com/users/fred/
@@ -5182,10 +5295,12 @@ bool printResult ( State0 *st, int32_t ix , int32_t *numPrintedSoFar ) {
 		sb->safePrintf (" - "
 				"<a style=color:blue; "
 				"href=\"/search?sb=1&c=%s&"
-				"q=url2%%3A" 
+				//"q=url2%%3A" 
+				"q=gbfieldmatch%%3AgbssUrl%%3A"
 				, coll 
 				);
-		sb->urlEncode ( url , gbstrlen(url) , false );
+		// do not include ending \0
+		sb->urlEncode ( mr->ptr_ubuf , mr->size_ubuf-1 , false );
 		sb->safePrintf ( "\">"
 				 "spider info</a>\n"
 			       );
@@ -7810,27 +7925,43 @@ int csvPtrCmp ( const void *a, const void *b ) {
 	if ( strcmp(pb,"product.title") == 0 ) return  1;
 	if ( strcmp(pa,"title") == 0 ) return -1;
 	if ( strcmp(pb,"title") == 0 ) return  1;
+
+	// this is now taken care of from the 'supps[]' array below
+	// by prepending two digits before each field name
+
+	// put url first for spider status docs
+	// if ( strcmp(pa,"gbssUrl") == 0 ) return -1;
+	// if ( strcmp(pb,"gbssUrl") == 0 ) return  1;
+
+	// if ( strcmp(pa,"gbssStatusMsg") == 0 ) return -1;
+	// if ( strcmp(pb,"gbssStatusMsg") == 0 ) return  1;
+
+	// if ( strcmp(pa,"gbssStatusCode") == 0 ) return -1;
+	// if ( strcmp(pb,"gbssStatusCode") == 0 ) return  1;
+
+
 	// otherwise string compare
 	int val = strcmp(pa,pb);
+
 	return val;
 }
 	
 
 #include "Json.h"
 
-// 
-// print header row in csv
-//
-bool printCSVHeaderRow ( SafeBuf *sb , State0 *st ) {
+bool printCSVHeaderRow2 ( SafeBuf *sb ,
+			  int32_t ct ,
+			  CollectionRec *cr ,
+			  SafeBuf *nameBuf ,
+			  HashTableX *columnTable ,
+			  Msg20 **msg20s ,
+			  int32_t numMsg20s ,
+			  int32_t *numPtrsArg ) {
 
-	Msg40 *msg40 = &st->m_msg40;
- 	int32_t numResults = msg40->getNumResults();
+	*numPtrsArg = 0;
 
 	char tmp1[1024];
 	SafeBuf tmpBuf (tmp1 , 1024);
-
-	char tmp2[1024];
-	SafeBuf nameBuf (tmp2, 1024);
 
 	char nbuf[27000];
 	HashTableX nameTable;
@@ -7839,16 +7970,86 @@ bool printCSVHeaderRow ( SafeBuf *sb , State0 *st ) {
 
 	int32_t niceness = 0;
 
+	// if doing spider status docs not all will have dupofdocid field
+	char *supps [] = { 
+		"00gbssUrl",
+		"01gbssDocId",
+		"02gbssDiscoveredTime",
+		"03gbssSpiderTime",
+		"06gbssContentLen",
+		"07gbssDupOfDocId" ,
+		"08gbssNumRedirects",
+		"09gbssFinalRedirectUrl",
+		"10gbssCrawlDelayMS",
+		"11gbssCrawlRound",
+		"12gbssPrevTotalNumIndexAttempts",
+		"13gbssHopCount",
+		"14gbssStatusMsg",
+		"15gbssSentToDiffbotThisTime",
+		"16gbssDiffbotReplyMsg",
+
+		"gbssIp",
+		"gbssPercentContentChanged",
+		"gbssDownloadStartTime",
+		"gbssDownloadEndTime",
+		"gbssContentType",
+		"gbssHttpStatus",
+		"gbssWasIndexed",
+		"gbssAgeInIndex",
+		"gbssPrevTotalNumIndexSuccesses",
+		"gbssPrevTotalNumIndexFailures",
+		"gbssDownloadStartTimeMS",
+		"gbssDownloadEndTimeMS",
+		"gbssDownloadDurationMS",
+		"gbssIpLookupTimeMS",
+		"gbssSiteNumInlinks",
+		"gbssSiteRank",
+		"gbssLanguage",
+		"gbssDiffbotReplyCode",
+		"gbssDiffbotLen",
+		"gbssDiffbotReplyResponseTimeMS",
+		"gbssDiffbotReplyRetries",
+		NULL };
+
+	for ( int32_t i = 0 ; supps[i] ; i++ ) {
+		// don't add these column headers to non spider status docs
+		if ( ct != CT_STATUS ) break;
+		char *skip = supps[i];
+		// if custom crawl only show fields in supps with digits
+		if ( cr->m_isCustomCrawl && ! is_digit(skip[0]) ) continue;
+		// skip over the two order digits
+		if ( is_digit(skip[0]) ) skip += 2;
+		// don't include the order digits in the hash
+		int64_t h64 = hash64n ( skip );
+		if ( nameTable.isInTable ( &h64 ) ) continue;
+		// only show diffbot column headers for custom (diffbot) crawls
+		if ( strncmp(skip,"gbssDiffbot",11) == 0 &&
+		     ( ! cr || ! cr->m_isCustomCrawl ) )
+			break;
+		// record offset of the name for our hash table
+		int32_t nameBufOffset = nameBuf->length();
+		// store the name in our name buffer
+		if ( ! nameBuf->safeStrcpy (supps[i])) return false;
+		if ( ! nameBuf->pushChar ( '\0' ) ) return false;
+		// it's new. add it
+		if ( ! nameTable.addKey ( &h64 ,&nameBufOffset)) return false;
+	}
+	
 	// . scan every fucking json item in the search results.
 	// . we still need to deal with the case when there are so many
 	//   search results we have to dump each msg20 reply to disk in
 	//   order. then we'll have to update this code to scan that file.
 
-	for ( int32_t i = 0 ; i < numResults ; i++ ) {
+	for ( int32_t i = 0 ; i < numMsg20s ; i++ ) { // numResults
+
+		// if custom crawl urls.csv only show the supps[] from above
+		if ( ct == CT_STATUS && cr->m_isCustomCrawl )
+			break;
 
 		// get the msg20 reply for search result #i
-		Msg20      *m20 = msg40->m_msg20[i];
-		Msg20Reply *mr  = m20->m_r;
+		//Msg20      *m20 = msg40->m_msg20[i];
+		//Msg20Reply *mr  = m20->m_r;
+		Msg20Reply *mr  = msg20s[i]->m_r;
 
 		if ( ! mr ) {
 			log("results: missing msg20 reply for result #%"INT32"",i);
@@ -7889,6 +8090,13 @@ bool printCSVHeaderRow ( SafeBuf *sb , State0 *st ) {
 			     strcmp(ji->m_name,"html")==0)
 				continue;
 
+			// for spider status docs skip these
+			if ( ct == CT_STATUS && ji->m_name ) {
+				if (!strcmp(ji->m_name,"") )
+					continue;
+			}
+
+
 			// reset length of buf to 0
 			tmpBuf.reset();
 
@@ -7902,12 +8110,12 @@ bool printCSVHeaderRow ( SafeBuf *sb , State0 *st ) {
 			if ( nameTable.isInTable ( &h64 ) ) continue;
 
 			// record offset of the name for our hash table
-			int32_t nameBufOffset = nameBuf.length();
+			int32_t nameBufOffset = nameBuf->length();
 			
 			// store the name in our name buffer
-			if ( ! nameBuf.safeStrcpy ( tmpBuf.getBufStart() ) )
+			if ( ! nameBuf->safeStrcpy ( tmpBuf.getBufStart() ) )
 				return false;
-			if ( ! nameBuf.pushChar ( '\0' ) )
+			if ( ! nameBuf->pushChar ( '\0' ) )
 				return false;
 
 			// it's new. add it
@@ -7923,29 +8131,128 @@ bool printCSVHeaderRow ( SafeBuf *sb , State0 *st ) {
 	for ( int32_t i = 0 ; i < nameTable.m_numSlots ; i++ ) {
 		if ( ! nameTable.m_flags[i] ) continue;
 		int32_t off = *(int32_t *)nameTable.getValueFromSlot(i);
-		char *p = nameBuf.getBufStart() + off;
+		char *p = nameBuf->getBufStart() + off;
 		ptrs[numPtrs++] = p;
 		if ( numPtrs >= 1024 ) break;
 	}
+
+	// pass back to caller
+	*numPtrsArg = numPtrs;
 
 	// sort them
 	qsort ( ptrs , numPtrs , sizeof(char *) , csvPtrCmp );
 
 	// set up table to map field name to column for printing the json items
-	HashTableX *columnTable = &st->m_columnTable;
+	//HashTableX *columnTable = &st->m_columnTable;
 	if ( ! columnTable->set ( 8,4, numPtrs * 4,NULL,0,false,0,"coltbl" ) )
 		return false;
 
 	// now print them out as the header row
 	for ( int32_t i = 0 ; i < numPtrs ; i++ ) {
+
+		char *hdr = ptrs[i];
+
 		if ( i > 0 && ! sb->pushChar(',') ) return false;
-		if ( ! sb->safeStrcpy ( ptrs[i] ) ) return false;
+
+		// skip the two order digits
+		if ( ct == CT_STATUS && is_digit(hdr[0]) ) hdr += 2;
+
+		// save it
+		char *skip = hdr;
+
+		// now transform the hdr from gbss* into the old way
+		if ( ! cr->m_isCustomCrawl )
+			goto skipTransform;
+
+		if ( ! strcmp(hdr,"gbssUrl") ) 
+			hdr = "Url";
+		if ( ! strcmp(hdr,"gbssDocId") ) 
+			hdr = "Doc ID";
+		// when url was first discovered
+		if ( ! strcmp(hdr,"gbssDiscoveredTime") ) // need this!
+			hdr = "Url Discovered Time";
+		// when it was crawled this time
+		if ( ! strcmp(hdr,"gbssSpiderTime" ) )
+			hdr = "Crawled Time";
+		if ( ! strcmp(hdr,"gbssContentLen") ) 
+			hdr = "Content Length";
+		if ( ! strcmp(hdr,"gbssDupOfDocId") ) 
+			hdr = "Duplicate Of";
+		if ( ! strcmp(hdr,"gbssNumRedirects") ) 
+			hdr = "Redirects";
+		if ( ! strcmp(hdr,"gbssFinalRedirectUrl") )
+			hdr = "Redirected To";
+		if ( ! strcmp(hdr,"gbssCrawlDelayMS") ) 
+			hdr = "Robots.txt Crawl Delay (ms)";
+		if ( ! strcmp(hdr,"gbssPercentContentChanged") )
+			hdr = "Percent Changed";
+		if ( ! strcmp(hdr,"gbssCrawlRound") ) 
+			hdr = "Crawl Round";
+		if ( ! strcmp(hdr,"gbssPrevTotalNumIndexAttempts") )
+			hdr = "Crawl Try #";
+		if ( ! strcmp(hdr,"gbssHopCount") ) 
+			hdr = "Hop Count";
+		if ( ! strcmp(hdr,"gbssIp") ) 
+			hdr = "IP";
+		if ( ! strcmp(hdr,"gbssSentToDiffbotThisTime") ) 
+			hdr = "Process Attempted";
+		if ( ! strcmp(hdr,"gbssDiffbotReplyMsg") )
+			hdr = "Process Response";
+		if ( ! strcmp(hdr,"gbssStatusMsg") ) 
+			hdr = "Crawl Status";
+
+		//if ( ! strcmp(hdr,"gbssMatchingUrlFilter") ) 
+		//	hdr = "Matching Expression";
+		// value is 'url ignored', 'will spider next round', 'error' or 
+		// a numeric priority
+		// if ( ! strcmp(hdr,"gbssSpiderPriority") ) 
+		// 	hdr = "Matching Action";
+
+		// new columns
+		// if ( ! strcmp(hdr,"gbssAgeInIndex") ) 
+		// 	hdr = "Age in Index";
+
+		// if not transformed, then do not print it out
+		if ( ! strncmp(hdr,"gbss",4) )
+			continue;
+
+	skipTransform:
+		if ( ! sb->safeStrcpy ( hdr ) ) return false;
+
 		// record the hash of each one for printing out further json
 		// objects in the same order so columns are aligned!
-		int64_t h64 = hash64n ( ptrs[i] );
+		int64_t h64 = hash64n ( skip ); // ptrs[i] );
 		if ( ! columnTable->addKey ( &h64 , &i ) ) 
 			return false;
 	}
+
+	return true;
+}
+
+// 
+// print header row in csv
+//
+bool printCSVHeaderRow ( SafeBuf *sb , State0 *st , int32_t ct ) {
+
+	Msg40 *msg40 = &st->m_msg40;
+ 	int32_t numResults = msg40->getNumResults();
+
+	char tmp2[1024];
+	SafeBuf nameBuf (tmp2, 1024);
+
+	CollectionRec *cr = g_collectiondb.getRec ( st->m_collnum );
+
+	int32_t numPtrs = 0;
+
+	printCSVHeaderRow2 ( sb , 
+			     ct ,
+			     cr ,
+			     &nameBuf ,
+			     &st->m_columnTable ,
+			     msg40->m_msg20 ,
+			     numResults ,
+			     &numPtrs 
+			     );
 
 	st->m_numCSVColumns = numPtrs;
 
@@ -7959,6 +8266,8 @@ bool printCSVHeaderRow ( SafeBuf *sb , State0 *st ) {
 
 // returns false and sets g_errno on error
 bool printJsonItemInCSV ( char *json , SafeBuf *sb , State0 *st ) {
+
+	CollectionRec *cr = g_collectiondb.getRec ( st->m_collnum );
 
 	int32_t niceness = 0;
 
@@ -8018,6 +8327,9 @@ bool printJsonItemInCSV ( char *json , SafeBuf *sb , State0 *st ) {
 		int32_t slot = columnTable->getSlot ( &h64 ) ;
 		// MUST be in there
 		if ( slot < 0 ) { 
+			// we do not transform all gbss fields any more for
+			// diffbot to avoid overpopulating the csv
+			if ( cr && cr->m_isCustomCrawl ) continue;
 			// do not core on this anymore...
 			log("serps: json column not in table : %s",ji->m_name);
 			continue;
@@ -9039,6 +9351,12 @@ bool printSearchFiltersBar ( SafeBuf *sb , HttpRequest *hr ) {
 		s_mi[n].m_icon     = NULL;
 		n++;
 
+		s_mi[n].m_menuNum  = 5;
+		s_mi[n].m_title    = "Output CSV";
+		s_mi[n].m_cgi      = "format=csv";
+		s_mi[n].m_icon     = NULL;
+		n++;
+
 		// show/hide banned
 		s_mi[n].m_menuNum  = 6;
 		s_mi[n].m_title    = "Hide banned results";
@@ -9116,19 +9434,19 @@ bool printSearchFiltersBar ( SafeBuf *sb , HttpRequest *hr ) {
 
 		s_mi[n].m_menuNum  = 11;
 		s_mi[n].m_title    = "Respider all results";
-		s_mi[n].m_cgi      = "/admin/reindex";
+		s_mi[n].m_cgi      = "";//"/admin/reindex";
 		s_mi[n].m_icon     = NULL;
 		n++;
 
 		s_mi[n].m_menuNum  = 11;
 		s_mi[n].m_title    = "Delete all results";
-		s_mi[n].m_cgi      = "/admin/reindex";
+		s_mi[n].m_cgi      = "";//"/admin/reindex";
 		s_mi[n].m_icon     = NULL;
 		n++;
 
 		s_mi[n].m_menuNum  = 11;
 		s_mi[n].m_title    = "Scrape from google/bing";
-		s_mi[n].m_cgi      = "/admin/inject";
+		s_mi[n].m_cgi      = "";//"/admin/inject";
 		s_mi[n].m_icon     = NULL;
 		n++;
 
@@ -9355,7 +9673,7 @@ bool printMenu ( SafeBuf *sb , int32_t menuNum , HttpRequest *hr ) {
 }
 
 bool replaceParm ( char *cgi , SafeBuf *newUrl , HttpRequest *hr ) { 
-
+	if ( ! cgi[0] ) return true;
 	// get original request url. this is not \0 terminated
 	char *src    = hr->m_origUrlRequest;
 	int32_t  srcLen = hr->m_origUrlRequestLen;
@@ -9371,7 +9689,8 @@ bool replaceParm2 ( char *cgi , SafeBuf *newUrl ,
 	char *srcEnd = src + srcLen;
 
 	char *equal = strstr(cgi,"=");
-	if ( ! equal ) return log("results: %s has no equal sign",cgi);
+	if ( ! equal ) 
+		return log("results: %s has no equal sign",cgi);
 	int32_t cgiLen = equal - cgi;
 
 	char *found = NULL;

@@ -666,7 +666,7 @@ bool printLeftColumnRocketAndTabs ( SafeBuf *sb ,
 		{"SYNTAX","/syntax.html"},
 		{"USERS","/users.html"},
 		{"ABOUT","/about.html"},
-		{"NEWS","/news.html"},
+		{"BLOG","/blog.html"},
 		// take this out for now
 		//{"FEED","/searchfeed.html"},
 		{"FAQ","/faq.html"},
@@ -1202,11 +1202,7 @@ bool printWebHomePage ( SafeBuf &sb , HttpRequest *r , TcpSocket *sock ) {
 	if ( printRedBox2 ( &sb , sock , r ) ) // true ) )
 		sb.safePrintf("<br>\n");
 
-	/*
-
-	  do not show table for open source installs
-
-	sb.safePrintf("<table cellpadding=3>\n");
+	sb.safePrintf("<br><center><table cellpadding=3>\n");
 	sb.safePrintf("\n");
 
 	char *root = "";
@@ -1216,16 +1212,42 @@ bool printWebHomePage ( SafeBuf &sb , HttpRequest *r , TcpSocket *sock ) {
 	sb.safePrintf("<tr valign=top>\n");
 
 	//sb.safePrintf("<td align=center><div style=width:50px;height:50px;display:inline-block;background-color:red;></div></td>\n");
-	sb.safePrintf("<td align=center><img height=71px width=50px "
+	sb.safePrintf("<td width=10%% "
+		      "align=center><img style=padding-right:10px; "
+		      "height=71px width=50px "
 		      "src=%s/opensource.png></td>\n"
 		      , root );
 
-	sb.safePrintf("<td><font size=+1><b>Open Source!</b>"
-	"</font><br>\n");
-	sb.brify2("Gigablast is now available as an <a href=https://github.com/gigablast/open-source-search-engine>open source search engine</a> on github.com. Download it today. Finally a robust, scalable search solution in C/C++ that has been in development and used commercially since 2000. <a href=http://www.gigablast.com/faq.html#features>Features</a>. Limited support available for free."
-		  ,80);
+	sb.safePrintf("<td width=45%%><font size=+1><b>Open Source!</b>"
+	"</font><br><br>\n");
+	sb.brify2("Gigablast is now available as an <a href=https://github.com/gigablast/open-source-search-engine>open source search engine</a> on github.com. Download it today. Finally a robust, scalable search solution in C/C++ that has been in development and used commercially since 2000. <a href=http://www.gigablast.com/faq.html#features>Features</a>."
+		  ,40);
+	//sb.safePrintf("<br><br>");
+	sb.safePrintf("</td>");
+
+	sb.safePrintf("<td><font size=+1><b>ScreenShots</b>"
+	"</font><br><br>\n");
+
+	sb.safePrintf("<a href=/ss_settings.png><img width=150 height=81 src=ss_settings_thumb.png></a>");
+
 	sb.safePrintf("<br><br>");
-	sb.safePrintf("</td></tr>\n");
+
+	sb.safePrintf("<a href=/ss_hosts.png><img width=150 height=81 src=ss_hosts_thumb.png></a>");
+
+	sb.safePrintf("<br><br>");
+
+	sb.safePrintf("<a href=/ss_filters.png><img width=150 height=81 src=ss_filters_thumb.png></a>");
+
+	sb.safePrintf("</td>");
+
+
+	sb.safePrintf("</tr>\n");
+
+	sb.safePrintf("</table></center>\n");
+
+	/*
+
+	  do not show table for open source installs
 
 
 	// donate with paypal

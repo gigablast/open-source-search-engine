@@ -349,11 +349,16 @@ void printUdpTable ( SafeBuf *p, char *title, UdpServer *server ,
 		     "<td><b>hostname</b></td>";
 	}
 
+	UdpSlot *slot = server->m_head3;
+	int32_t callbackReadyCount = 0;
+	for ( ; slot ; slot = slot->m_next3 , callbackReadyCount++ ); 
+
 	p->safePrintf ( "<table %s>"
 			"<tr class=hdrow><td colspan=19>"
 			"<center>"
 			//"<font size=+1>"
 			"<b>%s</b> (%"INT32" transactions)"
+			"(%"INT32" reads ready)"
 			//"</font>"
 			"</td></tr>"
 			"<tr bgcolor=#%s>"
@@ -380,6 +385,7 @@ void printUdpTable ( SafeBuf *p, char *title, UdpServer *server ,
 			"</tr>\n" , 
 			TABLE_STYLE,
 			title , server->getNumUsedSlots() , 
+			callbackReadyCount ,
 			DARK_BLUE ,
 			dd );
 

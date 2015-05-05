@@ -25,6 +25,7 @@ void Msg3a::constructor ( ) {
 	m_numDocIds    = 0;
 	m_collnums     = NULL;
 	m_inUse        = false;
+	m_q            = NULL;
 
 	// need to call all safebuf constructors now to set m_label
 	m_rbuf2.constructor();
@@ -143,6 +144,7 @@ bool Msg3a::getDocIds ( Msg39Request *r          ,
 	reset();
 	// remember ALL the stuff
 	m_r        = r;
+	// this should be &SearchInput::m_q
 	m_q        = q;
 	m_callback = callback;
 	m_state    = state;
@@ -761,6 +763,16 @@ bool Msg3a::gotAllShardReplies ( ) {
 		//   of posdb...
 		m_numTotalEstimatedHits += mr->m_estimatedHits;
 
+		// accumulate total facet count from all shards for each term
+		int64_t *facetCounts;
+		facetCounts = (int64_t*)mr->ptr_numDocsThatHaveFacetList;
+		for ( int32_t k = 0 ; k < mr->m_nqt ;  k++ ) {
+			QueryTerm *qt = &m_q->m_qterms[k];
+			// sanity. this should never happen.
+			if ( k >= m_q->m_numTerms ) break;
+			qt->m_numDocsThatHaveFacet += facetCounts[k];
+		}
+
 		// debug log stuff
 		if ( ! m_debug ) continue;
 		// cast these for printing out
@@ -771,7 +783,8 @@ bool Msg3a::gotAllShardReplies ( ) {
 			// print out score_t
 			logf( LOG_DEBUG,
 			     "query: msg3a: [%"PTRFMT"] %03"INT32") "
-			     "shard=%"INT32" docId=%012"UINT64" domHash=0x%02"XINT32" "
+			     "shard=%"INT32" docId=%012"UINT64" "
+			      "domHash=0x%02"XINT32" "
 			     "score=%f"                     ,
 			     (PTRTYPE)this                      ,
 			     j                                        , 
@@ -1063,13 +1076,21 @@ bool Msg3a::mergeLists ( ) {
 		// and Msg40.cpp ultimately.
 		HashTableX *ht = &qt->m_facetHashTable;
 		// we have to manually call this because Query::constructor()
-		// might have been called explicitly
-		ht->constructor();
+		// might have been called explicitly. not now because
+		// i added a call the Query::constructor() to call
+		// QueryTerm::constructor() for each QueryTerm in
+		// Query::m_qterms[]. this was causing a mem leak of 
+		// 'fhtqt' too beacause we were re-using the query for each 
+		// coll in the federated loop search.
+		//ht->constructor();
 		// 4 byte key, 4 byte score for counting facet values
 		if ( ! ht->set(4,sizeof(FacetEntry),
 			       128,NULL,0,false,
 			       m_r->m_niceness,"fhtqt")) 
 			return true;
+		// debug note
+		// log("results: alloc fhtqt of %"PTRFMT" for st0=%"PTRFMT,
+		//     (PTRTYPE)ht->m_buf,(PTRTYPE)m_q->m_st0Ptr);
 		// sanity
 		if ( ! ht->m_isWritable ) {char *xx=NULL;*xx=0;}
 	}
@@ -1185,7 +1206,6 @@ bool Msg3a::mergeLists ( ) {
 	// sets g_errno on error and returns false so we return true.
 	if ( ! sortFacetEntries() )
 		return true;
-
 
 	//if ( m_r->m_getSectionStats ) return true;
 	//

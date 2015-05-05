@@ -686,14 +686,26 @@ void Repair::initScan ( ) {
 
 	
 	// init secondary rdbs
-	if ( m_rebuildTitledb )
+	if ( m_rebuildTitledb ) {
 		if ( ! g_titledb2.init2    ( titledbMem    ) ) goto hadError;
+		// clean tree in case loaded from saved file
+		Rdb *r = g_titledb2.getRdb();
+		if ( r ) r->m_tree.cleanTree();
+	}
+
 	//if ( m_rebuildTfndb )
 	//	if ( ! g_tfndb2.init2      ( tfndbMem      ) ) goto hadError;
 	//if ( m_rebuildIndexdb )
 	//	if ( ! g_indexdb2.init2    ( indexdbMem    ) ) goto hadError;
-	if ( m_rebuildPosdb )
+	if ( m_rebuildPosdb ) {
 		if ( ! g_posdb2.init2    ( posdbMem    ) ) goto hadError;
+		// clean tree in case loaded from saved file
+		Rdb *r = g_posdb2.getRdb();
+		if ( r ) r->m_buckets.cleanBuckets();
+	}
+
+
+
 	//if ( m_rebuildDatedb )
 	//	if ( ! g_datedb2.init2     ( datedbMem     ) ) goto hadError;
 	if ( m_rebuildClusterdb )

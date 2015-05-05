@@ -506,7 +506,8 @@ class XmlDoc {
 	bool setTitleRecBuf ( SafeBuf *buf , int64_t docId, int64_t uh48 );
 	// sets m_titleRecBuf/m_titleRecBufValid/m_titleRecKey[Valid]
 	SafeBuf *getTitleRecBuf ( );
-	SafeBuf *getSpiderStatusDocMetaList ( class SpiderReply *reply ) ;
+	SafeBuf *getSpiderStatusDocMetaList ( class SpiderReply *reply ,
+					      bool forDelete ) ;
 	SafeBuf *getSpiderStatusDocMetaList2 ( class SpiderReply *reply ) ;
 	SafeBuf m_spiderStatusDocMetaList;
 	char *getIsAdult ( ) ;
@@ -532,6 +533,7 @@ class XmlDoc {
 	char *getIsPermalink ( ) ;
 	char *getIsUrlPermalinkFormat ( ) ;
 	char *getIsRSS ( ) ;
+	char *getIsSiteMap ( ) ;
 	class Xml *getXml ( ) ;
 	uint8_t *getLangVector ( ) ;	
 	uint8_t *getLangId ( ) ;
@@ -734,6 +736,18 @@ class XmlDoc {
 
 	char *getDiffbotParentUrl( char *myUrl );
 
+	int64_t m_diffbotReplyEndTime;
+	int64_t m_diffbotReplyStartTime;
+	int32_t m_diffbotReplyRetries;
+
+	bool m_sentToDiffbotThisTime;
+
+	uint64_t m_downloadStartTime;
+	//uint64_t m_downloadEndTime;
+
+	uint64_t m_ipStartTime;
+	uint64_t m_ipEndTime;
+
 	void copyFromOldDoc ( class XmlDoc *od ) ;
 
 	class SpiderReply *getFakeSpiderReply ( );
@@ -785,8 +799,8 @@ class XmlDoc {
 	bool hashContentType ( class HashTableX *table ) ;
 	bool hashDMOZCategories ( class HashTableX *table ) ;
 	bool hashLinks ( class HashTableX *table ) ;
-	bool hashUrl ( class HashTableX *table , bool isStatusDoc = false ) ;
-	bool hashDateNumbers ( class HashTableX *tt , bool isStatusDoc=false) ;
+	bool hashUrl ( class HashTableX *table );
+	bool hashDateNumbers ( class HashTableX *tt );
 	bool hashSections ( class HashTableX *table ) ;
 	bool hashIncomingLinkText ( class HashTableX *table            ,
 				    bool       hashAnomalies    ,
@@ -1148,6 +1162,7 @@ class XmlDoc {
 	char     m_addedSpiderRequestSizeValid;
 	char     m_addedSpiderReplySizeValid;
 	char     m_addedStatusDocSizeValid;
+	char     m_downloadStartTimeValid;
 	//char   m_docQualityValid;
 	char     m_siteValid;
 	char     m_startTimeValid;
@@ -1215,6 +1230,7 @@ class XmlDoc {
 	char     m_rootLangIdValid;
 	char     m_datedbDateValid;
 	char     m_isRSSValid;
+	char     m_isSiteMapValid;
 	char     m_spiderLinksArgValid;
 	char     m_isContentTruncatedValid;
 	char     m_xmlValid;
@@ -1436,6 +1452,8 @@ class XmlDoc {
 	bool m_looseContentHash64Valid;
 	bool m_jpValid;
 
+	char m_isSiteMap;
+
 	// shadows
 	char m_isRSS2;
 	char m_isPermalink2;
@@ -1634,7 +1652,7 @@ class XmlDoc {
 	//class LinkInfo *m_linkInfo1Ptr;
 	char     *m_linkInfoColl;
 	//char m_injectedReply;
-	int32_t m_minInlinkerHopCount;
+	//int32_t m_minInlinkerHopCount;
 	//class LinkInfo *m_linkInfo2Ptr;
 	SiteGetter m_siteGetter;
 	int64_t  m_siteHash64;
@@ -1712,6 +1730,9 @@ class XmlDoc {
 	bool doesPageContentMatchDiffbotProcessPattern() ;
 	int32_t *getDiffbotTitleHashes ( int32_t *numHashes ) ;
 	char *hashJSONFields ( HashTableX *table );
+	char *hashJSONFields2 ( HashTableX *table , HashInfo *hi , Json *jp ,
+				bool hashWithoutFieldNames ) ;
+
 	char *hashXMLFields ( HashTableX *table );
 	int32_t *reindexJSONObjects ( int32_t *newTitleHashes , 
 				      int32_t numNewHashes ) ;

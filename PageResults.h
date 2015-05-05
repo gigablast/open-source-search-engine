@@ -13,6 +13,14 @@
 #define PADDING 8
 #define SCROLLBAR_WIDTH 20
 
+bool printCSVHeaderRow2 ( class SafeBuf *sb ,
+			  int32_t ct ,
+			  class CollectionRec *cr ,
+			  class SafeBuf *nameBuf ,
+			  class HashTableX *columnTable ,
+			  class Msg20 **msg20s ,
+			  int32_t numMsg20s ,
+			  int32_t *numPtrsArg ) ;
 
 class State0 {
 public:

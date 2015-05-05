@@ -195,6 +195,8 @@ void dumpLinkdb          ( char *coll,int32_t sfn,int32_t numFiles,bool includeT
 void exitWrapper ( void *state ) { exit(0); };
 
 bool g_recoveryMode = false;
+
+int32_t g_recoveryLevel = 0;
 	
 bool isRecoveryFutile ( ) ;
 
@@ -1116,8 +1118,15 @@ int main2 ( int argc , char *argv[] ) {
 	//send an email on startup for -r, like if we are recovering from an
 	//unclean shutdown.
 	g_recoveryMode = false;
-	if ( strcmp ( cmd , "-r" ) == 0 ) g_recoveryMode = true;
-	if ( strcmp ( cmd2 , "-r" ) == 0 ) g_recoveryMode = true;
+	char *cc = NULL;
+	if ( strncmp ( cmd , "-r" ,2 ) == 0 ) cc = cmd;
+	if ( strncmp ( cmd2 , "-r",2 ) == 0 ) cc = cmd2;
+	if ( cc ) {
+		g_recoveryMode = true;
+		g_recoveryLevel = 1;
+		if ( cc[2] ) g_recoveryLevel = atoi(cc+2);
+		if ( g_recoveryLevel < 0 ) g_recoveryLevel = 0;
+	}
 
 	// run as daemon? then we have to fork
 	if ( strcmp ( cmd , "-d" ) == 0 ) g_conf.m_runAsDaemon = true;
@@ -3092,6 +3101,10 @@ int main2 ( int argc , char *argv[] ) {
 		pid_t pid, sid;
 		pid = fork();
 		if ( pid < 0 ) exit(EXIT_FAILURE);
+		// seems like we core unless parent sets this to NULL.
+		// it does not affect the child.
+		//if ( pid > 0 ) g_hostdb.m_myHost = NULL;
+		// child gets a 0, parent gets the child's pid, so exit
 		if ( pid > 0 ) exit(EXIT_SUCCESS);
 		// change file mode mask
 		umask(0);
@@ -4103,6 +4116,9 @@ bool doCmd ( const char *cmd , int32_t hostId , char *filename ,
 	// doCmdAll()'s call to convertHttpRequestToParmList
 	sock.m_ip = atoip("127.0.0.1");
 	s_r.set ( s_buffer , gbstrlen ( s_buffer ) , &sock );
+	// do not do sig alarms! for now just set this to null so 
+	// the sigalarmhandler doesn't core
+	//g_hostdb.m_myHost = NULL;
 	// run the loop
 	if ( ! g_loop.runLoop() ) 
 		return log("INJECT: loop run failed.");
@@ -5170,6 +5186,7 @@ int install ( install_flag_konst_t installFlag , int32_t hostId , char *dir ,
 				"export MALLOC_CHECK_=0;"
 				"cp -f gb gb.oldsave ; "
 				"ADDARGS='' "
+				"INC=1 "
 				"EXITSTATUS=1 ; "
 				 "while [ \\$EXITSTATUS != 0 ]; do "
  				 "{ "
@@ -5191,7 +5208,8 @@ int install ( install_flag_konst_t installFlag , int32_t hostId , char *dir ,
 				" ;"
 
 				"EXITSTATUS=\\$? ; "
-				"ADDARGS='-r' ; "
+				"ADDARGS='-r'\\$INC ; "
+				"INC=\\$((INC+1));"
 				"} " 
  				"done >& /dev/null & \" %s",
 				//"\" %s",

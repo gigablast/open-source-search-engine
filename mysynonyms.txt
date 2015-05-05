@@ -15,6 +15,10 @@ en|nos
 en|at
 en|ats
 
+# it's not good to do love <-> like, as wiktionary does. override it here.
+en|love,loved,loving,loves
+en|like,likes,liked,liking
+
 
 en|sunday,sundays,sun
 en|mon,monday,mondays
@@ -179,13 +183,7 @@ en|porno,pornographic,pornography
 en|tech,technology,technologies,technological
 en|car,auto,automobile,cars,autos,automobiles
 en|electric,electrical
-en|dinner,dining,dined,dines,food
-en|lunch,food
-en|breakfast,food
 en|restaurant,restaurants,restarant,restarants,diner,cafe,cafes,caf\xc3\xa9,caf\xc3\xa9s,caf\xc3\xa8,caf\xc3\xa8s
-en|breakfast,food
-en|lunch,food
-en|dine,dines,dined,dining,eat,eats,eating,ate
 
 en|website,web site,websites,web sites,webpage,web page,webpages,web pages,homepage,home page,homepages,home pages,site,sites
 
@@ -208,16 +206,11 @@ en|calendar,schedule,calendars,schedules
 # added tv
 en|tv,television,televisions,tvs
 
-en|food,foods,nourishment,nourishments
-
 # flower shop san francisco should match 'flower store'
 en|shop,shops,shopping,store,stores
 
 # trigram
 en|nfl,national football league,football leauge
-
-en|celebration,celebrations,bash,bashes,party,parties,partying
-en|rave,raves,party,parties,partying
 
 en|rock groups,rock group,band,bands
 en|music groups,music group,band,bands

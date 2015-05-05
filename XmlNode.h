@@ -322,12 +322,14 @@ enum {
 	TAG_BUTTON,
 	TAG_URLFROM, // for ahrefs.com
 
+	// support sitemap.xml
+	TAG_LOC,
+
 	//
 	// fake tags below here
 	//
 	// a fake tag used by Sections.cpp
 	TAG_SENTENCE,
-
 
 	LAST_TAG
 };

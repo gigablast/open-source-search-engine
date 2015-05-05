@@ -244,6 +244,7 @@ bool sendBackDump ( TcpSocket *sock, HttpRequest *hr ) {
 			       , dr
 			       , cr->m_coll
 			       );
+		log("crawlbot: %s",sb2.getBufStart());
 		HttpRequest hr2;
 		hr2.set ( sb2.getBufStart() , sb2.length() , sock );
 		return sendPageResults ( sock , &hr2 );
@@ -283,6 +284,59 @@ bool sendBackDump ( TcpSocket *sock, HttpRequest *hr ) {
 			       , dr 
 			       , cr->m_coll
 			       );
+		log("crawlbot: %s",sb2.getBufStart());
+		HttpRequest hr2;
+		hr2.set ( sb2.getBufStart() , sb2.length() , sock );
+		return sendPageResults ( sock , &hr2 );
+	}
+
+	// . now the urls.csv is also a query on gbss files
+	// . make an httprequest on stack and call it
+	// . only do this for version 3 
+	//   i.e. GET /v3/crawl/download/token-collectionname_urls.csv
+	if ( fmt == FORMAT_CSV && 
+	     rdbId == RDB_SPIDERDB &&
+	     path[0] == '/' &&
+	     path[1] == 'v' &&
+	     path[2] == '3' ) {
+		char tmp2[5000];
+		SafeBuf sb2(tmp2,5000);
+		// never dedup
+		int32_t dr = 0;
+		// do not dedup for crawls either it is too confusing!!!!
+		// ppl wonder where the results are!
+		dr = 0;
+		sb2.safePrintf("GET /search?"
+			       // this is not necessary
+			       //"icc=1&"
+			       "format=csv&"
+			       // no site clustering
+			       "sc=0&"
+			       // never dedup.
+			       "dr=0&"
+			       "c=%s&"
+			       "n=10000000&"
+			       // stream it now
+			       // can't stream until we fix headers be printed
+			       // in Msg40.cpp. so gbssUrl->Url etc.
+			       // mdw: ok should work now
+			       "stream=1&"
+			       //"stream=0&"
+			       // no summary similarity dedup, only exact
+			       // doc content hash. otherwise too slow!!
+			       "pss=0&"
+			       // no gigabits
+			       "dsrt=0&"
+			       // do not compute summary. 0 lines.
+			       //"ns=0&"
+			       "q=gbrevsortbyint%%3AgbssSpiderTime+"
+			       "gbssIsDiffbotObject%%3A0"
+			       "&"
+			       //"prepend=type%%3Ajson"
+			       "\r\n\r\n"
+			       , cr->m_coll
+			       );
+		log("crawlbot: %s",sb2.getBufStart());
 		HttpRequest hr2;
 		hr2.set ( sb2.getBufStart() , sb2.length() , sock );
 		return sendPageResults ( sock , &hr2 );
@@ -768,7 +822,7 @@ void StateCD::printSpiderdbList ( RdbList *list,SafeBuf *sb,char **lastKeyPtr){
 			lastSpidered = 0;
 
 		bool isProcessed = false;
-		if ( srep ) isProcessed = srep->m_sentToDiffbot;
+		if ( srep ) isProcessed = srep->m_sentToDiffbotThisTime;
 
 		if ( srep && srep->m_hadDiffbotError )
 			isProcessed = false;
@@ -848,8 +902,10 @@ void StateCD::printSpiderdbList ( RdbList *list,SafeBuf *sb,char **lastKeyPtr){
 		// lastspidertime>={roundstart} --> spiders disabled rule
 		// so that we do not spider a url twice in the same round
 		if ( ufn >= 0 && //! cr->m_spidersEnabled[ufn] ) {
+		     cr->m_regExs[ufn].length() &&
 		     // we set this to 0 instead of using the checkbox
-		     cr->m_maxSpidersPerRule[ufn] <= 0 ) {
+		     strstr(cr->m_regExs[ufn].getBufStart(),"round") ) {
+			//cr->m_maxSpidersPerRule[ufn] <= 0 ) {
 			priority = -5;
 		}
 
@@ -935,10 +991,12 @@ void StateCD::printSpiderdbList ( RdbList *list,SafeBuf *sb,char **lastKeyPtr){
 				       //, iptoa(sreq->m_firstIp)
 				       );
 			// print priority
-			if ( priority == SPIDER_PRIORITY_FILTERED )
+			//if ( priority == SPIDER_PRIORITY_FILTERED )
+			// we just turn off the spiders now
+			if ( ufn >= 0 && cr->m_maxSpidersPerRule[ufn] <= 0 )
 				sb->safePrintf("url ignored");
-			else if ( priority == SPIDER_PRIORITY_BANNED )
-				sb->safePrintf("url banned");
+			//else if ( priority == SPIDER_PRIORITY_BANNED )
+			//	sb->safePrintf("url banned");
 			else if ( priority == -4 )
 				sb->safePrintf("error");
 			else if ( priority == -5 )
@@ -4254,7 +4312,7 @@ bool getSpiderRequestMetaList ( char *doc ,
 		sreq.m_hostHash32 = url.getHostHash32();
 		sreq.m_domHash32  = url.getDomainHash32();
 		sreq.m_siteHash32 = url.getHostHash32();
-		sreq.m_probDocId  = probDocId;
+		//sreq.m_probDocId  = probDocId;
 		sreq.m_hopCount   = 0; // we're a seed
 		sreq.m_hopCountValid = true;
 		sreq.m_addedTime = now;

@@ -5068,27 +5068,51 @@ bool Links::set ( bool useRelNoFollow ,
 		// . continue if this tag ain't an <a href> tag
 		// . atom feeds have a <link href=""> field in them
 		int32_t id = xml->getNodeId ( i );
+
+		int32_t  slen;
+		char *s ;
+		// reset
+		linkflags_t flags = 0;
+
+		/*
+		  MDW: now we set m_nodeId properly to TAG_LINK even in
+		  pure xml docs
+		if ( xml->m_pureXml ) {
+			// if it's a back tag continue
+			if ( xml->isBackTag ( i ) ) continue;
+			// must be a <> tag not innerhtml of tag
+			if ( xml->m_nodes[i].m_nodeId != TAG_XMLTAG ) continue;
+			// must be <link> i guess
+			if ( xml->m_nodes[i].m_tagNameLen != 4 ) continue;
+			if ( strncmp ( xml->m_nodes[i].m_tagName , "link" , 4))
+				continue;
+			// pure xml does not have ids like this so force it
+			id = TAG_LINK;
+			goto gotOne;
+		}
+		*/
+
 		if ( id != TAG_A         &&
-		     id != TAG_LINK      &&
+		     id != TAG_LINK      && // rss feed url
+		     id != TAG_LOC       && // sitemap.xml url
 		     id != TAG_AREA      &&
 		     id != TAG_ENCLOSURE &&
 		     id != TAG_WEBLOG    &&
 		     id != TAG_URLFROM   && //  <UrlFrom> for ahrefs.com
 		     id != TAG_FBORIGLINK )
 			continue;
+
+		//gotOne:
+
 		urlattr = "href";
 		if ( id == TAG_WEBLOG     ) urlattr ="url";
 		if ( id == TAG_FBORIGLINK ) m_isFeedBurner = true;
 
 		// if it's a back tag continue
 		if ( xml->isBackTag ( i ) ) continue;
-		// reset
-		linkflags_t flags = 0;
 		// . if it has rel=nofollow then ignore it
 		// . for old titleRecs we should skip this part so that the
 		//   link: terms are indexed/hashed the same way in XmlDoc.cpp
-		int32_t  slen;
-		char *s ;
 		if ( useRelNoFollow ) s = xml->getString ( i , "rel", &slen ) ;
 		if ( useRelNoFollow &&
 		     slen==8 &&   // ASCII
@@ -5112,6 +5136,7 @@ bool Links::set ( bool useRelNoFollow ,
 		// follow, like in an rss feed.
 		if ( linkLen==0 && 
 		     (id == TAG_LINK || 
+		      id == TAG_LOC || // sitemap.xml urls
 		      id == TAG_URLFROM ||
 		      id == TAG_FBORIGLINK) ) {
 			// the the <link> node
@@ -5340,6 +5365,30 @@ bool Links::set ( char *buf ,  int32_t niceness ) { //char *coll,int32_t nicenes
 	}
 	// assume none are flagged as old, LF_OLDLINK
 	m_flagged = true;
+	return true;
+}
+
+bool Links::print ( SafeBuf *sb ) {
+	sb->safePrintf(
+		       "<table cellpadding=3 border=1>\n"
+		       "<tr>"
+		       "<td>#</td>"
+		       "<td colspan=40>"
+		       // table header row
+		       "Outlink"
+		       "</td>"
+		       "</tr>"
+		       );
+	// find the link point to our url
+	int32_t i;
+	for ( i = 0 ; i < m_numLinks ; i++ ) {
+		char *link    = getLinkPtr(i);
+		int32_t  linkLen = getLinkLen(i);
+		sb->safePrintf("<tr><td>%"INT32"</td><td>",i);
+		sb->safeMemcpy(link,linkLen);
+		sb->safePrintf("</td></tr>\n");
+	}
+	sb->safePrintf("</table>\n<br>\n");
 	return true;
 }
 

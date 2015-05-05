@@ -407,6 +407,10 @@ bool processLoop ( void *state ) {
 	if ( format == FORMAT_XML ) sb->reset();
 	if ( format == FORMAT_JSON ) sb->reset();
 
+	if ( xd->m_contentType == CT_JSON ) sb->reset();
+	if ( xd->m_contentType == CT_XML  ) sb->reset();
+	if ( xd->m_contentType == CT_STATUS ) sb->reset();
+
 	// for undoing the stuff below
 	int32_t startLen2 = sb->length();//p;
 
@@ -429,6 +433,9 @@ bool processLoop ( void *state ) {
 	bool printDisclaimer = st->m_printDisclaimer;
 
 	if ( xd->m_contentType == CT_JSON )
+		printDisclaimer = false;
+
+	if ( xd->m_contentType == CT_STATUS )
 		printDisclaimer = false;
 
 	if ( format == FORMAT_XML ) printDisclaimer = false;
@@ -624,6 +631,8 @@ bool processLoop ( void *state ) {
 		includeHeader = false;
 	if ( xd->m_contentType == CT_XML )
 		includeHeader = false;
+	if ( xd->m_contentType == CT_STATUS )
+		includeHeader = false;
 
 	if ( format == FORMAT_XML ) includeHeader = false;
 	if ( format == FORMAT_JSON ) includeHeader = false;
@@ -679,6 +688,7 @@ bool processLoop ( void *state ) {
 	// do not calc title or print it if doc is xml or json
 	if ( ctype == CT_XML ) sbend = sbstart;
 	if ( ctype == CT_JSON ) sbend = sbstart;
+	if ( ctype == CT_STATUS ) sbend = sbstart;
 
 	for ( char *t = sbstart ; t < sbend ; t++ ) {
 		// title tag?
@@ -813,6 +823,8 @@ bool processLoop ( void *state ) {
 	// do not do term highlighting if json
 	if ( xd->m_contentType == CT_JSON )
 		queryHighlighting = false;
+	if ( xd->m_contentType == CT_STATUS )
+		queryHighlighting = false;
 
 	SafeBuf tmp;
 	SafeBuf *xb = sb;
@@ -915,6 +927,9 @@ bool processLoop ( void *state ) {
 	//if ( ctype == CT_XML ) contentType = "text/xml";
 
 	if ( xd->m_contentType == CT_JSON )
+		contentType = "application/json";
+
+	if ( xd->m_contentType == CT_STATUS )
 		contentType = "application/json";
 
 	if ( xd->m_contentType == CT_XML )

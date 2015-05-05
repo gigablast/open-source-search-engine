@@ -2324,11 +2324,13 @@ bool Rdb::addRecord ( collnum_t collnum,
 			SpiderRequest *sreq = (SpiderRequest *)data;
 			logf(LOG_DEBUG,"spider: added doledb key "
 			     "for pri=%"INT32" time=%"UINT32" "
-			     "uh48=%"UINT64" docid=%"INT64" u=%s",
+			     "uh48=%"UINT64" "
+			     //"docid=%"INT64" "
+			     "u=%s",
 			     (int32_t)g_doledb.getPriority(&doleKey),
 			     (uint32_t)g_doledb.getSpiderTime(&doleKey),
 			     g_doledb.getUrlHash48(&doleKey),
-			     sreq->m_probDocId,
+			     //sreq->m_probDocId,
 			     sreq->m_url);
 		}
 	}
@@ -3042,7 +3044,10 @@ char getKeySizeFromRdbId ( uint8_t rdbId ) {
 		}
 	}
 	// sanity check
-	if ( s_table1[rdbId] == 0 ) { char *xx=NULL;*xx=0; }
+	if ( s_table1[rdbId] == 0 ) { 
+		log("rdb: bad lookup rdbid of %i",(int)rdbId);
+		char *xx=NULL;*xx=0; 
+	}
 	return s_table1[rdbId];
 }
 

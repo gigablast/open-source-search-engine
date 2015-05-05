@@ -815,6 +815,7 @@ int32_t RdbBase::addFile ( int32_t id , bool isNew , int32_t mergeNum , int32_t 
 		      ff->getFilename() ,
 		      (int64_t)ff->getFileSize(),
 		      (int64_t)MAX_PART_SIZE);
+		exit(0);
 		return -1;
 	}
 
@@ -2479,6 +2480,14 @@ bool RdbBase::verifyFileSharding ( ) {
 	// if swapping in from CollectionRec::getBase() then do
 	// not re-verify file sharding! only do at startup
 	if ( g_loop.m_isDoingLoop ) return true;
+
+	// skip for now to speed up startup
+	static int32_t s_count = 0;
+	s_count++;
+	if ( s_count == 50 )
+		log("db: skipping shard verification for remaining files");
+	if ( s_count >= 50 ) 
+		return true;
 
 	g_threads.disableThreads();
 
