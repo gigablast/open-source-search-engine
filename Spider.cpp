@@ -7640,10 +7640,23 @@ bool SpiderLoop::spiderUrl9 ( SpiderRequest *sreq ,
 	int32_t node = g_doledb.m_rdb.m_tree.deleteNode(m_collnum,
 							(char *)m_doledbKey,
 							true);
-	if ( node == -1 ) { char *xx=NULL;*xx=0; }
 
 	if ( g_conf.m_logDebugSpider )
 		log("spider: deleting doledb tree node %"INT32,node);
+
+	// if url filters rebuilt then doledb gets reset and i've seen us hit
+	// this node == -1 condition here... so maybe ignore it... just log
+	// what happened? i think we did a quickpoll somewhere between here
+	// and the call to spiderDoledUrls() and it the url filters changed
+	// so it reset doledb's tree. so in that case we should bail on this
+	// url.
+	if ( node == -1 ) { 
+		g_errno = EADMININTERFERENCE;
+		log("spider: lost url about to spider from url filters "
+		    "and doledb tree reset. %s",mstrerror(g_errno));
+		return true;
+	}
+
 
 	// now remove from doleiptable since we removed from doledb
 	m_sc->removeFromDoledbTable ( sreq->m_firstIp );
