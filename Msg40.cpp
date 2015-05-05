@@ -6346,6 +6346,41 @@ bool Msg40::printFacetTables ( SafeBuf *sb ) {
 
 	int32_t saved = sb->length();
 
+        // If json, print beginning of json array
+        if ( format == FORMAT_JSON ) {
+                if ( m_si->m_streamResults ) {
+                        // if we are streaming results in json, we may have hacked off
+                        // the last ,\n so we need a comma to put it back
+                        bool needComma = true;
+
+                        // check if the last non-whitespace char in the
+                        // buffer is a comma
+                        for (int32_t i= sb->m_length-1; i >= 0; i--) {
+                                char c = sb->getBufStart()[i];
+                                if (c == '\n' || c == ' ') {
+                                        // ignore whitespace chars
+                                        continue;
+                                }
+
+                                // If the loop reaches this point, we have a
+                                // non-whitespace char, so we break the loop
+                                // either way
+                                if (c == ',') {
+                                        // last non-whitespace char is a comma,
+                                        // so we don't need to add an extra one
+                                        needComma = false;
+                                }
+                                break;
+                        }
+
+                        if ( needComma ) {
+                                sb->safeStrcpy(",\n\n");
+                        }
+                }
+                sb->safePrintf("\"facets\":[");
+	}
+
+        int numFacets = 0;
 	for ( int32_t i = 0 ; i < m_si->m_q.getNumTerms() ; i++ ) {
 		// only for html for now i guess
 		//if ( m_si->m_format != FORMAT_HTML ) break;
@@ -6358,8 +6393,16 @@ bool Msg40::printFacetTables ( SafeBuf *sb ) {
 
 		// if had facet ranges, print them out
 		printFacetsForTable ( sb , qt );;
-
+                numFacets++;
 	}
+
+        // If josn, print end of json array
+        if ( format == FORMAT_JSON ) {
+                if (numFacets > 0) {
+                        sb->m_length -= 2; // hack off trailing comma
+	        }
+		sb->safePrintf("],\n"); // close off json array
+        }
 
 	// if json, remove ending ,\n and make it just \n
 	if ( format == FORMAT_JSON && sb->length() != saved ) {
@@ -6393,7 +6436,7 @@ bool Msg40::printFacetsForTable ( SafeBuf *sb , QueryTerm *qt ) {
 
 	// now scan the slots and print out
 	HttpRequest *hr = &m_si->m_hr;
-	bool firstTime = true;
+
 	bool isString = false;
 	bool isFloat  = false;
 	bool isInt = false;
@@ -6403,6 +6446,7 @@ bool Msg40::printFacetsForTable ( SafeBuf *sb , QueryTerm *qt ) {
 	char format = m_si->m_format;
 	// a new table for each facet query term
 	bool needTable = true;
+
 	// print out the dumps
 	for ( int32_t x= 0 ; x < numPtrs ; x++ ) {
 		// skip empty slots
@@ -6559,17 +6603,6 @@ bool Msg40::printFacetsForTable ( SafeBuf *sb , QueryTerm *qt ) {
 			continue;
 		}
 
-		if ( format == FORMAT_JSON && firstTime ) {
-			firstTime = false;
-			// if streaming results we may have hacked off
-			// the last ,\n so put it back
-			if ( m_si->m_streamResults ) {
-				//sb->m_length -= 1;
-				sb->safeStrcpy(",\n\n");
-			}
-			//sb->safePrintf("\"facets\":[\n");
-		}
-
 		// print that out
 		if ( needTable && format == FORMAT_HTML ) {
 			needTable = false;
@@ -6602,12 +6635,6 @@ bool Msg40::printFacetsForTable ( SafeBuf *sb , QueryTerm *qt ) {
 				       "values for</font> "
 				       "<b>%s</b></td></tr>\n",
 				       term);
-		}
-
-
-		if ( needTable && format == FORMAT_JSON ) {
-			needTable = false;
-			sb->safePrintf("\"facets\":[");
 		}
 
 
@@ -6779,11 +6806,6 @@ bool Msg40::printFacetsForTable ( SafeBuf *sb , QueryTerm *qt ) {
 			       "</td></tr>\n"
 			       ,text
 			       ,count); // count for printing
-	}
-
-	if ( ! needTable && format == FORMAT_JSON ) {
-		sb->m_length -= 2; // hack off trailing comma
-		sb->safePrintf("],\n"); // close off json array
 	}
 
 	if ( ! needTable && format == FORMAT_HTML ) 
