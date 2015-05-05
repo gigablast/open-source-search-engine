@@ -6450,6 +6450,8 @@ int32_t Msg40::printFacetsForTable ( SafeBuf *sb , QueryTerm *qt ) {
 	if ( numPtrs == 0 )
 		return 0;
 
+	int32_t numPrinted = 0;
+
 	// now scan the slots and print out
 	HttpRequest *hr = &m_si->m_hr;
 
@@ -6570,7 +6572,9 @@ int32_t Msg40::printFacetsForTable ( SafeBuf *sb , QueryTerm *qt ) {
 			text = m_facetTextBuf.getBufStart() + *offset;
 		}
 
+
 		if ( format == FORMAT_XML ) {
+			numPrinted++;
 			sb->safePrintf("\t<facet>\n"
 				       "\t\t<field>%s</field>\n"
 				       , term );
@@ -6663,6 +6667,7 @@ int32_t Msg40::printFacetsForTable ( SafeBuf *sb , QueryTerm *qt ) {
 
 
 		if ( format == FORMAT_JSON ) {
+			numPrinted++;
 			sb->safePrintf("{\n"
 				       "\t\"field\":\"%s\",\n"
 				       , term 
@@ -6816,6 +6821,8 @@ int32_t Msg40::printFacetsForTable ( SafeBuf *sb , QueryTerm *qt ) {
 		SafeBuf newUrl;
 		replaceParm ( newStuff.getBufStart(), &newUrl , hr );
 
+		numPrinted++;
+
 		// print the facet in its numeric form
 		// we will have to lookup based on its docid
 		// and get it from the cached page later
@@ -6839,5 +6846,5 @@ int32_t Msg40::printFacetsForTable ( SafeBuf *sb , QueryTerm *qt ) {
 	if ( ! needTable && format == FORMAT_HTML ) 
 		sb->safePrintf("</table></div><br>\n");
 
-	return numPtrs;
+	return numPrinted;
 }
