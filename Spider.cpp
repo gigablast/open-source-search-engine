@@ -12386,6 +12386,37 @@ int32_t getUrlFilterNum2 ( SpiderRequest *sreq       ,
 			goto checkNextRule;
 		}
 
+		// selector using the first time it was added to the Spiderdb
+		// added by Sam, May 5th 2015
+		if ( *p=='s' && strncmp(p,"spiderage",9) == 0 ) {
+			// skip for msg20
+			if ( isForMsg20 ) {
+				log("was for message 20");
+				continue;
+
+			}
+			// get the age of the spider_request. (substraction of uint with int, hope
+			// every thing goes well there)
+			int32_t sreq_age = 0;
+			if ( sreq ) sreq_age = nowGlobal-sreq->m_addedTime;
+			//log("spiderage=%d",sreq_age);
+			// the argument entered by user
+			int32_t argument_age=atoi(s) ;
+
+			if ( sign == SIGN_EQ && sreq_age != argument_age ) continue;
+			if ( sign == SIGN_NE && sreq_age == argument_age ) continue;
+			if ( sign == SIGN_GT && sreq_age <= argument_age ) continue;
+			if ( sign == SIGN_LT && sreq_age >= argument_age ) continue;
+			if ( sign == SIGN_GE && sreq_age <  argument_age ) continue;
+			if ( sign == SIGN_LE && sreq_age >  argument_age ) continue;
+			p = strstr(s, "&&");
+			//if nothing, else then it is a match
+			if ( ! p ) return i;
+			//skip the '&&' and go to next rule
+			p += 2;
+			goto checkNextRule;
+		}
+
 
 		if ( *p=='e' && strncmp(p,"errorcount",10) == 0 ) {
 			// if we do not have enough info for outlink, all done

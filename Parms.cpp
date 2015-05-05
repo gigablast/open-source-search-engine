@@ -1077,6 +1077,7 @@ bool Parms::setGigablastRequest ( TcpSocket *socket ,
 	int32_t page = g_pages.getDynamicPageNumber ( hrArg );
 	// is it a collection?
 	char *THIS = (char *)gr;
+
 	// ensure valid
 	if ( ! THIS ) {
 		// it is null when no collection explicitly specified...
@@ -22560,6 +22561,12 @@ bool printUrlExpressionExamples ( SafeBuf *sb ) {
 			  "is how you do round-based spidering. "
 			  "You have to use the respider frequency as well "
 			  "to adjust how often you want things respidered."
+			  "</td></tr>"
+
+			  "<tr class=poo><td>spiderage</td>"
+			  "<td>"
+			  "This is the time, in second, spent since the first time a url "
+			  "has been spidered. Allows to use the operators <,>,<=,>="
 			  "</td></tr>"
 			  
 
