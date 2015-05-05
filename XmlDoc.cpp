@@ -19074,6 +19074,8 @@ void *systemStartWrapper_r ( void *state , ThreadEntry *t ) {
 	ret = system(cmd);
 	if ( ret == -1 )
 		log("build: wget system failed: %s",mstrerror(errno));
+	else
+		log("build: wget system returned %"INT32"",ret);
 
 	// unzip it now
 	snprintf ( cmd , MAX_URL_LEN+256, "gunzip -f %s" , filename );
@@ -19083,6 +19085,8 @@ void *systemStartWrapper_r ( void *state , ThreadEntry *t ) {
 	ret = system(cmd);
 	if ( ret == -1 )
 		log("build: gunzip system failed: %s",mstrerror(errno));
+	else
+		log("build: gunzip system returned %"INT32"",ret);
 
 
 	log("build: done with gunzip");
@@ -26168,7 +26172,7 @@ SpiderReply *XmlDoc::getNewSpiderReply ( ) {
 	//if ( ! m_pageNumInlinksValid     ) { char *xx=NULL;*xx=0; }
 	if ( ! m_percentChangedValid       ) { char *xx=NULL;*xx=0; }
 	//if ( ! m_isSpamValid               ) { char *xx=NULL;*xx=0; }
-	if ( ! m_crawlDelayValid           ) { char *xx=NULL;*xx=0; }
+	//if ( ! m_crawlDelayValid           ) { char *xx=NULL;*xx=0; }
 
 	// httpStatus is -1 if not found (like for empty http replies)
 	m_srep.m_httpStatus = *hs;
@@ -26187,7 +26191,7 @@ SpiderReply *XmlDoc::getNewSpiderReply ( ) {
 	// . update crawl delay, but we must store now as milliseconds
 	//   because Spider.cpp like it better that way
 	// . -1 implies crawl delay unknown or not found
-	if ( m_crawlDelay >= 0 )
+	if ( m_crawlDelay >= 0 && m_crawlDelayValid )
 		// we already multiply x1000 in isAllowed2()
 		m_srep.m_crawlDelayMS = m_crawlDelay;// * 1000;
 	else

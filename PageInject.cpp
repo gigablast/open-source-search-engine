@@ -190,6 +190,8 @@ bool Msg7::sendInjectionRequestToHost ( InjectionRequest *ir ,
 	// forward it to another shard?
 	Host *host = getHostToHandleInjection ( ir->ptr_url );
 
+	log("inject: sending injection request to host #%"INT32"",host->m_hostId);
+
 	// . ok, forward it to another host now
 	// . and call got gotForwardedReplyWrapper when reply comes in
 	return g_udpServer.sendRequest ( sir , // req ,
