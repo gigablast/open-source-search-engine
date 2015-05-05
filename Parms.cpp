@@ -1077,7 +1077,6 @@ bool Parms::setGigablastRequest ( TcpSocket *socket ,
 	int32_t page = g_pages.getDynamicPageNumber ( hrArg );
 	// is it a collection?
 	char *THIS = (char *)gr;
-
 	// ensure valid
 	if ( ! THIS ) {
 		// it is null when no collection explicitly specified...
