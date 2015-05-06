@@ -22583,6 +22583,20 @@ bool printUrlExpressionExamples ( SafeBuf *sb ) {
 			  "older permalinks into a slower spider queue."
 			  "</td></tr>"
 
+			  "<tr class=poo><td>spiderwaited &lt; 3600</td>"
+			  "<td>"
+			  "<i>spiderwaited</i> is how many seconds have elapsed "
+			  "since the last time "
+			  "we tried to spider/download the url. "
+			  "The constaint containing <i>spiderwaited</i> will "
+			  "fail to be matched if the url has never been "
+			  "attempted to be spidered/downloaded before. Therefore, "
+			  "it will only ever match urls that have a spider reply "
+			  "of some sort, so there is no need to add an additional "
+			  "<i>hasreply</i>-based constraint."
+			  "</td></tr>"
+
+
 			  "<tr class=poo><td>"
 			  "<a name=insitelist>"
 			  "insitelist | !insitelist"

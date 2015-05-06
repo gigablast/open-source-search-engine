@@ -829,6 +829,7 @@ class SpiderReply {
 	// a SpiderRec outright
 	key128_t   m_key;
 
+	// this can be used for something else really. all SpiderReplies are fixed sz
 	int32_t    m_dataSize;
 
 	// for calling getHostIdToDole()
