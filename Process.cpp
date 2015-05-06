@@ -961,7 +961,10 @@ float getDiskUsage ( int64_t *diskAvail ) {
 		 g_hostdb.m_dir,
 		 out);
 	errno = 0;
+	// time it to see how long it took. could it be causing load spikes?
+	//log("process: begin df -ka");
 	int err = system ( cmd );
+	//log("process: end   df -ka");
 	if ( err == 127 ) {
 		log("build: /bin/sh does not exist. can not get disk usage.");
 		return -1.0; // unknown

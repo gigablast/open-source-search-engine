@@ -2246,10 +2246,10 @@ public:
 	//SpiderRequest m_sreq;
 };
 
-static void doneInjectingWrapper3 ( void *st1 ) ;
-
 // only allow up to 1 Msg10's to be in progress at a time
 static bool s_inprogress = false;
+
+void doneInjectingWrapper3 ( void *st ) ;
 
 // . returns false if blocked, true otherwise
 // . sets g_errno on error
@@ -2511,17 +2511,30 @@ bool sendPageAddUrl ( TcpSocket *sock , HttpRequest *hr ) {
 	}
 	*/
 
+	Msg7 *msg7 = &st1->m_msg7;
+	// set this.
+	InjectionRequest *ir = &msg7->m_injectionRequest;
 
-	// set this. also sets gr->m_hr
-	GigablastRequest *gr = &st1->m_msg7.m_gr;
+	// default to zero
+	memset ( ir , 0 , sizeof(InjectionRequest) );
+
 	// this will fill in GigablastRequest so all the parms we need are set
-	g_parms.setGigablastRequest ( sock , hr , gr );
+	//setInjectionRequestFromParms ( sock , hr , cr , ir );
+
+	ir->ptr_url = hr->getString("u",NULL);
+	if ( ! ir->ptr_url ) ir->ptr_url = hr->getString("url",NULL);
+	
+	// get back a short reply so we can show the status code easily
+	ir->m_shortReply = 1;
+
+	ir->m_spiderLinks = st1->m_spiderLinks;
 
 	// this is really an injection, not add url, so make
 	// GigablastRequest::m_url point to Gigablast::m_urlsBuf because
 	// the PAGE_ADDURLS2 parms in Parms.cpp fill in the m_urlsBuf.
 	// HACK!
-	gr->m_url = gr->m_urlsBuf;
+	//gr->m_url = gr->m_urlsBuf;
+	//ir->ptr_url = gr->m_urlsBuf;
 
 	//
 	// inject using msg7
@@ -2529,10 +2542,8 @@ bool sendPageAddUrl ( TcpSocket *sock , HttpRequest *hr ) {
 
 	// . pass in the cleaned url
 	// . returns false if blocked, true otherwise
-	if ( ! st1->m_msg7.inject ( //s ,
-				    //r ,
-				    st1 ,
-				    doneInjectingWrapper3 ) )
+	
+	if ( ! msg7->sendInjectionRequestToHost ( ir, st1 , doneInjectingWrapper3 ) )
 		return false;
 
 	// some kinda error, g_errno should be set i guess
@@ -2551,10 +2562,14 @@ void doneInjectingWrapper3 ( void *st ) {
 	// in order to see what sites are being added log it, then we can
 	// more easily remove sites from sitesearch.gigablast.com that are
 	// being added but not being searched
-	char *url = st1->m_msg7.m_xd.m_firstUrl.m_url;
+	//char *url = st1->m_msg7.m_xd.m_firstUrl.m_url;
+	Msg7 *msg7 = &st1->m_msg7;
+	InjectionRequest *ir = &msg7->m_injectionRequest;
+	char *url = ir->ptr_url;
 	log(LOG_INFO,"http: add url %s (%s)",url ,mstrerror(g_errno));
 	// extract info from state
 	TcpSocket *sock    = st1->m_socket;
+	
 	//bool       isAdmin = st1->m_isMasterAdmin;
 	//char      *url     = NULL;
 	//if ( st1->m_urlLen ) url = st1->m_url;
@@ -2654,11 +2669,12 @@ void doneInjectingWrapper3 ( void *st ) {
 			//	      " is enabled.");
 			sb.safePrintf("%s",pm);
 		}
-		else if ( st1->m_msg7.m_xd.m_indexCodeValid &&
-			  st1->m_msg7.m_xd.m_indexCode ) {
-			int32_t ic = st1->m_msg7.m_xd.m_indexCode;
+		else if ( msg7->m_replyIndexCode ) { 
+			//st1->m_msg7.m_xd.m_indexCodeValid &&
+			//  st1->m_msg7.m_xd.m_indexCode ) {
+			//int32_t ic = st1->m_msg7.m_xd.m_indexCode;
 			sb.safePrintf("<b>Had error injecting url: %s</b>",
-				      mstrerror(ic));
+				      mstrerror(msg7->m_replyIndexCode));
 		}
 		/*
 		if ( url && ! st1->m_ufu[0] && url[0] && printUrl ) {

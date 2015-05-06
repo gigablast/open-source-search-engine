@@ -45,6 +45,7 @@ void HttpMime::reset ( ) {
 	m_locationFieldLen = 0;
 	m_contentEncodingPos = NULL;
 	m_contentLengthPos = NULL;
+	m_contentTypePos   = NULL;
 }
 
 // . returns false if could not get a valid mime
@@ -67,7 +68,12 @@ bool HttpMime::set ( char *buf , int32_t bufLen , Url *url ) {
 	// . return false if we had no mime boundary
 	// . but set m_bufLen to 0 so getMimeLen() will return 0 instead of -1
 	//   thus avoiding a potential buffer overflow
-	if ( m_bufLen < 0 ) { m_bufLen = 0; m_boundaryLen = 0; return false; }
+	if ( m_bufLen < 0 ) { 
+		m_bufLen = 0; 
+		m_boundaryLen = 0; 
+		log("mime: no rnrn boundary detected");
+		return false; 
+	}
 	// set this
 	m_content = buf + m_bufLen;
 	// . parse out m_status, m_contentLen, m_lastModifiedData, contentType
@@ -157,8 +163,12 @@ bool HttpMime::parse ( char *mime , int32_t mimeLen , Url *url ) {
 			time_t now = time(NULL);
 			if (m_lastModifiedDate > now) m_lastModifiedDate = now;
 		}
-		else if ( strncasecmp ( p , "Content-Type:"   ,13) == 0 ) 
+		else if ( strncasecmp ( p , "Content-Type:"   ,13) == 0 ) {
 			m_contentType = getContentTypePrivate ( p + 13 );
+			char *s = p + 13;
+			while ( *s == ' ' || *s == '\t' ) s++;
+			m_contentTypePos = s;
+		}
 		else if ( strncasecmp ( p , "Set-Cookie:"   ,10) == 0 ) {
 			m_cookie = p + 11;
 			if ( m_cookie[0] == ' ' ) m_cookie++;
@@ -533,6 +543,8 @@ int32_t getContentTypeFromStr ( char *s ) {
 	else if (!strcasecmp(s,"application/vnd.ms-powerpoint")) ct = CT_PPT;
 	else if (!strcasecmp(s,"application/mspowerpoint") ) ct = CT_PPT;
 	else if (!strcasecmp(s,"application/postscript"  ) ) ct = CT_PS;
+	else if (!strcasecmp(s,"application/warc"        ) ) ct = CT_WARC;
+	else if (!strcasecmp(s,"application/arc"         ) ) ct = CT_ARC;
         else if (!strcasecmp(s,"image/gif"               ) ) ct = CT_GIF;
         else if (!strcasecmp(s,"image/jpeg"              ) ) ct = CT_JPG;
         else if (!strcasecmp(s,"image/png"               ) ) ct = CT_PNG;
@@ -540,6 +552,7 @@ int32_t getContentTypeFromStr ( char *s ) {
         else if (!strncasecmp(s,"image/",6               ) ) ct = CT_IMAGE;
 	else if (!strcasecmp(s,"application/javascript"  ) ) ct = CT_JS;
 	else if (!strcasecmp(s,"application/x-javascript") ) ct = CT_JS;
+	else if (!strcasecmp(s,"application/x-gzip"      ) ) ct = CT_GZ;
 	else if (!strcasecmp(s,"text/javascript"         ) ) ct = CT_JS;
 	else if (!strcasecmp(s,"text/x-js"               ) ) ct = CT_JS;
 	else if (!strcasecmp(s,"text/js"                 ) ) ct = CT_JS;
@@ -624,6 +637,17 @@ bool s_init = false;
 
 void resetHttpMime ( ) {
 	s_mimeTable.reset();
+}
+
+const char *extensionToContentTypeStr2 ( char *ext , int32_t elen ) {
+	// assume text/html if no extension provided
+	if ( ! ext || ! ext[0] ) return NULL;
+	if ( elen <= 0 ) return NULL;
+	// get hash for table look up
+	int32_t key = hash32 ( ext , elen );
+	char **pp = (char **)s_mimeTable.getValue ( &key );
+	if ( ! pp ) return NULL;
+	return *pp;
 }
 
 const char *HttpMime::getContentTypeFromExtension ( char *ext , int32_t elen) {
@@ -1051,7 +1075,10 @@ static char *s_ext[] = {
      "xwd" , "image/x-xwindowdump",
      "xyz" , "chemical/x-pdb",
       "zip" , "application/zip" ,
-      "xpi", "application/x-xpinstall"
+      "xpi", "application/x-xpinstall",
+      // newstuff
+      "warc", "application/warc",
+      "arc", "application/arc"
 };
 
 // . init s_mimeTable in this call

@@ -32,6 +32,8 @@ void Url::reset() {
 	//m_siteLen   = 0;
 	// ip related stuff
 	m_ip          = 0;
+	// m_isWarcValid = false;
+	// m_isArcValid  = false;
 }
 
 // set from another Url, does a copy
@@ -1426,13 +1428,79 @@ bool Url::isBadExtension ( int32_t version ) {
 		s_badExtInitialized = true;
 	}
 
-	
+
 	int myKey = hash64Lower_a(m_extension,m_elen);
 	//zero unless we have a bad extention, otherwise
 	//we return TR version in which it was banned
 	int32_t badVersion = s_badExtTable.getValue(myKey);
 	if (badVersion == 0) return false;
-	if(badVersion <= version) return true;
+	//if(badVersion <= version) return true;
+	if ( badVersion > version ) return false;
+	// exceptions for .warc.gz .warc .arc .argc.gz
+	if ( isWarc() || isArc() ) return false;
+	return true;
+}
+
+bool Url::isWarc ( ) {
+
+	// if ( ulen>8 && strncmp(uend-8,".warc.gz",8)==0 )
+	// 	m_isWarc = true;
+	// if ( ulen>8 && strncmp(uend-5,".warc"   ,5)==0 )
+	// 	m_isWarc = true;
+
+	// if ( ulen>8 && strncmp(uend-7,".arc.gz",7)==0 )
+	// 	m_isArc = true;
+	// if ( ulen>8 && strncmp(uend-4,".arc"   ,4)==0 )
+	// 	m_isArc = true;
+
+	if ( m_elen == 4 &&
+	     m_extension[0] == 'w' &&
+	     m_extension[1] == 'a' &&
+	     m_extension[2] == 'r' &&
+	     m_extension[3] == 'c' )
+		return true;
+
+	if ( m_elen == 2 && 
+	     m_extension[0] == 'g' &&
+	     m_extension[1] == 'z' &&
+	     m_ulen > 10 &&
+	     m_extension[-1] == '.' &&
+	     m_extension[-2] == 'c' &&
+	     m_extension[-3] == 'r' &&
+	     m_extension[-4] == 'a' &&
+	     m_extension[-5] == 'w' &&
+	     m_extension[-6] == '.' ) {
+		// m_isWarc = true;
+		// m_isWarcValid = true;
+		return true;
+	}
+
+	return false;
+}
+
+bool Url::isArc ( ) {
+
+	if ( m_elen == 3 &&
+	     m_extension[0] == 'a' &&
+	     m_extension[1] == 'r' &&
+	     m_extension[2] == 'c' )
+		return true;
+	     
+	// hack to allow for .gz if it is .warc.gz or .arc.gz
+	if ( m_elen == 2 && 
+	     m_extension[0] == 'g' &&
+	     m_extension[1] == 'z' &&
+	     m_ulen > 10 &&
+	     m_extension[-1] == '.' &&
+	     m_extension[-2] == 'c' &&
+	     m_extension[-3] == 'r' &&
+	     m_extension[-4] == 'a' &&
+	     m_extension[-5] == '.' ) {
+		// m_isArc = true;
+		// m_isArcValid = true;
+		return true;
+	}
+
 	return false;
 }
 

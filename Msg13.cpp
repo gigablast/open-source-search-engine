@@ -301,6 +301,8 @@ bool Msg13::forwardRequest ( ) {
 		if ( ++hostId >= nh ) hostId = 0;
 	}
 
+	hostId = 0; // HACK!!
+
 	// forward it to self if we are the spider proxy!!!
 	if ( g_hostdb.m_myHost->m_isProxy )
 		h = g_hostdb.m_myHost;
