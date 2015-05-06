@@ -463,18 +463,24 @@ bool Collectiondb::addNewColl ( char *coll ,
 		if ( ! h ) {
 			log("crawlbot: bad custom collname");
 			g_errno = EBADENGINEER;
+			mdelete ( cr, sizeof(CollectionRec), "CollectionRec" ); 
+			delete ( cr );
 			return true;
 		}
 		*h = '\0';
 		crawl = h + 1;
 		if ( ! crawl[0] ) {
 			log("crawlbot: bad custom crawl name");
+			mdelete ( cr, sizeof(CollectionRec), "CollectionRec" ); 
+			delete ( cr );
 			g_errno = EBADENGINEER;
 			return true;
 		}
 		// or if too big!
 		if ( gbstrlen(crawl) > 30 ) {
 			log("crawlbot: crawlbot crawl NAME is over 30 chars");
+			mdelete ( cr, sizeof(CollectionRec), "CollectionRec" ); 
+			delete ( cr );
 			g_errno = EBADENGINEER;
 			return true;
 		}
