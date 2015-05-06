@@ -4594,10 +4594,10 @@ bool SpiderColl::scanListForWinners ( ) {
 				// and the min added time as well!
 				// get the oldest timestamp so
 				// gbssDiscoveryTime will be accurate.
-				if ( sreq->m_addedTime < wsreq->m_addedTime )
+				if ( sreq->m_discoveryTime < wsreq->m_discoveryTime )
 					wsreq->m_discoveryTime = 
 						sreq->m_discoveryTime;
-				if ( wsreq->m_addedTime < sreq->m_addedTime )
+				if ( wsreq->m_discoveryTime < sreq->m_discoveryTime )
 					sreq->m_discoveryTime = 
 						wsreq->m_discoveryTime;
 			}
