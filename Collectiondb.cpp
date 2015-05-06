@@ -1939,12 +1939,13 @@ bool CollectionRec::load ( char *coll , int32_t i ) {
 
 	// the list of ip addresses that we have detected as being throttled
 	// and therefore backoff and use proxies for
-	sb.reset();
-	sb.safePrintf("%scoll.%s.%"INT32"/",
-		      g_hostdb.m_dir , m_coll , (int32_t)m_collnum );
-	m_twitchyTable.m_allocName = "twittbl";
-	m_twitchyTable.load ( sb.getBufStart() , "ipstouseproxiesfor.dat" );
-
+	if ( ! g_conf.m_doingCommandLine ) {
+		sb.reset();
+		sb.safePrintf("%scoll.%s.%"INT32"/",
+			      g_hostdb.m_dir , m_coll , (int32_t)m_collnum );
+		m_twitchyTable.m_allocName = "twittbl";
+		m_twitchyTable.load ( sb.getBufStart() , "ipstouseproxiesfor.dat" );
+	}
 
 	
 
@@ -3431,13 +3432,16 @@ bool CollectionRec::rebuildUrlFiltersDiffbot() {
 		expandRegExShortcuts ( &tmp );
 		m_hasucr = true;
 	}
-	if ( rx && regcomp ( &m_ucr , tmp.getBufStart() ,
-			     REG_EXTENDED| //REG_ICASE|
-			     REG_NEWLINE ) ) { // |REG_NOSUB) ) {
+	int32_t err;
+	if ( rx && ( err = regcomp ( &m_ucr , tmp.getBufStart() ,
+				     REG_EXTENDED| //REG_ICASE|
+				     REG_NEWLINE ) ) ) { // |REG_NOSUB) ) {
 		// error!
+		char errbuf[1024];
+		regerror(err,&m_ucr,errbuf,1000);
 		log("coll: regcomp %s failed: %s. "
-			   "Ignoring.",
-			   rx,mstrerror(errno));
+		    "Ignoring.",
+		    rx,errbuf);
 		regfree ( &m_ucr );
 		m_hasucr = false;
 	}
@@ -3452,13 +3456,15 @@ bool CollectionRec::rebuildUrlFiltersDiffbot() {
 		expandRegExShortcuts ( &tmp );
 		m_hasupr = true;
 	}
-	if ( rx && regcomp ( &m_upr , tmp.getBufStart() ,
-			     REG_EXTENDED| // REG_ICASE|
-			     REG_NEWLINE ) ) { // |REG_NOSUB) ) {
+	if ( rx && ( err = regcomp ( &m_upr , tmp.getBufStart() ,
+				     REG_EXTENDED| // REG_ICASE|
+				     REG_NEWLINE ) ) ) { // |REG_NOSUB) ) {
+		char errbuf[1024];
+		regerror(err,&m_upr,errbuf,1000);
 		// error!
 		log("coll: regcomp %s failed: %s. "
 		    "Ignoring.",
-		    rx,mstrerror(errno));
+		    rx,errbuf);
 		regfree ( &m_upr );
 		m_hasupr = false;
 	}
@@ -3898,17 +3904,20 @@ void testRegex ( ) {
 	rx = ".*?article[0-9]*?.html";
 
 	regex_t ucr;
+	int32_t err;
 
-	if ( regcomp ( &ucr , rx ,
-		       REG_ICASE
-		       |REG_EXTENDED
-		       //|REG_NEWLINE
-		       //|REG_NOSUB
-		       ) ) {
+	if ( ( err = regcomp ( &ucr , rx ,
+			       REG_ICASE
+			       |REG_EXTENDED
+			       //|REG_NEWLINE
+			       //|REG_NOSUB
+			       ) ) ) {
 		// error!
+		char errbuf[1024];
+		regerror(err,&ucr,errbuf,1000);
 		log("xmldoc: regcomp %s failed: %s. "
 		    "Ignoring.",
-		    rx,mstrerror(errno));
+		    rx,errbuf);
 	}
 
 	logf(LOG_DEBUG,"db: compiled '%s' for crawl pattern",rx);
