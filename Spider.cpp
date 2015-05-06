@@ -12406,21 +12406,21 @@ int32_t getUrlFilterNum2 ( SpiderRequest *sreq       ,
 
 		// selector using the first time it was added to the Spiderdb
 		// added by Sam, May 5th 2015
-		if ( *p=='s' && strncmp(p,"spiderage",9) == 0 ) {
+		if ( *p=='u' && strncmp(p,"urlage",6) == 0 ) {
 			// skip for msg20
 			if ( isForMsg20 ) {
-				log("was for message 20");
+				//log("was for message 20");
 				continue;
 
 			}
-			// get the age of the spider_request. (substraction of uint with int, hope
+			// get the age of the spider_request. 
+			// (substraction of uint with int, hope
 			// every thing goes well there)
 			int32_t sreq_age = 0;
-			if ( sreq ) sreq_age = nowGlobal-sreq->m_addedTime;
+			if ( sreq ) sreq_age = nowGlobal-sreq->m_discoveryTime;
 			//log("spiderage=%d",sreq_age);
 			// the argument entered by user
 			int32_t argument_age=atoi(s) ;
-
 			if ( sign == SIGN_EQ && sreq_age != argument_age ) continue;
 			if ( sign == SIGN_NE && sreq_age == argument_age ) continue;
 			if ( sign == SIGN_GT && sreq_age <= argument_age ) continue;
