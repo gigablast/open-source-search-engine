@@ -5362,7 +5362,8 @@ Dates *XmlDoc::getDates ( ) {
 	     m_sreq.m_parentPrevSpiderTime ) {
 		// pub date is somewhere between these two times
 		minPubDate = m_sreq.m_parentPrevSpiderTime;
-		maxPubDate = m_sreq.m_addedTime;
+		//maxPubDate = m_sreq.m_addedTime;
+		maxPubDate = m_sreq.m_discoveryTime;
 	}
 
 	// now set part2 , returns false and sets g_errno on error
@@ -20150,6 +20151,16 @@ bool XmlDoc::logIt ( SafeBuf *bb ) {
 			       tmp,(uint32_t)m_sreq.m_addedTime);
 	}
 
+	// discovery date, first time spiderrequest was added to spiderdb
+	if ( m_sreqValid && m_sreq.m_discoveryTime ) {
+		time_t ts = m_sreq.m_discoveryTime;
+		struct tm *timeStruct = gmtime ( &ts );
+		char tmp[64];
+		strftime ( tmp , 64 , "%b-%d-%Y(%H:%M:%S)" , timeStruct );
+		sb->safePrintf("discoverydate=%s(%"UINT32") ",
+			       tmp,(uint32_t)m_sreq.m_discoveryTime);
+	}
+
 	// print first indexed time
 	if ( m_firstIndexedDateValid ) {
 		time_t ts = m_firstIndexedDate;
@@ -27456,13 +27467,15 @@ SafeBuf *XmlDoc::getSpiderStatusDocMetaList2 ( SpiderReply *reply ) {
 			      cr->m_spiderRoundNum);
 
 	// for -diffbotxyz fake docs addedtime is 0
-	if ( m_sreqValid && m_sreq.m_addedTime != 0 ) {
+	if ( m_sreqValid && m_sreq.m_discoveryTime != 0 ) {
 		// in Spider.cpp we try to set m_sreq's m_addedTime to the
 		// min of all the spider requests, and we try to ensure
 		// that in the case of deduping we preserve the one with
-		// the oldest time.
+		// the oldest time. no, now we actually use 
+		// m_discoveryTime since we were using m_addedTime in
+		// the url filters as it was originally intended.
 		jd.safePrintf("\"gbssDiscoveredTime\":%"INT32",\n",
-			      m_sreq.m_addedTime);
+			      m_sreq.m_discoveryTime);
 	}
 
 	if ( m_isDupValid && m_isDup )

@@ -22562,6 +22562,14 @@ bool printUrlExpressionExamples ( SafeBuf *sb ) {
 			  "You have to use the respider frequency as well "
 			  "to adjust how often you want things respidered."
 			  "</td></tr>"
+
+			  "<tr class=poo><td>urlage</td>"
+			  "<td>"
+			  "This is the time, in seconds, since a url was first "
+			  "added to spiderdb to be spidered. This is "
+			  "its discovery date. "
+			  "Can use <, >, <=, >=, ==, != comparison operators."
+			  "</td></tr>"
 			  
 
 			  //"<tr class=poo><td>!newoutlink</td>"
@@ -22583,6 +22591,20 @@ bool printUrlExpressionExamples ( SafeBuf *sb ) {
 			  "forms of permalinks. This allows us to put "
 			  "older permalinks into a slower spider queue."
 			  "</td></tr>"
+
+			  "<tr class=poo><td>spiderwaited &lt; 3600</td>"
+			  "<td>"
+			  "<i>spiderwaited</i> is how many seconds have elapsed "
+			  "since the last time "
+			  "we tried to spider/download the url. "
+			  "The constaint containing <i>spiderwaited</i> will "
+			  "fail to be matched if the url has never been "
+			  "attempted to be spidered/downloaded before. Therefore, "
+			  "it will only ever match urls that have a spider reply "
+			  "of some sort, so there is no need to add an additional "
+			  "<i>hasreply</i>-based constraint."
+			  "</td></tr>"
+
 
 			  "<tr class=poo><td>"
 			  "<a name=insitelist>"
