@@ -20151,6 +20151,16 @@ bool XmlDoc::logIt ( SafeBuf *bb ) {
 			       tmp,(uint32_t)m_sreq.m_addedTime);
 	}
 
+	// discovery date, first time spiderrequest was added to spiderdb
+	if ( m_sreqValid && m_sreq.m_discoveryTime ) {
+		time_t ts = m_sreq.m_discoveryTime;
+		struct tm *timeStruct = gmtime ( &ts );
+		char tmp[64];
+		strftime ( tmp , 64 , "%b-%d-%Y(%H:%M:%S)" , timeStruct );
+		sb->safePrintf("discoverydate=%s(%"UINT32") ",
+			       tmp,(uint32_t)m_sreq.m_discoveryTime);
+	}
+
 	// print first indexed time
 	if ( m_firstIndexedDateValid ) {
 		time_t ts = m_firstIndexedDate;
