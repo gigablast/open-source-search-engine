@@ -472,6 +472,12 @@ bool Collectiondb::addNewColl ( char *coll ,
 			g_errno = EBADENGINEER;
 			return true;
 		}
+		// or if too big!
+		if ( gbstrlen(crawl) > 30 ) {
+			log("crawlbot: crawlbot crawl NAME is over 30 chars");
+			g_errno = EBADENGINEER;
+			return true;
+		}
 	}
 
 	//log("parms: added new collection \"%s\"", collName );
