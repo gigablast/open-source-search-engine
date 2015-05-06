@@ -5362,7 +5362,8 @@ Dates *XmlDoc::getDates ( ) {
 	     m_sreq.m_parentPrevSpiderTime ) {
 		// pub date is somewhere between these two times
 		minPubDate = m_sreq.m_parentPrevSpiderTime;
-		maxPubDate = m_sreq.m_addedTime;
+		//maxPubDate = m_sreq.m_addedTime;
+		maxPubDate = m_sreq.m_discoveryTime;
 	}
 
 	// now set part2 , returns false and sets g_errno on error
@@ -27456,13 +27457,15 @@ SafeBuf *XmlDoc::getSpiderStatusDocMetaList2 ( SpiderReply *reply ) {
 			      cr->m_spiderRoundNum);
 
 	// for -diffbotxyz fake docs addedtime is 0
-	if ( m_sreqValid && m_sreq.m_addedTime != 0 ) {
+	if ( m_sreqValid && m_sreq.m_discoveryTime != 0 ) {
 		// in Spider.cpp we try to set m_sreq's m_addedTime to the
 		// min of all the spider requests, and we try to ensure
 		// that in the case of deduping we preserve the one with
-		// the oldest time.
+		// the oldest time. no, now we actually use 
+		// m_discoveryTime since we were using m_addedTime in
+		// the url filters as it was originally intended.
 		jd.safePrintf("\"gbssDiscoveredTime\":%"INT32",\n",
-			      m_sreq.m_addedTime);
+			      m_sreq.m_discoveryTime);
 	}
 
 	if ( m_isDupValid && m_isDup )

@@ -6352,6 +6352,41 @@ bool Msg40::printFacetTables ( SafeBuf *sb ) {
 
 	int32_t saved = sb->length();
 
+        // If json, print beginning of json array
+        if ( format == FORMAT_JSON ) {
+                if ( m_si->m_streamResults ) {
+                        // if we are streaming results in json, we may have hacked off
+                        // the last ,\n so we need a comma to put it back
+                        bool needComma = true;
+
+                        // check if the last non-whitespace char in the
+                        // buffer is a comma
+                        for (int32_t i= sb->m_length-1; i >= 0; i--) {
+                                char c = sb->getBufStart()[i];
+                                if (c == '\n' || c == ' ') {
+                                        // ignore whitespace chars
+                                        continue;
+                                }
+
+                                // If the loop reaches this point, we have a
+                                // non-whitespace char, so we break the loop
+                                // either way
+                                if (c == ',') {
+                                        // last non-whitespace char is a comma,
+                                        // so we don't need to add an extra one
+                                        needComma = false;
+                                }
+                                break;
+                        }
+
+                        if ( needComma ) {
+                                sb->safeStrcpy(",\n\n");
+                        }
+                }
+                sb->safePrintf("\"facets\":[");
+	}
+
+        int numTablesPrinted = 0;
 	for ( int32_t i = 0 ; i < m_si->m_q.getNumTerms() ; i++ ) {
 		// only for html for now i guess
 		//if ( m_si->m_format != FORMAT_HTML ) break;
@@ -6363,9 +6398,24 @@ bool Msg40::printFacetTables ( SafeBuf *sb ) {
 			continue;
 
 		// if had facet ranges, print them out
-		printFacetsForTable ( sb , qt );;
-
+		if ( printFacetsForTable ( sb , qt ) > 0 )
+			numTablesPrinted++;
 	}
+
+        // If josn, print end of json array
+        if ( format == FORMAT_JSON ) {
+                if ( numTablesPrinted > 0 ) {
+                        sb->m_length -= 2; // hack off trailing comma
+			sb->safePrintf("],\n"); // close off json array
+	        }
+		// if no facets then do not print "facets":[]\n,
+		else {
+			// revert string buf to original length
+			sb->m_length = saved;
+			// and cap the string buf just in case
+			sb->nullTerm();
+		}
+        }
 
 	// if json, remove ending ,\n and make it just \n
 	if ( format == FORMAT_JSON && sb->length() != saved ) {
@@ -6387,7 +6437,7 @@ bool Msg40::printFacetTables ( SafeBuf *sb ) {
 	return true;
 }
 
-bool Msg40::printFacetsForTable ( SafeBuf *sb , QueryTerm *qt ) {
+int32_t Msg40::printFacetsForTable ( SafeBuf *sb , QueryTerm *qt ) {
 
 	//QueryWord *qw = qt->m_qword;
 	//if ( qw->m_numFacetRanges > 0 )
@@ -6397,9 +6447,14 @@ bool Msg40::printFacetsForTable ( SafeBuf *sb , QueryTerm *qt ) {
 	int32_t *ptrs = (int32_t *)qt->m_facetIndexBuf.getBufStart();
 	int32_t numPtrs = qt->m_facetIndexBuf.length() / sizeof(int32_t);
 
+	if ( numPtrs == 0 )
+		return 0;
+
+	int32_t numPrinted = 0;
+
 	// now scan the slots and print out
 	HttpRequest *hr = &m_si->m_hr;
-	bool firstTime = true;
+
 	bool isString = false;
 	bool isFloat  = false;
 	bool isInt = false;
@@ -6409,6 +6464,7 @@ bool Msg40::printFacetsForTable ( SafeBuf *sb , QueryTerm *qt ) {
 	char format = m_si->m_format;
 	// a new table for each facet query term
 	bool needTable = true;
+
 	// print out the dumps
 	for ( int32_t x= 0 ; x < numPtrs ; x++ ) {
 		// skip empty slots
@@ -6516,7 +6572,9 @@ bool Msg40::printFacetsForTable ( SafeBuf *sb , QueryTerm *qt ) {
 			text = m_facetTextBuf.getBufStart() + *offset;
 		}
 
+
 		if ( format == FORMAT_XML ) {
+			numPrinted++;
 			sb->safePrintf("\t<facet>\n"
 				       "\t\t<field>%s</field>\n"
 				       , term );
@@ -6573,17 +6631,6 @@ bool Msg40::printFacetsForTable ( SafeBuf *sb , QueryTerm *qt ) {
 			continue;
 		}
 
-		if ( format == FORMAT_JSON && firstTime ) {
-			firstTime = false;
-			// if streaming results we may have hacked off
-			// the last ,\n so put it back
-			if ( m_si->m_streamResults ) {
-				//sb->m_length -= 1;
-				sb->safeStrcpy(",\n\n");
-			}
-			//sb->safePrintf("\"facets\":[\n");
-		}
-
 		// print that out
 		if ( needTable && format == FORMAT_HTML ) {
 			needTable = false;
@@ -6619,13 +6666,8 @@ bool Msg40::printFacetsForTable ( SafeBuf *sb , QueryTerm *qt ) {
 		}
 
 
-		if ( needTable && format == FORMAT_JSON ) {
-			needTable = false;
-			sb->safePrintf("\"facets\":[");
-		}
-
-
 		if ( format == FORMAT_JSON ) {
+			numPrinted++;
 			sb->safePrintf("{\n"
 				       "\t\"field\":\"%s\",\n"
 				       , term 
@@ -6779,6 +6821,8 @@ bool Msg40::printFacetsForTable ( SafeBuf *sb , QueryTerm *qt ) {
 		SafeBuf newUrl;
 		replaceParm ( newStuff.getBufStart(), &newUrl , hr );
 
+		numPrinted++;
+
 		// print the facet in its numeric form
 		// we will have to lookup based on its docid
 		// and get it from the cached page later
@@ -6799,13 +6843,8 @@ bool Msg40::printFacetsForTable ( SafeBuf *sb , QueryTerm *qt ) {
 			       ,count); // count for printing
 	}
 
-	if ( ! needTable && format == FORMAT_JSON ) {
-		sb->m_length -= 2; // hack off trailing comma
-		sb->safePrintf("],\n"); // close off json array
-	}
-
 	if ( ! needTable && format == FORMAT_HTML ) 
 		sb->safePrintf("</table></div><br>\n");
 
-	return true;
+	return numPrinted;
 }

@@ -522,10 +522,16 @@ class SpiderRequest {
 	int32_t    m_parentDomHash32;
 	int32_t    m_parentSiteHash32;
 
+	// if there are several spiderrequests for a url, this should be
+	// the earliest m_addedTime, basically, the url discovery time. this is
+	// NOT valid in spiderdb, but only set upon selecting the url to spider
+	// when we scan all of the SpiderRequests it has.
+	int32_t m_discoveryTime;
+
 	// the PROBABLE DOCID. if there is a collision with another docid
 	// then we increment the last 8 bits or so. see Msg22.cpp.
 	//int64_t m_probDocId;
-	int32_t m_reservedc1;
+	//int32_t m_reservedc1;
 	int32_t m_reservedc2;
 
 	//int32_t  m_parentPubDate;
@@ -829,6 +835,7 @@ class SpiderReply {
 	// a SpiderRec outright
 	key128_t   m_key;
 
+	// this can be used for something else really. all SpiderReplies are fixed sz
 	int32_t    m_dataSize;
 
 	// for calling getHostIdToDole()

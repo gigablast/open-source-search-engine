@@ -227,7 +227,7 @@ class Msg40 {
 	int32_t m_omitCount;
 
 	bool printFacetTables ( class SafeBuf *sb ) ;
-	bool printFacetsForTable ( SafeBuf *sb , QueryTerm *qt );
+	int32_t printFacetsForTable ( SafeBuf *sb , QueryTerm *qt );
 	bool lookupFacets ( ) ;
 	void lookupFacets2 ( ) ;
 	void gotFacetText ( class Msg20 *msg20 ) ;

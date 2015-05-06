@@ -4562,6 +4562,9 @@ bool SpiderColl::scanListForWinners ( ) {
 						 spiderTimeMS ,
 						 uh48 );
 
+		// assume our added time is the first time this url was added
+		sreq->m_discoveryTime = sreq->m_addedTime;
+
 		// if ( uh48 == 110582802025376LL )
 		// 	log("hey");
 
@@ -4592,9 +4595,11 @@ bool SpiderColl::scanListForWinners ( ) {
 				// get the oldest timestamp so
 				// gbssDiscoveryTime will be accurate.
 				if ( sreq->m_addedTime < wsreq->m_addedTime )
-					wsreq->m_addedTime = sreq->m_addedTime;
+					wsreq->m_discoveryTime = 
+						sreq->m_discoveryTime;
 				if ( wsreq->m_addedTime < sreq->m_addedTime )
-					sreq->m_addedTime = wsreq->m_addedTime;
+					sreq->m_discoveryTime = 
+						wsreq->m_discoveryTime;
 			}
 
 			
@@ -12552,16 +12557,16 @@ int32_t getUrlFilterNum2 ( SpiderRequest *sreq       ,
 			// skip for msg20
 			if ( isForMsg20 ) continue;
 			// do not match rule if never attempted
-			if ( srep->m_spideredTime ==  0 ) {
-				char*xx=NULL;*xx=0;}
-			if ( srep->m_spideredTime == (uint32_t)-1){
-				char*xx=NULL;*xx=0;}
-			// int16_tcut
-			float af = (srep->m_spideredTime - nowGlobal);
+			// if ( srep->m_spideredTime ==  0 ) {
+			// 	char*xx=NULL;*xx=0;}
+			// if ( srep->m_spideredTime == (uint32_t)-1){
+			// 	char*xx=NULL;*xx=0;}
+			// shortcut
+			int32_t a = nowGlobal - srep->m_spideredTime;
 			// make into days
-			af /= (3600.0*24.0);
+			//af /= (3600.0*24.0);
 			// back to a int32_t, round it
-			int32_t a = (int32_t)(af + 0.5);
+			//int32_t a = (int32_t)(af + 0.5);
 			// make it point to the priority
 			int32_t b = atoi(s);
 			// compare
@@ -13093,6 +13098,7 @@ void dedupSpiderdbList ( RdbList *list , int32_t niceness , bool removeNegRecs )
 		// . if the same check who has the most recent added time
 		// . if we are not the most recent, just do not add us
 		// . no, now i want the oldest so we can do gbssDiscoveryTime
+		//   and set sreq->m_discoveryTime accurately, above
 		if ( sreq->m_addedTime >= oldReq->m_addedTime ) continue;
 		// otherwise, erase over him
 		dst     = restorePoint;
