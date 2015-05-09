@@ -1,5 +1,7 @@
 SHELL = /bin/bash
 
+# another test
+
 uname_m = $(shell uname -m)
 ARCH=$(uname_m)
 
