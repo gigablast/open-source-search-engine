@@ -207,21 +207,9 @@ int32_t SpiderRequest::print ( SafeBuf *sbarg ) {
 }
 
 void SpiderReply::setKey (int32_t firstIp,
-			  // no need for parentdocid in this any more.
-			  //int64_t parentDocId,
+			  int64_t parentDocId,
 			  int64_t uh48,
 			  bool isDel) {
-	// now we use a 1 parentdocid for replies that were successful
-	int64_t parentDocId = 1;
-	// or 0 if had error. this way we only keep at most 2 SpiderReplies
-	// for each url in spiderdb. we need to keep the last successful
-	// spiderreply  in spiderdb so 
-	// SpiderRequest::m_lastSuccessfulSpideredTime will be valid.
-	// this way the reply that was successful will occur after the
-	// one that had an error, so we can just check the last spider reply
-	// when doing our scan in scanListForWinners().
-	if ( m_errCode ) parentDocId = 0;
-
 	m_key = g_spiderdb.makeKey ( firstIp,uh48,false,parentDocId , isDel );
 	// set dataSize too!
 	m_dataSize = sizeof(SpiderReply) - sizeof(key128_t) - 4;
@@ -4577,13 +4565,6 @@ bool SpiderColl::scanListForWinners ( ) {
 		// assume our added time is the first time this url was added
 		sreq->m_discoveryTime = sreq->m_addedTime;
 
-		// record the last time we successfully indexed this doc, ifany
-		if ( srep && ! srep->m_errCode )
-			sreq->m_lastSuccessfulSpideredTime =
-				srep->m_spideredTime;
-		else
-			sreq->m_lastSuccessfulSpideredTime = 0;
-
 		// if ( uh48 == 110582802025376LL )
 		// 	log("hey");
 
@@ -4613,12 +4594,10 @@ bool SpiderColl::scanListForWinners ( ) {
 				// and the min added time as well!
 				// get the oldest timestamp so
 				// gbssDiscoveryTime will be accurate.
-				if ( sreq->m_discoveryTime < 
-				     wsreq->m_discoveryTime )
+				if ( sreq->m_discoveryTime < wsreq->m_discoveryTime )
 					wsreq->m_discoveryTime = 
 						sreq->m_discoveryTime;
-				if ( wsreq->m_discoveryTime < 
-				     sreq->m_discoveryTime )
+				if ( wsreq->m_discoveryTime < sreq->m_discoveryTime )
 					sreq->m_discoveryTime = 
 						wsreq->m_discoveryTime;
 			}
@@ -11334,7 +11313,6 @@ int32_t getUrlFilterNum2 ( SpiderRequest *sreq       ,
 
 		if ( *p != 'i' ) goto skipi;
 
-
 		if ( strncmp(p,"isinjected",10) == 0 ) {
 			// skip for msg20
 			if ( isForMsg20 ) continue;
@@ -11945,7 +11923,6 @@ int32_t getUrlFilterNum2 ( SpiderRequest *sreq       ,
 			goto checkNextRule;
 		}
 
-
 		// non-boolen junk
  skipi:
 
@@ -12430,32 +12407,6 @@ int32_t getUrlFilterNum2 ( SpiderRequest *sreq       ,
 			goto checkNextRule;
 		}
 
-		// constraint for last time url was successfully indexed
-		if ( *p=='i' && strncmp(p,"indexage",8) == 0 ) {
-			// skip for msg20
-			if ( isForMsg20 ) continue;
-			// if never successfully indexed, skip this one
-			if ( sreq->m_lastSuccessfulSpideredTime == 0) continue;
-			int32_t age;
-			age = nowGlobal - sreq->m_lastSuccessfulSpideredTime;
-			// the argument entered by user
-			int32_t uage = atoi(s) ;
-			if ( sign == SIGN_EQ && age != uage ) continue;
-			if ( sign == SIGN_NE && age == uage ) continue;
-			if ( sign == SIGN_GT && age <= uage ) continue;
-			if ( sign == SIGN_LT && age >= uage ) continue;
-			if ( sign == SIGN_GE && age <  uage ) continue;
-			if ( sign == SIGN_LE && age >  uage ) continue;
-			// skip over 'indexage'
-			p += 8;
-			p = strstr(s, "&&");
-			//if nothing, else then it is a match
-			if ( ! p ) return i;
-			//skip the '&&' and go to next rule
-			p += 2;
-			goto checkNextRule;
-		}
-
 		// selector using the first time it was added to the Spiderdb
 		// added by Sam, May 5th 2015
 		if ( *p=='u' && strncmp(p,"urlage",6) == 0 ) {
@@ -12479,8 +12430,6 @@ int32_t getUrlFilterNum2 ( SpiderRequest *sreq       ,
 			if ( sign == SIGN_LT && sreq_age >= argument_age ) continue;
 			if ( sign == SIGN_GE && sreq_age <  argument_age ) continue;
 			if ( sign == SIGN_LE && sreq_age >  argument_age ) continue;
-			// skip over 'urlage'
-			p += 6;
 			p = strstr(s, "&&");
 			//if nothing, else then it is a match
 			if ( ! p ) return i;
