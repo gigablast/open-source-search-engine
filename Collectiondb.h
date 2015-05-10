@@ -394,6 +394,9 @@ class CollectionRec {
 	// for diffbot crawl or bulk jobs
 	bool rebuildUrlFiltersDiffbot();
 
+	// rebuild the regexes related to diffbot, such as the one for the URL pattern
+	bool rebuildDiffbotRegexes();
+
 	bool rebuildLangRules( char *lang , char *tld );
 
 	bool rebuildShallowRules();

@@ -207,9 +207,21 @@ int32_t SpiderRequest::print ( SafeBuf *sbarg ) {
 }
 
 void SpiderReply::setKey (int32_t firstIp,
-			  int64_t parentDocId,
+			  // no need for parentdocid in this any more.
+			  //int64_t parentDocId,
 			  int64_t uh48,
 			  bool isDel) {
+	// now we use a 1 parentdocid for replies that were successful
+	int64_t parentDocId = 1;
+	// or 0 if had error. this way we only keep at most 2 SpiderReplies
+	// for each url in spiderdb. we need to keep the last successful
+	// spiderreply  in spiderdb so 
+	// SpiderRequest::m_lastSuccessfulSpideredTime will be valid.
+	// this way the reply that was successful will occur after the
+	// one that had an error, so we can just check the last spider reply
+	// when doing our scan in scanListForWinners().
+	if ( m_errCode ) parentDocId = 0;
+
 	m_key = g_spiderdb.makeKey ( firstIp,uh48,false,parentDocId , isDel );
 	// set dataSize too!
 	m_dataSize = sizeof(SpiderReply) - sizeof(key128_t) - 4;
@@ -4562,6 +4574,16 @@ bool SpiderColl::scanListForWinners ( ) {
 						 spiderTimeMS ,
 						 uh48 );
 
+		// assume our added time is the first time this url was added
+		sreq->m_discoveryTime = sreq->m_addedTime;
+
+		// record the last time we successfully indexed this doc, ifany
+		if ( srep && ! srep->m_errCode )
+			sreq->m_lastSuccessfulSpideredTime =
+				srep->m_spideredTime;
+		else
+			sreq->m_lastSuccessfulSpideredTime = 0;
+
 		// if ( uh48 == 110582802025376LL )
 		// 	log("hey");
 
@@ -4591,10 +4613,14 @@ bool SpiderColl::scanListForWinners ( ) {
 				// and the min added time as well!
 				// get the oldest timestamp so
 				// gbssDiscoveryTime will be accurate.
-				if ( sreq->m_addedTime < wsreq->m_addedTime )
-					wsreq->m_addedTime = sreq->m_addedTime;
-				if ( wsreq->m_addedTime < sreq->m_addedTime )
-					sreq->m_addedTime = wsreq->m_addedTime;
+				if ( sreq->m_discoveryTime < 
+				     wsreq->m_discoveryTime )
+					wsreq->m_discoveryTime = 
+						sreq->m_discoveryTime;
+				if ( wsreq->m_discoveryTime < 
+				     sreq->m_discoveryTime )
+					sreq->m_discoveryTime = 
+						wsreq->m_discoveryTime;
 			}
 
 			
@@ -7640,10 +7666,23 @@ bool SpiderLoop::spiderUrl9 ( SpiderRequest *sreq ,
 	int32_t node = g_doledb.m_rdb.m_tree.deleteNode(m_collnum,
 							(char *)m_doledbKey,
 							true);
-	if ( node == -1 ) { char *xx=NULL;*xx=0; }
 
 	if ( g_conf.m_logDebugSpider )
 		log("spider: deleting doledb tree node %"INT32,node);
+
+	// if url filters rebuilt then doledb gets reset and i've seen us hit
+	// this node == -1 condition here... so maybe ignore it... just log
+	// what happened? i think we did a quickpoll somewhere between here
+	// and the call to spiderDoledUrls() and it the url filters changed
+	// so it reset doledb's tree. so in that case we should bail on this
+	// url.
+	if ( node == -1 ) { 
+		g_errno = EADMININTERFERENCE;
+		log("spider: lost url about to spider from url filters "
+		    "and doledb tree reset. %s",mstrerror(g_errno));
+		return true;
+	}
+
 
 	// now remove from doleiptable since we removed from doledb
 	m_sc->removeFromDoledbTable ( sreq->m_firstIp );
@@ -11295,6 +11334,7 @@ int32_t getUrlFilterNum2 ( SpiderRequest *sreq       ,
 
 		if ( *p != 'i' ) goto skipi;
 
+
 		if ( strncmp(p,"isinjected",10) == 0 ) {
 			// skip for msg20
 			if ( isForMsg20 ) continue;
@@ -11905,6 +11945,7 @@ int32_t getUrlFilterNum2 ( SpiderRequest *sreq       ,
 			goto checkNextRule;
 		}
 
+
 		// non-boolen junk
  skipi:
 
@@ -12389,6 +12430,65 @@ int32_t getUrlFilterNum2 ( SpiderRequest *sreq       ,
 			goto checkNextRule;
 		}
 
+		// constraint for last time url was successfully indexed
+		if ( *p=='i' && strncmp(p,"indexage",8) == 0 ) {
+			// skip for msg20
+			if ( isForMsg20 ) continue;
+			// if never successfully indexed, skip this one
+			if ( sreq->m_lastSuccessfulSpideredTime == 0) continue;
+			int32_t age;
+			age = nowGlobal - sreq->m_lastSuccessfulSpideredTime;
+			// the argument entered by user
+			int32_t uage = atoi(s) ;
+			if ( sign == SIGN_EQ && age != uage ) continue;
+			if ( sign == SIGN_NE && age == uage ) continue;
+			if ( sign == SIGN_GT && age <= uage ) continue;
+			if ( sign == SIGN_LT && age >= uage ) continue;
+			if ( sign == SIGN_GE && age <  uage ) continue;
+			if ( sign == SIGN_LE && age >  uage ) continue;
+			// skip over 'indexage'
+			p += 8;
+			p = strstr(s, "&&");
+			//if nothing, else then it is a match
+			if ( ! p ) return i;
+			//skip the '&&' and go to next rule
+			p += 2;
+			goto checkNextRule;
+		}
+
+		// selector using the first time it was added to the Spiderdb
+		// added by Sam, May 5th 2015
+		if ( *p=='u' && strncmp(p,"urlage",6) == 0 ) {
+			// skip for msg20
+			if ( isForMsg20 ) {
+				//log("was for message 20");
+				continue;
+
+			}
+			// get the age of the spider_request. 
+			// (substraction of uint with int, hope
+			// every thing goes well there)
+			int32_t sreq_age = 0;
+			if ( sreq ) sreq_age = nowGlobal-sreq->m_discoveryTime;
+			//log("spiderage=%d",sreq_age);
+			// the argument entered by user
+			int32_t argument_age=atoi(s) ;
+			if ( sign == SIGN_EQ && sreq_age != argument_age ) continue;
+			if ( sign == SIGN_NE && sreq_age == argument_age ) continue;
+			if ( sign == SIGN_GT && sreq_age <= argument_age ) continue;
+			if ( sign == SIGN_LT && sreq_age >= argument_age ) continue;
+			if ( sign == SIGN_GE && sreq_age <  argument_age ) continue;
+			if ( sign == SIGN_LE && sreq_age >  argument_age ) continue;
+			// skip over 'urlage'
+			p += 6;
+			p = strstr(s, "&&");
+			//if nothing, else then it is a match
+			if ( ! p ) return i;
+			//skip the '&&' and go to next rule
+			p += 2;
+			goto checkNextRule;
+		}
+
 
 		if ( *p=='e' && strncmp(p,"errorcount",10) == 0 ) {
 			// if we do not have enough info for outlink, all done
@@ -12511,16 +12611,16 @@ int32_t getUrlFilterNum2 ( SpiderRequest *sreq       ,
 			// skip for msg20
 			if ( isForMsg20 ) continue;
 			// do not match rule if never attempted
-			if ( srep->m_spideredTime ==  0 ) {
-				char*xx=NULL;*xx=0;}
-			if ( srep->m_spideredTime == (uint32_t)-1){
-				char*xx=NULL;*xx=0;}
-			// int16_tcut
-			float af = (srep->m_spideredTime - nowGlobal);
+			// if ( srep->m_spideredTime ==  0 ) {
+			// 	char*xx=NULL;*xx=0;}
+			// if ( srep->m_spideredTime == (uint32_t)-1){
+			// 	char*xx=NULL;*xx=0;}
+			// shortcut
+			int32_t a = nowGlobal - srep->m_spideredTime;
 			// make into days
-			af /= (3600.0*24.0);
+			//af /= (3600.0*24.0);
 			// back to a int32_t, round it
-			int32_t a = (int32_t)(af + 0.5);
+			//int32_t a = (int32_t)(af + 0.5);
 			// make it point to the priority
 			int32_t b = atoi(s);
 			// compare
@@ -13052,6 +13152,7 @@ void dedupSpiderdbList ( RdbList *list , int32_t niceness , bool removeNegRecs )
 		// . if the same check who has the most recent added time
 		// . if we are not the most recent, just do not add us
 		// . no, now i want the oldest so we can do gbssDiscoveryTime
+		//   and set sreq->m_discoveryTime accurately, above
 		if ( sreq->m_addedTime >= oldReq->m_addedTime ) continue;
 		// otherwise, erase over him
 		dst     = restorePoint;

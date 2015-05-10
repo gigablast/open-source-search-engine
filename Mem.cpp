@@ -700,7 +700,7 @@ void Mem::addMem ( void *mem , int32_t size , const char *note , char isnew ) {
 	//(int32_t)mem,size,h,s_n,note);
 	s_n++;
 	// debug
-	if ( size > MINMEM && g_conf.m_logDebugMemUsage )
+	if ( (size > MINMEM && g_conf.m_logDebugMemUsage) || size>=100000000 )
 		log(LOG_INFO,"mem: addMem(%"INT32"): %s. ptr=0x%"PTRFMT" "
 		    "used=%"INT64"",
 		    size,note,(PTRTYPE)mem,m_used);
@@ -1023,7 +1023,7 @@ bool Mem::rmMem  ( void *mem , int32_t size , const char *note ) {
 
  keepgoing:
 	// debug
-	if ( size > MINMEM && g_conf.m_logDebugMemUsage )
+	if ( (size > MINMEM && g_conf.m_logDebugMemUsage) || size>=100000000 )
 		log(LOG_INFO,"mem: rmMem (%"INT32"): "
 		    "ptr=0x%"PTRFMT" %s.",size,(PTRTYPE)mem,note);
 

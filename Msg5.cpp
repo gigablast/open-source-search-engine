@@ -182,9 +182,10 @@ bool Msg5::getList ( char     rdbId         ,
 	// log("Msg5::readList: startKey > endKey warning"); 
 	// we no longer allow negative minRecSizes
 	if ( minRecSizes < 0 ) {
-		log(LOG_LOGIC,"net: msg5: MinRecSizes < 0, using 1.");
-		minRecSizes = 1;
-		char *xx = NULL; *xx = 0;
+		if ( g_conf.m_logDebugDb )
+		      log(LOG_LOGIC,"net: msg5: MinRecSizes < 0, using 2GB.");
+		minRecSizes = 0x7fffffff;
+		//char *xx = NULL; *xx = 0;
 	}
 	// ensure startKey last bit clear, endKey last bit set
 	//if ( (startKey.n0 & 0x01) == 0x01 ) 

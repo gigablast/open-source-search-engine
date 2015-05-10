@@ -1161,10 +1161,14 @@ void doneReportingStatsWrapper ( void *state, UdpSlot *slot ) {
 	s_55Out--;
 }
 
-bool ipWasBanned ( TcpSocket *ts , const char **msg ) {
+bool ipWasBanned ( TcpSocket *ts , const char **msg , Msg13Request *r ) {
 
 	// ts will be null if we got a fake reply from a bulk job
 	if ( ! ts )
+		return false;
+
+	// do not do this on robots.txt files
+	if ( r->m_isRobotsTxt )
 		return false;
 
 	// g_errno is 104 for 'connection reset by peer'
@@ -1208,10 +1212,24 @@ bool ipWasBanned ( TcpSocket *ts , const char **msg ) {
 
 	// if it has link to "google.com/recaptcha"
 	// TODO: use own gbstrstr so we can do QUICKPOLL(niceness)
+	// TODO: ensure NOT in an invisible div
 	if ( strstr ( ts->m_readBuf , "google.com/recaptcha/api/challenge") ) {
 		*msg = "recaptcha link";
 		return true;
 	}
+
+	//CollectionRec *cr = g_collectiondb.getRec ( r->m_collnum );
+
+	// if it is a seed url and there are no links, then perhaps we
+	// are in a blacklist somewhere already from triggering a spider trap
+	if ( //isInSeedBuf ( cr , r->ptr_url ) &&
+	     // this is set in XmlDoc.cpp based on hopcount really
+	     r->m_isRootSeedUrl &&
+	     ! strstr ( ts->m_readBuf, "<a href" ) ) {
+		*msg = "root/seed url with no outlinks";
+		return true;
+	}
+
 
 	// TODO: compare a simple checksum of the page content to what
 	// we have downloaded previously from this domain or ip. if it 
@@ -1237,11 +1255,15 @@ void gotHttpReply9 ( void *state , TcpSocket *ts ) {
 	const char *banMsg = NULL;
 	//bool banned = false;
 
-	//if ( ! g_errno ) 
-	bool banned = ipWasBanned ( ts , &banMsg );
-
 	if ( g_errno )
 		log("msg13: got error from proxy: %s",mstrerror(g_errno));
+
+	if ( g_conf.m_logDebugSpider )
+		log("msg13: got proxy reply for %s",r->ptr_url);
+
+	//if ( ! g_errno ) 
+	bool banned = ipWasBanned ( ts , &banMsg , r );
+
 
 	// inc this every time we try
 	r->m_proxyTries++;
@@ -1491,7 +1513,7 @@ void gotHttpReply2 ( void *state ,
 	const char *banMsg = NULL;
 	bool banned = false;
 	if ( checkIfBanned )
-		banned = ipWasBanned ( ts , &banMsg );
+		banned = ipWasBanned ( ts , &banMsg , r );
 	if (  banned )
 		// should we turn proxies on for this IP address only?
 		log("msg13: url %s detected as banned (%s), "
@@ -1513,11 +1535,11 @@ void gotHttpReply2 ( void *state ,
 	     // retry iff we haven't already, but if we did stop the inf loop
 	     ! r->m_wasInTableBeforeStarting &&
 	     cr &&
-	     cr->m_automaticallyBackOff &&
+	     ( cr->m_automaticallyBackOff || cr->m_automaticallyUseProxies ) &&
 	     // but this is not for proxies... only native crawlbot backoff
 	     ! r->m_proxyIp ) {
 		// note this as well
-		log("msg13: retrying spider with new crawldelay for %s",
+		log("msg13: retrying spidered page with new logic for %s",
 		    r->ptr_url);
 		// reset this so we don't endless loop it
 		r->m_wasInTableBeforeStarting = true;
