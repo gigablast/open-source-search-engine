@@ -22028,7 +22028,7 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 		srep.m_domHash32  = m_sreq.m_domHash32;
 		srep.m_spideredTime = getTimeGlobal();
 		int64_t uh48 = m_sreq.getUrlHash48();
-		//int64_t parentDocId = 0LL;
+		int64_t parentDocId = 0LL;
 		srep.m_contentHash32 = 0;
 		// were we already in titledb before we started spidering?
 		// yes otherwise we would have called "goto skip9" above
@@ -22038,7 +22038,7 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 		srep.m_isIndexedINValid = false;
 		srep.m_errCode      = EREINDEXREDIR; // indexCode
 		srep.m_downloadEndTime = 0;
-		srep.setKey (  srep.m_firstIp, /*parentDocId ,*/uh48 , false );
+		srep.setKey (  srep.m_firstIp, parentDocId , uh48 , false );
 		// lock of request needs to match that of reply so the
 		// reply, when recevied by Rdb.cpp which calls addSpiderReply()
 		// can unlock this url so it can be spidered again.
@@ -24922,7 +24922,7 @@ SpiderReply *XmlDoc::getNewSpiderReply ( ) {
 		log("xmldoc: uh48=%"UINT64" parentdocid=%"UINT64"",uh48,parentDocId);
 
 	// set the key, m_srep.m_key
-	m_srep.setKey (  firstIp, /*parentDocId ,*/ uh48 , false );
+	m_srep.setKey (  firstIp, parentDocId , uh48 , false );
 
 	// . did we download a page? even if indexcode is set we might have
 	// . if this is non-zero that means its valid

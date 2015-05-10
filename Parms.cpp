@@ -22563,24 +22563,14 @@ bool printUrlExpressionExamples ( SafeBuf *sb ) {
 			  "to adjust how often you want things respidered."
 			  "</td></tr>"
 
-			  "<tr class=poo><td>indexage</td>"
-			  "<td>"
-			  "How long has it been since the url was last "
-			  "successfully indexed? In seconds. "
-			  "Can use <, >, <=, >=, ==, != comparison operators."
-			  "</td></tr>"
-
 			  "<tr class=poo><td>urlage</td>"
 			  "<td>"
-			  "This uses the time, in seconds, since a url was "
-			  "first added to spiderdb to be spidered, aka "
+			  "This is the time, in seconds, since a url was first "
+			  "added to spiderdb to be spidered. This is "
 			  "its discovery date. "
 			  "Can use <, >, <=, >=, ==, != comparison operators."
 			  "</td></tr>"
 			  
-
-			  
-
 
 			  //"<tr class=poo><td>!newoutlink</td>"
 			  //"<td>Matches if document is NOT a new outlink."
