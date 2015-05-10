@@ -463,12 +463,24 @@ bool Collectiondb::addNewColl ( char *coll ,
 		if ( ! h ) {
 			log("crawlbot: bad custom collname");
 			g_errno = EBADENGINEER;
+			mdelete ( cr, sizeof(CollectionRec), "CollectionRec" ); 
+			delete ( cr );
 			return true;
 		}
 		*h = '\0';
 		crawl = h + 1;
 		if ( ! crawl[0] ) {
 			log("crawlbot: bad custom crawl name");
+			mdelete ( cr, sizeof(CollectionRec), "CollectionRec" ); 
+			delete ( cr );
+			g_errno = EBADENGINEER;
+			return true;
+		}
+		// or if too big!
+		if ( gbstrlen(crawl) > 30 ) {
+			log("crawlbot: crawlbot crawl NAME is over 30 chars");
+			mdelete ( cr, sizeof(CollectionRec), "CollectionRec" ); 
+			delete ( cr );
 			g_errno = EBADENGINEER;
 			return true;
 		}
@@ -1939,12 +1951,13 @@ bool CollectionRec::load ( char *coll , int32_t i ) {
 
 	// the list of ip addresses that we have detected as being throttled
 	// and therefore backoff and use proxies for
-	sb.reset();
-	sb.safePrintf("%scoll.%s.%"INT32"/",
-		      g_hostdb.m_dir , m_coll , (int32_t)m_collnum );
-	m_twitchyTable.m_allocName = "twittbl";
-	m_twitchyTable.load ( sb.getBufStart() , "ipstouseproxiesfor.dat" );
-
+	if ( ! g_conf.m_doingCommandLine ) {
+		sb.reset();
+		sb.safePrintf("%scoll.%s.%"INT32"/",
+			      g_hostdb.m_dir , m_coll , (int32_t)m_collnum );
+		m_twitchyTable.m_allocName = "twittbl";
+		m_twitchyTable.load ( sb.getBufStart() , "ipstouseproxiesfor.dat" );
+	}
 
 	
 
@@ -3472,6 +3485,70 @@ bool CollectionRec::rebuildUrlFiltersDiffbot() {
 	char *ppp = m_diffbotPageProcessPattern.getBufStart();
 	if ( ppp && ! ppp[0] ) ppp = NULL;
 
+	///////
+	//
+	// recompile regular expressions
+	//
+	///////
+
+
+	if ( m_hasucr ) {
+		regfree ( &m_ucr );
+		m_hasucr = false;
+	}
+
+	if ( m_hasupr ) {
+		regfree ( &m_upr );
+		m_hasupr = false;
+	}
+
+	// copy into tmpbuf
+	SafeBuf tmp;
+
+	char *rx = m_diffbotUrlCrawlRegEx.getBufStart();
+	if ( rx && ! rx[0] ) rx = NULL;
+	if ( rx ) {
+		tmp.reset();
+		tmp.safeStrcpy ( rx );
+		expandRegExShortcuts ( &tmp );
+		m_hasucr = true;
+	}
+	int32_t err;
+	if ( rx && ( err = regcomp ( &m_ucr , tmp.getBufStart() ,
+				     REG_EXTENDED| //REG_ICASE|
+				     REG_NEWLINE ) ) ) { // |REG_NOSUB) ) {
+		// error!
+		char errbuf[1024];
+		regerror(err,&m_ucr,errbuf,1000);
+		log("coll: regcomp %s failed: %s. "
+		    "Ignoring.",
+		    rx,errbuf);
+		regfree ( &m_ucr );
+		m_hasucr = false;
+	}
+
+
+	rx = m_diffbotUrlProcessRegEx.getBufStart();
+	if ( rx && ! rx[0] ) rx = NULL;
+	if ( rx ) m_hasupr = true;
+	if ( rx ) {
+		tmp.reset();
+		tmp.safeStrcpy ( rx );
+		expandRegExShortcuts ( &tmp );
+		m_hasupr = true;
+	}
+	if ( rx && ( err = regcomp ( &m_upr , tmp.getBufStart() ,
+				     REG_EXTENDED| // REG_ICASE|
+				     REG_NEWLINE ) ) ) { // |REG_NOSUB) ) {
+		char errbuf[1024];
+		regerror(err,&m_upr,errbuf,1000);
+		// error!
+		log("coll: regcomp %s failed: %s. "
+		    "Ignoring.",
+		    rx,errbuf);
+		regfree ( &m_upr );
+		m_hasupr = false;
+	}
 
 	// what diffbot url to use for processing
 	char *api = m_diffbotApiUrl.getBufStart();
@@ -3913,17 +3990,20 @@ void testRegex ( ) {
 	rx = ".*?article[0-9]*?.html";
 
 	regex_t ucr;
+	int32_t err;
 
-	if ( regcomp ( &ucr , rx ,
-		       REG_ICASE
-		       |REG_EXTENDED
-		       //|REG_NEWLINE
-		       //|REG_NOSUB
-		       ) ) {
+	if ( ( err = regcomp ( &ucr , rx ,
+			       REG_ICASE
+			       |REG_EXTENDED
+			       //|REG_NEWLINE
+			       //|REG_NOSUB
+			       ) ) ) {
 		// error!
+		char errbuf[1024];
+		regerror(err,&ucr,errbuf,1000);
 		log("xmldoc: regcomp %s failed: %s. "
 		    "Ignoring.",
-		    rx,mstrerror(errno));
+		    rx,errbuf);
 	}
 
 	logf(LOG_DEBUG,"db: compiled '%s' for crawl pattern",rx);

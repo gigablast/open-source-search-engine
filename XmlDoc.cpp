@@ -1859,7 +1859,10 @@ bool XmlDoc::set2 ( char    *titleRec ,
 	//m_hasContactInfoValid = true;
 
 	// sanity check. if m_siteValid is true, this must be there
-	if ( ! ptr_site ) { char *xx=NULL;*xx=0; }
+	if ( ! ptr_site ) { 
+		log("set4: ptr_site is null for docid %"INT64"",m_docId);
+		//char *xx=NULL;*xx=0; }
+	}
 
 	// lookup the tagdb rec fresh if setting for a summary. that way we
 	// can see if it is banned or not
@@ -2534,16 +2537,50 @@ bool XmlDoc::indexDoc ( ) {
 		if ( ! m_firstIpValid ) { char *xx=NULL;*xx=0; }
 		// sanity log
 		if ( *fip == 0 || *fip == -1 ) {
+			// 
+			// now add a spider status doc for this so we know
+			// why a crawl might have failed to start
+			//
+			SafeBuf *ssDocMetaList = NULL;
+			// save this
+			int32_t saved = m_indexCode;
+			// and make it the real reason for the spider status doc
+			m_indexCode = EDNSERROR;
+			// get the spiderreply ready to be added
+			
+			ssDocMetaList = getSpiderStatusDocMetaList(NULL ,false);//del
+			// revert
+			m_indexCode = saved;
+			// error?
+			if ( ! ssDocMetaList ) return true;
+			// blocked?
+			if ( ssDocMetaList == (void *)-1 ) return false;
+			// need to alloc space for it too
+			char *list = ssDocMetaList->getBufStart();
+			int32_t len = ssDocMetaList->length();
+			//needx += len;
+			// this too
+			m_addedStatusDocSize = len;
+			m_addedStatusDocSizeValid = true;
+
 			char *url = "unknown";
 			if ( m_sreqValid ) url = m_sreq.m_url;
 			log("build: error2 getting real firstip of %"INT32" for "
 			    "%s. Not adding new spider req", (int32_t)*fip,url);
+			// also count it as a crawl attempt
+			cr->m_localCrawlInfo.m_pageDownloadAttempts++;
+			cr->m_globalCrawlInfo.m_pageDownloadAttempts++;
+
+			if ( ! m_metaList2.safeMemcpy ( list , len ) )
+				return true;
+
 			goto skipNewAdd1;
 		}
 		// store the new request (store reply for this below)
 		char rd = RDB_SPIDERDB;
 		if ( m_useSecondaryRdbs ) rd = RDB2_SPIDERDB2;
-		m_metaList2.pushChar(rd);
+		if ( ! m_metaList2.pushChar(rd) )
+			return true;
 		// store it here
 		SpiderRequest revisedReq;
 		// this fills it in
@@ -23044,7 +23081,7 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 		srep.m_domHash32  = m_sreq.m_domHash32;
 		srep.m_spideredTime = getTimeGlobal();
 		int64_t uh48 = m_sreq.getUrlHash48();
-		int64_t parentDocId = 0LL;
+		//int64_t parentDocId = 0LL;
 		srep.m_contentHash32 = 0;
 		// were we already in titledb before we started spidering?
 		// yes otherwise we would have called "goto skip9" above
@@ -23054,7 +23091,7 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 		srep.m_isIndexedINValid = false;
 		srep.m_errCode      = EREINDEXREDIR; // indexCode
 		srep.m_downloadEndTime = 0;
-		srep.setKey (  srep.m_firstIp, parentDocId , uh48 , false );
+		srep.setKey (  srep.m_firstIp, /*parentDocId ,*/uh48 , false );
 		// lock of request needs to match that of reply so the
 		// reply, when recevied by Rdb.cpp which calls addSpiderReply()
 		// can unlock this url so it can be spidered again.
@@ -25945,7 +25982,7 @@ SpiderReply *XmlDoc::getNewSpiderReply ( ) {
 		log("xmldoc: uh48=%"UINT64" parentdocid=%"UINT64"",uh48,parentDocId);
 
 	// set the key, m_srep.m_key
-	m_srep.setKey (  firstIp, parentDocId , uh48 , false );
+	m_srep.setKey (  firstIp, /*parentDocId ,*/ uh48 , false );
 
 	// . did we download a page? even if indexcode is set we might have
 	// . if this is non-zero that means its valid
@@ -28372,7 +28409,7 @@ SafeBuf *XmlDoc::getSpiderStatusDocMetaList ( SpiderReply *reply ,
 // . TODO:
 //   usedProxy:1
 //   proxyIp:1.2.3.4
-SafeBuf *XmlDoc::getSpiderStatusDocMetaList2 ( SpiderReply *reply ) {	
+SafeBuf *XmlDoc::getSpiderStatusDocMetaList2 ( SpiderReply *reply1 ) {	
 
 	setStatus ( "making spider reply meta list");
 
@@ -28393,8 +28430,8 @@ SafeBuf *XmlDoc::getSpiderStatusDocMetaList2 ( SpiderReply *reply ) {
 	int64_t *uqd = getAvailDocIdOnly ( d );
 	if ( ! uqd || uqd == (void *)-1 ) return  (SafeBuf *)uqd;
 
-	unsigned char *hc = (unsigned char *)getHopCount();
-	if ( ! hc || hc == (void *)-1 ) return (SafeBuf *)hc;
+	// unsigned char *hc = (unsigned char *)getHopCount();
+	// if ( ! hc || hc == (void *)-1 ) return (SafeBuf *)hc;
 
 	int32_t tmpVal = -1;
 	int32_t *priority = &tmpVal;
@@ -28430,7 +28467,7 @@ SafeBuf *XmlDoc::getSpiderStatusDocMetaList2 ( SpiderReply *reply ) {
 	if ( ! m_indexCodeValid ) { char *xx=NULL;*xx=0; }
 
 	// why isn't gbhopcount: being indexed consistently?
-	if ( ! m_hopCountValid )  { char *xx=NULL;*xx=0; }
+	//if ( ! m_hopCountValid )  { char *xx=NULL;*xx=0; }
 
 	// reset just in case
 	m_spiderStatusDocMetaList.reset();
@@ -28465,12 +28502,17 @@ SafeBuf *XmlDoc::getSpiderStatusDocMetaList2 ( SpiderReply *reply ) {
 		jd.safePrintf("\"gbssFinalRedirectUrl\":\"%s\",\n",
 			      ptr_redirUrl);
 
+	if ( m_indexCodeValid ) {
+		jd.safePrintf("\"gbssStatusCode\":%i,\n",(int)m_indexCode);
+		jd.safePrintf("\"gbssStatusMsg\":\"");
+		jd.jsonEncode (mstrerror(m_indexCode));
+		jd.safePrintf("\",\n");
+	}
+	else {
+		jd.safePrintf("\"gbssStatusCode\":-1,\n");
+		jd.safePrintf("\"gbssStatusMsg\":\"???\",\n");
+	}
 
-	jd.safePrintf("\"gbssStatusCode\":%i,\n",(int)m_indexCode);
-
-	jd.safePrintf("\"gbssStatusMsg\":\"");
-	jd.jsonEncode (mstrerror(m_indexCode));
-	jd.safePrintf("\",\n");
 
 	if ( m_httpStatusValid )
 		jd.safePrintf("\"gbssHttpStatus\":%"INT32",\n",
@@ -28514,12 +28556,15 @@ SafeBuf *XmlDoc::getSpiderStatusDocMetaList2 ( SpiderReply *reply ) {
 	jd.safePrintf("\",\n");
 
 	//if ( m_redirUrlPtr && m_redirUrlValid )
-	jd.safePrintf("\"gbssNumRedirects\":%"INT32",\n",
-		      m_numRedirects);
+	//if ( m_numRedirectsValid )
+	jd.safePrintf("\"gbssNumRedirects\":%"INT32",\n",m_numRedirects);
 
-	jd.safePrintf("\"gbssDocId\":%"INT64",\n", m_docId);//*uqd);
+	if ( m_docIdValid )
+		jd.safePrintf("\"gbssDocId\":%"INT64",\n", m_docId);//*uqd);
 
-	jd.safePrintf("\"gbssHopCount\":%"INT32",\n",(int32_t)*hc);
+	if ( m_hopCountValid )
+		//jd.safePrintf("\"gbssHopCount\":%"INT32",\n",(int32_t)*hc);
+		jd.safePrintf("\"gbssHopCount\":%"INT32",\n",(int32_t)m_hopCount);
 
 	// crawlbot round
 	if ( cr->m_isCustomCrawl )
@@ -28945,6 +28990,13 @@ SafeBuf *XmlDoc::getSpiderStatusDocMetaList2 ( SpiderReply *reply ) {
 	// serps need site, otherwise search results core
 	xd->ptr_site = ptr_site;
 	xd->size_site = size_site;
+
+	// if this is null then ip lookup failed i guess so just use
+	// the subdomain
+	if ( ! ptr_site && m_firstUrlValid ) {
+		xd->ptr_site  = m_firstUrl.getHost();
+		xd->size_site = m_firstUrl.getHostLen();
+	}
 
 	// use the same uh48 of our parent
 	int64_t uh48 = m_firstUrl.getUrlHash48();

@@ -108,6 +108,7 @@ case	EDNSBAD          : return "DNS sent an unknown response code";
 case	EDNSREFUSED      : return "DNS refused to talk";
 case	EDNSDEAD         : return "DNS hostname does not exist";
 case	EDNSTIMEDOUT     : return "DNS timed out";
+case	EDNSERROR        : return "DNS lookup error";
 case	ECOLLTOOBIG      : return "Collection is too long";
 case	ESTRIKEOUT       : return "Retried enough times, deleting doc";
 case	ENOPERM          : return "Permission Denied";
