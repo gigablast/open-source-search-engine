@@ -532,7 +532,11 @@ class SpiderRequest {
 	// then we increment the last 8 bits or so. see Msg22.cpp.
 	//int64_t m_probDocId;
 	//int32_t m_reservedc1;
-	int32_t m_reservedc2;
+	//int32_t m_reservedc2;
+
+	// if there is a 'successful' SpiderReply for this url then this is
+	// the SpiderReply::m_spideredTime of the most recent one.
+	int32_t m_lastSuccessfulSpideredTime;
 
 	//int32_t  m_parentPubDate;
 
@@ -955,7 +959,7 @@ class SpiderReply {
 	void reset() { memset ( this , 0 , sizeof(SpiderReply) ); };
 
 	void setKey ( int32_t firstIp,
-		      int64_t parentDocId , 
+		      //int64_t parentDocId , 
 		      int64_t uh48 , 
 		      bool isDel ) ;
 
