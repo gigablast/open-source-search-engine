@@ -45,6 +45,7 @@ static SafeBuf s_ubuf2;
 static SafeBuf s_cbuf2;
 
 static Url s_url;
+static char *s_expect = NULL;
 
 void markOut ( char *content , char *needle ) {
 
@@ -303,7 +304,6 @@ void processReply ( char *reply , int32_t replyLen ) {
 	// note it
 	log("qa: got contentCRC of %"UINT32"",contentCRC);
 
-
 	// if what we expected, save to disk if not there yet, then
 	// call s_callback() to resume the qa pipeline
 	/*
@@ -323,16 +323,50 @@ void processReply ( char *reply , int32_t replyLen ) {
 	}
 	*/
 
-	//
-	// if crc of content does not match what was expected then do a diff
-	// so we can see why not
-	//
+    // Just look a substring of the response so we don't have to worry about
+    // miniscule changes in output formats or changing dates.
+    if(s_expect) {
+        if(gb_strcasestr(content, s_expect)) {
+            g_qaOutput.safePrintf("<b style=color:green;>"
+                                  "passed test</b><br>%s : "
+                                  "<a href=%s>%s</a> Found %s (crc=%"UINT32")<br>"
+                                  "<hr>",
+                                  s_qt->m_testName,
+                                  s_url.getUrl(),
+                                  s_url.getUrl(),
+                                  s_expect,
+                                  contentCRC);
+        } else {
+            g_numErrors++;
+	
+            g_qaOutput.safePrintf("<b style=color:red;>FAILED TEST</b><br>%s : "
+                                  "<a href=%s>%s</a><br> Expected: %s in reply"
+                                  " (crc=%"UINT32")<br>"
+                                  "<hr>",
+                                  s_qt->m_testName,
+                                  s_url.getUrl(),
+                                  s_url.getUrl(),
+                                  s_expect,
+                                  contentCRC);
+
+
+        }
+        s_expect = NULL;
+		return;
+
+    }
 
 	// this means caller does not care about the response
 	if ( ! s_checkCRC ) {
 		//s_callback();
 		return;
 	}
+
+	//
+	// if crc of content does not match what was expected then do a diff
+	// so we can see why not
+	//
+
 
 	//const char *emsg = "qa: bad contentCRC of %"INT32" should be %"INT32" "
 	//	"\n";//"phase=%"INT32"\n";
@@ -497,11 +531,15 @@ static void gotReplyWrapper ( void *state , TcpSocket *sock ) {
 
 	processReply ( sock->m_readBuf , sock->m_readOffset );
 
+    // Avoid resuming execution if someone called wait while a reply
+    // was outstanding.
+    if(s_registered) return;
 	s_callback ();
 }
 
 // returns false if blocked, true otherwise, like on quick connect error
-bool getUrl( char *path , int32_t checkCRC = 0 , char *post = NULL ) {
+bool getUrl( char *path , int32_t checkCRC = 0 , char *post = NULL ,
+             char* expect = NULL) {
 
 	SafeBuf sb;
 	sb.safePrintf ( "http://%s:%"INT32"%s"
@@ -518,6 +556,8 @@ bool getUrl( char *path , int32_t checkCRC = 0 , char *post = NULL ) {
 
 	//Url u;
 	s_url.set ( sb.getBufStart() );
+    s_expect = expect;
+
 	log("qa: getting %s",sb.getBufStart());
 	if ( ! g_httpServer.getDoc ( s_url.getUrl() ,
 				     0 , // ip
@@ -545,7 +585,7 @@ bool getUrl( char *path , int32_t checkCRC = 0 , char *post = NULL ) {
 	return true;
 }	
 
-bool loadUrls ( ) {
+bool loadUrls () {
 	static bool s_loaded = false;
 	if ( s_loaded ) return true;
 	s_loaded = true;
@@ -1316,6 +1356,130 @@ bool qaSyntax ( ) {
 	return true;
 }
 
+typedef enum {
+    DELETE_COLLECTION = 0, 
+    ADD_COLLECTION = 1,
+    ADD_INITIAL_URLS = 2,
+    URL_COUNTER = 20,
+    CONTENT_COUNTER = 21,
+    SET_PARAMETERS = 17,
+    WAIT_A_BIT = 3,
+    EXAMINE_RESULTS = 16
+} TimeAxisFlags;
+
+
+bool qaTimeAxis ( ) {
+	if ( ! s_flags[DELETE_COLLECTION] ) {
+		s_flags[DELETE_COLLECTION] = true;
+		if ( ! getUrl ( "/admin/delcoll?xml=1&delcoll=qatest123" ) )
+			return false;
+	}
+
+	if ( ! s_flags[ADD_COLLECTION] ) {
+		s_flags[ADD_COLLECTION] = true;
+		if ( ! getUrl ( "/admin/addcoll?addcoll=qatest123&xml=1&"
+				"collectionips=127.0.0.1" , 
+				// checksum of reply expected
+				238170006 ) )
+			return false;
+	}
+
+	if ( ! s_flags[SET_PARAMETERS] ) {
+		s_flags[SET_PARAMETERS] = true;
+		if ( ! getUrl ( "/admin/spider?c=qatest123&qa=1&mit=0&mns=1"
+				// no spider replies because it messes
+				// up our last test to make sure posdb
+				// is 100% empty. 
+				// see "index spider replies" in Parms.cpp.
+				"&isr=0"
+				// turn off use robots to avoid that
+				// xyz.com/robots.txt redir to seekseek.com
+				"&obeyRobots=0"
+                // This is what we are testing
+				"&usetimeaxis=1"
+				"&de=1"
+				,
+				// checksum of reply expected
+				238170006 ) )
+			return false;
+	}
+
+
+	// this only loads once
+	loadUrls();
+	int32_t numDocsToInject = s_ubuf2.length()/(int32_t)sizeof(char *);
+
+	//
+	// Inject urls, return false if not done yet.
+	// Here we alternate sending the same url -> content pair with sending 
+    // the same url with different content to simulate a site that is updated
+    // at about half the rate that we spider them.
+	if ( ! s_flags[ADD_INITIAL_URLS] ) {
+		for ( ; s_flags[URL_COUNTER] < numDocsToInject &&
+                  s_flags[CONTENT_COUNTER] < numDocsToInject; ) {
+            // inject using html api
+            SafeBuf sb;
+
+            int32_t urlIndex = s_flags[URL_COUNTER];
+            int32_t flipFlop = s_flags[CONTENT_COUNTER] % 2;
+            int32_t contentIndex = s_flags[URL_COUNTER] +
+                s_flags[CONTENT_COUNTER] - flipFlop ;
+
+            char* expect = "[Success]";
+            if(flipFlop) {
+                expect = "[Doc is a dup]";
+            }
+
+            log("sending url num %d with content num %d, flip %d expect %s",
+                urlIndex, contentIndex, flipFlop, expect);
+            sb.safePrintf("&c=qatest123&deleteurl=0&"
+                          "format=xml&u=");
+            sb.urlEncode ( s_urlPtrs[s_flags[URL_COUNTER]]);
+            sb.safePrintf("&hasmime=1");
+            sb.safePrintf("&content=");
+            sb.urlEncode(s_contentPtrs[contentIndex]);
+
+            sb.nullTerm();
+
+
+            if(s_flags[CONTENT_COUNTER] >= 6) {
+                s_flags[URL_COUNTER] += s_flags[CONTENT_COUNTER];
+                s_flags[CONTENT_COUNTER] = 0;
+            }
+            s_flags[CONTENT_COUNTER]++;
+
+            if(s_flags[URL_COUNTER] >= 12) {
+                s_flags[ADD_INITIAL_URLS] = true;
+            }
+
+            wait(1.0);
+            if ( ! getUrl("/admin/inject",
+                          0, // no idea what crc to expect
+                          sb.getBufStart(),
+                          expect)
+                 )
+                return false;
+            return false;
+        }
+		s_flags[ADD_INITIAL_URLS] = true;
+	}
+
+	if ( ! s_flags[WAIT_A_BIT] ) {
+		wait(1.5);
+		s_flags[3] = true;
+		return false;
+	}
+
+	// if ( ! s_flags[EXAMINE_RESULTS] ) {
+	// 	s_flags[16] = true;
+	// 	if ( ! getUrl ( "/search?c=qatest123&qa=1&q=%2Bthe"
+	// 			"&dsrt=500",
+	// 			702467314 ) )
+	// 		return false;
+	// }
+
+    return true;
+}
 
 bool qaimport () {
 
@@ -2914,7 +3078,14 @@ static QATest s_qatests[] = {
 
 	{qaSyntax,
 	 "querySyntaxTest",
-	 "Test the queries in the syntax.html page and inject injectmedemo."}
+	 "Test the queries in the syntax.html page and inject injectmedemo."},
+
+	{qaTimeAxis,
+	 "timeAxisTest",
+	 "Use Inject api to inject the same url at different times, "
+	 "sometimes changed and sometimes not.  Ensure docId is different "
+	 "when content has changed, even if the url is the same. "}
+
 
 };
 

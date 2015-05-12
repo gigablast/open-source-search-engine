@@ -998,7 +998,7 @@ int32_t XmlDoc::getSpideredTime ( ) {
 	if ( ! cr ) return 0;
 
 	// if not test collection keep it simple
-	if ( strcmp(cr->m_coll,"qatest123") ) {
+	if ( strcmp(cr->m_coll,"qatest123") || cr->m_useTimeAxis) {
 		// . set spider time to current time
 		// . this might already be valid if we set it in 
 		//   getTestSpideredDate()
