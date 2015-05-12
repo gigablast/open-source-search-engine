@@ -377,6 +377,9 @@ bool Msg3a::gotCacheReply ( ) {
 		// 'time enough for love' query was hitting 30MB termlists.
 		//rs = 50000000;
 		rs = DEFAULT_POSDB_READSIZE;//90000000; // 90MB!
+		// it is better to go oom then leave users scratching their
+		// heads as to why some results are not being returned.
+		rs = -1;
 		// if section stats, limit to 1MB
 		//if ( m_r->m_getSectionStats ) rs = 1000000;
 		// get the jth query term
