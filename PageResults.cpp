@@ -1199,8 +1199,8 @@ bool gotResults ( void *state ) {
 		st->m_socket->m_callback = NULL;
 
 		// fix this to try to fix double close i guess
-		if ( st->m_socket->m_sd > 0 )
-			st->m_socket->m_sd *= -1;
+		// if ( st->m_socket->m_sd > 0 )
+		// 	st->m_socket->m_sd *= -1;
 
 		mdelete(st, sizeof(State0), "PageResults2");
 		delete st;
