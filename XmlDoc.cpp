@@ -9924,11 +9924,8 @@ char *XmlDoc::getIsDup ( ) {
 	// get it
 	CollectionRec *cr = getCollRec();
 	if ( ! cr ) return NULL;
-	// skip if we should. however, if time axis support is enabled
-	// then we have to dedup since EDOCUNCHANGED does not work since
-	// the docid is different, it is based on the spidered time in that 
-	// case.
-	if ( ( ! cr->m_dedupingEnabled && ! cr->m_useTimeAxis ) || 
+	// skip if we should
+	if ( ! cr->m_dedupingEnabled || 
 	     // bulk jobs never dedup
 	     cr->m_isCustomCrawl == 2 ) {
 		m_isDupValid = true;
