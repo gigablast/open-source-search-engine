@@ -5,6 +5,11 @@
 //#include "Unicode.h"
 #include "gb-include.h"
 
+/**
+ * Safe Char Buffer, or mutable Strings.
+ * (for java programmers, very similar to the StringBuffer class, with all the speed that c++ allows).
+ * Most of strings in Gigablast are handled by those.
+ */
 class SafeBuf {
 public:
 	//*TRUCTORS
