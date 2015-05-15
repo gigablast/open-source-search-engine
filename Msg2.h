@@ -14,7 +14,6 @@
 #define MAX_WHITELISTS 500
 
 /**
- * Doc by Sam May 15th 2015.
  *
  * Msg2 is the "message" that gets the term-list from the disk.
  * This is one fundamental brick of the search, given a

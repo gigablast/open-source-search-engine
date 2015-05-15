@@ -4,9 +4,10 @@
 #define _RDBLIST_H_
 
 /**
- * Additional documentation by Sam, May 15th 2015
  *
- * This implements a list of <key><dataSize><data>
+ * Core of the storage, this implements a list of <key><dataSize><data>.
+ *
+ * Additional documentation by Sam, May 15th 2015
  * Compared to a standard vector, this class offers a few low level optimizations
  * it seems, like compression of the keys when successive keys start with the same
  * bits.
