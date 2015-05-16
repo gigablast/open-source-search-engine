@@ -1166,7 +1166,8 @@ bool gotResults ( void *state ) {
 	if ( si->m_streamResults ) {
 		// this will be our final send
 		if ( st->m_socket->m_streamingMode ) {
-			log("res: socket still in streaming mode. wtf?");
+			log("res: socket still in streaming mode. wtf? err=%s",
+			    mstrerror(g_errno));
 			st->m_socket->m_streamingMode = false;
 		}
 		log("msg40: done streaming. nuking state=0x%"PTRFMT" "
