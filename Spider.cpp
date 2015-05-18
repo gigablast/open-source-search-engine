@@ -12417,7 +12417,10 @@ int32_t getUrlFilterNum2 ( SpiderRequest *sreq       ,
 			// (substraction of uint with int, hope
 			// every thing goes well there)
 			int32_t sreq_age = 0;
-			if ( sreq ) sreq_age = nowGlobal-sreq->m_discoveryTime;
+
+			// if m_discoveryTime is available, we use it. Otherwise we use m_addedTime
+			if ( sreq && sreq->m_discoveryTime!=0) sreq_age = nowGlobal-sreq->m_discoveryTime;
+			if ( sreq && sreq->m_discoveryTime==0) sreq_age = nowGlobal-sreq->m_addedTime;
 			//log("spiderage=%d",sreq_age);
 			// the argument entered by user
 			int32_t argument_age=atoi(s) ;
