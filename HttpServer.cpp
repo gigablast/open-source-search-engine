@@ -197,7 +197,6 @@ bool HttpServer::getDoc ( char   *url      ,
 	if ( ! ip || useHttpTunnel ) 
 		host = getHostFast ( url , &hostLen , &port );
 
-
 	// this returns false and sets g_errno on error
 	if ( ! fullRequest ) {
 		if ( ! r.set ( url , offset , size , ifModifiedSince ,
@@ -212,6 +211,7 @@ bool HttpServer::getDoc ( char   *url      ,
 			// TODO: ensure we close the socket on this error!
 			return true;
 		}
+		//log("archive: %s",r.m_reqBuf.getBufStart());
 		reqSize = r.getRequestLen();
 		int32_t need = reqSize + pcLen;
 		// if we are requesting an HTTPS url through a proxy then
@@ -1034,6 +1034,44 @@ bool HttpServer::sendReply ( TcpSocket  *s , HttpRequest *r , bool isAdmin) {
 	// "GET /download/mycoll_urls.csv"
 	if ( strncmp ( path , "/download/", 10 ) == 0 )
 		return sendBackDump ( s , r );
+
+	if ( strncmp ( path , "/gbiaitem/" , 10 ) == 0 ) {
+		SafeBuf cmd;
+		char *iaItem = path + 10;
+		char c = iaItem[pathLen];
+		iaItem[pathLen] = '\0';
+		// iaItem is like "webgroup-20100422114008-00011"
+		// print out the warc files as if they were urls
+		// so we can spider them through the spider pipeline as-is.
+		// this hack only works on internet archive servers
+		// that have the '/home/mwells/ia' obviously
+		cmd.safePrintf("/home/mwells/ia list %s --glob='*arc.gz' | "
+			       "awk '{print \"<a "
+			       "href=http://archive.org/download/"
+			       "%s/\"$1\">\"$1\"</a><br>\"}' > ./tmpiaout"
+			       //, g_hostdb.m_dir
+			       ,iaItem
+			       ,iaItem
+			       );
+		iaItem[pathLen] = c;
+		log("system: %s",cmd.getBufStart());
+		gbsystem ( cmd.getBufStart() );
+		SafeBuf sb;
+		sb.safePrintf("<title>%s</title>\n<br>\n",iaItem);
+		sb.load ( "./tmpiaout" );
+		// remove those pesky ^M guys. i guess ia is windows based.
+		sb.safeReplace3("\r","");
+		//log("system: output(%"INT32"=%s",sb.getBufStart(),
+		//sb.length());
+		return g_httpServer.sendDynamicPage(s,
+						    sb.getBufStart(),
+						    sb.length(),
+						    0, false, 
+						    "text/html",
+						    -1, NULL,
+						    "UTF-8");
+	}
+		
 
 	// . is it a diffbot api request, like "GET /api/*"
 	// . ie "/api/startcrawl" or "/api/stopcrawl" etc.?
@@ -2357,6 +2395,7 @@ int32_t getMsgSize ( char *buf, int32_t bufSize, TcpSocket *s ) {
 	}
 	// if has no content then it must end  in \n\r\n\r or \r\n\r\n
 	if ( ! hasContent ) return bufSize;
+
 	// look for a Content-Type: field because we now limit how much
 	// we read based on this
 	char *p          = buf;
@@ -2380,45 +2419,71 @@ int32_t getMsgSize ( char *buf, int32_t bufSize, TcpSocket *s ) {
 		//   as well index that at least.
 		if ( p + 15 < pend && strncasecmp( p,"application/pdf",15)==0)
 			allOrNothing = true;
+		if ( p + 15 < pend&&strncasecmp(p,"application/x-gzip",18)==0)
+			allOrNothing = true;
 		// adjust "max to read" if we don't have an html/plain doc
 		if ( ! isPost ) {
 			max = s->m_maxOtherDocLen + 10*1024 ;
 			if ( s->m_maxOtherDocLen == -1 ) max = 0x7fffffff;
 		}
 	}
+
+	// // if it is a warc or arc.gz allow it for now but we should
+	// // only allow one spider at a time per host
+	if ( s->m_sendBuf ) {
+		char *p = s->m_sendBuf;
+		char *pend = p + s->m_sendBufSize;
+		if ( strncmp(p,"GET /",5) == 0 ) p += 4;
+		// find end of url we are getting
+		char *e = p;
+		for ( ; *e && e < pend && ! is_wspace_a(*e) ; e++ );
+		if ( e - 8 > p && strncmp(e-8,".warc.gz", 8 ) == 0 )
+			max = 0x7fffffff;
+		if ( e - 7 > p && strncmp(e-7, ".arc.gz", 7 ) == 0 )
+			max = 0x7fffffff;
+	}
+
+	int32_t contentSize = 0;
+	int32_t totalReplySize = 0;
+
 	// now look for Content-Length in the mime
-	for ( int32_t j = 0; j < i ; j++ ) {
+	int32_t j; for ( j = 0; j < i ; j++ ) {
 		if ( buf[j] != 'c' && buf[j] != 'C' ) continue;
 		if ( j + 16 >= i ) break;
 		if ( strncasecmp ( &buf[j], "Content-Length:" , 15 ) != 0 )
 			continue;
-		int32_t contentSize = atol2 ( &buf[j+15] , i - (j+15) );
-		int32_t totalReplySize = contentSize + mimeSize ;
-		// all-or-nothing filter
-		if ( totalReplySize > max && allOrNothing ) {
-			log(LOG_INFO,
-			    "http: pdf reply/request size of %"INT32" is larger "
-			    "than limit of %"INT32". Cutoff pdf's are useless. "
-			    "Abandoning.",totalReplySize,max);
-			// do not read any more than what we have
-			return bufSize;
-		}
-		// warn if we received a post that was truncated
-		if ( totalReplySize > max && isPost ) {
-			log("http: Truncated POST request from %"INT32" "
-			    "to %"INT32" bytes. Increase \"max other/text doc "
-			    "len\" in Spider Controls page to prevent this.",
-			    totalReplySize,max);
-		}
-		// truncate the reply if we have to
-		if ( totalReplySize > max ) {
-			log("http: truncating reply of %"INT32" to %"INT32" bytes",
-			    totalReplySize,max);
-			totalReplySize = max;
-		}
-		// truncate if we need to
-		return totalReplySize;
+		contentSize = atol2 ( &buf[j+15] , i - (j+15) );
+		totalReplySize = contentSize + mimeSize ;
+		break;
 	}
+
+	// all-or-nothing filter
+	if ( totalReplySize > max && allOrNothing ) {
+		log(LOG_INFO,
+		    "http: reply/request size of %"INT32" is larger "
+		    "than limit of %"INT32". Cutoff documents "
+		    "of this type are useless. "
+		    "Abandoning.",totalReplySize,max);
+		// do not read any more than what we have
+		return bufSize;
+	}
+	// warn if we received a post that was truncated
+	if ( totalReplySize > max && isPost ) {
+		log("http: Truncated POST request from %"INT32" "
+		    "to %"INT32" bytes. Increase \"max other/text doc "
+		    "len\" in Spider Controls page to prevent this.",
+		    totalReplySize,max);
+	}
+	// truncate the reply if we have to
+	if ( totalReplySize > max ) {
+		log("http: truncating reply of %"INT32" to %"INT32" bytes",
+		    totalReplySize,max);
+		totalReplySize = max;
+	}
+	// truncate if we need to
+	if ( totalReplySize )
+		return totalReplySize;
+
 	// if it is a POST request with content but no content length...
 	// we don't know how big it is...
 	if ( isPost ) {
@@ -2849,16 +2914,34 @@ TcpSocket *HttpServer::unzipReply(TcpSocket* s) {
 	// so we need to rewrite the Content-Length: and the 
 	// Content-Encoding: http mime field values so they are no longer
 	// "gzip" and use the uncompressed content-length.
-	char *ptr1 = NULL;
-	char *ptr2 = NULL;
-	if(mime.getContentEncodingPos() &&
-	   mime.getContentEncodingPos() < mime.getContentLengthPos()) {
-		ptr1 = mime.getContentEncodingPos();
-		ptr2 = mime.getContentLengthPos();
-	}
-	else {
-		ptr1 = mime.getContentLengthPos();
-		ptr2 = mime.getContentEncodingPos();
+	char *ptr1 = mime.getContentEncodingPos();
+	char *ptr2 = mime.getContentLengthPos();
+	char *ptr3 = NULL;
+
+	// change the content type based on the extension before the
+	// .gz extension since we are uncompressing it
+	char *p = s->m_sendBuf + 4;
+	char *pend = s->m_sendBuf + s->m_sendBufSize;
+	const char *newCT = NULL;
+	char *lastPeriod = NULL;
+	// get the extension, if any, before the .gz
+	for ( ; *p && ! is_wspace_a(*p) && p < pend ; p++ ) {
+		if ( p[0] != '.' ) continue;
+		if ( p[1] != 'g' ) { lastPeriod = p; continue; }
+		if ( p[2] != 'z' ) { lastPeriod = p; continue; }
+		if ( ! is_wspace_a(p[3]) ) { lastPeriod = p; continue; }
+		// no prev?
+		if ( ! lastPeriod ) break;
+		// skip period
+		lastPeriod++;
+		// back up
+		newCT = extensionToContentTypeStr2 (lastPeriod,p-lastPeriod);
+		// this is NULL if the file extension is unrecognized
+		if ( ! newCT ) break;
+		// this should be like text/html or
+		// WARC/html or something like that...
+		ptr3 = mime.getContentTypePos();
+		break;
 	}
 
 	// this was writing a number at the start of the mime and messing
@@ -2870,38 +2953,47 @@ TcpSocket *HttpServer::unzipReply(TcpSocket* s) {
 	char *src = s->m_readBuf;
 
 	// sometimes they are missing Content-Length:
-	if ( ptr1 ) {
-		// copy ptr1 to src
-		gbmemcpy ( pnew, src, ptr1 - src );
-		pnew += ptr1 - src;
-		src  += ptr1 - src;
-		// store either the new content encoding or new length
-		if(ptr1 == mime.getContentEncodingPos())
-			pnew += sprintf(pnew, " identity");
-		else	
-			pnew += sprintf(pnew, " %"INT32"",newSize);
-		// scan to \r\n at end of that line we replace
-		while ( *src != '\r' && *src != '\n') src++;
+
+ subloop:
+
+	char *nextMin = (char *)-1;
+	if ( ptr1 && (ptr1 < nextMin || nextMin==(char *)-1)) nextMin = ptr1;
+	if ( ptr2 && (ptr2 < nextMin || nextMin==(char *)-1)) nextMin = ptr2;
+	if ( ptr3 && (ptr3 < nextMin || nextMin==(char *)-1)) nextMin = ptr3;
+
+	// if all ptrs are NULL then copy the tail
+	if ( nextMin == (char *)-1 ) nextMin = mimeEnd;
+
+	// copy ptr1 to src
+	gbmemcpy ( pnew, src, nextMin - src );
+	pnew += nextMin - src;
+	src  += nextMin - src;
+	// store either the new content encoding or new length
+	if ( nextMin == mime.getContentEncodingPos()) {
+		pnew += sprintf(pnew, " identity");
+		ptr1 = NULL;
+	}
+	else if ( nextMin == mime.getContentLengthPos() ) {
+		pnew += sprintf(pnew, " %"INT32"",newSize);
+		ptr2 = NULL;
+	}
+	else if ( nextMin == mime.getContentTypePos() ) {
+		pnew += sprintf(pnew," %s",newCT);
+		ptr3 = NULL;
 	}
 
-	if ( ptr2 ) {
-		// copy ptr2 to src
-		gbmemcpy ( pnew , src , ptr2 - src );
-		pnew += ptr2 - src;
-		src  += ptr2 - src;
-		// now insert the new shit
-		if(ptr2 == mime.getContentEncodingPos())
-			pnew += sprintf(pnew, " identity");
-		else	
-			pnew += sprintf(pnew, " %"INT32"",newSize);
+	// loop for more
+	if ( nextMin < mimeEnd ) {
 		// scan to \r\n at end of that line we replace
 		while ( *src != '\r' && *src != '\n') src++;
+		goto subloop;
 	}
+
 
 	// copy the rest
-	gbmemcpy ( pnew , src , mimeEnd - src );
-	pnew += mimeEnd - src;
-	src  += mimeEnd - src;
+	// gbmemcpy ( pnew , src , mimeEnd - src );
+	// pnew += mimeEnd - src;
+	// src  += mimeEnd - src;
 
 
 	// before restLen was negative because we were skipping over

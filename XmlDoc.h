@@ -249,6 +249,8 @@ public:
 
 #define MAX_XML_DOCS 4
 
+#define MAXMSG7S 50
+
 class XmlDoc {
 
  public:
@@ -339,7 +341,7 @@ class XmlDoc {
 	uint16_t  m_isDiffbotJSONObject:1;
 	uint16_t  m_sentToDiffbot:1;
 	uint16_t  m_gotDiffbotSuccessfulReply:1;
-	uint16_t  m_reserved804:1;
+	uint16_t  m_useTimeAxis:1; // m_reserved804:1;
 	uint16_t  m_reserved805:1;
 	uint16_t  m_reserved806:1;
 	uint16_t  m_reserved807:1;
@@ -473,7 +475,9 @@ class XmlDoc {
 		    int32_t             forcedIp = 0 ,
 		    uint8_t          contentType = CT_HTML ,
 		    uint32_t           spideredTime = 0 , // time_t
-		    bool             contentHasMime = false ) ;
+		    bool             contentHasMime = false ,
+		    // for container docs, what is the separator of subdocs?
+		    char            *contentDelim = NULL ) ;
 
 	// we now call this right away rather than at download time!
 	int32_t getSpideredTime();
@@ -499,6 +503,9 @@ class XmlDoc {
 	void getRebuiltSpiderRequest ( class SpiderRequest *sreq ) ;
 	bool indexDoc ( );
 	bool indexDoc2 ( );
+	bool isContainerDoc ( );
+	bool indexContainerDoc ( );
+	bool indexWarcOrArc ( char ct ) ;
 	key_t *getTitleRecKey() ;
 	//char *getSkipIndexing ( );
 	char *prepareToMakeTitleRec ( ) ;
@@ -600,6 +607,7 @@ class XmlDoc {
 	class Url *getFirstUrl() ;
 	int64_t getFirstUrlHash48();
 	int64_t getFirstUrlHash64();
+	class Url **getLastRedirUrl() ;
 	class Url **getRedirUrl() ;
 	class Url **getMetaRedirUrl() ;
 	class Url **getCanonicalRedirUrl ( ) ;
@@ -608,7 +616,7 @@ class XmlDoc {
 	//int32_t *getNumBannedOutlinks ( ) ;
 	uint16_t *getCountryId ( ) ;
 	class XmlDoc **getOldXmlDoc ( ) ;
-	bool isRobotsTxtFile ( char *url , int32_t urlLen ) ;
+	//bool isRobotsTxtFile ( char *url , int32_t urlLen ) ;
 	class XmlDoc **getExtraDoc ( char *url , int32_t maxCacheAge = 0 ) ;
 	bool getIsPageParser ( ) ;
 	class XmlDoc **getRootXmlDoc ( int32_t maxCacheAge = 0 ) ;
@@ -686,6 +694,8 @@ class XmlDoc {
 	char **getRawUtf8Content ( ) ;
 	char **getExpandedUtf8Content ( ) ;
 	char **getUtf8Content ( ) ;
+	// we download large files to a file on disk, like warcs and arcs
+	File *getUtf8ContentInFile ( int64_t *fileSizeArg );
 	int32_t *getContentHash32 ( ) ;
 	int32_t *getContentHashJson32 ( ) ;
 	//int32_t *getTagHash32 ( ) ;
@@ -799,6 +809,8 @@ class XmlDoc {
 	bool hashContentType ( class HashTableX *table ) ;
 	bool hashDMOZCategories ( class HashTableX *table ) ;
 	bool hashLinks ( class HashTableX *table ) ;
+	bool getUseTimeAxis ( ) ;
+	SafeBuf *getTimeAxisUrl ( );
 	bool hashUrl ( class HashTableX *table );
 	bool hashDateNumbers ( class HashTableX *tt );
 	bool hashSections ( class HashTableX *table ) ;
@@ -1009,6 +1021,7 @@ class XmlDoc {
 
 	Url        m_redirUrl;
 	Url       *m_redirUrlPtr;
+	Url       *m_lastRedirUrlPtr;
 	SafeBuf    m_redirCookieBuf;
 	Url        m_metaRedirUrl;
 	Url       *m_metaRedirUrlPtr;
@@ -1043,6 +1056,33 @@ class XmlDoc {
 	SafeBuf  m_metaList2;
 	SafeBuf  m_zbuf;
 	SafeBuf  m_kbuf;
+
+	// warc parsing member vars
+	class Msg7 *m_msg7;
+	class Msg7 *m_msg7s[MAXMSG7S];
+	char *m_warcContentPtr;
+	char *m_arcContentPtr;
+	char *m_anyContentPtr;
+	char *m_contentDelim;
+	SafeBuf m_injectUrlBuf;
+	bool m_subDocsHaveMime;
+	int32_t m_warcError ;
+	int32_t m_arcError ;
+	bool m_doneInjectingWarc ;
+	bool m_doneInjectingArc ;
+	int64_t m_fileOff ;
+	char *m_fileBuf ;
+	int32_t m_fileBufAllocSize;
+	char *m_fptr ;
+	char *m_fptrEnd ;
+	File m_file;
+	int64_t m_fileSize;
+	bool m_hasMoreToRead;
+	int32_t m_numInjectionsOut;
+	bool m_calledWgetThread;
+
+	// used by msg7 to store udp slot
+	class UdpSlot *m_injectionSlot;
 
 	// . same thing, a little more complicated
 	// . these classes are only set on demand
@@ -1114,6 +1154,8 @@ class XmlDoc {
 	//bool  m_storedVoteCache;
 	//SafeBuf m_cacheRecBuf;
 
+	SafeBuf m_timeAxisUrl;
+
 	HashTableX m_turkVotingTable;
 	HashTableX m_turkBitsTable;
 	uint32_t m_confirmedTitleContentHash ;
@@ -1154,6 +1196,8 @@ class XmlDoc {
 	class SafeBuf     *m_savedSb;
 	class HttpRequest *m_savedHr;
 
+	char m_savedChar;
+
 
 	// validity flags. on reset() all these are set to false.
 	char     m_VALIDSTART;
@@ -1163,10 +1207,14 @@ class XmlDoc {
 	char     m_addedSpiderReplySizeValid;
 	char     m_addedStatusDocSizeValid;
 	char     m_downloadStartTimeValid;
+	char     m_contentDelimValid;
+	char     m_fileValid;
 	//char   m_docQualityValid;
 	char     m_siteValid;
 	char     m_startTimeValid;
 	char     m_currentUrlValid;
+	char     m_useTimeAxisValid;
+	char     m_timeAxisUrlValid;
 	char     m_firstUrlValid;
 	char     m_firstUrlHash48Valid;
 	char     m_firstUrlHash64Valid;
@@ -2397,7 +2445,10 @@ class XmlDoc {
 			 void (*callback)(void *state) ,
 
 			 uint32_t firstIndexedTime = 0,
-			 uint32_t lastSpideredDate = 0 );
+			 uint32_t lastSpideredDate = 0 ,
+			 int32_t  injectDocIp = 0 ,
+			 // for container docs consisting of subdocs to inject
+			 char *contentDelim = NULL );
 
 
 	bool injectLinks  ( HashTableX *linkDedupTable ,

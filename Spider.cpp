@@ -797,6 +797,8 @@ bool Spiderdb::verify ( char *coll ) {
 key128_t Spiderdb::makeKey ( int32_t      firstIp     ,
 			     int64_t urlHash48   , 
 			     bool      isRequest   ,
+			     // MDW: now we use timestamp instead of parentdocid
+			     // for spider replies. so they do not dedup...
 			     int64_t parentDocId ,
 			     bool      isDel       ) {
 	key128_t k;
@@ -814,6 +816,9 @@ key128_t Spiderdb::makeKey ( int32_t      firstIp     ,
 	if ( isRequest ) k.n0 |= 0x01;
 	// parent docid
 	k.n0 <<= 38;
+	// if we are making a spider reply key just leave the parentdocid as 0
+	// so we only store one reply per url. the last reply we got.
+	// if ( isRequest ) k.n0 |= parentDocId & DOCID_MASK;
 	k.n0 |= parentDocId & DOCID_MASK;
 	// reserved (padding)
 	k.n0 <<= 8;
@@ -1802,8 +1807,13 @@ void SpiderColl::clearLocks ( ) {
 
 void SpiderColl::reset ( ) {
 
-	m_numSuccessReplies = 0;
-	m_numFailedReplies  = 0;
+	// these don't work because we only store one reply
+	// which overwrites any older reply. that's how the 
+	// key is. we can change the key to use the timestamp 
+	// and not parent docid in makeKey() for spider 
+	// replies later.
+	// m_numSuccessReplies = 0;
+	// m_numFailedReplies  = 0;
 
 	// reset these for SpiderLoop;
 	m_nextDoledbKey.setMin();
@@ -3980,15 +3990,65 @@ bool SpiderColl::scanListForWinners ( ) {
 			// see if this is the most recent one
 			SpiderReply *tmp = (SpiderReply *)rec;
 
-			// reset reply stats if beginning a new url
-			if ( srepUh48 != tmp->getUrlHash48() ) {
-				m_numSuccessReplies = 0;
-				m_numFailedReplies  = 0;
+			// . MDW: we have to detect corrupt replies up here so
+			//   they do not become the winning reply because
+			//   their date is in the future!!
+
+			// . this is -1 on corruption
+			// . i've seen -31757, 21... etc for bad http replies
+			//   in the qatest123 doc cache... so turn off for that
+			if ( tmp->m_httpStatus >= 1000 ) {
+				if ( m_cr->m_spiderCorruptCount == 0 ) {
+					log("spider: got corrupt 3 "
+					    "spiderReply in "
+					    "scan "
+					    "uh48=%"INT64" "
+					    "httpstatus=%"INT32" "
+					    "(cn=%"INT32")",
+					    tmp->getUrlHash48(),
+					    (int32_t)tmp->m_httpStatus,
+					    (int32_t)m_collnum);
+				}
+				m_cr->m_spiderCorruptCount++;
+				// don't nuke it just for that...
+				//srep = NULL;
+				continue;
+			}
+			// bad langid?
+			if ( ! getLanguageAbbr (tmp->m_langId) ) {
+				log("spider: got corrupt 4 spiderReply in "
+				    "scan uh48=%"INT64" "
+				    "langid=%"INT32" (cn=%"INT32")",
+				    tmp->getUrlHash48(),
+				    (int32_t)tmp->m_langId,
+				    (int32_t)m_collnum);
+				m_cr->m_spiderCorruptCount++;
+				//srep = NULL;
+				// if ( tmp->getUrlHash48() == 
+				//      271713196158770LL )
+				// 	log("hey");
+				continue;
 			}
 
+			// reset reply stats if beginning a new url
+			// these don't work because we only store one reply
+			// which overwrites any older reply. that's how the 
+			// key is. we can change the key to use the timestamp 
+			// and not parent docid in makeKey() for spider 
+			// replies later.
+			// if ( srepUh48 != tmp->getUrlHash48() ) {
+			// 	m_numSuccessReplies = 0;
+			// 	m_numFailedReplies  = 0;
+			// }
+
 			// inc stats
-			if ( tmp->m_errCode == 0 ) m_numSuccessReplies++;
-			else                       m_numFailedReplies ++;
+			// these don't work because we only store one reply
+			// which overwrites any older reply. that's how the 
+			// key is. we can change the key to use the timestamp 
+			// and not parent docid in makeKey() for spider 
+			// replies later.
+			// if ( tmp->m_errCode == 0 ) m_numSuccessReplies++;
+			// else                       m_numFailedReplies ++;
 
 			// if we have a more recent reply already, skip this 
 			if ( srep && 
@@ -4010,10 +4070,14 @@ bool SpiderColl::scanListForWinners ( ) {
 		int64_t uh48 = sreq->getUrlHash48();
 
 		// reset reply stats if beginning a new url
-		if ( ! srep ) {
-			m_numSuccessReplies = 0;
-			m_numFailedReplies  = 0;
-		}
+		// these don't work because we only store one reply
+		// which overwrites any older reply. that's how the key is.
+		// we can change the key to use the timestamp and not
+		// parent docid in makeKey() for spider replies later.
+		// if ( ! srep ) {
+		// 	m_numSuccessReplies = 0;
+		// 	m_numFailedReplies  = 0;
+		// }
 
 		// . skip if our twin should add it to doledb
 		// . waiting tree only has firstIps assigned to us so
@@ -4100,8 +4164,13 @@ bool SpiderColl::scanListForWinners ( ) {
 		// put these in the spiderequest in doledb so we can
 		// show in the json spider status docs in 
 		// XmlDoc::getSpiderStatusDocMetaList2()
-		sreq->m_reservedc1 = m_numSuccessReplies;
-		sreq->m_reservedc2 = m_numFailedReplies;
+		// these don't work because we only store one reply
+		// which overwrites any older reply. that's how the 
+		// key is. we can change the key to use the timestamp 
+		// and not parent docid in makeKey() for spider 
+		// replies later.
+		// sreq->m_reservedc1 = m_numSuccessReplies;
+		// sreq->m_reservedc2 = m_numFailedReplies;
 		
 		m_lastSreqUh48 = uh48;
 		m_lastCBlockIp = cblock;
@@ -4256,28 +4325,6 @@ bool SpiderColl::scanListForWinners ( ) {
 			// if we tried it before
 			sreq->m_hadReply = true;
 		}
-		// . this is -1 on corruption
-		// . i've seen -31757, 21... etc for bad http replies
-		//   in the qatest123 doc cache... so turn off for that
-		if ( srep && srep->m_httpStatus >= 1000 ) {
-			if ( m_cr->m_spiderCorruptCount == 0 ) {
-				log("spider: got corrupt 3 spiderReply in "
-				    "scan httpstatus=%"INT32" (cn=%"INT32")",
-				    (int32_t)srep->m_httpStatus,
-				    (int32_t)m_collnum);
-			}
-			m_cr->m_spiderCorruptCount++;
-			// don't nuke it just for that...
-			//srep = NULL;
-		}
-		// bad langid?
-		if ( srep && ! getLanguageAbbr (srep->m_langId) ) {
-			log("spider: got corrupt 4 spiderReply in scan "
-			    "langid=%"INT32" (cn=%"INT32")",
-			    (int32_t)srep->m_langId,
-			    (int32_t)m_collnum);
-			srep = NULL;
-		}
 
 		// . get the url filter we match
 		// . if this is slow see the TODO below in dedupSpiderdbList()
@@ -4310,7 +4357,8 @@ bool SpiderColl::scanListForWinners ( ) {
 		if ( priority >= MAX_SPIDER_PRIORITIES) {char *xx=NULL;*xx=0;}
 
 		if ( g_conf.m_logDebugSpider )
-			log("spider: got ufn=%"INT32" for %s",ufn,sreq->m_url);
+			log("spider: got ufn=%"INT32" for %s (%"INT64"",
+			    ufn,sreq->m_url,sreq->getUrlHash48());
 
 		if ( g_conf.m_logDebugSpider && srep )
 			log("spider: lastspidered=%"UINT32"",
@@ -4514,6 +4562,9 @@ bool SpiderColl::scanListForWinners ( ) {
 						 spiderTimeMS ,
 						 uh48 );
 
+		// assume our added time is the first time this url was added
+		sreq->m_discoveryTime = sreq->m_addedTime;
+
 		// if ( uh48 == 110582802025376LL )
 		// 	log("hey");
 
@@ -4543,10 +4594,12 @@ bool SpiderColl::scanListForWinners ( ) {
 				// and the min added time as well!
 				// get the oldest timestamp so
 				// gbssDiscoveryTime will be accurate.
-				if ( sreq->m_addedTime < wsreq->m_addedTime )
-					wsreq->m_addedTime = sreq->m_addedTime;
-				if ( wsreq->m_addedTime < sreq->m_addedTime )
-					sreq->m_addedTime = wsreq->m_addedTime;
+				if ( sreq->m_discoveryTime < wsreq->m_discoveryTime )
+					wsreq->m_discoveryTime = 
+						sreq->m_discoveryTime;
+				if ( wsreq->m_discoveryTime < sreq->m_discoveryTime )
+					sreq->m_discoveryTime = 
+						wsreq->m_discoveryTime;
 			}
 
 			
@@ -7592,10 +7645,23 @@ bool SpiderLoop::spiderUrl9 ( SpiderRequest *sreq ,
 	int32_t node = g_doledb.m_rdb.m_tree.deleteNode(m_collnum,
 							(char *)m_doledbKey,
 							true);
-	if ( node == -1 ) { char *xx=NULL;*xx=0; }
 
 	if ( g_conf.m_logDebugSpider )
 		log("spider: deleting doledb tree node %"INT32,node);
+
+	// if url filters rebuilt then doledb gets reset and i've seen us hit
+	// this node == -1 condition here... so maybe ignore it... just log
+	// what happened? i think we did a quickpoll somewhere between here
+	// and the call to spiderDoledUrls() and it the url filters changed
+	// so it reset doledb's tree. so in that case we should bail on this
+	// url.
+	if ( node == -1 ) { 
+		g_errno = EADMININTERFERENCE;
+		log("spider: lost url about to spider from url filters "
+		    "and doledb tree reset. %s",mstrerror(g_errno));
+		return true;
+	}
+
 
 	// now remove from doleiptable since we removed from doledb
 	m_sc->removeFromDoledbTable ( sreq->m_firstIp );
@@ -11663,11 +11729,14 @@ int32_t getUrlFilterNum2 ( SpiderRequest *sreq       ,
 					goto gotOne;
 			}
 			// two letter extensions
-			else if ( ext[1] == '.' ) {
-				if ( to_lower_a(ext[2]) == 'g' &&
-				     to_lower_a(ext[3]) == 'z' )
-					goto gotOne;
-			}
+			// .warc.gz and .arc.gz is ok
+			// take this out for now
+			// else if ( ext[1] == '.' ) {
+			// 	if ( to_lower_a(ext[2]) == 'g' &&
+			// 	     to_lower_a(ext[3]) == 'z' )
+			// 		goto gotOne;
+			// }
+
 			// check for ".css?" substring
 			// these two suck up a lot of time:
 			// take them out for now. MDW 2/21/2015
@@ -12338,6 +12407,37 @@ int32_t getUrlFilterNum2 ( SpiderRequest *sreq       ,
 			goto checkNextRule;
 		}
 
+		// selector using the first time it was added to the Spiderdb
+		// added by Sam, May 5th 2015
+		if ( *p=='u' && strncmp(p,"urlage",6) == 0 ) {
+			// skip for msg20
+			if ( isForMsg20 ) {
+				//log("was for message 20");
+				continue;
+
+			}
+			// get the age of the spider_request. 
+			// (substraction of uint with int, hope
+			// every thing goes well there)
+			int32_t sreq_age = 0;
+			if ( sreq ) sreq_age = nowGlobal-sreq->m_discoveryTime;
+			//log("spiderage=%d",sreq_age);
+			// the argument entered by user
+			int32_t argument_age=atoi(s) ;
+			if ( sign == SIGN_EQ && sreq_age != argument_age ) continue;
+			if ( sign == SIGN_NE && sreq_age == argument_age ) continue;
+			if ( sign == SIGN_GT && sreq_age <= argument_age ) continue;
+			if ( sign == SIGN_LT && sreq_age >= argument_age ) continue;
+			if ( sign == SIGN_GE && sreq_age <  argument_age ) continue;
+			if ( sign == SIGN_LE && sreq_age >  argument_age ) continue;
+			p = strstr(s, "&&");
+			//if nothing, else then it is a match
+			if ( ! p ) return i;
+			//skip the '&&' and go to next rule
+			p += 2;
+			goto checkNextRule;
+		}
+
 
 		if ( *p=='e' && strncmp(p,"errorcount",10) == 0 ) {
 			// if we do not have enough info for outlink, all done
@@ -12460,16 +12560,16 @@ int32_t getUrlFilterNum2 ( SpiderRequest *sreq       ,
 			// skip for msg20
 			if ( isForMsg20 ) continue;
 			// do not match rule if never attempted
-			if ( srep->m_spideredTime ==  0 ) {
-				char*xx=NULL;*xx=0;}
-			if ( srep->m_spideredTime == (uint32_t)-1){
-				char*xx=NULL;*xx=0;}
-			// int16_tcut
-			float af = (srep->m_spideredTime - nowGlobal);
+			// if ( srep->m_spideredTime ==  0 ) {
+			// 	char*xx=NULL;*xx=0;}
+			// if ( srep->m_spideredTime == (uint32_t)-1){
+			// 	char*xx=NULL;*xx=0;}
+			// shortcut
+			int32_t a = nowGlobal - srep->m_spideredTime;
 			// make into days
-			af /= (3600.0*24.0);
+			//af /= (3600.0*24.0);
 			// back to a int32_t, round it
-			int32_t a = (int32_t)(af + 0.5);
+			//int32_t a = (int32_t)(af + 0.5);
 			// make it point to the priority
 			int32_t b = atoi(s);
 			// compare
@@ -13001,6 +13101,7 @@ void dedupSpiderdbList ( RdbList *list , int32_t niceness , bool removeNegRecs )
 		// . if the same check who has the most recent added time
 		// . if we are not the most recent, just do not add us
 		// . no, now i want the oldest so we can do gbssDiscoveryTime
+		//   and set sreq->m_discoveryTime accurately, above
 		if ( sreq->m_addedTime >= oldReq->m_addedTime ) continue;
 		// otherwise, erase over him
 		dst     = restorePoint;

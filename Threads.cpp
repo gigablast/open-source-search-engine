@@ -671,6 +671,18 @@ bool ThreadQueue::init ( char threadType, int32_t maxThreads, int32_t maxEntries
 }
 
 int32_t ThreadQueue::getNumThreadsOutOrQueued() {
+	// MDW: we also need to count threads that are returned but need their
+	// callback called so, in the case of RdbDump, the rdblist that was written
+	// to disk can update the rdbmap before it gets saved, so it doesn't get
+	// out of sync. Process.cpp calls .suspendMerge() to make sure that all
+	// merge operations are suspended as well.
+	int32_t n = 0;
+	for ( int32_t i = 0 ; i < m_maxEntries ; i++ ) {
+		ThreadEntry *e = &m_entries[i];
+		if ( e->m_isOccupied ) n++;
+	}
+	return n;
+	/*
 	int32_t n = m_launched - m_returned;
 	for ( int32_t i = 0 ; i < m_maxEntries ; i++ ) {
 		ThreadEntry *e = &m_entries[i];
@@ -684,6 +696,7 @@ int32_t ThreadQueue::getNumThreadsOutOrQueued() {
 		//}
 	}
 	return n;
+	*/
 }
 
 // return NULL and set g_errno on error

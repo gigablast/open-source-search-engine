@@ -109,11 +109,27 @@ char *getFirstJSONObject ( char *p ,
 char *getJSONObjectEnd ( char *p , int32_t niceness ) ;
 
 XmlDoc::XmlDoc() { 
+	for ( int32_t i = 0 ; i < MAXMSG7S ; i++ ) m_msg7s[i] = NULL;
 	m_esbuf.setLabel("exputfbuf");
 	for ( int32_t i = 0 ; i < MAX_XML_DOCS ; i++ ) m_xmlDocs[i] = NULL;
 	m_freed = false;
 	m_contentInjected = false;
 	m_wasContentInjected = false;
+
+	// warc parsing stuff
+	m_msg7 = NULL;
+	m_warcError = 0;
+	m_arcError = 0;
+	m_doneInjectingWarc = false;
+	m_doneInjectingArc = false;
+	m_fileOff = 0;
+	m_numInjectionsOut = 0;
+	m_fptr = NULL;
+	m_fptrEnd = NULL;
+	m_fileBuf = NULL;
+	m_warcContentPtr = NULL;
+	m_calledWgetThread = false;
+
 	//m_coll  = NULL;
 	m_ubuf = NULL;
 	m_pbuf = NULL;
@@ -187,7 +203,39 @@ XmlDoc::~XmlDoc() {
 
 static int64_t s_lastTimeStart = 0LL;
 
+// for debugging
+class XmlDoc *g_xd;
+
 void XmlDoc::reset ( ) {
+
+	if ( m_fileValid ) {
+		m_file.close();
+		m_file.unlink();
+	}
+
+	if ( m_fileBuf )
+		mfree ( m_fileBuf , m_fileBufAllocSize , "fbdd");
+
+	for ( int i = 0 ; i < MAXMSG7S ; i++ ) {
+		Msg7 *msg7 = m_msg7s[i];
+		if ( ! msg7 ) continue;
+		mdelete ( m_msg7 , sizeof(Msg7) , "xdmsg7" );
+		delete ( m_msg7 );
+		m_msg7s[i] = NULL;
+	}		
+
+	if ( m_msg7 ) {
+		mdelete ( m_msg7 , sizeof(Msg7) , "xdmsg7" );
+		delete ( m_msg7 );
+		m_msg7 = NULL;
+	}
+	m_warcContentPtr = NULL;
+	m_arcContentPtr = NULL;
+	m_anyContentPtr = NULL;
+	m_savedChar = '\0';
+	m_contentDelim = NULL;
+
+	m_redirUrl.reset();
 
 	m_ipStartTime = 0;
 	m_ipEndTime   = 0;
@@ -1136,7 +1184,8 @@ bool XmlDoc::set4 ( SpiderRequest *sreq      ,
 		    int32_t           forcedIp ,
 		    uint8_t        contentType ,
 		    uint32_t         spideredTime ,
-		    bool           contentHasMime ) {
+		    bool           contentHasMimeArg ,
+		    char          *contentDelim ) {
 
 	// sanity check
 	if ( sreq->m_dataSize == 0 ) { char *xx=NULL;*xx=0; }
@@ -1160,6 +1209,21 @@ bool XmlDoc::set4 ( SpiderRequest *sreq      ,
 	// PageReindex.cpp will set this in the spider request
 	if ( sreq->m_forceDelete )
 		m_deleteFromIndex = true;
+
+	// if we are a container doc then we need the content delimeter,
+	// unless if we are a warc or arc, then we know how those delimit
+	// already.
+	m_contentDelim = contentDelim;
+	m_contentDelimValid = true;
+
+	bool contentHasMime = contentHasMimeArg;
+	// but if we are a container doc then this parm applies to each subdoc
+	// not to us, so turn it off for this part.
+	if ( isContainerDoc() )	{
+		contentHasMime    = false;
+		m_subDocsHaveMime = contentHasMimeArg;
+	}
+
 
 	char *utf8Content = utf8ContentArg;
 
@@ -1795,7 +1859,10 @@ bool XmlDoc::set2 ( char    *titleRec ,
 	//m_hasContactInfoValid = true;
 
 	// sanity check. if m_siteValid is true, this must be there
-	if ( ! ptr_site ) { char *xx=NULL;*xx=0; }
+	if ( ! ptr_site ) { 
+		log("set4: ptr_site is null for docid %"INT64"",m_docId);
+		//char *xx=NULL;*xx=0; }
+	}
 
 	// lookup the tagdb rec fresh if setting for a summary. that way we
 	// can see if it is banned or not
@@ -1840,7 +1907,7 @@ bool XmlDoc::setFirstUrl ( char *u , bool addWWW , Url *baseUrl ) {
 
 	//if ( gbstrlen (u) + 1 > MAX_URL_LEN ) 
 	//	m_indexCode = EURLTOOLONG;
-	
+
 	m_firstUrl.set ( baseUrl , u , gbstrlen(u) , addWWW ) ;
 
 	// it is the active url
@@ -1998,7 +2065,7 @@ bool XmlDoc::injectDoc ( char *url ,
 			 CollectionRec *cr ,
 			 char *content ,
 			 char *diffbotReply, // usually null
-			 bool contentHasMime ,
+			 bool contentHasMimeArg ,
 			 int32_t hopCount,
 			 int32_t charset,
 
@@ -2011,7 +2078,9 @@ bool XmlDoc::injectDoc ( char *url ,
 			 void (*callback)(void *state) ,
 
 			 uint32_t firstIndexed,
-			 uint32_t lastSpidered ) {
+			 uint32_t lastSpidered ,
+			 int32_t injectDocIp ,
+			 char *contentDelim ) {
 
 	// wait until we are synced with host #0
 	if ( ! isClockInSync() ) {
@@ -2035,7 +2104,9 @@ bool XmlDoc::injectDoc ( char *url ,
 		     uu.getUrlLen() );
 
 
-	int32_t contentType = getContentTypeFromStr(contentTypeStr);
+	int32_t contentType = CT_UNKNOWN;
+	if ( contentTypeStr && contentTypeStr[0] )
+		contentType = getContentTypeFromStr(contentTypeStr);
 
 	// use CT_HTML if contentTypeStr is empty or blank. default
 	if ( ! contentTypeStr || ! contentTypeStr[0] )
@@ -2074,10 +2145,11 @@ bool XmlDoc::injectDoc ( char *url ,
 		      // inject this content
 		      content ,
 		      deleteUrl, // false, // deleteFromIndex ,
-		      0,//forcedIp ,
+		      injectDocIp, // 0,//forcedIp ,
 		      contentType ,
 		      lastSpidered,//lastSpidered overide
-		      contentHasMime )) {
+		      contentHasMimeArg ,
+		      contentDelim )) {
 		// g_errno should be set if that returned false
 		if ( ! g_errno ) { char *xx=NULL;*xx=0; }
 		return true;
@@ -2114,7 +2186,8 @@ bool XmlDoc::injectDoc ( char *url ,
 		m_hopCountValid = true;
 	}
 
-	if ( charset != -1 && charset != csUnknown ) {
+	// PageInject calls memset on gigablastrequest so add '!= 0' here
+	if ( charset != -1 && charset != csUnknown && charset != 0 ) {
 		m_charset = charset;
 		m_charsetValid = true;
 	}
@@ -2386,8 +2459,8 @@ bool XmlDoc::indexDoc ( ) {
 		    "error reply.",
 		    m_firstUrl.m_url,mstrerror(g_errno));
 	else if ( g_errno )
-		log("build: docid=%"INT64" had internal error = %s. adding spider "
-		    "error reply.",
+		log("build: docid=%"INT64" had internal error = %s. "
+		    "adding spider error reply.",
 		    m_docId,mstrerror(g_errno));
 
 	// seems like this was causing a core somehow...
@@ -2410,6 +2483,16 @@ bool XmlDoc::indexDoc ( ) {
 		m_indexCodeValid = true;
 	}
 
+	// this should not be retired either. i am seeing it excessively 
+	// retried from a 
+	// "TitleRec::set: uncompress uncompressed size=-2119348471"
+	// error condition. it also said
+	// "Error spidering for doc http://www.... : Bad cached document"
+	if ( g_errno == EBADTITLEREC ) {
+		m_indexCode = g_errno;
+		m_indexCodeValid = true;
+	}
+
 	// i've seen Multicast got error in reply from hostId 19 (msgType=0x22
 	// transId=496026 nice=1 net=default): Buf too small.
 	// so fix that with this
@@ -2428,7 +2511,7 @@ bool XmlDoc::indexDoc ( ) {
 		m_indexCodeValid = true;
 	}
 
-
+	// default to internal error which will be retried forever otherwise
 	if ( ! m_indexCodeValid ) {
 		m_indexCode = EINTERNALERROR;//g_errno;
 		m_indexCodeValid = true;
@@ -2454,16 +2537,50 @@ bool XmlDoc::indexDoc ( ) {
 		if ( ! m_firstIpValid ) { char *xx=NULL;*xx=0; }
 		// sanity log
 		if ( *fip == 0 || *fip == -1 ) {
+			// 
+			// now add a spider status doc for this so we know
+			// why a crawl might have failed to start
+			//
+			SafeBuf *ssDocMetaList = NULL;
+			// save this
+			int32_t saved = m_indexCode;
+			// and make it the real reason for the spider status doc
+			m_indexCode = EDNSERROR;
+			// get the spiderreply ready to be added
+			
+			ssDocMetaList = getSpiderStatusDocMetaList(NULL ,false);//del
+			// revert
+			m_indexCode = saved;
+			// error?
+			if ( ! ssDocMetaList ) return true;
+			// blocked?
+			if ( ssDocMetaList == (void *)-1 ) return false;
+			// need to alloc space for it too
+			char *list = ssDocMetaList->getBufStart();
+			int32_t len = ssDocMetaList->length();
+			//needx += len;
+			// this too
+			m_addedStatusDocSize = len;
+			m_addedStatusDocSizeValid = true;
+
 			char *url = "unknown";
 			if ( m_sreqValid ) url = m_sreq.m_url;
 			log("build: error2 getting real firstip of %"INT32" for "
 			    "%s. Not adding new spider req", (int32_t)*fip,url);
+			// also count it as a crawl attempt
+			cr->m_localCrawlInfo.m_pageDownloadAttempts++;
+			cr->m_globalCrawlInfo.m_pageDownloadAttempts++;
+
+			if ( ! m_metaList2.safeMemcpy ( list , len ) )
+				return true;
+
 			goto skipNewAdd1;
 		}
 		// store the new request (store reply for this below)
 		char rd = RDB_SPIDERDB;
 		if ( m_useSecondaryRdbs ) rd = RDB2_SPIDERDB2;
-		m_metaList2.pushChar(rd);
+		if ( ! m_metaList2.pushChar(rd) )
+			return true;
 		// store it here
 		SpiderRequest revisedReq;
 		// this fills it in
@@ -2699,6 +2816,39 @@ bool XmlDoc::indexDoc2 ( ) {
 		// call it
 		if ( ! injectAhrefsLinks () ) return false;
 	}
+
+
+	// handle docs that consist of subdocs that need to be injected
+	// or indexed individually.
+	if ( m_firstUrlValid && m_firstUrl.isWarc() ) {
+		// this returns false if it would block and callback will be 
+		// called
+		if ( ! indexWarcOrArc ( CT_WARC ) )
+			return false;
+		logIt();
+		// all done! no need to add the parent doc.
+		return true;
+	}
+
+	if ( m_firstUrlValid && m_firstUrl.isArc() ) {
+		// this returns false if it would block and callback will be 
+		// called
+		if ( ! indexWarcOrArc ( CT_ARC ) )
+			return false;
+		logIt();
+		// all done! no need to add the parent doc.
+		return true;
+	}
+
+	if ( isContainerDoc() ) {
+		// m_delimeter should be set!
+		if ( ! indexContainerDoc () )
+			return false;
+		logIt();
+		// all done! no need to add the parent doc.
+		return true;
+	}
+
 	// . now get the meta list from it to add
 	// . returns NULL and sets g_errno on error
 	char *metaList = getMetaList ( );
@@ -2947,6 +3097,755 @@ bool XmlDoc::indexDoc2 ( ) {
 	return logIt();
 	*/
 }
+
+bool isRobotsTxtFile ( char *u , int32_t ulen ) {
+	if ( ulen > 12 && ! strncmp ( u + ulen - 11 , "/robots.txt" , 11 ) )
+		return true;
+	return false;
+}
+
+// does this doc consist of a sequence of smaller sub-docs?
+// if so we'll index the subdocs and not the container doc itself.
+bool XmlDoc::isContainerDoc ( ) {
+	if ( m_firstUrlValid && m_firstUrl.isWarc() ) return true;
+	if ( m_firstUrlValid && m_firstUrl.isArc () ) return true;
+	if ( ! m_contentDelimValid ) { char *xx=NULL;*xx=0; }
+	if ( m_contentDelim ) return true;
+	return false;
+}
+
+// returns false if would block, true otherwise. returns true and sets g_errno on err
+bool XmlDoc::indexContainerDoc ( ) {
+
+	if ( ! m_contentDelim ) { 
+		log("build: can not index container doc. no delimeter.");
+		g_errno = EBADENGINEER;
+		return true;
+	}
+
+	// int8_t *hc = getHopCount();
+	// if ( ! hc ) return true; // error?
+	// if ( hc == (void *)-1 ) return false;
+	// first download
+	char **cpp = getUtf8Content();
+	// return true with g_errno set on error
+	if ( ! cpp ) {
+		if ( ! g_errno ) { char *xx=NULL;*xx=0; }
+		return true;
+	}
+	// would block? return false then
+	if ( cpp == (void *)-1 )
+		return false;
+
+	// need this. it is almost 1MB in size, so alloc it
+	if ( ! m_msg7 ) {
+		try { m_msg7 = new ( Msg7 ); }
+		catch ( ... ) {
+			g_errno = ENOMEM;
+			return true;
+		}
+		mnew ( m_msg7 , sizeof(Msg7),"xdmsg7");
+	}
+
+	// inject input parms:
+	InjectionRequest *ir = &m_msg7->m_injectionRequest;
+	// the cursor for scanning the subdocs
+	if ( ! m_anyContentPtr ) {
+		// init the content cursor to point to the first subdoc
+		m_anyContentPtr = *cpp;
+		// but skip over initial separator if there. that is a
+		// faux pau
+		int32_t dlen = gbstrlen(m_contentDelim);
+		if ( strncmp(m_anyContentPtr,m_contentDelim,dlen) == 0 )
+			m_anyContentPtr += dlen;
+		// init the input parms
+		memset ( ir , 0 , sizeof(InjectionRequest) );
+		// reset it
+		ir->m_spiderLinks = false;
+		ir->m_injectLinks = false;
+		ir->m_hopCount = 0;//*hc + 1;
+		if ( ! m_collnumValid ) { char *xx=NULL;*xx=0; }
+		ir->m_collnum = m_collnum;
+		// will this work on a content delimeterized doc?
+		ir->m_deleteUrl = m_deleteFromIndex;
+		// each subdoc will have a mime since it is an arc
+		ir->m_hasMime = m_subDocsHaveMime;//true;
+	}
+
+ subdocLoop:
+
+	QUICKPOLL ( m_niceness );
+
+	// EOF?
+	if ( m_anyContentPtr == (char *)-1 ) {
+		m_indexCode = 0;//m_warcError;
+		m_indexCodeValid = true;
+		return true;
+	}
+
+	// we had \0 terminated the end of the previous record, so put back
+	if ( m_savedChar && ! *m_anyContentPtr ) {
+		*m_anyContentPtr = m_savedChar;
+		m_anyContentPtr += gbstrlen(m_contentDelim);
+	}
+
+
+	// index this subdoc
+	ir->ptr_content = m_anyContentPtr;
+
+	// . should have the url as well.
+	// . the url, ip etc. are on a single \n terminated line for an arc!
+	char *separator = strstr(m_anyContentPtr,m_contentDelim);
+
+
+
+	if ( separator ) {
+		m_savedChar = *separator;
+		m_anyContentPtr = separator;
+		*m_anyContentPtr = '\0';
+		//ir->size_content = separator - ir->ptr_content;
+	}
+
+	// if no separator found, this is our last injection
+	if ( ! separator ) {
+		m_anyContentPtr = (char *)-1;
+	}
+
+
+	// these are not defined. will be autoset in set4() i guess.
+	ir->m_firstIndexed = 0;
+	ir->m_lastSpidered = 0;
+
+	bool setUrl = false;
+
+	// HOWEVER, if an hasmime is true and an http:// follows
+	// the delimeter then use that as the url...
+	// this way we can specify our own urls.
+	if ( ir->m_hasMime ) {
+		char *du = ir->ptr_content;
+		//du += gbstrlen(delim);
+		if ( du && is_wspace_a ( *du ) ) du++;
+		if ( du && is_wspace_a ( *du ) ) du++;
+		if ( du && is_wspace_a ( *du ) ) du++;
+		if ( ir->m_hasMime && 
+		     (strncasecmp( du,"http://",7) == 0 ||
+		      strncasecmp( du,"https://",8) == 0 ) ) {
+			// flag it
+			setUrl = true;
+			// find end of it
+			char *uend = du + 7;
+			for ( ; *uend && ! is_wspace_a(*uend) ; uend++ );
+			// inject that then
+			m_injectUrlBuf.reset();
+			m_injectUrlBuf.safeMemcpy ( du , uend - du );
+			m_injectUrlBuf.nullTerm();
+			// and point to the actual http mime then
+			// well, skip that space, right
+			ir->ptr_content = uend + 1;
+			ir->ptr_url = m_injectUrlBuf.getBufStart();
+			ir->size_url = m_injectUrlBuf.length()+1; // include \0
+		}
+	}
+
+
+	QUICKPOLL ( m_niceness );
+
+	// make the url from parent url
+	// use hash of the content
+	int64_t ch64 = hash64n ( ir->ptr_content , 0LL );
+
+	// need this for an injection
+	ir->size_content = gbstrlen(ir->ptr_content) + 1;// improve this?
+
+
+	QUICKPOLL ( m_niceness );
+
+	if ( ! setUrl ) {
+		// reset it
+		m_injectUrlBuf.reset();
+		// by default append a -<ch64> to the provided url
+		m_injectUrlBuf.safePrintf("%s-%"UINT64"",
+					  m_firstUrl.getUrl(),ch64);
+		ir->ptr_url = m_injectUrlBuf.getBufStart();
+		ir->size_url = m_injectUrlBuf.length()+1; // include \0
+	}
+
+
+	if ( m_msg7->sendInjectionRequestToHost ( ir ,
+						  m_masterState ,
+						  m_masterLoop ) )
+		// it would block, callback will be called later
+		return false;
+
+	QUICKPOLL ( m_niceness );
+
+	// error?
+	if ( g_errno ) {
+		log("build: index flatfile error %s",mstrerror(g_errno));
+		return NULL;
+	}
+	else
+		log("build: index flatfile did not block");
+
+	// loop it up
+	goto subdocLoop;
+
+}
+
+
+void doneInjectingArchiveRec ( void *state ) {
+	Msg7 *THIS = (Msg7 *)state;
+	THIS->m_inUse = false;
+	XmlDoc *xd = THIS->m_stashxd;
+	xd->m_numInjectionsOut--;
+	log("build: archive: injection thread returned. %"INT32" out now.",
+	    xd->m_numInjectionsOut);
+	xd->m_masterLoop ( xd );
+}
+
+
+#define MAXWARCRECSIZE 1000000
+
+// . returns false if would block, true otherwise. 
+// . returns true and sets g_errno on err
+// . injectwarc
+// . ctype is CT_WARC or CT_ARC respectively
+bool XmlDoc::indexWarcOrArc ( char ctype ) {
+
+	int8_t *hc = getHopCount();
+	if ( ! hc ) return true; // error?
+	if ( hc == (void *)-1 ) return false;
+
+	// first download the warc into a file on disk. because it can be
+	// so big we can fit it in memory. just do a wget then gunzip 
+	// then open it. use a system call in a thread.
+	int64_t fileSize = -1;
+	File *file = getUtf8ContentInFile( &fileSize );
+	// return true with g_errno set on error
+	if ( ! file ) {
+		if ( ! g_errno ) { char *xx=NULL;*xx=0; }
+		return true;
+	}
+	// would block? return false then
+	if ( file == (void *)-1 )
+		return false;
+
+	setStatus ("injecting archive records");
+
+	// if ( *wcp == NULL ) {
+	// 	log("build: warc content was empty. did not index.");
+	// 	return true;
+	// }
+
+	QUICKPOLL ( m_niceness );
+
+	// MDW BEGIN
+
+	bool needReadMore = false;
+	if ( ! m_fptr ) needReadMore = true;
+
+	// did an inject return?
+	if ( m_doneInjectingWarc ) {
+	warcDone:
+		m_doneInjectingWarc = true;
+		log("build: done parsing %"INT64 " bytes of archive file %s.",
+		    fileSize,file->getFilename());
+		// return if all injects have returned.
+		if ( m_numInjectionsOut == 0 ) {
+			g_errno = m_warcError;
+			m_indexCode = m_warcError;
+			m_indexCodeValid = true;
+			return true;
+		}
+		log("build: waiting for injection threads to return.");
+		// we would block
+		return false;
+	}
+
+
+ readMore:
+
+	if ( needReadMore ) {
+
+		log("build: reading %"INT64" bytes more of archive file %s"
+		    ,(int64_t)MAXWARCRECSIZE,file->getFilename());
+
+		// are we done?
+		if ( m_fileOff >= fileSize ) {
+			log("build: hit end of archive file %s. done.",
+			    file->getFilename());
+			goto warcDone;
+		}
+
+		// read 1MB of data into this buf to get the first WARC record
+		// it must be < 1MB or we faulter.
+		if ( ! m_fileBuf ) {
+			m_fileBufAllocSize = MAXWARCRECSIZE + 1;
+			m_fileBuf=(char *)mmalloc(m_fileBufAllocSize ,"sibuf");
+		}
+		if ( ! m_fileBuf ) {
+			log("build: failed to alloc buf to read archive file "
+			    "%s",file->getFilename());
+			return true;
+		}
+
+		int32_t maxToRead = MAXWARCRECSIZE;
+		int32_t toRead = maxToRead;
+		m_hasMoreToRead = true;
+		if ( m_fileOff + toRead > fileSize ) {
+			toRead = fileSize - m_fileOff;
+			m_hasMoreToRead = false;
+		}
+		int32_t bytesRead = file->read (m_fileBuf, toRead, m_fileOff);
+		if ( bytesRead != toRead ) {
+			log("build: read of %s failed at offset "
+			    "%"INT64"", file->getFilename(), m_fileOff);
+			if ( ! g_errno ) g_errno = EBADENGINEER;
+			m_warcError = g_errno;
+			goto warcDone;
+		}
+		// null term what we read
+		m_fileBuf[bytesRead] = '\0';
+
+		// if not enough to constitute a WARC record probably just 
+		// new lines
+		if ( toRead < 20 ) {
+			log("build: done processing archive file %s",
+			    file->getFilename());
+			goto warcDone;
+		}
+		// point to what we read
+		m_fptr = m_fileBuf;
+		m_fptrEnd = m_fileBuf + bytesRead;
+	}
+
+ loop:
+
+	QUICKPOLL ( m_niceness );
+
+	int32_t max = g_hostdb.m_numHosts * 2;
+	if ( max > MAXMSG7S ) max = MAXMSG7S;
+
+	// wait for one to come back before launching another msg7
+	if ( m_numInjectionsOut > max ) return false;
+
+	char *realStart = m_fptr;
+
+	// need at least say 100k for warc header
+	if ( m_fptr + 100000 > m_fptrEnd && m_hasMoreToRead )  {
+		needReadMore = true;
+		goto readMore;
+	}
+
+	int64_t  recTime       = 0;
+	char    *recIp         = NULL;
+	char    *recUrl        = NULL;
+	char    *recContent    = NULL;
+	int64_t  recContentLen = 0;
+	// what we skip over
+	uint64_t recSize       = 0;
+	
+	uint64_t oldOff = m_fileOff;
+
+	//
+	// set recUrl, recIp, recTime, recContent, recContentLen and recSize
+	//
+	if ( ctype == CT_WARC ) {
+		// find "WARC/1.0" or whatever
+		char *whp = m_fptr;
+		// we do terminate last warc rec with \0 so be aware of that...
+		int32_t maxCount = 10;
+		for ( ; *whp && strncmp(whp,"WARC/",5) && --maxCount>0; whp++);
+		// none?
+		if ( ! *whp ) {
+			log("build: could not find WARC/1 header start for "
+			    "file=%s",  file->getFilename());
+			// we don't really need this and since we force the 
+			// http reply to end in \0 before calling inject2() on
+			// it it gets messed up
+			goto warcDone;
+		}
+
+		char *warcHeader = whp;
+
+		// find end of warc mime HEADER not the content
+		char *warcHeaderEnd = strstr(warcHeader,"\r\n\r\n");
+		if ( ! warcHeaderEnd ) {
+			log("build: could not find end of WARC header for "
+			    "file=%s.",
+			    file->getFilename());
+			goto warcDone;
+		}
+		// \0 term for strstrs below
+		*warcHeaderEnd = '\0';
+		//warcHeaderEnd += 4;
+
+		char *warcLen  = strstr(warcHeader,"Content-Length:");
+		char *warcUrl  = strstr(warcHeader,"WARC-Target-URI:");
+		char *warcType = strstr(warcHeader,"WARC-Type:");
+		char *warcDate = strstr(warcHeader,"WARC-Date:");
+		char *warcIp   = strstr(warcHeader,"WARC-IP-Address:");
+		char *warcCon  = strstr(warcHeader,"Content-Type:");
+
+		// advance
+		if ( warcLen  ) warcLen  += 15;
+		if ( warcUrl  ) warcUrl  += 16;
+		if ( warcType ) warcType += 10;
+		if ( warcIp   ) warcIp   += 17;
+		if ( warcCon  ) warcCon  += 13;
+		if ( warcDate ) warcDate += 10;
+
+		// skip initial spaces spaces
+		for ( ; warcUrl  && is_wspace_a(*warcUrl ) ; warcUrl ++ );
+		for ( ; warcLen  && is_wspace_a(*warcLen ) ; warcLen ++ );
+		for ( ; warcType && is_wspace_a(*warcType) ; warcType++ );
+		for ( ; warcDate && is_wspace_a(*warcDate) ; warcDate++ );
+		for ( ; warcIp   && is_wspace_a(*warcIp  ) ; warcIp  ++ );
+		for ( ; warcCon  && is_wspace_a(*warcCon ) ; warcCon ++ );
+
+		// get Content-Length: of WARC header for its content
+		if ( ! warcLen ) {
+			// this is a critical stop.
+			log("build: could not find WARC Content-Length:");
+			goto warcDone;
+		}
+
+		//
+		// advance m_fptr to point to the next warc record in case we
+		// end up calling 'goto loop' below
+		//
+		recContent    = warcHeaderEnd + 4;
+		recContentLen = atoll(warcLen);
+		char    *warcContentEnd = recContent + recContentLen;
+		recSize = (warcContentEnd - realStart); 
+
+		recUrl = warcUrl;
+
+		// point to the next warc record
+		m_fptr += recSize;
+
+		// advance the file offset to the next record as well
+		m_fileOff += recSize;
+
+
+		// get WARC-Type:
+		// revisit  (if url was already done before)
+		// request (making a GET or DNS request)
+		// response (reponse to a GET or dns request)
+		// warcinfo (crawling parameters, robots: obey, etc)
+		// metadata (fetchTimeMs: 263, hopsFromSeed:P,outlink:)
+		if ( ! warcType ) {
+			log("build: could not find WARC-Type:");
+			goto loop;
+		}
+
+		// get Content-Type: 
+		// application/warc-fields (fetch time, hops from seed)
+		// application/http; msgtype=request  (the GET request)
+		// application/http; msgtype=response (the GET reply)
+		if ( ! warcCon ) {
+			log("build: could not find Content-Type:");
+			goto loop;
+		}
+
+		if ( ! warcUrl ) {
+			// no URI?
+			goto loop;
+		}
+
+		// if WARC-Type: is not response, skip it. so if it
+		// is a revisit then skip it i guess.
+		if ( strncmp ( warcType,"response", 8 ) != 0 ) {
+			// read another warc record
+			goto loop;
+		}
+
+		// warcConType needs to be 
+		// application/http; msgtype=response
+		if ( strncmp(warcCon,"application/http; msgtype=response",34)){
+			// read another warc record
+			goto loop;
+		}
+
+		recTime = 0;
+		if ( warcDate ) recTime = atotime ( warcDate );
+		recIp = warcIp;
+	}
+	// END WARC SPECIFIC PARSING
+
+	//
+	// set recUrl, recIp, recTime, recContent, recContentLen and recSize
+	//
+	if ( ctype == CT_ARC ) {
+		// find \n\nhttp://
+		char *whp = m_fptr;
+		for ( ; *whp ; whp++ ) {
+			if ( whp[0] != '\n' ) continue;
+			if ( strncmp(whp+1,"http://",7) ) continue;
+			break;
+		}
+		// none?
+		if ( ! *whp ) {
+			log("build: arc: could not find next \\nhttp:// in "
+			    "arc file %s",file->getFilename());
+			goto warcDone;
+		}
+		char *arcHeader = whp;
+		// find end of arc header not the content
+		char *arcHeaderEnd = strstr(arcHeader+1,"\n");
+		if ( ! arcHeaderEnd ) {
+			log("inject: could not find end of ARC header.");
+			exit(0);
+		}
+		// \0 term for strstrs below
+		*arcHeaderEnd = '\0';
+		char *arcContent = arcHeaderEnd + 1;
+		// parse arc header line
+		char *url = arcHeader + 1;
+		char *hp = url;
+		for ( ; *hp && *hp != ' ' ; hp++ );
+		if ( ! *hp ) {log("inject: bad arc header 1.");exit(0);}
+		*hp++ = '\0';
+		char *ipStr = hp;
+		for ( ; *hp && *hp != ' ' ; hp++ );
+		if ( ! *hp ) {log("inject: bad arc header 2.");exit(0);}
+		*hp++ = '\0';
+		char *timeStr = hp;
+		for ( ; *hp && *hp != ' ' ; hp++ );
+		if ( ! *hp ) {log("inject: bad arc header 3.");exit(0);}
+		*hp++ = '\0'; // null term timeStr
+		char *arcConType = hp;
+		for ( ; *hp && *hp != ' ' ; hp++ );
+		if ( ! *hp ) {log("inject: bad arc header 4.");exit(0);}
+		*hp++ = '\0'; // null term arcContentType
+		char *arcContentLenStr = hp;
+		// get arc content len
+		int64_t arcContentLen = atoll(arcContentLenStr);
+		char *arcContentEnd = arcContent + arcContentLen;
+		//uint64_t oldOff = s_off;
+		recSize = (arcContentEnd - realStart); 
+		// point to the next arc record
+		m_fptr += recSize;
+		// advance the file offset to the next record as well
+		m_fileOff += recSize;
+		// arcConType needs to indexable
+		int32_t ct = getContentTypeFromStr ( arcConType );
+		if ( ct != CT_HTML &&
+		     ct != CT_TEXT &&
+		     ct != CT_XML &&
+		     ct != CT_JSON ) {
+			// read another arc record
+			goto loop;
+		}
+		// convert to timestamp
+		// this time structure, once filled, will help yield a time_t
+		struct tm t;
+		// DAY OF MONTH
+		t.tm_mday = atol2 ( timeStr + 6 , 2 );
+		// MONTH
+		t.tm_mon = atol2 ( timeStr + 4  , 2 );
+		// YEAR - # of years since 1900
+		t.tm_year = atol2 ( timeStr     , 4 ) - 1900 ;
+		// TIME
+		t.tm_hour = atol2 ( timeStr +  8 , 2 );
+		t.tm_min  = atol2 ( timeStr + 10 , 2 );
+		t.tm_sec  = atol2 ( timeStr + 12 , 2 );
+		// unknown if we're in  daylight savings time
+		t.tm_isdst = -1;
+		// translate using mktime
+		recTime = timegm ( &t );
+		// set content as well
+		recContent = arcContent;
+		recContentLen = arcContentLen;
+		recUrl = url;
+		recIp = ipStr;
+	}
+	// END ARC SPECIFIC PARSING
+
+
+
+	// must be http not dns:
+	// url must start with http:// or https://
+	// it's probably like WARC-Target-URI: dns:www.xyz.com
+	// so it is a dns response
+	if ( strncmp(recUrl,"http://" ,7) != 0 &&
+	     strncmp(recUrl,"https://",8) != 0 ) 
+		goto loop;
+
+	// get length of it, null term it
+	char *recUrlEnd = recUrl;
+	for ( ; *recUrlEnd && ! is_wspace_a(*recUrlEnd) ; recUrlEnd++ );
+	int32_t recUrlLen = recUrlEnd - recUrl;
+	*recUrlEnd = '\0';
+
+	// skip if robots.txt
+	if ( isRobotsTxtFile( recUrl , recUrlLen ) )
+		goto loop;
+
+	// how can there be no more to read?
+	if ( m_fptr > m_fptrEnd && ! m_hasMoreToRead ) {
+		log("build: archive file %s exceeded file length.",
+		    file->getFilename());
+		goto loop;
+	}
+
+	// if we fall outside of the current read buf, read next rec if too big
+	if ( m_fptr > m_fptrEnd && recSize > MAXWARCRECSIZE ) {
+		log("build: skipping archive file of %"INT64" "
+		    "bytes which is too big",recSize);
+		needReadMore = true;
+		goto readMore;
+	}
+
+	// don't read the next record, read THIS one again, we can fit it
+	if ( m_fptr > m_fptrEnd ) {
+		m_fileOff -= recSize; // backpedal to point to THIS rec
+		needReadMore = true;
+		goto readMore;
+	}
+
+	char    *httpReply     = recContent;
+	int64_t  httpReplySize = recContentLen;
+
+	// should be a mime that starts with GET or POST
+	HttpMime m;
+	if ( ! m.set ( httpReply , httpReplySize , NULL ) ) {
+		log("build: archive: failed to set http mime at %"INT64" in "
+		    "file",oldOff);
+		goto loop;
+	}
+
+	// check content type
+	int ct2 = m.getContentType();
+	if ( ct2 != CT_HTML &&
+	     ct2 != CT_TEXT &&
+	     ct2 != CT_XML &&
+	     ct2 != CT_JSON )
+		goto loop;
+
+
+	// grab an available msg7
+	Msg7 *msg7 = NULL;
+	for ( int32_t i = 0 ; i < MAXMSG7S ; i++ ) {
+		msg7 = m_msg7s[i];
+		// if we got an available one stop
+		if ( msg7 && ! msg7->m_inUse ) break;
+		// ok, create one, 1MB each about
+		try { msg7 = new ( Msg7 ); }
+		catch ( ... ) {g_errno=ENOMEM;m_warcError=g_errno;return true;}
+		mnew ( msg7 , sizeof(Msg7),"xdmsgs7");
+		// store it for re-use
+		m_msg7s[i] = msg7;
+		break;
+	}
+
+
+	// inject input parms:
+	InjectionRequest *ir = &msg7->m_injectionRequest;
+	// reset it
+	ir->m_hopCount = *hc + 1;
+	if ( ! m_collnumValid ) { char *xx=NULL;*xx=0; }
+	ir->m_collnum = m_collnum;
+	// will this work on a content delimeterized doc?
+	ir->m_deleteUrl = m_deleteFromIndex;
+	// each subdoc will have a mime since it is a warc
+	ir->m_hasMime = true;
+	// it has a mime so we shouldn't need to set this
+	ir->ptr_contentTypeStr = NULL;
+	// we are injecting a single page, not a container file
+	ir->ptr_contentDelim = NULL;
+	// miscelleaneous. faster than memsetting the whole gr class (32k)
+	ir->m_getSections = 0;
+	ir->m_gotSections = 0;
+	ir->m_spiderLinks = false;
+	ir->m_injectLinks = false;
+	ir->m_shortReply = false;
+	ir->m_newOnly = false;
+	ir->m_recycle = false;
+	ir->m_dedup = true;
+	ir->m_doConsistencyTesting = false;
+	ir->m_charset = 0;
+
+	ir->ptr_queryToScrape = NULL;
+	ir->ptr_contentFile = NULL;
+	ir->ptr_diffbotReply = NULL;
+
+
+	//
+	// set 'timestamp' for injection
+	//
+	ir->m_firstIndexed = recTime;
+	ir->m_lastSpidered = recTime;
+
+
+	//
+	// set 'ip' for injection
+	//
+	ir->m_injectDocIp = 0;
+	// get the record IP address from the warc header if there
+	if ( recIp ) {
+		// get end of ip
+		char *ipEnd = recIp;
+		// skip digits and periods
+		while ( *ipEnd && ! is_wspace_a(*ipEnd) ) ipEnd++;
+		// we now have the ip address for doing ip: searches
+		// this func is in ip.h
+		ir->m_injectDocIp = atoip ( recIp, ipEnd-recIp );
+	}
+
+	// we end up repopulating m_fileBuf to read the next warc sometimes
+	// so do not destroy the content we are injecting from the original
+	// m_fileBuf. so we have to copy it.
+	msg7->m_contentBuf.reset();
+	msg7->m_contentBuf.reserve ( httpReplySize + 1 );
+	msg7->m_contentBuf.safeMemcpy ( httpReply , httpReplySize );
+	msg7->m_contentBuf.nullTerm();
+
+	//
+	// set 'content' for injection
+	//
+	ir->ptr_content = msg7->m_contentBuf.getBufStart();
+	ir->size_content = msg7->m_contentBuf.getLength()+1;
+
+	// null term it and hope it doesn't hurt anything!!!!!
+	//httpReply [ httpReplySize ] = '\0';
+	// skip over that '\0' with this too
+	//m_fptr++;
+
+
+	// set the rest of the injection parms
+	ir->m_hopCount     = -1;
+	ir->m_newOnly        = 0;
+	// all warc records have the http mime
+	ir->m_hasMime        = true;
+
+	ir->ptr_url          = recUrl;
+	ir->size_url         = recUrlLen+1;
+
+	// stash this
+	msg7->m_stashxd = this;
+
+	QUICKPOLL ( m_niceness );
+
+	// log it
+	log("build: archive: injecting archive url %s",recUrl);
+
+	QUICKPOLL ( m_niceness );
+
+	if (msg7->sendInjectionRequestToHost(ir,msg7,doneInjectingArchiveRec)){
+		m_numInjectionsOut++;
+		msg7->m_inUse = true;
+		goto loop;
+	}
+
+	log("build: index archive: msg7 inject: %s",
+	    mstrerror(g_errno));
+
+	goto loop;
+}
+              
+ 
+			
 
 void getTitleRecBufWrapper ( void *state ) {
 	XmlDoc *THIS = (XmlDoc *)state;
@@ -5347,7 +6246,8 @@ Dates *XmlDoc::getDates ( ) {
 	     m_sreq.m_parentPrevSpiderTime ) {
 		// pub date is somewhere between these two times
 		minPubDate = m_sreq.m_parentPrevSpiderTime;
-		maxPubDate = m_sreq.m_addedTime;
+		//maxPubDate = m_sreq.m_addedTime;
+		maxPubDate = m_sreq.m_discoveryTime;
 	}
 
 	// now set part2 , returns false and sets g_errno on error
@@ -10029,6 +10929,18 @@ int64_t XmlDoc::getFirstUrlHash64() {
 	return m_firstUrlHash64;
 }
 
+Url **XmlDoc::getLastRedirUrl() {
+
+	Url **ru = getRedirUrl();
+	if ( ! ru || ru == (void *)-1 ) return ru;
+
+	// m_redirUrlPtr will be NULL in all cases, however, the
+	// last redir url we actually got will be set in
+	// m_redirUrl.m_url so return that.
+	m_lastRedirUrlPtr = &m_redirUrl;
+	return &m_lastRedirUrlPtr;
+}
+
 // . operates on the latest m_httpReply
 Url **XmlDoc::getRedirUrl() {
 	if ( m_redirUrlValid ) return &m_redirUrlPtr;
@@ -10108,7 +11020,12 @@ Url **XmlDoc::getRedirUrl() {
 		// http-equiv refresh tag, but that added an element of 
 		// recursion that is just too confusing to deal with. so 
 		// let's just parse out the meta tag by hand
-		if ( ! isRobotsTxt ) {
+		bool checkMeta = true;
+		if ( isRobotsTxt ) checkMeta = false;
+		// if we are a doc that consists of a sequence of sub-docs that
+		// we are indexing/injecting then don't do this check.
+		if ( isContainerDoc() ) checkMeta = false;
+		if ( checkMeta ) {
 			Url **mrup = getMetaRedirUrl();
 			if ( ! mrup || mrup == (void *)-1) return (Url **)mrup;
 			// set it. might be NULL if not there.
@@ -10804,12 +11721,6 @@ void XmlDoc::nukeDoc ( XmlDoc *nd ) {
 	}
 }
 
-bool XmlDoc::isRobotsTxtFile ( char *u , int32_t ulen ) {
-	if ( ulen > 12 && ! strncmp ( u + ulen - 11 , "/robots.txt" , 11 ) )
-		return true;
-	return false;
-}
-
 static LinkInfo s_dummy;
 
 XmlDoc **XmlDoc::getExtraDoc ( char *u , int32_t maxCacheAge ) {
@@ -11108,6 +12019,17 @@ RdbList *XmlDoc::getOldMetaList ( ) {
 }
 */
 
+SafeBuf *XmlDoc::getTimeAxisUrl ( ) {
+	if ( m_timeAxisUrlValid ) return &m_timeAxisUrl;
+	if ( m_setFromDocId ) return &m_timeAxisUrl;
+	m_timeAxisUrlValid = true;
+	Url *fu = getFirstUrl();
+	int32_t spideredTime = getSpideredTime ();
+	m_timeAxisUrl.reset();
+	m_timeAxisUrl.safePrintf("%s.%u",fu->getUrl(),spideredTime);
+	return &m_timeAxisUrl;
+}
+
 // . look up TitleRec using Msg22 if we need to
 // . set our m_titleRec member from titledb
 // . the twin brother of XmlDoc::getTitleRecBuf() which makes the title rec
@@ -11165,6 +12087,16 @@ char **XmlDoc::getOldTitleRec ( ) {
 	}
 	CollectionRec *cr = getCollRec();
 	if ( ! cr ) return NULL;
+
+	// if using time axis then append the timestamp to the end of
+	// the url. this way Msg22::getAvailDocId() will return a docid
+	// based on that so we don't collide with other instances of this
+	// same url.
+	if ( u && getUseTimeAxis() ) { // g_conf.m_useTimeAxis ) {
+		SafeBuf *tau = getTimeAxisUrl();
+		u = tau->getBufStart();
+	}
+
 	// the title must be local since we're spidering it
 	if ( ! m_msg22a.getTitleRec ( &m_msg22Request      ,
 				      u                    ,
@@ -13605,6 +14537,16 @@ bool *XmlDoc::getIsAllowed ( ) {
 		return &m_isAllowed;
 	}
 
+	// HACK: so we can spider archive.org warcs and arcs internally
+	if ( m_firstUrlValid &&
+	     m_firstUrl.getDomainLen() == 11 &&
+	     strncmp ( m_firstUrl.getDomain() , "archive.org" , 11 ) == 0 ) {
+		m_isAllowed      = true;
+		m_isAllowedValid = true;
+		return &m_isAllowed;
+	}
+		
+
 	// double get?
 	if ( m_crawlDelayValid ) { char *xx=NULL;*xx=0; }
 
@@ -15806,6 +16748,16 @@ char **XmlDoc::getHttpReply2 ( ) {
 	//strcpy ( r->m_url , cu->getUrl() );
 	r->ptr_url  = cu->getUrl();
 	r->size_url = cu->getUrlLen()+1;
+
+	// caution: m_sreq.m_hopCountValid is false sometimes for page parser
+	// this is used for Msg13.cpp's ipWasBanned()
+	// we use hopcount now instead of isInSeedBuf(cr,r->ptr_url)
+	bool isInjecting = getIsInjecting();
+	if ( ! isInjecting && m_sreqValid     && m_sreq.m_hopCount == 0 )
+		r->m_isRootSeedUrl = 1;
+	if ( ! isInjecting && m_hopCountValid && m_hopCount        == 0 )
+		r->m_isRootSeedUrl = 1;
+
 	// sanity check
 	if ( ! m_firstIpValid ) { char *xx=NULL;*xx=0; }
 	// max to download in bytes. currently 1MB.
@@ -15904,6 +16856,9 @@ char **XmlDoc::getHttpReply2 ( ) {
 
 	// turn this off too
 	r->m_attemptedIframeExpansion = false;
+
+	r->m_collnum = (collnum_t)-1;
+	if ( m_collnumValid )r->m_collnum = m_collnum;
 
 	// turn off
 	r->m_useCompressionProxy = false;
@@ -17259,6 +18214,9 @@ char **XmlDoc::getFilteredContent ( ) {
 	// we now support JSON for diffbot
 	if ( *ct == CT_JSON    ) return &m_filteredContent;
 
+	if ( *ct == CT_ARC     ) return &m_filteredContent;
+	if ( *ct == CT_WARC    ) return &m_filteredContent;
+
 	// unknown content types are 0 since it is probably binary... and
 	// we do not want to parse it!!
 	if ( *ct == CT_PDF ) filterable = true;
@@ -17876,13 +18834,21 @@ char **XmlDoc::getExpandedUtf8Content ( ) {
 		return &m_expandedUtf8Content;
 	}
 
+	bool skip = m_skipIframeExpansion;
+
+	// if we are a warc, arc or doc that consists of a sequence of
+	// sub-docs that we are indexing/injecting then skip iframe expansion
+	if ( isContainerDoc() )
+		skip = true;
+
 	// or if this is set to true
-	if ( m_skipIframeExpansion ) {
+	if ( skip ) {
 		m_expandedUtf8Content     = m_rawUtf8Content;
 		m_expandedUtf8ContentSize = m_rawUtf8ContentSize;
 		m_expandedUtf8ContentValid = true;
 		return &m_expandedUtf8Content;
 	}
+
 
 
 	uint8_t *ct = getContentType();
@@ -18128,6 +19094,167 @@ char **XmlDoc::getExpandedUtf8Content ( ) {
 
 	m_expandedUtf8ContentValid = true;
 	return &m_expandedUtf8Content;
+}
+
+static SafeBuf s_cookieBuf;
+
+void *systemStartWrapper_r ( void *state , ThreadEntry *t ) {
+
+	XmlDoc *THIS = (XmlDoc *)state;
+
+	char filename[2048];
+	snprintf(filename,2048,"%sgbarchivefile%"UINT32".gz",
+		 g_hostdb.m_dir,
+		 (int32_t)(int64_t)THIS);
+
+	char cmd[MAX_URL_LEN+256];
+	snprintf( cmd,
+		  MAX_URL_LEN+256,
+		  "wget --header=\"Cookie: %s\" \"%s\" -O %s" ,
+		  s_cookieBuf.getBufStart() ,
+		  THIS->m_firstUrl.getUrl() ,
+		  filename );
+
+	log("build: wget: %s",cmd );
+
+	int ret;
+
+	ret = system(cmd);
+	if ( ret == -1 )
+		log("build: wget system failed: %s",mstrerror(errno));
+	else
+		log("build: wget system returned %"INT32"",ret);
+
+	// unzip it now
+	snprintf ( cmd , MAX_URL_LEN+256, "gunzip -f %s" , filename );
+
+	log("build: wget begin: %s",cmd );
+
+	ret = system(cmd);
+	if ( ret == -1 )
+		log("build: gunzip system failed: %s",mstrerror(errno));
+	else
+		log("build: gunzip system returned %"INT32"",ret);
+
+
+	log("build: done with gunzip");
+
+	return NULL;
+}
+
+// come back here
+void systemDoneWrapper ( void *state , ThreadEntry *t ) {
+	XmlDoc *THIS = (XmlDoc *)state;
+	THIS->m_masterLoop ( THIS->m_masterState );
+}
+
+// we download large files to a file on disk, like warcs and arcs
+File *XmlDoc::getUtf8ContentInFile ( int64_t *fileSizeArg ) {
+
+	if ( m_fileValid ) {
+		*fileSizeArg = m_fileSize;
+		return &m_file;
+	}
+
+	setStatus ("wgetting archive file");
+
+	if ( m_calledWgetThread ) {
+
+		char filename[2048];
+		snprintf ( filename,
+			   2048,
+			   "%sgbarchivefile%"UINT32"",
+			   g_hostdb.m_dir,
+			   (int32_t)(int64_t)this);
+
+		m_file.set ( filename );
+		m_fileSize = m_file.getFileSize();
+		m_fileValid = true;
+		*fileSizeArg = m_fileSize;
+		m_file.open(O_RDONLY);
+		return &m_file;
+	}
+
+	// before calling the system wget thread we gotta set the cookiebuf
+	// HACK: for archive.org
+	// if getting a page from archive.org then append the cookie
+	// so we have the proper permissions
+	static bool s_triedToLoadCookie = false;
+	char *x = m_firstUrl.getUrl();
+	// only go out 20 chars looking for start of .archive.org/
+	char *xend = x + 25;
+	bool isArchiveOrg = false;
+	for ( ; x < xend && *x ; x++ ) {
+		if ( x[ 0] != '.' && x[0] != '/' ) continue; // /archive.org?
+		if ( x[ 1] != 'a' ) continue;
+		if ( x[ 2] != 'r' ) continue;
+		if ( x[ 3] != 'c' ) continue;
+		if ( x[ 4] != 'h' ) continue;
+		if ( x[ 5] != 'i' ) continue;
+		if ( x[ 6] != 'v' ) continue;
+		if ( x[ 7] != 'e' ) continue;
+		if ( x[ 8] != '.' ) continue;
+		if ( x[ 9] != 'o' ) continue;
+		if ( x[10] != 'r' ) continue;
+		if ( x[11] != 'g' ) continue;
+		if ( x[12] != '/' ) continue;
+		isArchiveOrg = true;
+		break;
+	}
+
+	if ( isArchiveOrg && ! s_triedToLoadCookie ) {
+		// try to load it up if haven't tried yet
+		s_triedToLoadCookie = true;
+		SafeBuf tmp;
+		tmp.load ( "/home/mwells/.config/internetarchive.yml");
+		char *s = tmp.getBufStart();
+		char *line;
+		char *lineEnd;
+		line = strstr ( s , "logged-in-user: " );
+		if ( line ) lineEnd = strstr(line,"\n");
+		if ( lineEnd ) {
+			s_cookieBuf.safePrintf("logged-in-user=");
+			line += 16;
+			s_cookieBuf.safeMemcpy(line,lineEnd-line);
+			s_cookieBuf.pushChar(';');
+			s_cookieBuf.pushChar(' ');
+			s_cookieBuf.nullTerm();
+		}
+		line = strstr ( s , "logged-in-sig: " );
+		if ( line ) lineEnd = strstr(line,"\n");
+		if ( lineEnd ) {
+			s_cookieBuf.safePrintf("logged-in-sig=");
+			line += 15;
+			s_cookieBuf.safeMemcpy(line,lineEnd-line);
+			//s_cookieBuf.pushChar(';');
+			//s_cookieBuf.pushChar(' ');
+			s_cookieBuf.nullTerm();
+		}
+	}
+
+	// if we loaded something use it
+	if ( isArchiveOrg && s_cookieBuf.length() ) {
+		//cookie = s_cookieBuf.getBufStart();
+		log("http: using archive cookie %s",s_cookieBuf.getBufStart());
+		// and set user-agent too
+		// userAgent = "python-requests/2.3.0 "
+		// 	"CPython/2.7.3 Linux/3.5.0-32-generic";
+	}
+
+	m_calledWgetThread = true;
+
+	// . call thread to call popen
+	// . callThread returns true on success, in which case we block
+	if ( g_threads.call ( FILTER_THREAD        ,
+			      MAX_NICENESS         ,
+			      (void *)this                 , // this
+			      systemDoneWrapper    ,
+			      systemStartWrapper_r ) ) 
+		// would block, wait for thread
+		return (File *)-1;
+	// failed?
+	log("build: failed to launch wget thread");
+	return NULL;
 }
 
 // . get the final utf8 content of the document
@@ -20109,6 +21236,16 @@ bool XmlDoc::logIt ( SafeBuf *bb ) {
 			       tmp,(uint32_t)m_sreq.m_addedTime);
 	}
 
+	// discovery date, first time spiderrequest was added to spiderdb
+	if ( m_sreqValid && m_sreq.m_discoveryTime ) {
+		time_t ts = m_sreq.m_discoveryTime;
+		struct tm *timeStruct = gmtime ( &ts );
+		char tmp[64];
+		strftime ( tmp , 64 , "%b-%d-%Y(%H:%M:%S)" , timeStruct );
+		sb->safePrintf("discoverydate=%s(%"UINT32") ",
+			       tmp,(uint32_t)m_sreq.m_discoveryTime);
+	}
+
 	// print first indexed time
 	if ( m_firstIndexedDateValid ) {
 		time_t ts = m_firstIndexedDate;
@@ -20211,6 +21348,11 @@ bool XmlDoc::logIt ( SafeBuf *bb ) {
 	if ( m_robotsTxtLenValid )
 		sb->safePrintf("robotstxtlen=%04"INT32" ",m_robotsTxtLen );
 
+	if ( m_isAllowedValid )
+		sb->safePrintf("robotsallowed=%i ", (int)m_isAllowed);
+	else
+		sb->safePrintf("robotsallowed=? " );
+
 	if ( m_contentHash32Valid )
 		sb->safePrintf("ch32=%010"UINT32" ",m_contentHash32);
 
@@ -20230,9 +21372,12 @@ bool XmlDoc::logIt ( SafeBuf *bb ) {
 		sb->safePrintf("hasrssoutlink=%"INT32" ",
 			      (int32_t)m_links.hasRSSOutlink() );
 
-	if ( m_numOutlinksAddedValid ) 
+	if ( m_numOutlinksAddedValid ) {
 		sb->safePrintf("outlinksadded=%04"INT32" ",
 			       (int32_t)m_numOutlinksAdded);
+		sb->safePrintf("outlinksaddedfromsamedomain=%04"INT32" ",
+			       (int32_t)m_numOutlinksAddedFromSameDomain);
+	}
 
 	if ( m_metaListValid ) 
 		sb->safePrintf("addlistsize=%05"INT32" ",
@@ -23335,9 +24480,12 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 	     // the spider request to spiderdb...
 	     //m_useSpiderdb &&
 	     /// don't add requests like http://xyz.com/xxx-diffbotxyz0 though
-	     ! m_isDiffbotJSONObject )
+	     ! m_isDiffbotJSONObject ) {
 		needSpiderdb3 = m_sreq.getRecSize() + 1;
-
+		// NO! because when injecting a warc and the subdocs
+		// it contains, gb then tries to spider all of them !!! sux...
+		needSpiderdb3 = 0;
+	}
 	// or if we are rebuilding spiderdb
 	else if (m_useSecondaryRdbs && !m_isDiffbotJSONObject && m_useSpiderdb)
 		needSpiderdb3 = sizeof(SpiderRequest) + m_firstUrl.m_ulen+1;
@@ -23415,6 +24563,8 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 			// if doing qa test drop core
 			CollectionRec *cr = getCollRec();
 			if ( cr && strcmp(cr->m_coll,"qatest123") == 0 ) {
+				log("xmldoc: sleep 1000");
+				sleep(1000);
 				exit(0);}//char *xx=NULL;*xx=0; }
 		}
 		// assign the new one, getTitleRecBuf() call below needs this
@@ -23861,7 +25011,9 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 
 	// if we are injecting we must add the spider request
 	// we are injecting from so the url can be scheduled to be
-	// spidered again
+	// spidered again. 
+	// NO! because when injecting a warc and the subdocs
+	// it contains, gb then tries to spider all of them !!! sux...
 	if ( needSpiderdb3 ) {
 		// note it
 		setStatus("adding spider request");
@@ -24766,6 +25918,7 @@ SpiderReply *XmlDoc::getNewSpiderReply ( ) {
 	// store it
 	m_srep.m_firstIp = firstIp;
 	// assume no error
+	// MDW: not right...
 	m_srep.m_errCount = 0;
 	// otherwise, inherit from oldsr to be safe
 	//if ( m_sreqValid ) 
@@ -25077,7 +26230,7 @@ SpiderReply *XmlDoc::getNewSpiderReply ( ) {
 	//if ( ! m_pageNumInlinksValid     ) { char *xx=NULL;*xx=0; }
 	if ( ! m_percentChangedValid       ) { char *xx=NULL;*xx=0; }
 	//if ( ! m_isSpamValid               ) { char *xx=NULL;*xx=0; }
-	if ( ! m_crawlDelayValid           ) { char *xx=NULL;*xx=0; }
+	//if ( ! m_crawlDelayValid           ) { char *xx=NULL;*xx=0; }
 
 	// httpStatus is -1 if not found (like for empty http replies)
 	m_srep.m_httpStatus = *hs;
@@ -25096,7 +26249,7 @@ SpiderReply *XmlDoc::getNewSpiderReply ( ) {
 	// . update crawl delay, but we must store now as milliseconds
 	//   because Spider.cpp like it better that way
 	// . -1 implies crawl delay unknown or not found
-	if ( m_crawlDelay >= 0 )
+	if ( m_crawlDelay >= 0 && m_crawlDelayValid )
 		// we already multiply x1000 in isAllowed2()
 		m_srep.m_crawlDelayMS = m_crawlDelay;// * 1000;
 	else
@@ -25254,6 +26407,9 @@ void XmlDoc::setSpiderReqForMsg20 ( SpiderRequest *sreq   ,
 	if ( m_firstUrlValid )
 		strcpy(sreq->m_url,m_firstUrl.m_url);
 }
+
+// defined in PageCrawlBot.cpp
+int32_t isInSeedBuf ( CollectionRec *cr , char *url, int len ) ;
 
 // . add the spiderdb recs to the meta list
 // . used by XmlDoc::setMetaList()
@@ -25461,6 +26617,25 @@ char *XmlDoc::addOutlinkSpiderRecsToMetaList ( ) {
 	bool ignore = false;
 	if ( mbuf[0] == '1' ) ignore = true;
 
+	// for diffbot crawlbot, if we are a seed url and redirected to a 
+	// different domain... like bn.com --> barnesandnoble.com
+	int32_t redirDomHash32  = 0;
+	int32_t redirHostHash32 = 0;
+	//int32_t redirSiteHash32 = 0;
+	if ( //cr->m_isCustomCrawl == 1 &&
+	     //isInSeedBuf(cr,m_firstUrl.getUrl(),m_firstUrl.getUrlLen() ) &&
+	     m_hopCount == 0 &&
+	     m_redirUrlValid &&
+	     ptr_redirUrl &&
+	     //m_redirUrlPtr && (this gets reset to NULL as being LAST redir)
+	     // this is the last non-empty redir here:
+	     m_redirUrl.getUrlLen() > 0 ) {
+		log("build: seed REDIR: %s",m_redirUrl.getUrl());
+		redirDomHash32  = m_redirUrl.getDomainHash32();
+		redirHostHash32 = m_redirUrl.getHostHash32();
+	}		
+
+
 	//SpiderColl *sc = g_spiderCache.getSpiderCollIffNonNull ( m_collnum );
 
 	//
@@ -25655,6 +26830,15 @@ char *XmlDoc::addOutlinkSpiderRecsToMetaList ( ) {
 		ksr.m_parentHostHash32 = hostHash32a;
 		ksr.m_parentDomHash32  = m_domHash32;
 		ksr.m_parentSiteHash32 = m_siteHash32;
+
+		// if a seed/hopcount0 url redirected to a different domain
+		// then use that if it is the same. that way we can satisft
+		// the "isonsamedomain" expression in the url filters table.
+		if ( redirDomHash32 == domHash32 && redirDomHash32 )
+			ksr.m_parentDomHash32 = redirDomHash32;
+		if ( redirHostHash32 == hostHash32 && redirHostHash32 )
+			ksr.m_parentHostHash32 = redirHostHash32;
+
 		//ksr.m_parentFirstIp    = *pfip;//m_ip;
 		ksr.m_pageNumInlinks   = 0;
 
@@ -25735,6 +26919,16 @@ char *XmlDoc::addOutlinkSpiderRecsToMetaList ( ) {
 		// the mere existence of these tags is good
 		if ( gr->getTag("authorityinlink"))ksr.m_hasAuthorityInlink =1;
 		ksr.m_hasAuthorityInlinkValid = true;
+
+		// if our url was a seed and redirected to another domain
+		// allow outlinks on that other domain to be on domain too.
+		// only used for diffbot crawlbot right now.
+		if ( domHash32  == redirDomHash32  && redirDomHash32 ) 
+			ksr.m_sameDom  = 1;
+		if ( hostHash32 == redirHostHash32 && redirHostHash32 ) 
+			ksr.m_sameHost = 1;
+		// if ( linkSiteHashes[i]==redirSiteHash32 && redirSiteHash32) 
+		// 	ksr.m_sameSite = 1;
 
 		// set parent based info
 		if ( domHash32  == m_domHash32   ) ksr.m_sameDom  = 1;
@@ -25893,7 +27087,8 @@ char *XmlDoc::addOutlinkSpiderRecsToMetaList ( ) {
 		// count it
 		numAdded++;
 		// check domain
-		if ( domHash32  == m_domHash32 ) numAddedFromSameDomain++;
+		//if ( domHash32  == m_domHash32 ) numAddedFromSameDomain++;
+		if ( ksr.m_sameDom ) numAddedFromSameDomain++;
 	}
 
 	//
@@ -27214,7 +28409,7 @@ SafeBuf *XmlDoc::getSpiderStatusDocMetaList ( SpiderReply *reply ,
 // . TODO:
 //   usedProxy:1
 //   proxyIp:1.2.3.4
-SafeBuf *XmlDoc::getSpiderStatusDocMetaList2 ( SpiderReply *reply ) {	
+SafeBuf *XmlDoc::getSpiderStatusDocMetaList2 ( SpiderReply *reply1 ) {	
 
 	setStatus ( "making spider reply meta list");
 
@@ -27235,8 +28430,8 @@ SafeBuf *XmlDoc::getSpiderStatusDocMetaList2 ( SpiderReply *reply ) {
 	int64_t *uqd = getAvailDocIdOnly ( d );
 	if ( ! uqd || uqd == (void *)-1 ) return  (SafeBuf *)uqd;
 
-	unsigned char *hc = (unsigned char *)getHopCount();
-	if ( ! hc || hc == (void *)-1 ) return (SafeBuf *)hc;
+	// unsigned char *hc = (unsigned char *)getHopCount();
+	// if ( ! hc || hc == (void *)-1 ) return (SafeBuf *)hc;
 
 	int32_t tmpVal = -1;
 	int32_t *priority = &tmpVal;
@@ -27272,7 +28467,7 @@ SafeBuf *XmlDoc::getSpiderStatusDocMetaList2 ( SpiderReply *reply ) {
 	if ( ! m_indexCodeValid ) { char *xx=NULL;*xx=0; }
 
 	// why isn't gbhopcount: being indexed consistently?
-	if ( ! m_hopCountValid )  { char *xx=NULL;*xx=0; }
+	//if ( ! m_hopCountValid )  { char *xx=NULL;*xx=0; }
 
 	// reset just in case
 	m_spiderStatusDocMetaList.reset();
@@ -27307,12 +28502,17 @@ SafeBuf *XmlDoc::getSpiderStatusDocMetaList2 ( SpiderReply *reply ) {
 		jd.safePrintf("\"gbssFinalRedirectUrl\":\"%s\",\n",
 			      ptr_redirUrl);
 
+	if ( m_indexCodeValid ) {
+		jd.safePrintf("\"gbssStatusCode\":%i,\n",(int)m_indexCode);
+		jd.safePrintf("\"gbssStatusMsg\":\"");
+		jd.jsonEncode (mstrerror(m_indexCode));
+		jd.safePrintf("\",\n");
+	}
+	else {
+		jd.safePrintf("\"gbssStatusCode\":-1,\n");
+		jd.safePrintf("\"gbssStatusMsg\":\"???\",\n");
+	}
 
-	jd.safePrintf("\"gbssStatusCode\":%i,\n",(int)m_indexCode);
-
-	jd.safePrintf("\"gbssStatusMsg\":\"");
-	jd.jsonEncode (mstrerror(m_indexCode));
-	jd.safePrintf("\",\n");
 
 	if ( m_httpStatusValid )
 		jd.safePrintf("\"gbssHttpStatus\":%"INT32",\n",
@@ -27356,12 +28556,15 @@ SafeBuf *XmlDoc::getSpiderStatusDocMetaList2 ( SpiderReply *reply ) {
 	jd.safePrintf("\",\n");
 
 	//if ( m_redirUrlPtr && m_redirUrlValid )
-	jd.safePrintf("\"gbssNumRedirects\":%"INT32",\n",
-		      m_numRedirects);
+	//if ( m_numRedirectsValid )
+	jd.safePrintf("\"gbssNumRedirects\":%"INT32",\n",m_numRedirects);
 
-	jd.safePrintf("\"gbssDocId\":%"INT64",\n", m_docId);//*uqd);
+	if ( m_docIdValid )
+		jd.safePrintf("\"gbssDocId\":%"INT64",\n", m_docId);//*uqd);
 
-	jd.safePrintf("\"gbssHopCount\":%"INT32",\n",(int32_t)*hc);
+	if ( m_hopCountValid )
+		//jd.safePrintf("\"gbssHopCount\":%"INT32",\n",(int32_t)*hc);
+		jd.safePrintf("\"gbssHopCount\":%"INT32",\n",(int32_t)m_hopCount);
 
 	// crawlbot round
 	if ( cr->m_isCustomCrawl )
@@ -27369,13 +28572,15 @@ SafeBuf *XmlDoc::getSpiderStatusDocMetaList2 ( SpiderReply *reply ) {
 			      cr->m_spiderRoundNum);
 
 	// for -diffbotxyz fake docs addedtime is 0
-	if ( m_sreqValid && m_sreq.m_addedTime != 0 ) {
+	if ( m_sreqValid && m_sreq.m_discoveryTime != 0 ) {
 		// in Spider.cpp we try to set m_sreq's m_addedTime to the
 		// min of all the spider requests, and we try to ensure
 		// that in the case of deduping we preserve the one with
-		// the oldest time.
+		// the oldest time. no, now we actually use 
+		// m_discoveryTime since we were using m_addedTime in
+		// the url filters as it was originally intended.
 		jd.safePrintf("\"gbssDiscoveredTime\":%"INT32",\n",
-			      m_sreq.m_addedTime);
+			      m_sreq.m_discoveryTime);
 	}
 
 	if ( m_isDupValid && m_isDup )
@@ -27383,14 +28588,19 @@ SafeBuf *XmlDoc::getSpiderStatusDocMetaList2 ( SpiderReply *reply ) {
 			      m_docIdWeAreADupOf);
 
 	// how many spiderings were successful vs. failed
-	if ( m_sreqValid ) {
-		jd.safePrintf("\"gbssPrevTotalNumIndexAttempts\":%"INT32",\n",
-			      m_sreq.m_reservedc1 + m_sreq.m_reservedc2 );
-		jd.safePrintf("\"gbssPrevTotalNumIndexSuccesses\":%"INT32",\n",
-			      m_sreq.m_reservedc1);
-		jd.safePrintf("\"gbssPrevTotalNumIndexFailures\":%"INT32",\n",
-			      m_sreq.m_reservedc2);
-	}
+	// these don't work because we only store one reply
+	// which overwrites any older reply. that's how the 
+	// key is. we can change the key to use the timestamp 
+	// and not parent docid in makeKey() for spider 
+	// replies later.
+	// if ( m_sreqValid ) {
+	// 	jd.safePrintf("\"gbssPrevTotalNumIndexAttempts\":%"INT32",\n",
+	// 		      m_sreq.m_reservedc1 + m_sreq.m_reservedc2 );
+	// 	jd.safePrintf("\"gbssPrevTotalNumIndexSuccesses\":%"INT32",\n",
+	// 		      m_sreq.m_reservedc1);
+	// 	jd.safePrintf("\"gbssPrevTotalNumIndexFailures\":%"INT32",\n",
+	// 		      m_sreq.m_reservedc2);
+	// }
 
 	if ( m_spideredTimeValid )
 		jd.safePrintf("\"gbssSpiderTime\":%"INT32",\n",
@@ -27468,11 +28678,12 @@ SafeBuf *XmlDoc::getSpiderStatusDocMetaList2 ( SpiderReply *reply ) {
 			      ":%.01f,\n",
 			      m_percentChanged);
 
-	jd.safePrintf("\"gbssSpiderPriority\":%"INT32",\n", 
-		      *priority);
+	if ( ! m_isDiffbotJSONObject )
+		jd.safePrintf("\"gbssSpiderPriority\":%"INT32",\n", 
+			      *priority);
 
 	// this could be -1, careful
-	if ( *ufn >= 0 )
+	if ( *ufn >= 0 && ! m_isDiffbotJSONObject )
 		jd.safePrintf("\"gbssMatchingUrlFilter\":\"%s\",\n", 
 			      cr->m_regExs[*ufn].getBufStart());
 
@@ -27491,31 +28702,36 @@ SafeBuf *XmlDoc::getSpiderStatusDocMetaList2 ( SpiderReply *reply ) {
 
 	// do not show the -1 any more, just leave it out then
 	// to make things look prettier
-	if (  m_crawlDelayValid && m_crawlDelay >= 0 )
+	if (  m_crawlDelayValid && m_crawlDelay >= 0 &&
+	      ! m_isDiffbotJSONObject )
 		// -1 if none?
 		jd.safePrintf("\"gbssCrawlDelayMS\":%"INT32",\n",
 			      (int32_t)m_crawlDelay);
 		
 	// was this url ever sent to diffbot either now or at a previous
 	// spider time?
-	jd.safePrintf("\"gbssSentToDiffbotAtSomeTime\":%i,\n",
-		      (int)m_sentToDiffbot);
+	if ( ! m_isDiffbotJSONObject ) {
+		jd.safePrintf("\"gbssSentToDiffbotAtSomeTime\":%i,\n",
+			      (int)m_sentToDiffbot);
 
-	// sent to diffbot?
-	jd.safePrintf("\"gbssSentToDiffbotThisTime\":%i,\n",
-		      (int)m_sentToDiffbotThisTime);
+		// sent to diffbot?
+		jd.safePrintf("\"gbssSentToDiffbotThisTime\":%i,\n",
+			      (int)m_sentToDiffbotThisTime);
+	}
 
 	// page must have been downloaded for this one
 	if ( cr->m_isCustomCrawl && 
 	     m_utf8ContentValid && 
+	     ! m_isDiffbotJSONObject &&
 	     m_content &&
+	     m_contentValid &&
 	     cr->m_diffbotPageProcessPattern.getBufStart() &&
 	     cr->m_diffbotPageProcessPattern.getBufStart()[0] ) {
 		char match = doesPageContentMatchDiffbotProcessPattern();
 		jd.safePrintf("\"gbssMatchesPageProcessPattern\":%i,\n",
 			      (int)match);
 	}
-	if ( cr->m_isCustomCrawl && m_firstUrlValid ) {
+	if ( cr->m_isCustomCrawl && m_firstUrlValid && !m_isDiffbotJSONObject){
 
 		char *url = getFirstUrl()->getUrl();
 
@@ -27559,7 +28775,8 @@ SafeBuf *XmlDoc::getSpiderStatusDocMetaList2 ( SpiderReply *reply ) {
 
 
 
-	if ( m_diffbotReplyValid && m_sentToDiffbotThisTime ) {
+	if ( m_diffbotReplyValid && m_sentToDiffbotThisTime &&
+	     ! m_isDiffbotJSONObject ) {
 		jd.safePrintf("\"gbssDiffbotReplyCode\":%"INT32",\n",
 			      m_diffbotReplyError);
 		jd.safePrintf("\"gbssDiffbotReplyMsg\":\"");
@@ -27773,6 +28990,13 @@ SafeBuf *XmlDoc::getSpiderStatusDocMetaList2 ( SpiderReply *reply ) {
 	// serps need site, otherwise search results core
 	xd->ptr_site = ptr_site;
 	xd->size_site = size_site;
+
+	// if this is null then ip lookup failed i guess so just use
+	// the subdomain
+	if ( ! ptr_site && m_firstUrlValid ) {
+		xd->ptr_site  = m_firstUrl.getHost();
+		xd->size_site = m_firstUrl.getHostLen();
+	}
 
 	// use the same uh48 of our parent
 	int64_t uh48 = m_firstUrl.getUrlHash48();
@@ -28384,6 +29608,20 @@ bool XmlDoc::hashLinksForLinkdb ( HashTableX *dt ) {
 	return true;
 }
 
+bool XmlDoc::getUseTimeAxis ( ) {
+	if ( m_useTimeAxisValid )
+		return m_useTimeAxis;
+	if ( m_setFromTitleRec )
+		// return from titlerec header
+		return m_useTimeAxis;
+	CollectionRec *cr = g_collectiondb.getRec ( m_collnum );
+	if ( ! cr ) return false;
+	m_useTimeAxis = cr->m_useTimeAxis;
+	m_useTimeAxisValid = true;
+	return m_useTimeAxis;
+}
+
+
 // . returns false and sets g_errno on error
 // . copied Url2.cpp into here basically, so we can now dump Url2.cpp
 bool XmlDoc::hashUrl ( HashTableX *tt ) { // , bool isStatusDoc ) {
@@ -28411,6 +29649,12 @@ bool XmlDoc::hashUrl ( HashTableX *tt ) { // , bool isStatusDoc ) {
 	if ( ! hashSingleTerm(uw.getUrl(),uw.getUrlLen(),&hi) ) 
 		return false;
 
+	if ( getUseTimeAxis() ) { // g_conf.m_useTimeAxis ) {
+		hi.m_prefix = "gbtimeurl";
+		SafeBuf *tau = getTimeAxisUrl();
+		hashSingleTerm ( tau->getBufStart(),tau->length(),&hi);
+	}
+		
 	// use hash of url as score so we can get a # of docs per site est.
 	//uint16_t score = hash16 ( fu->getUrl() , fu->getUrlLen() );
 
@@ -40004,6 +41248,9 @@ bool XmlDoc::injectLinks (HashTableX *linkDedupTablePtr ,
 	// INJECT 10 at a time. xmldoc is 1MB.
 	int32_t i; for ( i = 0 ; i < MAX_XML_DOCS ; i++ ) {
 		XmlDoc *nd;
+		// continue if already set it. this was overwriting it
+		// and causing a mem leak before
+		if ( m_xmlDocs[i] ) continue;
 		try { nd = new ( XmlDoc ); }
 		catch ( ... ) {
 			g_errno = ENOMEM;

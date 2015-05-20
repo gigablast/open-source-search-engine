@@ -612,11 +612,20 @@ char *serializeMsg ( int32_t  baseSize ,
 		     char *userBuf     ,
 		     int32_t  userBufSize ,
 		     bool  makePtrsRefNewBuf ) ;
+
+char *serializeMsg2 ( void *thisPtr ,
+		      int32_t objSize ,
+		      char **firstStrPtr ,
+		      int32_t *firstSizeParm ,
+		      int32_t *retSize );
+
 // convert offsets back into ptrs
 int32_t deserializeMsg ( int32_t  baseSize ,
 		      int32_t *firstSizeParm ,
 		      int32_t *lastSizeParm ,
 		      char **firstStrPtr ,
 		      char *stringBuf ) ;
+
+void deserializeMsg2 ( char **firstStrPtr , int32_t  *firstSizeParm );
 
 #endif 

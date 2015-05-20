@@ -1491,6 +1491,16 @@ int32_t TcpServer::readSocket ( TcpSocket *s ) {
 	// . MDW: add "&& s->m_sendBuf to it"
 	// . just return -1 WITHOUT setting g_errno
 	if ( n == 0 )  {
+		// set g_errno to 0 then otherwise it seems g_errno was set to
+		// ETRYAGAIN from some other time and when readSocket
+		// calls makeCallback() it ends up calling Msg13.cpp::gotHttpReply2
+		// eventually and coring because the error is not recognized.
+		// even though there was no error but the read just finished.
+		// also see TcpServer.cpp:readSocketWrapper2() to see where
+		// it calls makeCallback() after noticing we return -1 from here.
+		// the site was content.time.com in this case that we read 0
+		// bytes on to indicate the read was done.
+		g_errno = 0;
 		// for debug. seems like content-length: is counting
 		// the \r\n when it shoulnd't be
 		//char *xx=NULL;*xx=0; 
@@ -2861,6 +2871,10 @@ int TcpServer::sslHandshake ( TcpSocket *s ) {
 		    (int32_t)sslError,r,iptoa(s->m_ip),sslMsg);
 
 		g_errno = ESSLERROR;
+		// note in log
+		log("tcp: ssl: try running "
+		    "'openssl s_client -connect www.hostnamehere.com:443 "
+		    "-debug' to debug the webserver on the other side.");
 		// make sure read callback is registered
 		// g_loop.registerReadCallback (s->m_sd,this,readSocketWrapper,
 		// 			     s->m_niceness);

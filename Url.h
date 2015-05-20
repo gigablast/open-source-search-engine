@@ -92,6 +92,11 @@ public:
 	bool isBadExtension(int32_t xxx);
 	bool isSet()            { return m_ulen != 0; }
 
+	// is this url a warc or arc url? i.e. ends in .warc or .arc or
+	// .warc.gz or .arc.gz?
+	bool isWarc ( );
+	bool isArc ( );
+
 	// does it end in .xml, .rdb or .rss, etc. kinda thing
 	//bool isRSSFormat ( ) ;
 
