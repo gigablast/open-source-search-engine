@@ -5209,7 +5209,6 @@ SafeBuf *XmlDoc::getTitleRecBuf ( ) {
 	// time it
 	int64_t startTime = gettimeofdayInMilliseconds();
 
-
 	//////
 	//
 	// fill in m_titleRecBuf
@@ -10915,6 +10914,12 @@ int64_t XmlDoc::getFirstUrlHash48() {
 	if ( m_firstUrlHash48Valid ) return m_firstUrlHash48;
 	// this must work
 	if ( ! m_firstUrlValid ) { char *xx=NULL;*xx=0; }
+	if ( getUseTimeAxis() ) {
+		m_firstUrlHash48 = hash64b ( getTimeAxisUrl()->getBufStart() ) & 0x0000ffffffffffffLL;
+		m_firstUrlHash48Valid = true;
+		return m_firstUrlHash48;
+	}
+
 	m_firstUrlHash48 = hash64b ( m_firstUrl.m_url ) & 0x0000ffffffffffffLL;
 	m_firstUrlHash48Valid = true;
 	return m_firstUrlHash48;
@@ -10924,6 +10929,13 @@ int64_t XmlDoc::getFirstUrlHash64() {
 	if ( m_firstUrlHash64Valid ) return m_firstUrlHash64;
 	// this must work
 	if ( ! m_firstUrlValid ) { char *xx=NULL;*xx=0; }
+
+	if ( getUseTimeAxis() ) {
+		m_firstUrlHash64 = hash64b ( getTimeAxisUrl()->getBufStart() );
+		m_firstUrlHash64Valid = true;
+		return m_firstUrlHash64;
+	}
+
 	m_firstUrlHash64 = hash64b ( m_firstUrl.m_url );
 	m_firstUrlHash64Valid = true;
 	return m_firstUrlHash64;
@@ -11635,12 +11647,13 @@ XmlDoc **XmlDoc::getOldXmlDoc ( ) {
 	// valid if we are a docid based doc and THIS function was called
 	// from getFirstUrl() -- we end up in a recursive loop.
 	if ( ! m_setFromDocId ) { 
-		int64_t uh48 = getFirstUrl()->getUrlHash48();
+		//int64_t uh48 = getFirstUrl()->getUrlHash48();
+		int64_t uh48 = getFirstUrlHash48();
 		int64_t tuh48 = g_titledb.getUrlHash48 ( (key_t *)*otr );
 		if ( uh48 != tuh48 ) {
 			log("xmldoc: docid collision uh48 mismatch. cannot "
-			    "index "
-			    "%s",getFirstUrl()->getUrl() );
+				"index "
+				"%s",getFirstUrl()->getUrl() );
 			g_errno = EDOCIDCOLLISION;
 			return NULL;
 		}
@@ -12024,9 +12037,8 @@ SafeBuf *XmlDoc::getTimeAxisUrl ( ) {
 	if ( m_setFromDocId ) return &m_timeAxisUrl;
 	m_timeAxisUrlValid = true;
 	Url *fu = getFirstUrl();
-	int32_t spideredTime = getSpideredTime ();
 	m_timeAxisUrl.reset();
-	m_timeAxisUrl.safePrintf("%s.%u",fu->getUrl(),spideredTime);
+	m_timeAxisUrl.safePrintf("%s.%u",fu->getUrl(),m_contentHash32);
 	return &m_timeAxisUrl;
 }
 
@@ -12096,7 +12108,7 @@ char **XmlDoc::getOldTitleRec ( ) {
 		SafeBuf *tau = getTimeAxisUrl();
 		u = tau->getBufStart();
 	}
-
+    
 	// the title must be local since we're spidering it
 	if ( ! m_msg22a.getTitleRec ( &m_msg22Request      ,
 				      u                    ,
@@ -19254,6 +19266,12 @@ File *XmlDoc::getUtf8ContentInFile ( int64_t *fileSizeArg ) {
 		return (File *)-1;
 	// failed?
 	log("build: failed to launch wget thread");
+	// If we run it in this thread then if we are fetching 
+	// a local url it will block forever.
+	// systemStartWrapper_r(this,NULL);
+	// return getUtf8ContentInFile ( fileSizeArg );
+	g_errno = ETHREADSDISABLED;
+
 	return NULL;
 }
 
@@ -22240,7 +22258,7 @@ bool XmlDoc::verifyMetaList ( char *p , char *pend , bool forDelete ) {
 	// do not do this if not test collection for now
 	if ( strcmp(cr->m_coll,"qatest123") ) return true;
 	
-	log("xmldoc: VERIFYING METALIST");
+	log(LOG_DEBUG, "xmldoc: VERIFYING METALIST");
 
 	// store each record in the list into the send buffers
 	for ( ; p < pend ; ) {
