@@ -386,7 +386,9 @@ bool BigFile::readwrite ( void         *buf      ,
 	//   had negative offsets, bad engineer
 	if ( offset < 0 ) {
 		log(LOG_LOGIC,"disk: readwrite() offset is %"INT64" "
-		    "< 0. dumping core.",offset);
+		    "< 0. filename=%s/%s. dumping core. try deleting "
+		    "the .map file for it and restarting.",offset,
+		    m_dir,m_baseFilename);
 		char *xx = NULL; *xx = 0;
 	}
 	// if we're not blocking use a fake fstate

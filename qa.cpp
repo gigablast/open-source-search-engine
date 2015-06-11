@@ -1,6 +1,7 @@
 #include <string.h>
 #include "SafeBuf.h"
 #include "HttpServer.h"
+#include "Posdb.h"
 
 TcpSocket *g_qaSock = NULL;
 SafeBuf g_qaOutput;
@@ -183,6 +184,7 @@ void processReply ( char *reply , int32_t replyLen ) {
 	markOut ( content , "spider is done (");
 	markOut ( content , "spider is paused (");
 	markOut ( content , "spider queue empty (");
+	markOut ( content , "spider is active (");
 
 	markOut ( content , "<totalShards>");
 
@@ -199,6 +201,25 @@ void processReply ( char *reply , int32_t replyLen ) {
 	markOut ( content , "\"currentTimeUTC\":" );
 	markOut ( content , "\"responseTimeMS\":");
 	markOut ( content , "\"docsInCollection\":");
+
+	// if the results are in json, then status doc is encoded json
+	markOut ( content , "\\\"gbssDownloadStartTime\\\":");
+	markOut ( content , "\\\"gbssDownloadEndTime\\\":");
+	markOut ( content , "\\\"gbssDownloadStartTimeMS\\\":");
+	markOut ( content , "\\\"gbssDownloadEndTimeMS\\\":");
+	markOut ( content , "\\\"gbssDownloadDurationMS\\\":");
+	markOut ( content , "\\\"gbssAgeInIndex\\\":");
+	markOut ( content , "\\\"gbssDiscoveredTime\\\":");
+
+
+	// if the results are in xml, then the status doc is xml encoded
+	markOut ( content , "\"gbssDownloadStartTime\":");
+	markOut ( content , "\"gbssDownloadEndTime\":");
+	markOut ( content , "\"gbssDownloadStartTimeMS\":");
+	markOut ( content , "\"gbssDownloadEndTimeMS\":");
+	markOut ( content , "\"gbssDownloadDurationMS\":");
+	markOut ( content , "\"gbssAgeInIndex\":");
+
 
 	// for xml
 	markOut ( content , "<currentTimeUTC>" );
@@ -776,6 +797,16 @@ bool qainject1 ( ) {
 			log("qa: failed qa test of posdb0001.dat. "
 			    "has %i bytes of positive keys! coring.",
 			    (int)list.m_listSize);
+			char rec [ 64];
+			for ( list.getCurrentKey ( rec ) ;
+			      ! list.isExhausted() ;
+			      list.skipCurrentRecord() ) {
+				// parse it up
+				int64_t tid = g_posdb.getTermId ( rec );
+				int64_t d = g_posdb.getDocId ( rec ) ;
+				log("qa: termid=%"INT64" docid=%"INT64,
+				    tid,d);
+			}
 			//char *xx=NULL;*xx=0;
 			exit(0);
 		}
@@ -980,7 +1011,8 @@ bool qainject2 ( ) {
 	if ( ! s_flags[33] ) {
 		s_flags[33] = true;
 		if ( ! getUrl ( "/search?c=qatest123&qa=1&format=xml&q="
-				"url2%3Axyz.com%2F-13737921970569011262&xml=1"
+				"gbssUrl%3Axyz.com%2F-13737921970569011262&"
+				"xml=1"
 				,-1405546537 ) )
 			return false;
 	}
@@ -1164,17 +1196,17 @@ bool qaSyntax ( ) {
 			     "gbpermalink:1",
 			     "gbdocid:123456",
 
-			     "gbstatus:0",
-			     "gbstatusmsg:tcp",
-			     "url2:www.abc.com/page.html",
-			     "site2:mysite.com",
-			     "ip2:1.2.3.4",
-			     "inurl2:dog",
-			     "gbpathdepth2:2",
-			     "gbhopcount2:3",
-			     "gbhasfilename2:1",
-			     "gbiscgi2:1",
-			     "gbhasext2:1",
+			     "gbssStatusCode:0",
+			     "gbssStatusmsg:tcp",
+			     "gbssUrl:www.abc.com/page.html",
+			     "gbssDomain:mysite.com",
+			     "gbssIp:1.2.3.4",
+			     "gbssUrl:dog",
+			     //"gbpathdepth:2",
+			     "gbssHopcount:3",
+			     //"gbhasfilename2:1",
+			     //"gbiscgi2:1",
+			     //"gbhasext2:1",
 
 			     "cat AND dog",
 			     "cat OR dog",
@@ -1553,6 +1585,7 @@ bool qareindex() {
 			      "ufp=custom&"
 			      // zero spiders if not isreindex
 			      "fe1=default&hspl1=0&hspl1=1&fsf1=1.000000&"
+			      "fdu1=0&"
 			      "mspr1=0&mspi1=0&xg1=1000&fsp1=45&"
 		);
 		if ( ! getUrl ( "/admin/filters",0,sb.getBufStart()) )
@@ -1776,15 +1809,15 @@ bool qaspider1 ( ) {
 			      // make it the custom filter
 			      "ufp=custom&"
 
-	       "fe=%%21ismanualadd+%%26%%26+%%21insitelist&hspl=0&hspl=1&fsf=0.000000&mspr=0&mspi=1&xg=1000&fsp=-3&"
+	       "fdu=0&fe=%%21ismanualadd+%%26%%26+%%21insitelist&hspl=0&hspl=1&fsf=0.000000&mspr=0&mspi=1&xg=1000&fsp=-3&"
 
 			      // take out hopcount for now, just test quotas
 			      //	       "fe1=tag%%3Ashallow+%%26%%26+hopcount%%3C%%3D1&hspl1=0&hspl1=1&fsf1=1.000000&mspr1=1&mspi1=1&xg1=1000&fsp1=3&"
 
 			      // just one spider out allowed for consistency
-	       "fe1=tag%%3Ashallow+%%26%%26+sitepages%%3C%%3D20&hspl1=0&hspl1=1&fsf1=1.000000&mspr1=1&mspi1=1&xg1=1000&fsp1=45&"
+	       "fdu1=0&fe1=tag%%3Ashallow+%%26%%26+sitepages%%3C%%3D20&hspl1=0&hspl1=1&fsf1=1.000000&mspr1=1&mspi1=1&xg1=1000&fsp1=45&"
 
-	       "fe2=default&hspl2=0&hspl2=1&fsf2=1.000000&mspr2=0&mspi2=1&xg2=1000&fsp2=45&"
+	       "fdu2=0&fe2=default&hspl2=0&hspl2=1&fsf2=1.000000&mspr2=0&mspi2=1&xg2=1000&fsp2=45&"
 
 		);
 		if ( ! getUrl ( "/admin/filters",0,sb.getBufStart()) )
@@ -1935,8 +1968,8 @@ bool qaspider1 ( ) {
 	if ( ! s_flags[17] ) {
 		s_flags[17] = true;
 		if ( ! getUrl ( "/search?c=qatest123&qa=1&format=xml&"
-				"q=site2%3Awww.walmart.com+"
-				"gbsortby%3Agbspiderdate",
+				"q=gbssSubdomain%3Awww.walmart.com+"
+				"gbsortbyint%3AgbssDownloadStartTime",
 				999 ) )
 			return false;
 	}
@@ -2039,7 +2072,7 @@ bool qaspider2 ( ) {
 			      // make it the custom filter
 			      "ufp=custom&"
 
-	       "fe=%%21ismanualadd+%%26%%26+%%21insitelist&hspl=0&hspl=1&fsf=0.000000&mspr=0&mspi=1&xg=1000&fsp=-3&"
+	       "fdu=0&fe=%%21ismanualadd+%%26%%26+%%21insitelist&hspl=0&hspl=1&fsf=0.000000&mspr=0&mspi=1&xg=1000&fsp=-3&"
 
 			      // take out hopcount for now, just test quotas
 			      //	       "fe1=tag%%3Ashallow+%%26%%26+hopcount%%3C%%3D1&hspl1=0&hspl1=1&fsf1=1.000000&mspr1=1&mspi1=1&xg1=1000&fsp1=3&"
@@ -2047,9 +2080,9 @@ bool qaspider2 ( ) {
 			      // sitepages is a little fuzzy so take it
 			      // out for this test and use hopcount!!!
 			      //"fe1=tag%%3Ashallow+%%26%%26+sitepages%%3C%%3D20&hspl1=0&hspl1=1&fsf1=1.000000&mspr1=1&mspi1=1&xg1=1000&fsp1=45&"
-			      "fe1=tag%%3Ashallow+%%26%%26+hopcount<%%3D1&hspl1=0&hspl1=1&fsf1=1.000000&mspr1=1&mspi1=1&xg1=1000&fsp1=45&"
+			      "fdu1=0&fe1=tag%%3Ashallow+%%26%%26+hopcount<%%3D1&hspl1=0&hspl1=1&fsf1=1.000000&mspr1=1&mspi1=1&xg1=1000&fsp1=45&"
 
-	       "fe2=default&hspl2=0&hspl2=1&fsf2=1.000000&mspr2=0&mspi2=1&xg2=1000&fsp2=45&"
+	       "fdu2=0&fe2=default&hspl2=0&hspl2=1&fsf2=1.000000&mspr2=0&mspi2=1&xg2=1000&fsp2=45&"
 
 		);
 		if ( ! getUrl ( "/admin/filters",0,sb.getBufStart()) )
@@ -2450,7 +2483,7 @@ bool qajson ( ) {
 	if ( ! s_flags[12] ) {
 		s_flags[12] = true;
 		if ( ! getUrl ( "/search?c=qatest123&qa=1&format=json&"
-				"q=inurl2%3Aquirksmode.org%2Fm%2F",
+				"q=gbssUrl%3Aquirksmode.org%2Fm%2F",
 				-1310551262 ) )
 			return false;
 	}

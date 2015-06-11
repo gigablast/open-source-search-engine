@@ -287,10 +287,19 @@ bool Xml::set ( char  *s             ,
 		return true;
 	}
 
-	// override
+	// override. no don't it hurts when parsing CT_XML docs!!
+	// we need XmlNode.cpp's setNodeInfo() to identify xml tags in 
+	// an rss feed. No, this was here for XmlDoc::hashXml() i think
+	// so let's just fix Links.cpp to get links from pure xml.
+	// we can't do this any more. it's easier to fix xmldoc::hashxml()
+	// some other way... because Links.cpp and Xml::isRSSFeed() 
+	// depend on having regular tagids. but without this here
+	// then XmlDoc::hashXml() breaks.
 	if ( contentType == CT_XML )
-		pureXml = true;
+	  	pureXml = true;
 
+	// is it an xml conf file?
+	m_pureXml = pureXml;
 
 	QUICKPOLL((niceness));
 	int32_t i;
@@ -372,8 +381,12 @@ bool Xml::set ( char  *s             ,
 		bool endsInSlash = false;
 		if ( xi->m_node[xi->m_nodeLen-2] == '/' ) endsInSlash = true;
 		if ( xi->m_node[xi->m_nodeLen-2] == '?' ) endsInSlash = true;
+		// disregard </> in the conf files
+		if ( xi->m_nodeLen==3 && endsInSlash    ) endsInSlash = false;
 
 		// if not text node then he's the new parent
+		// if we don't do this for xhtml then we don't pop the parent
+		// and run out of parent stack space very quickly.
 		if ( pureXml &&
 		     xi->m_nodeId && 
 		     xi->m_nodeId != TAG_COMMENT &&

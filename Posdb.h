@@ -400,7 +400,10 @@ class Posdb {
 
 class FacetEntry {
  public:
+	// # of search results that have this value:
 	int32_t m_count;
+	// # of docs that have this value:
+	int32_t m_outsideSearchResultsCount;
 	int64_t m_docId;
 
 	// cast as double/floats for floats:
@@ -710,6 +713,8 @@ class PosdbTable {
 	bool setQueryTermInfo ( );
 
 	void shrinkSubLists ( class QueryTermInfo *qti );
+
+	int64_t countUniqueDocids( QueryTermInfo *qti ) ;
 
 	// for intersecting docids
 	void addDocIdVotes ( class QueryTermInfo *qti , int32_t listGroupNum );

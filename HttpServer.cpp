@@ -1026,6 +1026,7 @@ bool HttpServer::sendReply ( TcpSocket  *s , HttpRequest *r , bool isAdmin) {
 	// "GET /crawlbot/downloadpages"
 	if ( strncmp ( path , "/crawlbot/download/" ,19 ) == 0 ||
 	     // add 4 to length of needle to account for /vXX.
+	     // GET /v3/crawl/download/
 	     (pathLen >= 20 && strnstr(path, "/crawl/download/", 20)) ||
 	     (pathLen >= 19 && strnstr(path, "/bulk/download/", 19)) )
 		return sendBackDump ( s , r );
@@ -1243,8 +1244,8 @@ bool HttpServer::sendReply ( TcpSocket  *s , HttpRequest *r , bool isAdmin) {
 		return sendPagePretty ( s , r , "about.html","about" );
 
 	// decorate the plain html page, news.html, with our nav chrome
-	if ( ! strncmp ( path ,"/news.html", pathLen ) )
-		return sendPagePretty ( s , r , "news.html", "news");
+	if ( ! strncmp ( path ,"/blog.html", pathLen ) )
+		return sendPagePretty ( s , r , "blog.html", "blog");
 
 	// decorate the plain html page with our nav chrome
 	if ( ! strncmp ( path ,"/searchfeed.html", pathLen ) )
@@ -2340,7 +2341,7 @@ int32_t getMsgSize ( char *buf, int32_t bufSize, TcpSocket *s ) {
 		// /admin/basic etc
 		if ( pp + 7 < ppend && strncmp ( pp ,"/admin/",7)==0)
 			max = 0x7fffffff;
-		// bulk job. /v2/bulk
+		// bulk job. /v2/bulk or /v3/crawl/download/token-name...
 		if ( pp + 4 < ppend && strncmp ( pp ,"/v",2)==0 &&
 		     // /v2/bulk
 		     ( ( pp[4] == 'b' && pp[5] == 'u' ) ||

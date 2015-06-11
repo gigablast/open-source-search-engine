@@ -168,6 +168,7 @@ class RdbBuckets {
 
 	int32_t      getNumNegativeKeys ( );
 	int32_t      getNumPositiveKeys ( );
+	void cleanBuckets ( );
  	bool      delColl            ( collnum_t collnum );
 
 	//just for this collection

@@ -715,7 +715,10 @@ bool TcpServer::sendMsg ( TcpSocket *s            ,
 	// if in streaming mode just return true, do not set sockState
 	// to ST_NEEDS_CLOSE lest it be destroyed. streaming mode needs
 	// to get more data to send on the socket.
-	if ( s->m_streamingMode ) return true;
+	if ( s->m_streamingMode ) {
+		log("tcp: streaming mode trying to write more");
+		return true;
+	}
 
 	// reset the socket iff it was a reply that we finished writing
 	// hmmm else if ( s->m_readBuf ) { recycleSocket ( s ); return true; }
@@ -1491,6 +1494,16 @@ int32_t TcpServer::readSocket ( TcpSocket *s ) {
 	// . MDW: add "&& s->m_sendBuf to it"
 	// . just return -1 WITHOUT setting g_errno
 	if ( n == 0 )  {
+		// set g_errno to 0 then otherwise it seems g_errno was set to
+		// ETRYAGAIN from some other time and when readSocket
+		// calls makeCallback() it ends up calling Msg13.cpp::gotHttpReply2
+		// eventually and coring because the error is not recognized.
+		// even though there was no error but the read just finished.
+		// also see TcpServer.cpp:readSocketWrapper2() to see where
+		// it calls makeCallback() after noticing we return -1 from here.
+		// the site was content.time.com in this case that we read 0
+		// bytes on to indicate the read was done.
+		g_errno = 0;
 		// for debug. seems like content-length: is counting
 		// the \r\n when it shoulnd't be
 		//char *xx=NULL;*xx=0; 
@@ -1654,7 +1667,10 @@ void writeSocketWrapper ( int sd , void *state ) {
 			 iptoa(s->m_ip),nowms-s->m_lastActionTime);
 		// . some http servers close socket as end of transmission
 		// . so it's not really an g_errno
-		if ( ! s->m_streamingMode ) g_errno = 0;
+		if ( ! s->m_streamingMode ) 
+			g_errno = 0;
+		else 
+			log("tcp: socket closed while streaming");
 		THIS->makeCallback ( s );
 		THIS->destroySocket ( s ); 
 		return; 
@@ -1728,7 +1744,11 @@ void writeSocketWrapper ( int sd , void *state ) {
 
 	// we have to do a final call to writeSocket with m_streamingMode
 	// set to false, so don't destroy socket just yet...
-	if ( wasStreaming ) return;
+	if ( wasStreaming ) {
+		log("tcp: not destroying sock in streaming mode after callback"
+		    ". s=0x%"PTRFMT,   (PTRTYPE)s);
+		    return;
+	}
 
 	// skip if we already destroyed in writeSocket()
 	if ( s->m_sockState == ST_CLOSE_CALLED ) return;
@@ -1979,7 +1999,12 @@ int32_t TcpServer::writeSocket ( TcpSocket *s ) {
 		return 1 ;
 	}
 
-	if ( s->m_streamingMode ) return true;
+	if ( s->m_streamingMode ) {
+		log("tcp: not destroying sock in streaming mode after "
+		    "writing data. s=0x%"PTRFMT,
+		    (PTRTYPE)s);
+		return true;
+	}
 
 	// close it. without this here the socket only gets
 	// closed for real in the timeout loop.
@@ -2233,13 +2258,20 @@ void TcpServer::destroySocket ( TcpSocket *s ) {
 	// if sd is 0 do not really close it. seems to fix that bug.
 	// 0 is the FD for stdin so i don't know how that is happening.
 	if ( sd != 0 ) cret = ::close ( sd );
-	if ( cret != 0 ) // == -1 ) 
-		log("tcp: close(%"INT32") = %"INT32" = %s",
-		    (int32_t)sd,cret,mstrerror(errno));
+	if ( cret != 0 ) { // == -1 ) 
+		log("tcp: s=%"PTRFMT" close(%"INT32") = %"INT32" = %s",
+		    (PTRTYPE)s,(int32_t)sd,cret,mstrerror(errno));
+		if ( sd < 0 )
+			log("tcp: caught double close/callback while "
+			    "streaming bug");
+	}
 	else {
 		m_numClosed++;
 		// log("tcp: closing sock %i (open=%"INT32")",sd,
 		//     m_numOpen-m_numClosed);
+		// set it negative to try to fix the double close while
+		// streaming bug.
+		if ( s->m_sd > 0 ) s->m_sd *= -1;
 	}
 	// a 2nd close? it should return -1 with errno set!
 	//int32_t cret2 = ::close ( sd );
@@ -2690,7 +2722,11 @@ bool TcpServer::sslAccept ( TcpSocket *s ) {
 
 // . NOTE: caller must free s->m_sendBuf/m_readBuf -- we don't do it at all
 void TcpServer::makeCallback ( TcpSocket * s ) {
-	if ( ! s->m_callback ) return;
+	if ( ! s->m_callback ) {
+		// note it
+		log("tcp: null callback for s=0x%"PTRFMT"",(PTRTYPE)s);
+		return;
+	}
 	// record times for profiler
 	//int32_t address = (int32_t)s->m_callback;
 // 	uint64_t start ;
@@ -2861,6 +2897,10 @@ int TcpServer::sslHandshake ( TcpSocket *s ) {
 		    (int32_t)sslError,r,iptoa(s->m_ip),sslMsg);
 
 		g_errno = ESSLERROR;
+		// note in log
+		log("tcp: ssl: try running "
+		    "'openssl s_client -connect www.hostnamehere.com:443 "
+		    "-debug' to debug the webserver on the other side.");
 		// make sure read callback is registered
 		// g_loop.registerReadCallback (s->m_sd,this,readSocketWrapper,
 		// 			     s->m_niceness);

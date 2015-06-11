@@ -34,6 +34,7 @@ class JsonItem {
 
 	// for JT_NUMBER
 	int32_t m_valueLong;
+	int64_t m_value64;
 	// for JT_NUMBER
 	double m_valueDouble;
 

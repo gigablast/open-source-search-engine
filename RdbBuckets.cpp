@@ -885,6 +885,13 @@ bool RdbBuckets::addBucket (RdbBucket* newBucket, int32_t i) {
 	return true;
 }
 
+// void RdbBuckets::deleteBucket ( int32_t i ) {
+// 	int32_t moveSize = (m_numBuckets - i)*sizeof(RdbBuckets*);
+// 	if(moveSize > 0)
+// 		memmove(&m_buckets[i+1], &m_buckets[i], moveSize);
+// 	m_numBuckets--;
+// }
+
 bool RdbBuckets::getList ( collnum_t collnum ,
 			   char *startKey, char *endKey, int32_t minRecSizes ,
 			   RdbList *list , int32_t *numPosRecs , 
@@ -1768,6 +1775,66 @@ bool RdbBucket::deleteList(RdbList *list) {
 	return true;
 }
 
+// remove keys from any non-existent collection
+void RdbBuckets::cleanBuckets ( ) {
+
+	// what buckets have -1 rdbid???
+	if ( m_rdbId < 0 ) return;
+
+	// the liberation count
+	int32_t count = 0;
+
+	/*
+	char buf[50000];
+	RdbList list;
+	list.set ( NULL,
+		   0,
+		   buf,
+		   50000,
+		   0, // fixeddatasize
+		   false, // own data? should rdblist free it
+		   false, // usehalfkeys
+		   m_ks);
+	*/
+
+ top:
+
+	for ( int32_t i = 0; i < m_numBuckets; i++ ) {
+		RdbBucket *b = m_buckets[i];
+		collnum_t collnum = b->getCollnum();
+		CollectionRec *cr = g_collectiondb.m_recs[collnum];
+		if ( cr ) continue;
+		// count # deleted
+		count += b->getNumKeys();
+		// delete that coll
+		delColl ( collnum );
+		// restart
+		goto top;
+		/*
+		int32_t nk = b->getNumKeys();
+		for (int32_t j = 0 ; j < nk ; j++ ) {
+			char *kp = b->m_keys + j*m_ks;
+			// add into list. should just be a gbmemcpy()
+			list.addKey ( kp , 0 , NULL );
+		*/
+		//deleteBucket ( i );
+	}
+
+	// print it
+	if ( count == 0 ) return;
+	log(LOG_LOGIC,"db: Removed %"INT32" records from %s buckets "
+	    "for invalid collection numbers.",count,m_dbname);
+	//log(LOG_LOGIC,"db: Records not actually removed for safety. Except "
+	//    "for those with negative colnums.");
+	// static bool s_print = true;
+	// if ( ! s_print ) return;
+	// s_print = false;
+	// log (LOG_LOGIC,"db: This is bad. Did you remove a collection "
+	//      "subdirectory? Don't do that, you should use the \"delete "
+	//      "collections\" interface because it also removes records from "
+	//      "memory, too.");
+}
+
 
 bool RdbBuckets::delColl(collnum_t collnum) {
 
@@ -1783,7 +1850,8 @@ bool RdbBuckets::delColl(collnum_t collnum) {
 				minRecSizes /= 2;
 				continue;
 			} else {
-				log("db: buckets could not delete collection: %s.",
+				log("db: buckets could not delete "
+				    "collection: %s.",
 				    mstrerror(errno));
 				return false;
 			}
@@ -1791,6 +1859,8 @@ bool RdbBuckets::delColl(collnum_t collnum) {
 		if(list.isEmpty()) break;
 		deleteList(collnum, &list);
 	}
+
+	log("buckets: deleted all keys for collnum %"INT32,(int32_t)collnum);
 	return true;
 }
 

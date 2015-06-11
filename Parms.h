@@ -29,10 +29,10 @@ void handleRequest3f ( UdpSlot *slot , int32_t niceness ) ;
 
 // special priorities for the priority drop down 
 // in the url filters table
-enum {
-	SPIDER_PRIORITY_FILTERED  = -3 ,
-	SPIDER_PRIORITY_BANNED    = -2 ,
-	SPIDER_PRIORITY_UNDEFINED = -1 };
+//enum {
+//	SPIDER_PRIORITY_FILTERED  = -3 ,
+//	SPIDER_PRIORITY_BANNED    = -2 ,
+//	SPIDER_PRIORITY_UNDEFINED = -1 };
 
 enum {
 	OBJ_CONF    = 1 ,

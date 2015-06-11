@@ -157,6 +157,7 @@ class Conf {
 	SafeBuf m_proxyTestUrl;
 	bool    m_useRandAgents;
 	bool    m_useProxyIps;
+	bool    m_automaticallyUseProxyIps;
 	SafeBuf m_proxyAuth;
 
 	// built-in dns parameters using name servers
@@ -679,6 +680,8 @@ class Conf {
 	bool  m_logDebugStats   ;
 	bool  m_logDebugSummary ;
 	bool  m_logDebugSpider  ;
+	bool  m_logDebugMsg13   ;
+	bool  m_diffbotMsg13Hack ;
 	bool  m_logDebugUrlAttempts ;
 	bool  m_logDebugTcp     ;
 	bool  m_logDebugThread  ;

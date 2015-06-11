@@ -1625,6 +1625,11 @@ bool printDropDown ( int32_t n , SafeBuf* sb, char *name, int32_t select,
 	// . by default, minus 2 includes minus 3, the new "FILTERED" priority
 	// . it is link "BANNED" but does not mean the url is low quality necessarily
 	if ( includeMinusTwo ) i = -3;
+
+	// no more DELETE, etc.
+	i = 0;
+	if ( select < 0 ) select = 0;
+
 	for ( ; i < n ; i++ ) {
 		if ( i == select ) s = " selected";
 		else               s = "";
@@ -3446,8 +3451,11 @@ bool Parms::setFromFile ( void *THIS        ,
 	Xml xml;
 	//char buf [ MAX_XML_CONF ];
 	SafeBuf sb;
-	if ( filename&&!setXmlFromFile(&xml,filename,&sb))//buf,MAX_XML_CONF) )
+	if ( filename&&!setXmlFromFile(&xml,filename,&sb)){//buf,MAX_XML_CONF))
+		log("parms: error setting from file %s: %s",filename,
+		    mstrerror(g_errno));
 		return false;
+	}
 
 	// . all the collectionRecs have the same default file in
 	//   the workingDir/collections/default.conf
@@ -3499,7 +3507,7 @@ bool Parms::setFromFile ( void *THIS        ,
 		if ( m->m_type == TYPE_CONSTANT ) continue;
 		// these are special commands really
 		if ( m->m_type == TYPE_BOOL2    ) continue;
-		//if ( strcmp ( m->m_xml , "users" ) == 0 )
+		//if ( strcmp ( m->m_xml , "forceDeleteUrls" ) == 0 )
 		//	log("got it");
 		// we did not get one from first xml file yet
 		bool first = true;
@@ -8779,18 +8787,46 @@ void Parms::init ( ) {
 	//  
 	///////////////////////////////////////////
 
-	m->m_title = "use spider proxies";
-	m->m_desc  = "Use the spider proxies listed below. If none are "
-		"listed then gb will not use any.";
+	m->m_title = "always use spider proxies for all collections";
+	m->m_desc  = "ALWAYS Use the spider proxies listed below for "
+		"spidering. If none are "
+		"listed then gb will not use any. Applies to all collections. "
+		"If you want to regulate this on a per collection basis then "
+		"set this to <b>NO</b> here and adjust the "
+		"proxy controls on the "
+		"<b>spider controls</b> page. If the list of proxy IPs below "
+		"is empty, then of course, no proxies will be used.";
 	m->m_cgi   = "useproxyips";
 	m->m_xml   = "useSpiderProxies";
 	m->m_off   = (char *)&g_conf.m_useProxyIps - g;
 	m->m_type  = TYPE_BOOL;
-	m->m_def   = "1";
-	m->m_flags = 0;
+	m->m_def   = "0";
+	// hide this for now. just make it a per collection parm.
+	m->m_flags = PF_HIDDEN;
 	m->m_page  = PAGE_SPIDERPROXIES;
 	m->m_obj   = OBJ_CONF;
 	m++;
+
+	m->m_title = "automatically use spider proxies for all collections";
+	m->m_desc  = "AUTOMATICALLY use the spider proxies listed below for "
+		"spidering. If none are "
+		"listed then gb will not use any. Applies to all collections. "
+		"If you want to regulate this on a per collection basis then "
+		"set this to <b>NO</b> here and adjust the "
+		"proxy controls on the "
+		"<b>spider controls</b> page. If the list of proxy IPs below "
+		"is empty, then of course, no proxies will be used.";
+	m->m_cgi   = "autouseproxyips";
+	m->m_xml   = "automaticallyUseSpiderProxies";
+	m->m_off   = (char *)&g_conf.m_automaticallyUseProxyIps - g;
+	m->m_type  = TYPE_BOOL;
+	m->m_def   = "0";
+	// hide this for now. just make it a per collection parm.
+	m->m_flags = PF_HIDDEN;
+	m->m_page  = PAGE_SPIDERPROXIES;
+	m->m_obj   = OBJ_CONF;
+	m++;
+
 
 	m->m_title = "spider proxy ips";
 	m->m_desc  = "List of white space-separated spider proxy IPs. Put "
@@ -12985,11 +13021,15 @@ void Parms::init ( ) {
 		"expressions. "
 		"Use the <i>&&</i> operator to string multiple expressions "
 		"together in the same expression text box. "
-		"A <i>spider priority</i> of "
+		"If you check the <i>delete</i> checkbox then urls matching "
+		"that row will be deleted if already indexed, otherwise, "
+		"they just won't be indexed."
+		//"A <i>spider priority</i> of "
 		//"<i>FILTERED</i> or <i>BANNED</i> "
-		"<i>DELETE</i> "
-		"will cause the URL to not be spidered, or if it has already "
-		"been indexed, it will be deleted when it is respidered."
+		// "<i>DELETE</i> "
+		// "will cause the URL to not be spidered, "
+		// "or if it has already "
+		// "been indexed, it will be deleted when it is respidered."
 		"<br><br>";
 		
 		/*
@@ -13158,6 +13198,19 @@ void Parms::init ( ) {
 	m->m_rowid = 1;
 	m++;
 	*/
+
+	m->m_title = "delete";
+	m->m_cgi   = "fdu";
+	m->m_xml   = "forceDeleteUrls";
+	m->m_max   = MAX_FILTERS;
+	m->m_off   = (char *)cr.m_forceDelete - x;
+	m->m_type  = TYPE_CHECKBOX;
+	m->m_def   = "0";
+	m->m_page  = PAGE_FILTERS;
+	m->m_rowid = 1;
+	m->m_flags = PF_REBUILDURLFILTERS | PF_CLONE;
+	m->m_obj   = OBJ_COLL;
+	m++;
 
 	m->m_title = "spider priority";
 	m->m_cgi   = "fsp";
@@ -16415,16 +16468,57 @@ void Parms::init ( ) {
 	m++;
 
 
-	m->m_title = "use proxies for spidering";
-	m->m_desc  = "If this is true Gigablast will use the proxies "
-		"listed on the <a href=/admin/proxies>proxies</a> page for "
+	m->m_title = "always use spider proxies";
+	m->m_desc  = "If this is true Gigablast will ALWAYS use the proxies "
+		"listed on the <a href=/admin/proxies>proxies</a> "
+		"page for "
 		"spidering for "
-		"this collection regardless whether the proxies are enabled "
-		"on the <a href=/admin/proxies>proxies</a> page.";
+		"this collection."
+		//"regardless whether the proxies are enabled "
+		//"on the <a href=/admin/proxies>proxies</a> page."
+		;
 	m->m_cgi   = "useproxies";
 	m->m_off   = (char *)&cr.m_forceUseFloaters - x;
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "0";
+	m->m_page  = PAGE_SPIDER;
+	m->m_obj   = OBJ_COLL;
+	m->m_flags = PF_CLONE;
+	m++;
+
+	m->m_title = "automatically use spider proxies";
+	m->m_desc  = "Use the spider proxies listed on the proxies page "
+		"if gb detects that "
+		"a webserver is throttling the spiders. This way we can "
+		"learn the webserver's spidering policy so that our spiders "
+		"can be more polite. If no proxies are listed on the "
+		"proxies page then this parameter will have no effect.";
+	m->m_cgi   = "automaticallyuseproxies";
+	m->m_off   = (char *)&cr.m_automaticallyUseProxies - x;
+	m->m_type  = TYPE_BOOL;
+	m->m_def   = "0";
+	m->m_group = 0;
+	m->m_page  = PAGE_SPIDER;
+	m->m_obj   = OBJ_COLL;
+	m->m_flags = PF_CLONE;
+	m++;
+
+
+
+	m->m_title = "automatically back off";
+	m->m_desc  = "Set the crawl delay to 5 seconds if gb detects "
+		"that an IP is throttling or banning gigabot from crawling "
+		"it. The crawl delay just applies to that IP. "
+		"Such throttling will be logged.";
+	m->m_cgi   = "automaticallybackoff";
+	m->m_xml   = "automaticallyBackOff";
+	m->m_off   = (char *)&cr.m_automaticallyBackOff - x;
+	m->m_type  = TYPE_BOOL;
+	// a lot of pages have recaptcha links but they have valid content
+	// so leave this off for now... they have it in a hidden div which
+	// popups to email the article link or whatever to someone.
+	m->m_def   = "0";
+	m->m_group = 0;
 	m->m_page  = PAGE_SPIDER;
 	m->m_obj   = OBJ_COLL;
 	m->m_flags = PF_CLONE;
@@ -17148,6 +17242,7 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&cr.m_doLinkSpamCheck - x;
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "1";
+	m->m_group = 0;
 	m->m_page  = PAGE_SPIDER;
 	m->m_obj   = OBJ_COLL;
 	m->m_flags = PF_CLONE;
@@ -17729,6 +17824,7 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&cr.m_thumbnailMaxWidthHeight - x;
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "250";
+	m->m_group = 0;
 	m->m_page  = PAGE_SPIDER;
 	m->m_obj   = OBJ_COLL;
 	m->m_flags = PF_CLONE;
@@ -17754,7 +17850,8 @@ void Parms::init ( ) {
 	// and we add gbdocspidertime and gbdocindextime terms so you
 	// can use those to sort regular docs and not have spider reply
 	// status docs in the serps.
-	m->m_def   = "0";
+	// back on 4/21/2015 seems pretty stable.
+	m->m_def   = "1";
 	m->m_page  = PAGE_SPIDER;
 	m->m_obj   = OBJ_COLL;
 	m->m_flags = PF_CLONE;
@@ -17796,6 +17893,54 @@ void Parms::init ( ) {
 	m->m_page  = PAGE_SPIDER;
 	m->m_obj   = OBJ_COLL;
 	m++;
+
+	m->m_cgi   = "urlProcessPatternTwo";
+	m->m_desc  = "Only send urls that match this simple substring "
+		"pattern to Diffbot. Separate substrings with two pipe "
+		"operators, ||. Leave empty for no restrictions.";
+	m->m_xml   = "diffbotUrlProcessPattern";
+	m->m_title = "diffbot url process pattern";
+	m->m_off   = (char *)&cr.m_diffbotUrlProcessPattern - x;
+	m->m_type  = TYPE_SAFEBUF;
+	m->m_page  = PAGE_SPIDER;
+	m->m_obj   = OBJ_COLL;
+	m->m_def   = "";
+	m->m_group = 0;
+	m->m_flags = PF_REBUILDURLFILTERS | PF_CLONE;
+	m++;
+
+	m->m_cgi   = "urlProcessRegExTwo";
+	m->m_desc  = "Only send urls that match this regular expression "
+		"to Diffbot. "
+		"Leave empty for no restrictions.";
+	m->m_xml   = "diffbotUrlProcessRegEx";
+	m->m_title = "diffbot url process regex";
+	m->m_off   = (char *)&cr.m_diffbotUrlProcessRegEx - x;
+	m->m_type  = TYPE_SAFEBUF;
+	m->m_page  = PAGE_SPIDER;
+	m->m_obj   = OBJ_COLL;
+	m->m_def   = "";
+	m->m_group = 0;
+	m->m_flags = PF_REBUILDURLFILTERS | PF_CLONE;
+	m++;
+
+	m->m_cgi   = "pageProcessPatternTwo";
+	m->m_desc  = "Only send urls whose content matches this simple "
+		"substring "
+		"pattern to Diffbot. Separate substrings with two pipe "
+		"operators, ||. "
+		"Leave empty for no restrictions.";
+	m->m_xml   = "diffbotPageProcessPattern";
+	m->m_title = "diffbot page process pattern";
+	m->m_off   = (char *)&cr.m_diffbotPageProcessPattern - x;
+	m->m_type  = TYPE_SAFEBUF;
+	m->m_page  = PAGE_SPIDER;
+	m->m_obj   = OBJ_COLL;
+	m->m_def   = "";
+	m->m_group = 0;
+	m->m_flags = PF_REBUILDURLFILTERS | PF_CLONE;
+	m++;
+
 
 
 	m->m_title = "spider start time";
@@ -19380,6 +19525,26 @@ void Parms::init ( ) {
 	m->m_title = "log debug spider messages";
 	m->m_cgi   = "ldspid";
 	m->m_off   = (char *)&g_conf.m_logDebugSpider - g;
+	m->m_type  = TYPE_BOOL;
+	m->m_def   = "0";
+	m->m_priv  = 1;
+	m->m_page  = PAGE_LOG;
+	m->m_obj   = OBJ_CONF;
+	m++;
+
+	m->m_title = "log debug msg13 messages";
+	m->m_cgi   = "ldspmth";
+	m->m_off   = (char *)&g_conf.m_logDebugMsg13 - g;
+	m->m_type  = TYPE_BOOL;
+	m->m_def   = "0";
+	m->m_priv  = 1;
+	m->m_page  = PAGE_LOG;
+	m->m_obj   = OBJ_CONF;
+	m++;
+
+	m->m_title = "disable host0 for msg13 reception hack";
+	m->m_cgi   = "dmth";
+	m->m_off   = (char *)&g_conf.m_diffbotMsg13Hack - g;
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "0";
 	m->m_priv  = 1;
@@ -22006,6 +22171,41 @@ bool Parms::updateParm ( char *rec , WaitEntry *we ) {
 			cr->m_localCrawlInfo.m_lastSpiderAttempt = 0;
 		}
 	}
+
+	//
+	// if user changed the crawl/process max then reset here so
+	// spiders will resume
+	// 
+	if ( base == cr && 
+	     dst == (char *)&cr->m_maxToCrawl &&
+	     cr->m_spiderStatus == SP_MAXTOCRAWL ) {
+		// reset this for rebuilding of active spider collections
+		// so this collection can be in the linked list again
+		cr->m_spiderStatus = SP_INPROGRESS;
+		// rebuild list of active spider collections then
+		g_spiderLoop.m_activeListValid = false;
+	}
+
+	if ( base == cr && 
+	     dst == (char *)&cr->m_maxToProcess &&
+	     cr->m_spiderStatus == SP_MAXTOPROCESS ) {
+		// reset this for rebuilding of active spider collections
+		// so this collection can be in the linked list again
+		cr->m_spiderStatus = SP_INPROGRESS;
+		// rebuild list of active spider collections then
+		g_spiderLoop.m_activeListValid = false;
+	}
+
+	if ( base == cr && 
+	     dst == (char *)&cr->m_maxCrawlRounds &&
+	     cr->m_spiderStatus == SP_MAXROUNDS ) {
+		// reset this for rebuilding of active spider collections
+		// so this collection can be in the linked list again
+		cr->m_spiderStatus = SP_INPROGRESS;
+		// rebuild list of active spider collections then
+		g_spiderLoop.m_activeListValid = false;
+	}
+
 	//
 	// END HACK
 	//
@@ -22287,11 +22487,18 @@ bool printUrlExpressionExamples ( SafeBuf *sb ) {
 
 
 			  "<tr class=poo><td>isrss | !isrss</td>"
-			  "<td>Matches if document is an rss feed. "
-			  "When harvesting outlinks we <i>guess</i> if they "
-			  "are an rss feed by seeing if their file extension "
-			  "is xml, rss or rdf. Or if they are in an "
-			  "alternative link tag.</td></tr>"
+			  "<td>Matches if document is an RSS feed. Will "
+			  "only match this rule if the document has been "
+			  "successfully spidered before, because it requires "
+			  "downloading the document content to see if it "
+			  "truly is an RSS feed.."
+			  "</td></tr>"
+
+			  "<tr class=poo><td>isrssext | !isrssext</td>"
+			  "<td>Matches if url ends in .xml .rss or .atom. "
+			  "TODO: Or if the link was in an "
+			  "alternative link tag."
+			  "</td></tr>"
 
 			  //"<tr class=poo><td>!isrss</td>"
 			  //"<td>Matches if document is NOT an rss feed."
@@ -22355,6 +22562,14 @@ bool printUrlExpressionExamples ( SafeBuf *sb ) {
 			  "You have to use the respider frequency as well "
 			  "to adjust how often you want things respidered."
 			  "</td></tr>"
+
+			  "<tr class=poo><td>urlage</td>"
+			  "<td>"
+			  "This is the time, in seconds, since a url was first "
+			  "added to spiderdb to be spidered. This is "
+			  "its discovery date. "
+			  "Can use <, >, <=, >=, ==, != comparison operators."
+			  "</td></tr>"
 			  
 
 			  //"<tr class=poo><td>!newoutlink</td>"
@@ -22376,6 +22591,20 @@ bool printUrlExpressionExamples ( SafeBuf *sb ) {
 			  "forms of permalinks. This allows us to put "
 			  "older permalinks into a slower spider queue."
 			  "</td></tr>"
+
+			  "<tr class=poo><td>spiderwaited &lt; 3600</td>"
+			  "<td>"
+			  "<i>spiderwaited</i> is how many seconds have elapsed "
+			  "since the last time "
+			  "we tried to spider/download the url. "
+			  "The constaint containing <i>spiderwaited</i> will "
+			  "fail to be matched if the url has never been "
+			  "attempted to be spidered/downloaded before. Therefore, "
+			  "it will only ever match urls that have a spider reply "
+			  "of some sort, so there is no need to add an additional "
+			  "<i>hasreply</i>-based constraint."
+			  "</td></tr>"
+
 
 			  "<tr class=poo><td>"
 			  "<a name=insitelist>"
@@ -22452,6 +22681,13 @@ bool printUrlExpressionExamples ( SafeBuf *sb ) {
 			  "then this will be matched."
 			  "</td></tr>"
 
+			  "<tr class=poo><td>isparentsitemap | "
+			  "!isparentsitemap</td>"
+			  "<td>"
+			  "If a parent of the URL was a sitemap.xml page "
+			  "then this will be matched."
+			  "</td></tr>"
+
 			  /*
 			  "<tr class=poo><td>parentisnew | !parentisnew</td>"
 			  "<td>"
@@ -22517,6 +22753,20 @@ bool printUrlExpressionExamples ( SafeBuf *sb ) {
 			  "once."
 			  "Can use <, >, <=, >=, ==, != comparison operators. "
 			  "</td></tr>"
+
+
+			  "<tr class=poo><td>numinlinks&gt;20</td>"
+			  "<td>"
+			  "How many inlinks does the URL itself have? "
+			  "We only count one link per unique C-Class IP "
+			  "address "
+			  "so that a webmaster who owns an entire C-Class "
+			  "of IP addresses will only have her inlinks counted "
+			  "once."
+			  "Can use <, >, <=, >=, ==, != comparison operators. "
+			  "This is useful for spidering popular URLs quickly."
+			  "</td></tr>"
+
 
 			  "<tr class=poo><td>httpstatus==404</td>"
 			  "<td>"
@@ -22648,6 +22898,14 @@ bool printUrlExpressionExamples ( SafeBuf *sb ) {
 			  "and so would <i>abc.com</i>, but "
 			  "<i>foo.somesite.com</i> would NOT match."
 			  "</td></tr>"
+
+
+			  "<tr class=poo><td>isroot | !isroot</td>"
+			  "<td>Matches if the URL is a root URL. Like if "
+			  "its path is just '/'. Example: http://www.abc.com "
+			  "is a root ur but http://www.abc.com/foo is not. "
+			  "</td></tr>"
+
 
 			  "<tr class=poo><td>isonsamedomain | !isonsamedomain</td>"
 			  "<td>"

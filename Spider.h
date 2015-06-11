@@ -509,15 +509,30 @@ class SpiderRequest {
 	// spidered (when m_url was not an outlink on its parent page)
 	uint32_t  m_parentPrevSpiderTime; // time_t
 
+	//int32_t    m_parentFirstIp;
+	// # of spider requests from different c-blocks. capped at 255.
+	// taken from the # of SpiderRequests.
+	uint8_t    m_pageNumInlinks;
+	uint8_t    m_reservedb2;
+	uint8_t    m_reservedb3;
+	uint8_t    m_reservedb4;
+
 	// info on the page we were harvest from
-	int32_t    m_parentFirstIp;
 	int32_t    m_parentHostHash32;
 	int32_t    m_parentDomHash32;
 	int32_t    m_parentSiteHash32;
 
+	// if there are several spiderrequests for a url, this should be
+	// the earliest m_addedTime, basically, the url discovery time. this is
+	// NOT valid in spiderdb, but only set upon selecting the url to spider
+	// when we scan all of the SpiderRequests it has.
+	int32_t m_discoveryTime;
+
 	// the PROBABLE DOCID. if there is a collision with another docid
 	// then we increment the last 8 bits or so. see Msg22.cpp.
-	int64_t m_probDocId;
+	//int64_t m_probDocId;
+	//int32_t m_reservedc1;
+	int32_t m_reservedc2;
 
 	//int32_t  m_parentPubDate;
 
@@ -550,8 +565,8 @@ class SpiderRequest {
 	/* char    m_onlyDoNotAddLinksLinksLinks   :1; // max hopcount 2 */
 	char    m_ignoreDocUnchangedError:1;//reserved2a:1;
 	char    m_recycleContent:1;//m_reserved2b:1;
-	char    m_reserved2c:1;
-	char    m_reserved2d:1;
+	char    m_hasMediaExtension:1; // reserved2c:1;
+	char    m_hasMediaExtensionValid:1;
 
 	char    m_reserved2e:1;
 	char    m_reserved2f:1;
@@ -583,11 +598,12 @@ class SpiderRequest {
 	// or from PageParser.cpp directly
 	int32_t    m_isPageParser:1; 
 	// should we use the test-spider-dir for caching test coll requests?
-	int32_t    m_useTestSpiderDir:1;
+	//int32_t    m_useTestSpiderDir:1;
+	int32_t    m_parentIsSiteMap:1;
 	// . is the url a docid (not an actual url)
 	// . could be a "query reindex"
 	int32_t    m_urlIsDocId:1;
-	// does m_url end in .rss? or a related rss file extension?
+	// does m_url end in .rss .xml .atom? or a related rss file extension?
 	int32_t    m_isRSSExt:1;
 	// is url in a format known to be a permalink format?
 	int32_t    m_isUrlPermalinkFormat:1;
@@ -819,6 +835,7 @@ class SpiderReply {
 	// a SpiderRec outright
 	key128_t   m_key;
 
+	// this can be used for something else really. all SpiderReplies are fixed sz
 	int32_t    m_dataSize;
 
 	// for calling getHostIdToDole()
@@ -921,7 +938,7 @@ class SpiderReply {
 	// was the request an injection request
 	int32_t    m_fromInjectionRequest    :1; 
 	// did we TRY to send it to the diffbot backend filter? might be err?
-	int32_t    m_sentToDiffbot           :1;
+	int32_t    m_sentToDiffbotThisTime   :1;
 	int32_t    m_hadDiffbotError         :1;
 	// . was it in the index when we started?
 	// . we use this with m_isIndexed above to adjust quota counts for
@@ -1145,6 +1162,14 @@ class SpiderColl {
 	int32_t      m_tailHopCount;
 	int64_t m_minFutureTimeMS;
 
+	// these don't work because we only store one reply
+	// which overwrites any older reply. that's how the 
+	// key is. we can change the key to use the timestamp 
+	// and not parent docid in makeKey() for spider 
+	// replies later.
+	// int32_t m_numSuccessReplies;
+	// int32_t m_numFailedReplies;
+
 	// . do not re-send CrawlInfoLocal for a coll if not update
 	// . we store the flags in here as true if we should send our
 	//   CrawlInfoLocal for this coll to this hostId
@@ -1212,6 +1237,7 @@ class SpiderColl {
 	int32_t     m_numAdded;
 	int64_t m_numBytesScanned;
 	int64_t m_lastPrintCount;
+	int64_t m_lastPrinted;
 
 	// used by SpiderLoop.cpp
 	int32_t m_spidersOut;
@@ -1253,6 +1279,7 @@ class SpiderColl {
 	bool addToWaitingTree    ( uint64_t spiderTime , int32_t firstIp ,
 				   bool callForScan );
 	int32_t getNextIpFromWaitingTree ( );
+	uint64_t getNextSpiderTimeFromWaitingTree ( ) ;
 	void populateDoledbFromWaitingTree ( );
 
 	//bool scanSpiderdb        ( bool needList );
@@ -1305,6 +1332,11 @@ class SpiderColl {
 	int32_t *m_overflowList;
 	int64_t  m_totalNewSpiderRequests;
 	int64_t  m_lastSreqUh48;
+
+	int32_t m_cblocks[20];
+	int32_t m_pageNumInlinks;
+	int32_t m_lastCBlockIp;
+		
 	int32_t  m_lastOverflowFirstIp;
 
  private:

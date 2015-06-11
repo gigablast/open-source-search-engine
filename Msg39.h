@@ -188,6 +188,7 @@ public:
 	char  *ptr_scoreInfo      ; // transparency info
 	char  *ptr_pairScoreBuf   ; // transparency info
 	char  *ptr_singleScoreBuf ; // transparency info
+	char  *ptr_numDocsThatHaveFacetList ;
 	// this is now 1-1 with # of query terms!
 	char  *ptr_facetHashList   ; // list of all the facet values in serps
 	char  *ptr_clusterRecs    ; // key_t (might be empty)
@@ -199,6 +200,7 @@ public:
 	int32_t   size_scoreInfo;
 	int32_t   size_pairScoreBuf  ;
 	int32_t   size_singleScoreBuf;
+	int32_t   size_numDocsThatHaveFacetList ;
 	int32_t   size_facetHashList;
 	int32_t   size_clusterRecs;
 

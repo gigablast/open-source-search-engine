@@ -108,6 +108,7 @@ Msg40::Msg40() {
 	m_omitCount      = 0;
 	m_printCount = 0;
 	//m_numGigabitInfos = 0;
+	m_numCollsToSearch = 0;
 }
 
 #define MAX2 50
@@ -140,6 +141,14 @@ void Msg40::resetBuf2 ( ) {
 }
 
 Msg40::~Msg40() {
+	// free tmp msg3as now
+	for ( int32_t i = 0 ; i < m_numCollsToSearch ; i++ ) {
+		if ( ! m_msg3aPtrs[i] ) continue;
+		if ( m_msg3aPtrs[i] == &m_msg3a ) continue;
+		mdelete ( m_msg3aPtrs[i] , sizeof(Msg3a), "tmsg3a");
+		delete  ( m_msg3aPtrs[i] );
+		m_msg3aPtrs[i] = NULL;
+	}
 	if ( m_buf  ) mfree ( m_buf  , m_bufMaxSize  , "Msg40" );
 	m_buf  = NULL;
 	resetBuf2();
@@ -1895,7 +1904,13 @@ bool Msg40::gotSummary ( ) {
 			for ( k = 0 ; k < m_needFirstReplies ; k++ ) {
 				Msg20 *xx = getCompletedSummary(k);
 				if ( ! xx ) break;
-				if ( ! xx->m_r ) break;
+				if ( ! xx->m_r && 
+				     // and it did not have an error fetching
+				     // because m_r could be NULL and m_errno
+				     // is set to something like Bad Cached
+				     // Document
+				     ! xx->m_errno ) 
+					break;
 			}
 			// if not all have come back yet, wait longer...
 			if ( k < m_needFirstReplies ) break;
@@ -2009,7 +2024,9 @@ bool Msg40::gotSummary ( ) {
 		m20->reset();
 	}
 
-	// set it to true on all but the last thing we send!
+	// . set it to true on all but the last thing we send!
+	// . after each chunk of data we send out, TcpServer::sendChunk
+	//   will call our callback, doneSendingWrapper9 
 	if ( m_si->m_streamResults )
 		st->m_socket->m_streamingMode = true;
 
@@ -2108,7 +2125,8 @@ bool Msg40::gotSummary ( ) {
 	//   socket but rather calls doneSendingWrapper() which can call
 	//   this function again to send another chunk
 	// . when we are truly done sending all the data, then we set lastChunk
-	//   to true and TcpServer.cpp will destroy m_socket when done
+	//   to true and TcpServer.cpp will destroy m_socket when done.
+	//   no, actually we just set m_streamingMode to false i guess above
 	if ( sb->length() &&
 	     // did client browser close the socket on us midstream?
 	     ! m_socketHadError &&
@@ -2179,6 +2197,8 @@ bool Msg40::gotSummary ( ) {
 		//mdelete(st, sizeof(State0), "msg40st0");
 		//delete st;
 		// otherwise, all done!
+		log("msg40: did not send stuff from last summary. BUG "
+		    "this=0x%"PTRFMT"",(PTRTYPE)this);
 		return true;
 	}
 
@@ -5774,6 +5794,7 @@ bool printHttpMime ( State0 *st ) {
 //
 /////////////////
 
+/*
 // return 1 if a should be before b
 static int csvPtrCmp ( const void *a, const void *b ) {
 	//JsonItem *ja = (JsonItem **)a;
@@ -5791,6 +5812,7 @@ static int csvPtrCmp ( const void *a, const void *b ) {
 	int val = strcmp(pa,pb);
 	return val;
 }
+*/
 	
 #include "Json.h"
 
@@ -5802,11 +5824,9 @@ bool Msg40::printCSVHeaderRow ( SafeBuf *sb ) {
 	//Msg40 *msg40 = &st->m_msg40;
 	//int32_t numResults = msg40->getNumResults();
 
+	/*
 	char tmp1[1024];
 	SafeBuf tmpBuf (tmp1 , 1024);
-
-	char tmp2[1024];
-	SafeBuf nameBuf (tmp2, 1024);
 
 	char nbuf[27000];
 	HashTableX nameTable;
@@ -5905,9 +5925,8 @@ bool Msg40::printCSVHeaderRow ( SafeBuf *sb ) {
 	}
 
 	// sort them
-	qsort ( ptrs , numPtrs , 4 , csvPtrCmp );
+	qsort ( ptrs , numPtrs , sizeof(char *) , csvPtrCmp );
 
-	// set up table to map field name to column for printing the json items
 	HashTableX *columnTable = &m_columnTable;
 	if ( ! columnTable->set ( 8,4, numPtrs * 4,NULL,0,false,0,"coltbl" ) )
 		return false;
@@ -5922,6 +5941,37 @@ bool Msg40::printCSVHeaderRow ( SafeBuf *sb ) {
 		if ( ! columnTable->addKey ( &h64 , &i ) ) 
 			return false;
 	}
+	*/
+
+	Msg20 *msg20s[100];
+	int32_t i;
+	for ( i = 0 ; i < m_needFirstReplies && i < 100 ; i++ ) {
+		Msg20 *m20 = getCompletedSummary(i);
+		if ( ! m20 ) break;
+		msg20s[i] = m20;
+	}
+
+	int32_t numPtrs = 0;
+
+	char tmp2[1024];
+	SafeBuf nameBuf (tmp2, 1024);
+
+	int32_t ct = 0;
+	if ( msg20s[0] ) ct = msg20s[0]->m_r->m_contentType;
+
+	CollectionRec *cr =g_collectiondb.getRec(m_firstCollnum);
+
+	// . set up table to map field name to col for printing the json items
+	// . call this from PageResults.cpp 
+	printCSVHeaderRow2 ( sb , 
+			     ct ,
+			     cr ,
+			     &nameBuf ,
+			     &m_columnTable ,
+			     msg20s ,
+			     i , // numResults ,
+			     &numPtrs 
+			     );
 
 	m_numCSVColumns = numPtrs;
 
@@ -6016,6 +6066,8 @@ bool Msg40::printJsonItemInCSV ( State0 *st , int32_t ix ) {
 
 		// sanity
 		if ( column == -1 ) {//>= numCSVColumns ) { 
+			// don't show it any more...
+			continue;
 			// add a new column...
 			int32_t newColnum = numCSVColumns + 1;
 			// silently drop it if we already have too many cols
@@ -6050,6 +6102,7 @@ bool Msg40::printJsonItemInCSV ( State0 *st , int32_t ix ) {
 		//
 		// get value and print otherwise
 		//
+		/*
 		if ( ji->m_type == JT_NUMBER ) {
 			// print numbers without double quotes
 			if ( ji->m_valueDouble *10000000.0 == 
@@ -6059,11 +6112,15 @@ bool Msg40::printJsonItemInCSV ( State0 *st , int32_t ix ) {
 				sb->safePrintf("%f",ji->m_valueDouble);
 			continue;
 		}
+		*/
+
+		int32_t vlen;
+		char *str = ji->getValueAsString ( &vlen );
 
 		// print the value
 		sb->pushChar('\"');
 		// get the json item to print out
-		int32_t  vlen = ji->getValueLen();
+		//int32_t  vlen = ji->getValueLen();
 		// truncate
 		char *truncStr = NULL;
 		if ( vlen > 32000 ) {
@@ -6073,7 +6130,8 @@ bool Msg40::printJsonItemInCSV ( State0 *st , int32_t ix ) {
 				"JSON to get untruncated data.";
 		}
 		// print it out
-		sb->csvEncode ( ji->getValue() , vlen );
+		//sb->csvEncode ( ji->getValue() , vlen );
+		sb->csvEncode ( str , vlen );
 		// print truncate msg?
 		if ( truncStr ) sb->safeStrcpy ( truncStr );
 		// end the CSV
@@ -6304,6 +6362,41 @@ bool Msg40::printFacetTables ( SafeBuf *sb ) {
 
 	int32_t saved = sb->length();
 
+        // If json, print beginning of json array
+        if ( format == FORMAT_JSON ) {
+                if ( m_si->m_streamResults ) {
+                        // if we are streaming results in json, we may have hacked off
+                        // the last ,\n so we need a comma to put it back
+                        bool needComma = true;
+
+                        // check if the last non-whitespace char in the
+                        // buffer is a comma
+                        for (int32_t i= sb->m_length-1; i >= 0; i--) {
+                                char c = sb->getBufStart()[i];
+                                if (c == '\n' || c == ' ') {
+                                        // ignore whitespace chars
+                                        continue;
+                                }
+
+                                // If the loop reaches this point, we have a
+                                // non-whitespace char, so we break the loop
+                                // either way
+                                if (c == ',') {
+                                        // last non-whitespace char is a comma,
+                                        // so we don't need to add an extra one
+                                        needComma = false;
+                                }
+                                break;
+                        }
+
+                        if ( needComma ) {
+                                sb->safeStrcpy(",\n\n");
+                        }
+                }
+                sb->safePrintf("\"facets\":[");
+	}
+
+        int numTablesPrinted = 0;
 	for ( int32_t i = 0 ; i < m_si->m_q.getNumTerms() ; i++ ) {
 		// only for html for now i guess
 		//if ( m_si->m_format != FORMAT_HTML ) break;
@@ -6315,9 +6408,24 @@ bool Msg40::printFacetTables ( SafeBuf *sb ) {
 			continue;
 
 		// if had facet ranges, print them out
-		printFacetsForTable ( sb , qt );;
-
+		if ( printFacetsForTable ( sb , qt ) > 0 )
+			numTablesPrinted++;
 	}
+
+        // If josn, print end of json array
+        if ( format == FORMAT_JSON ) {
+                if ( numTablesPrinted > 0 ) {
+                        sb->m_length -= 2; // hack off trailing comma
+			sb->safePrintf("],\n"); // close off json array
+	        }
+		// if no facets then do not print "facets":[]\n,
+		else {
+			// revert string buf to original length
+			sb->m_length = saved;
+			// and cap the string buf just in case
+			sb->nullTerm();
+		}
+        }
 
 	// if json, remove ending ,\n and make it just \n
 	if ( format == FORMAT_JSON && sb->length() != saved ) {
@@ -6339,7 +6447,7 @@ bool Msg40::printFacetTables ( SafeBuf *sb ) {
 	return true;
 }
 
-bool Msg40::printFacetsForTable ( SafeBuf *sb , QueryTerm *qt ) {
+int32_t Msg40::printFacetsForTable ( SafeBuf *sb , QueryTerm *qt ) {
 
 	//QueryWord *qw = qt->m_qword;
 	//if ( qw->m_numFacetRanges > 0 )
@@ -6349,9 +6457,14 @@ bool Msg40::printFacetsForTable ( SafeBuf *sb , QueryTerm *qt ) {
 	int32_t *ptrs = (int32_t *)qt->m_facetIndexBuf.getBufStart();
 	int32_t numPtrs = qt->m_facetIndexBuf.length() / sizeof(int32_t);
 
+	if ( numPtrs == 0 )
+		return 0;
+
+	int32_t numPrinted = 0;
+
 	// now scan the slots and print out
 	HttpRequest *hr = &m_si->m_hr;
-	bool firstTime = true;
+
 	bool isString = false;
 	bool isFloat  = false;
 	bool isInt = false;
@@ -6361,6 +6474,7 @@ bool Msg40::printFacetsForTable ( SafeBuf *sb , QueryTerm *qt ) {
 	char format = m_si->m_format;
 	// a new table for each facet query term
 	bool needTable = true;
+
 	// print out the dumps
 	for ( int32_t x= 0 ; x < numPtrs ; x++ ) {
 		// skip empty slots
@@ -6375,8 +6489,12 @@ bool Msg40::printFacetsForTable ( SafeBuf *sb , QueryTerm *qt ) {
 		FacetEntry *fe;
 		fe = (FacetEntry *)fht->getValueFromSlot(j);
 		int32_t count = 0;
+		int64_t allCount = 0;
 		// could be empty if range had no values in it
-		if ( fe ) count = fe->m_count;
+		if ( fe ) {
+			count = fe->m_count;
+			allCount = fe->m_outsideSearchResultsCount;
+		}
 
 		char *text = NULL;
 
@@ -6464,20 +6582,29 @@ bool Msg40::printFacetsForTable ( SafeBuf *sb , QueryTerm *qt ) {
 			text = m_facetTextBuf.getBufStart() + *offset;
 		}
 
+
 		if ( format == FORMAT_XML ) {
+			numPrinted++;
 			sb->safePrintf("\t<facet>\n"
 				       "\t\t<field>%s</field>\n"
-				       "\t\t<value>"
-				       , term
-				       );
+				       , term );
+			sb->safePrintf("\t\t<totalDocsWithField>%"INT64""
+				       "</totalDocsWithField>\n"
+				       , qt->m_numDocsThatHaveFacet );
+			sb->safePrintf("\t\t<totalDocsWithFieldAndValue>"
+				       "%"INT64""
+				       "</totalDocsWithFieldAndValue>\n"
+				       , allCount );
+			sb->safePrintf("\t\t<value>");
+
 			if ( isString )
 				sb->safePrintf("<![CDATA[%"UINT32",",
 					       (uint32_t)*fvh);
 			sb->cdataEncode ( text );
 			if ( isString )
 				sb->safePrintf("]]>");
-			sb->safePrintf("</value>\n"
-				       "\t\t<docCount>%"INT32""
+			sb->safePrintf("</value>\n");
+			sb->safePrintf("\t\t<docCount>%"INT32""
 				       "</docCount>\n"
 				       ,count);
 			// some stats now for floats
@@ -6512,17 +6639,6 @@ bool Msg40::printFacetsForTable ( SafeBuf *sb , QueryTerm *qt ) {
 			}
 			sb->safePrintf("\t</facet>\n");
 			continue;
-		}
-
-		if ( format == FORMAT_JSON && firstTime ) {
-			firstTime = false;
-			// if streaming results we may have hacked off
-			// the last ,\n so put it back
-			if ( m_si->m_streamResults ) {
-				//sb->m_length -= 1;
-				sb->safeStrcpy(",\n\n");
-			}
-			//sb->safePrintf("\"facets\":[\n");
 		}
 
 		// print that out
@@ -6560,18 +6676,20 @@ bool Msg40::printFacetsForTable ( SafeBuf *sb , QueryTerm *qt ) {
 		}
 
 
-		if ( needTable && format == FORMAT_JSON ) {
-			needTable = false;
-			sb->safePrintf("\"facets\":[");
-		}
-
-
 		if ( format == FORMAT_JSON ) {
+			numPrinted++;
 			sb->safePrintf("{\n"
 				       "\t\"field\":\"%s\",\n"
-				       "\t\"value\":\""
-				       , term
+				       , term 
 				       );
+			sb->safePrintf("\t\"totalDocsWithField\":%"INT64""
+				       ",\n", qt->m_numDocsThatHaveFacet );
+			sb->safePrintf("\t\"totalDocsWithFieldAndValue\":"
+				       "%"INT64""
+				       ",\n", 
+				       allCount );
+			sb->safePrintf("\t\"value\":\"");
+
 			if (  isString )
 				sb->safePrintf("%"UINT32","
 					       , (uint32_t)*fvh);
@@ -6579,10 +6697,10 @@ bool Msg40::printFacetsForTable ( SafeBuf *sb , QueryTerm *qt ) {
 			//if ( isString )
 			// just use quotes for ranges like "[1-3)" now
 			sb->safePrintf("\"");
-			sb->safePrintf(",\n"
-				       "\t\"docCount\":%"INT32""
-				       , count );
+			sb->safePrintf(",\n");
 
+			sb->safePrintf("\t\"docCount\":%"INT32""
+				       , count );
 			// if it's a # then we print stats after
 			if ( isString || fe->m_count == 0 )
 				sb->safePrintf("\n");
@@ -6713,6 +6831,8 @@ bool Msg40::printFacetsForTable ( SafeBuf *sb , QueryTerm *qt ) {
 		SafeBuf newUrl;
 		replaceParm ( newStuff.getBufStart(), &newUrl , hr );
 
+		numPrinted++;
+
 		// print the facet in its numeric form
 		// we will have to lookup based on its docid
 		// and get it from the cached page later
@@ -6733,13 +6853,8 @@ bool Msg40::printFacetsForTable ( SafeBuf *sb , QueryTerm *qt ) {
 			       ,count); // count for printing
 	}
 
-	if ( ! needTable && format == FORMAT_JSON ) {
-		sb->m_length -= 2; // hack off trailing comma
-		sb->safePrintf("],\n"); // close off json array
-	}
-
 	if ( ! needTable && format == FORMAT_HTML ) 
 		sb->safePrintf("</table></div><br>\n");
 
-	return true;
+	return numPrinted;
 }
