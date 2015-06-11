@@ -1,5 +1,7 @@
 #include "gb-include.h"
 
+#include <limits>
+
 #include "Query.h"
 //#include "Indexdb.h" // g_indexdb.getTruncationLimit() g_indexdb.getTermId()
 #include "Words.h"
@@ -2509,10 +2511,11 @@ bool Query::setQWords ( char boolFlag ,
 			char *send = w + wlen;
 			int32_t nr = 0;
 			for ( ; s <send && fieldCode == FIELD_GBFACETINT;){
-				// must be a digit or . or -
+				// must be a digit or . or - or *
 				if ( ! is_digit(s[0]) &&
 				     s[0] != '.' &&
-				     s[0] != '-' )
+				     s[0] != '-' &&
+                                     s[0] != '*')
 					break;
 				char *sav = s;
 				// skip to hyphen
@@ -2521,16 +2524,26 @@ bool Query::setQWords ( char boolFlag ,
 				if ( *s != '-' ) break;
 				// skip hyphen
 				s++;
-				// must be a digit or . or -
+				// must be a digit or . or - or *
 				if ( ! is_digit(s[0]) &&
 				     s[0] != '.' &&
-				     s[0] != '-' )
+				     s[0] != '-' &&
+                                     s[0] != '*')
 					break;
 				// if under max, add it
 				if ( nr < MAX_FACET_RANGES ) {
-					qw->m_facetRangeIntA [nr] = atoll(sav);
-					qw->m_facetRangeIntB [nr] = atoll(s);
-					qw->m_numFacetRanges = ++nr;
+				     if (sav[0] == '*')
+                                       qw->m_facetRangeIntA [nr] =
+                                         std::numeric_limits<int>::min();
+                                     else
+				       qw->m_facetRangeIntA [nr] = atoll(sav);
+
+                                     if (s[0] == '*')
+                                       qw->m_facetRangeIntB [nr] =
+                                         std::numeric_limits<int>::max();
+                                     else
+				       qw->m_facetRangeIntB [nr] = atoll(s);
+				     qw->m_numFacetRanges = ++nr;
 				}
 				// skip to comma or end
 				for ( ; s < send && *s != ',' ; s++ );
@@ -2542,10 +2555,11 @@ bool Query::setQWords ( char boolFlag ,
 				ignoreTill = s;
 			}
 			for ( ; s <send && fieldCode==FIELD_GBFACETFLOAT;){
-				// must be a digit or . or -
+				// must be a digit or . or - or *
 				if ( ! is_digit(s[0]) &&
 				     s[0] != '.' &&
-				     s[0] != '-' )
+				     s[0] != '-' &&
+                                     s[0] != '*')
 					break;
 				char *sav = s;
 				// skip to hyphen
@@ -2556,10 +2570,11 @@ bool Query::setQWords ( char boolFlag ,
 				char *cma = s;
 				// skip hyphen
 				s++;
-				// must be a digit or . or -
+				// must be a digit or . or - or *
 				if ( ! is_digit(s[0]) &&
 				     s[0] != '.' &&
-				     s[0] != '-' )
+				     s[0] != '-' &&
+                                     s[0] != '*')
 					break;
 				// save that
 				char *sav2 = s;
@@ -2568,9 +2583,20 @@ bool Query::setQWords ( char boolFlag ,
 				char *cma2 = s;
 				// if under max, add it
 				if ( nr < MAX_FACET_RANGES ) {
-					qw->m_facetRangeFloatA [nr] =atof2(sav,cma-sav);
-					qw->m_facetRangeFloatB [nr] =atof2(sav2,cma2-sav2);
-					qw->m_numFacetRanges = ++nr;
+				  if (sav[0] == '*')
+                                    // min() is min positive value for float, so
+				    // we want -max() instead
+                                    qw->m_facetRangeFloatA [nr] =
+                                      -std::numeric_limits<float>::max();
+                                  else
+				    qw->m_facetRangeFloatA [nr] =atof2(sav,cma-sav);
+
+                                  if (sav2[0] == '*')
+                                    qw->m_facetRangeFloatB [nr] =
+                                      std::numeric_limits<float>::max();
+                                  else
+				    qw->m_facetRangeFloatB [nr] =atof2(sav2,cma2-sav2);
+				  qw->m_numFacetRanges = ++nr;
 				}
 				// skip that
 				if ( *s != ',' ) break;
