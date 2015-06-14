@@ -1359,6 +1359,9 @@ void RdbBase::attemptMerge ( int32_t niceness, bool forceMergeAll, bool doLog ,
 	if ( g_merge.m_isSuspended  ) return;
 	if ( g_merge2.m_isSuspended ) return;
 
+	// shutting down? do not start another merge then
+	if ( g_process.m_mode == EXIT_MODE ) return;
+
 	// sanity checks
 	if (   g_loop.m_inQuickPoll ) { 
 		log("rdb: cant attempt merge in quickpoll");
