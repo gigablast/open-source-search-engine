@@ -5978,6 +5978,8 @@ void doneSleepingWrapperSL ( int fd , void *state ) {
 	// because we might have had a lock collision
 	int32_t nc = g_collectiondb.m_numRecs;
 	for ( int32_t i = 0 ; i < nc ; i++ ) {
+		// breathe
+		QUICKPOLL(MAX_NICENESS);
 		// get collectionrec
 		CollectionRec *cr = g_collectiondb.getRec(i);
 		if ( ! cr ) continue;
