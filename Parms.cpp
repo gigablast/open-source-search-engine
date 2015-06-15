@@ -15181,6 +15181,18 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&ir.ptr_content - (char *)&ir;
 	m++;
 
+	m->m_title = "metadata";
+	m->m_desc = "Json encoded metadata to be indexed with the document.";
+	m->m_cgi   = "metadata";
+	m->m_obj   = OBJ_IR;
+	m->m_type  = TYPE_CHARPTR;
+	m->m_def   = NULL;
+	m->m_flags = PF_API|PF_TEXTAREA;
+	m->m_page  = PAGE_INJECT;
+	m->m_off   = (char *)&ir.ptr_metadata - (char *)&ir;
+	m++;
+
+
 	m->m_title = "get sectiondb voting info";
 	m->m_desc = "Return section information of injected content for "
 		"the injected subdomain. ";

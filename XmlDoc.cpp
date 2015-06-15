@@ -219,8 +219,8 @@ void XmlDoc::reset ( ) {
 	for ( int i = 0 ; i < MAXMSG7S ; i++ ) {
 		Msg7 *msg7 = m_msg7s[i];
 		if ( ! msg7 ) continue;
-		mdelete ( m_msg7 , sizeof(Msg7) , "xdmsg7" );
-		delete ( m_msg7 );
+		mdelete ( msg7 , sizeof(Msg7) , "xdmsg7" );
+		delete ( msg7 );
 		m_msg7s[i] = NULL;
 	}		
 
@@ -911,6 +911,10 @@ void XmlDoc::reset ( ) {
 	void *px    = &ptr_firstUrl;
 	void *pxend = &size_firstUrl;
 	memset ( px , 0 , (char *)pxend - (char *)px );
+
+	m_hasMetadata = false;
+	ptr_metadata = NULL;
+	size_metadata = 0;
 }
 
 // . set the url with the intention of adding it or deleting it from the index
@@ -1185,7 +1189,9 @@ bool XmlDoc::set4 ( SpiderRequest *sreq      ,
 		    uint8_t        contentType ,
 		    uint32_t         spideredTime ,
 		    bool           contentHasMimeArg ,
-		    char          *contentDelim ) {
+		    char          *contentDelim,
+		    char          *metadata ,
+		    uint32_t       metadataLen) {
 
 	// sanity check
 	if ( sreq->m_dataSize == 0 ) { char *xx=NULL;*xx=0; }
@@ -1440,6 +1446,14 @@ bool XmlDoc::set4 ( SpiderRequest *sreq      ,
 	if ( m_sreqValid )
 		m_recycleContent = m_sreq.m_recycleContent;
 
+    if(metadata) {
+        log("metadata is %s", metadata);
+    } else {
+        log("metadata is empty");
+    }
+	m_hasMetadata = (bool)metadata;
+    ptr_metadata = metadata;
+    size_metadata = metadataLen;
 	return true;
 }
 
@@ -2080,7 +2094,10 @@ bool XmlDoc::injectDoc ( char *url ,
 			 uint32_t firstIndexed,
 			 uint32_t lastSpidered ,
 			 int32_t injectDocIp ,
-			 char *contentDelim ) {
+			 char *contentDelim,
+			 char *metadata,
+			 uint32_t metadataLen
+			 ) {
 
 	// wait until we are synced with host #0
 	if ( ! isClockInSync() ) {
@@ -2149,7 +2166,10 @@ bool XmlDoc::injectDoc ( char *url ,
 		      contentType ,
 		      lastSpidered,//lastSpidered overide
 		      contentHasMimeArg ,
-		      contentDelim )) {
+              contentDelim,
+              metadata,
+              metadataLen
+                  )) {
 		// g_errno should be set if that returned false
 		if ( ! g_errno ) { char *xx=NULL;*xx=0; }
 		return true;
@@ -2230,6 +2250,8 @@ bool XmlDoc::injectDoc ( char *url ,
 	// log it. i guess only for errors when it does not block?
 	// because xmldoc.cpp::indexDoc calls logIt()
 	if ( status ) logIt();
+
+
 
 	// undo it
 	//g_inPageInject = false;
@@ -3769,7 +3791,8 @@ bool XmlDoc::indexWarcOrArc ( char ctype ) {
 	ir->ptr_queryToScrape = NULL;
 	ir->ptr_contentFile = NULL;
 	ir->ptr_diffbotReply = NULL;
-
+	ir->ptr_metadata = ptr_metadata;
+	ir->size_metadata = size_metadata;
 
 	//
 	// set 'timestamp' for injection
@@ -3778,9 +3801,9 @@ bool XmlDoc::indexWarcOrArc ( char ctype ) {
 	ir->m_lastSpidered = recTime;
 
 
-	//
+
 	// set 'ip' for injection
-	//
+
 	ir->m_injectDocIp = 0;
 	// get the record IP address from the warc header if there
 	if ( recIp ) {
@@ -19218,7 +19241,12 @@ File *XmlDoc::getUtf8ContentInFile ( int64_t *fileSizeArg ) {
 		// try to load it up if haven't tried yet
 		s_triedToLoadCookie = true;
 		SafeBuf tmp;
-		tmp.load ( "/home/mwells/.config/internetarchive.yml");
+		//int32_t loaded = tmp.load ( "/home/mwells/.config/internetarchive.yml");
+		int32_t loaded = tmp.load ( "auth/internetarchive.yml");
+		if(loaded <= 0) {
+			// FIXME
+			char *xx=NULL;*xx=0;
+		}
 		char *s = tmp.getBufStart();
 		char *line;
 		char *lineEnd;
@@ -28846,6 +28874,7 @@ SafeBuf *XmlDoc::getSpiderStatusDocMetaList2 ( SpiderReply *reply1 ) {
 	// fill up tt4. false -> do not hash without field prefixes.
 	hashJSONFields2 ( &tt4 , &hi , &jp2 , false );
 
+
 	/*
 	char buf[64];
 	int32_t bufLen;
@@ -29163,6 +29192,23 @@ bool XmlDoc::hashMetaTags ( HashTableX *tt ) {
 		//if ( ! hashNumber ( buf , bufLen , &hi ) )
 		//	return false;
 	}
+
+
+	if(ptr_metadata) {
+		Json jpMetadata;
+
+		if (jpMetadata.parseJsonStringIntoJsonItems (ptr_metadata, m_niceness)){
+			hashJSONFields2 ( tt , &hi , &jpMetadata , false );
+			log("we hashed the terms in %s", ptr_metadata);
+		} else {
+			log("had error parsing json in %s", ptr_metadata);
+
+		}
+	}
+
+
+
+
 	return true;
 }
 
@@ -36833,6 +36879,8 @@ bool XmlDoc::printDoc ( SafeBuf *sb ) {
 		  "<tr><td>content type</td><td>%"INT32" (%s)</td></tr>\n"
 		  "<tr><td>language</td><td>%"INT32" (%s)</td></tr>\n"
 		  "<tr><td>country</td><td>%"INT32" (%s)</td></tr>\n"
+		  "<tr><td>time axis used</td><td>%"INT32"</td></tr>\n"
+		  "<tr><td>metadata</td><td>%s</td></tr>\n"
 		  "</td></tr>\n",
 
 		  ddd , 
@@ -36878,7 +36926,9 @@ bool XmlDoc::printDoc ( SafeBuf *sb ) {
 		  strLanguage,
 
 		  (int32_t)m_countryId,
-		  g_countryCode.getName(m_countryId) );
+		  g_countryCode.getName(m_countryId),
+		  m_useTimeAxis,
+		  ptr_metadata);
 
 
 	/*

@@ -435,7 +435,7 @@ bool SafeBuf::reserve2x(int32_t i, char *label) {
 
 int32_t SafeBuf::saveToFile ( char *dir , char *filename ) {
 	char buf[1024];
-	sprintf(buf,"%s/%s",dir,filename);
+	snprintf(buf,1024,"%s/%s",dir,filename);
 	return dumpToFile ( buf );
 }
 
@@ -524,8 +524,8 @@ int32_t SafeBuf::safeSave (char *filename ) {
 
 int32_t SafeBuf::fillFromFile(char *dir,char *filename) {
 	char buf[1024];
-	if ( dir ) sprintf(buf,"%s/%s",dir,filename);
-	else       sprintf(buf,"%s",filename);
+	if ( dir ) snprintf(buf,1024,"%s/%s",dir,filename);
+	else       snprintf(buf,1024,"%s",filename);
 	return fillFromFile ( buf );
 }
 
@@ -585,8 +585,6 @@ retry2:
 		m_length += numRead;
 		m_buf[m_length] = '\0';
 	}
-
-	if ( numRead > 0) return numRead;//true;
 
 	return numRead;
 }

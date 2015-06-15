@@ -342,7 +342,7 @@ class XmlDoc {
 	uint16_t  m_sentToDiffbot:1;
 	uint16_t  m_gotDiffbotSuccessfulReply:1;
 	uint16_t  m_useTimeAxis:1; // m_reserved804:1;
-	uint16_t  m_reserved805:1;
+	uint16_t  m_hasMetadata:1;
 	uint16_t  m_reserved806:1;
 	uint16_t  m_reserved807:1;
 	uint16_t  m_reserved808:1;
@@ -388,6 +388,8 @@ class XmlDoc {
 	char      *ptr_sectiondbData;
 	char      *ptr_tagRecData;
 	LinkInfo  *ptr_linkInfo2;
+	char      *ptr_metadata;
+
 
 	int32_t       size_firstUrl;
 	int32_t       size_redirUrl;
@@ -417,6 +419,7 @@ class XmlDoc {
 	int32_t       size_sectiondbData;
 	int32_t       size_tagRecData;
 	int32_t       size_linkInfo2;
+	int32_t       size_metadata;
 
 	char      m_dummyEnd;
 
@@ -477,7 +480,9 @@ class XmlDoc {
 		    uint32_t           spideredTime = 0 , // time_t
 		    bool             contentHasMime = false ,
 		    // for container docs, what is the separator of subdocs?
-		    char            *contentDelim = NULL ) ;
+				char            *contentDelim = NULL,
+				char *metadata = NULL,
+				uint32_t metadataLen = 0) ;
 
 	// we now call this right away rather than at download time!
 	int32_t getSpideredTime();
@@ -2448,7 +2453,9 @@ class XmlDoc {
 			 uint32_t lastSpideredDate = 0 ,
 			 int32_t  injectDocIp = 0 ,
 			 // for container docs consisting of subdocs to inject
-			 char *contentDelim = NULL );
+			 char *contentDelim = NULL,
+			 char* metadata = NULL,
+			 uint32_t metadataLen = 0);
 
 
 	bool injectLinks  ( HashTableX *linkDedupTable ,

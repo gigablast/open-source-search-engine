@@ -50,6 +50,7 @@ class InjectionRequest {
 	char *ptr_contentTypeStr;
 	char *ptr_content;
 	char *ptr_diffbotReply; // secret thing from dan
+	char *ptr_metadata;
 
 	int32_t size_url;
 	int32_t size_queryToScrape;
@@ -58,6 +59,7 @@ class InjectionRequest {
 	int32_t size_contentTypeStr;
 	int32_t size_content;
 	int32_t size_diffbotReply; // secret thing from dan
+	int32_t size_metadata;
 
 	// serialized space for the ptr_* strings above
 	char m_buf[0];

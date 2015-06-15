@@ -270,8 +270,8 @@ void processReply ( char *reply , int32_t replyLen ) {
 	fb2.nullTerm();
 
 	// log that we got the reply
-	log("qa: got reply(len=%"INT32")(errno=%s)=%s",
-	    replyLen,mstrerror(g_errno),reply);
+	log("qa: got reply(len=%"INT32")(errno=%s)",
+	    replyLen,mstrerror(g_errno));
 
 	char *content = NULL;
 	int32_t  contentLen = 0;
@@ -325,42 +325,44 @@ void processReply ( char *reply , int32_t replyLen ) {
 	*/
 
 	if(s_ignore) {
-	  for(int i = 0;;i++) {
-		if(!s_ignore[i]) break;
-		if(gb_strcasestr(content, s_ignore[i])) return;
-	  }
-	  s_ignore = NULL;
+		for(int i = 0;;i++) {
+			if(!s_ignore[i]) break;
+			if(gb_strcasestr(content, s_ignore[i])) return;
+		}
+		s_ignore = NULL;
 	}
 
 	// Just look a substring of the response so we don't have to worry about
 	// miniscule changes in output formats or changing dates.
 	if(s_expect) {
-	  if(gb_strcasestr(content, s_expect)) {
-		g_qaOutput.safePrintf("<b style=color:green;>"
-							  "passed test</b><br>%s : "
-							  "<a href=%s>%s</a> Found %s (crc=%"UINT32")<br>"
-							  "<hr>",
-							  s_qt->m_testName,
-							  s_url.getUrl(),
-							  s_url.getUrl(),
-							  s_expect,
-							  contentCRC);
-	  } else {
-		g_numErrors++;
+		log("expecting for %s", s_expect);
+		if(gb_strcasestr(content, s_expect)) {
+			g_qaOutput.safePrintf("<b style=color:green;>"
+								  "passed test</b><br>%s : "
+								  "<a href=%s>%s</a> Found %s (crc=%"UINT32")<br>"
+								  "<hr>",
+								  s_qt->m_testName,
+								  s_url.getUrl(),
+								  s_url.getUrl(),
+								  s_expect,
+								  contentCRC);
 
-		g_qaOutput.safePrintf("<b style=color:red;>FAILED TEST</b><br>%s : "
-							  "<a href=%s>%s</a><br> Expected: %s in reply"
-							  " (crc=%"UINT32")<br>"
-							  "<hr>",
-							  s_qt->m_testName,
-							  s_url.getUrl(),
-							  s_url.getUrl(),
-							  s_expect,
-							  contentCRC);
+		} else {
+			g_numErrors++;
+
+			g_qaOutput.safePrintf("<b style=color:red;>FAILED TEST</b><br>%s : "
+								  "<a href=%s>%s</a><br> Expected: %s in reply"
+								  " (crc=%"UINT32")<br>"
+								  "<hr>",
+								  s_qt->m_testName,
+								  s_url.getUrl(),
+								  s_url.getUrl(),
+								  s_expect,
+								  contentCRC);
 
 
-	  }
-	  s_expect = NULL;
+		}
+		s_expect = NULL;
 		return;
 
 	}
@@ -1374,7 +1376,8 @@ typedef enum {
     CONTENT_COUNTER = 21,
     SET_PARAMETERS = 17,
     WAIT_A_BIT = 3,
-    EXAMINE_RESULTS = 16
+    EXAMINE_RESULTS1 = 16,
+    EXAMINE_RESULTS2 = 22
 } TimeAxisFlags;
 char* g_timeAxisIgnore[3] = {"Bad IP", "Doc is error page", NULL};
 
@@ -1551,8 +1554,8 @@ bool qaWarcFiles ( ) {
 		if ( ! getUrl ( "/admin/addurl",0,sb.getBufStart()) )
 			return false;
 	}
-	if ( ! s_flags[EXAMINE_RESULTS] == 0) {
-		s_flags[EXAMINE_RESULTS]++;
+	if ( s_flags[EXAMINE_RESULTS1] == 0) {
+		s_flags[EXAMINE_RESULTS1]++;
 		if ( ! getUrl ( "/search?c=qatest123&qa=1&format=xml&q=%2Bthe"
 				"&dsrt=500",
 				702467314 ) )
@@ -1576,8 +1579,8 @@ bool qaWarcFiles ( ) {
 			return false;
 	}
 
-	if ( ! s_flags[EXAMINE_RESULTS] == 1) {
-		s_flags[EXAMINE_RESULTS]++;
+	if ( s_flags[EXAMINE_RESULTS2] == 0) {
+		s_flags[EXAMINE_RESULTS2]++;
 		if ( ! getUrl ( "/search?c=qatest123&qa=1&format=xml&q=%2Bthe"
 				"&dsrt=500",
 				702467314 ) )
@@ -1586,7 +1589,76 @@ bool qaWarcFiles ( ) {
 	return true;
 }
 
+bool qaInjectMetadata ( ) {
+	if ( ! s_flags[DELETE_COLLECTION] ) {
+		s_flags[DELETE_COLLECTION] = true;
+		if ( ! getUrl ( "/admin/delcoll?xml=1&delcoll=qatest123" ) )
+			return false;
+	}
 
+	if ( ! s_flags[ADD_COLLECTION] ) {
+		s_flags[ADD_COLLECTION] = true;
+		if ( ! getUrl ( "/admin/addcoll?addcoll=qatest123&xml=1&"
+				"collectionips=127.0.0.1" , 
+				// checksum of reply expected
+				238170006 ) )
+			return false;
+	}
+
+	if ( ! s_flags[SET_PARAMETERS] ) {
+		s_flags[SET_PARAMETERS] = true;
+		if ( ! getUrl ( "/admin/spider?c=qatest123&qa=1&mit=0&mns=1"
+				// no spider replies because it messes
+				// up our last test to make sure posdb
+				// is 100% empty. 
+				// see "index spider replies" in Parms.cpp.
+				"&isr=0"
+				// turn off use robots to avoid that
+				// xyz.com/robots.txt redir to seekseek.com
+				"&obeyRobots=0"
+				// This is what we are testing
+				"&usetimeaxis=1"
+				,
+				// checksum of reply expected
+				0 ) )
+			return false;
+	}
+
+
+	//
+	// Inject urls, return false if not done yet.
+	// Here we alternate sending the same url -> content pair with sending 
+	// the same url with different content to simulate a site that is updated
+	// at about half the rate that we spider them.
+	if ( s_flags[ADD_INITIAL_URLS] == 0) {
+		s_flags[ADD_INITIAL_URLS]++;
+		SafeBuf sb;
+
+		sb.safePrintf("&c=qatest123"
+					  "&format=json"
+					  "&spiderlinks=1"
+					  "&url=http://%s:%"INT32"/test.warc.gz"
+					  "&metadata=%s"
+					  , iptoa(g_hostdb.m_myHost->m_ip)
+					  , (int32_t)g_hostdb.m_myHost->m_httpPort
+					  , "{\"testtest\":42}"
+					  );
+		if ( ! getUrl ( "/admin/inject",0,sb.getBufStart()) )
+			return false;
+	}
+	if ( s_flags[EXAMINE_RESULTS1] == 0) {
+		s_flags[EXAMINE_RESULTS1]++;
+		log("searching for metadata");
+		if ( ! getUrl ( "/search?c=qatest123&q=testtest%3A42"
+                        "&n=1000&sb=1&dr=0&sc=0&s=0&showerrors=1&format=json",
+                        1,// Checksum
+						NULL,
+                        "hits\":106"
+                        ) )
+		  return false;
+	}
+	return true;
+}
 
 
 bool qaimport () {
@@ -3200,7 +3272,12 @@ static QATest s_qatests[] = {
 
 	{qaWarcFiles,
 	 "indexWarcFiles",
-	 "Ensure the spider handles arc.gz and warc.gz file formats."}
+	 "Ensure the spider handles arc.gz and warc.gz file formats."},
+
+	{qaInjectMetadata,
+	 "injectMetadata",
+	 "When we pass json encoded metadata to an injection, make sure we can"
+     "search for the fields."}
 
 
 };

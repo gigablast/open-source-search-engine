@@ -638,7 +638,9 @@ void handleRequest7 ( UdpSlot *slot , int32_t netnice ) {
 			       // the ip of the url being injected.
 			       // use 0 if unknown and it won't be valid.
 			       ir->m_injectDocIp ,
-			       ir->ptr_contentDelim
+				   ir->ptr_contentDelim,
+				   ir->ptr_metadata,
+			       ir->size_metadata
 			       ) )
 		// we blocked...
 		return;

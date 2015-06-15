@@ -2428,6 +2428,7 @@ char *serializeMsg2 ( void *thisPtr ,
 	for ( int i = 0 ; i < nptrs ; i++ ) {
 		if ( srcStrPtr[i] == NULL ) continue;
 		totalStringSizes += srcSizePtr[i];
+
 	}
 	int32_t stringBufferOffset = need;
 	need += totalStringSizes;
