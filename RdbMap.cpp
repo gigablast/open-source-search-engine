@@ -323,10 +323,11 @@ bool RdbMap::verifyMap2 ( ) {
 			KEYSET(lastKey,k,m_ks); continue; }
 		// just bitch for now
 		log(
-		    "db: Key out of order in map file %s. "
+		    "db: Key out of order in map file %s%s. "
 		    "page = %"INT32". key offset = %"INT64". Map or data file is "
-		    "corrupt, but it is probably the data file.", 
-		    m_file.getFilename() ,
+		    "corrupt, but it is probably the data file. Please "
+		    "delete the map file and restart.", 
+		    m_file.m_dir,m_file.getFilename() ,
 		    i,(int64_t)m_pageSize*(int64_t)i+getOffset(i));
 
 		//log("db: oldk.n1=%08"XINT32" n0=%016"XINT64"",
