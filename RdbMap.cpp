@@ -323,8 +323,9 @@ bool RdbMap::verifyMap2 ( ) {
 			KEYSET(lastKey,k,m_ks); continue; }
 		// just bitch for now
 		log(
-		    "db: Key out of order in map file %s%s. "
-		    "page = %"INT32". key offset = %"INT64". Map or data file is "
+		    "db: Key out of order in map file %s/%s. "
+		    "page = %"INT32". key offset = %"INT64". "
+		    "Map or data file is "
 		    "corrupt, but it is probably the data file. Please "
 		    "delete the map file and restart.", 
 		    m_file.m_dir,m_file.getFilename() ,
@@ -337,6 +338,15 @@ bool RdbMap::verifyMap2 ( ) {
 		    KEY1(lastKey,m_ks),KEY0(lastKey));
 		log("db:    k.n1=%016"XINT64" n0=%016"XINT64"",KEY1(k,m_ks),KEY0(k));
 		log("db: m_numPages = %"INT32"",m_numPages);
+
+		SafeBuf cmd;
+		cmd.safePrintf("mv %s/%s %s/trash/",
+			       m_file.m_dir,
+			       m_file.getFilename(),
+			       g_hostdb.m_dir);
+		log("db: %s",cmd.getBufStart() );
+		gbsystem ( cmd.getBufStart() );
+
 		exit(0);
 		//char *xx=NULL;*xx=0;
 		// was k too small?
