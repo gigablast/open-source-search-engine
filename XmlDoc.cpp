@@ -1446,14 +1446,14 @@ bool XmlDoc::set4 ( SpiderRequest *sreq      ,
 	if ( m_sreqValid )
 		m_recycleContent = m_sreq.m_recycleContent;
 
-    if(metadata) {
-        log("metadata is %s", metadata);
-    } else {
-        log("metadata is empty");
-    }
+	if(metadata) {
+		log("metadata is %s", metadata);
+	} else {
+		log("metadata is empty");
+	}
 	m_hasMetadata = (bool)metadata;
-    ptr_metadata = metadata;
-    size_metadata = metadataLen;
+	ptr_metadata = metadata;
+	size_metadata = metadataLen;
 	return true;
 }
 
@@ -10668,6 +10668,18 @@ bool XmlDoc::addGigabits(Words *ww,int64_t docId,Sections *sections,
 		i = wikij - 1;
 	}
 	return true;
+}
+
+
+char* XmlDoc::getMetadata(int32_t* retlen) {
+	if(!m_hasMetadata) {
+		*retlen = 0;
+		return NULL;
+	}
+
+	*retlen = size_metadata;
+	return ptr_metadata;
+
 }
 
 // . this is called by Msg40.cpp to intersect gigabits from multiple docs

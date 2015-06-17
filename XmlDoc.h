@@ -599,6 +599,7 @@ class XmlDoc {
 	char *getMetaDescription( int32_t *mdlen ) ;
 	char *getMetaSummary ( int32_t *mslen ) ;
 	char *getMetaKeywords( int32_t *mklen ) ;
+	char *getMetadata(int32_t* retlen);
 	bool addGigabits ( char *s , int64_t docId , uint8_t langId ) ;
 	bool addGigabits2 ( char *s,int32_t slen,int64_t docId,uint8_t langId);
 	bool addGigabits ( class Words *ww , 
