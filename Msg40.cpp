@@ -3714,8 +3714,8 @@ bool Msg40::computeGigabits( TopicGroup *tg ) {
 				char *s;
 				s = gb_strcasestr (gj->m_term, gi->m_term);
 				// un-null term longer
-				gi->m_term[gi->m_termLen] = c1;
 				gj->m_term[gj->m_termLen] = c2;
+				gi->m_term[gi->m_termLen] = c1;
 				// even if he's longer, if his score is too
 				// low then he cannot nuke us
 				// MDW: try doing page count!
@@ -3766,8 +3766,8 @@ bool Msg40::computeGigabits( TopicGroup *tg ) {
 				char *s;
 				s = gb_strcasestr ( gi->m_term,gj->m_term );
 				// un-null term
-				gi->m_term[gi->m_termLen] = c1;
 				gj->m_term[gj->m_termLen] = c2;
+				gi->m_term[gi->m_termLen] = c1;
 				// keep going if no match
 				if ( ! s ) continue;
 
