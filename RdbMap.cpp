@@ -337,6 +337,7 @@ bool RdbMap::verifyMap2 ( ) {
 		    KEY1(lastKey,m_ks),KEY0(lastKey));
 		log("db:    k.n1=%016"XINT64" n0=%016"XINT64"",KEY1(k,m_ks),KEY0(k));
 		log("db: m_numPages = %"INT32"",m_numPages);
+		exit(0);
 		//char *xx=NULL;*xx=0;
 		// was k too small?
 		//if ( i + 1 < m_numPages && lastKey <= getKey(i+1) ) {
