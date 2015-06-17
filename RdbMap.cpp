@@ -1372,6 +1372,9 @@ bool RdbMap::chopHead ( int32_t fileHeadSize ) {
 bool RdbMap::generateMap ( BigFile *f ) {
 	reset();
 	if ( g_conf.m_readOnlyMode ) return false;
+
+	log("db: Generating map for %s/%s",f->m_dir,f->getFilename());
+
 	// we don't support headless datafiles right now
 	if ( ! f->doesPartExist(0) ) {
 		g_errno = EBADENGINEER;
