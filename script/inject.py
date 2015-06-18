@@ -23,7 +23,8 @@ def injectItem(item):
         itemMetadata = {'mtime':ff['mtime']}
         itemMetadata.update(md['metadata'])
         postVars = {'url':'http://archive.org/download/%s/%s' %(item,ff['name']),
-                    'metadata':json.dumps(itemMetadata)}
+                    'metadata':json.dumps(itemMetadata),
+                    'c':'ait'}
         print "sending", postVars,' to gb'
         rp = requests.post("http://localhost:8000/admin/inject", postVars)
         print rp.content
