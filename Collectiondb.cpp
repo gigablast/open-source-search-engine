@@ -3574,7 +3574,7 @@ bool CollectionRec::rebuildUrlFiltersDiffbot() {
 	if ( respiderFreq <= 0.0 ) respiderFreq = 3652.5;
 
 	// lower from 7 to 1 since we have so many collections now
-	int32_t diffbotipms = 1; // 7
+	int32_t diffbotipms = 7;//1; // 7
 
 	// make the gigablast regex table just "default" so it does not
 	// filtering, but accepts all urls. we will add code to pass the urls
