@@ -1610,6 +1610,7 @@ class SpiderLoop {
 	class CollectionRec *m_crx;
 	class CollectionRec *m_activeList;
 	bool m_activeListValid;
+	bool m_activeListModified;
 	uint32_t m_recalcTime;
 	bool m_recalcTimeValid;
 

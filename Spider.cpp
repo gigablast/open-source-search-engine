@@ -5883,6 +5883,7 @@ void SpiderLoop::startLoop ( ) {
 	//m_cri     = 0;
 	m_crx = NULL;
 	m_activeListValid = false;
+	m_activeListModified = false;
 	m_activeList = NULL;
 	m_recalcTime = 0;
 	m_recalcTimeValid = false;
@@ -5976,16 +5977,20 @@ void doneSleepingWrapperSL ( int fd , void *state ) {
 	// count these calls
 	s_count++;
 
+ top:
+
 	// reset SpiderColl::m_didRound and m_nextDoledbKey if it is maxed
 	// because we might have had a lock collision
 	//int32_t nc = g_collectiondb.m_numRecs;
 	// start again at head
-	class CollectionRec *crp = g_spiderLoop.getActiveList();//m_activeList;
+	class CollectionRec *crp = g_spiderLoop.getActiveList();
 
 	//for ( int32_t i = 0 ; i < nc ; i++ ) {
 	for ( ; crp ; crp = crp->m_nextActive ) {
 		// breathe
 		QUICKPOLL(MAX_NICENESS);
+		// if list was modified a collection was deleted/added
+		if ( g_spiderLoop.m_activeListModified ) goto top;
 		// // get collectionrec
 		// CollectionRec *cr = g_collectiondb.getRec(i);
 		// if ( ! cr ) continue;
@@ -6018,6 +6023,8 @@ void doneSleepingWrapperSL ( int fd , void *state ) {
 			// should be fast in those cases
 			sc->populateWaitingTreeFromSpiderdb ( false );
 		}
+		// if list was modified a collection was deleted/added
+		if ( g_spiderLoop.m_activeListModified ) goto top;
 		// re-entry is false because we are entering for the first time
 		sc->populateDoledbFromWaitingTree ( );
 		// . skip if still loading doledb lists from disk this round
@@ -6035,6 +6042,8 @@ void doneSleepingWrapperSL ( int fd , void *state ) {
 		// send notifications when a crawl is basically in hiatus.
 		//sc->m_encounteredDoledbRecs = false;
 		//sc->m_nextDoledbKey.setMin();
+		// if list was modified a collection was deleted/added
+		if ( g_spiderLoop.m_activeListModified ) goto top;
 	}
 
 	// set initial priority to the highest to start spidering there
@@ -6303,7 +6312,7 @@ void SpiderLoop::spiderDoledUrls ( ) {
  collLoop:
 
 	// start again at head
-	if ( ! m_crx ) m_crx = getActiveList();//m_activeList;
+	if ( ! m_crx ) m_crx = getActiveList();
 
 	bool firstTime = true;
 
@@ -14281,12 +14290,13 @@ CollectionRec *SpiderLoop::getActiveList() {
 	// versa. also when deleting a collection in Collectiondb.cpp. this
 	// keeps the below loop fast when we have thousands of collections
 	// and most are inactive or empty/deleted.
-	if ( ! m_activeListValid ) {
+	if ( ! m_activeListValid || m_activeListModified ) {
 		buildActiveList();
 		//m_crx = m_activeList;
 		// recompute every 3 seconds, it seems kinda buggy!!
 		m_recalcTime = nowGlobal + 3;
 		m_recalcTimeValid = true;
+		m_activeListModified = false;
 	}
 
 	return m_activeList;
