@@ -51659,6 +51659,7 @@ char *XmlDoc::hashJSONFields2 ( HashTableX *table ,
 		// change all :'s in names to .'s since : is reserved!
 		char *px = nameBuf.getBufStart();
 		for ( ; *px ; px++ ) if ( *px == ':' ) *px = '.';
+		for ( px = nameBuf.getBufStart(); *px ; px++ ) if ( *px == '-' ) *px = '_';
 		//
 		// DIFFBOT special field hacks
 		//
@@ -51731,10 +51732,11 @@ char *XmlDoc::hashJSONFields2 ( HashTableX *table ,
 			totalHash32 ^= vh32;
 		}
 		*/
-
 		// index like "title:whatever"
 		hi->m_prefix = name;
 		hashString ( val , vlen , hi );
+
+		//log("hashing json var as %s %s %d", name, val, vlen);
 
 		// hash gbfieldmatch:some.fieldInJson:"case-sens field Value"
 		if ( name ) 

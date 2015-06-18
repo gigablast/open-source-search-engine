@@ -588,7 +588,7 @@ bool Msg20Reply::sendReply ( XmlDoc *xd ) {
 				    color                        );
 	
 	// FIXME
-	//int32_t mdLen = 0;
+	// int32_t mdLen = 0;
 	// char* md = xd->getMetadata(&mdLen);
 	// if(mdLen) {
 	// 	log("this has metadata %s", md);

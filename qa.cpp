@@ -1377,7 +1377,8 @@ typedef enum {
     SET_PARAMETERS = 17,
     WAIT_A_BIT = 3,
     EXAMINE_RESULTS1 = 16,
-    EXAMINE_RESULTS2 = 22
+    EXAMINE_RESULTS2 = 22,
+    EXAMINE_RESULTS3 = 24
 } TimeAxisFlags;
 char* g_timeAxisIgnore[3] = {"Bad IP", "Doc is error page", NULL};
 
@@ -1631,6 +1632,10 @@ bool qaInjectMetadata ( ) {
 	// the same url with different content to simulate a site that is updated
 	// at about half the rate that we spider them.
 	if ( s_flags[ADD_INITIAL_URLS] == 0) {
+		char* metadata = "{\"testtest\":42,\"a-hyphenated-name\":5, "
+			"\"a-string-value\":\"can we search for this\", "
+			"\"a field with spaces\":6}";
+		
 		s_flags[ADD_INITIAL_URLS]++;
 		SafeBuf sb;
 
@@ -1641,7 +1646,7 @@ bool qaInjectMetadata ( ) {
 					  "&metadata=%s"
 					  , iptoa(g_hostdb.m_myHost->m_ip)
 					  , (int32_t)g_hostdb.m_myHost->m_httpPort
-					  , "{\"testtest\":42}"
+					  , metadata
 					  );
 		if ( ! getUrl ( "/admin/inject",0,sb.getBufStart()) )
 			return false;
@@ -1657,6 +1662,33 @@ bool qaInjectMetadata ( ) {
                         ) )
 		  return false;
 	}
+
+	if ( s_flags[EXAMINE_RESULTS2] == 0) {
+		s_flags[EXAMINE_RESULTS2]++;
+		log("searching for metadata");
+		if ( ! getUrl ( "/search?c=qatest123&q=a_hyphenated_name%3A5"
+                        "&n=1000&sb=1&dr=0&sc=0&s=0&showerrors=1&format=json",
+                        1,// Checksum
+						NULL,
+                        "hits\":106"
+                        ) )
+		  return false;
+	}
+
+	if ( s_flags[EXAMINE_RESULTS3] == 0) {
+		s_flags[EXAMINE_RESULTS3]++;
+		log("searching for metadata");
+		if ( ! getUrl ( "/search?c=qatest123&q=a_string_value%3A\"can+we+search+for+this\""
+                        "&n=1000&sb=1&dr=0&sc=0&s=0&showerrors=1&format=json",
+                        1,// Checksum
+						NULL,
+                        "hits\":106"
+                        ) )
+		  return false;
+	}
+
+
+
 	return true;
 }
 

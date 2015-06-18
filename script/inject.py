@@ -1,3 +1,4 @@
+#!/usr/bin/python
 # -*- coding: utf-8 -*-
 
 
@@ -7,19 +8,9 @@ import re
 import subprocess
 import multiprocessing
 
-
-
-
-def getItems():
-    r = requests.get('https://archive.org/advancedsearch.php?q=collection%3Aarchiveitdigitalcollection&fl%5B%5D=identifier&rows=200&page=1&output=json&callback=callback&save=yes')
-    if r.status_code != 200:
-        return []
-    # jsonp reply is callback(.*), so strip that
-    contents = r.content[9:-1]
-    print contents
-    jsonContents = json.loads(contents)
-    items = [x['identifier'] for x in jsonContents['response']['docs']]
-    return items
+#Generate environment with:
+#pex -r requests -r multiprocessing -e inject:main -o warc-inject -s '.' --no-wheel
+#pex -r requests -r multiprocessing -o warc-inject
 
 
 def injectItem(item):
@@ -40,37 +31,34 @@ def injectItem(item):
 
 
 def getPage(page):
-    print 'https://archive.org/advancedsearch.php?q=collection%3Aarchiveitdigitalcollection&fl%5B%5D=identifier&rows=1000&page={0}&output=json&callback=callback&save=yes'.format(page)
-    r = requests.get('https://archive.org/advancedsearch.php?q=collection%3Aarchiveitdigitalcollection&fl%5B%5D=identifier&rows=1000&page={0}&output=json&callback=callback&save=yes'.format(page))
+    # r = requests.get('https://archive.org/advancedsearch.php?q=collection%3Aarchiveitdigitalcollection&fl%5B%5D=identifier&rows=1&page={0}&output=json&save=yes'.format(page))
+    r = requests.get('https://archive.org/advancedsearch.php?q=collection%3Aarchiveitdigitalcollection&fl%5B%5D=identifier&rows=1000&page={0}&output=json&save=yes'.format(page))
 
     if r.status_code != 200:
-        return []
+        return 0
     # jsonp reply is callback(.*), so strip that
-    contents = r.content[9:-1]
+    contents = r.content
     jsonContents = json.loads(contents)
     items = [x['identifier'] for x in jsonContents['response']['docs']]
     if len(items) == 0:
-        return
+        return 0
     print 'loading %s items, %s - %s' % (len(items), items[0], items[-1])
     for item in items:
         injectItem(item)
 
     return len(items)
 
-def main():
-    getPage(4)
-    # pool = multiprocessing.Pool(processes=5)
-    # print pool.map(getPage, xrange(1,120000))
 
-    # items = getItems()
-    # for item in items:
-    #     injectItem(item)
-            
-    # print items
+
+def main():
+    #getPage(4)
+    from multiprocessing.pool import ThreadPool
+    pool = ThreadPool(processes=5)
+    print pool.map(getPage, xrange(1,1200))
+    print result
     
+
 if __name__ == '__main__':
     main()
-# payload = dict(key1='value1', key2='value2')
-# requests.post("http://httpbin.org/post", data=payload))
 
 
