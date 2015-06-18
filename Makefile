@@ -771,3 +771,7 @@ install-pkgs-local:
 # DEBIAN PACKAGE SECTION END
 
 
+# You may need:
+# sudo apt-get install libffi-dev libssl-dev
+warcinjector: 
+	pex -r requests -r pyopenssl -r ndg-httpsclient -r pyasn1 -r multiprocessing -e inject.inject:main -o script/warc-inject -s '/home/zak/repos/open-source-search-engine/script/' --no-wheel

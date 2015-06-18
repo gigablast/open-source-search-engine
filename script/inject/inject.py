@@ -15,10 +15,9 @@ import multiprocessing
 
 def injectItem(item):
     metadata = subprocess.Popen(['./ia','metadata', item], stdout=subprocess.PIPE).communicate()[0]
-    print 'item metadata is ', metadata, 'item is ', item
+    #print 'item metadata is ', metadata, 'item is ', item
     md = json.loads(metadata)
     for ff in md['files']:
-        print ff['name'], 'is the name'
         if not ff['name'].endswith('arc.gz'): continue
         itemMetadata = {'mtime':ff['mtime']}
         itemMetadata.update(md['metadata'])
@@ -34,10 +33,9 @@ def injectItem(item):
 def getPage(page):
     # r = requests.get('https://archive.org/advancedsearch.php?q=collection%3Aarchiveitdigitalcollection&fl%5B%5D=identifier&rows=1&page={0}&output=json&save=yes'.format(page))
     r = requests.get('https://archive.org/advancedsearch.php?q=collection%3Aarchiveitdigitalcollection&fl%5B%5D=identifier&rows=1000&page={0}&output=json&save=yes'.format(page))
-
     if r.status_code != 200:
         return 0
-    # jsonp reply is callback(.*), so strip that
+
     contents = r.content
     jsonContents = json.loads(contents)
     items = [x['identifier'] for x in jsonContents['response']['docs']]
@@ -56,7 +54,6 @@ def main():
     from multiprocessing.pool import ThreadPool
     pool = ThreadPool(processes=5)
     print pool.map(getPage, xrange(1,1200))
-    print result
     
 
 if __name__ == '__main__':
