@@ -5947,6 +5947,8 @@ void SpiderLoop::startLoop ( ) {
 		log("build: failed to register updatecrawlinfowrapper");
 }
 
+// call this every 50ms it seems to try to spider urls and populate doledb
+// from the waiting tree
 void doneSleepingWrapperSL ( int fd , void *state ) {
 	//SpiderLoop *THIS = (SpiderLoop *)state;
 	// dole some out
@@ -5976,16 +5978,22 @@ void doneSleepingWrapperSL ( int fd , void *state ) {
 
 	// reset SpiderColl::m_didRound and m_nextDoledbKey if it is maxed
 	// because we might have had a lock collision
-	int32_t nc = g_collectiondb.m_numRecs;
-	for ( int32_t i = 0 ; i < nc ; i++ ) {
-		// get collectionrec
-		CollectionRec *cr = g_collectiondb.getRec(i);
-		if ( ! cr ) continue;
+	//int32_t nc = g_collectiondb.m_numRecs;
+	// start again at head
+	class CollectionRec *crp = g_spiderLoop.getActiveList();//m_activeList;
+
+	//for ( int32_t i = 0 ; i < nc ; i++ ) {
+	for ( ; crp ; crp = crp->m_nextActive ) {
+		// breathe
+		QUICKPOLL(MAX_NICENESS);
+		// // get collectionrec
+		// CollectionRec *cr = g_collectiondb.getRec(i);
+		// if ( ! cr ) continue;
 		// skip if not enabled
-		if ( ! cr->m_spideringEnabled ) continue;
+		if ( ! crp->m_spideringEnabled ) continue;
 		// get it
 		//SpiderColl *sc = cr->m_spiderColl;
-		SpiderColl *sc = g_spiderCache.getSpiderColl(i);
+		SpiderColl *sc = g_spiderCache.getSpiderColl(crp->m_collnum);
 		// skip if none
 		if ( ! sc ) continue;
 		// also scan spiderdb to populate waiting tree now but
@@ -6001,12 +6009,13 @@ void doneSleepingWrapperSL ( int fd , void *state ) {
 				log(LOG_INFO,
 				    "spider: hit spider queue "
 				    "rebuild timeout for %s (%"INT32")",
-				    cr->m_coll,(int32_t)cr->m_collnum);
+				    crp->m_coll,(int32_t)crp->m_collnum);
 				// flush the ufn table
 				//clearUfnTable();
 			}
 			// try this then. it just returns if
-			// sc->m_waitingTreeNeedsRebuild is false
+			// sc->m_waitingTreeNeedsRebuild is false so it
+			// should be fast in those cases
 			sc->populateWaitingTreeFromSpiderdb ( false );
 		}
 		// re-entry is false because we are entering for the first time
@@ -6293,28 +6302,8 @@ void SpiderLoop::spiderDoledUrls ( ) {
 
  collLoop:
 
-	uint32_t nowGlobal = (uint32_t)getTimeGlobal();
-
-	if ( nowGlobal >= m_recalcTime && m_recalcTimeValid )
-		m_activeListValid = false;
-
-	// we set m_activeListValid to false when enabling/disabling spiders,
-	// when rebuilding url filters in Collectiondb.cpp rebuildUrlFilters()
-	// and when updating the site list in updateSiteList(). all of these
-	// could possible make an inactive collection active again, or vice
-	// versa. also when deleting a collection in Collectiondb.cpp. this
-	// keeps the below loop fast when we have thousands of collections
-	// and most are inactive or empty/deleted.
-	if ( ! m_activeListValid ) {
-		buildActiveList();
-		m_crx = m_activeList;
-		// recompute every 3 seconds, it seems kinda buggy!!
-		m_recalcTime = nowGlobal + 3;
-		m_recalcTimeValid = true;
-	}
-
 	// start again at head
-	if ( ! m_crx ) m_crx = m_activeList;
+	if ( ! m_crx ) m_crx = getActiveList();//m_activeList;
 
 	bool firstTime = true;
 
@@ -6329,8 +6318,7 @@ void SpiderLoop::spiderDoledUrls ( ) {
 	//int32_t count = g_collectiondb.m_numRecs;
 	// set this in the loop
 	CollectionRec *cr = NULL;
-	//uint32_t nowGlobal = 0;
-	nowGlobal = 0;
+	uint32_t nowGlobal = 0;
 	// debug
 	//log("spider: m_cri=%"INT32"",(int32_t)m_cri);
 	// . get the next collection to spider
@@ -14278,6 +14266,32 @@ bool SpiderRequest::isCorrupt ( ) {
 
 	return false;
 }
+
+CollectionRec *SpiderLoop::getActiveList() {
+
+	uint32_t nowGlobal = (uint32_t)getTimeGlobal();
+
+	if ( nowGlobal >= m_recalcTime && m_recalcTimeValid )
+		m_activeListValid = false;
+
+	// we set m_activeListValid to false when enabling/disabling spiders,
+	// when rebuilding url filters in Collectiondb.cpp rebuildUrlFilters()
+	// and when updating the site list in updateSiteList(). all of these
+	// could possible make an inactive collection active again, or vice
+	// versa. also when deleting a collection in Collectiondb.cpp. this
+	// keeps the below loop fast when we have thousands of collections
+	// and most are inactive or empty/deleted.
+	if ( ! m_activeListValid ) {
+		buildActiveList();
+		//m_crx = m_activeList;
+		// recompute every 3 seconds, it seems kinda buggy!!
+		m_recalcTime = nowGlobal + 3;
+		m_recalcTimeValid = true;
+	}
+
+	return m_activeList;
+}
+
 
 void SpiderLoop::buildActiveList ( ) {
 
