@@ -132,7 +132,6 @@ bool File::rename ( char *newFilename ) {
 }
 
 
-/*
 static File *s_activeHead = NULL;
 static File *s_activeTail = NULL;
 
@@ -175,7 +174,6 @@ void promoteInLinkedList ( File *f ) {
 	rmFileFromLinkedList ( f );
 	addFileToLinkedList  ( f );
 }
-*/
 
 // . open the file
 // . only call once per File after calling set()
@@ -249,7 +247,7 @@ int File::write ( void *buf             ,
 	// valgrind
 	if ( n < 0 && errno == EINTR ) goto retry21;	
 	// update linked list
-	//promoteInLinkedList ( this );
+	promoteInLinkedList ( this );
 	// copy errno to g_errno
 	if ( n < 0 ) g_errno = errno;
 	// cancel blocking errors - not really errors
@@ -279,7 +277,7 @@ int File::read ( void *buf            ,
 	// valgrind
 	if ( n < 0 && errno == EINTR ) goto retry9;	
 	// update linked list
-	//promoteInLinkedList ( this );
+	promoteInLinkedList ( this );
 	// copy errno to g_errno
 	if ( n < 0 ) g_errno = errno;
 	// cancel blocking errors - not really errors
@@ -367,7 +365,8 @@ void File::close1_r ( ) {
 	if ( errno == EINTR ) goto again;
 }
 
-// just update the counts
+// . just update the counts
+// . BigFile.cpp calls this when done unlinking/renaming this file
 void File::close2 ( ) { 
 	// if already gone, bail. this could be a closed map file, m_vfd=-1.
 	if ( m_vfd < 0 ) {
@@ -393,7 +392,7 @@ void File::close2 ( ) {
 		return;
 	}
 	// excise from linked list of active files
-	//rmFileFromLinkedList ( this );
+	rmFileFromLinkedList ( this );
 	// mark this virtual file descriptor as available.
 	s_fds [ m_vfd ] = -2;           
 	// no more virtual file descriptor
@@ -462,7 +461,7 @@ bool File::close ( ) {
 	// otherwise decrease the # of open files
 	s_numOpenFiles--; 
 	// excise from linked list of active files
-	//rmFileFromLinkedList ( this );
+	rmFileFromLinkedList ( this );
 	// return true blue
 	return true; 
 }
@@ -581,7 +580,7 @@ int File::getfd () {
 	// update the time stamp
 	s_timestamps [ m_vfd ] = gettimeofdayInMillisecondsLocal();
 	// add file to linked list of active files
-	//addFileToLinkedList ( this );
+	addFileToLinkedList ( this );
 	return fd;
 }
 
@@ -593,30 +592,30 @@ bool File::closeLeastUsed () {
 	int    mini = -1;
 	int64_t now = gettimeofdayInMillisecondsLocal();
 
-	/*
 	// use the new linked list of active file descriptors
 	// . file at tail is the most active
 	File *f = s_activeHead;
 
 	// if nothing to do return true
-	if ( ! f ) return true;
+	//if ( ! f ) return true;
+
+	int32_t mini2 = -1;
 
 	// close the head if not writing
 	for ( ; f ; f = f->m_nextActive ) {
-		mini = f->m_vfd;
+		mini2 = f->m_vfd;
 		// how can this be?
-		if ( s_fds [ mini ] < 0 ) { char *xx=NULL;*xx=0; }
-		if ( s_writing [ mini ] ) continue;
-		if ( s_unlinking [ mini ] ) continue;
+		if ( s_fds [ mini2 ] < 0 ) { char *xx=NULL;*xx=0; }
+		if ( s_writing [ mini2 ] ) continue;
+		if ( s_unlinking [ mini2 ] ) continue;
 		// when we got like 1000 reads queued up, it uses a *lot* of
 		// memory and we can end up never being able to complete a
 		// read because the descriptors are always getting closed on us
 		// so do a hack fix and do not close descriptors that are
 		// about .5 seconds old on avg.
-		if ( s_timestamps [ mini ] >= now - 1 ) continue;
+		if ( s_timestamps [ mini2 ] >= now - 1000 ) continue;
 		break;
 	}
-	*/
 
 	// get the least used of all the actively opened file descriptors.
 	// we can't get files that were opened for writing!!!
@@ -645,14 +644,26 @@ bool File::closeLeastUsed () {
 		}
 	}
 
+	// debug why it doesn't work right
+	if ( mini != mini2 ) {
+		int fd1 = -1;
+		int fd2 = -1;
+		if ( mini >= 0 ) fd1 = s_fds[mini];
+		if ( mini2 >= 0 ) fd2 = s_fds[mini2];
+		int32_t age = now - s_timestamps[mini] ;
+		log("File: linkedlistfd=%i != rightfd=%i agems=%i",fd1,fd2,
+		    (int)age);
+	}
+
 	// if nothing to free then return false
 	if ( mini == -1 ) 
-		return log("File: closeLeastUsed: failed. All %"INT32" descriptors "
+		return log("File: closeLeastUsed: failed. All %"INT32" "
+			   "descriptors "
 			   "are unavailable to be closed and re-used to read "
 			   "from another file.",(int32_t)s_maxNumOpenFiles);
 
 	// debug msg
-	log(LOG_DEBUG,"disk: Closing vfd #%i of %"INT32". delta=%"INT64"",
+	logf(LOG_DEBUG,"disk: Closing vfd #%i of %"INT32". delta=%"INT64"",
 	    mini,(int32_t)s_fds[mini],now-s_timestamps[mini]);
 
 	// always block on close
@@ -672,7 +683,7 @@ bool File::closeLeastUsed () {
 	}
 
 	// . tally up another close for this fd, if any
-	// . so if an open happens int16_tly here after, and 
+	// . so if an open happens shortly here after, and 
 	//   gets this fd, then any read that was started 
 	//   before that open will know it!
 	//s_closeCounts [ fd ]++;
@@ -692,7 +703,7 @@ bool File::closeLeastUsed () {
 	if ( status == 0 ) {
 		s_numOpenFiles--;
 		// excise from linked list of active files
-		//rmFileFromLinkedList ( f );
+		rmFileFromLinkedList ( f );
 		// getfd() may not execute in time to ince the closeCount
 		// so do it here. test by setting the max open files to like
 		// 10 or so and spidering heavily.

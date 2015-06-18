@@ -839,6 +839,22 @@ int32_t RdbBase::addFile ( int32_t id , bool isNew , int32_t mergeNum , int32_t 
 		// this returns false and sets g_errno on error
 		if ( ! m->generateMap ( f ) ) {
 			log("db: Map generation failed.");
+			log("db: Moving .dat and .map file to trash dir");
+			SafeBuf tmp;
+			tmp.safePrintf("%s",f->getFilename());
+			// take off .dat and make it * so we can move map file
+			int32_t len = tmp.getLength();
+			char *str = tmp.getBufStart();
+			str[len-3] = '*';
+			str[len-2] = '\0';
+			SafeBuf cmd;
+			cmd.safePrintf("mv %s/%s %s/trash/",
+				       m_dir.getDir(),
+				       str,
+				       g_hostdb.m_dir);
+			log("db: %s",cmd.getBufStart() );
+			gbsystem ( cmd.getBufStart() );
+			exit(0);
 			mdelete ( f , sizeof(BigFile),"RdbBase");
 			delete (f); 
 			mdelete ( m , sizeof(RdbMap),"RdbBase");
@@ -1358,6 +1374,9 @@ void RdbBase::attemptMerge ( int32_t niceness, bool forceMergeAll, bool doLog ,
 	// nor if EITHER of the merge classes are suspended
 	if ( g_merge.m_isSuspended  ) return;
 	if ( g_merge2.m_isSuspended ) return;
+
+	// shutting down? do not start another merge then
+	if ( g_process.m_mode == EXIT_MODE ) return;
 
 	// sanity checks
 	if (   g_loop.m_inQuickPoll ) { 

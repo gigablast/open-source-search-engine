@@ -516,6 +516,7 @@ class XmlDoc {
 	SafeBuf *getSpiderStatusDocMetaList ( class SpiderReply *reply ,
 					      bool forDelete ) ;
 	SafeBuf *getSpiderStatusDocMetaList2 ( class SpiderReply *reply ) ;
+	bool setSpiderStatusDocMetaList ( SafeBuf *jd , int64_t ssDocId ) ;
 	SafeBuf m_spiderStatusDocMetaList;
 	char *getIsAdult ( ) ;
 	int32_t **getIndCatIds ( ) ;

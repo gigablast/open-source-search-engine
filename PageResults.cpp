@@ -1166,14 +1166,19 @@ bool gotResults ( void *state ) {
 	if ( si->m_streamResults ) {
 		// this will be our final send
 		if ( st->m_socket->m_streamingMode ) {
-			log("res: socket still in streaming mode. wtf?");
+			log("res: socket still in streaming mode. wtf? err=%s",
+			    mstrerror(g_errno));
 			st->m_socket->m_streamingMode = false;
 		}
 		log("msg40: done streaming. nuking state=0x%"PTRFMT" "
+		    "tcpsock=0x%"PTRFMT" "
+		    "sd=%i "
 		    "msg40=0x%"PTRFMT" q=%s. "
 		    "msg20sin=%i msg20sout=%i sendsin=%i sendsout=%i "
 		    "numrequests=%i numreplies=%i "
 		    ,(PTRTYPE)st
+		    ,(PTRTYPE)st->m_socket
+		    ,(int)st->m_socket->m_sd
 		    ,(PTRTYPE)msg40
 		    ,si->m_q.m_orig
 
@@ -1193,6 +1198,10 @@ bool gotResults ( void *state ) {
 		// the callback, doneSendingWrapper9()... because msg40
 		// will have been deleted!
 		st->m_socket->m_callback = NULL;
+
+		// fix this to try to fix double close i guess
+		// if ( st->m_socket->m_sd > 0 )
+		// 	st->m_socket->m_sd *= -1;
 
 		mdelete(st, sizeof(State0), "PageResults2");
 		delete st;
