@@ -6381,7 +6381,7 @@ void SpiderLoop::spiderDoledUrls ( ) {
 	// we don't core trying to access a delete collectionrec.
 	// i'm not sure if this can happen here but i put this in as a 
 	// precaution.
-	if ( ! m_activeListValid ) goto collLoop;
+	if ( ! m_activeListValid ) { m_crx = NULL; goto collLoop; }
 
 	// return now if list is just empty
 	if ( ! m_activeList ) return;

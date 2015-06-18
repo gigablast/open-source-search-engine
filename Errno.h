@@ -112,7 +112,6 @@ enum {
 	EDNSREFUSED      , //dns refused to talk to us
 	EDNSDEAD         , //dns is dead
 	EDNSTIMEDOUT     , //was just EUDPTIMEDOUT
-	EDNSERROR        ,
 	ECOLLTOOBIG      , //collection is too long
 	ESTRIKEOUT       , //retried enough times; deleting doc & giving up
 	ENOPERM          , //permission denied
@@ -197,6 +196,7 @@ enum {
 	ENOTITLEREC,
 	EQUERYINGDISABLED,
 	EJSONMISSINGLASTCURLY,
-	EADMININTERFERENCE
+	EADMININTERFERENCE,
+	EDNSERROR        
 };
 #endif
