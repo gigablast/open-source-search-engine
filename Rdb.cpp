@@ -1833,6 +1833,14 @@ bool Rdb::addList ( collnum_t collnum , RdbList *list,
 	       m_rdbId == RDB_DOLEDB     ||
 	       m_rdbId == RDB_SPIDERDB   ||
 	       m_rdbId == RDB_REVDB      ) ) {
+
+		// exception, spider status docs can be deleted from titledb
+		// if user turns off 'index spider replies' before doing
+		// the rebuild, when not rebuilding titledb.
+		if ( m_rdbId == RDB_TITLEDB && 
+		     list->m_listSize == 12 )
+			goto exception;
+
 		// allow banning of sites still
 		//m_rdbId == RDB_TAGDB     ) ) {
 		log("db: How did an add come in while in repair mode?"
@@ -1840,6 +1848,9 @@ bool Rdb::addList ( collnum_t collnum , RdbList *list,
 		g_errno = EREPAIRING;
 		return false;
 	}
+
+ exception:
+
 	/*
 	if ( g_repair.isRepairActive() &&
 	     g_repair.m_fullRebuild    && 
