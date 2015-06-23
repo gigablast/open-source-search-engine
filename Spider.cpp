@@ -6317,7 +6317,8 @@ void SpiderLoop::spiderDoledUrls ( ) {
 	bool firstTime = true;
 
 	// detect overlap
-	CollectionRec *start = m_crx;
+	//CollectionRec *start = m_crx;
+	m_bookmark = m_crx;
 
 	// log this now
 	//logf(LOG_DEBUG,"spider: getting collnum to dole from");
@@ -6367,21 +6368,29 @@ void SpiderLoop::spiderDoledUrls ( ) {
 	// don't spider if not all hosts are up, or they do not all
 	// have the same hosts.conf.
 	if ( ! g_pingServer.m_hostsConfInAgreement ) return;
-
-
+	// if nothin in the active list then return as well
+	if ( ! m_activeList ) return;
 
 	// if we hit the end of the list, wrap it around
 	if ( ! m_crx ) m_crx = m_activeList;
+
+	// we use m_bookmark to determine when we've done a round over all
+	// the collections. but it will be set to null sometimes when we
+	// are in this loop because the active list gets recomputed. so
+	// if we lost it because our bookmarked collection is no longer 
+	// 'active' then just set it to the list head i guess
+	if ( ! m_bookmark )
+		m_bookmark = m_activeList;
 
 	// i guess return at the end of the linked list if no collection
 	// launched a spider... otherwise do another cycle to launch another
 	// spider. i could see a single collection dominating all the spider
 	// slots in some scenarios with this approach unfortunately.
-	if ( m_crx == start && ! firstTime && m_launches == 0 )
+	if ( m_crx == m_bookmark && ! firstTime && m_launches == 0 )
 		return;
 
 	// reset # launches after doing a round and having launched > 0
-	if ( m_crx == start && ! firstTime )
+	if ( m_crx == m_bookmark && ! firstTime )
 		m_launches = 0;
 
 	firstTime = false;
@@ -14315,6 +14324,7 @@ void SpiderLoop::buildActiveList ( ) {
 
 	// reset the linked list of active collections
 	m_activeList = NULL;
+	bool found = false;
 
 	CollectionRec *tail = NULL;
 
@@ -14348,6 +14358,8 @@ void SpiderLoop::buildActiveList ( ) {
 
 		if ( ! active ) continue;
 
+		if ( cr == m_bookmark ) found = true;
+
 		// we are at the tail of the linked list
 		cr->m_nextActive = NULL;
 
@@ -14362,4 +14374,9 @@ void SpiderLoop::buildActiveList ( ) {
 		tail->m_nextActive = cr;
 		tail = cr;
 	}
+
+	// we use m_bookmark so we do not get into an infinite loop
+	// in spider urls logic above
+	if ( ! found )
+		m_bookmark = NULL;
 }
