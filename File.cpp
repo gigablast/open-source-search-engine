@@ -247,7 +247,7 @@ int File::write ( void *buf             ,
 	// valgrind
 	if ( n < 0 && errno == EINTR ) goto retry21;	
 	// update linked list
-	promoteInLinkedList ( this );
+	//promoteInLinkedList ( this );
 	// copy errno to g_errno
 	if ( n < 0 ) g_errno = errno;
 	// cancel blocking errors - not really errors
@@ -277,7 +277,7 @@ int File::read ( void *buf            ,
 	// valgrind
 	if ( n < 0 && errno == EINTR ) goto retry9;	
 	// update linked list
-	promoteInLinkedList ( this );
+	//promoteInLinkedList ( this );
 	// copy errno to g_errno
 	if ( n < 0 ) g_errno = errno;
 	// cancel blocking errors - not really errors
@@ -392,7 +392,7 @@ void File::close2 ( ) {
 		return;
 	}
 	// excise from linked list of active files
-	rmFileFromLinkedList ( this );
+	//rmFileFromLinkedList ( this );
 	// mark this virtual file descriptor as available.
 	s_fds [ m_vfd ] = -2;           
 	// no more virtual file descriptor
@@ -461,7 +461,7 @@ bool File::close ( ) {
 	// otherwise decrease the # of open files
 	s_numOpenFiles--; 
 	// excise from linked list of active files
-	rmFileFromLinkedList ( this );
+	//rmFileFromLinkedList ( this );
 	// return true blue
 	return true; 
 }
@@ -580,7 +580,7 @@ int File::getfd () {
 	// update the time stamp
 	s_timestamps [ m_vfd ] = gettimeofdayInMillisecondsLocal();
 	// add file to linked list of active files
-	addFileToLinkedList ( this );
+	//addFileToLinkedList ( this );
 	return fd;
 }
 
@@ -592,30 +592,6 @@ bool File::closeLeastUsed () {
 	int    mini = -1;
 	int64_t now = gettimeofdayInMillisecondsLocal();
 
-	// use the new linked list of active file descriptors
-	// . file at tail is the most active
-	File *f = s_activeHead;
-
-	// if nothing to do return true
-	//if ( ! f ) return true;
-
-	int32_t mini2 = -1;
-
-	// close the head if not writing
-	for ( ; f ; f = f->m_nextActive ) {
-		mini2 = f->m_vfd;
-		// how can this be?
-		if ( s_fds [ mini2 ] < 0 ) { char *xx=NULL;*xx=0; }
-		if ( s_writing [ mini2 ] ) continue;
-		if ( s_unlinking [ mini2 ] ) continue;
-		// when we got like 1000 reads queued up, it uses a *lot* of
-		// memory and we can end up never being able to complete a
-		// read because the descriptors are always getting closed on us
-		// so do a hack fix and do not close descriptors that are
-		// about .5 seconds old on avg.
-		if ( s_timestamps [ mini2 ] >= now - 1000 ) continue;
-		break;
-	}
 
 	// get the least used of all the actively opened file descriptors.
 	// we can't get files that were opened for writing!!!
@@ -644,6 +620,32 @@ bool File::closeLeastUsed () {
 		}
 	}
 
+	/*
+	// use the new linked list of active file descriptors
+	// . file at tail is the most active
+	File *f = s_activeHead;
+
+	// if nothing to do return true
+	//if ( ! f ) return true;
+
+	int32_t mini2 = -1;
+
+	// close the head if not writing
+	for ( ; f ; f = f->m_nextActive ) {
+		mini2 = f->m_vfd;
+		// how can this be?
+		if ( s_fds [ mini2 ] < 0 ) { char *xx=NULL;*xx=0; }
+		if ( s_writing [ mini2 ] ) continue;
+		if ( s_unlinking [ mini2 ] ) continue;
+		// when we got like 1000 reads queued up, it uses a *lot* of
+		// memory and we can end up never being able to complete a
+		// read because the descriptors are always getting closed on us
+		// so do a hack fix and do not close descriptors that are
+		// about .5 seconds old on avg.
+		if ( s_timestamps [ mini2 ] >= now - 1000 ) continue;
+		break;
+	}
+
 	// debug why it doesn't work right
 	if ( mini != mini2 ) {
 		int fd1 = -1;
@@ -654,6 +656,7 @@ bool File::closeLeastUsed () {
 		log("File: linkedlistfd=%i != rightfd=%i agems=%i",fd1,fd2,
 		    (int)age);
 	}
+	*/
 
 	// if nothing to free then return false
 	if ( mini == -1 ) 
@@ -703,7 +706,7 @@ bool File::closeLeastUsed () {
 	if ( status == 0 ) {
 		s_numOpenFiles--;
 		// excise from linked list of active files
-		rmFileFromLinkedList ( f );
+		//rmFileFromLinkedList ( f );
 		// getfd() may not execute in time to ince the closeCount
 		// so do it here. test by setting the max open files to like
 		// 10 or so and spidering heavily.

@@ -1609,7 +1609,9 @@ class SpiderLoop {
 	void buildActiveList ( ) ;
 	class CollectionRec *m_crx;
 	class CollectionRec *m_activeList;
+	CollectionRec *m_bookmark;
 	bool m_activeListValid;
+	bool m_activeListModified;
 	uint32_t m_recalcTime;
 	bool m_recalcTimeValid;
 

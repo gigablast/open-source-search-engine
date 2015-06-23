@@ -1105,6 +1105,7 @@ bool Collectiondb::setRecPtr ( collnum_t collnum , CollectionRec *cr ) {
 
 	// tell spiders to re-upadted the active list
 	g_spiderLoop.m_activeListValid = false;
+	g_spiderLoop.m_activeListModified = true;
 
 	// a delete?
 	if ( ! cr ) {
@@ -3574,7 +3575,8 @@ bool CollectionRec::rebuildUrlFiltersDiffbot() {
 	if ( respiderFreq <= 0.0 ) respiderFreq = 3652.5;
 
 	// lower from 7 to 1 since we have so many collections now
-	int32_t diffbotipms = 1; // 7
+	// ok, now we have much less colls so raise back to 7
+	int32_t diffbotipms = 7;// 1; // 7
 
 	// make the gigablast regex table just "default" so it does not
 	// filtering, but accepts all urls. we will add code to pass the urls
