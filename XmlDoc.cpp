@@ -1446,11 +1446,6 @@ bool XmlDoc::set4 ( SpiderRequest *sreq      ,
 	if ( m_sreqValid )
 		m_recycleContent = m_sreq.m_recycleContent;
 
-	if(metadata) {
-		log("metadata is %s", metadata);
-	} else {
-		log("metadata is empty");
-	}
 	m_hasMetadata = (bool)metadata;
 	ptr_metadata = metadata;
 	size_metadata = metadataLen;
@@ -29211,15 +29206,10 @@ bool XmlDoc::hashMetaTags ( HashTableX *tt ) {
 
 		if (jpMetadata.parseJsonStringIntoJsonItems (ptr_metadata, m_niceness)){
 			hashJSONFields2 ( tt , &hi , &jpMetadata , false );
-			log("we hashed the terms in %s", ptr_metadata);
 		} else {
-			log("had error parsing json in %s", ptr_metadata);
-
+			log("XmlDoc had error parsing json in metadata %s", ptr_metadata);
 		}
 	}
-
-
-
 
 	return true;
 }
@@ -31875,6 +31865,7 @@ Msg20Reply *XmlDoc::getMsg20Reply ( ) {
 		return reply;
 	}
 
+
 	// if they provided a query with gbfacet*: terms then we have
 	// to get those facet values.
 	if ( ! m_gotFacets ) {
@@ -32176,10 +32167,10 @@ Msg20Reply *XmlDoc::getMsg20Reply ( ) {
 		ptr_utf8Content[size_utf8Content-1] = '\0';
 	}
 	*/
-
-	// does they want a summary?
+	// do they want a summary?
 	if ( m_req->m_numSummaryLines>0 && ! reply->ptr_displaySum ) {
 		char *hsum = getHighlightedSummary();
+
 		if ( ! hsum || hsum == (void *)-1 ) return (Msg20Reply *)hsum;
 		//Summary *s = getSummary();
 		//if ( ! s || s == (void *)-1 ) return (Msg20Reply *)s;
@@ -32500,6 +32491,8 @@ Msg20Reply *XmlDoc::getMsg20Reply ( ) {
 	reply->ptr_dmozTitles       = ptr_dmozTitles;
 	reply->ptr_dmozSumms        = ptr_dmozSumms;
 	reply->ptr_dmozAnchors      = ptr_dmozAnchors;
+	reply->ptr_metadataBuf      = ptr_metadata;
+
 
 	reply->size_ubuf             = getFirstUrl()->getUrlLen() + 1;
 	reply->size_rubuf            = rulen;
@@ -32508,6 +32501,8 @@ Msg20Reply *XmlDoc::getMsg20Reply ( ) {
 	reply->size_dmozTitles       = size_dmozTitles;
 	reply->size_dmozSumms        = size_dmozSumms;
 	reply->size_dmozAnchors      = size_dmozAnchors;
+	reply->size_metadataBuf      = size_metadata;
+	
 
 	// breathe
 	QUICKPOLL( m_req->m_niceness );
@@ -33519,6 +33514,7 @@ char *XmlDoc::getHighlightedSummary ( ) {
 	}
 
 	Summary *s = getSummary();
+
 	if ( ! s || s == (void *)-1 ) return (char *)s;
 
 	Query *q = getQuery();
@@ -33546,7 +33542,7 @@ char *XmlDoc::getHighlightedSummary ( ) {
 
 	//char tt[5000];
 	Highlight hi;
-	SafeBuf hb;
+	StackBuf(hb);
 	// highlight the query in it
 	int32_t hlen = hi.set ( &hb,
 			     //tt , 
@@ -33562,6 +33558,7 @@ char *XmlDoc::getHighlightedSummary ( ) {
 			     "</b>" , // back tag
 			     0,
 			     m_niceness );
+
 
 	// highlight::set() returns 0 on error
 	if ( hlen < 0 ) {
@@ -33599,6 +33596,7 @@ char *XmlDoc::getHighlightedSummary ( ) {
 // aka getGigabitSample.  get gigabit sample
 // 
 SafeBuf *XmlDoc::getSampleForGigabits ( ) {
+
 
 	if ( m_gsbufValid ) return &m_gsbuf;
 
@@ -35231,6 +35229,7 @@ bool XmlDoc::hashWords3 ( //int32_t        wordStart ,
 		// key should NEVER collide since we are always incrementing
 		// the distance cursor, m_dist
 		dt->addTerm144 ( &k );
+
 
 		// . make the m_wordPosInfoBuf here because we need to set
 		//   WordPosInfo::m_wordPtr/m_wordLen. 
@@ -51659,7 +51658,7 @@ char *XmlDoc::hashJSONFields2 ( HashTableX *table ,
 		// change all :'s in names to .'s since : is reserved!
 		char *px = nameBuf.getBufStart();
 		for ( ; *px ; px++ ) if ( *px == ':' ) *px = '.';
-		for ( px = nameBuf.getBufStart(); *px ; px++ ) if ( *px == '-' ) *px = '_';
+		//for ( px = nameBuf.getBufStart(); *px ; px++ ) if ( *px == '-' ) *px = '_';
 		//
 		// DIFFBOT special field hacks
 		//
@@ -51858,7 +51857,7 @@ bool XmlDoc::storeFacetValues ( char *qs , SafeBuf *sb , FacetValHash_t fvh ) {
 	// sanity
 	if ( ! m_contentTypeValid ) { char *xx=NULL;*xx=0; }
 
-  storeFacetValuesSite ( qs, sb, fvh );
+	storeFacetValuesSite ( qs, sb, fvh );
 
 	// if "qa" is a gbxpathsitehash123456 type of beastie then we
 	// gotta scan the sections
@@ -51868,13 +51867,20 @@ bool XmlDoc::storeFacetValues ( char *qs , SafeBuf *sb , FacetValHash_t fvh ) {
 	// if a json doc, get json field
 	// spider status docs are really json now
 	if ( m_contentType == CT_JSON || m_contentType == CT_STATUS ) 
-		return storeFacetValuesJSON ( qs , sb , fvh );
+		return storeFacetValuesJSON ( qs , sb , fvh, getParsedJson());
 
 	if ( m_contentType == CT_HTML ) 
 		return storeFacetValuesHtml ( qs , sb , fvh );
 
 	if ( m_contentType == CT_XML ) 
 		return storeFacetValuesXml ( qs , sb , fvh );
+
+	if ( m_hasMetadata) {
+		Json jpMetadata;
+		if (jpMetadata.parseJsonStringIntoJsonItems (ptr_metadata, m_niceness)) {
+			storeFacetValuesJSON ( qs, sb, fvh, &jpMetadata );
+		}
+	}
 
 	return true;
 }
@@ -52126,11 +52132,11 @@ bool XmlDoc::storeFacetValuesXml(char *qs, SafeBuf *sb, FacetValHash_t fvh ) {
 	return true;
 }
 
-bool XmlDoc::storeFacetValuesJSON (char *qs, SafeBuf *sb,FacetValHash_t fvh ) {
+bool XmlDoc::storeFacetValuesJSON (char *qs,
+                                   SafeBuf *sb,
+                                   FacetValHash_t fvh,
+                                   Json *jp ) {
 
-	// use new json parser
-	Json *jp = getParsedJson();
-		
 	JsonItem *ji = jp->getFirstItem();
 
 	char nb[1024];

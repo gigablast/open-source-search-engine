@@ -149,6 +149,7 @@ JsonItem *Json::parseJsonStringIntoJsonItems ( char *json , int32_t niceness ) {
 			// set the name
 			ji->m_name    = NAME;
 			ji->m_nameLen = NAMELEN;
+			ji->m_valueLen = 0;
 			// this goes on the stack
 			if ( m_stackPtr >= MAXJSONPARENTS ) return NULL;
 			m_stack[m_stackPtr++] = ji;
@@ -463,7 +464,7 @@ bool JsonItem::isInArray ( ) {
 	return false;
 }
 
-// convert nubers and bools to strings for this one
+// convert numbers and bools to strings for this one
 char *JsonItem::getValueAsString ( int32_t *valueLen ) {
 
 	// strings are the same

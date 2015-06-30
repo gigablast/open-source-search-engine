@@ -388,4 +388,11 @@ public:
 };
 
 
+#define TOKENPASTE(x, y) x ## y
+#define TOKENPASTE2(x, y) TOKENPASTE(x, y)
+
+#define StackBuf(name) char TOKENPASTE2(tmpsafebuf, __LINE__)[1024];	\
+	SafeBuf name(TOKENPASTE2(tmpsafebuf, __LINE__), 1024)
+
+
 #endif

@@ -1634,7 +1634,7 @@ bool qaInjectMetadata ( ) {
 	if ( s_flags[ADD_INITIAL_URLS] == 0) {
 		char* metadata = "{\"testtest\":42,\"a-hyphenated-name\":5, "
 			"\"a-string-value\":\"can we search for this\", "
-			"\"a field with spaces\":6}";
+			"\"a field with spaces\":6, \"compound\":{\"field\":7}}";
 		
 		s_flags[ADD_INITIAL_URLS]++;
 		SafeBuf sb;
@@ -1666,7 +1666,7 @@ bool qaInjectMetadata ( ) {
 	if ( s_flags[EXAMINE_RESULTS2] == 0) {
 		s_flags[EXAMINE_RESULTS2]++;
 		log("searching for metadata");
-		if ( ! getUrl ( "/search?c=qatest123&q=a_hyphenated_name%3A5"
+		if ( ! getUrl ( "/search?c=qatest123&q=a-hyphenated-name%3A5"
                         "&n=1000&sb=1&dr=0&sc=0&s=0&showerrors=1&format=json",
                         1,// Checksum
 						NULL,
@@ -1678,7 +1678,7 @@ bool qaInjectMetadata ( ) {
 	if ( s_flags[EXAMINE_RESULTS3] == 0) {
 		s_flags[EXAMINE_RESULTS3]++;
 		log("searching for metadata");
-		if ( ! getUrl ( "/search?c=qatest123&q=a_string_value%3A\"can+we+search+for+this\""
+		if ( ! getUrl ( "/search?c=qatest123&q=a-string-value%3A\"can+we+search+for+this\""
                         "&n=1000&sb=1&dr=0&sc=0&s=0&showerrors=1&format=json",
                         1,// Checksum
 						NULL,

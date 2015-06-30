@@ -1538,6 +1538,7 @@ bool gotResults ( void *state ) {
 			break;
 		}
 
+
 		// limit it
 		count--;
 	}
@@ -1814,7 +1815,8 @@ bool printLeftNavColumn ( SafeBuf &sb, State0 *st ) {
 			      );
 
 	Query gigabitQuery;
-	SafeBuf ttt;
+	char tmp[1024];
+	SafeBuf ttt(tmp, 1024);
 	// limit it to 40 gigabits for now
 	for ( int32_t i = 0 ; i < numGigabits && i < 40 ; i++ ) {
 		Gigabit *gi = &gigabits[i];
@@ -3282,26 +3284,26 @@ bool printSearchResultsTail ( State0 *st ) {
 		// . add our cgi to the original url
 		// . so if it has &qlang=de and they select &qlang=en
 		//   we have to replace it... etc.
-		SafeBuf newUrl;
+		StackBuf(newUrl);
 		// show banned results
 		replaceParm2 ("sb=1",
 			      &newUrl,
 			      hr->m_origUrlRequest,
 			      hr->m_origUrlRequestLen );
 		// no deduping by summary or content hash etc.
-		SafeBuf newUrl2;
+		StackBuf(newUrl2);
 		replaceParm2("dr=0",&newUrl2,newUrl.getBufStart(),
 			     newUrl.length());
 		// and no site clustering
-		SafeBuf newUrl3;
+		StackBuf( newUrl3 );
 		replaceParm2 ( "sc=0", &newUrl3 , newUrl2.getBufStart(),
 			     newUrl2.length());
 		// start at results #0 again
-		SafeBuf newUrl4;
+		StackBuf( newUrl4 );
 		replaceParm2 ( "s=0", &newUrl4 , newUrl3.getBufStart(),
 			     newUrl3.length());
 		// show errors
-		SafeBuf newUrl5;
+		StackBuf( newUrl5 );
 		replaceParm2 ( "showerrors=1", 
 			       &newUrl5 , 
 			       newUrl4.getBufStart(),
@@ -3341,7 +3343,7 @@ bool printSearchResultsTail ( State0 *st ) {
 		char nsbuf[128];
 		sprintf(nsbuf,"s=%"INT32"",ss);
 		// get the original url and add/replace in &s=xxx
-		SafeBuf newUrl;
+		StackBuf ( newUrl );
 		replaceParm ( nsbuf , &newUrl , hr );
 
 
@@ -3373,7 +3375,7 @@ bool printSearchResultsTail ( State0 *st ) {
 		char nsbuf[128];
 		sprintf(nsbuf,"s=%"INT32"",ss);
 		// get the original url and add/replace in &s=xxx
-		SafeBuf newUrl;
+		StackBuf(newUrl);
 		replaceParm ( nsbuf , &newUrl , hr );
 
 		// close it up
@@ -3900,7 +3902,6 @@ bool printResult ( State0 *st, int32_t ix , int32_t *numPrintedSoFar ) {
 		*numPrintedSoFar = *numPrintedSoFar + 1;
 		return true;
 	}
-
 
 	Msg20      *m20 ;
 	if ( si->m_streamResults )
@@ -4541,7 +4542,8 @@ bool printResult ( State0 *st, int32_t ix , int32_t *numPrintedSoFar ) {
 	int32_t cols = 80;
 	cols = si->m_summaryMaxWidth;
 
-	SafeBuf hb;
+	char tmp3[1024];
+	SafeBuf hb(tmp3, 1024);
 	if ( str && strLen && si->m_doQueryHighlighting ) {
 		hlen = hi.set ( &hb,
 				//tt , 
@@ -5436,7 +5438,8 @@ bool printResult ( State0 *st, int32_t ix , int32_t *numPrintedSoFar ) {
 		qq.safeStrcpy(st->m_qe);
 		qq.nullTerm();
 		// get the original url and add/replace in query
-		SafeBuf newUrl;
+		char tmp2[512];
+		SafeBuf newUrl(tmp2, 512);
 		replaceParm ( qq.getBufStart() , &newUrl , hr );
 		// put show more results from this site link
 		sb->safePrintf (" - <nobr><a href=\"%s\">"
@@ -5611,6 +5614,47 @@ bool printResult ( State0 *st, int32_t ix , int32_t *numPrintedSoFar ) {
 	help.safePrintf("<br><br>"
 	*/
 		
+	if ( mr->size_metadataBuf && si->m_format == FORMAT_JSON) {
+		sb->safePrintf("\t\t\"metadata\":");
+		sb->safeMemcpy(mr->ptr_metadataBuf, mr->size_metadataBuf);
+		sb->pushChar(',');
+
+	}
+
+
+	if ( mr->size_metadataBuf && si->m_format == FORMAT_HTML) {
+		Json md;
+		JsonItem *ji = md.parseJsonStringIntoJsonItems(mr->ptr_metadataBuf,
+													   0);
+		char tmpBuf1[1024];
+		char tmpBuf2[1024];
+		SafeBuf nameBuf(tmpBuf1, 1024);
+		for ( ; ji ; ji = ji->m_next ) {
+			if(ji->isInArray()) continue;
+			ji->getCompoundName ( nameBuf ) ;
+			if(nameBuf.length() == 0) {
+				continue;
+			}
+			//nameBuf.replaceChar('-', '_');
+			nameBuf.nullTerm();
+
+			int32_t valLen;
+			char* valBuf = ji->getValueAsString(&valLen);
+			SafeBuf queryBuf(tmpBuf2, 1024);
+			// log("compound name is %s %d %d",nameBuf.getBufStart(),
+			// nameBuf.length(), valLen);
+
+			queryBuf.safePrintf("/search?q=%s:%%22",nameBuf.getBufStart());
+			queryBuf.urlEncode(valBuf, valLen);
+			queryBuf.safePrintf("%%22&c=%s",coll);
+			queryBuf.nullTerm();
+			sb->safePrintf(" - <a href=\"%s\">%s:\"", queryBuf.getBufStart(),
+						   nameBuf.getBufStart());
+			sb->safeMemcpy(valBuf, valLen);
+			sb->safeStrcpy("\"</a>");
+		}
+	}
+
 
 	// end serp div
 	if ( si->m_format == FORMAT_WIDGET_IFRAME ||
@@ -5663,7 +5707,8 @@ bool printResult ( State0 *st, int32_t ix , int32_t *numPrintedSoFar ) {
 	// print breakout tables here for distance matrix
 	//SafeBuf bt;
 	// final score calc
-	SafeBuf ft;
+	char tmp[1024];
+	SafeBuf ft(tmp, 1024);;
 	// int16_tcut
 	//Query *q = si->m_q;
 
@@ -5758,7 +5803,6 @@ bool printResult ( State0 *st, int32_t ix , int32_t *numPrintedSoFar ) {
 	}
 
 
-	
 
 	// close the distance table
 	//if ( nr ) sb->safePrintf("</table>");
@@ -5828,6 +5872,7 @@ bool printResult ( State0 *st, int32_t ix , int32_t *numPrintedSoFar ) {
 		if ( ! firstTime ) sb->safePrintf("</table><br>");
 	}
 
+	
 
 	char *ff = "";
 	if ( si->m_useMinAlgo ) ff = "MIN ";
@@ -9123,6 +9168,7 @@ bool printSearchFiltersBar ( SafeBuf *sb , HttpRequest *hr ) {
 };
 	*/
 
+
 	SafeBuf cu;
 	hr->getCurrentUrl ( cu );
 
@@ -9586,7 +9632,8 @@ bool printMenu ( SafeBuf *sb , int32_t menuNum , HttpRequest *hr ) {
 		// . add our cgi to the original url
 		// . so if it has &qlang=de and they select &qlang=en
 		//   we have to replace it... etc.
-		SafeBuf newUrl;
+		char tmp2[512];
+		SafeBuf newUrl(tmp2, 512);
 		replaceParm ( mi->m_cgi , &newUrl , hr );
 
 		// print each item in there

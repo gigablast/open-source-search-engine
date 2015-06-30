@@ -455,6 +455,7 @@ void handleRequest20 ( UdpSlot *slot , int32_t netnice ) {
 bool gotReplyWrapperxd ( void *state ) {
 	// grab it
 	XmlDoc *xd = (XmlDoc *)state;
+
 	// get it
 	UdpSlot *slot = (UdpSlot *)xd->m_slot;
 	// parse the request
@@ -587,12 +588,7 @@ bool Msg20Reply::sendReply ( XmlDoc *xd ) {
 				    gettimeofdayInMilliseconds() ,
 				    color                        );
 	
-	// FIXME
-	// int32_t mdLen = 0;
-	// char* md = xd->getMetadata(&mdLen);
-	// if(mdLen) {
-	// 	log("this has metadata %s", md);
-	// }
+	
 	// . del the list at this point, we've copied all the data into reply
 	// . this will free a non-null State20::m_ps (ParseState) for us
 	mdelete ( xd , sizeof(XmlDoc) , "xd20" );

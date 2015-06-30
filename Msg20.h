@@ -481,13 +481,14 @@ public:
 	char       *ptr_rssItem              ; // set for m_getLinkText
 	char       *ptr_categories           ;
 	char       *ptr_gigabitQuery         ; // , separated list of gigabits
-	int32_t       *ptr_gigabitScores        ; // 1-1 with the terms in query
+	int32_t    *ptr_gigabitScores        ; // 1-1 with the terms in query
 	char       *ptr_content              ; // page content in utf8
 	char       *ptr_sectionVotingInfo    ; // in JSON
 	char       *ptr_tr                   ; // like just using msg22
 	char       *ptr_tlistBuf             ;
 	char       *ptr_tiBuf                ; // terminfobuf
 	char       *ptr_templateVector       ;
+	char       *ptr_metadataBuf;
 
 	// . for eventIds include the title and text of the event, and the addr
 	//   serialized using Address::serialize(), and all the start dates
@@ -579,6 +580,7 @@ public:
 	int32_t       size_tlistBuf             ;
 	int32_t       size_tiBuf                ;
 	int32_t       size_templateVector       ;
+	int32_t       size_metadataBuf          ;
 
 	//int32_t       size_eventSummaryLines    ;
 	//int32_t       size_eventAddr            ;

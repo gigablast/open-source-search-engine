@@ -959,7 +959,8 @@ class XmlDoc {
 	bool storeFacetValuesXml      ( char *qs , class SafeBuf *sb ,
 					FacetValHash_t fvh ) ;
 	bool storeFacetValuesJSON     ( char *qs , class SafeBuf *sb ,
-					FacetValHash_t fvh ) ;
+                                    FacetValHash_t fvh,
+                                    Json* jp ) ;
 
 	// print out for PageTitledb.cpp and PageParser.cpp
 	bool printDoc ( class SafeBuf *pbuf );
