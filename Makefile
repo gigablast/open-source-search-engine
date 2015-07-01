@@ -774,4 +774,6 @@ install-pkgs-local:
 # You may need:
 # sudo apt-get install libffi-dev libssl-dev
 warcinjector: 
+	-rm -r /home/zak/.pex/build/inject-*
+	-rm -r /home/zak/.pex/install/inject-*
 	pex -r requests -r pyopenssl -r ndg-httpsclient -r pyasn1 -r multiprocessing -e inject.inject:main -o script/warc-inject -s '/home/zak/repos/open-source-search-engine/script/' --no-wheel
