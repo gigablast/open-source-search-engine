@@ -5,6 +5,11 @@
 //#include "Unicode.h"
 #include "gb-include.h"
 
+/**
+ * Safe Char Buffer, or mutable Strings.
+ * (for java programmers, very similar to the StringBuffer class, with all the speed that c++ allows).
+ * Most of strings in Gigablast are handled by those.
+ */
 class SafeBuf {
 public:
 	//*TRUCTORS
@@ -182,6 +187,7 @@ public:
 
 	void zeroOut() { memset ( m_buf , 0 , m_capacity ); }
 
+	// insert <br>'s to make 's' no more than 'cols' chars per line
 	bool brify2 ( char *s , int32_t cols , char *sep = "<br>" ,
 		      bool isHtml = true ) ;
 

@@ -1105,6 +1105,7 @@ bool Collectiondb::setRecPtr ( collnum_t collnum , CollectionRec *cr ) {
 
 	// tell spiders to re-upadted the active list
 	g_spiderLoop.m_activeListValid = false;
+	g_spiderLoop.m_activeListModified = true;
 
 	// a delete?
 	if ( ! cr ) {
@@ -3573,6 +3574,9 @@ bool CollectionRec::rebuildUrlFiltersDiffbot() {
 	float respiderFreq = m_collectiveRespiderFrequency;
 	if ( respiderFreq <= 0.0 ) respiderFreq = 3652.5;
 
+	// lower from 7 to 1 since we have so many collections now
+	// ok, now we have much less colls so raise back to 7
+	int32_t diffbotipms = 7;// 1; // 7
 
 	// make the gigablast regex table just "default" so it does not
 	// filtering, but accepts all urls. we will add code to pass the urls
@@ -3587,10 +3591,10 @@ bool CollectionRec::rebuildUrlFiltersDiffbot() {
 		// domains it slows diffbot back-end down, so change this
 		// from 100 to 7 if doing a bulk job
 		if ( m_isCustomCrawl == 2 )
-			m_maxSpidersPerRule[i] = 7;
+			m_maxSpidersPerRule[i] = 2;// try 2 not 1 to be faster
 
 		m_spiderIpWaits     [i] = wait;
-		m_spiderIpMaxSpiders[i] = 7; // keep it respectful
+		m_spiderIpMaxSpiders[i] = diffbotipms; // keep it respectful
 		// ethan wants some speed
 		if ( isEthan )
 			m_spiderIpMaxSpiders[i] = 30;

@@ -1904,7 +1904,13 @@ bool Msg40::gotSummary ( ) {
 			for ( k = 0 ; k < m_needFirstReplies ; k++ ) {
 				Msg20 *xx = getCompletedSummary(k);
 				if ( ! xx ) break;
-				if ( ! xx->m_r ) break;
+				if ( ! xx->m_r && 
+				     // and it did not have an error fetching
+				     // because m_r could be NULL and m_errno
+				     // is set to something like Bad Cached
+				     // Document
+				     ! xx->m_errno ) 
+					break;
 			}
 			// if not all have come back yet, wait longer...
 			if ( k < m_needFirstReplies ) break;
@@ -2018,7 +2024,9 @@ bool Msg40::gotSummary ( ) {
 		m20->reset();
 	}
 
-	// set it to true on all but the last thing we send!
+	// . set it to true on all but the last thing we send!
+	// . after each chunk of data we send out, TcpServer::sendChunk
+	//   will call our callback, doneSendingWrapper9 
 	if ( m_si->m_streamResults )
 		st->m_socket->m_streamingMode = true;
 
@@ -2189,6 +2197,8 @@ bool Msg40::gotSummary ( ) {
 		//mdelete(st, sizeof(State0), "msg40st0");
 		//delete st;
 		// otherwise, all done!
+		log("msg40: did not send stuff from last summary. BUG "
+		    "this=0x%"PTRFMT"",(PTRTYPE)this);
 		return true;
 	}
 

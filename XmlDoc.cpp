@@ -21460,6 +21460,17 @@ bool XmlDoc::logIt ( SafeBuf *bb ) {
 		sb->safePrintf("addstatusdocsize=%05"INT32" ",0);
 
 
+	if ( m_useSecondaryRdbs ) {
+		sb->safePrintf("useposdb=%i ",(int)m_usePosdb);
+		sb->safePrintf("usetitledb=%i ",(int)m_useTitledb);
+		sb->safePrintf("useclusterdb=%i ",(int)m_useClusterdb);
+		sb->safePrintf("usespiderdb=%i ",(int)m_useSpiderdb);
+		sb->safePrintf("uselinkdb=%i ",(int)m_useLinkdb);
+		if ( cr )
+			sb->safePrintf("indexspiderreplies=%i ",(int)
+				       cr->m_indexSpiderReplies);
+	}
+
 	if ( size_imageData && m_imageDataValid ) {
 		// url is in data now
 		ThumbnailArray *ta = (ThumbnailArray *)ptr_imageData;
@@ -23019,6 +23030,58 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 	// returning from a handler that had an error?
 	if ( g_errno ) return NULL;
 
+	// if we are a spider status doc/titlerec and we are doing a rebuild
+	// operation, then keep it simple
+	if ( m_setFromTitleRec &&
+	     m_useSecondaryRdbs &&
+	     m_contentTypeValid &&
+	     m_contentType == CT_STATUS ) {
+		// if not rebuilding posdb then done, list is empty since
+		// spider status docs do not contribute to linkdb, clusterdb,..
+		if ( ! m_usePosdb && ! m_useTitledb ) {
+			m_metaListValid = true;
+			return m_metaList;
+		}
+
+		/////////////
+		//
+		// if user disabled spider status docs then delete the titlerec
+		// AND the posdb index list from our dbs for this ss doc
+		//
+		/////////////
+		CollectionRec *cr = getCollRec();
+		if ( ! cr ) return NULL;
+		if ( ! cr->m_indexSpiderReplies ) {
+			int64_t uh48 = m_firstUrl.getUrlHash48();
+			// delete title rec. true = delete?
+			key_t tkey = g_titledb.makeKey (m_docId,uh48,true);
+			// shortcut
+			SafeBuf *ssb = &m_spiderStatusDocMetaList;
+			// add to list. and we do not add the spider status
+			// doc to posdb since we deleted its titlerec.
+			ssb->pushChar(RDB_TITLEDB); // RDB2_TITLEDB2
+			ssb->safeMemcpy ( &tkey , sizeof(key_t) );
+			m_metaList      = ssb->getBufStart();
+			m_metaListSize  = ssb->getLength  ();
+			m_metaListValid = true;
+			return m_metaList;
+		}
+
+		// set safebuf to the json of the spider status doc
+		SafeBuf jd;
+		if ( ! jd.safeMemcpy ( ptr_utf8Content , size_utf8Content ) )
+			return NULL;
+		// set m_spiderStatusDocMetaList from the json
+		if ( ! setSpiderStatusDocMetaList ( &jd , m_docId ) )
+			return NULL;
+		// TODO: support titledb rebuild as well
+		m_metaList      = m_spiderStatusDocMetaList.getBufStart();
+		m_metaListSize  = m_spiderStatusDocMetaList.getLength();
+		m_metaListValid = true;
+		return m_metaList;
+	}
+	     
+
 	// any other indexing issue? hey! g_errno might not be set here
 	//if ( m_indexCode ) { g_errno = m_indexCode; return NULL; }
 
@@ -24043,11 +24106,20 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 	// i guess it is safe to do this after getting the spiderreply
 	SafeBuf *spiderStatusDocMetaList = NULL;
 	//if ( indexReply ) {
+
 	// get the spiderreply ready to be added to the rdbs w/ msg4
-	spiderStatusDocMetaList = getSpiderStatusDocMetaList (newsr,forDelete);
-	// block?
-	if ( ! spiderStatusDocMetaList ||
-	     spiderStatusDocMetaList == (void *)-1)
+	// but if doing a rebuild operation then do not get it, we'll rebuild
+	// it since it will have its own titlerec
+	if ( ! m_useSecondaryRdbs ) {
+		spiderStatusDocMetaList = 
+			getSpiderStatusDocMetaList (newsr,forDelete);
+		if ( ! spiderStatusDocMetaList ) {
+			log("build: ss doc metalist null. bad!");
+			return NULL;
+		}
+	}
+
+	if ( spiderStatusDocMetaList == (void *)-1)
 		return (char *)spiderStatusDocMetaList;
 	//}
 
@@ -25183,6 +25255,8 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 			 spiderStatusDocMetaList->getBufStart() ,
 			 spiderStatusDocMetaList->length() );
 		m_p += spiderStatusDocMetaList->length();
+		m_addedStatusDocSize = spiderStatusDocMetaList->length();
+		m_addedStatusDocSizeValid = true;
 	}
 
 	/*
@@ -28852,21 +28926,121 @@ SafeBuf *XmlDoc::getSpiderStatusDocMetaList2 ( SpiderReply *reply1 ) {
 	// end the json spider status doc
 	jd.safePrintf("\n}\n");
 
+	// BEFORE ANY HASHING
+	int32_t savedDist = m_dist;
+
+	// add the index list for it. it returns false and sets g_errno on err
+	// otherwise it sets m_spiderStatusDocMetaList
+	if ( ! setSpiderStatusDocMetaList ( &jd , *uqd ) )
+		return NULL;
+
+	// now make the titlerec 
+	char xdhead[2048];
+	// just the head of it. this is the hacky part.
+	XmlDoc *xd = (XmlDoc *)xdhead;
+	// clear it out
+	memset ( xdhead, 0 , 2048);
+
+	// copy stuff from THIS so the spider reply "document" has the same
+	// header info stuff
+	int32_t hsize = (char *)&ptr_firstUrl - (char *)this;
+	if ( hsize > 2048 ) { char *xx=NULL;*xx=0; }
+	gbmemcpy ( xdhead , (char *)this , hsize );
+
+	// override spider time in case we had error to be consistent
+	// with the actual SpiderReply record
+	//xd->m_spideredTime = reply->m_spideredTime;
+	//xd->m_spideredTimeValid = true;
+	// sanity
+	//if ( reply->m_spideredTime != m_spideredTime ) {char *xx=NULL;*xx=0;}
+
+	// this will cause the maroon box next to the search result to
+	// say "STATUS" similar to "PDF" "DOC" etc.
+	xd->m_contentType  = CT_STATUS;
+
+	int32_t fullsize = &m_dummyEnd - (char *)this;
+	if ( fullsize > 2048 ) { char *xx=NULL;*xx=0; }
+
+	/*
+	// the ptr_* were all zero'd out, put the ones we want to keep back in
+	SafeBuf tmp;
+	// was "Spider Status: %s" but that is unnecessary
+	tmp.safePrintf("<title>%s</title>",
+		       mstrerror(m_indexCode));
+
+	// if we are a dup...
+	if ( m_indexCode == EDOCDUP )
+		tmp.safePrintf("Dup of docid %"INT64"<br>", m_docIdWeAreADupOf );
+
+	if ( m_redirUrlPtr && m_redirUrlValid )
+		tmp.safePrintf("Redirected to %s<br>",m_redirUrlPtr->getUrl());
+	*/
+
+	// put stats like we log out from logIt
+	//tmp.safePrintf("<div style=max-width:800px;>\n");
+	// store log output into doc
+	//logIt(&tmp);
+	//tmp.safePrintf("\n</div>");
+
+	// the content is just the title tag above
+	// xd->ptr_utf8Content = tmp.getBufStart();
+	// xd->size_utf8Content = tmp.length()+1;
+	xd->ptr_utf8Content = jd.getBufStart();
+	xd->size_utf8Content = jd.length()+1;
+
+	// keep the same url as the doc we are the spider reply for
+	xd->ptr_firstUrl = ptr_firstUrl;
+	xd->size_firstUrl = size_firstUrl;
+
+	// serps need site, otherwise search results core
+	xd->ptr_site = ptr_site;
+	xd->size_site = size_site;
+
+	// if this is null then ip lookup failed i guess so just use
+	// the subdomain
+	if ( ! ptr_site && m_firstUrlValid ) {
+		xd->ptr_site  = m_firstUrl.getHost();
+		xd->size_site = m_firstUrl.getHostLen();
+	}
+
+	// use the same uh48 of our parent
+	int64_t uh48 = m_firstUrl.getUrlHash48();
+	// then make into a titlerec but store in metalistbuf, not m_titleRec
+	SafeBuf titleRecBuf;
+	// this should not include ptrs that are NULL when compressing
+	// using its m_internalFlags1
+	if ( ! xd->setTitleRecBuf( &titleRecBuf,*uqd,uh48 ) ) 
+		return NULL;
+
+	// concat titleRec to our posdb key records
+	if ( ! m_spiderStatusDocMetaList.pushChar((char)RDB_TITLEDB) )
+		return NULL;
+	if ( ! m_spiderStatusDocMetaList.cat(titleRecBuf) ) 
+		return NULL;
+
+	// return the right val
+	m_dist = savedDist;
+
+	// ok, good to go, ready to add to posdb and titledb
+	m_spiderStatusDocMetaListValid = true;
+	return &m_spiderStatusDocMetaList;
+}
+
+
+bool XmlDoc::setSpiderStatusDocMetaList ( SafeBuf *jd , int64_t uqd ) {
 
 	// the posdb table
 	HashTableX tt4;
 	if ( !tt4.set(18,4,256,NULL,0,false,m_niceness,"posdb-spindx"))
-		return NULL;
+		return false;
 
 
 	Json jp2;
-	if (! jp2.parseJsonStringIntoJsonItems ( jd.getBufStart(),m_niceness)){
+	if (! jp2.parseJsonStringIntoJsonItems (jd->getBufStart(),m_niceness)){
 		g_errno = EBADJSONPARSER;
-		return NULL;
+		return false;
 	}
 
-	// BEFORE ANY HASHING
-	int32_t savedDist = m_dist;
 	// re-set to 0
 	m_dist = 0;
 
@@ -28973,7 +29147,7 @@ SafeBuf *XmlDoc::getSpiderStatusDocMetaList2 ( SpiderReply *reply1 ) {
 	*/
 
 	// store keys in safebuf then to make our own meta list
-	addTable144 ( &tt4 , *uqd , &m_spiderStatusDocMetaList );
+	addTable144 ( &tt4 , uqd , &m_spiderStatusDocMetaList );
 
 	// debug this shit
 	//SafeBuf tmpsb;
@@ -28982,97 +29156,7 @@ SafeBuf *XmlDoc::getSpiderStatusDocMetaList2 ( SpiderReply *reply1 ) {
 	//		&tmpsb );
 	//logf(LOG_DEBUG,"%s\n",tmpsb.getBufStart());
 
-
-	// now make the titlerec 
-	char xdhead[2048];
-	// just the head of it. this is the hacky part.
-	XmlDoc *xd = (XmlDoc *)xdhead;
-	// clear it out
-	memset ( xdhead, 0 , 2048);
-
-	// copy stuff from THIS so the spider reply "document" has the same
-	// header info stuff
-	int32_t hsize = (char *)&ptr_firstUrl - (char *)this;
-	if ( hsize > 2048 ) { char *xx=NULL;*xx=0; }
-	gbmemcpy ( xdhead , (char *)this , hsize );
-
-	// override spider time in case we had error to be consistent
-	// with the actual SpiderReply record
-	//xd->m_spideredTime = reply->m_spideredTime;
-	//xd->m_spideredTimeValid = true;
-	// sanity
-	//if ( reply->m_spideredTime != m_spideredTime ) {char *xx=NULL;*xx=0;}
-
-	// this will cause the maroon box next to the search result to
-	// say "STATUS" similar to "PDF" "DOC" etc.
-	xd->m_contentType  = CT_STATUS;
-
-	int32_t fullsize = &m_dummyEnd - (char *)this;
-	if ( fullsize > 2048 ) { char *xx=NULL;*xx=0; }
-
-	/*
-	// the ptr_* were all zero'd out, put the ones we want to keep back in
-	SafeBuf tmp;
-	// was "Spider Status: %s" but that is unnecessary
-	tmp.safePrintf("<title>%s</title>",
-		       mstrerror(m_indexCode));
-
-	// if we are a dup...
-	if ( m_indexCode == EDOCDUP )
-		tmp.safePrintf("Dup of docid %"INT64"<br>", m_docIdWeAreADupOf );
-
-	if ( m_redirUrlPtr && m_redirUrlValid )
-		tmp.safePrintf("Redirected to %s<br>",m_redirUrlPtr->getUrl());
-	*/
-
-	// put stats like we log out from logIt
-	//tmp.safePrintf("<div style=max-width:800px;>\n");
-	// store log output into doc
-	//logIt(&tmp);
-	//tmp.safePrintf("\n</div>");
-
-	// the content is just the title tag above
-	// xd->ptr_utf8Content = tmp.getBufStart();
-	// xd->size_utf8Content = tmp.length()+1;
-	xd->ptr_utf8Content = jd.getBufStart();
-	xd->size_utf8Content = jd.length()+1;
-
-	// keep the same url as the doc we are the spider reply for
-	xd->ptr_firstUrl = ptr_firstUrl;
-	xd->size_firstUrl = size_firstUrl;
-
-	// serps need site, otherwise search results core
-	xd->ptr_site = ptr_site;
-	xd->size_site = size_site;
-
-	// if this is null then ip lookup failed i guess so just use
-	// the subdomain
-	if ( ! ptr_site && m_firstUrlValid ) {
-		xd->ptr_site  = m_firstUrl.getHost();
-		xd->size_site = m_firstUrl.getHostLen();
-	}
-
-	// use the same uh48 of our parent
-	int64_t uh48 = m_firstUrl.getUrlHash48();
-	// then make into a titlerec but store in metalistbuf, not m_titleRec
-	SafeBuf titleRecBuf;
-	// this should not include ptrs that are NULL when compressing
-	// using its m_internalFlags1
-	if ( ! xd->setTitleRecBuf( &titleRecBuf,*uqd,uh48 ) ) 
-		return NULL;
-
-	// concat titleRec to our posdb key records
-	if ( ! m_spiderStatusDocMetaList.pushChar((char)RDB_TITLEDB) )
-		return NULL;
-	if ( ! m_spiderStatusDocMetaList.cat(titleRecBuf) ) 
-		return NULL;
-
-	// return the right val
-	m_dist = savedDist;
-
-	// ok, good to go, ready to add to posdb and titledb
-	m_spiderStatusDocMetaListValid = true;
-	return &m_spiderStatusDocMetaList;
+	return true;
 }
 
 // returns false and sets g_errno on error

@@ -6618,6 +6618,7 @@ void dumpTitledb (char *coll,int32_t startFileNum,int32_t numFiles,bool includeT
 			"ch32=%010"UINT32" "
 			"clen=%07"INT32" "
 			"cs=%04d "
+			"ctype=%s "
 			"lang=%02d "
 			"sni=%03"INT32" "
 			//"cats=%"INT32" "
@@ -6642,6 +6643,7 @@ void dumpTitledb (char *coll,int32_t startFileNum,int32_t numFiles,bool includeT
 			xd->m_contentHash32,
 			xd->size_utf8Content,//tr.getContentLen() ,
 			xd->m_charset,//tr.getCharset(),
+			g_contentTypeStrings[xd->m_contentType],
 			xd->m_langId,//tr.getLanguage(),
 			(int32_t)xd->m_siteNumInlinks,//tr.getDocQuality(),
 			//nc,
