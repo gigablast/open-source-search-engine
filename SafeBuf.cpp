@@ -3222,7 +3222,8 @@ bool SafeBuf::brify ( char *s ,
 			safeMemcpy ( pstart , breakPoint - pstart + 1 );
 			// then br
 			//if ( forced ) pushChar('\n');
-			if ( ! forced ) safeMemcpy ( sep , sepLen ) ; // "<br>"
+			if ( ! forced ) 
+				safeMemcpy ( sep , sepLen ) ; // "<br>"
 			forced = false;
 		}
 		// start right after breakpoint for next line
@@ -3256,6 +3257,7 @@ bool SafeBuf::brify ( char *s ,
 
 	// now do it again but for real!
 	lastRound = true;
+	forced = false;
 	goto redo;
 	return true;
 }

@@ -847,7 +847,8 @@ static bool printGigabitContainingSentences ( State0 *st,
 	}
 
 	if ( format == FORMAT_JSON ) {
-		sb->safePrintf("\t\"gigabit\":{\n");
+		sb->safePrintf("\t{\n");
+		//sb->safePrintf("\t\"gigabit\":{\n");
 		sb->safePrintf("\t\t\"term\":\"");
 		sb->jsonEncode(gi->m_term,gi->m_termLen);
 		sb->safePrintf("\",\n");
@@ -1029,6 +1030,7 @@ static bool printGigabitContainingSentences ( State0 *st,
 		// remove last ,\n
 		sb->m_length -= 2;
 		// replace with just \n
+		// end the gigabit
 		sb->safePrintf("\n\t},\n");
 	}
 
@@ -1777,7 +1779,7 @@ bool printLeftNavColumn ( SafeBuf &sb, State0 *st ) {
 		sb.safePrintf("\t<gigabits>\n");
 
 	if ( numGigabits && format == FORMAT_JSON )
-		sb.safePrintf("\"gigabits\":{\n");
+		sb.safePrintf("\"gigabits\":[\n");
 
 
 	if ( numGigabits && format == FORMAT_HTML )
@@ -1896,7 +1898,8 @@ bool printLeftNavColumn ( SafeBuf &sb, State0 *st ) {
 		// remove ,\n
 		sb.m_length -=2;
 		// add back just \n
-		sb.safePrintf("\n},\n");
+		// end the gigabits array
+		sb.safePrintf("\n],\n");
 	}
 
 	//
