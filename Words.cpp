@@ -315,7 +315,6 @@ bool Words::addWords(char *s,int32_t nodeLen,bool computeWordIds, int32_t nicene
 			}
 			else
 				m_tagIds [m_numWords] = ::getTagId(s+i+1);
-			// word start
 			m_words    [m_numWords] = s + i;
 			m_wordIds  [m_numWords] = 0LL;
 			// skip till end
@@ -461,6 +460,11 @@ bool Words::addWords(char *s,int32_t nodeLen,bool computeWordIds, int32_t nicene
 	if ( m_numWords >= m_preCount ) goto done;
 	m_words   [ m_numWords  ] = &s[j];
 	m_wordLens[ m_numWords  ] = wlen;
+
+	// word start
+	// if ( m_numWords==11429 )
+	// 	log("hey");
+
 	// . Lars says it's better to leave the accented chars intact
 	// . google agrees
 	// . but what about "re'sume"?

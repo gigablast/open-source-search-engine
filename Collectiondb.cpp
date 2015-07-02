@@ -416,6 +416,9 @@ bool Collectiondb::addNewColl ( char *coll ,
 	//g_parms.setToDefault( (char *)cr , OBJ_COLL );
 	g_parms.setToDefault( (char *)cr , OBJ_COLL , cr );
 
+	// put search results back so it doesn't mess up results in qatest123
+	if ( strcmp(coll,"qatest123") == 0 )
+		cr->m_sameLangWeight = 20.0;
 	/*
 	// the default conf file
 	char tmp1[1024];

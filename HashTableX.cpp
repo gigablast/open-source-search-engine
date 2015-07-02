@@ -887,3 +887,20 @@ int32_t HashTableX::getKeyChecksum32 () {
 	}
 	return checksum;
 }
+
+// print as text into sb for debugging
+void HashTableX::print ( class SafeBuf *sb ) {
+	for ( int32_t i = 0 ; i < m_numSlots ; i++ ) {
+		// skip empty bucket
+		if ( ! m_flags[i] ) continue;
+		// get the key
+		char *kp = (char *)getKeyFromSlot(i);
+		//char *dp = (char *)getValFromSlot(i);
+		// show key in hex
+		char *kstr = KEYSTR ( kp , m_ks );
+		//char *dstr = KEYSTR ( kp , m_ds );
+		// show key
+		//sb->safePrintf("\n%s -> %s", kstr , dstr );
+		sb->safePrintf("KEY %s\n", kstr );
+	}
+}

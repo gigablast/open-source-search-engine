@@ -2422,8 +2422,8 @@ bool  Pages::printAdminLinks ( SafeBuf *sb,
 		//if ( ! top && i  < PAGE_CGIPARMS ) continue;
 
 		// skip seo link
-		//if ( ! g_conf.m_isMattWells && i == PAGE_SEO ) 
-		//	continue;
+		if ( ! g_conf.m_isMattWells && i == PAGE_SEO ) 
+			continue;
 
 		// skip page autoban link
 		if ( ! g_conf.m_isMattWells && i == PAGE_AUTOBAN )

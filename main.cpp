@@ -6630,6 +6630,7 @@ void dumpTitledb (char *coll,int32_t startFileNum,int32_t numFiles,bool includeT
 			//"maxLinkTextWeight=%06"UINT32"%% "
 			"hc=%"INT32" "
 			"shard=%"INT32" "
+			"metadatasize=%"INT32" "
 			//"diffbot=%"INT32" "
 			"redir=%s "
 			"url=%s\n", 
@@ -6655,6 +6656,7 @@ void dumpTitledb (char *coll,int32_t startFileNum,int32_t numFiles,bool includeT
 			//ms,
 			(int32_t)xd->m_hopCount,
 			shard,
+			xd->size_metadata,
 			//(int32_t)xd->m_isDiffbotJSONObject,
 			ru,
 			u->getUrl() );

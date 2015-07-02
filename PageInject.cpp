@@ -164,6 +164,9 @@ bool Msg7::sendInjectionRequestToHost ( InjectionRequest *ir ,
 	// ensure it is our own
 	if ( &m_injectionRequest != ir ) { char *xx=NULL;*xx=0; }
 
+	//if ( strcmp ( ir->ptr_url , "http://www.indyweek.com/durham/current/news.html" )  == 0 )
+	//	fprintf(stderr,"ey\n");
+
 	int32_t sirSize = 0;
 	char *sir = serializeMsg2 ( ir ,
 				    sizeof(InjectionRequest),
@@ -190,11 +193,15 @@ bool Msg7::sendInjectionRequestToHost ( InjectionRequest *ir ,
 	// forward it to another shard?
 	Host *host = getHostToHandleInjection ( ir->ptr_url );
 
-	log("inject: sending injection request to host #%"INT32"",host->m_hostId);
+	log("inject: sending injection request of url %s reqsize=%i "
+	    "to host #%"INT32"",
+	    ir->ptr_url,(int)sirSize,host->m_hostId);
 
 	// . ok, forward it to another host now
 	// . and call got gotForwardedReplyWrapper when reply comes in
-	return g_udpServer.sendRequest ( sir , // req ,
+	// . returns false and sets g_errno on error
+	// . returns true on success
+	if ( g_udpServer.sendRequest ( sir , // req ,
 					 sirSize,
 					 0x07 , // msgtype
 					 host->m_ip , // ip
@@ -209,7 +216,13 @@ bool Msg7::sendInjectionRequestToHost ( InjectionRequest *ir ,
 					 NULL, // replybuf
 					 0, // replybufmaxsize
 					 MAX_NICENESS // niceness
-					 );
+				       ) )
+		// we also return true on success, false on error
+		return true;
+
+	if ( ! g_errno ) { char *xx=NULL;*xx=0; }
+	// there was an error, g_errno should be set
+	return false;
 }
 
 void sendHttpReplyWrapper ( void *state ) {
@@ -333,11 +346,18 @@ bool sendPageInject ( TcpSocket *sock , HttpRequest *hr ) {
 	// }
 
 	// when we receive the udp reply then send back the http reply
+	// we return true on success, which means it blocked... so return false
 	if ( msg7->sendInjectionRequestToHost(ir,msg7,sendHttpReplyWrapper)) 
 		return false;
 
+	if ( ! g_errno ) {
+		log("inject: blocked with no error!");
+		char *xx=NULL;*xx=0; 
+	}
+		
 	// error?
-	log("inject: error forwarding reply: %s",  mstrerror(g_errno));
+	log("inject: error forwarding reply: %s (%i)",  mstrerror(g_errno),
+	    (int)g_errno);
 	// it did not block, i gues we are done
 	return sendHttpReply ( msg7 );
 }
