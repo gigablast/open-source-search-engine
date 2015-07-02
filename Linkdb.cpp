@@ -339,12 +339,18 @@ key224_t Linkdb::makeKey_uk ( uint32_t  linkeeSiteHash32       ,
 
 	// sanity checks
 	//if(discoveryDate && discoveryDate < 1025376000){char *xx=NULL;*xx=0;}
-	if ( lostDate && lostDate < LINKDBEPOCH){char *xx=NULL;*xx=0;}
+	if ( lostDate && lostDate < LINKDBEPOCH){
+        lostDate = LINKDBEPOCH;
+        //char *xx=NULL;*xx=0;
+    }
 
 	// . convert discovery date from utc into days since jan 2008 epoch
 	// . the number is for jan 2012, so subtract 4 years to do 2008
 	uint32_t epoch = LINKDBEPOCH;
-	if ( discoveryDate && discoveryDate < epoch ) { char *xx=NULL;*xx=0; }
+	if ( discoveryDate && discoveryDate < epoch ) {
+        discoveryDate = epoch;
+        //char *xx=NULL;*xx=0;
+    }
 	uint32_t nd = (discoveryDate - epoch) / 86400;
 	if ( discoveryDate == 0 ) nd = 0;
 	// makeEndKey_uk() maxes this out!

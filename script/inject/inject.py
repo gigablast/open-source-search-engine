@@ -26,7 +26,7 @@ def injectItem(item):
                     'c':'ait'}
         print "sending", postVars,' to gb'
         rp = requests.post("http://localhost:8000/admin/inject", postVars)
-        print postVars['url'], rp.status_code:
+        print postVars['url'], rp.status_code
 
 
 
