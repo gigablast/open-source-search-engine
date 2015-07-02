@@ -6399,15 +6399,21 @@ HashTableX *XmlDoc::getClockCandidatesTable ( ) {
 	if ( m_clockCandidatesDataValid ) {
 		// and table is now valid
 		m_clockCandidatesTableValid = true;
-		// return empty table if ptr is NULL
-		if (! ptr_clockCandidatesData ) return &m_clockCandidatesTable;
+		// we no longer have this, replaced by ptr_metadata
+		return &m_clockCandidatesTable;
+		// return empty table if ptr is NULL. take this out then.
+		//if(!ptr_clockCandidatesData ) return &m_clockCandidatesTable;
 		// otherwise, deserialize
-		m_clockCandidatesTable.deserialize ( ptr_clockCandidatesData ,
-						     size_clockCandidatesData,
-						     m_niceness );
+		// m_clockCandidatesTable.deserialize(ptr_clockCandidatesData ,
+		// 				     size_clockCandidatesData,
+		// 				     m_niceness );
 		// and return that
 		return &m_clockCandidatesTable;
 	}
+
+	// no longer using this since we got ptr_metadata
+	return &m_clockCandidatesTable;
+
 	// otherwise, get our dates
 	Dates *dp = getDates();
 	if ( ! dp || dp == (Dates *)-1 ) return (HashTableX *)dp;
@@ -6417,8 +6423,8 @@ HashTableX *XmlDoc::getClockCandidatesTable ( ) {
 	if ( dp->m_numDatePtrs == 0 ) {
 		m_clockCandidatesTableValid = true;
 		m_clockCandidatesDataValid  = true;
-		ptr_clockCandidatesData  = NULL;
-		size_clockCandidatesData = 0;
+		// ptr_clockCandidatesData  = NULL;
+		// size_clockCandidatesData = 0;
 		return &m_clockCandidatesTable;
 	}
 	// and set size to 32 buckets to start
@@ -6454,8 +6460,8 @@ HashTableX *XmlDoc::getClockCandidatesTable ( ) {
 	// store it in there
 	m_clockCandidatesTable.serialize ( &m_cctbuf );
 	// point to it
-	ptr_clockCandidatesData  = m_cctbuf.getBufStart();
-	size_clockCandidatesData = need;
+	// ptr_clockCandidatesData  = m_cctbuf.getBufStart();
+	// size_clockCandidatesData = need;
 	// that is valid now
 	m_clockCandidatesDataValid = true;
 	return &m_clockCandidatesTable;

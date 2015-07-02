@@ -375,7 +375,8 @@ class XmlDoc {
 	//char    *ptr_sectionsReply; // votes read from sectiondb - m_osvt
 	//char    *ptr_sectionsVotes; // our local votes - m_nsvt
 	//char    *ptr_addressReply;
-	char      *ptr_clockCandidatesData;
+	//char      *ptr_clockCandidatesData;
+	char      *ptr_metadata;
 	// . serialization of the sectiondb and placedb lists
 	// . that way we can store just these and not have to store the content
 	//   of the entire page if we do not need to
@@ -388,7 +389,6 @@ class XmlDoc {
 	char      *ptr_sectiondbData;
 	char      *ptr_tagRecData;
 	LinkInfo  *ptr_linkInfo2;
-	char      *ptr_metadata;
 
 
 	int32_t       size_firstUrl;
@@ -410,7 +410,8 @@ class XmlDoc {
 	//int32_t     size_sectionsReply;
 	//int32_t     size_sectionsVotes;
 	//int32_t     size_addressReply;
-	int32_t       size_clockCandidatesData;
+	//int32_t       size_clockCandidatesData;
+	int32_t       size_metadata;
 	//int32_t     size_sectiondbData;
 	//int32_t     size_placedbData;
 	int32_t       size_site;
@@ -419,7 +420,6 @@ class XmlDoc {
 	int32_t       size_sectiondbData;
 	int32_t       size_tagRecData;
 	int32_t       size_linkInfo2;
-	int32_t       size_metadata;
 
 	char      m_dummyEnd;
 
