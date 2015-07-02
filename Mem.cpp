@@ -537,7 +537,7 @@ void Mem::addMem ( void *mem , int32_t size , const char *note , char isnew ) {
 	if ( ! s_initialized ) {
 		//m_memtablesize = m_maxMem / 6510;
 		// support 1.2M ptrs for now. good for about 8GB
-		m_memtablesize = 1200*1024;//m_maxMem / 6510;
+		m_memtablesize = 3000*1024;//m_maxMem / 6510;
 		//if ( m_maxMem < 8000000000 ) { char *xx=NULL;*xx=0; }
 	}
 

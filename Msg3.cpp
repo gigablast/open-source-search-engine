@@ -785,7 +785,7 @@ bool Msg3::doneScanning ( ) {
 	// if shutting down gb then limit to 20 so we can shutdown because
 	// it can't shutdown until all threads are out of the queue i think
 	if ( g_process.m_mode == EXIT_MODE && max < 0 ) {
-		log("msg3: forcing retries to 0 because shutting down");
+		//log("msg3: forcing retries to 0 because shutting down");
 		max = 0;
 	}
 

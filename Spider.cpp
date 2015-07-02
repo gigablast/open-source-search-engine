@@ -5883,6 +5883,7 @@ void SpiderLoop::startLoop ( ) {
 	//m_cri     = 0;
 	m_crx = NULL;
 	m_activeListValid = false;
+	m_activeListModified = false;
 	m_activeList = NULL;
 	m_recalcTime = 0;
 	m_recalcTimeValid = false;
@@ -5947,6 +5948,8 @@ void SpiderLoop::startLoop ( ) {
 		log("build: failed to register updatecrawlinfowrapper");
 }
 
+// call this every 50ms it seems to try to spider urls and populate doledb
+// from the waiting tree
 void doneSleepingWrapperSL ( int fd , void *state ) {
 	//SpiderLoop *THIS = (SpiderLoop *)state;
 	// dole some out
@@ -5974,18 +5977,28 @@ void doneSleepingWrapperSL ( int fd , void *state ) {
 	// count these calls
 	s_count++;
 
+ top:
+
 	// reset SpiderColl::m_didRound and m_nextDoledbKey if it is maxed
 	// because we might have had a lock collision
-	int32_t nc = g_collectiondb.m_numRecs;
-	for ( int32_t i = 0 ; i < nc ; i++ ) {
-		// get collectionrec
-		CollectionRec *cr = g_collectiondb.getRec(i);
-		if ( ! cr ) continue;
+	//int32_t nc = g_collectiondb.m_numRecs;
+	// start again at head
+	class CollectionRec *crp = g_spiderLoop.getActiveList();
+
+	//for ( int32_t i = 0 ; i < nc ; i++ ) {
+	for ( ; crp ; crp = crp->m_nextActive ) {
+		// breathe
+		QUICKPOLL(MAX_NICENESS);
+		// if list was modified a collection was deleted/added
+		if ( g_spiderLoop.m_activeListModified ) goto top;
+		// // get collectionrec
+		// CollectionRec *cr = g_collectiondb.getRec(i);
+		// if ( ! cr ) continue;
 		// skip if not enabled
-		if ( ! cr->m_spideringEnabled ) continue;
+		if ( ! crp->m_spideringEnabled ) continue;
 		// get it
 		//SpiderColl *sc = cr->m_spiderColl;
-		SpiderColl *sc = g_spiderCache.getSpiderColl(i);
+		SpiderColl *sc = g_spiderCache.getSpiderColl(crp->m_collnum);
 		// skip if none
 		if ( ! sc ) continue;
 		// also scan spiderdb to populate waiting tree now but
@@ -6001,14 +6014,17 @@ void doneSleepingWrapperSL ( int fd , void *state ) {
 				log(LOG_INFO,
 				    "spider: hit spider queue "
 				    "rebuild timeout for %s (%"INT32")",
-				    cr->m_coll,(int32_t)cr->m_collnum);
+				    crp->m_coll,(int32_t)crp->m_collnum);
 				// flush the ufn table
 				//clearUfnTable();
 			}
 			// try this then. it just returns if
-			// sc->m_waitingTreeNeedsRebuild is false
+			// sc->m_waitingTreeNeedsRebuild is false so it
+			// should be fast in those cases
 			sc->populateWaitingTreeFromSpiderdb ( false );
 		}
+		// if list was modified a collection was deleted/added
+		if ( g_spiderLoop.m_activeListModified ) goto top;
 		// re-entry is false because we are entering for the first time
 		sc->populateDoledbFromWaitingTree ( );
 		// . skip if still loading doledb lists from disk this round
@@ -6026,6 +6042,8 @@ void doneSleepingWrapperSL ( int fd , void *state ) {
 		// send notifications when a crawl is basically in hiatus.
 		//sc->m_encounteredDoledbRecs = false;
 		//sc->m_nextDoledbKey.setMin();
+		// if list was modified a collection was deleted/added
+		if ( g_spiderLoop.m_activeListModified ) goto top;
 	}
 
 	// set initial priority to the highest to start spidering there
@@ -6293,33 +6311,14 @@ void SpiderLoop::spiderDoledUrls ( ) {
 
  collLoop:
 
-	uint32_t nowGlobal = (uint32_t)getTimeGlobal();
-
-	if ( nowGlobal >= m_recalcTime && m_recalcTimeValid )
-		m_activeListValid = false;
-
-	// we set m_activeListValid to false when enabling/disabling spiders,
-	// when rebuilding url filters in Collectiondb.cpp rebuildUrlFilters()
-	// and when updating the site list in updateSiteList(). all of these
-	// could possible make an inactive collection active again, or vice
-	// versa. also when deleting a collection in Collectiondb.cpp. this
-	// keeps the below loop fast when we have thousands of collections
-	// and most are inactive or empty/deleted.
-	if ( ! m_activeListValid ) {
-		buildActiveList();
-		m_crx = m_activeList;
-		// recompute every 3 seconds, it seems kinda buggy!!
-		m_recalcTime = nowGlobal + 3;
-		m_recalcTimeValid = true;
-	}
-
 	// start again at head
-	if ( ! m_crx ) m_crx = m_activeList;
+	if ( ! m_crx ) m_crx = getActiveList();
 
 	bool firstTime = true;
 
 	// detect overlap
-	CollectionRec *start = m_crx;
+	//CollectionRec *start = m_crx;
+	m_bookmark = m_crx;
 
 	// log this now
 	//logf(LOG_DEBUG,"spider: getting collnum to dole from");
@@ -6329,8 +6328,7 @@ void SpiderLoop::spiderDoledUrls ( ) {
 	//int32_t count = g_collectiondb.m_numRecs;
 	// set this in the loop
 	CollectionRec *cr = NULL;
-	//uint32_t nowGlobal = 0;
-	nowGlobal = 0;
+	uint32_t nowGlobal = 0;
 	// debug
 	//log("spider: m_cri=%"INT32"",(int32_t)m_cri);
 	// . get the next collection to spider
@@ -6370,21 +6368,29 @@ void SpiderLoop::spiderDoledUrls ( ) {
 	// don't spider if not all hosts are up, or they do not all
 	// have the same hosts.conf.
 	if ( ! g_pingServer.m_hostsConfInAgreement ) return;
-
-
+	// if nothin in the active list then return as well
+	if ( ! m_activeList ) return;
 
 	// if we hit the end of the list, wrap it around
 	if ( ! m_crx ) m_crx = m_activeList;
+
+	// we use m_bookmark to determine when we've done a round over all
+	// the collections. but it will be set to null sometimes when we
+	// are in this loop because the active list gets recomputed. so
+	// if we lost it because our bookmarked collection is no longer 
+	// 'active' then just set it to the list head i guess
+	if ( ! m_bookmark || ! m_bookmark->m_isActive )
+		m_bookmark = m_activeList;
 
 	// i guess return at the end of the linked list if no collection
 	// launched a spider... otherwise do another cycle to launch another
 	// spider. i could see a single collection dominating all the spider
 	// slots in some scenarios with this approach unfortunately.
-	if ( m_crx == start && ! firstTime && m_launches == 0 )
+	if ( m_crx == m_bookmark && ! firstTime && m_launches == 0 )
 		return;
 
 	// reset # launches after doing a round and having launched > 0
-	if ( m_crx == start && ! firstTime )
+	if ( m_crx == m_bookmark && ! firstTime )
 		m_launches = 0;
 
 	firstTime = false;
@@ -6393,7 +6399,7 @@ void SpiderLoop::spiderDoledUrls ( ) {
 	// we don't core trying to access a delete collectionrec.
 	// i'm not sure if this can happen here but i put this in as a 
 	// precaution.
-	if ( ! m_activeListValid ) goto collLoop;
+	if ( ! m_activeListValid ) { m_crx = NULL; goto collLoop; }
 
 	// return now if list is just empty
 	if ( ! m_activeList ) return;
@@ -12420,7 +12426,10 @@ int32_t getUrlFilterNum2 ( SpiderRequest *sreq       ,
 			// (substraction of uint with int, hope
 			// every thing goes well there)
 			int32_t sreq_age = 0;
-			if ( sreq ) sreq_age = nowGlobal-sreq->m_discoveryTime;
+
+			// if m_discoveryTime is available, we use it. Otherwise we use m_addedTime
+			if ( sreq && sreq->m_discoveryTime!=0) sreq_age = nowGlobal-sreq->m_discoveryTime;
+			if ( sreq && sreq->m_discoveryTime==0) sreq_age = nowGlobal-sreq->m_addedTime;
 			//log("spiderage=%d",sreq_age);
 			// the argument entered by user
 			int32_t argument_age=atoi(s) ;
@@ -14279,7 +14288,36 @@ bool SpiderRequest::isCorrupt ( ) {
 	return false;
 }
 
+CollectionRec *SpiderLoop::getActiveList() {
+
+	uint32_t nowGlobal = (uint32_t)getTimeGlobal();
+
+	if ( nowGlobal >= m_recalcTime && m_recalcTimeValid )
+		m_activeListValid = false;
+
+	// we set m_activeListValid to false when enabling/disabling spiders,
+	// when rebuilding url filters in Collectiondb.cpp rebuildUrlFilters()
+	// and when updating the site list in updateSiteList(). all of these
+	// could possible make an inactive collection active again, or vice
+	// versa. also when deleting a collection in Collectiondb.cpp. this
+	// keeps the below loop fast when we have thousands of collections
+	// and most are inactive or empty/deleted.
+	if ( ! m_activeListValid || m_activeListModified ) {
+		buildActiveList();
+		//m_crx = m_activeList;
+		// recompute every 3 seconds, it seems kinda buggy!!
+		m_recalcTime = nowGlobal + 3;
+		m_recalcTimeValid = true;
+		m_activeListModified = false;
+	}
+
+	return m_activeList;
+}
+
+
 void SpiderLoop::buildActiveList ( ) {
+
+	m_bookmark = NULL;
 
 	// set current time, synced with host #0
 	uint32_t nowGlobal = (uint32_t)getTimeGlobal();
@@ -14291,6 +14329,7 @@ void SpiderLoop::buildActiveList ( ) {
 
 	// reset the linked list of active collections
 	m_activeList = NULL;
+	//bool found = false;
 
 	CollectionRec *tail = NULL;
 
@@ -14322,10 +14361,17 @@ void SpiderLoop::buildActiveList ( ) {
 			// }
 		}
 
+		// we are at the tail of the linked list OR not in the list
+		cr->m_nextActive = NULL;
+
+		cr->m_isActive = false;
+
 		if ( ! active ) continue;
 
-		// we are at the tail of the linked list
-		cr->m_nextActive = NULL;
+		cr->m_isActive = true;
+
+		//if ( cr == m_bookmark ) found = true;
+
 
 		// if first one, set it to head
 		if ( ! tail ) {
@@ -14338,4 +14384,9 @@ void SpiderLoop::buildActiveList ( ) {
 		tail->m_nextActive = cr;
 		tail = cr;
 	}
+
+	// we use m_bookmark so we do not get into an infinite loop
+	// in spider urls logic above
+	//if ( ! found ) 
+	//m_bookmark = NULL;
 }

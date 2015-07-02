@@ -847,7 +847,8 @@ static bool printGigabitContainingSentences ( State0 *st,
 	}
 
 	if ( format == FORMAT_JSON ) {
-		sb->safePrintf("\t\"gigabit\":{\n");
+		sb->safePrintf("\t{\n");
+		//sb->safePrintf("\t\"gigabit\":{\n");
 		sb->safePrintf("\t\t\"term\":\"");
 		sb->jsonEncode(gi->m_term,gi->m_termLen);
 		sb->safePrintf("\",\n");
@@ -1029,6 +1030,7 @@ static bool printGigabitContainingSentences ( State0 *st,
 		// remove last ,\n
 		sb->m_length -= 2;
 		// replace with just \n
+		// end the gigabit
 		sb->safePrintf("\n\t},\n");
 	}
 
@@ -1166,14 +1168,19 @@ bool gotResults ( void *state ) {
 	if ( si->m_streamResults ) {
 		// this will be our final send
 		if ( st->m_socket->m_streamingMode ) {
-			log("res: socket still in streaming mode. wtf?");
+			log("res: socket still in streaming mode. wtf? err=%s",
+			    mstrerror(g_errno));
 			st->m_socket->m_streamingMode = false;
 		}
 		log("msg40: done streaming. nuking state=0x%"PTRFMT" "
+		    "tcpsock=0x%"PTRFMT" "
+		    "sd=%i "
 		    "msg40=0x%"PTRFMT" q=%s. "
 		    "msg20sin=%i msg20sout=%i sendsin=%i sendsout=%i "
 		    "numrequests=%i numreplies=%i "
 		    ,(PTRTYPE)st
+		    ,(PTRTYPE)st->m_socket
+		    ,(int)st->m_socket->m_sd
 		    ,(PTRTYPE)msg40
 		    ,si->m_q.m_orig
 
@@ -1193,6 +1200,10 @@ bool gotResults ( void *state ) {
 		// the callback, doneSendingWrapper9()... because msg40
 		// will have been deleted!
 		st->m_socket->m_callback = NULL;
+
+		// fix this to try to fix double close i guess
+		// if ( st->m_socket->m_sd > 0 )
+		// 	st->m_socket->m_sd *= -1;
 
 		mdelete(st, sizeof(State0), "PageResults2");
 		delete st;
@@ -1769,7 +1780,7 @@ bool printLeftNavColumn ( SafeBuf &sb, State0 *st ) {
 		sb.safePrintf("\t<gigabits>\n");
 
 	if ( numGigabits && format == FORMAT_JSON )
-		sb.safePrintf("\"gigabits\":{\n");
+		sb.safePrintf("\"gigabits\":[\n");
 
 
 	if ( numGigabits && format == FORMAT_HTML )
@@ -1889,7 +1900,8 @@ bool printLeftNavColumn ( SafeBuf &sb, State0 *st ) {
 		// remove ,\n
 		sb.m_length -=2;
 		// add back just \n
-		sb.safePrintf("\n},\n");
+		// end the gigabits array
+		sb.safePrintf("\n],\n");
 	}
 
 	//

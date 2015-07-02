@@ -375,7 +375,8 @@ class XmlDoc {
 	//char    *ptr_sectionsReply; // votes read from sectiondb - m_osvt
 	//char    *ptr_sectionsVotes; // our local votes - m_nsvt
 	//char    *ptr_addressReply;
-	char      *ptr_clockCandidatesData;
+	//char      *ptr_clockCandidatesData;
+	char      *ptr_metadata;
 	// . serialization of the sectiondb and placedb lists
 	// . that way we can store just these and not have to store the content
 	//   of the entire page if we do not need to
@@ -388,7 +389,6 @@ class XmlDoc {
 	char      *ptr_sectiondbData;
 	char      *ptr_tagRecData;
 	LinkInfo  *ptr_linkInfo2;
-	char      *ptr_metadata;
 
 
 	int32_t       size_firstUrl;
@@ -410,7 +410,8 @@ class XmlDoc {
 	//int32_t     size_sectionsReply;
 	//int32_t     size_sectionsVotes;
 	//int32_t     size_addressReply;
-	int32_t       size_clockCandidatesData;
+	//int32_t       size_clockCandidatesData;
+	int32_t       size_metadata;
 	//int32_t     size_sectiondbData;
 	//int32_t     size_placedbData;
 	int32_t       size_site;
@@ -419,7 +420,6 @@ class XmlDoc {
 	int32_t       size_sectiondbData;
 	int32_t       size_tagRecData;
 	int32_t       size_linkInfo2;
-	int32_t       size_metadata;
 
 	char      m_dummyEnd;
 
@@ -521,6 +521,7 @@ class XmlDoc {
 	SafeBuf *getSpiderStatusDocMetaList ( class SpiderReply *reply ,
 					      bool forDelete ) ;
 	SafeBuf *getSpiderStatusDocMetaList2 ( class SpiderReply *reply ) ;
+	bool setSpiderStatusDocMetaList ( SafeBuf *jd , int64_t ssDocId ) ;
 	SafeBuf m_spiderStatusDocMetaList;
 	char *getIsAdult ( ) ;
 	int32_t **getIndCatIds ( ) ;
@@ -539,7 +540,7 @@ class XmlDoc {
 	//class DateParse2 *getDateParse2 ( ) ;
 	class Dates *getSimpleDates();
 	class Dates *getDates();
-	class HashTableX *getClockCandidatesTable();
+	//class HashTableX *getClockCandidatesTable();
 	int32_t getUrlPubDate ( ) ;
 	int32_t getOutlinkAge ( int32_t outlinkNum ) ;
 	char *getIsPermalink ( ) ;
@@ -1496,8 +1497,8 @@ class XmlDoc {
 	bool m_isCompromisedValid;
 	bool m_isNoArchiveValid;
 	//bool m_isVisibleValid;
-	bool m_clockCandidatesTableValid;
-	bool m_clockCandidatesDataValid;
+	//bool m_clockCandidatesTableValid;
+	//bool m_clockCandidatesDataValid;
 	bool m_titleRecBufValid;
 	bool m_isLinkSpamValid;
 	bool m_isErrorPageValid;
@@ -1536,8 +1537,8 @@ class XmlDoc {
 	//DateParse2 m_dateParse2;
 	bool m_printedMenu;
 	Dates m_dates;
-	HashTableX m_clockCandidatesTable;
-	SafeBuf m_cctbuf;
+	//HashTableX m_clockCandidatesTable;
+	//SafeBuf m_cctbuf;
 	float m_ageInDays;
 	int32_t m_urlPubDate;
 	//int32_t m_urlAge;

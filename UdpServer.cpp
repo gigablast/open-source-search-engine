@@ -2313,7 +2313,7 @@ bool UdpServer::makeCallback_ass ( UdpSlot *slot ) {
 		// . unless there was an error
 		// . g_errno could be ECANCELLED
 		if ( ! g_errno && ! slot->isTransactionComplete()) {
-			log("udp: why calling callback when not ready???");
+			//log("udp: why calling callback when not ready???");
 			return false;
 		}
 		/*
