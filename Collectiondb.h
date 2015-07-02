@@ -450,6 +450,9 @@ class CollectionRec {
 	//char  m_recycleVotes            ;
 	int32_t  m_spiderDelayInMilliseconds;
 
+	// is in active list in spider.cpp?
+	bool m_isActive;
+
 	// . at what time did the spiders start?
 	// . this is incremented when all urls have been spidered and
 	//   the next round begins

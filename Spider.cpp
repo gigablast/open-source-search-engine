@@ -6379,7 +6379,7 @@ void SpiderLoop::spiderDoledUrls ( ) {
 	// are in this loop because the active list gets recomputed. so
 	// if we lost it because our bookmarked collection is no longer 
 	// 'active' then just set it to the list head i guess
-	if ( ! m_bookmark )
+	if ( ! m_bookmark || ! m_bookmark->m_isActive )
 		m_bookmark = m_activeList;
 
 	// i guess return at the end of the linked list if no collection
@@ -14317,6 +14317,8 @@ CollectionRec *SpiderLoop::getActiveList() {
 
 void SpiderLoop::buildActiveList ( ) {
 
+	m_bookmark = NULL;
+
 	// set current time, synced with host #0
 	uint32_t nowGlobal = (uint32_t)getTimeGlobal();
 
@@ -14327,7 +14329,7 @@ void SpiderLoop::buildActiveList ( ) {
 
 	// reset the linked list of active collections
 	m_activeList = NULL;
-	bool found = false;
+	//bool found = false;
 
 	CollectionRec *tail = NULL;
 
@@ -14359,12 +14361,17 @@ void SpiderLoop::buildActiveList ( ) {
 			// }
 		}
 
+		// we are at the tail of the linked list OR not in the list
+		cr->m_nextActive = NULL;
+
+		cr->m_isActive = false;
+
 		if ( ! active ) continue;
 
-		if ( cr == m_bookmark ) found = true;
+		cr->m_isActive = true;
 
-		// we are at the tail of the linked list
-		cr->m_nextActive = NULL;
+		//if ( cr == m_bookmark ) found = true;
+
 
 		// if first one, set it to head
 		if ( ! tail ) {
@@ -14380,6 +14387,6 @@ void SpiderLoop::buildActiveList ( ) {
 
 	// we use m_bookmark so we do not get into an infinite loop
 	// in spider urls logic above
-	if ( ! found )
-		m_bookmark = NULL;
+	//if ( ! found ) 
+	//m_bookmark = NULL;
 }
