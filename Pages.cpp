@@ -4085,10 +4085,12 @@ bool printApiForPage ( SafeBuf *sb , int32_t PAGENUM , CollectionRec *cr ) {
 
 		sb->brify2 ( "\t\t\t# The DMOZ category as a UTF-8 string.\n"
 			     , cols , "\n\t\t\t# " , false );
-		sb->safePrintf("<b>\t\t\t\"dmozCatStr\":"
-			       "\"Top: Computers: Security: Malicious Software: Viruses: Detection and Removal Tools: Reviews\""
-			       ",</b>\n\n");
-
+		sb->brify2 ("<b>\t\t\t\"dmozCatStr\":"
+			       "\"Top: Computers: Security: "
+			       "Malicious Software: Viruses: Detection "
+			       "and Removal Tools: Reviews\""
+			       ",</b>\n\n" 
+			     , 60 , "\n\t\t\t " , false );
 
 		sb->brify2 ( "\t\t\t# What title some DMOZ editor gave "
 			     "to this url.\n"

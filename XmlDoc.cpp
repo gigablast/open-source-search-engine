@@ -728,8 +728,8 @@ void XmlDoc::reset ( ) {
 	m_tagRec.reset();
 	m_newTagBuf.reset();
 	m_catRec.reset();
-	m_clockCandidatesTable.reset();
-	m_cctbuf.reset();
+	//m_clockCandidatesTable.reset();
+	//m_cctbuf.reset();
 	m_dupList.reset();
 	//m_oldMetaList.reset();
 	m_msg8a.reset();
@@ -1823,7 +1823,7 @@ bool XmlDoc::set2 ( char    *titleRec ,
 	m_crawlDelayValid             = true;
 	//m_sectiondbDataValid          = true;
 	//m_placedbDataValid            = true;
-	m_clockCandidatesDataValid    = true;
+	//m_clockCandidatesDataValid    = true;
 	//m_skipIndexingValid           = true;
 	m_isSiteRootValid             = true;
 
@@ -5205,7 +5205,7 @@ SafeBuf *XmlDoc::getTitleRecBuf ( ) {
 	if ( ! m_linkInfo2Valid              ) { char *xx=NULL;*xx=0; }
 	//if ( ! m_sectiondbDataValid          ) { char *xx=NULL;*xx=0; }
 	//if ( ! m_placedbDataValid            ) { char *xx=NULL;*xx=0; }
-	if ( ! m_clockCandidatesDataValid    ) { char *xx=NULL;*xx=0; }
+	//if ( ! m_clockCandidatesDataValid    ) { char *xx=NULL;*xx=0; }
 
 	// do we need these?
 	if ( ! m_hostHash32aValid            ) { char *xx=NULL;*xx=0; }
@@ -6346,8 +6346,8 @@ Dates *XmlDoc::getSimpleDates ( ) {
 	// value is the timestamp of the date. this is used by the clock
 	// detection algorithm to compare a date in the previous version
 	// of this web page to see if it changed and is therefore a clock then.
-	HashTableX *cct = NULL;
-	if ( *pod ) cct = (*pod)->getClockCandidatesTable();
+	// HashTableX *cct = NULL;
+	// if ( *pod ) cct = (*pod)->getClockCandidatesTable();
 	// this should be valid
 	uint8_t ctype = *getContentType();
 	CollectionRec *cr = getCollRec();
@@ -6368,7 +6368,7 @@ Dates *XmlDoc::getSimpleDates ( ) {
 				  info1      ,
 				  //sv       ,
 				  //odp      , // old dates
-				  cct        ,
+				  NULL , // cct        ,
 				  this       , // us
 				  *pod       , // old XmlDoc
 				  cr->m_coll     ,
@@ -6391,6 +6391,7 @@ Dates *XmlDoc::getSimpleDates ( ) {
 	return &m_dates;
 }
 
+/*
 // returns NULL and sets g_errno on error, returns -1 if blocked
 HashTableX *XmlDoc::getClockCandidatesTable ( ) {
 	// return if valid
@@ -6399,14 +6400,12 @@ HashTableX *XmlDoc::getClockCandidatesTable ( ) {
 	if ( m_clockCandidatesDataValid ) {
 		// and table is now valid
 		m_clockCandidatesTableValid = true;
-		// we no longer have this, replaced by ptr_metadata
-		return &m_clockCandidatesTable;
 		// return empty table if ptr is NULL. take this out then.
-		//if(!ptr_clockCandidatesData ) return &m_clockCandidatesTable;
+		if(!ptr_clockCandidatesData ) return &m_clockCandidatesTable;
 		// otherwise, deserialize
-		// m_clockCandidatesTable.deserialize(ptr_clockCandidatesData ,
-		// 				     size_clockCandidatesData,
-		// 				     m_niceness );
+		m_clockCandidatesTable.deserialize(ptr_clockCandidatesData ,
+						     size_clockCandidatesData,
+		 				     m_niceness );
 		// and return that
 		return &m_clockCandidatesTable;
 	}
@@ -6466,6 +6465,7 @@ HashTableX *XmlDoc::getClockCandidatesTable ( ) {
 	m_clockCandidatesDataValid = true;
 	return &m_clockCandidatesTable;
 }
+*/
 
 // a date of -1 means not found or unknown
 int32_t XmlDoc::getUrlPubDate ( ) {
@@ -24067,10 +24067,10 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 	if ( ! sh32 || sh32 == (int32_t *)-1 ) return (char *)sh32;
 
 	// set ptr_clockCandidatesData
-	if ( nd ) {
-		HashTableX *cct = nd->getClockCandidatesTable();
-		if ( ! cct || cct==(void *)-1) return (char *)cct;
-	}
+	// if ( nd ) {
+	// 	HashTableX *cct = nd->getClockCandidatesTable();
+	// 	if ( ! cct || cct==(void *)-1) return (char *)cct;
+	// }
 
 	if ( m_useLinkdb && ! m_deleteFromIndex ) {
 		int32_t *linkSiteHashes = getLinkSiteHashes();

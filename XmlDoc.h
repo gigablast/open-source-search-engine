@@ -540,7 +540,7 @@ class XmlDoc {
 	//class DateParse2 *getDateParse2 ( ) ;
 	class Dates *getSimpleDates();
 	class Dates *getDates();
-	class HashTableX *getClockCandidatesTable();
+	//class HashTableX *getClockCandidatesTable();
 	int32_t getUrlPubDate ( ) ;
 	int32_t getOutlinkAge ( int32_t outlinkNum ) ;
 	char *getIsPermalink ( ) ;
@@ -1497,8 +1497,8 @@ class XmlDoc {
 	bool m_isCompromisedValid;
 	bool m_isNoArchiveValid;
 	//bool m_isVisibleValid;
-	bool m_clockCandidatesTableValid;
-	bool m_clockCandidatesDataValid;
+	//bool m_clockCandidatesTableValid;
+	//bool m_clockCandidatesDataValid;
 	bool m_titleRecBufValid;
 	bool m_isLinkSpamValid;
 	bool m_isErrorPageValid;
@@ -1537,8 +1537,8 @@ class XmlDoc {
 	//DateParse2 m_dateParse2;
 	bool m_printedMenu;
 	Dates m_dates;
-	HashTableX m_clockCandidatesTable;
-	SafeBuf m_cctbuf;
+	//HashTableX m_clockCandidatesTable;
+	//SafeBuf m_cctbuf;
 	float m_ageInDays;
 	int32_t m_urlPubDate;
 	//int32_t m_urlAge;
