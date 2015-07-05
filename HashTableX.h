@@ -464,6 +464,9 @@ class HashTableX {
 
 	bool setTableSize ( int32_t numSlots , char *buf , int32_t bufSize );
 
+	// print as text into sb for debugging
+	void print ( class SafeBuf *sb );
+
 	void disableWrites () { m_isWritable = false; };
 	void enableWrites  () { m_isWritable = true ; };
 	bool m_isWritable;

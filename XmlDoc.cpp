@@ -2108,6 +2108,10 @@ bool XmlDoc::injectDoc ( char *url ,
 	// which has no www.tmblr.co IP!
 	uu.set(url,gbstrlen(url),false);//true);
 
+	// if (!strncmp(url , "http://www.focusinfo.com/products/mxprodv" ,40))
+        //          log("hey");
+
+
 	// remove >'s i guess and store in st1->m_url[] buffer
 	char cleanUrl[MAX_URL_LEN+1];
 	cleanInput ( cleanUrl,
@@ -3144,7 +3148,9 @@ bool XmlDoc::indexContainerDoc ( ) {
 	// if ( ! hc ) return true; // error?
 	// if ( hc == (void *)-1 ) return false;
 	// first download
-	char **cpp = getUtf8Content();
+	// in the case of a list of delimeted http server replies let's
+	// not convert into utf8 here but just use as-is
+	char **cpp = getContent();//getUtf8Content();
 	// return true with g_errno set on error
 	if ( ! cpp ) {
 		if ( ! g_errno ) { char *xx=NULL;*xx=0; }
@@ -3261,6 +3267,9 @@ bool XmlDoc::indexContainerDoc ( ) {
 			ir->ptr_content = uend + 1;
 			ir->ptr_url = m_injectUrlBuf.getBufStart();
 			ir->size_url = m_injectUrlBuf.length()+1; // include \0
+			// if (!strncmp(ir->ptr_url,"http://www.focusinfo.com/"
+			// 	       "products/mxprodv" ,40) )
+			// 	log("hey");
 		}
 	}
 
@@ -3288,10 +3297,12 @@ bool XmlDoc::indexContainerDoc ( ) {
 	}
 
 
-	if ( m_msg7->sendInjectionRequestToHost ( ir ,
-						  m_masterState ,
-						  m_masterLoop ) )
-		// it would block, callback will be called later
+	bool status = m_msg7->sendInjectionRequestToHost ( ir ,
+							   m_masterState ,
+							   m_masterLoop ) ;
+ 
+	// it would block, callback will be called later
+	if ( status )
 		return false;
 
 	QUICKPOLL ( m_niceness );
@@ -24672,6 +24683,15 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 		// all keys in tt1, ns1, kt1 and pt1
 		int32_t ck32 = 0;
 		ck32 ^= tt1.getKeyChecksum32();
+
+		// show tt1
+		//
+		// UNCOMMENT this to debug parsing inconsistencies!!!
+		//
+		// SafeBuf sb;
+		// tt1.print(&sb);
+		// if(sb.getBufStart()) fprintf(stderr,"%s", sb.getBufStart());
+
 		//ck32 ^= ns1.getKeyChecksum32();
 		//ck32 ^= kt1.getKeyChecksum32();
 		//ck32 ^= pt1.getKeyChecksum32();
@@ -24687,7 +24707,8 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 		     m_version >= 120 &&
 		     m_metaListCheckSum8 != currentMetaListCheckSum8 ) {
 			log("xmldoc: checksum parsing inconsistency for %s "
-			    "%i != %i",
+			    "(old)%i != %i(new). Uncomment tt1.print() "
+			    "above to debug.",
 			    m_firstUrl.getUrl(),
 			    (int)m_metaListCheckSum8,
 			    (int)currentMetaListCheckSum8);
@@ -35300,6 +35321,8 @@ bool XmlDoc::hashWords3 ( //int32_t        wordStart ,
 
 		// if using posdb
 		key144_t k;
+		// if ( i == 11429 )
+		// 	log("foo");
 		g_posdb.makeKey ( &k ,
 				  h ,
 				  0LL,//docid
@@ -35315,6 +35338,11 @@ bool XmlDoc::hashWords3 ( //int32_t        wordStart ,
 				  false , // syn?
 				  false , // delkey?
 				  hi->m_shardByTermId );
+
+		// get the one we lost
+		// char *kstr = KEYSTR ( &k , sizeof(POSDBKEY) );
+		// if (!strcmp(kstr,"0x0ca3417544e400000000000032b96bf8aa01"))
+		// 	log("got lost key");
 
 		// key should NEVER collide since we are always incrementing
 		// the distance cursor, m_dist

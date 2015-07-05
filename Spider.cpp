@@ -5854,6 +5854,7 @@ static void doneSleepingWrapperSL ( int fd , void *state ) ;
 SpiderLoop g_spiderLoop;
 
 SpiderLoop::SpiderLoop ( ) {
+	m_crx = NULL;
 	// clear array of ptrs to Doc's
 	memset ( m_docs , 0 , sizeof(XmlDoc *) * MAX_SPIDERS );
 }
@@ -6311,7 +6312,7 @@ void SpiderLoop::spiderDoledUrls ( ) {
 
  collLoop:
 
-	// start again at head
+	// start again at head if this is NULL
 	if ( ! m_crx ) m_crx = getActiveList();
 
 	bool firstTime = true;
@@ -14317,7 +14318,9 @@ CollectionRec *SpiderLoop::getActiveList() {
 
 void SpiderLoop::buildActiveList ( ) {
 
-	m_bookmark = NULL;
+	//log("spider: rebuilding active list");
+
+	//m_bookmark = NULL;
 
 	// set current time, synced with host #0
 	uint32_t nowGlobal = (uint32_t)getTimeGlobal();
@@ -14329,7 +14332,7 @@ void SpiderLoop::buildActiveList ( ) {
 
 	// reset the linked list of active collections
 	m_activeList = NULL;
-	//bool found = false;
+	bool found = false;
 
 	CollectionRec *tail = NULL;
 
@@ -14370,7 +14373,7 @@ void SpiderLoop::buildActiveList ( ) {
 
 		cr->m_isActive = true;
 
-		//if ( cr == m_bookmark ) found = true;
+		if ( cr == m_crx ) found = true;
 
 
 		// if first one, set it to head
@@ -14387,6 +14390,8 @@ void SpiderLoop::buildActiveList ( ) {
 
 	// we use m_bookmark so we do not get into an infinite loop
 	// in spider urls logic above
-	//if ( ! found ) 
-	//m_bookmark = NULL;
+	if ( ! found ) {
+		m_bookmark = NULL;
+		m_crx = NULL;
+	}
 }

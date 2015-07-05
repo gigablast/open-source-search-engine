@@ -454,6 +454,11 @@ void Posdb::makeKey ( void              *vkp            ,
 	if ( ! isDelKey ) kp->n0 |= 0x01;
 
 	if ( shardedByTermId ) setShardedByTermIdBit ( kp );
+
+	// get the one we lost
+	// char *kstr = KEYSTR ( kp , sizeof(POSDBKEY) );
+	// if (!strcmp(kstr,"0x0ca3417544e400000000000032b96bf8aa01"))
+	// 	log("got lost key");
 }
 
 RdbCache g_termFreqCache;

@@ -5020,6 +5020,17 @@ bool Tagdb::loadMinSiteInlinksBuffer ( ) {
 		log("tagdb: bad siteinlinks. 0009.org not found.");
 		//return false;
 	}
+	// slot #1 in the buffer. make sure b-stepping doesn't lose it between
+	// the roundoff error cracks.
+	hostHash32 = hash32n("www.hindu.com");
+	msi = getMinSiteInlinks ( hostHash32 );
+	if ( msi < 3 ) 	{
+		log("tagdb: bad siteinlinks. www.hindu.com not found "
+		    "(%"INT32").",
+		    hostHash32);
+		//return false;
+	}
+
 	Url tmp;
 	tmp.set("gnu.org");
 	hostHash32 = tmp.getHash32WithWWW();
@@ -5092,6 +5103,7 @@ bool Tagdb::loadMinSiteInlinksBuffer2 ( ) {
 		for ( ; *p && *p != '\n' && *p != ' ' && *p != '\t' ; p++ );
 		// hash it
 		uint32_t hostHash32 = hash32 ( host , p - host );
+
 		// store in buffer
 		if ( numLinks >= 256 ) {
 			Entry1 e1;
@@ -5147,18 +5159,18 @@ int32_t Tagdb::getMinSiteInlinks ( uint32_t hostHash32 ) {
 	int32_t i = ne / 2;
 	int32_t step = ne / 2;
 	int32_t count = 0;
+	int32_t divs = 0;
+	int32_t dir = 0;
 
  loop1:
 
 	if ( i < 0 ) i = 0;
 	if ( i >= ne ) i = ne-1;
-	// after 3 single steps if no hit, try next hosthash buf
-	if ( count == 3 ) goto tryNextBuf;
+
 	step /= 2;
-	if ( step == 0 ) {
-		step = 1;
-		count++;
-	}
+
+	if ( step == 1 )
+		goto linearScan1;
 	if ( hostHash32 < ep[i].m_hostHash32 ) {
 		i -= step;
 		goto loop1;
@@ -5169,6 +5181,24 @@ int32_t Tagdb::getMinSiteInlinks ( uint32_t hostHash32 ) {
 	}
 	return ep[i].m_siteNumInlinksUniqueCBlock;
 
+ linearScan1:
+	if ( hostHash32 < ep[i].m_hostHash32 ) {
+		if ( i == 0 ) goto tryNextBuf;
+		if ( dir == +1 ) goto tryNextBuf;
+		i--;
+		dir = -1;
+		goto linearScan1;
+	}
+	if ( hostHash32 > ep[i].m_hostHash32 ) {
+		if ( i == ne-1 ) goto tryNextBuf;
+		if ( dir == -1 ) goto tryNextBuf;
+		i++;
+		dir = +1;
+		goto linearScan1;
+	}
+	return ep[i].m_siteNumInlinksUniqueCBlock;
+
+
  tryNextBuf:
 
 	// reset parms
@@ -5177,18 +5207,16 @@ int32_t Tagdb::getMinSiteInlinks ( uint32_t hostHash32 ) {
 	i = ne / 2;
 	step = ne / 2;
 	count = 0;
+	divs = 0;
+	dir = 0;
 
  loop2:
 
 	if ( i < 0 ) i = 0;
 	if ( i >= ne ) i = ne-1;
-	// after 3 single steps if no hit, that's it...
-	if ( count == 3 ) return -1;
 	step /= 2;
-	if ( step == 0 ) {
-		step = 1;
-		count++;
-	}
+	if ( step == 1 )
+		goto linearScan2;
 	if ( hostHash32 < fp[i].m_hostHash32 ) {
 		i -= step;
 		goto loop2;
@@ -5198,5 +5226,22 @@ int32_t Tagdb::getMinSiteInlinks ( uint32_t hostHash32 ) {
 		goto loop2;
 	}
 	return fp[i].m_siteNumInlinksUniqueCBlock;
-	
+
+ linearScan2:
+
+	if ( hostHash32 < fp[i].m_hostHash32 ) {
+		if ( i == 0    ) return -1;
+		if ( dir == +1 ) return -1;
+		i--;
+		dir = -1;
+		goto linearScan2;
+	}
+	if ( hostHash32 > fp[i].m_hostHash32 ) {
+		if ( i == ne-1 ) return -1;
+		if ( dir == -1 ) return -1;
+		i++;
+		dir = +1;
+		goto linearScan2;
+	}
+	return fp[i].m_siteNumInlinksUniqueCBlock;
 }
