@@ -776,4 +776,4 @@ install-pkgs-local:
 warcinjector: 
 	-rm -r /home/zak/.pex/build/inject-*
 	-rm -r /home/zak/.pex/install/inject-*
-	pex -r requests -r pyopenssl -r ndg-httpsclient -r pyasn1 -r multiprocessing -e inject.inject:main -o script/warc-inject -s '/home/zak/repos/open-source-search-engine/script/' --no-wheel
+	pex -r requests -r sqlite3 -r pyopenssl -r ndg-httpsclient -r pyasn1 -r multiprocessing -e inject.inject:main -o script/warc-inject -s '/home/zak/repos/open-source-search-engine/script/' --no-wheel
