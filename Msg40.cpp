@@ -2360,6 +2360,13 @@ bool Msg40::gotSummary ( ) {
                         //m_visibleContiguous--;
 			continue;
 		}
+		// corruptino?
+		if ( mr && ! mr->ptr_ubuf ) {
+			log("msg40: got corrupt msg20 reply for docid %"
+			    INT64,mr->m_docId);
+			*level = CR_BAD_URL;
+			continue;
+		}
 		// filter out urls with <![CDATA in them
 		if ( mr && strstr(mr->ptr_ubuf, "<![CDATA[") ) {
 			*level = CR_BAD_URL;

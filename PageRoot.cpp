@@ -2543,13 +2543,24 @@ bool sendPageAddUrl ( TcpSocket *sock , HttpRequest *hr ) {
 	// . pass in the cleaned url
 	// . returns false if blocked, true otherwise
 	
-	if ( ! msg7->sendInjectionRequestToHost ( ir, st1 , doneInjectingWrapper3 ) )
-		return false;
+	if ( ! msg7->sendInjectionRequestToHost ( ir, st1 , 
+						  doneInjectingWrapper3 ) ) {
+		// there was an error
+		log("http: error sending injection request: %s"
+		    ,mstrerror(g_errno));
+		// we did not block, but had an error
+		return true;
+	}
+
+	//log("http: injection did not block");
 
 	// some kinda error, g_errno should be set i guess
-	doneInjectingWrapper3  ( st1 );
+	//doneInjectingWrapper3  ( st1 );
 	// we did not block
-	return true;
+	//return true;
+	// wait for the reply, this 'blocked'
+	return false;
+
 }
 
 
