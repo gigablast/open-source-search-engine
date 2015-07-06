@@ -1544,15 +1544,13 @@ bool qaWarcFiles ( ) {
 		SafeBuf sb;
 
 		sb.safePrintf("&c=qatest123"
-				"&format=json"
-				  "&strip=1"
-				  "&spiderlinks=1"
-				  "&urls=http://%s:%"INT32"/test.warc.gz"
+					  "&format=json"
+					  "&url=http://%s:%"INT32"/test.warc.gz"
 				  , iptoa(g_hostdb.m_myHost->m_ip)
 				  , (int32_t)g_hostdb.m_myHost->m_httpPort
 
 			      );
-		if ( ! getUrl ( "/admin/addurl",0,sb.getBufStart()) )
+		if ( ! getUrl ( "/admin/inject",0,sb.getBufStart()) )
 			return false;
 	}
 	if ( s_flags[EXAMINE_RESULTS1] == 0) {
@@ -1570,13 +1568,11 @@ bool qaWarcFiles ( ) {
 		SafeBuf sb;
 		sb.safePrintf("&c=qatest123"
 				"&format=json"
-				"&strip=1"
-				"&spiderlinks=1"
-				"&urls=http://%s:%"INT32"/test.arc.gz"
+				"&url=http://%s:%"INT32"/test.arc.gz"
 				, iptoa(g_hostdb.m_myHost->m_ip)
 				, (int32_t)g_hostdb.m_myHost->m_httpPort);
 
-		if ( ! getUrl ( "/admin/addurl",0,sb.getBufStart()) )
+		if ( ! getUrl ( "/admin/inject",0,sb.getBufStart()) )
 			return false;
 	}
 

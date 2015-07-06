@@ -3478,6 +3478,7 @@ bool XmlDoc::indexWarcOrArc ( char ctype ) {
 	//
 	// set recUrl, recIp, recTime, recContent, recContentLen and recSize
 	//
+
 	if ( ctype == CT_WARC ) {
 		// find "WARC/1.0" or whatever
 		char *whp = m_fptr;
