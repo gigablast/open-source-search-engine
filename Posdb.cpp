@@ -5020,10 +5020,7 @@ void PosdbTable::addDocIdVotes ( QueryTermInfo *qti , int32_t   listGroupNum) {
 	// int16_tcut
 	char *bufStart = m_docIdVoteBuf.getBufStart();
 
-	register char *dp = NULL;
-	register char *dpEnd;
-	register char *recPtr     ;
-	char          *subListEnd ;
+
 
 	// range terms tend to disappear if the docid's value falls outside
 	// of the specified range... gbmin:offerprice:190
@@ -5055,71 +5052,147 @@ void PosdbTable::addDocIdVotes ( QueryTermInfo *qti , int32_t   listGroupNum) {
 	//   the docid vote buf. that is, if the query is "jump car" we
 	//   just add all the docids for "jump" and then intersect with the
 	//   docids for "car".
+
+	/* Notes of Sam, July 6th 2015.
+	 * This is a try of using the stepping algorithm to realize the intersection.
+	 * Below we are intersecting termlists. Each time we intersect two termlists, and most
+	 * of the time, one is really big compared to the other.
+	 *
+	 * What is done here is: we assume that each sublists is smaller than the m_docIdVoteBuf
+	 * For each sublist, we will determine a step, which is sqrt(length(big_list)/length(small_list)).
+	 * We will traverse the big list step by step and only go back if we need to.
+	 * This way, in an ideal world, the algorithm is step times faster.
+	 */
+	register char *dp = NULL;
+	register char *dpListEnd;
+	register char *recPtr;
+	register char *recPtr_end;
+	register char *subListEnd ;
+	register size_t step=0;
 	for ( int32_t i = 0 ; i < qti->m_numSubLists && listGroupNum > 0; i++){
+
+		// as explained above, we will try to locate the docId (*dp) between
+		// recPtr_start and recPtr_end
+		dp  =      m_docIdVoteBuf.getBufStart();
+		dpListEnd = dp + m_docIdVoteBuf.length();
+
 		// get that sublist
 		recPtr     = qti->m_subLists[i]->getList();
 		subListEnd = qti->m_subLists[i]->getListEnd();
-		// reset docid list ptrs
-		dp    =      m_docIdVoteBuf.getBufStart();
-		dpEnd = dp + m_docIdVoteBuf.length();
-		// loop it
-	subLoop:
-		// scan for his docids and inc the vote
-		for ( ; dp < dpEnd ; dp += 6 ) {
-			// if current docid in docid list is >= the docid
-			// in the sublist, stop. docid in list is 6 bytes and
-			// recPtr must be pointing to a 12 byte posdb rec.
-			if ( *(uint32_t *)(dp+1) >
-			     *(uint32_t *)(recPtr+8) ) 
-				break;
-			// less than? keep going
-			if ( *(uint32_t *)(dp+1) <
-			     *(uint32_t *)(recPtr+8) ) 
-				continue;
-			// top 4 bytes are equal. check lower single byte then.
-			if ( *(unsigned char *)(dp) >
-			     (*(unsigned char *)(recPtr+7) & 0xfc ) )
-				break;
-			if ( *(unsigned char *)(dp) <
-			     (*(unsigned char *)(recPtr+7) & 0xfc ) )
-				continue;
 
-			// if we are a range term, does this subtermlist
-			// for this docid meet the min/max requirements
-			// of the range term, i.e. gbmin:offprice:190.
-			// if it doesn't then do not add this docid to the
-			// docidVoteBuf, "dp"
-			if ( isRangeTerm && ! isInRange2(recPtr,subListEnd,qt))
+		// determine the step size
+		// Sam: so many variables are for debug
+		int ratio=(subListEnd-recPtr)/(m_docIdVoteBuf.length()+1);
+		double sqrt_ratio=round(sqrt(1.0*ratio/12))*12;
+		step=(int)(sqrt_ratio);
+
+
+		if (step<12)
+			step=12;
+		// step has to be a multiple of 6
+		step-=(step%12);
+
+		int counter=0;
+		// The initial loop in GB has two intricated loop, with the buffer
+		// being the inner loop. I made it the outer loop
+		for (; dp < dpListEnd; dp+=6) {
+
+			// if the step is gt than 12, then probably it worths traversing the big list using
+			// large iteration.
+			// What is inside this if is the stepping algorithm. If you remove this if, you will obtain
+			// a simple merge.
+
+			if (step>12){
+				recPtr_end = recPtr+12;
+
+				// first step, we traverse the big list step by step, in order to find
+				// a docId that is bigger than
+				for (; recPtr_end < subListEnd; recPtr_end += step) {
+					counter++;
+					// This is the problem with the weird mix between 6bytes and 12bytes keys of gigablast.
+					// because now we have to move until we find a 12 bytes key. This adds a lot of instruction to the algorithm,
+					// the step
+					for ( ; recPtr_end < subListEnd && ((*recPtr_end)&0x04); recPtr_end += 6 );
+					if ( recPtr_end >= subListEnd ) break;
+					// are we still below? Check the 4 first byte first
+					if ( *(uint32_t *)(dp+1) >
+							*(uint32_t *)(recPtr_end+8) ){
+						recPtr=recPtr_end;
+						continue;
+					}
+					// are we above? Check the 4 first byte first
+					if ( *(uint32_t *)(dp+1) <
+							*(uint32_t *)(recPtr_end+8) ){
+						break;
+					}
+					// are we still below? Check the last byte first
+					if ( *(unsigned char *)(dp) >
+						*(unsigned char *)(recPtr_end+7) ){
+						recPtr=recPtr_end;
+						continue;
+					}
+					break;
+				}
+			}
+
+			// end of the first loop. At this point, if *dp is contained
+			// in the sublist, it is between recPtr_start and recPtr_end
+			for (; recPtr < subListEnd; recPtr += 12) {
+				counter++;
+				// move to the next 12 bytes key
+				for ( ; recPtr < subListEnd && ((*recPtr)&0x04); recPtr += 6 );
+				if ( recPtr >= subListEnd ) break;
+
+				// being below is the most probable case
+				// are we still below? Check the 4 first byte first
+				if ( *(uint32_t *)(dp+1) >
+						*(uint32_t *)(recPtr+8) ){
+					continue;
+				}
+				// are we above? Check the 4 first byte first
+				if ( *(uint32_t *)(dp+1) <
+						*(uint32_t *)(recPtr+8) ){
+					break;
+				}
+
+				// are we still below? Check the last byte first
+				if ( *(unsigned char *)(dp) >
+					*(unsigned char *)(recPtr+7) ){
+					continue;
+				}
+				// are we above? Check the last byte first
+				if ( *(unsigned char *)(dp) <
+						*(unsigned char *)(recPtr+7) ){
+					break;
+				}
+
+				// if we are a range term, does this subtermlist
+				// for this docid meet the min/max requirements
+				// of the range term, i.e. gbmin:offprice:190.
+				// if it doesn't then do not add this docid to the
+				// docidVoteBuf, "dp"
+				if ( isRangeTerm && ! isInRange2(recPtr,subListEnd,qt))
+					break;
+
+				// Equal!, let's mark our vote
+				dp[5]=listGroupNum;
+
+				// and we can advance to the next 12 bytes key
+				recPtr += 12;
+				// skip any following keys that are 6 bytes, that means they
+				// share the same docid
+				for ( ; recPtr < subListEnd && ((*recPtr)&0x04); recPtr += 6 );
+
 				break;
+			}
 
-			// . equal! record our vote!
-			// . we start at zero for the
-			//   first termlist, and go to 1, etc.
-			dp[5] = listGroupNum;
-			// skip it
-			dp += 6;
 
-			// advance recPtr now
-			break;
+
 		}
 
-		// if we've exhausted this docid list go to next sublist
-		// since this docid is NOT in the current/ongoing intersection
-		// of the docids for each queryterm
-		if ( dp >= dpEnd ) continue;
-
-		// skip that docid record in our termlist. it MUST have been
-		// 12 bytes, a docid heading record.
-		recPtr += 12;
-
-		// skip any following keys that are 6 bytes, that means they
-		// share the same docid
-		for ( ; recPtr < subListEnd && ((*recPtr)&0x04); recPtr += 6 );
-		// if we have more posdb recs in this sublist, then keep
-		// adding our docid votes into the docid list
-		if ( recPtr < subListEnd ) goto subLoop;
-		// otherwise, advance to next sublist
+		log("count total %d", counter);
 	}
+
 
 	// . all done if not the first group of sublists
 	// . shrink the docid list then
@@ -5127,9 +5200,9 @@ void PosdbTable::addDocIdVotes ( QueryTermInfo *qti , int32_t   listGroupNum) {
 		// ok, shrink the docidbuf by removing docids with not enough 
 		// votes which means they are missing a query term
 		dp    =      m_docIdVoteBuf.getBufStart();
-		dpEnd = dp + m_docIdVoteBuf.length();
+		dpListEnd = dp + m_docIdVoteBuf.length();
 		register char *dst   = dp;
-		for ( ; dp < dpEnd ; dp += 6 ) {
+		for ( ; dp < dpListEnd ; dp += 6 ) {
 			// skip if it has enough votes to be in search 
 			// results so far
 			if ( dp[5] != listGroupNum ) continue;
