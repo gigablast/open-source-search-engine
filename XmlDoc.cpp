@@ -51978,6 +51978,13 @@ bool XmlDoc::storeFacetValues ( char *qs , SafeBuf *sb , FacetValHash_t fvh ) {
 
 	storeFacetValuesSite ( qs, sb, fvh );
 
+	if ( m_hasMetadata) {
+		Json jpMetadata;
+		if (jpMetadata.parseJsonStringIntoJsonItems (ptr_metadata, m_niceness)) {
+			storeFacetValuesJSON ( qs, sb, fvh, &jpMetadata );
+		}
+	}
+
 	// if "qa" is a gbxpathsitehash123456 type of beastie then we
 	// gotta scan the sections
 	if ( strncasecmp(qs,"gbxpathsitehash",15) == 0 )
@@ -51987,6 +51994,7 @@ bool XmlDoc::storeFacetValues ( char *qs , SafeBuf *sb , FacetValHash_t fvh ) {
 	// spider status docs are really json now
 	if ( m_contentType == CT_JSON || m_contentType == CT_STATUS ) 
 		return storeFacetValuesJSON ( qs , sb , fvh, getParsedJson());
+	
 
 	if ( m_contentType == CT_HTML ) 
 		return storeFacetValuesHtml ( qs , sb , fvh );
@@ -51994,12 +52002,6 @@ bool XmlDoc::storeFacetValues ( char *qs , SafeBuf *sb , FacetValHash_t fvh ) {
 	if ( m_contentType == CT_XML ) 
 		return storeFacetValuesXml ( qs , sb , fvh );
 
-	if ( m_hasMetadata) {
-		Json jpMetadata;
-		if (jpMetadata.parseJsonStringIntoJsonItems (ptr_metadata, m_niceness)) {
-			storeFacetValuesJSON ( qs, sb, fvh, &jpMetadata );
-		}
-	}
 
 	return true;
 }
