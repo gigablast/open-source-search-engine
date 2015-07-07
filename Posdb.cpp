@@ -5087,12 +5087,12 @@ void PosdbTable::addDocIdVotes ( QueryTermInfo *qti , int32_t   listGroupNum) {
 		step=(int)(sqrt_ratio);
 
 
+
 		if (step<12)
 			step=12;
 		// step has to be a multiple of 6
 		step-=(step%12);
 
-		int counter=0;
 		// The initial loop in GB has two intricated loop, with the buffer
 		// being the inner loop. I made it the outer loop
 		for (; dp < dpListEnd; dp+=6) {
@@ -5108,7 +5108,6 @@ void PosdbTable::addDocIdVotes ( QueryTermInfo *qti , int32_t   listGroupNum) {
 				// first step, we traverse the big list step by step, in order to find
 				// a docId that is bigger than
 				for (; recPtr_end < subListEnd; recPtr_end += step) {
-					counter++;
 					// This is the problem with the weird mix between 6bytes and 12bytes keys of gigablast.
 					// because now we have to move until we find a 12 bytes key. This adds a lot of instruction to the algorithm,
 					// the step
@@ -5138,7 +5137,6 @@ void PosdbTable::addDocIdVotes ( QueryTermInfo *qti , int32_t   listGroupNum) {
 			// end of the first loop. At this point, if *dp is contained
 			// in the sublist, it is between recPtr_start and recPtr_end
 			for (; recPtr < subListEnd; recPtr += 12) {
-				counter++;
 				// move to the next 12 bytes key
 				for ( ; recPtr < subListEnd && ((*recPtr)&0x04); recPtr += 6 );
 				if ( recPtr >= subListEnd ) break;
@@ -5190,7 +5188,6 @@ void PosdbTable::addDocIdVotes ( QueryTermInfo *qti , int32_t   listGroupNum) {
 
 		}
 
-		log("count total %d", counter);
 	}
 
 
