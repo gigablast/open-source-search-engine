@@ -4999,13 +4999,13 @@ int64_t PosdbTable::countUniqueDocids( QueryTermInfo *qti ) {
 	// inc the TOTAL val count
 	if ( fe ) fe->m_outsideSearchResultsCount++;
 
-	// skip that docid record in our termlist. it MUST have been
-	// 12 bytes, a docid heading record.
-	recPtr += 12;
-	count++;
-	// skip any following keys that are 6 bytes, that means they
-	// share the same docid
-	for ( ; recPtr < subListEnd && ((*recPtr)&0x04); recPtr += 6 );
+	// Increment ptr to the next record
+        int32_t recSize = qti->m_subLists[0]->getRecSize(recPtr);
+        recPtr += recSize;
+
+        // Records that are 6 bytes share the same doc id, so only increment
+        // 'count' if it refers to a record with a new (unique) docId
+        if (recSize > 6) count++;
 	goto loop;
 }
 
