@@ -4037,7 +4037,8 @@ bool printApiForPage ( SafeBuf *sb , int32_t PAGENUM , CollectionRec *cr ) {
 		// end instance
 		sb->safePrintf("<b>\t\t}\n\n</b>");
 		// end gigabit
-		sb->safePrintf("<b>\t\t},\n\n</b>");
+		sb->safePrintf("\t\t# End of the first gigabit\n"
+			       "<b>\t\t},\n\n</b>");
 
 		sb->safePrintf("\t\t...\n\n");
 
@@ -4047,6 +4048,59 @@ bool printApiForPage ( SafeBuf *sb , int32_t PAGENUM , CollectionRec *cr ) {
 		sb->safePrintf("<b>\t],\n\n</b>");
 
 
+		// BEGIN FACETS
+		sb->safePrintf( "\t# Start of the facets array, if any.\n");
+		sb->safePrintf("<b>\t\"facets\":[\n</b>\n");
+
+		sb->safePrintf("\t\t# The first facet in the array.\n");
+		sb->safePrintf("<b>\t\t{\n</b>");
+
+		sb->brify2 ( "\t\t\t"
+			     "# The field you are faceting over\n"
+			     , cols , "\n\t\t\t# " , false );
+		sb->safePrintf ( "<b>\t\t\t\"field\":\"Company\",\n\n</b>");
+		sb->brify2 ( "\t\t\t"
+			     "# How many documents in the collection had "
+			     "this particular field? 64-bit integer.\n"
+			     , cols , "\n\t\t\t# " , false );
+		sb->safePrintf ( "<b>\t\t\t\"totalDocsWithField\":148553,"
+				 "\n\n</b>");
+
+		sb->brify2 ( "\t\t\t"
+			     "# How many documents in the collection had "
+			     "this particular field with the same value "
+			     "as the value line directly below? This should "
+			     "always be less than or equal to the "
+			     "totalDocsWithField count. 64-bit integer.\n"
+			     , cols , "\n\t\t\t# " , false );
+		sb->safePrintf ( "<b>\t\t\t\"totalDocsWithFieldAndValue\":"
+				 "44184,\n\n</b>");
+
+		sb->brify2 ( "\t\t\t"
+			     "# The value of the field in the case of "
+			     "this facet. Can be a string or an integer or "
+			     "a float, depending on the type described in "
+			     "the gbfacet query term. i.e. gbfacetstr, "
+			     "gbfacetint or gbfacetfloat.\n"
+			     , cols , "\n\t\t\t# " , false );
+		sb->safePrintf ( "<b>\t\t\t\"value\":"
+				 "\"Widgets, Inc.\",\n\n</b>");
+
+
+		sb->brify2 ( "\t\t\t"
+			     "# Should be the same as totalDocsWith"
+			     "FieldAndValue, "
+			     "above. 64-bit integer.\n"
+			     , cols , "\n\t\t\t# " , false );
+		sb->safePrintf ( "<b>\t\t\t\"docCount\":"
+				 "44184\n\n</b>");
+
+		sb->safePrintf("\t\t# End of the first facet in the array.\n");
+		sb->safePrintf("<b>\t\t}\n\n</b>");
+
+		sb->safePrintf( "\t# End of the facets array.\n");
+		sb->safePrintf("<b>\t],\n\n</b>");
+		// END FACETS
 
 
 
