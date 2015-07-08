@@ -3482,6 +3482,11 @@ bool XmlDoc::indexWarcOrArc ( char ctype ) {
 	if ( ctype == CT_WARC ) {
 		// find "WARC/1.0" or whatever
 		char *whp = m_fptr;
+		if( ! whp ) {
+			// FIXME: shouldn't get here with a NULL
+			log("build: No buffer for file=%s",  file->getFilename());
+			goto warcDone;
+		}
 		// we do terminate last warc rec with \0 so be aware of that...
 		int32_t maxCount = 10;
 		for ( ; *whp && strncmp(whp,"WARC/",5) && --maxCount>0; whp++);

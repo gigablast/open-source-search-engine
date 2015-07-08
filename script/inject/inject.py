@@ -9,6 +9,7 @@ import subprocess
 import multiprocessing
 import sqlite3
 import datetime
+import sys
 
 #Generate environment with:
 #pex -r requests -r multiprocessing -e inject:main -o warc-inject -s '.' --no-wheel
@@ -44,7 +45,7 @@ def injectItem(item, c):
                     'metadata':json.dumps(itemMetadata),
                     'c':'ait'}
         print "sending", postVars,' to gb'
-        if False:
+        if True:
             rp = requests.post("http://localhost:8000/admin/inject", postVars)
             statusCode = rp.status_code
             print postVars['url'], rp.status_code
@@ -77,28 +78,31 @@ def getPage(page):
 
 
 def main():
-    getPage(4)
-    # from multiprocessing.pool import ThreadPool
-    # pool = ThreadPool(processes=5)
-    # print pool.map(getPage, xrange(1,1200))
+    print 'arguments were', sys.argv
+    if len(sys.argv) == 2:
+        if sys.argv[1] == 'init':
+            init()
+            print 'initialized'
+            return sys.exit(0)
+        if sys.argv[1] == 'reset':
+            import os
+            os.unlink('items.db')
+            init()
+            return sys.exit(0)
+    else:
+        #getPage(4)
+        from multiprocessing.pool import ThreadPool
+        pool = ThreadPool(processes=10)
+        print pool.map(getPage, xrange(1,1300))
     
 
 def init():
     db = sqlite3.connect('items.db', detect_types=sqlite3.PARSE_DECLTYPES|sqlite3.PARSE_COLNAMES)
     c = db.cursor()
-    db.execute('''CREATE TABLE items
+    c.execute('''CREATE TABLE items
              (item text, file text, updated timestamp, status integer)''')
-
-
+    db.commit()
+    db.close()
 
 if __name__ == '__main__':
-    import sys
-    if len(sys.argv) == 2:
-        if sys.argv[1] == 'init':
-            init()
-        if sys.argv[1] == 'reset':
-            import os
-            os.unlink('items.db')
-            init()
-    else:
-        main()
+    main()
