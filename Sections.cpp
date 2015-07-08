@@ -1164,7 +1164,9 @@ bool Sections::set ( Words     *w                       ,
 			xh ^= g_hashtab[cnt++][(unsigned char )*p];
 		}
 		// sanity check
-		if ( ! xh ) { char *xx=NULL;*xx=0; }
+		//if ( ! xh ) { char *xx=NULL;*xx=0; }
+		// if it is a string of the same chars it can be 0
+		if ( ! xh ) xh = 1;
 		// store that
 		sn->m_xmlNameHash = (int32_t)xh;
 	}
