@@ -167,6 +167,13 @@ bool Msg7::sendInjectionRequestToHost ( InjectionRequest *ir ,
 	//if ( strcmp ( ir->ptr_url , "http://www.indyweek.com/durham/current/news.html" )  == 0 )
 	//	fprintf(stderr,"ey\n");
 
+	// ensure url not beyond limit
+	if ( ir->ptr_url &&
+	     gbstrlen(ir->ptr_url) > MAX_URL_LEN ) {
+		g_errno = EURLTOOBIG;
+		return log("inject: url too big.");
+	}
+
 	int32_t sirSize = 0;
 	char *sir = serializeMsg2 ( ir ,
 				    sizeof(InjectionRequest),
@@ -375,7 +382,8 @@ bool sendHttpReply ( void *state ) {
 
 	int64_t docId  = msg7->m_replyDocId; // xd->m_docId;
 
-	g_errno = msg7->m_replyIndexCode;
+	// might already be EURLTOOBIG set from above
+	if ( ! g_errno ) g_errno = msg7->m_replyIndexCode;
 
 	int32_t      hostId = 0;//msg7->m_msg7.m_hostId;
 
