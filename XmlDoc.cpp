@@ -3763,11 +3763,15 @@ bool XmlDoc::indexWarcOrArc ( char ctype ) {
 	for ( int32_t i = 0 ; i < MAXMSG7S ; i++ ) {
 		msg7 = m_msg7s[i];
 		// if we got an available one stop
-		if ( msg7 && ! msg7->m_inUse ) break;
+		if ( msg7 ) {
+			if( msg7->m_inUse ) continue;
+			break; // reuse this one.
+		}
 		// ok, create one, 1MB each about
 		try { msg7 = new ( Msg7 ); }
 		catch ( ... ) {g_errno=ENOMEM;m_warcError=g_errno;return true;}
 		mnew ( msg7 , sizeof(Msg7),"xdmsgs7");
+
 		// store it for re-use
 		m_msg7s[i] = msg7;
 		break;
