@@ -3482,6 +3482,11 @@ bool XmlDoc::indexWarcOrArc ( char ctype ) {
 	if ( ctype == CT_WARC ) {
 		// find "WARC/1.0" or whatever
 		char *whp = m_fptr;
+		if( ! whp ) {
+			// FIXME: shouldn't get here with a NULL
+			log("build: No buffer for file=%s",  file->getFilename());
+			goto warcDone;
+		}
 		// we do terminate last warc rec with \0 so be aware of that...
 		int32_t maxCount = 10;
 		for ( ; *whp && strncmp(whp,"WARC/",5) && --maxCount>0; whp++);
@@ -3758,11 +3763,15 @@ bool XmlDoc::indexWarcOrArc ( char ctype ) {
 	for ( int32_t i = 0 ; i < MAXMSG7S ; i++ ) {
 		msg7 = m_msg7s[i];
 		// if we got an available one stop
-		if ( msg7 && ! msg7->m_inUse ) break;
+		if ( msg7 ) {
+			if( msg7->m_inUse ) continue;
+			break; // reuse this one.
+		}
 		// ok, create one, 1MB each about
 		try { msg7 = new ( Msg7 ); }
 		catch ( ... ) {g_errno=ENOMEM;m_warcError=g_errno;return true;}
 		mnew ( msg7 , sizeof(Msg7),"xdmsgs7");
+
 		// store it for re-use
 		m_msg7s[i] = msg7;
 		break;
