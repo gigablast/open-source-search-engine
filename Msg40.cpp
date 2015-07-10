@@ -3496,7 +3496,10 @@ bool Msg40::computeGigabits( TopicGroup *tg ) {
 			log("gbits: too many words in samples. "
 			    "Discarding the remaining samples "
 			    "(maxWords=%"INT32")", maxWords);
-			char *xx=NULL;*xx=0;
+			// return -1 with g_errno set on error
+			g_errno = EBUFTOOSMALL;
+			return -1;
+			//char *xx=NULL;*xx=0;
 		}
 		// the thing we are counting!!!!
 		maxWords += sampleWords;
