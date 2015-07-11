@@ -636,14 +636,16 @@ bool Query::setQTerms ( Words &words , Phrases &phrases ) {
 
 
 	// allocate the stack buf
-	int32_t need = nqt * sizeof(QueryTerm) ;
-	if ( ! m_stackBuf.reserve ( need ) )
-		return false;
-	m_stackBuf.setLabel("stkbuf3");
-	char *pp = m_stackBuf.getBufStart();
-	m_qterms = (QueryTerm *)pp;
-	pp += sizeof(QueryTerm);
-	if ( pp > m_stackBuf.getBufEnd() ) { char *xx=NULL;*xx=0; }
+	if ( nqt ) {
+		int32_t need = nqt * sizeof(QueryTerm) ;
+		if ( ! m_stackBuf.reserve ( need ) )
+			return false;
+		m_stackBuf.setLabel("stkbuf3");
+		char *pp = m_stackBuf.getBufStart();
+		m_qterms = (QueryTerm *)pp;
+		pp += sizeof(QueryTerm);
+		if ( pp > m_stackBuf.getBufEnd() ) { char *xx=NULL;*xx=0; }
+	}
 
 	// call constructor on each one here
 	for ( int32_t i = 0 ; i < nqt ; i++ ) {

@@ -769,9 +769,9 @@ bool Msg39::getLists () {
 	int32_t nqt = m_tmpq.getNumTerms();
 	if ( ! m_stackBuf.reserve ( sizeof(RdbList) * nqt ) ) return true;
 	m_stackBuf.setLabel("stkbuf2");
+	m_lists = (IndexList *)m_stackBuf.getBufStart();
 	for ( int32_t i = 0 ; i < nqt ; i++ )
-		m_lists = (IndexList *)m_stackBuf.getBufStart();
-
+		m_lists[i].constructor();
 
 	// call msg2
 	if ( ! m_msg2.getLists ( rdbId                      ,
