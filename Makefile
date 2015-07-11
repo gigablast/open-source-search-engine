@@ -10,7 +10,7 @@ CC=g++
 
 # remove dlstubs.o for CYGWIN
 OBJS =  UdpSlot.o Rebalance.o \
-	Msg13.o Mime.o IndexReadInfo.o \
+	Msg13.o Mime.o \
 	PageGet.o PageHosts.o \
 	PageParser.o PageInject.o PagePerf.o PageReindex.o PageResults.o \
 	PageAddUrl.o PageRoot.o PageSockets.o PageStats.o \

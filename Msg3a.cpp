@@ -317,8 +317,8 @@ bool Msg3a::gotCacheReply ( ) {
 
 	//CollectionRec *cr;
 	//cr = g_collectiondb.getRec(m_r->ptr_coll,m_r->size_coll-1);
-
-	setTermFreqWeights ( m_r->m_collnum,m_q,m_termFreqs,m_termFreqWeights);
+	//setTermFreqWeights(m_r->m_collnum,m_q,m_termFreqs,m_termFreqWeights);
+	setTermFreqWeights ( m_r->m_collnum,m_q );
 
 	if ( m_debug ) {
 		//int64_t *termIds = m_q->getTermIds();
@@ -338,8 +338,8 @@ bool Msg3a::gotCacheReply ( ) {
 			     i,
 			     qt->m_term, 
 			     qt->m_termId,
-			     m_termFreqs[i],
-			     m_termFreqWeights[i]);
+			     qt->m_termFreq,//m_termFreqs[i],
+			     qt->m_termFreqWeight);//m_termFreqWeights[i]);
 			// put it back
 			*tpc = c;
 		}
@@ -368,7 +368,8 @@ bool Msg3a::gotCacheReply ( ) {
 	}
 
 	// a tmp buf
-	int32_t readSizes[MAX_QUERY_TERMS];
+	int32_t readSizes[ABS_MAX_QUERY_TERMS];
+	float   tfw      [ABS_MAX_QUERY_TERMS];
 	// update our read info
 	for ( int32_t j = 0; j < n ; j++ ) {
 		// the read size for THIS query term
@@ -388,13 +389,14 @@ bool Msg3a::gotCacheReply ( ) {
 		if ( qt->m_ignored ) rs = 0;
 		// set it
 		readSizes[j] = rs;
+		// serialize these too
+		tfw[j] = qt->m_termFreqWeight;
 	}
 
 	// serialize this
 	m_r->ptr_readSizes  = (char *)readSizes;
 	m_r->size_readSizes = 4 * n;
-	// and this
-	m_r->ptr_termFreqWeights  = (char *)m_termFreqWeights;
+	m_r->ptr_termFreqWeights  = (char *)tfw;//m_termFreqWeights;
 	m_r->size_termFreqWeights = 4 * n;
 	// store query into request, might have changed since we called
 	// Query::expandQuery() above
@@ -1095,7 +1097,10 @@ bool Msg3a::mergeLists ( ) {
 		// log("results: alloc fhtqt of %"PTRFMT" for st0=%"PTRFMT,
 		//     (PTRTYPE)ht->m_buf,(PTRTYPE)m_q->m_st0Ptr);
 		// sanity
-		if ( ! ht->m_isWritable ) {char *xx=NULL;*xx=0;}
+		if ( ! ht->m_isWritable ) {
+			log("msg3a: queryterm::constructor not called?");
+			char *xx=NULL;*xx=0;
+		}
 	}
 
 	// now scan each facethashlist from each shard and compile into 
@@ -1548,9 +1553,9 @@ void Msg3a::printTerms ( ) {
 }
 
 void setTermFreqWeights ( collnum_t collnum , // char *coll,
-			  Query *q , 
-			  int64_t *termFreqs, 
-			  float *termFreqWeights ) {
+			  Query *q ) {
+			  // int64_t *termFreqs, 
+			  // float *termFreqWeights ) {
 
 	int64_t numDocsInColl = 0;
 	RdbBase *base = getRdbBase ( RDB_CLUSTERDB  , collnum );	
@@ -1562,13 +1567,16 @@ void setTermFreqWeights ( collnum_t collnum , // char *coll,
 		numDocsInColl = 1;
 	}
 	// now get term freqs again, like the good old days
-	int64_t *termIds = q->getTermIds();
+	//int64_t *termIds = q->getTermIds();
 	// just use rdbmap to estimate!
 	for ( int32_t i = 0 ; i < q->getNumTerms(); i++ ) {
+		QueryTerm *qt = &q->m_qterms[i];
 		// GET THE TERMFREQ for setting weights
-		int64_t tf = g_posdb.getTermFreq ( collnum ,termIds[i]);
-		if ( termFreqs ) termFreqs[i] = tf;
+		int64_t tf = g_posdb.getTermFreq ( collnum ,qt->m_termId);
+		//if ( termFreqs ) termFreqs[i] = tf;
+		qt->m_termFreq = tf;
 		float tfw = getTermFreqWeight(tf,numDocsInColl);
-		termFreqWeights[i] = tfw;
+		//termFreqWeights[i] = tfw;
+		qt->m_termFreqWeight = tfw;
 	}
 }			      

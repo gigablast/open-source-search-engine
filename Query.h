@@ -36,7 +36,8 @@
 //#define MAX_QUERY_TERMS 40
 // how to make a lock pick set loses synonyms from 40!
 //#define MAX_QUERY_TERMS 80
-#define MAX_QUERY_TERMS 160
+//#define MAX_QUERY_TERMS 160
+#define ABS_MAX_QUERY_TERMS 3000
 
 // only allow up to 200 interests from facebook plus manually entered
 // because we are limited by the query terms above so we can only
@@ -463,6 +464,10 @@ class QueryTerm {
 	char *m_parenList;
 	int32_t  m_parenListLen;
 
+	int32_t   m_componentCode;
+	int64_t   m_termFreq;
+	float     m_termFreqWeight;
+
 	// . our representative bits
 	// . the bits in this bit vector is 1-1 with the QueryTerms
 	// . if a doc has query term #i then bit #i will be set
@@ -680,9 +685,9 @@ class Query {
 	// . the signs and ids are dupped in the QueryTerm classes, too
 	//int64_t *getTermFreqs ( ) { return m_termFreqs ; };
 	//int64_t  getTermFreq  ( int32_t i ) { return m_termFreqs[i]; };
-	int64_t *getTermIds   ( ) { return m_termIds   ; };
-	char      *getTermSigns ( ) { return m_termSigns ; };
-	int32_t      *getComponentCodes   ( ) { return m_componentCodes; };
+	//int64_t *getTermIds   ( ) { return m_termIds   ; };
+	//char      *getTermSigns ( ) { return m_termSigns ; };
+	//int32_t      *getComponentCodes   ( ) { return m_componentCodes; };
 	int64_t  getRawWordId ( int32_t i ) { return m_qwords[i].m_rawWordId;};
 
 	int32_t getNumComponentTerms ( ) { return m_numComponents; };
@@ -926,17 +931,24 @@ class Query {
 	int32_t       m_qwordsAllocSize;
 
 	// QueryWords are converted to QueryTerms
-	QueryTerm m_qterms [ MAX_QUERY_TERMS ];
+	//QueryTerm m_qterms [ MAX_QUERY_TERMS ];
 	int32_t      m_numTerms;
 	int32_t      m_numTermsSpecial;
 
 	// separate vectors for easier interfacing, 1-1 with m_qterms
 	//int64_t m_termFreqs      [ MAX_QUERY_TERMS ];
-	int64_t m_termIds        [ MAX_QUERY_TERMS ];
-	char      m_termSigns      [ MAX_QUERY_TERMS ];
-	int32_t      m_componentCodes [ MAX_QUERY_TERMS ];
-	char      m_ignore         [ MAX_QUERY_TERMS ]; // is term ignored?
-	int32_t      m_numComponents;
+	//int64_t m_termIds        [ MAX_QUERY_TERMS ];
+	//char      m_termSigns      [ MAX_QUERY_TERMS ];
+	//int32_t      m_componentCodes [ MAX_QUERY_TERMS ];
+	//char      m_ignore         [ MAX_QUERY_TERMS ]; // is term ignored?
+	SafeBuf    m_stackBuf;
+	QueryTerm *m_qterms         ;
+	//int64_t   *m_termIds        ;
+	//char      *m_termSigns      ;
+	//int32_t   *m_componentCodes ;
+	//char      *m_ignore         ; // is term ignored?
+
+	int32_t   m_numComponents;
 
 	// how many bits in the full vector?
 	//int32_t      m_numExplicitBits;

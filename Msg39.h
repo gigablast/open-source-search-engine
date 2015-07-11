@@ -266,7 +266,9 @@ class Msg39 {
 
 	// . we hold our IndexLists here for passing to PosdbTable
 	// . one array for each of the tiers
-	IndexList  m_lists [ MAX_QUERY_TERMS ];
+	//IndexList  m_lists [ MAX_QUERY_TERMS ];
+	IndexList *m_lists;
+	SafeBuf m_stackBuf;
 	
 	// used for timing
 	int64_t  m_startTime;

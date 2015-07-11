@@ -7,9 +7,10 @@
 #include "Msg0.h"
 
 /** define the max # of lists you can get as the max # of query terms for now */
-#define MAX_NUM_LISTS MAX_QUERY_TERMS
+//#define MAX_NUM_LISTS MAX_QUERY_TERMS
 /** how many outstanding msg5 requests at one time? */
-#define MSG2_MAX_REQUESTS MAX_QUERY_TERMS
+//#define MSG2_MAX_REQUESTS MAX_QUERY_TERMS
+#define MSG2_MAX_REQUESTS 32
 /** support the &sites=xyz.com+abc.com+... to restrict search results to provided sites.*/
 #define MAX_WHITELISTS 500
 

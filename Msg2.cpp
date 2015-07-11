@@ -98,7 +98,7 @@ bool Msg2::getLists ( int32_t     rdbId       ,
 	// set this
 	m_numLists = m_query->m_numTerms;
 	// make sure not too many lists being requested
-	if ( m_numLists > MAX_NUM_LISTS ) {g_errno=ETOOMANYLISTS; return true;}
+	//if(m_numLists > MAX_NUM_LISTS ) {g_errno=ETOOMANYLISTS; return true;}
 	// clear them all
 	//for ( int32_t i = 0 ; i < m_numLists ; i++ ) {
 	//	m_inProgress[i] = true;
@@ -133,7 +133,7 @@ bool Msg2::getLists ( ) {
 	// . make slots for all
 	for (  ; m_i < m_numLists ; m_i++ ) {
 		// sanity for Msg39's sake. do no breach m_lists[].
-		if ( m_i >= MAX_QUERY_TERMS ) { char *xx=NULL;*xx=0; }
+		if ( m_i >= ABS_MAX_QUERY_TERMS ) { char *xx=NULL;*xx=0; }
 		// if any had error, forget the rest. do not launch any more
 		if ( m_errno ) break;
 		// skip if already did it

@@ -2574,7 +2574,8 @@ bool printSearchResultsHeader ( State0 *st ) {
 					       ,printTerm);
 				term[sq->m_termLen] = c;
 			}				
-			int64_t tf = msg40->m_msg3a.m_termFreqs[i];
+			//int64_t tf = msg40->m_msg3a.m_termFreqs[i];
+			int64_t tf = qt->m_termFreq;
 			sb->safePrintf("\t\t\t<termFreq>%"INT64"</termFreq>\n"
 				       ,tf);
 			sb->safePrintf("\t\t\t<termHash48>%"INT64"</termHash48>\n"
@@ -2643,7 +2644,8 @@ bool printSearchResultsHeader ( State0 *st ) {
 				sb->safePrintf("\",\n");
 				term[sq->m_termLen] = c;
 			}				
-			int64_t tf = msg40->m_msg3a.m_termFreqs[i];
+			//int64_t tf = msg40->m_msg3a.m_termFreqs[i];
+			int64_t tf = qt->m_termFreq;
 			sb->safePrintf("\t\t\"termFreq\":%"INT64",\n"
 				       ,tf);
 
@@ -6176,8 +6178,14 @@ bool printPairScore ( SafeBuf *sb , SearchInput *si , PairScore *ps ,
 	//int64_t sz2 = ps->m_listSize2;
 	//int64_t tf1 = ps->m_termFreq1;//sz1 / 10;
 	//int64_t tf2 = ps->m_termFreq2;//sz2 / 10;
-	int64_t tf1 = msg40->m_msg3a.m_termFreqs[qtn1];
-	int64_t tf2 = msg40->m_msg3a.m_termFreqs[qtn2];
+	
+	QueryTerm *qt1 = &msg40->m_msg3a.m_q->m_qterms[qtn1];
+	QueryTerm *qt2 = &msg40->m_msg3a.m_q->m_qterms[qtn2];
+
+	//int64_t tf1 = msg40->m_msg3a.m_termFreqs[qtn1];
+	//int64_t tf2 = msg40->m_msg3a.m_termFreqs[qtn2];
+	int64_t tf1 = qt1->m_termFreq;
+	int64_t tf2 = qt2->m_termFreq;
 	float tfw1 = ps->m_tfWeight1;
 	float tfw2 = ps->m_tfWeight2;
 	
@@ -6893,7 +6901,9 @@ bool printSingleScore ( SafeBuf *sb ,
 	
 	//int64_t tf = ss->m_termFreq;//ss->m_listSize;
 	int32_t qtn = ss->m_qtermNum;
-	int64_t tf = msg40->m_msg3a.m_termFreqs[qtn];
+	//int64_t tf = msg40->m_msg3a.m_termFreqs[qtn];
+	QueryTerm *qt = &msg40->m_msg3a.m_q->m_qterms[qtn];
+	int64_t tf = qt->m_termFreq;
 	float tfw = ss->m_tfWeight;
 	
 	if ( si->m_format == FORMAT_XML ) {

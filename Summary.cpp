@@ -1211,7 +1211,7 @@ bool Summary::set1 ( char      *doc                ,
 	int32_t numTerms = q->getNumTerms();
 	// . now assign scores based on term frequencies
 	// . highest score is 10000, then 9900, 9800, 9700, ...
-	int32_t ptrs [ MAX_QUERY_TERMS ];
+	int32_t ptrs [ ABS_MAX_QUERY_TERMS ];
 	for ( int32_t i = 0 ; i < numTerms ; i++ ) ptrs[i] = i;
 	// convenience var
 	int64_t *freqs = termFreqs; // q->getTermFreqs();
@@ -1232,7 +1232,7 @@ bool Summary::set1 ( char      *doc                ,
 		}
 	}
 	// assign scores, give rarest terms highest score
-	int32_t scores [ MAX_QUERY_TERMS ];
+	int32_t scores [ ABS_MAX_QUERY_TERMS ];
 	for ( int32_t i = 0 ; i < numTerms ; i++ ) 
 		scores[ptrs[i]] = 10000000 - (i*100);
 	// force QUERY stop words to have much lower scores at most 10000
@@ -1441,7 +1441,7 @@ bool Summary::set1 ( char      *doc                ,
 	int32_t  maxi = -1;
 	int32_t  maxa = 0;
 	int32_t  maxb = 0;
-	char  gotIt [ MAX_QUERY_TERMS ];
+	char  gotIt [ ABS_MAX_QUERY_TERMS ];
 	char *maxleft  = NULL;
 	char *maxright = NULL;
 	for ( int32_t i = 0 ; i < numMatches ; i++ ) {

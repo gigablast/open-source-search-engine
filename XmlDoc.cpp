@@ -9617,11 +9617,15 @@ float computeSimilarity ( int32_t   *vec0 ,
 		// . stock the query term hash table
 		// . use the lower 32 bits of the termids to make compatible 
 		//   with the other vectors we use
-		int64_t *qtids = q->getTermIds ();
+		//int64_t *qtids = q->getTermIds ();
 		int32_t       nt    = q->getNumTerms();
 		for ( int32_t i = 0 ; i < nt ; i++ ) {
+			// get query term
+			QueryTerm *QT = &q->m_qterms[i];
+			// get the termid
+			int64_t termId = QT->m_termId;
 			// get it
-			uint32_t h = (uint32_t)(qtids[i] & 0xffffffff);
+			uint32_t h = (uint32_t)(termId & 0xffffffff);
 			// hash it
 			if ( ! qt.addKey ( &h ) ) return -1;
 		}
