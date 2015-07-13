@@ -12,7 +12,7 @@
 //#define MAX_QUERY_LEN   8000 // url:XXX can be quite long! (MAX_URL_LEN)
 //#define MAX_QUERY_LEN 3200
 // support big OR queries for image shingles
-#define ABS_MAX_QUERY_LEN 32000
+#define ABS_MAX_QUERY_LEN 62000
 // . words need to deal with int32_t list of sites!
 // . remember, words can be string of punctuation, too
 //#define MAX_QUERY_WORDS 5000 
@@ -24,7 +24,7 @@
 // is really a performance capper but it is used in Summary.cpp
 // and Matches.h so don't go too big just yet
 //#define MAX_QUERY_WORDS 800
-#define ABS_MAX_QUERY_WORDS 9000
+#define ABS_MAX_QUERY_WORDS 99000
 
 // . how many IndexLists might we get/intersect
 // . we now use a int64_t to hold the query term bits for non-boolean queries
@@ -40,7 +40,7 @@
 // how to make a lock pick set loses synonyms from 40!
 //#define MAX_QUERY_TERMS 80
 //#define MAX_QUERY_TERMS 160
-#define ABS_MAX_QUERY_TERMS 3000
+#define ABS_MAX_QUERY_TERMS 9000
 
 // only allow up to 200 interests from facebook plus manually entered
 // because we are limited by the query terms above so we can only
