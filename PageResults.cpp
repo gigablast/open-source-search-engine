@@ -2795,13 +2795,14 @@ bool printSearchResultsHeader ( State0 *st ) {
 
 	//Highlight h;
 
-	st->m_qe[0] = '\0';
+	//st->m_qe[0] = '\0';
+	st->m_qesb.nullTerm();
 
 	// encode query buf
 	//char qe[MAX_QUERY_LEN+1];
 	char *dq    = si->m_displayQuery;
 	//int32_t  dqlen = si->m_displayQueryLen;
-	if ( dq ) urlEncode(st->m_qe,MAX_QUERY_LEN*2,dq,gbstrlen(dq));
+	if ( dq ) st->m_qesb.urlEncode(dq);
 
 	// how many results were requested?
 	//int32_t docsWanted = msg40->getDocsWanted();
@@ -5187,7 +5188,7 @@ bool printResult ( State0 *st, int32_t ix , int32_t *numPrintedSoFar ) {
 				"get?"
 				"q=%s&c=%s&d=%"INT64">"
 				"cached</a>\n",
-				st->m_qe , coll ,
+				 st->m_qesb.getBufStart() , coll ,
 				mr->m_docId );
 	else if ( printCached )
 		sb->safePrintf ( "<a href=\""
@@ -5196,7 +5197,7 @@ bool printResult ( State0 *st, int32_t ix , int32_t *numPrintedSoFar ) {
 				"qlang=%s&"
 				"c=%s&d=%"INT64"&cnsp=0\">"
 				"cached</a>\n", 
-				st->m_qe , 
+				 st->m_qesb.getBufStart() , 
 				// "qlang" parm
 				si->m_defaultSortLang,
 				coll , 
@@ -5336,7 +5337,7 @@ bool printResult ( State0 *st, int32_t ix , int32_t *numPrintedSoFar ) {
 				 "d=%"INT64"&"
 				 "cnsp=0\">"
 				 "sections</a>\n", 
-				 st->m_qe , 
+				 st->m_qesb.getBufStart() , 
 				 // "qlang" parm
 				 si->m_defaultSortLang,
 				 coll , 
@@ -5449,7 +5450,7 @@ bool printResult ( State0 *st, int32_t ix , int32_t *numPrintedSoFar ) {
 		qq.urlEncode("site:");
 		qq.urlEncode (hbuf);
 		qq.urlEncode(" | ");
-		qq.safeStrcpy(st->m_qe);
+		qq.safeStrcpy(st->m_qesb.getBufStart());
 		qq.nullTerm();
 		// get the original url and add/replace in query
 		char tmp2[512];

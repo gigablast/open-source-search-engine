@@ -68,9 +68,11 @@ void Query::reset ( ) {
 		qt->m_facetIndexBuf.purge();
 	}
 
+	m_sb.purge();
+	m_osb.purge();
 	m_docIdRestriction = 0LL;
 	m_groupThatHasDocId = NULL;
-	m_bufLen      = 0;
+	//m_bufLen      = 0;
 	m_origLen     = 0;
 	m_numWords    = 0;
 	//m_numOperands = 0;
@@ -160,17 +162,26 @@ bool Query::set2 ( char *query        ,
 	//m_coll    = coll;
 	//m_collLen = collLen;
 	// truncate query if too big
-	if ( queryLen >= MAX_QUERY_LEN ) {
-		log("query: Query length of %"INT32" must be less than %"INT32". "
-		    "Truncating.",queryLen,(int32_t)MAX_QUERY_LEN);
-		queryLen = MAX_QUERY_LEN - 1;
+	if ( queryLen >= ABS_MAX_QUERY_LEN ) {
+		log("query: Query length of %"INT32" must be "
+		    "less than %"INT32". "
+		    "Truncating.",queryLen,(int32_t)ABS_MAX_QUERY_LEN);
+		queryLen = ABS_MAX_QUERY_LEN - 1;
 		m_truncated = true;
 	}
 	// save original query
+	m_osb.setBuf ( m_otmpBuf , 128 , 0 , false );
+	m_osb.setLabel ("oqbuf" );
+	m_osb.reserve ( queryLen + 1 );
+	m_osb.safeMemcpy ( query , queryLen );
+	m_osb.nullTerm ();
 	
-	m_origLen = queryLen;
-	gbmemcpy ( m_orig , query , queryLen );
-	m_orig [ m_origLen ] = '\0';
+	//m_origLen = queryLen;
+	//gbmemcpy ( m_orig , query , queryLen );
+	//m_orig [ m_origLen ] = '\0';
+
+	m_orig = m_osb.getBufStart();
+	m_origLen = m_osb.getLength();
 
 	log(LOG_DEBUG, "query: set called = %s", m_orig);
 
@@ -204,9 +215,16 @@ bool Query::set2 ( char *query        ,
 	// that were set somewhere above!!! i moved top: label above!
 	//reset();
 
+	// reserve some space, guessing how much we'd need
+	m_sb.setBuf(m_tmpBuf3,128,0,false);
+	m_sb.setLabel("qrystk");
+	int32_t need = queryLen * 2 + 32;
+	if ( ! m_sb.reserve ( need ) ) 
+		return false;
+
 	// convenience ptr
-	char *p    = m_buf;
-	char *pend = m_buf + MAX_QUERY_LEN;
+	//char *p    = m_buf;
+	//char *pend = m_buf + MAX_QUERY_LEN;
 	bool inQuotesFlag = false;
 	// . copy query into m_buf
 	// . translate ( and ) to special query operators so Words class
@@ -219,27 +237,31 @@ bool Query::set2 ( char *query        ,
 		if ( query[i] == '\"' ) inQuotesFlag = !inQuotesFlag;
 
 		if ( inQuotesFlag ) {
-			*p = query [i];
-			p++;
+			//*p = query [i];
+			//p++;
+			m_sb.pushChar(query[i]);
 			continue;
 		}
 
 		// dst buf must be big enough
-		if ( p + 8 >= pend ) {
-			g_errno = EBUFTOOSMALL;
-			return log(LOG_LOGIC,"query: query: query too big.");
-		}
+		// if ( p + 8 >= pend ) {
+		// 	g_errno = EBUFTOOSMALL;
+		// 	return log(LOG_LOGIC,"query: query: query too big.");
+		// }
 		// translate ( and )
 		if ( boolFlag == 1 && query[i] == '(' ) {
-			gbmemcpy ( p , " LeFtP " , 7 ); p += 7;
+			//gbmemcpy ( p , " LeFtP " , 7 ); p += 7;
+			m_sb.safeMemcpy ( " LeFtP " , 7 );
 			continue;
 		}
 		if ( boolFlag == 1 && query[i] == ')' ) {
-			gbmemcpy ( p , " RiGhP " , 7 ); p += 7;
+			//gbmemcpy ( p , " RiGhP " , 7 ); p += 7;
+			m_sb.safeMemcpy ( " RiGhP " , 7 );
 			continue;
 		}
 		if ( query[i] == '|' ) {
-			gbmemcpy ( p , " PiiPE " , 7 ); p += 7;
+			//gbmemcpy ( p , " PiiPE " , 7 ); p += 7;
+			m_sb.safeMemcpy ( " PiiPE " , 7 );
 			continue;
 		}
 		// translate [#a] [#r] [#ap] [#rp] [] [p] to operators
@@ -249,28 +271,34 @@ bool Query::set2 ( char *query        ,
 			while ( is_digit(query[j]) ) j++;
 			char c = query[j];
 			if ( (c == 'a' || c == 'r') && query[j+1]==']' ) {
-				sprintf ( p , " LeFtB %"INT32" %c RiGhB ",val,c);
-				p += gbstrlen(p);
+				//sprintf ( p , " LeFtB %"INT32" %c RiGhB ",
+				m_sb.safePrintf(" LeFtB %"INT32" %c RiGhB ",
+					  val,c);
+				//p += gbstrlen(p);
 				i = j + 1;
 				continue;
 			}
 			else if ( (c == 'a' || c == 'r') && 
 				  query[j+1]=='p' && query[j+2]==']') {
-				sprintf ( p , " LeFtB %"INT32" %cp RiGhB ",val,c);
-				p += gbstrlen(p);
+				//sprintf ( p , " LeFtB %"INT32" %cp RiGhB ",
+				m_sb.safePrintf(" LeFtB %"INT32" %cp RiGhB ",
+				val,c);
+				//p += gbstrlen(p);
 				i = j + 2;
 				continue;
 			}
 		}
 		if ( query[i] == '[' && query[i+1] == ']' ) {
-			sprintf ( p , " LeFtB RiGhB ");
-			p += gbstrlen(p);
+			//sprintf ( p , " LeFtB RiGhB ");
+			//p += gbstrlen(p);
+			m_sb.safePrintf ( " LeFtB RiGhB ");
 			i = i + 1;
 			continue;
 		}
 		if ( query[i] == '[' && query[i+1] == 'p' && query[i+2]==']') {
-			sprintf ( p , " LeFtB RiGhB ");
-			p += gbstrlen(p);
+			//sprintf ( p , " LeFtB RiGhB ");
+			//p += gbstrlen(p);
+			m_sb.safePrintf ( " LeFtB RiGhB ");
 			i = i + 2;
 			continue;
 		}
@@ -306,17 +334,22 @@ bool Query::set2 ( char *query        ,
  
 		// TODO: copy altavista's operators here? & | !
 		// otherwise, just a plain copy
-		*p = query [i];
-		p++;
+		// *p = query [i];
+		// p++;
+		m_sb.pushChar ( query[i] );
 	}
 	// NULL terminate
-	*p = '\0';
+	//*p = '\0';
+	m_sb.nullTerm();
 	// debug statement
 	//log(LOG_DEBUG,"Query: Got new query=%s",tempBuf);
 	//printf("query: query: Got new query=%s\n",tempBuf);
 
 	// set length
-	m_bufLen = p - m_buf;
+	//m_bufLen = p - m_buf;
+
+	//m_buf = m_sb.getBufStart();
+	//m_bufLen = m_sb.length();
 
 	Words words;
 	Phrases phrases;
@@ -1991,16 +2024,17 @@ bool Query::setQWords ( char boolFlag ,
 	// . because we now deal with boolean queries, we make parentheses
 	//   their own separate Word, so tell "words" we're setting a query
 	//Words words;
-	if ( ! words.set ( m_buf , m_bufLen,
+	if ( ! words.set ( m_sb.getBufStart() , m_sb.length() ,
+			   //buf , m_bufLen,
 			    TITLEREC_CURRENT_VERSION, true, true ) )
 		return log("query: Had error parsing query: %s.",
 			   mstrerror(g_errno));
 	int32_t numWords = words.getNumWords();
 	// truncate it
-	if ( numWords > MAX_QUERY_WORDS ) {
+	if ( numWords > ABS_MAX_QUERY_WORDS ) {
 		log("query: Had %"INT32" words. Max is %"INT32". Truncating.",
-		    numWords,(int32_t)MAX_QUERY_WORDS);
-		numWords = MAX_QUERY_WORDS;
+		    numWords,(int32_t)ABS_MAX_QUERY_WORDS);
+		numWords = ABS_MAX_QUERY_WORDS;
 		m_truncated = true;
 	}
 	m_numWords = numWords;
@@ -2026,8 +2060,8 @@ bool Query::setQWords ( char boolFlag ,
 
 	// is all alpha chars in query in upper case? caps lock on?
 	bool allUpper = true;
-	char *p    = m_buf;
-	char *pend = m_buf + m_bufLen;
+	char *p    = m_sb.getBufStart();//m_buf;
+	char *pend = m_sb.getBuf(); // m_buf + m_bufLen;
 	for ( ; p < pend ; p += getUtf8CharSize(p) )
 		if ( is_alpha_utf8 ( p ) && ! is_upper_utf8 ( p ) ) {
 			allUpper = false; break; }
@@ -2127,7 +2161,7 @@ bool Query::setQWords ( char boolFlag ,
 	char *ignoreTill = NULL;
 
 	// loop over all words, these QueryWords are 1-1 with "words"
-	for ( int32_t i = 0 ; i < numWords && i < MAX_QUERY_WORDS ; i++ ) {
+	for ( int32_t i = 0 ; i < numWords && i < ABS_MAX_QUERY_WORDS ; i++ ) {
 		// convenience var, these are 1-1 with "words"
 		QueryWord *qw = &m_qwords[i];
 		// set to defaults?
@@ -3328,7 +3362,8 @@ bool Query::setQWords ( char boolFlag ,
 			// search up to this far
 			int32_t maxj = i + nw;
 			// but not past our truncated limit
-			if ( maxj > MAX_QUERY_WORDS ) maxj = MAX_QUERY_WORDS;
+			if ( maxj > ABS_MAX_QUERY_WORDS ) 
+				maxj = ABS_MAX_QUERY_WORDS;
 
 			for ( j = i ; j < maxj ; j++ ) {
 				// skip punct

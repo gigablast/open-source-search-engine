@@ -1858,11 +1858,11 @@ bool printDirHomePage ( SafeBuf &sb , HttpRequest *r ) {
 // . call g_httpServer.sendDynamicPage() to send it
 bool sendPageRoot ( TcpSocket *s , HttpRequest *r, char *cookie ) {
 	// don't allow pages bigger than 128k in cache
-	char  buf [ 10*1024 + MAX_QUERY_LEN ];
+	char  buf [ 10*1024 ];//+ MAX_QUERY_LEN ];
 	// a ptr into "buf"
 	//char *p    = buf;
 	//char *pend = buf + 10*1024 + MAX_QUERY_LEN - 100 ;
-	SafeBuf sb(buf, 10*1024 + MAX_QUERY_LEN);
+	SafeBuf sb(buf, 10*1024 );//+ MAX_QUERY_LEN);
 	// print bgcolors, set focus, set font style
 	//p = g_httpServer.printFocus  ( p , pend );
 	//p = g_httpServer.printColors ( p , pend );

@@ -45266,7 +45266,7 @@ SafeBuf *XmlDoc::getMatchingQueriesScoredForFullQuery ( ) {
 	// prepend to the query?
 	int32_t ulen = m_firstUrl.m_ulen;
 	// go to next guy if this query is too big already
-	if ( ulen + qlen + 10 > MAX_QUERY_LEN ) {
+	if ( ulen + qlen + 10 > ABS_MAX_QUERY_LEN ) {
 		m_queryNum++;
 		goto loop;
 	}

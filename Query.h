@@ -10,7 +10,9 @@
 
 // keep these down to save memory
 //#define MAX_QUERY_LEN   8000 // url:XXX can be quite long! (MAX_URL_LEN)
-#define MAX_QUERY_LEN 3200
+//#define MAX_QUERY_LEN 3200
+// support big OR queries for image shingles
+#define ABS_MAX_QUERY_LEN 32000
 // . words need to deal with int32_t list of sites!
 // . remember, words can be string of punctuation, too
 //#define MAX_QUERY_WORDS 5000 
@@ -21,7 +23,8 @@
 // seems like we alloc just enough to hold our words now so that this
 // is really a performance capper but it is used in Summary.cpp
 // and Matches.h so don't go too big just yet
-#define MAX_QUERY_WORDS 800
+//#define MAX_QUERY_WORDS 800
+#define ABS_MAX_QUERY_WORDS 9000
 
 // . how many IndexLists might we get/intersect
 // . we now use a int64_t to hold the query term bits for non-boolean queries
@@ -986,18 +989,27 @@ class Query {
 	class Host *m_groupThatHasDocId;
 
 	// for holding the filtered query, in utf8
-	char m_buf [ MAX_QUERY_LEN ];
-	int32_t m_bufLen;
+	//char m_buf [ MAX_QUERY_LEN ];
+	//int32_t m_bufLen;
+
+	// for holding the filtered query, in utf8
+	SafeBuf m_sb;
+	char m_tmpBuf3[128];
 
 	// for holding the filtered/NULL-terminated query for doing
 	// matching. basically store phrases in here without punct
 	// so we can point a needle to them for matching in XmlDoc.cpp.
-	char m_needleBuf [ MAX_QUERY_LEN + 1 ];
-	int32_t m_needleBufLen;
+	//char m_needleBuf [ MAX_QUERY_LEN + 1 ];
+	//int32_t m_needleBufLen;
 
 	// the original query
-	char m_orig [ MAX_QUERY_LEN ];
+	//char m_orig [ MAX_QUERY_LEN ];
+	//int32_t m_origLen;
+
+	char *m_orig;
 	int32_t m_origLen;
+	SafeBuf m_osb;
+	char m_otmpBuf[128];
 
 	// we just have a ptr to this so don't pull the rug out
 	//char *m_coll;
