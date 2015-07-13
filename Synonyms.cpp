@@ -12,6 +12,7 @@
 #include "Wiktionary.h"
 
 Synonyms::Synonyms() {
+	m_synWordBuf.setLabel("syswbuf");
 }
 
 Synonyms::~Synonyms() {

@@ -73,8 +73,9 @@ public:
 	int32_t safeSave (char *filename );
 
 	int32_t  fillFromFile(char *filename);
-	int32_t  fillFromFile(char *dir,char *filename);
-	int32_t  load(char *dir,char *fname) { return fillFromFile(dir,fname);};
+	int32_t  fillFromFile(char *dir,char *filename, char *label=NULL);
+	int32_t  load(char *dir,char *fname,char *label = NULL) { 
+		return fillFromFile(dir,fname,label);};
 	int32_t  load(char *fname) { return fillFromFile(fname);};
 
 	void filterTags();

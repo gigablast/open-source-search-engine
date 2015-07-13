@@ -380,7 +380,9 @@ bool Msg3a::gotCacheReply ( ) {
 		rs = DEFAULT_POSDB_READSIZE;//90000000; // 90MB!
 		// it is better to go oom then leave users scratching their
 		// heads as to why some results are not being returned.
-		rs = -1;
+		// no, because we are going out of mem for queries like
+		// 'www.disney.nl' etc.
+		//rs = -1;
 		// if section stats, limit to 1MB
 		//if ( m_r->m_getSectionStats ) rs = 1000000;
 		// get the jth query term

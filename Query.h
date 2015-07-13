@@ -274,6 +274,9 @@ class QueryWord {
 			if ( is_wspace_utf8 ( p ) ) return true;
 		return false;
 	};
+	void constructor ();
+	void destructor ();
+
 	//UCScript wordScript() { 
 	//	UChar*foo;
 	//	return ucGetScript(utf16Decode((UChar*)(m_word),&foo));

@@ -28,6 +28,7 @@ void Query::constructor ( ) {
 	//m_bmap      = NULL;
 	m_bitScores = NULL;
 	m_qwords      = NULL;
+	m_numWords = 0;
 	//m_expressions = NULL;
 	m_qwordsAllocSize      = 0;
 	//m_expressionsAllocSize = 0;
@@ -68,6 +69,11 @@ void Query::reset ( ) {
 		qt->m_facetIndexBuf.purge();
 	}
 
+	for ( int32_t i = 0 ; i < m_numWords ; i++ ) {
+		QueryWord *qw = &m_qwords[i];
+		qw->destructor();
+	}
+
 	m_sb.purge();
 	m_osb.purge();
 	m_docIdRestriction = 0LL;
@@ -86,6 +92,7 @@ void Query::reset ( ) {
 	//if ( m_bitScores && m_bitScoresSize ) //  != m_bsbuf )
 	//	mfree ( m_bitScores , m_bitScoresSize , "Query2" );
 	//m_bmap = NULL;
+
 	m_bitScores = NULL;
 	//m_bmapSize      = 0;
 	m_bitScoresSize = 0;
@@ -1402,6 +1409,7 @@ bool Query::setQTerms ( Words &words , Phrases &phrases ) {
 		// sanity
 		if ( naids > MAX_SYNS ) { char *xx=NULL;*xx=0; }
 		// now make the buffer to hold them for us
+		qw->m_synWordBuf.setLabel("qswbuf");
 		qw->m_synWordBuf.safeMemcpy ( &syn.m_synWordBuf );
 		// get the term for this word
 		QueryTerm *origTerm = qw->m_queryWordTerm;
@@ -2057,6 +2065,9 @@ bool Query::setQWords ( char boolFlag ,
 			return log("query: Could not allocate mem for query.");
 		m_qwordsAllocSize = need;
 	}
+	// reset safebuf in there
+	for ( int32_t i = 0 ; i < m_numWords ; i++ )
+		m_qwords[i].constructor();
 
 	// is all alpha chars in query in upper case? caps lock on?
 	bool allUpper = true;
@@ -5654,4 +5665,12 @@ int64_t Query::getQueryHash() {
 		qh = hash64 ( qt->m_termId , qh );
 	}
 	return qh;
+}
+
+void QueryWord::constructor () {
+	m_synWordBuf.constructor();
+}
+
+void QueryWord::destructor () {
+	m_synWordBuf.purge();
 }

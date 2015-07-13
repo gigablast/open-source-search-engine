@@ -825,6 +825,9 @@ bool SearchInput::setQueryBuffers ( HttpRequest *hr ) {
 			m_sbuf2.safeStrcpy(" AND ");
 		}
 	}
+	m_sbuf1.setLabel("sisbuf1");
+	m_sbuf2.setLabel("sisbuf2");
+	m_sbuf3.setLabel("sisbuf3");
 	// append the natural query
 	if ( m_query && m_query[0] ) {
 		//if ( p  > pstart  ) *p++  = ' ';

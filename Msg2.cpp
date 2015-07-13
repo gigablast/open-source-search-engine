@@ -413,6 +413,8 @@ bool Msg2::getLists ( ) {
 		// mem. we should also report the size of each termlist
 		// in bytes in the query info header.
 		//int32_t minRecSizes = DEFAULT_POSDB_READSIZE;
+		// MDW TODO fix this later we go oom too easily for queries
+		// like 'www.disney.nl'
 		int32_t minRecSizes = -1;
 
 		// start up the read. thread will wait in thread queue to 

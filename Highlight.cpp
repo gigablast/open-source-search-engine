@@ -170,6 +170,10 @@ int32_t Highlight::set ( SafeBuf *sb ,
 	//m_bufLen = bufLen;
 	//m_bufPtr = buf;
 	m_sb = sb;
+
+	// label it
+	m_sb->setLabel ("highw");
+
 	// save room for terminating \0
 	//m_bufEnd = m_buf + m_bufLen - 1;
 
