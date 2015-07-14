@@ -142,6 +142,7 @@ class Matches {
 	Matches ( ) ;
 	~Matches( ) ;
 	void reset ( ) ;
+	void reset2 ( ) ;
 
 	// BIG HACK support
 	//int32_t getTermsFound ( bool *hadPhrases , bool *hadWords );
