@@ -42,9 +42,10 @@ void Summary::reset() {
 		m_wordWeights = NULL;
 	}
 	m_wordWeights = NULL;
-	if ( m_buf && m_buf != m_tmpBuf2 ) 
-		mfree ( m_buf , m_bufSize , "ssstkb" );
-	m_buf = NULL;
+	if ( m_buf4 && m_buf4 != m_tmpBuf4 ) {
+		mfree ( m_buf4 , m_buf4Size , "ssstkb" );
+		m_buf4 = NULL;
+	}
 }
 
 
@@ -248,13 +249,13 @@ bool Summary::set2 ( Xml      *xml                ,
 	m_numExcerpts = 0;
 
 	int32_t need2 = (1+1+1) * m_q->m_numWords;
-	m_bufSize = need2;
+	m_buf4Size = need2;
 	if ( need2 < 128 )
-		m_buf = m_tmpBuf2;
+		m_buf4 = m_tmpBuf4;
 	else
-		m_buf = (char *)mmalloc ( need2 , "stkbuf" );
-	if ( ! m_buf ) return false;
-	char *x = m_buf;
+		m_buf4 = (char *)mmalloc ( need2 , "stkbuf" );
+	if ( ! m_buf4 ) return false;
+	char *x = m_buf4;
 	char *retired = x;
 	x += m_q->m_numWords;
 	char *maxGotIt = x;
@@ -591,9 +592,10 @@ bool Summary::set2 ( Xml      *xml                ,
 	}
 
 	// free the mem we used if we allocated it
-	if ( m_buf && m_buf != m_tmpBuf2 ) 
-		mfree ( m_buf , m_bufSize , "ssstkb" );
-	m_buf = NULL;
+	if ( m_buf4 && m_buf4 != m_tmpBuf4 ) {
+		mfree ( m_buf4 , m_buf4Size , "ssstkb" );
+		m_buf4 = NULL;
+	}
 
 
 	// If we still didn't find a summary, get the default summary
