@@ -2565,11 +2565,10 @@ bool XmlDoc::indexDoc ( ) {
 			SafeBuf *ssDocMetaList = NULL;
 			// save this
 			int32_t saved = m_indexCode;
-			// and make it the real reason for the spider status doc
+			// make it the real reason for the spider status doc
 			m_indexCode = EDNSERROR;
-			// get the spiderreply ready to be added
-			
-			ssDocMetaList = getSpiderStatusDocMetaList(NULL ,false);//del
+			// get the spiderreply ready to be added. false=del
+			ssDocMetaList =getSpiderStatusDocMetaList(NULL ,false);
 			// revert
 			m_indexCode = saved;
 			// error?
@@ -2586,8 +2585,11 @@ bool XmlDoc::indexDoc ( ) {
 
 			char *url = "unknown";
 			if ( m_sreqValid ) url = m_sreq.m_url;
-			log("build: error2 getting real firstip of %"INT32" for "
-			    "%s. Not adding new spider req", (int32_t)*fip,url);
+			log("build: error2 getting real firstip of "
+			    "%"INT32" for "
+			    "%s. Not adding new spider req. "
+			    "spiderstatusdocsize=%"INT32, (int32_t)*fip,url,
+			    m_addedStatusDocSize);
 			// also count it as a crawl attempt
 			cr->m_localCrawlInfo.m_pageDownloadAttempts++;
 			cr->m_globalCrawlInfo.m_pageDownloadAttempts++;
