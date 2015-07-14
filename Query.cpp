@@ -74,6 +74,9 @@ void Query::reset ( ) {
 		qw->destructor();
 	}
 
+	m_stackBuf.purge();
+	m_qterms = NULL;
+
 	m_sb.purge();
 	m_osb.purge();
 	m_docIdRestriction = 0LL;

@@ -18,6 +18,8 @@ void HashTableX::constructor() {
 	m_useKeyMagic = false;
 	m_ks = 0;
 	m_allowGrowth = true;
+	m_numSlots = 0;
+	m_numSlotsUsed = 0;
 }
 
 void HashTableX::destructor() {
