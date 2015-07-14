@@ -5049,8 +5049,8 @@ bool Tagdb::loadMinSiteInlinksBuffer2 ( ) {
 	// use 4 bytes for the first 130,000 entries or so to hold
 	// # of site inlinks. then we only need 1 byte since the remaining
 	// 25M are <256 sitenuminlinksunqiecblocks
-	m_siteBuf1.load(g_hostdb.m_dir,"sitelinks1.dat");
-	m_siteBuf2.load(g_hostdb.m_dir,"sitelinks2.dat");
+	m_siteBuf1.load(g_hostdb.m_dir,"sitelinks1.dat","stelnks1");
+	m_siteBuf2.load(g_hostdb.m_dir,"sitelinks2.dat","stelnks2");
 
 	m_siteBuf1.setLabel("sitelnks");
 	m_siteBuf2.setLabel("sitelnks");

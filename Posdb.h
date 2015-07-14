@@ -654,10 +654,13 @@ class PosdbTable {
 	SafeBuf m_pairScoreBuf;
 	SafeBuf m_singleScoreBuf;
 
+	SafeBuf m_stackBuf;
+
 	//SafeBuf m_mergeBuf;
 
 	// a reference to the query
 	Query          *m_q;
+	int32_t m_nqt;
 
 	// these are NOT in imap space, but in query term space, 1-1 with 
 	// Query::m_qterms[]

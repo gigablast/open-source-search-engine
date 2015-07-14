@@ -10,6 +10,9 @@
  * (for java programmers, very similar to the StringBuffer class, with all the speed that c++ allows).
  * Most of strings in Gigablast are handled by those.
  */
+
+#include "iana_charset.h"
+
 class SafeBuf {
 public:
 	//*TRUCTORS
@@ -33,8 +36,11 @@ public:
 	// want SafeBuf to free the data for you. Keep in mind, all
 	// previous content in SafeBuf will be cleared when you pass it
 	// a new buffer.
-	bool setBuf(char *newBuf, int32_t bufMax, int32_t bytesInUse, bool ownData,
-		    int16_t encoding );
+	bool setBuf(char *newBuf, 
+		    int32_t bufMax, 
+		    int32_t bytesInUse, 
+		    bool ownData,
+		    int16_t encoding = csUTF8 );
 	// yieldBuf() allows you to take over the buffer in SafeBuf. 
 	// You may only free the data if it was originally owned by
 	// the SafeBuf.
@@ -67,8 +73,9 @@ public:
 	int32_t safeSave (char *filename );
 
 	int32_t  fillFromFile(char *filename);
-	int32_t  fillFromFile(char *dir,char *filename);
-	int32_t  load(char *dir,char *fname) { return fillFromFile(dir,fname);};
+	int32_t  fillFromFile(char *dir,char *filename, char *label=NULL);
+	int32_t  load(char *dir,char *fname,char *label = NULL) { 
+		return fillFromFile(dir,fname,label);};
 	int32_t  load(char *fname) { return fillFromFile(fname);};
 
 	void filterTags();

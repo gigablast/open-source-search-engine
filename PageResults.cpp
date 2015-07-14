@@ -2574,7 +2574,8 @@ bool printSearchResultsHeader ( State0 *st ) {
 					       ,printTerm);
 				term[sq->m_termLen] = c;
 			}				
-			int64_t tf = msg40->m_msg3a.m_termFreqs[i];
+			//int64_t tf = msg40->m_msg3a.m_termFreqs[i];
+			int64_t tf = qt->m_termFreq;
 			sb->safePrintf("\t\t\t<termFreq>%"INT64"</termFreq>\n"
 				       ,tf);
 			sb->safePrintf("\t\t\t<termHash48>%"INT64"</termHash48>\n"
@@ -2643,7 +2644,8 @@ bool printSearchResultsHeader ( State0 *st ) {
 				sb->safePrintf("\",\n");
 				term[sq->m_termLen] = c;
 			}				
-			int64_t tf = msg40->m_msg3a.m_termFreqs[i];
+			//int64_t tf = msg40->m_msg3a.m_termFreqs[i];
+			int64_t tf = qt->m_termFreq;
 			sb->safePrintf("\t\t\"termFreq\":%"INT64",\n"
 				       ,tf);
 
@@ -2793,13 +2795,14 @@ bool printSearchResultsHeader ( State0 *st ) {
 
 	//Highlight h;
 
-	st->m_qe[0] = '\0';
+	//st->m_qe[0] = '\0';
+	st->m_qesb.nullTerm();
 
 	// encode query buf
 	//char qe[MAX_QUERY_LEN+1];
 	char *dq    = si->m_displayQuery;
 	//int32_t  dqlen = si->m_displayQueryLen;
-	if ( dq ) urlEncode(st->m_qe,MAX_QUERY_LEN*2,dq,gbstrlen(dq));
+	if ( dq ) st->m_qesb.urlEncode(dq);
 
 	// how many results were requested?
 	//int32_t docsWanted = msg40->getDocsWanted();
@@ -5185,7 +5188,7 @@ bool printResult ( State0 *st, int32_t ix , int32_t *numPrintedSoFar ) {
 				"get?"
 				"q=%s&c=%s&d=%"INT64">"
 				"cached</a>\n",
-				st->m_qe , coll ,
+				 st->m_qesb.getBufStart() , coll ,
 				mr->m_docId );
 	else if ( printCached )
 		sb->safePrintf ( "<a href=\""
@@ -5194,7 +5197,7 @@ bool printResult ( State0 *st, int32_t ix , int32_t *numPrintedSoFar ) {
 				"qlang=%s&"
 				"c=%s&d=%"INT64"&cnsp=0\">"
 				"cached</a>\n", 
-				st->m_qe , 
+				 st->m_qesb.getBufStart() , 
 				// "qlang" parm
 				si->m_defaultSortLang,
 				coll , 
@@ -5334,7 +5337,7 @@ bool printResult ( State0 *st, int32_t ix , int32_t *numPrintedSoFar ) {
 				 "d=%"INT64"&"
 				 "cnsp=0\">"
 				 "sections</a>\n", 
-				 st->m_qe , 
+				 st->m_qesb.getBufStart() , 
 				 // "qlang" parm
 				 si->m_defaultSortLang,
 				 coll , 
@@ -5447,7 +5450,7 @@ bool printResult ( State0 *st, int32_t ix , int32_t *numPrintedSoFar ) {
 		qq.urlEncode("site:");
 		qq.urlEncode (hbuf);
 		qq.urlEncode(" | ");
-		qq.safeStrcpy(st->m_qe);
+		qq.safeStrcpy(st->m_qesb.getBufStart());
 		qq.nullTerm();
 		// get the original url and add/replace in query
 		char tmp2[512];
@@ -6176,8 +6179,14 @@ bool printPairScore ( SafeBuf *sb , SearchInput *si , PairScore *ps ,
 	//int64_t sz2 = ps->m_listSize2;
 	//int64_t tf1 = ps->m_termFreq1;//sz1 / 10;
 	//int64_t tf2 = ps->m_termFreq2;//sz2 / 10;
-	int64_t tf1 = msg40->m_msg3a.m_termFreqs[qtn1];
-	int64_t tf2 = msg40->m_msg3a.m_termFreqs[qtn2];
+	
+	QueryTerm *qt1 = &msg40->m_msg3a.m_q->m_qterms[qtn1];
+	QueryTerm *qt2 = &msg40->m_msg3a.m_q->m_qterms[qtn2];
+
+	//int64_t tf1 = msg40->m_msg3a.m_termFreqs[qtn1];
+	//int64_t tf2 = msg40->m_msg3a.m_termFreqs[qtn2];
+	int64_t tf1 = qt1->m_termFreq;
+	int64_t tf2 = qt2->m_termFreq;
 	float tfw1 = ps->m_tfWeight1;
 	float tfw2 = ps->m_tfWeight2;
 	
@@ -6893,7 +6902,9 @@ bool printSingleScore ( SafeBuf *sb ,
 	
 	//int64_t tf = ss->m_termFreq;//ss->m_listSize;
 	int32_t qtn = ss->m_qtermNum;
-	int64_t tf = msg40->m_msg3a.m_termFreqs[qtn];
+	//int64_t tf = msg40->m_msg3a.m_termFreqs[qtn];
+	QueryTerm *qt = &msg40->m_msg3a.m_q->m_qterms[qtn];
+	int64_t tf = qt->m_termFreq;
 	float tfw = ss->m_tfWeight;
 	
 	if ( si->m_format == FORMAT_XML ) {

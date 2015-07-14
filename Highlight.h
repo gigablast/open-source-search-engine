@@ -70,7 +70,7 @@ class Highlight {
 	bool     m_doStemming;
 
 	bool     m_useAnchors;  // click and scroll technology for cached pages
-	int32_t     m_anchorCounts [ MAX_QUERY_TERMS ];
+	//int32_t     m_anchorCounts [ MAX_QUERY_TERMS ];
 	const char    *m_baseUrl;
 
 	int32_t m_numMatches;
