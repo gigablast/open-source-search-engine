@@ -28678,6 +28678,11 @@ SafeBuf *XmlDoc::getSpiderStatusDocMetaList2 ( SpiderReply *reply1 ) {
 		jd.safePrintf("\"gbssHttpStatus\":%"INT32",\n",
 			      (int32_t)m_httpStatus);
 
+	// do not index gbssIsSeedUrl:0 because there will be too many usually
+	bool isSeed = ( m_sreqValid && m_sreq.m_isAddUrl );
+	if ( isSeed )
+		jd.safePrintf("\"gbssIsSeedUrl\":1,\n");
+
 	if ( od )
 		jd.safePrintf("\"gbssWasIndexed\":1,\n");
 	else
@@ -28702,6 +28707,18 @@ SafeBuf *XmlDoc::getSpiderStatusDocMetaList2 ( SpiderReply *reply1 ) {
 		else
 			jd.safePrintf("\"gbssDiffbotUri\":"
 				      "\"none\",\n");
+		// show the type as gbssDiffbotType:"article" etc.
+		JsonItem *dti = NULL;
+		if ( jp1 ) 
+			dti = jp1->getItem("type");
+		if ( dti ) {
+			jd.safePrintf("\"gbssDiffbotType\":\"");
+			int32_t vlen;
+			char *val = jsonItem->getValueAsString( &vlen );
+			if ( val ) jd.jsonEncode ( val , vlen );
+			jd.safePrintf("\",\n");
+		}
+
 	}
 	else { // if ( cr->m_isCustomCrawl ) {
 		jd.safePrintf("\"gbssIsDiffbotObject\":0,\n");
