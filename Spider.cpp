@@ -11641,6 +11641,18 @@ int32_t getUrlFilterNum2 ( SpiderRequest *sreq       ,
 			goto checkNextRule;
 		}
 
+		if ( strncmp ( p , "isfakeip",8 ) == 0 ) {
+			// skip for msg20
+			if ( isForMsg20 ) continue;
+			// if no match continue
+			if ( (bool)sreq->m_fakeFirstIp == val ) continue;
+			p += 8;
+			p = strstr(p, "&&");
+			if ( ! p ) return i;
+			p += 2;
+			goto checkNextRule;
+		}
+
 		if ( strncmp ( p , "isonsamedomain",14 ) == 0 ) {
 			// skip for msg20
 			if ( isForMsg20 ) continue;
