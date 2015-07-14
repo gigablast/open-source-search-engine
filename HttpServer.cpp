@@ -1729,6 +1729,11 @@ void cleanUp ( void *state , TcpSocket *s ) {
 	//log("HttpServer: unregistering file fd: %i", f->getfd());
 	// unregister f from getting callbacks (might not be registerd)
 	if ( s ) {
+		// When reading from a slow disk, socket gets closed before the
+		// file and sets its descriptor to be negative, so make sure this 
+		// is positive so we can find the callback.
+		int32_t socketDescriptor = s->m_sd;
+		if (socketDescriptor < 0) socketDescriptor *= -1;
 		// set this
 		fd = f->getfd();
 		// get the server this socket uses
@@ -1736,12 +1741,12 @@ void cleanUp ( void *state , TcpSocket *s ) {
 		// do it SILENTLY so not message is logged if fd not registered
 		if (tcp->m_useSSL)
 			g_loop.unregisterReadCallback ( fd,//f->getfd(),
-						    (void *)(PTRTYPE)(s->m_sd),
+						    (void *)(PTRTYPE)(socketDescriptor),
 							getSSLMsgPieceWrapper,
 							true );
 		else
 			g_loop.unregisterReadCallback ( fd,//f->getfd(),
-						    (void *)(PTRTYPE)(s->m_sd),
+						    (void *)(PTRTYPE)(socketDescriptor),
 							getMsgPieceWrapper , 
 							true );
 	}

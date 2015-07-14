@@ -76,6 +76,13 @@ def getPage(page):
     return len(items)
 
 
+def dumpDb():
+    db = sqlite3.connect('items.db', detect_types=sqlite3.PARSE_DECLTYPES|sqlite3.PARSE_COLNAMES)
+    c = db.cursor()
+    res = c.execute("select * from items")    
+    for item, fileName, updated, status in res:
+        print item, fileName, updated, status
+
 
 def main():
     print 'arguments were', sys.argv
@@ -89,10 +96,12 @@ def main():
             os.unlink('items.db')
             init()
             return sys.exit(0)
+        if sys.argv[1] == 'dump':
+            dumpDb()
     else:
         #getPage(4)
         from multiprocessing.pool import ThreadPool
-        pool = ThreadPool(processes=10)
+        pool = ThreadPool(processes=50)
         print pool.map(getPage, xrange(1,1300))
     
 
