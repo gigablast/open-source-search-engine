@@ -34,6 +34,10 @@ Msg39::Msg39 () {
 	reset();
 }
 
+Msg39::~Msg39 () {
+	reset();
+}
+
 void Msg39::reset() {
 	if ( m_inUse ) { char *xx=NULL;*xx=0; }
 	m_allocedTree = false;
@@ -46,8 +50,14 @@ void Msg39::reset() {
 
 void Msg39::reset2() {
 	// reset lists
-	for ( int32_t j = 0 ; j < m_msg2.m_numLists && m_lists ; j++ ) 
-		m_lists[j].freeList();
+	int32_t nqt = m_stackBuf.getLength() / sizeof(RdbList);
+	//for ( int32_t j = 0 ; j < m_msg2.m_numLists && m_lists ; j++ ) {
+	for ( int32_t j = 0 ; j < nqt && m_lists ; j++ ) {
+		//m_lists[j].freeList();
+		//log("msg39: destroy list @ 0x%"PTRFMT,(PTRTYPE)&m_lists[j]);
+		// same thing but more generic
+		m_lists[j].destructor();
+	}
 	m_stackBuf.purge();
 	m_lists = NULL;
 	m_msg2.reset();
@@ -207,7 +217,8 @@ void Msg39::getDocIds2 ( Msg39Request *req ) {
 	if ( ! m_tmpq.set2 ( m_r->ptr_query  , 
 			     m_r->m_language ,
 			     m_r->m_queryExpansion ,
-			     m_r->m_useQueryStopWords ) ) {
+			     m_r->m_useQueryStopWords ,
+			     m_r->m_maxQueryTerms ) ) {
 		log("query: msg39: setQuery: %s." , 
 		    mstrerror(g_errno) );
 		sendReply ( m_slot , this , NULL , 0 , 0 , true );
@@ -767,11 +778,15 @@ bool Msg39::getLists () {
 
 
 	int32_t nqt = m_tmpq.getNumTerms();
-	if ( ! m_stackBuf.reserve ( sizeof(RdbList) * nqt ) ) return true;
+	int32_t need = sizeof(RdbList) * nqt ;
 	m_stackBuf.setLabel("stkbuf2");
+	if ( ! m_stackBuf.reserve ( need ) ) return true;
 	m_lists = (IndexList *)m_stackBuf.getBufStart();
-	for ( int32_t i = 0 ; i < nqt ; i++ )
+	m_stackBuf.setLength ( need );
+	for ( int32_t i = 0 ; i < nqt ; i++ ) {
 		m_lists[i].constructor();
+		//log("msg39: constructlist @ 0x%"PTRFMT,(PTRTYPE)&m_lists[i]);
+	}
 
 	// call msg2
 	if ( ! m_msg2.getLists ( rdbId                      ,

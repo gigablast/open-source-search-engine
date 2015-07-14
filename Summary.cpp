@@ -13,6 +13,7 @@ Summary::Summary()
 	m_bitScoresBuf = NULL;
 	m_bitScoresBufSize = 0;
 	m_wordWeights = NULL;
+	m_buf4 = NULL;
 	reset();
 }
 

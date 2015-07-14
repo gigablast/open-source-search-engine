@@ -216,6 +216,7 @@ class Msg39 {
  public:
 
 	Msg39();
+	~Msg39();
 	void reset();
 	void reset2();
 	// register our request handler for Msg39's

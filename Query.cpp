@@ -143,13 +143,15 @@ bool Query::set2 ( char *query        ,
 		   // need language for doing synonyms
 		   uint8_t  langId ,
 		   char     queryExpansion ,
-		   bool     useQueryStopWords ) {
-		  //int32_t  maxQueryTerms  ) {
+		   bool     useQueryStopWords ,
+		   int32_t  maxQueryTerms  ) {
 
 	m_langId = langId;
 	m_useQueryStopWords = useQueryStopWords;
 	// fix summary rerank and highlighting.
 	bool keepAllSingles = true;
+
+	m_maxQueryTerms = maxQueryTerms;
 
 	// assume  boolean auto-detect.
 	char boolFlag = 2;
@@ -162,7 +164,7 @@ bool Query::set2 ( char *query        ,
 	if ( ! query ) return true;
 
 	// set to 256 for synonyms?
-	m_maxQueryTerms = 256;
+	//m_maxQueryTerms = 256;
 	m_queryExpansion = queryExpansion;
 
 	int32_t queryLen = gbstrlen(query);
@@ -676,7 +678,7 @@ bool Query::setQTerms ( Words &words , Phrases &phrases ) {
 		nqt += naids;
 	}
 
-
+	if ( nqt > m_maxQueryTerms ) nqt = m_maxQueryTerms;
 
 	// allocate the stack buf
 	if ( nqt ) {
@@ -720,6 +722,11 @@ bool Query::setQTerms ( Words &words , Phrases &phrases ) {
 		if ( n >= ABS_MAX_QUERY_TERMS ) {
 			log("query: lost query phrase terms to max term "
 			    "limit of %"INT32"",(int32_t)ABS_MAX_QUERY_TERMS );
+			break;
+		}
+		if ( n >= m_maxQueryTerms ) {
+			log("query: lost query phrase terms to max term cr "
+			    "limit of %"INT32"",(int32_t)m_maxQueryTerms);
 			break;
 		}
 
@@ -878,6 +885,11 @@ bool Query::setQTerms ( Words &words , Phrases &phrases ) {
 		if ( n >= ABS_MAX_QUERY_TERMS ) {
 			log("query: lost query terms to max term "
 			    "limit of %"INT32"",(int32_t)ABS_MAX_QUERY_TERMS );
+			break;
+		}
+		if ( n >= m_maxQueryTerms ) {
+			log("query: lost query terms to max term cr "
+			    "limit of %"INT32"",(int32_t)m_maxQueryTerms);
 			break;
 		}
 

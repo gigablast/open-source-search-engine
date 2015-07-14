@@ -666,7 +666,7 @@ bool Msg40::federatedLoop ( ) {
 	mr.size_whiteList              = slen;
 	mr.m_timeout                   = -1; // auto-determine based on #terms
 	// make sure query term counts match in msg39
-	mr.m_maxQueryTerms             = m_si->m_maxQueryTerms; 
+	//mr.m_maxQueryTerms             = m_si->m_maxQueryTerms; 
 	mr.m_realMaxTop                = m_si->m_realMaxTop;
 
 	mr.m_minSerpDocId              = m_si->m_minSerpDocId;
@@ -698,6 +698,9 @@ bool Msg40::federatedLoop ( ) {
 	// prevent going OOM for type:article AND html
 	//if ( numDocIdSplits < 5 ) numDocIdSplits = 5;
 	//}
+
+	if ( cr ) mr.m_maxQueryTerms = cr->m_maxQueryTerms; 
+	else      mr.m_maxQueryTerms = 100;
 
 	// special oom hack fix
 	if ( cr && cr->m_isCustomCrawl && numDocIdSplits < 4 ) 
