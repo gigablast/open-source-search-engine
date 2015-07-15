@@ -16170,14 +16170,14 @@ SafeBuf *XmlDoc::getDiffbotReply ( ) {
 
 	// invalid url?
 	Url apiUrl; apiUrl.set ( au->getBufStart() );
-//	if ( true || apiUrl.getUrlLen() <= 0 ||
-//	     apiUrl.getHostLen() <= 0 ||
-//	     apiUrl.getDomainLen() <= 0 )  {
-//		log("build: invalid diffbot api url of \"%s\".",
-//		    au->getBufStart() );
-//		m_diffbotReplyValid = true;
-//		return &m_diffbotReply;
-//	}
+	if (apiUrl.getUrlLen() <= 0 ||
+	     apiUrl.getHostLen() <= 0 ||
+	     apiUrl.getDomainLen() <= 0 )  {
+		log("build: invalid diffbot api url of \"%s\".",
+		    au->getBufStart() );
+		m_diffbotReplyValid = true;
+		return &m_diffbotReply;
+	}
 	
 
 	// when respidering an "old" doc, never call this. we already
