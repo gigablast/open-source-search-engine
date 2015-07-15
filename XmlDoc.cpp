@@ -16170,14 +16170,14 @@ SafeBuf *XmlDoc::getDiffbotReply ( ) {
 
 	// invalid url?
 	Url apiUrl; apiUrl.set ( au->getBufStart() );
-	if ( apiUrl.getUrlLen() <= 0 || 
-	     apiUrl.getHostLen() <= 0 ||
-	     apiUrl.getDomainLen() <= 0 )  {
-		log("build: invalid diffbot api url of \"%s\".",
-		    au->getBufStart() );
-		m_diffbotReplyValid = true;
-		return &m_diffbotReply;
-	}
+//	if ( true || apiUrl.getUrlLen() <= 0 ||
+//	     apiUrl.getHostLen() <= 0 ||
+//	     apiUrl.getDomainLen() <= 0 )  {
+//		log("build: invalid diffbot api url of \"%s\".",
+//		    au->getBufStart() );
+//		m_diffbotReplyValid = true;
+//		return &m_diffbotReply;
+//	}
 	
 
 	// when respidering an "old" doc, never call this. we already
@@ -51808,7 +51808,7 @@ char *XmlDoc::hashJSONFields2 ( HashTableX *table ,
 		// time_t and hash with that... this will hash
 		// diffbot's article date field as a number so we can
 		// sortby and constrain by it in the search results
-		if ( name && strcasecmp(name,"date") == 0 ) {
+		if ( name && (strcasecmp(name,"date") == 0 || strcasecmp(name,"estimatedDate") == 0)) {
 			// this is in HttpMime.cpp
 			int64_t tt = atotime1 ( val );
 			// we can't store 64-bit dates... so truncate to -2147483648
