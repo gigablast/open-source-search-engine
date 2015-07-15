@@ -28714,7 +28714,7 @@ SafeBuf *XmlDoc::getSpiderStatusDocMetaList2 ( SpiderReply *reply1 ) {
 		if ( dti ) {
 			jd.safePrintf("\"gbssDiffbotType\":\"");
 			int32_t vlen;
-			char *val = jsonItem->getValueAsString( &vlen );
+			char *val = dti->getValueAsString( &vlen );
 			if ( val ) jd.jsonEncode ( val , vlen );
 			jd.safePrintf("\",\n");
 		}
