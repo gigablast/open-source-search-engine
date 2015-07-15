@@ -658,6 +658,8 @@ bool Query::setQTerms ( Words &words , Phrases &phrases ) {
 			continue;
 		// skip if ignored like a stopword (stop to->too)
 		//if ( qw->m_ignoreWord ) continue;
+		// ignore title: etc. words, they are field names
+		if ( qw->m_ignoreWord == IGNORE_FIELDNAME ) continue;
 		// no, hurts 'Greencastle IN economic development'
 		if ( qw->m_wordId == to ) continue;
 		// single letters...
@@ -1404,6 +1406,8 @@ bool Query::setQTerms ( Words &words , Phrases &phrases ) {
 			continue;
 		// skip if ignored like a stopword (stop to->too)
 		//if ( qw->m_ignoreWord ) continue;
+		// ignore title: etc. words, they are field names
+		if ( qw->m_ignoreWord == IGNORE_FIELDNAME ) continue;
 		// no, hurts 'Greencastle IN economic development'
 		if ( qw->m_wordId == to ) continue;
 		// single letters...
@@ -2498,12 +2502,14 @@ bool Query::setQWords ( char boolFlag ,
 		// in quotes which is silly, so undo it. But we should
 		// still inherit any quoteSign, however. Be sure to also
 		// set m_inQuotes to false so Matches.cpp::matchWord() works.
-		if ( i == quoteStart ) { // + 1 ) {
-			if ( i + 1 >= numWords || words.getNumQuotes(i+1)>0 ) {
-				qw->m_quoteStart = -1;
-				qw->m_inQuotes   = false;
-			}
-		}
+		// MDW: don't undo it because we do not want to get synonyms
+		// of terms in quotes. 7/15/2015
+		// if ( i == quoteStart ) { // + 1 ) {
+		// 	if ( i + 1 >= numWords || words.getNumQuotes(i+1)>0 ) {
+		// 		qw->m_quoteStart = -1;
+		// 		qw->m_inQuotes   = false;
+		// 	}
+		// }
 		// . get prefix hash of collection name and field
 		// . but first convert field to lower case
 		uint64_t ph;
