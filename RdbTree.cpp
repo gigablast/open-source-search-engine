@@ -1283,19 +1283,21 @@ bool RdbTree::checkTree2 ( bool printMsgs , bool doChainTest ) {
 		if ( m_right[i] >= 0 && m_parents[m_right[i]] != i ) 
 			return log(
 				   "db: Tree right kid and parent disagree.");
-		/*
+		// MDW: why did i comment out the order checking?
 		// check order
 		if ( m_left[i] >= 0 ) {
 			char *key = &m_keys[i*m_ks];
 			char *left = &m_keys[m_left[i]*m_ks];
-			if ( KEYCMP(key,left,m_ks)<0) {char *xx=NULL;*xx=0;}
+			if ( KEYCMP(key,left,m_ks)<0) 
+				return log("db: Tree left kid > parent %i",i);
+			
 		}
 		if ( m_right[i] >= 0 ) {
 			char *key = &m_keys[i*m_ks];
 			char *right = &m_keys[m_right[i]*m_ks];
-			if ( KEYCMP(key,right,m_ks)>0) {char *xx=NULL;*xx=0;}
+			if ( KEYCMP(key,right,m_ks)>0) 
+				return log("db: Tree right kid < parent %i",i);
 		}
-		*/
 		//g_loop.quickPoll(1, __PRETTY_FUNCTION__, __LINE__);
 	}
 	if ( hkp > 0 ) 
