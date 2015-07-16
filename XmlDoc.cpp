@@ -219,6 +219,10 @@ void XmlDoc::reset ( ) {
 	for ( int i = 0 ; i < MAXMSG7S ; i++ ) {
 		Msg7 *msg7 = m_msg7s[i];
 		if ( ! msg7 ) continue;
+        if(msg7->m_inUse) {
+            log("build: archive: reseting xmldoc when msg7s are outstanding");
+            
+        }
 		mdelete ( msg7 , sizeof(Msg7) , "xdmsg7" );
 		delete ( msg7 );
 		m_msg7s[i] = NULL;
@@ -3455,7 +3459,7 @@ bool XmlDoc::indexWarcOrArc ( char ctype ) {
 	if ( max > MAXMSG7S ) max = MAXMSG7S;
 
 	// wait for one to come back before launching another msg7
-	if ( m_numInjectionsOut > max ) return false;
+	if ( m_numInjectionsOut >= max ) return false;
 
 	char *realStart = m_fptr;
 
@@ -3777,6 +3781,11 @@ bool XmlDoc::indexWarcOrArc ( char ctype ) {
 		break;
 	}
 
+    if(!msg7 || msg7->m_inUse) {
+        // shouldn't happen, but it does... why?
+        log("build: archive: Ran out of msg7s to inject doc.");
+        return false;
+    }
 
 	// inject input parms:
 	InjectionRequest *ir = &msg7->m_injectionRequest;

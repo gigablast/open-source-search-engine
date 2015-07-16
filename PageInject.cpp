@@ -620,7 +620,8 @@ void handleRequest7 ( UdpSlot *slot , int32_t netnice ) {
 
 	CollectionRec *cr = g_collectiondb.getRec ( ir->m_collnum );
 	if ( ! cr ) {
-		log("inject: cr rec is null");
+		log("inject: cr rec is null %i", ir->m_collnum);
+		g_errno = ENOCOLLREC;
 		g_udpServer.sendErrorReply(slot,g_errno);
 		return;
 	}

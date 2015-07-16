@@ -26,6 +26,8 @@ def injectItem(item, c):
     md = json.loads(metadata)
 
     res = c.execute("select * from items where item = ?", (item,))
+    c.commit() # Getting database is locked errors, will this help?
+
     lastUpdate = {}
     for item, fileName, updated, status in res:
         lastUpdate[fileName] = updated
@@ -44,8 +46,9 @@ def injectItem(item, c):
                     (item,ff['name']),
                     'metadata':json.dumps(itemMetadata),
                     'c':'ait'}
-        print "sending", postVars,' to gb'
+        print "sending", ff['name'],' to gb'
         if True:
+            
             rp = requests.post("http://localhost:8000/admin/inject", postVars)
             statusCode = rp.status_code
             print postVars['url'], rp.status_code
@@ -57,7 +60,9 @@ def injectItem(item, c):
         c.commit()
 
 def getPage(page):
-    db = sqlite3.connect('items.db',detect_types=sqlite3.PARSE_DECLTYPES|sqlite3.PARSE_COLNAMES)
+    db = sqlite3.connect('items.db',
+                         isolation_level=None,
+                         detect_types=sqlite3.PARSE_DECLTYPES|sqlite3.PARSE_COLNAMES)
 
     #r = requests.get('https://archive.org/advancedsearch.php?q=collection%3Aarchiveitdigitalcollection&fl%5B%5D=identifier&rows=1&page={0}&output=json&save=yes'.format(page))
     r = requests.get('https://archive.org/advancedsearch.php?q=collection%3Aarchiveitdigitalcollection&fl%5B%5D=identifier&rows=1000&page={0}&output=json&save=yes'.format(page))
@@ -73,6 +78,7 @@ def getPage(page):
     for item in items:
         injectItem(item, db)
 
+    db.close()
     return len(items)
 
 
@@ -82,6 +88,7 @@ def dumpDb():
     res = c.execute("select * from items")    
     for item, fileName, updated, status in res:
         print item, fileName, updated, status
+    db.close()
 
 
 def main():

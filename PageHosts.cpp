@@ -156,13 +156,13 @@ skipReplaceHost:
 			       //"<font size=+1>"
 			       "<b>Hosts "
 			       "(<a href=\"/admin/hosts?c=%s&sort=%"INT32"&resetstats=1\">"
-			       "reset)</b>"
+			       "reset)</a></b>"
 			       //"</font>"
 			       "</td></tr>" 
 			       "<tr bgcolor=#%s>"
 			       "<td><a href=\"/admin/hosts?c=%s&sort=0\">"
 
-			       "<b>hostId</b></td>"
+			       "<b>hostId</b></a></td>"
 			       "<td><b>host ip</b></td>"
 			       "<td><b>shard</b></td>"
 			       "<td><b>mirror</b></td>" // mirror # within the shard
@@ -179,7 +179,7 @@ skipReplaceHost:
 			       //"<td><b>priority udp port</td>"
 
 			       //"<td><b>dns client port</td>"
-			       "<td><b>http port</td>"
+			       "<td><b>http port</b></td>"
 
 			       // this is now obsolete since ide channel is. it was used
 			       // so that only the guy with the token could merge,
@@ -200,10 +200,10 @@ skipReplaceHost:
 
 			       //"<td><b>resends sent</td>"
 			       //"<td><b>errors recvd</td>"
-			       "<td><b>try agains recvd</td>"
+			       "<td><b>try agains recvd</b></td>"
 
 			       "<td><a href=\"/admin/hosts?c=%s&sort=3\">"
-			       "<b>dgrams resent</a></td>"
+			       "<b>dgrams resent</b></a></td>"
 
 			       /*
 
@@ -233,15 +233,15 @@ skipReplaceHost:
 
 
 			       "<td><a href=\"/admin/hosts?c=%s&sort=13\">"
-			       "<b>avg split time</a></td>"
+			       "<b>avg split time</b></a></td>"
 
-			       "<td><b>splits done</a></td>"
+			       "<td><b>splits done</b></a></td>"
 
 			       "<td><a href=\"/admin/hosts?c=%s&sort=12\">"
-			       "<b>status</a></td>"
+			       "<b>status</b></a></td>"
 
 			       "<td><a href=\"/admin/hosts?c=%s&sort=15\">"
-			       "<b>slow reads</a></td>"
+			       "<b>slow reads</b></a></td>"
 
 			       "<td><b>docs indexed</a></td>"
 
@@ -249,26 +249,26 @@ skipReplaceHost:
 			       "<b>mem used</a></td>"
 
 			       "<td><a href=\"/admin/hosts?c=%s&sort=10\">"
-			       "<b>cpu used</a></td>"
+			       "<b>cpu used</b></a></td>"
 
 			       "<td><a href=\"/admin/hosts?c=%s&sort=17\">"
-			       "<b>disk used</a></td>"
+			       "<b>disk used</b></a></td>"
 
 			       "<td><a href=\"/admin/hosts?c=%s&sort=14\">"
-			       "<b>max ping1</a></td>"
+			       "<b>max ping1</b></a></td>"
 
 			       "<td><a href=\"/admin/hosts?c=%s&sort=11\">"
-			       "<b>ping1 age</a></td>"
+			       "<b>ping1 age</b></a></td>"
 
 			       //"<td><b>ip1</td>"
 			       "<td><a href=\"/admin/hosts?c=%s&sort=1\">"
-			       "<b>ping1</a></td>"
+			       "<b>ping1</b></a></td>"
 
 			       "%s"// "<td><b>ip2</td>"
 			       //"<td><b>inSync</td>",
 			       //"<td>avg roundtrip</td>"
 			       //"<td>std. dev.</td></tr>"
-			       "<td><b>note</td>",
+			       "<td><b>note</b></td>",
 			       TABLE_STYLE ,
 			       colspan    ,
 
