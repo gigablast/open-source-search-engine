@@ -40,7 +40,9 @@ public:
 	bool       m_isLocal;
 	//bool       m_seq;
 	bool       m_rtq;
-	char       m_q[MAX_QUERY_LEN+1];
+	//char       m_q[MAX_QUERY_LEN+1];
+	SafeBuf m_qsb;
+	char m_qtmpBuf[128];
 	int32_t       m_qlen;
 	char       m_boolFlag;
 	bool       m_printed;
@@ -98,7 +100,7 @@ bool sendPageGet ( TcpSocket *s , HttpRequest *r ) {
 	int32_t  qlen = 0;
 	char *q = r->getString ( "q" , &qlen , NULL /*default*/);
 	// ensure query not too big
-	if ( qlen >= MAX_QUERY_LEN-1 ) { 
+	if ( qlen >= ABS_MAX_QUERY_LEN-1 ) { 
 		g_errno=EQUERYTOOBIG; 
 		return g_httpServer.sendErrorReply (s,500 ,mstrerror(g_errno));
 	}
@@ -156,8 +158,16 @@ bool sendPageGet ( TcpSocket *s , HttpRequest *r ) {
 	//	delete ( st );
 	//	return sendPageNetResult( s );
 	//}
-	if ( q && qlen > 0 ) strcpy ( st->m_q , q );
-	else                 st->m_q[0] = '\0';
+	//if ( q && qlen > 0 ) strcpy ( st->m_q , q );
+	//else                 st->m_q[0] = '\0';
+
+	st->m_qsb.setBuf ( st->m_qtmpBuf,128,0,false );
+	st->m_qsb.setLabel ( "qsbpg" );
+
+	// save the query
+	if ( q && qlen > 0 )
+		st->m_qsb.safeStrcpy ( q );
+	
 	st->m_qlen = qlen;
 	//st->m_seq      = seq;
 	st->m_rtq      = rtq;
@@ -415,8 +425,8 @@ bool processLoop ( void *state ) {
 	int32_t startLen2 = sb->length();//p;
 
 	// query should be NULL terminated
-	char *q    = st->m_q;
-	int32_t  qlen = st->m_qlen;
+	char *q    = st->m_qsb.getBufStart();
+	int32_t  qlen = st->m_qsb.getLength(); // m_qlen;
 
 	char styleTitle[128] =  "font-size:14px;font-weight:600;"
 				"color:#000000;";

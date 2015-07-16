@@ -3519,6 +3519,7 @@ bool printApiForPage ( SafeBuf *sb , int32_t PAGENUM , CollectionRec *cr ) {
 		if ( pageNum != PAGENUM ) continue;
 
 		SafeBuf tmp;
+		tmp.setLabel("apisb");
 		char diff = 0;
 		bool printVal = false;
 		if ( parm->m_type != TYPE_CMD &&

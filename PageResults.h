@@ -52,7 +52,8 @@ public:
 	int64_t    m_took; // how long it took to get the results
 	HttpRequest  m_hr;
 	bool         m_printedHeaderRow;
-	char         m_qe[MAX_QUERY_LEN+1];
+	//char         m_qe[MAX_QUERY_LEN+1];
+	SafeBuf m_qesb;
 
 	// for printing our search result json items in csv:
 	HashTableX   m_columnTable;

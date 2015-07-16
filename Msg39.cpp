@@ -46,8 +46,10 @@ void Msg39::reset() {
 
 void Msg39::reset2() {
 	// reset lists
-	for ( int32_t j = 0 ; j < m_msg2.m_numLists ; j++ ) 
+	for ( int32_t j = 0 ; j < m_msg2.m_numLists && m_lists ; j++ ) 
 		m_lists[j].freeList();
+	m_stackBuf.purge();
+	m_lists = NULL;
 	m_msg2.reset();
 	m_posdbTable.reset();
 	m_callback = NULL;
@@ -713,7 +715,7 @@ bool Msg39::getLists () {
 			     //(int64_t)m_tmpq.m_qterms[i].m_explicitBit  ,
 			     //(int64_t)m_tmpq.m_qterms[i].m_implicitBits ,
 			     (int32_t)m_tmpq.m_qterms[i].m_hardCount ,
-			     (int32_t)m_tmpq.m_componentCodes[i],
+			     (int32_t)m_tmpq.m_qterms[i].m_componentCode,
 			     (int32_t)m_tmpq.getTermLen(i) ,
 			     isSynonym,
 			     (int32_t)m_tmpq.m_langId ); // ,tt
@@ -762,6 +764,15 @@ bool Msg39::getLists () {
 	// split is us????
 	//int32_t split = g_hostdb.m_myHost->m_group;
 	int32_t split = g_hostdb.m_myHost->m_shardNum;
+
+
+	int32_t nqt = m_tmpq.getNumTerms();
+	if ( ! m_stackBuf.reserve ( sizeof(RdbList) * nqt ) ) return true;
+	m_stackBuf.setLabel("stkbuf2");
+	m_lists = (IndexList *)m_stackBuf.getBufStart();
+	for ( int32_t i = 0 ; i < nqt ; i++ )
+		m_lists[i].constructor();
+
 	// call msg2
 	if ( ! m_msg2.getLists ( rdbId                      ,
 				 m_r->m_collnum,//m_r->ptr_coll              ,

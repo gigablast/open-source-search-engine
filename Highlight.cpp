@@ -160,8 +160,8 @@ int32_t Highlight::set ( SafeBuf *sb ,
 	// . set the anchor counts to 1000*i+1 for each possible query term num
 	// . yes, i know, why +1? because we're assuming the query terms
 	//   have been highlighted before us 
-	for ( int32_t i = 0 ; i < MAX_QUERY_TERMS ; i++ ) 
-		m_anchorCounts[i] = 1000*i + 1;
+	//for ( int32_t i = 0 ; i < MAX_QUERY_TERMS ; i++ ) 
+	//	m_anchorCounts[i] = 1000*i + 1;
 	// set lengths of provided front/back highlight tags
 	if ( m_frontTag ) m_frontTagLen = gbstrlen ( frontTag );
 	if ( m_backTag  ) m_backTagLen  = gbstrlen ( backTag  );
@@ -170,6 +170,10 @@ int32_t Highlight::set ( SafeBuf *sb ,
 	//m_bufLen = bufLen;
 	//m_bufPtr = buf;
 	m_sb = sb;
+
+	// label it
+	m_sb->setLabel ("highw");
+
 	// save room for terminating \0
 	//m_bufEnd = m_buf + m_bufLen - 1;
 

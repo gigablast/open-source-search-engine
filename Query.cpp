@@ -28,6 +28,7 @@ void Query::constructor ( ) {
 	//m_bmap      = NULL;
 	m_bitScores = NULL;
 	m_qwords      = NULL;
+	m_numWords = 0;
 	//m_expressions = NULL;
 	m_qwordsAllocSize      = 0;
 	//m_expressionsAllocSize = 0;
@@ -37,8 +38,8 @@ void Query::constructor ( ) {
 	m_st0Ptr = NULL;
 	// we have to manually call this because Query::constructor()
 	// might have been called explicitly
-	for ( int32_t i = 0 ; i < MAX_QUERY_TERMS ; i++ )
-		m_qterms[i].constructor();
+	//for ( int32_t i = 0 ; i < MAX_QUERY_TERMS ; i++ )
+	//	m_qterms[i].constructor();
 	//m_expressions          = NULL;
 	reset ( );
 }
@@ -68,9 +69,16 @@ void Query::reset ( ) {
 		qt->m_facetIndexBuf.purge();
 	}
 
+	for ( int32_t i = 0 ; i < m_numWords ; i++ ) {
+		QueryWord *qw = &m_qwords[i];
+		qw->destructor();
+	}
+
+	m_sb.purge();
+	m_osb.purge();
 	m_docIdRestriction = 0LL;
 	m_groupThatHasDocId = NULL;
-	m_bufLen      = 0;
+	//m_bufLen      = 0;
 	m_origLen     = 0;
 	m_numWords    = 0;
 	//m_numOperands = 0;
@@ -84,6 +92,7 @@ void Query::reset ( ) {
 	//if ( m_bitScores && m_bitScoresSize ) //  != m_bsbuf )
 	//	mfree ( m_bitScores , m_bitScoresSize , "Query2" );
 	//m_bmap = NULL;
+
 	m_bitScores = NULL;
 	//m_bmapSize      = 0;
 	m_bitScoresSize = 0;
@@ -160,17 +169,26 @@ bool Query::set2 ( char *query        ,
 	//m_coll    = coll;
 	//m_collLen = collLen;
 	// truncate query if too big
-	if ( queryLen >= MAX_QUERY_LEN ) {
-		log("query: Query length of %"INT32" must be less than %"INT32". "
-		    "Truncating.",queryLen,(int32_t)MAX_QUERY_LEN);
-		queryLen = MAX_QUERY_LEN - 1;
+	if ( queryLen >= ABS_MAX_QUERY_LEN ) {
+		log("query: Query length of %"INT32" must be "
+		    "less than %"INT32". "
+		    "Truncating.",queryLen,(int32_t)ABS_MAX_QUERY_LEN);
+		queryLen = ABS_MAX_QUERY_LEN - 1;
 		m_truncated = true;
 	}
 	// save original query
+	m_osb.setBuf ( m_otmpBuf , 128 , 0 , false );
+	m_osb.setLabel ("oqbuf" );
+	m_osb.reserve ( queryLen + 1 );
+	m_osb.safeMemcpy ( query , queryLen );
+	m_osb.nullTerm ();
 	
-	m_origLen = queryLen;
-	gbmemcpy ( m_orig , query , queryLen );
-	m_orig [ m_origLen ] = '\0';
+	//m_origLen = queryLen;
+	//gbmemcpy ( m_orig , query , queryLen );
+	//m_orig [ m_origLen ] = '\0';
+
+	m_orig = m_osb.getBufStart();
+	m_origLen = m_osb.getLength();
 
 	log(LOG_DEBUG, "query: set called = %s", m_orig);
 
@@ -204,9 +222,16 @@ bool Query::set2 ( char *query        ,
 	// that were set somewhere above!!! i moved top: label above!
 	//reset();
 
+	// reserve some space, guessing how much we'd need
+	m_sb.setBuf(m_tmpBuf3,128,0,false);
+	m_sb.setLabel("qrystk");
+	int32_t need = queryLen * 2 + 32;
+	if ( ! m_sb.reserve ( need ) ) 
+		return false;
+
 	// convenience ptr
-	char *p    = m_buf;
-	char *pend = m_buf + MAX_QUERY_LEN;
+	//char *p    = m_buf;
+	//char *pend = m_buf + MAX_QUERY_LEN;
 	bool inQuotesFlag = false;
 	// . copy query into m_buf
 	// . translate ( and ) to special query operators so Words class
@@ -219,27 +244,31 @@ bool Query::set2 ( char *query        ,
 		if ( query[i] == '\"' ) inQuotesFlag = !inQuotesFlag;
 
 		if ( inQuotesFlag ) {
-			*p = query [i];
-			p++;
+			//*p = query [i];
+			//p++;
+			m_sb.pushChar(query[i]);
 			continue;
 		}
 
 		// dst buf must be big enough
-		if ( p + 8 >= pend ) {
-			g_errno = EBUFTOOSMALL;
-			return log(LOG_LOGIC,"query: query: query too big.");
-		}
+		// if ( p + 8 >= pend ) {
+		// 	g_errno = EBUFTOOSMALL;
+		// 	return log(LOG_LOGIC,"query: query: query too big.");
+		// }
 		// translate ( and )
 		if ( boolFlag == 1 && query[i] == '(' ) {
-			gbmemcpy ( p , " LeFtP " , 7 ); p += 7;
+			//gbmemcpy ( p , " LeFtP " , 7 ); p += 7;
+			m_sb.safeMemcpy ( " LeFtP " , 7 );
 			continue;
 		}
 		if ( boolFlag == 1 && query[i] == ')' ) {
-			gbmemcpy ( p , " RiGhP " , 7 ); p += 7;
+			//gbmemcpy ( p , " RiGhP " , 7 ); p += 7;
+			m_sb.safeMemcpy ( " RiGhP " , 7 );
 			continue;
 		}
 		if ( query[i] == '|' ) {
-			gbmemcpy ( p , " PiiPE " , 7 ); p += 7;
+			//gbmemcpy ( p , " PiiPE " , 7 ); p += 7;
+			m_sb.safeMemcpy ( " PiiPE " , 7 );
 			continue;
 		}
 		// translate [#a] [#r] [#ap] [#rp] [] [p] to operators
@@ -249,28 +278,34 @@ bool Query::set2 ( char *query        ,
 			while ( is_digit(query[j]) ) j++;
 			char c = query[j];
 			if ( (c == 'a' || c == 'r') && query[j+1]==']' ) {
-				sprintf ( p , " LeFtB %"INT32" %c RiGhB ",val,c);
-				p += gbstrlen(p);
+				//sprintf ( p , " LeFtB %"INT32" %c RiGhB ",
+				m_sb.safePrintf(" LeFtB %"INT32" %c RiGhB ",
+					  val,c);
+				//p += gbstrlen(p);
 				i = j + 1;
 				continue;
 			}
 			else if ( (c == 'a' || c == 'r') && 
 				  query[j+1]=='p' && query[j+2]==']') {
-				sprintf ( p , " LeFtB %"INT32" %cp RiGhB ",val,c);
-				p += gbstrlen(p);
+				//sprintf ( p , " LeFtB %"INT32" %cp RiGhB ",
+				m_sb.safePrintf(" LeFtB %"INT32" %cp RiGhB ",
+				val,c);
+				//p += gbstrlen(p);
 				i = j + 2;
 				continue;
 			}
 		}
 		if ( query[i] == '[' && query[i+1] == ']' ) {
-			sprintf ( p , " LeFtB RiGhB ");
-			p += gbstrlen(p);
+			//sprintf ( p , " LeFtB RiGhB ");
+			//p += gbstrlen(p);
+			m_sb.safePrintf ( " LeFtB RiGhB ");
 			i = i + 1;
 			continue;
 		}
 		if ( query[i] == '[' && query[i+1] == 'p' && query[i+2]==']') {
-			sprintf ( p , " LeFtB RiGhB ");
-			p += gbstrlen(p);
+			//sprintf ( p , " LeFtB RiGhB ");
+			//p += gbstrlen(p);
+			m_sb.safePrintf ( " LeFtB RiGhB ");
 			i = i + 2;
 			continue;
 		}
@@ -306,17 +341,22 @@ bool Query::set2 ( char *query        ,
  
 		// TODO: copy altavista's operators here? & | !
 		// otherwise, just a plain copy
-		*p = query [i];
-		p++;
+		// *p = query [i];
+		// p++;
+		m_sb.pushChar ( query[i] );
 	}
 	// NULL terminate
-	*p = '\0';
+	//*p = '\0';
+	m_sb.nullTerm();
 	// debug statement
 	//log(LOG_DEBUG,"Query: Got new query=%s",tempBuf);
 	//printf("query: query: Got new query=%s\n",tempBuf);
 
 	// set length
-	m_bufLen = p - m_buf;
+	//m_bufLen = p - m_buf;
+
+	//m_buf = m_sb.getBufStart();
+	//m_bufLen = m_sb.length();
 
 	Words words;
 	Phrases phrases;
@@ -560,8 +600,102 @@ bool Query::setQTerms ( Words &words , Phrases &phrases ) {
 	// what is the max value for "shift"?
 	int32_t max = (int32_t)MAX_EXPLICIT_BITS;
 	if ( max > m_maxQueryTerms ) max = m_maxQueryTerms;
+
+	// count them first for allocating
+	int32_t nqt = 0;
+	for ( int32_t i = 0 ; i < m_numWords ; i++ ) {
+		QueryWord *qw  = &m_qwords[i];
+		// skip if ignored... mdw...
+		if ( ! qw->m_phraseId ) continue;
+		if (   qw->m_ignorePhrase ) continue; // could be a repeat
+		// none if weight is absolute zero
+		if ( qw->m_userWeightPhrase == 0   && 
+		     qw->m_userTypePhrase   == 'a'  ) continue;
+		nqt++;
+	}
+	// count phrase terms too!!!
+	for ( int32_t i = 0 ; i < m_numWords; i++ ) {
+		QueryWord *qw  = &m_qwords[i];
+ 		if ( qw->m_ignoreWord && 
+ 		     qw->m_ignoreWord != IGNORE_QSTOP) continue;
+		// ignore if in quotes and part of phrase, watch out
+		// for things like "word", a single word in quotes.
+		if ( qw->m_quoteStart >= 0 && qw->m_phraseId ) continue;
+		// if we are not start of quote and NOT in a phrase we
+		// must be the tailing word i guess.
+		// fixes '"john smith" -"bob dole"' from having
+		// smith and dole as query terms.
+		if ( qw->m_quoteStart >= 0 && qw->m_quoteStart != i )
+			continue;
+		// ignore if weight is absolute zero
+		if ( qw->m_userWeight == 0   && 
+		     qw->m_userType   == 'a'  ) continue;
+		nqt++;
+	}
+	// thirdly, count synonyms
+	Synonyms syn;
+	int32_t sn = 0;
+	if ( m_queryExpansion ) sn = m_numWords;
+	int64_t to = hash64n("to",0LL);
+	for ( int32_t i = 0 ; i < sn ; i++ ) {
+		// get query word
+		QueryWord *qw  = &m_qwords[i];
+		// skip if in quotes, we will not get synonyms for it
+		if ( qw->m_inQuotes ) continue;
+		// skip if has plus sign in front
+		if ( qw->m_wordSign == '+' ) continue;
+		// not '-' either i guess
+		if ( qw->m_wordSign == '-' ) continue;
+		// no url: stuff, maybe only title
+		if ( qw->m_fieldCode &&
+		     qw->m_fieldCode != FIELD_TITLE &&
+		     qw->m_fieldCode != FIELD_GENERIC )
+			continue;
+		// skip if ignored like a stopword (stop to->too)
+		//if ( qw->m_ignoreWord ) continue;
+		// no, hurts 'Greencastle IN economic development'
+		if ( qw->m_wordId == to ) continue;
+		// single letters...
+		if ( qw->m_wordLen == 1 ) continue;
+		// set the synonyms for this word
+		char tmpBuf [ TMPSYNBUFSIZE ];
+		int32_t naids = syn.getSynonyms ( &words ,
+					       i ,
+						  // language of the query.
+						  // 0 means unknown. if this
+						  // is 0 we sample synonyms
+						  // from all languages.
+						  m_langId , 
+					       tmpBuf ,
+					       0 ); // m_niceness );
+		// if no synonyms, all done
+		if ( naids <= 0 ) continue;
+		nqt += naids;
+	}
+
+
+
+	// allocate the stack buf
+	if ( nqt ) {
+		int32_t need = nqt * sizeof(QueryTerm) ;
+		if ( ! m_stackBuf.reserve ( need ) )
+			return false;
+		m_stackBuf.setLabel("stkbuf3");
+		char *pp = m_stackBuf.getBufStart();
+		m_qterms = (QueryTerm *)pp;
+		pp += sizeof(QueryTerm);
+		if ( pp > m_stackBuf.getBufEnd() ) { char *xx=NULL;*xx=0; }
+	}
+
+	// call constructor on each one here
+	for ( int32_t i = 0 ; i < nqt ; i++ ) {
+		QueryTerm *qt = &m_qterms[i];
+		qt->constructor();
+	}
+
+
 	//char u8Buf[256]; 
-	for ( int32_t i = 0 ; i < m_numWords && n < MAX_QUERY_TERMS ; i++ ) {
+	for ( int32_t i = 0 ; i < m_numWords ; i++ ) {
 		// break out if no more explicit bits!
 		/*
 		if ( shift >= max ) {
@@ -580,9 +714,9 @@ bool Query::setQTerms ( Words &words , Phrases &phrases ) {
 		     qw->m_userTypePhrase   == 'a'  ) continue;
 
 		// stop breach
-		if ( n >= MAX_QUERY_TERMS ) {
+		if ( n >= ABS_MAX_QUERY_TERMS ) {
 			log("query: lost query phrase terms to max term "
-			    "limit of %"INT32"",(int32_t)MAX_QUERY_TERMS );
+			    "limit of %"INT32"",(int32_t)ABS_MAX_QUERY_TERMS );
 			break;
 		}
 
@@ -604,7 +738,7 @@ bool Query::setQTerms ( Words &words , Phrases &phrases ) {
 		qt->m_isQueryStopWord = false;
 		// change in both places
 		qt->m_termId    = qw->m_phraseId & TERMID_MASK;
-		m_termIds[n]    = qw->m_phraseId & TERMID_MASK;
+		//m_termIds[n]    = qw->m_phraseId & TERMID_MASK;
 		//log(LOG_DEBUG, "Setting query phrase term id %d: %lld", n, m_termIds[n]);
 		qt->m_rawTermId = qw->m_rawPhraseId;
 		// assume explicit bit is 0
@@ -615,12 +749,12 @@ bool Query::setQTerms ( Words &words , Phrases &phrases ) {
 		// phrases like: "cat dog" AND pig
 		if ( m_isBoolean && qw->m_phraseSign != '*' ) {
 			qt->m_termSign = '\0';
-			m_termSigns[n] = '\0';
+			//m_termSigns[n] = '\0';
 		}
 		// if not boolean, ensure to change signs in both places
 		else {
 			qt->m_termSign  = qw->m_phraseSign;
-			m_termSigns[n]  = qw->m_phraseSign;
+			//m_termSigns[n]  = qw->m_phraseSign;
 		}
 		//
 		// INSERT UOR LOGIC HERE
@@ -703,7 +837,7 @@ bool Query::setQTerms ( Words &words , Phrases &phrases ) {
 	}
 
 	// now if we have enough room, do the singles
-	for ( int32_t i = 0 ; i < m_numWords && n < MAX_QUERY_TERMS ; i++ ) {
+	for ( int32_t i = 0 ; i < m_numWords ; i++ ) {
 		// break out if no more explicit bits!
 		/*
 		if ( shift >= max ) {
@@ -738,9 +872,9 @@ bool Query::setQTerms ( Words &words , Phrases &phrases ) {
 		     qw->m_userType   == 'a'  ) continue;
 
 		// stop breach
-		if ( n >= MAX_QUERY_TERMS ) {
+		if ( n >= ABS_MAX_QUERY_TERMS ) {
 			log("query: lost query terms to max term "
-			    "limit of %"INT32"",(int32_t)MAX_QUERY_TERMS );
+			    "limit of %"INT32"",(int32_t)ABS_MAX_QUERY_TERMS );
 			break;
 		}
 
@@ -760,7 +894,7 @@ bool Query::setQTerms ( Words &words , Phrases &phrases ) {
 		qt->m_isQueryStopWord = qw->m_isQueryStopWord;
 		// change in both places
 		qt->m_termId    = qw->m_wordId & TERMID_MASK;
-		m_termIds[n]    = qw->m_wordId & TERMID_MASK;
+		//m_termIds[n]    = qw->m_wordId & TERMID_MASK;
 		qt->m_rawTermId = qw->m_rawWordId;
 		// assume explicit bit is 0
 		qt->m_explicitBit = 0;
@@ -769,18 +903,18 @@ bool Query::setQTerms ( Words &words , Phrases &phrases ) {
 		// boolean queries are not allowed term signs
 		if ( m_isBoolean ) {
 			qt->m_termSign = '\0';
-			m_termSigns[n] = '\0';
+			//m_termSigns[n] = '\0';
 			// boolean fix for "health OR +sports" because
 			// the + there means exact word match, no synonyms.
 			if ( qw->m_wordSign == '+' ) {
 				qt->m_termSign  = qw->m_wordSign;
-				m_termSigns[n]  = qw->m_wordSign;
+				//m_termSigns[n]  = qw->m_wordSign;
 			}
 		}
 		// if not boolean, ensure to change signs in both places
 		else {
 			qt->m_termSign  = qw->m_wordSign;
-			m_termSigns[n]  = qw->m_wordSign;
+			//m_termSigns[n]  = qw->m_wordSign;
 		}
 		// get previous text word
 		//int32_t pw = i - 2;
@@ -1230,16 +1364,14 @@ bool Query::setQTerms ( Words &words , Phrases &phrases ) {
 	// . skip this part if language is unknown i guess
 	//
 	////////////
-	int32_t sn = 0;
-	Synonyms syn;
 	// loop over all words in query and process its synonyms list
 	//if ( m_langId != langUnknown && m_queryExpansion ) 
 	// if lang is "xx" unknown we still do synonyms it just does
 	// a loop over all languages starting with english
-	if ( m_queryExpansion ) 
-		sn = m_numWords;
+	// if ( m_queryExpansion ) 
+	// 	sn = m_numWords;
 
-	int64_t to = hash64n("to",0LL);
+	//int64_t to = hash64n("to",0LL);
 
 	for ( int32_t i = 0 ; i < sn ; i++ ) {
 		// get query word
@@ -1277,15 +1409,17 @@ bool Query::setQTerms ( Words &words , Phrases &phrases ) {
 		// sanity
 		if ( naids > MAX_SYNS ) { char *xx=NULL;*xx=0; }
 		// now make the buffer to hold them for us
+		qw->m_synWordBuf.setLabel("qswbuf");
 		qw->m_synWordBuf.safeMemcpy ( &syn.m_synWordBuf );
 		// get the term for this word
 		QueryTerm *origTerm = qw->m_queryWordTerm;
 		// loop over synonyms for word #i now
 		for ( int32_t j = 0 ; j < naids ; j++ ) {
 			// stop breach
-			if ( n >= MAX_QUERY_TERMS ) {
+			if ( n >= ABS_MAX_QUERY_TERMS ) {
 				log("query: lost synonyms due to max term "
-				    "limit of %"INT32"",(int32_t)MAX_QUERY_TERMS );
+				    "limit of %"INT32"",
+				    (int32_t)ABS_MAX_QUERY_TERMS );
 				break;
 			}
 			// this happens for 'da da da'
@@ -1346,7 +1480,7 @@ bool Query::setQTerms ( Words &words , Phrases &phrases ) {
 				wid= hash64h(wid,ph);
 			}
 			qt->m_termId    = wid & TERMID_MASK;
-			m_termIds[n]    = wid & TERMID_MASK;
+			//m_termIds[n]    = wid & TERMID_MASK;
 			qt->m_rawTermId = syn.m_aids[j];
 			// assume explicit bit is 0
 			qt->m_explicitBit = 0;
@@ -1354,18 +1488,18 @@ bool Query::setQTerms ( Words &words , Phrases &phrases ) {
 			// boolean queries are not allowed term signs
 			if ( m_isBoolean ) {
 				qt->m_termSign = '\0';
-				m_termSigns[n] = '\0';
+				//m_termSigns[n] = '\0';
 				// boolean fix for "health OR +sports" because
 				// the + there means exact word match, no syns
 				if ( qw->m_wordSign == '+' ) {
 					qt->m_termSign  = qw->m_wordSign;
-					m_termSigns[n]  = qw->m_wordSign;
+					//m_termSigns[n]  = qw->m_wordSign;
 				}
 			}
 			// if not bool, ensure to change signs in both places
 			else {
 				qt->m_termSign  = qw->m_wordSign;
-				m_termSigns[n]  = qw->m_wordSign;
+				//m_termSigns[n]  = qw->m_wordSign;
 			}
 			// do not use an explicit bit up if we got a hard count
 			qt->m_hardCount = qw->m_hardCount;
@@ -1413,7 +1547,7 @@ bool Query::setQTerms ( Words &words , Phrases &phrases ) {
 
 	m_numTerms = n;
 	
-	if ( n > MAX_QUERY_TERMS ) { char *xx=NULL;*xx=0; }
+	if ( n > ABS_MAX_QUERY_TERMS ) { char *xx=NULL;*xx=0; }
 
 
 	// count them for doing number of combos
@@ -1493,7 +1627,7 @@ bool Query::setQTerms ( Words &words , Phrases &phrases ) {
 	// . don't forget to set m_termSigns too!
 	if ( n == 1 && m_qterms[0].m_isPhrase && ! m_qterms[0].m_termSign ) {
 		m_qterms[0].m_termSign = '*';
-		m_termSigns[0]         = '*';
+		//m_termSigns[0]         = '*';
 	}
 
 	// . or bits into the m_implicitBits member of phrase QueryTerms that
@@ -1524,7 +1658,11 @@ bool Query::setQTerms ( Words &words , Phrases &phrases ) {
 	// . see Msg2.cpp for more info on componentCodes
 	// . -2 means unset, neither a compound term nor a component term at
 	//   this time
-	for ( int32_t i = 0 ; i < m_numTerms ; i++ ) m_componentCodes[i] = -2;
+	//for( int32_t i = 0 ; i < m_numTerms ; i++ ) m_componentCodes[i] = -2;
+	for ( int32_t i = 0 ; i < m_numTerms ; i++ ) {
+		QueryTerm *qt = &m_qterms[i];
+		qt->m_componentCode = -2;
+	}
 	m_numComponents = 0;
 
 	// . now set m_phrasePart for Summary.cpp's hackfix filter
@@ -1879,7 +2017,10 @@ void Query::addCompoundTerms ( ) {
 
 // -1 means compound, -2 means unset, >= 0 means component
 bool Query::isCompoundTerm ( int32_t i ) {
-	return ( m_componentCodes[i] == -1 );
+	//return ( m_componentCodes[i] == -1 );
+	if ( i >= m_numTerms ) return false;
+	QueryTerm *qt = &m_qterms[i];
+	return ( qt->m_componentCode == -1 );
 }
 
 bool Query::setQWords ( char boolFlag , 
@@ -1891,16 +2032,17 @@ bool Query::setQWords ( char boolFlag ,
 	// . because we now deal with boolean queries, we make parentheses
 	//   their own separate Word, so tell "words" we're setting a query
 	//Words words;
-	if ( ! words.set ( m_buf , m_bufLen,
+	if ( ! words.set ( m_sb.getBufStart() , m_sb.length() ,
+			   //buf , m_bufLen,
 			    TITLEREC_CURRENT_VERSION, true, true ) )
 		return log("query: Had error parsing query: %s.",
 			   mstrerror(g_errno));
 	int32_t numWords = words.getNumWords();
 	// truncate it
-	if ( numWords > MAX_QUERY_WORDS ) {
+	if ( numWords > ABS_MAX_QUERY_WORDS ) {
 		log("query: Had %"INT32" words. Max is %"INT32". Truncating.",
-		    numWords,(int32_t)MAX_QUERY_WORDS);
-		numWords = MAX_QUERY_WORDS;
+		    numWords,(int32_t)ABS_MAX_QUERY_WORDS);
+		numWords = ABS_MAX_QUERY_WORDS;
 		m_truncated = true;
 	}
 	m_numWords = numWords;
@@ -1923,11 +2065,14 @@ bool Query::setQWords ( char boolFlag ,
 			return log("query: Could not allocate mem for query.");
 		m_qwordsAllocSize = need;
 	}
+	// reset safebuf in there
+	for ( int32_t i = 0 ; i < m_numWords ; i++ )
+		m_qwords[i].constructor();
 
 	// is all alpha chars in query in upper case? caps lock on?
 	bool allUpper = true;
-	char *p    = m_buf;
-	char *pend = m_buf + m_bufLen;
+	char *p    = m_sb.getBufStart();//m_buf;
+	char *pend = m_sb.getBuf(); // m_buf + m_bufLen;
 	for ( ; p < pend ; p += getUtf8CharSize(p) )
 		if ( is_alpha_utf8 ( p ) && ! is_upper_utf8 ( p ) ) {
 			allUpper = false; break; }
@@ -2027,7 +2172,7 @@ bool Query::setQWords ( char boolFlag ,
 	char *ignoreTill = NULL;
 
 	// loop over all words, these QueryWords are 1-1 with "words"
-	for ( int32_t i = 0 ; i < numWords && i < MAX_QUERY_WORDS ; i++ ) {
+	for ( int32_t i = 0 ; i < numWords && i < ABS_MAX_QUERY_WORDS ; i++ ) {
 		// convenience var, these are 1-1 with "words"
 		QueryWord *qw = &m_qwords[i];
 		// set to defaults?
@@ -3228,7 +3373,8 @@ bool Query::setQWords ( char boolFlag ,
 			// search up to this far
 			int32_t maxj = i + nw;
 			// but not past our truncated limit
-			if ( maxj > MAX_QUERY_WORDS ) maxj = MAX_QUERY_WORDS;
+			if ( maxj > ABS_MAX_QUERY_WORDS ) 
+				maxj = ABS_MAX_QUERY_WORDS;
 
 			for ( j = i ; j < maxj ; j++ ) {
 				// skip punct
@@ -3385,7 +3531,7 @@ bool Query::setQWords ( char boolFlag ,
 		// count non-ignored words
 		if ( qw->m_ignoreWord ) continue;
 		// if under limit, continue
-		if ( count++ < MAX_QUERY_TERMS ) continue;
+		if ( count++ < ABS_MAX_QUERY_TERMS ) continue;
 		// . otherwise, ignore
 		// . if we set this for our UOR'ed terms from SearchInput.cpp's
 		//   UOR'ed facebook interests then it causes us to get no results!
@@ -4968,7 +5114,7 @@ void Query::printQueryTerms(){
 		     (int64_t)m_qterms[i].m_explicitBit  ,
 		     (int64_t)m_qterms[i].m_implicitBits ,
 		     (int32_t) m_qterms[i].m_hardCount ,
-		     m_componentCodes[i],
+		     m_qterms[i].m_componentCode,
 		     getTermLen(i),
 		     tt                        );
 	}
@@ -5514,7 +5660,17 @@ bool QueryTerm::isSplit() {
 // hash of all the query terms
 int64_t Query::getQueryHash() {
 	int64_t qh = 0LL;
-	for ( int32_t i = 0 ; i < m_numTerms ; i++ ) 
-		qh = hash64 ( m_termIds[i] , qh );
+	for ( int32_t i = 0 ; i < m_numTerms ; i++ )  {
+		QueryTerm *qt = &m_qterms[i];
+		qh = hash64 ( qt->m_termId , qh );
+	}
 	return qh;
+}
+
+void QueryWord::constructor () {
+	m_synWordBuf.constructor();
+}
+
+void QueryWord::destructor () {
+	m_synWordBuf.purge();
 }
