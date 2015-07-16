@@ -8263,8 +8263,11 @@ bool printCSVHeaderRow2 ( SafeBuf *sb ,
 			hdr = "Hop Count";
 		if ( ! strcmp(hdr,"gbssIp") ) 
 			hdr = "IP";
-		if ( ! strcmp(hdr,"gbssDiffbotUri" ) )
-			hdr = "Diffbot URI";
+		// csv report is regular urls not diffbot object urls so
+		// regular urls do not have a just a single diffboturi,
+		// they could have 0 or multiple diffboturis
+		//if ( ! strcmp(hdr,"gbssDiffbotUri" ) )
+		//	hdr = "Diffbot URI";
 		if ( ! strcmp(hdr,"gbssSentToDiffbotThisTime") ) 
 			hdr = "Process Attempted";
 		if ( ! strcmp(hdr,"gbssDiffbotReplyMsg") )
