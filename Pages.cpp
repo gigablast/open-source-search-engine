@@ -4725,7 +4725,7 @@ bool printRedBox ( SafeBuf *mb , TcpSocket *sock , HttpRequest *hr ) {
 		mb->safePrintf("%s",box);
 		mb->safePrintf("%"INT32" %s dead and not responding to "
 			      "pings. See the "
-			       "<a href=/admin/host?c=%s>hosts table</a>.",
+			       "<a href=/admin/hosts?c=%s>hosts table</a>.",
 			       ps->m_numHostsDead ,s ,coll);
 		mb->safePrintf("%s",boxEnd);
 	}
