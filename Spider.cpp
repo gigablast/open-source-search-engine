@@ -14005,6 +14005,17 @@ bool getSpiderStatusMsg ( CollectionRec *cx , SafeBuf *msg , int32_t *status ) {
 		return msg->safePrintf("Job is initializing.");
 	}
 
+	// if we had seeds and none were successfully crawled, do not just
+	// print that the crawl completed.
+	if ( cx->m_collectiveRespiderFrequency <= 0.0 &&
+	     cx->m_isCustomCrawl &&
+	     ! cx->m_globalCrawlInfo.m_hasUrlsReadyToSpider &&
+	     cx->m_globalCrawlInfo.m_pageDownloadAttempts > 0 &&
+	     cx->m_globalCrawlInfo.m_pageDownloadSuccesses == 0 ) {
+		*status = SP_SEEDSERROR;
+		return msg->safePrintf("Failed to crawl any seed.");
+	}
+
 	// if we sent an email simply because no urls
 	// were left and we are not recrawling!
 	if ( cx->m_collectiveRespiderFrequency <= 0.0 &&
