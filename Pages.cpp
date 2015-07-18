@@ -3858,6 +3858,25 @@ bool printApiForPage ( SafeBuf *sb , int32_t PAGENUM , CollectionRec *cr ) {
 
 
 		sb->brify2 ( 
+			"\t\t# List of space separated words in the "
+			"query that were ignored for the most part. "
+			"Because they were common words for the "
+			"query language they are in.\n"
+			, cols , "\n\t\t# " , false );
+		sb->safePrintf("<b>\t\t\"ignoredWords\":\"to the\",\n\n"
+			       "</b>");
+
+		sb->brify2 ( 
+			"\t\t# There is a maximum limit placed on the "
+			"number of query terms we search on to keep things "
+			"fast. This can "
+			"be changed in the search controls.\n"
+			, cols , "\n\t\t# " , false );
+		sb->safePrintf("<b>\t\t\"queryNumTermsTotal\":52,\n</b>");
+		sb->safePrintf("<b>\t\t\"queryNumTermsUsed\":20,\n</b>");
+		sb->safePrintf("<b>\t\t\"queryWasTruncated\":1,\n\n</b>");
+
+		sb->brify2 ( 
 			"\t\t# The start of the terms array. Each query "
 			"is broken down into a list of terms. Each "
 			"term is described here.\n"

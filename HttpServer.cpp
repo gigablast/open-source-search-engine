@@ -1514,6 +1514,10 @@ bool HttpServer::sendReply ( TcpSocket  *s , HttpRequest *r , bool isAdmin) {
 	//   is recycled/destroyed
 	// . this will call getMsgPiece() to fill up sendBuf from file
 	int32_t totalToSend = mimeLen + bytesToSend;
+
+	//s->m_state = NULL; // do we need this? yes, cuz s is NULL for cleanUp
+	if ( s && s->m_state == f ) s->m_state = NULL;
+
 	//if ( ! m_tcp.sendMsg ( s           , 
 	if (  ! tcp->sendMsg ( s           , 
 			       sendBuf     ,
@@ -1542,7 +1546,6 @@ bool HttpServer::sendReply ( TcpSocket  *s , HttpRequest *r , bool isAdmin) {
 	if ( ! f->isOpen() ) f->open( O_RDONLY );
 	int fd = f->getfd();
 	cleanUp ( f , NULL/*TcpSocket */ );
-	s->m_state = NULL; // do we need this? yes, cuz s is NULL for cleanUp
 	// . AND we need to do this ourselves here
 	// . do it SILENTLY so not message is logged if fd not registered
 	if (tcp->m_useSSL)

@@ -680,6 +680,8 @@ bool Query::setQTerms ( Words &words , Phrases &phrases ) {
 		nqt += naids;
 	}
 
+	m_numTermsUntruncated = nqt;
+
 	if ( nqt > m_maxQueryTerms ) nqt = m_maxQueryTerms;
 
 	// allocate the stack buf
@@ -1443,6 +1445,14 @@ bool Query::setQTerms ( Words &words , Phrases &phrases ) {
 			}
 			// this happens for 'da da da'
 			if ( ! origTerm ) continue;
+
+			if ( n >= m_maxQueryTerms ) {
+				log("query: lost synonyms due to max cr term "
+				    "limit of %"INT32"",
+				    (int32_t)m_maxQueryTerms);
+				break;
+			}
+
 			// add that query term
 			QueryTerm *qt   = &m_qterms[n];
 			qt->m_qword     = qw; // NULL;
