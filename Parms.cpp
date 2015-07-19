@@ -15285,7 +15285,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_CHARPTR;
 	m->m_page  = PAGE_REINDEX;
 	m->m_obj   = OBJ_GBREQUEST;
-	m->m_def   = "xx";
+	m->m_def   = "en";
 	m->m_flags = PF_API ;
 	m++;
 

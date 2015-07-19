@@ -606,7 +606,7 @@ bool Query::setQTerms ( Words &words , Phrases &phrases ) {
 	int32_t max = (int32_t)MAX_EXPLICIT_BITS;
 	if ( max > m_maxQueryTerms ) max = m_maxQueryTerms;
 
-	// count them first for allocating
+	// count phrases first for allocating
 	int32_t nqt = 0;
 	for ( int32_t i = 0 ; i < m_numWords ; i++ ) {
 		QueryWord *qw  = &m_qwords[i];
@@ -660,6 +660,8 @@ bool Query::setQTerms ( Words &words , Phrases &phrases ) {
 		//if ( qw->m_ignoreWord ) continue;
 		// ignore title: etc. words, they are field names
 		if ( qw->m_ignoreWord == IGNORE_FIELDNAME ) continue;
+		// ignore boolean operators
+		if ( qw->m_ignoreWord ) continue;// IGNORE_BOOLOP
 		// no, hurts 'Greencastle IN economic development'
 		if ( qw->m_wordId == to ) continue;
 		// single letters...
@@ -1410,6 +1412,8 @@ bool Query::setQTerms ( Words &words , Phrases &phrases ) {
 		//if ( qw->m_ignoreWord ) continue;
 		// ignore title: etc. words, they are field names
 		if ( qw->m_ignoreWord == IGNORE_FIELDNAME ) continue;
+		// ignore boolean operators
+		if ( qw->m_ignoreWord ) continue;// IGNORE_BOOLOP
 		// no, hurts 'Greencastle IN economic development'
 		if ( qw->m_wordId == to ) continue;
 		// single letters...
