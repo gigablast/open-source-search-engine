@@ -3132,8 +3132,9 @@ bool isRobotsTxtFile ( char *u , int32_t ulen ) {
 bool XmlDoc::isContainerDoc ( ) {
 	if ( m_firstUrlValid && m_firstUrl.isWarc() ) return true;
 	if ( m_firstUrlValid && m_firstUrl.isArc () ) return true;
-	if ( ! m_contentDelimValid ) { char *xx=NULL;*xx=0; }
-	if ( m_contentDelim ) return true;
+	//if ( ! m_contentDelimValid ) { char *xx=NULL;*xx=0; }
+	//if ( m_contentDelim ) return true;
+	if ( m_contentDelimValid && m_contentDelim ) return true;
 	return false;
 }
 
