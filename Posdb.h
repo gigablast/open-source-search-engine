@@ -604,6 +604,8 @@ class PosdbTable {
 	float m_finalScore;
 	float m_preFinalScore;
 
+	float m_siteRankMultiplier;
+
 	// how long to add the last batch of lists
 	int64_t       m_addListsTime;
 	int64_t       m_t1 ;

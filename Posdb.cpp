@@ -759,7 +759,6 @@ void PosdbTable::init ( Query     *q               ,
 	// set this now
 	//m_collnum = cr->m_collnum;
 
-
 	// save it
 	m_topTree = topTree;
 	// a ptr for debugging i guess
@@ -772,6 +771,9 @@ void PosdbTable::init ( Query     *q               ,
 
 	m_realMaxTop = r->m_realMaxTop;
 	if ( m_realMaxTop > MAX_TOP ) m_realMaxTop = MAX_TOP;
+
+	m_siteRankMultiplier = SITERANKMULTIPLIER;
+	if ( m_q->m_isBoolean ) m_siteRankMultiplier = 0.0;
 
 	// seo.cpp supplies a NULL msg2 because it already sets
 	// QueryTerm::m_posdbListPtrs
@@ -7241,7 +7243,7 @@ void PosdbTable::intersectLists10_r ( ) {
  boolJump2:
 
 	// try dividing it by 3! (or multiply by .33333 faster)
-	score = minScore * (((float)siteRank)*SITERANKMULTIPLIER+1.0);
+	score = minScore * (((float)siteRank)*m_siteRankMultiplier+1.0);
 
 	// . not foreign language? give a huge boost
 	// . use "qlang" parm to set the language. i.e. "&qlang=fr"
@@ -7911,7 +7913,7 @@ float PosdbTable::getMaxPossibleScore ( QueryTermInfo *qti ,
 		score *= WIKI_BIGRAM_WEIGHT;
 	}
 	//score *= perfectWordSpamWeight * perfectWordSpamWeight;
-	score *= (((float)siteRank)*SITERANKMULTIPLIER+1.0);
+	score *= (((float)siteRank)*m_siteRankMultiplier+1.0);
 
 	// language boost if same language (or no lang specified)
 	if ( m_r->m_language == docLang ||
