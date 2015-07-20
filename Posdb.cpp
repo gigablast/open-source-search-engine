@@ -6304,7 +6304,22 @@ void PosdbTable::intersectLists10_r ( ) {
 	}
 
 	if ( m_q->m_isBoolean ) {
-		minScore = 1.0;
+		//minScore = 1.0;
+		// add one point for each term matched in the bool query
+		// this is really just for when the terms are from different
+		// fields. if we have unfielded boolean terms we should
+		// do proximity matching.
+		int32_t slot = m_bt.getSlot ( &m_docId );
+		if ( slot >= 0 ) {
+			uint8_t *bv = (uint8_t *)m_bt.getValueFromSlot(slot);
+			// then a score based on the # of terms that matched
+			int16_t bitsOn = getNumBitsOnX ( bv , m_vecSize );
+			// but store in hashtable now
+			minScore = (float)bitsOn;
+		}
+		else {
+			minScore = 1.0;
+		}
 		// since we are jumping, we need to set m_docId here
 		//m_docId = *(uint32_t *)(docIdPtr+1);
 		//m_docId <<= 8;
@@ -8187,13 +8202,15 @@ bool PosdbTable::makeDocIdVoteBufForBoolQuery_r ( ) {
 			// a 6 byte key means you pass
 			gbmemcpy ( dst , &docId , 6 );
 			// test it
-			int64_t d2;
-			d2 = *(uint32_t *)(dst+1);
-			d2 <<= 8;
-			d2 |= (unsigned char)dst[0];
-			d2 >>= 2;
-			docId >>= 2;
-			if ( d2 != docId ) { char *xx=NULL;*xx=0; }
+			if ( m_debug ) {
+				int64_t d2;
+				d2 = *(uint32_t *)(dst+1);
+				d2 <<= 8;
+				d2 |= (unsigned char)dst[0];
+				d2 >>= 2;
+				docId >>= 2;
+				if ( d2 != docId ) { char *xx=NULL;*xx=0; }
+			}
 			// end test
 			dst += 6;
 		}
