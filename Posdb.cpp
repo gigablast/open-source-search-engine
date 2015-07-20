@@ -6307,26 +6307,6 @@ void PosdbTable::intersectLists10_r ( ) {
 
 	if ( m_q->m_isBoolean ) {
 		//minScore = 1.0;
-		// add one point for each term matched in the bool query
-		// this is really just for when the terms are from different
-		// fields. if we have unfielded boolean terms we should
-		// do proximity matching.
-		int32_t slot = m_bt.getSlot ( &m_docId );
-		if ( slot >= 0 ) {
-			uint8_t *bv = (uint8_t *)m_bt.getValueFromSlot(slot);
-			// then a score based on the # of terms that matched
-			int16_t bitsOn = getNumBitsOnX ( bv , m_vecSize );
-			// but store in hashtable now
-			minScore = (float)bitsOn;
-		}
-		else {
-			minScore = 1.0;
-		}
-		// since we are jumping, we need to set m_docId here
-		//m_docId = *(uint32_t *)(docIdPtr+1);
-		//m_docId <<= 8;
-		//m_docId |= (unsigned char)docIdPtr[0];
-		//m_docId >>= 2;
 		// we can't jump over setting of miniMergeList. do that.
 		goto boolJump1;
 	}
@@ -6537,6 +6517,30 @@ void PosdbTable::intersectLists10_r ( ) {
  skipPreAdvance:
 
  boolJump1:
+
+	if ( m_q->m_isBoolean ) {
+		//minScore = 1.0;
+		// this is somewhat wasteful since it is set below again
+		m_docId = *(uint32_t *)(docIdPtr+1);
+		m_docId <<= 8;
+		m_docId |= (unsigned char)docIdPtr[0];
+		m_docId >>= 2;
+		// add one point for each term matched in the bool query
+		// this is really just for when the terms are from different
+		// fields. if we have unfielded boolean terms we should
+		// do proximity matching.
+		int32_t slot = m_bt.getSlot ( &m_docId );
+		if ( slot >= 0 ) {
+			uint8_t *bv = (uint8_t *)m_bt.getValueFromSlot(slot);
+			// then a score based on the # of terms that matched
+			int16_t bitsOn = getNumBitsOnX ( bv , m_vecSize );
+			// but store in hashtable now
+			minScore = (float)bitsOn;
+		}
+		else {
+			minScore = 1.0;
+		}
+	}
 
 	// we need to do this for seo hacks to merge the synonyms together
 	// into one list
