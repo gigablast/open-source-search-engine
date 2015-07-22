@@ -4838,6 +4838,8 @@ bool PosdbTable::setQueryTermInfo ( ) {
 	// below when trying to grow it. they could all be OR'd together
 	// so alloc the most!
 	int32_t maxSlots = (grand/12) * 2;
+	// try to speed up. this doesn't *seem* to matter, so i took out:
+	//maxSlots *= 2;
 	// get total operands we used
 	//int32_t numOperands = m_q->m_numWords;//Operands;
 	// a quoted phrase counts as a single operand
@@ -4849,15 +4851,15 @@ bool PosdbTable::setQueryTermInfo ( ) {
 	// allow an extra byte for remainders
 	if ( m_numQueryTermInfos % 8 ) m_vecSize++;
 	// now preallocate the hashtable. 0 niceness.
-	if ( m_q->m_isBoolean && 
-	     ! m_bt.set (8,m_vecSize,maxSlots,NULL,0,false,0,"booltbl"))
+	if ( m_q->m_isBoolean &&  // true = useKeyMagic
+	     ! m_bt.set (8,m_vecSize,maxSlots,NULL,0,false,0,"booltbl",true))
 		return false;
 	// . m_ct maps a boolean "bit vector" to a true/false value
 	// . each "bit" in the "bit vector" indicates if docid has that 
 	//   particular query term
-	if ( m_q->m_isBoolean && 
+	if ( m_q->m_isBoolean && // true = useKeyMagic
 	     ! m_ct.set (8,1,maxSlots,NULL,0,false,0,
-			 "booltbl"))
+			 "booltbl",true))
 		return false;
 
 	return true;
@@ -8149,6 +8151,10 @@ bool PosdbTable::makeDocIdVoteBufForBoolQuery_r ( ) {
 		}
 	}
 
+
+	// debug info
+	// int32_t nc = m_bt.getLongestString();
+	// log("posdb: string of %"INT32" filled slots!",nc);
 
 	char *dst = m_docIdVoteBuf.getBufStart();
 
