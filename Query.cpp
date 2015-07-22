@@ -74,6 +74,9 @@ void Query::reset ( ) {
 		qw->destructor();
 	}
 
+	m_stackBuf.purge();
+	m_qterms = NULL;
+
 	m_sb.purge();
 	m_osb.purge();
 	m_docIdRestriction = 0LL;
@@ -140,13 +143,15 @@ bool Query::set2 ( char *query        ,
 		   // need language for doing synonyms
 		   uint8_t  langId ,
 		   char     queryExpansion ,
-		   bool     useQueryStopWords ) {
-		  //int32_t  maxQueryTerms  ) {
+		   bool     useQueryStopWords ,
+		   int32_t  maxQueryTerms  ) {
 
 	m_langId = langId;
 	m_useQueryStopWords = useQueryStopWords;
 	// fix summary rerank and highlighting.
 	bool keepAllSingles = true;
+
+	m_maxQueryTerms = maxQueryTerms;
 
 	// assume  boolean auto-detect.
 	char boolFlag = 2;
@@ -159,7 +164,7 @@ bool Query::set2 ( char *query        ,
 	if ( ! query ) return true;
 
 	// set to 256 for synonyms?
-	m_maxQueryTerms = 256;
+	//m_maxQueryTerms = 256;
 	m_queryExpansion = queryExpansion;
 
 	int32_t queryLen = gbstrlen(query);
@@ -601,7 +606,7 @@ bool Query::setQTerms ( Words &words , Phrases &phrases ) {
 	int32_t max = (int32_t)MAX_EXPLICIT_BITS;
 	if ( max > m_maxQueryTerms ) max = m_maxQueryTerms;
 
-	// count them first for allocating
+	// count phrases first for allocating
 	int32_t nqt = 0;
 	for ( int32_t i = 0 ; i < m_numWords ; i++ ) {
 		QueryWord *qw  = &m_qwords[i];
@@ -653,6 +658,10 @@ bool Query::setQTerms ( Words &words , Phrases &phrases ) {
 			continue;
 		// skip if ignored like a stopword (stop to->too)
 		//if ( qw->m_ignoreWord ) continue;
+		// ignore title: etc. words, they are field names
+		if ( qw->m_ignoreWord == IGNORE_FIELDNAME ) continue;
+		// ignore boolean operators
+		if ( qw->m_ignoreWord ) continue;// IGNORE_BOOLOP
 		// no, hurts 'Greencastle IN economic development'
 		if ( qw->m_wordId == to ) continue;
 		// single letters...
@@ -673,7 +682,9 @@ bool Query::setQTerms ( Words &words , Phrases &phrases ) {
 		nqt += naids;
 	}
 
+	m_numTermsUntruncated = nqt;
 
+	if ( nqt > m_maxQueryTerms ) nqt = m_maxQueryTerms;
 
 	// allocate the stack buf
 	if ( nqt ) {
@@ -717,6 +728,11 @@ bool Query::setQTerms ( Words &words , Phrases &phrases ) {
 		if ( n >= ABS_MAX_QUERY_TERMS ) {
 			log("query: lost query phrase terms to max term "
 			    "limit of %"INT32"",(int32_t)ABS_MAX_QUERY_TERMS );
+			break;
+		}
+		if ( n >= m_maxQueryTerms ) {
+			log("query: lost query phrase terms to max term cr "
+			    "limit of %"INT32"",(int32_t)m_maxQueryTerms);
 			break;
 		}
 
@@ -875,6 +891,11 @@ bool Query::setQTerms ( Words &words , Phrases &phrases ) {
 		if ( n >= ABS_MAX_QUERY_TERMS ) {
 			log("query: lost query terms to max term "
 			    "limit of %"INT32"",(int32_t)ABS_MAX_QUERY_TERMS );
+			break;
+		}
+		if ( n >= m_maxQueryTerms ) {
+			log("query: lost query terms to max term cr "
+			    "limit of %"INT32"",(int32_t)m_maxQueryTerms);
 			break;
 		}
 
@@ -1389,6 +1410,10 @@ bool Query::setQTerms ( Words &words , Phrases &phrases ) {
 			continue;
 		// skip if ignored like a stopword (stop to->too)
 		//if ( qw->m_ignoreWord ) continue;
+		// ignore title: etc. words, they are field names
+		if ( qw->m_ignoreWord == IGNORE_FIELDNAME ) continue;
+		// ignore boolean operators
+		if ( qw->m_ignoreWord ) continue;// IGNORE_BOOLOP
 		// no, hurts 'Greencastle IN economic development'
 		if ( qw->m_wordId == to ) continue;
 		// single letters...
@@ -1424,6 +1449,14 @@ bool Query::setQTerms ( Words &words , Phrases &phrases ) {
 			}
 			// this happens for 'da da da'
 			if ( ! origTerm ) continue;
+
+			if ( n >= m_maxQueryTerms ) {
+				log("query: lost synonyms due to max cr term "
+				    "limit of %"INT32"",
+				    (int32_t)m_maxQueryTerms);
+				break;
+			}
+
 			// add that query term
 			QueryTerm *qt   = &m_qterms[n];
 			qt->m_qword     = qw; // NULL;
@@ -2483,12 +2516,14 @@ bool Query::setQWords ( char boolFlag ,
 		// in quotes which is silly, so undo it. But we should
 		// still inherit any quoteSign, however. Be sure to also
 		// set m_inQuotes to false so Matches.cpp::matchWord() works.
-		if ( i == quoteStart ) { // + 1 ) {
-			if ( i + 1 >= numWords || words.getNumQuotes(i+1)>0 ) {
-				qw->m_quoteStart = -1;
-				qw->m_inQuotes   = false;
-			}
-		}
+		// MDW: don't undo it because we do not want to get synonyms
+		// of terms in quotes. 7/15/2015
+		// if ( i == quoteStart ) { // + 1 ) {
+		// 	if ( i + 1 >= numWords || words.getNumQuotes(i+1)>0 ) {
+		// 		qw->m_quoteStart = -1;
+		// 		qw->m_inQuotes   = false;
+		// 	}
+		// }
 		// . get prefix hash of collection name and field
 		// . but first convert field to lower case
 		uint64_t ph;

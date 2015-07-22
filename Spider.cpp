@@ -11641,6 +11641,18 @@ int32_t getUrlFilterNum2 ( SpiderRequest *sreq       ,
 			goto checkNextRule;
 		}
 
+		if ( strncmp ( p , "isfakeip",8 ) == 0 ) {
+			// skip for msg20
+			if ( isForMsg20 ) continue;
+			// if no match continue
+			if ( (bool)sreq->m_fakeFirstIp == val ) continue;
+			p += 8;
+			p = strstr(p, "&&");
+			if ( ! p ) return i;
+			p += 2;
+			goto checkNextRule;
+		}
+
 		if ( strncmp ( p , "isonsamedomain",14 ) == 0 ) {
 			// skip for msg20
 			if ( isForMsg20 ) continue;
@@ -13991,6 +14003,17 @@ bool getSpiderStatusMsg ( CollectionRec *cx , SafeBuf *msg , int32_t *status ) {
 	if ( cx->m_spiderStatus == SP_INITIALIZING ) {
 		*status = SP_INITIALIZING;
 		return msg->safePrintf("Job is initializing.");
+	}
+
+	// if we had seeds and none were successfully crawled, do not just
+	// print that the crawl completed.
+	if ( cx->m_collectiveRespiderFrequency <= 0.0 &&
+	     cx->m_isCustomCrawl &&
+	     ! cx->m_globalCrawlInfo.m_hasUrlsReadyToSpider &&
+	     cx->m_globalCrawlInfo.m_pageDownloadAttempts > 0 &&
+	     cx->m_globalCrawlInfo.m_pageDownloadSuccesses == 0 ) {
+		*status = SP_SEEDSERROR;
+		return msg->safePrintf("Failed to crawl any seed.");
 	}
 
 	// if we sent an email simply because no urls

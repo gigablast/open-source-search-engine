@@ -7879,17 +7879,19 @@ void Parms::init ( ) {
 	m->m_obj   = OBJ_COLL;
 	m++;
 
-	//m->m_title = "max query terms";
-	//m->m_desc  = "Do not allow more than this many query terms. Will "
-	//	"return error in XML feed error tag if breeched.";
-	//m->m_cgi   = "mqt";
-	//m->m_off   = (char *)&cr.m_maxQueryTerms - x;
+	m->m_title = "max query terms";
+	m->m_desc  = "Do not allow more than this many query terms. Helps "
+		"prevent big queries from resource hogging.";
+	m->m_cgi   = "mqt";
+	m->m_off   = (char *)&cr.m_maxQueryTerms - x;
 	//m->m_soff  = (char *)&si.m_maxQueryTerms - y;
-	//m->m_type  = TYPE_LONG;
-	//m->m_def   = "20"; // 20 for testing, normally 16
-	//m->m_sparm = 1;
-	//m->m_spriv = 1;
-	//m++;
+	m->m_type  = TYPE_LONG;
+	m->m_def   = "999999"; // now we got synonyms... etc
+	m->m_group = 0;
+	m->m_flags = 0;//PF_HIDDEN | PF_NOSAVE; 
+	m->m_page  = PAGE_SEARCH;
+	m->m_obj   = OBJ_COLL;
+	m++;
 
 	/*
 	m->m_title = "dictionary site";
@@ -15283,7 +15285,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_CHARPTR;
 	m->m_page  = PAGE_REINDEX;
 	m->m_obj   = OBJ_GBREQUEST;
-	m->m_def   = "xx";
+	m->m_def   = "en";
 	m->m_flags = PF_API ;
 	m++;
 

@@ -2529,6 +2529,22 @@ bool printSearchResultsHeader ( State0 *st ) {
 			       , getLanguageString(si->m_queryLangId) );
 		// print query words we ignored, like stop words
 		printIgnoredWords ( sb , si );
+
+		sb->safePrintf("\t\t<queryNumTermsTotal>"
+			       "%"INT32
+			       "</queryNumTermsTotal>\n"
+			       , q->m_numTermsUntruncated );
+		sb->safePrintf("\t\t<queryNumTermsUsed>"
+			       "%"INT32
+			       "</queryNumTermsUsed>\n"
+			       , q->m_numTerms );
+		int32_t tval = 0;
+		if ( q->m_numTerms < q->m_numTermsUntruncated ) tval = 1;
+		sb->safePrintf("\t\t<queryWasTruncated>"
+			       "%"INT32
+			       "</queryWasTruncated>\n"
+			       , tval );
+
 		for ( int i = 0 ; i < q->m_numTerms ; i++ ) {
 			sb->safePrintf("\t\t<term>\n");
 			QueryTerm *qt = &q->m_qterms[i];
@@ -2605,6 +2621,19 @@ bool printSearchResultsHeader ( State0 *st ) {
 		sb->safePrintf("\",\n");
 		// print query words we ignored, like stop words
 		printIgnoredWords ( sb , si );
+
+		sb->safePrintf("\t\"queryNumTermsTotal\":"
+			       "%"INT32",\n"
+			       , q->m_numTermsUntruncated );
+		sb->safePrintf("\t\"queryNumTermsUsed\":"
+			       "%"INT32",\n"
+			       , q->m_numTerms );
+		int32_t tval = 0;
+		if ( q->m_numTerms < q->m_numTermsUntruncated ) tval = 1;
+		sb->safePrintf("\t\"queryWasTruncated\":"
+			       "%"INT32",\n"
+			       , tval );
+			
 		sb->safePrintf("\t\"terms\":[\n");
 		for ( int i = 0 ; i < q->m_numTerms ; i++ ) {
 			sb->safePrintf("\t\t{\n");
@@ -8263,8 +8292,11 @@ bool printCSVHeaderRow2 ( SafeBuf *sb ,
 			hdr = "Hop Count";
 		if ( ! strcmp(hdr,"gbssIp") ) 
 			hdr = "IP";
-		if ( ! strcmp(hdr,"gbssDiffbotUri" ) )
-			hdr = "Diffbot URI";
+		// csv report is regular urls not diffbot object urls so
+		// regular urls do not have a just a single diffboturi,
+		// they could have 0 or multiple diffboturis
+		//if ( ! strcmp(hdr,"gbssDiffbotUri" ) )
+		//	hdr = "Diffbot URI";
 		if ( ! strcmp(hdr,"gbssSentToDiffbotThisTime") ) 
 			hdr = "Process Attempted";
 		if ( ! strcmp(hdr,"gbssDiffbotReplyMsg") )

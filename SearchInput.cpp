@@ -470,14 +470,16 @@ bool SearchInput::set ( TcpSocket *sock , HttpRequest *r ) { //, Query *q ) {
 		log("query: qlang of \"%s\" is NOT SUPPORTED. using "
 		    "langUnknown, \"xx\".",langAbbr);
 
+	int32_t maxQueryTerms = cr->m_maxQueryTerms;
+
 	// . the query to use for highlighting... can be overriden with "hq"
 	// . we need the language id for doing synonyms
 	if ( m_prepend && m_prepend[0] )
-		m_hqq.set2 ( m_prepend , m_queryLangId , true );
+		m_hqq.set2 ( m_prepend , m_queryLangId , true ,maxQueryTerms);
 	else if ( m_highlightQuery && m_highlightQuery[0] )
-		m_hqq.set2 ( m_highlightQuery , m_queryLangId , true );
+		m_hqq.set2 (m_highlightQuery,m_queryLangId,true,maxQueryTerms);
 	else if ( m_query && m_query[0] )
-		m_hqq.set2 ( m_query , m_queryLangId , true );
+		m_hqq.set2 ( m_query , m_queryLangId , true,maxQueryTerms);
 
 	// log it here
 	log(LOG_INFO,
@@ -489,7 +491,9 @@ bool SearchInput::set ( TcpSocket *sock , HttpRequest *r ) { //, Query *q ) {
 	// . returns false and sets g_errno on error (ETOOMANYOPERANDS)
 	if ( ! m_q.set2 ( m_sbuf1.getBufStart(), 
 			  m_queryLangId , 
-			  m_queryExpansion ) ) {
+			  m_queryExpansion ,
+			  true , // use QUERY stopwords?
+			  maxQueryTerms ) ) {
 		g_msg = " (error: query has too many operands)";
 		return false;
 	}

@@ -373,12 +373,12 @@ bool RdbDump::dumpTree ( bool recall ) {
 		//if ( removeNegRecs )
 		//	m_list.removeNegRecs();
 
-// 		if(!m_list->checkList_r ( false , // removeNegRecs?
-// 					 false , // sleep on problem?
-// 					 m_rdb->m_rdbId )) {
-// 			log("db: list to dump is not sane!");
-//			char *xx=NULL;*xx=0;
-// 		}
+ 		// if(!m_list->checkList_r ( false , // removeNegRecs?
+ 		// 			 false , // sleep on problem?
+ 		// 			 m_rdb->m_rdbId )) {
+ 		// 	log("db: list to dump is not sane!");
+		// 	char *xx=NULL;*xx=0;
+ 		// }
 
 
 	skip:
@@ -781,6 +781,10 @@ bool RdbDump::doneReadingForVerify ( ) {
 	if ( m_addToMap ) t = gettimeofdayInMilliseconds();
 	// sanity check
 	if ( m_list->m_ks != m_ks ) { char *xx = NULL; *xx = 0; }
+
+	bool triedToFix = false;
+
+ tryAgain:
 	// . register this with the map now
 	// . only register AFTER it's ALL on disk so we don't get partial
 	//   record reads and we don't read stuff on disk that's also in tree
@@ -788,6 +792,16 @@ bool RdbDump::doneReadingForVerify ( ) {
 	// . we don't have maps when we do unordered dumps
 	// . careful, map is NULL if we're doing unordered dump
 	if ( m_addToMap && m_map && ! m_map->addList ( m_list ) ) {
+		// keys  out of order in list from tree?
+		if ( g_errno == ECORRUPTDATA ) {
+			log("db: trying to fix tree or buckets");
+			if ( m_tree ) m_tree->fixTree();
+			//if ( m_buckets ) m_buckets->fixBuckets();
+			if ( m_buckets ) { char *xx=NULL;*xx=0; }
+			if ( triedToFix ) { char *xx=NULL;*xx=0; }
+			triedToFix = true;
+			goto tryAgain;
+		}
 		g_errno = ENOMEM; 
 		log("db: Failed to add data to map.");
 		// undo the offset update, the write failed, the parent

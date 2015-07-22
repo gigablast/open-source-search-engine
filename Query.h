@@ -635,10 +635,10 @@ class Query {
 		    //int32_t  collLen  ,
 		    uint8_t  langId ,
 		    char     queryExpansion ,
-		    bool     useQueryStopWords = true );
-		   //char  boolFlag = 2 , // auto-detect if boolean query
-		   //bool  keepAllSingles = false ,
-		   //int32_t  maxQueryTerms = 0x7fffffff );
+		    bool     useQueryStopWords = true ,
+		    //char  boolFlag = 2 , // auto-detect if boolean query
+		    //bool  keepAllSingles = false ,
+		    int32_t  maxQueryTerms = 0x7fffffff );
 
 	// serialize/deserialize ourselves so we don't have to pass the
 	// unmodified string around and reparse it every time
@@ -940,6 +940,8 @@ class Query {
 	//QueryTerm m_qterms [ MAX_QUERY_TERMS ];
 	int32_t      m_numTerms;
 	int32_t      m_numTermsSpecial;
+
+	int32_t m_numTermsUntruncated;
 
 	// separate vectors for easier interfacing, 1-1 with m_qterms
 	//int64_t m_termFreqs      [ MAX_QUERY_TERMS ];

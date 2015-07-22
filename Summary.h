@@ -271,9 +271,9 @@ class Summary {
 	int32_t m_wordWeightSize;
 	char m_tmpBuf[128];
 
-	char *m_buf;
-	int32_t m_bufSize;
-	char m_tmpBuf2[128];
+	char *m_buf4;
+	int32_t m_buf4Size;
+	char m_tmpBuf4[128];
 
 	char    m_summaryLocBuf[MAX_SUMMARY_LOCS*sizeof(uint64_t)];
 	SafeBuf m_summaryLocs;

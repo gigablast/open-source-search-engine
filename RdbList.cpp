@@ -624,7 +624,8 @@ bool RdbList::growList ( int32_t newSize ) {
 	// don't shrink list
 	if ( newSize <= m_allocSize ) return true;
 	// debug msg
-	//log("RdbList::growList from %"INT32" to %"INT32"",m_allocSize , newSize );
+	// log("RdbList::growList 0x%"PTRFMT "from %"INT32" to %"INT32"",
+	//     (PTRTYPE)this,m_allocSize , newSize );
 	// make a new buffer
 	char *tmp =(char *) mrealloc ( m_alloc,m_allocSize,newSize,"RdbList");
 	//if ( (int32_t)tmp == 0x904dbd0 )

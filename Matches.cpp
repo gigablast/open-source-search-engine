@@ -30,6 +30,18 @@ Matches::Matches ( ) {
 }
 Matches::~Matches( ) { reset(); }
 void Matches::reset   ( ) { 
+	reset2();
+	if ( m_qwordFlags && m_qwordFlags != (mf_t *)m_tmpBuf ) {
+		mfree ( m_qwordFlags , m_qwordAllocSize , "mmqw" );
+		m_qwordFlags = NULL;
+	}
+	//m_explicitsMatched = 0;
+	//m_matchableRequiredBits = 0;
+	//m_hasAllQueryTerms = false;
+	//m_matchesQuery = false;
+}
+
+void Matches::reset2() {
 	m_numMatches = 0;
 	//m_maxNQT     = -1;
 	m_numAlnums  = 0;
@@ -41,14 +53,6 @@ void Matches::reset   ( ) {
 		m_bitsArray    [i].reset();
 	}
 	m_numMatchGroups = 0;
-	if ( m_qwordFlags && m_qwordFlags != (mf_t *)m_tmpBuf ) {
-		mfree ( m_qwordFlags , m_qwordAllocSize , "mmqw" );
-		m_qwordFlags = NULL;
-	}
-	//m_explicitsMatched = 0;
-	//m_matchableRequiredBits = 0;
-	//m_hasAllQueryTerms = false;
-	//m_matchesQuery = false;
 }
 
 bool Matches::isMatchableTerm ( QueryTerm *qt ) { // , int32_t i ) {
@@ -298,7 +302,7 @@ bool Matches::set ( XmlDoc   *xd         ,
 		    int32_t      niceness   ) {
 
 	// don't reset query info!
-	reset();
+	reset2();
 
 	// sanity check
 	if ( ! xd->m_docIdValid ) { char *xx=NULL;*xx=0; }

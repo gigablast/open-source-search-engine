@@ -3579,7 +3579,7 @@ bool CollectionRec::rebuildUrlFiltersDiffbot() {
 
 	// lower from 7 to 1 since we have so many collections now
 	// ok, now we have much less colls so raise back to 7
-	int32_t diffbotipms = 7;// 1; // 7
+	int32_t diffbotipms = 7;//1; // 7
 
 	// make the gigablast regex table just "default" so it does not
 	// filtering, but accepts all urls. we will add code to pass the urls
@@ -3599,8 +3599,8 @@ bool CollectionRec::rebuildUrlFiltersDiffbot() {
 		m_spiderIpWaits     [i] = wait;
 		m_spiderIpMaxSpiders[i] = diffbotipms; // keep it respectful
 		// ethan wants some speed
-		if ( isEthan )
-			m_spiderIpMaxSpiders[i] = 30;
+		// if ( isEthan )
+		// 	m_spiderIpMaxSpiders[i] = 30;
 		//m_spidersEnabled    [i] = 1;
 		m_spiderFreqs       [i] = respiderFreq;
 		//m_spiderDiffbotApiUrl[i].purge();
@@ -3621,6 +3621,18 @@ bool CollectionRec::rebuildUrlFiltersDiffbot() {
 	m_maxSpidersPerRule  [i] = 0;
 	m_spiderPriorities   [i] = 100; // delete!
 	m_forceDelete        [i] = 1;
+	i++;
+
+	// de-prioritize fakefirstip urls so we don't give the impression our
+	// spiders are slow. like if someone adds a bulk job with 100,000 urls
+	// then we sit there and process to lookup their ips and add a real
+	// spider request (if it falls onto the same shard) before we actually
+	// do any real spidering. so keep the priority here low.
+	m_regExs[i].set("isfakeip");
+	m_maxSpidersPerRule  [i] = 7;
+	m_spiderIpMaxSpiders [i] = 7;
+	m_spiderPriorities   [i] = 20;
+	m_spiderIpWaits      [i] = 0;
 	i++;
 
 	// hopcount filter if asked for

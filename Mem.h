@@ -280,6 +280,20 @@ inline int32_t getNumBitsOn64 ( uint64_t bits ) {
 		g_a [ *((unsigned char *)(&bits) + 7)  ] ;
 }
 
+inline int32_t getNumBitsOnX ( unsigned char *s , int32_t slen ) {
+	if ( slen == 1 ) return getNumBitsOn8 ( *s );
+	if ( slen == 2 ) return getNumBitsOn16 ( *(uint16_t *)s );
+	if ( slen == 4 ) return getNumBitsOn32 ( *(uint32_t *)s );
+	if ( slen == 3 ) 
+		return  getNumBitsOn8 ( s[0] ) +
+			getNumBitsOn8 ( s[1] ) +
+			getNumBitsOn8 ( s[2] ) ;
+	int32_t total = 0;
+	for ( int32_t i = 0 ; i < slen ; i++ )
+		total += getNumBitsOn8 ( s[i] );
+	return total;
+}
+
 // assume only one bit is set for this (used by Address.cpp)
 inline int32_t getBitPosLL ( uint8_t *bit ) {
 	// which int32_t is it in?

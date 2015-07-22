@@ -2569,11 +2569,10 @@ bool XmlDoc::indexDoc ( ) {
 			SafeBuf *ssDocMetaList = NULL;
 			// save this
 			int32_t saved = m_indexCode;
-			// and make it the real reason for the spider status doc
+			// make it the real reason for the spider status doc
 			m_indexCode = EDNSERROR;
-			// get the spiderreply ready to be added
-			
-			ssDocMetaList = getSpiderStatusDocMetaList(NULL ,false);//del
+			// get the spiderreply ready to be added. false=del
+			ssDocMetaList =getSpiderStatusDocMetaList(NULL ,false);
 			// revert
 			m_indexCode = saved;
 			// error?
@@ -2590,8 +2589,11 @@ bool XmlDoc::indexDoc ( ) {
 
 			char *url = "unknown";
 			if ( m_sreqValid ) url = m_sreq.m_url;
-			log("build: error2 getting real firstip of %"INT32" for "
-			    "%s. Not adding new spider req", (int32_t)*fip,url);
+			log("build: error2 getting real firstip of "
+			    "%"INT32" for "
+			    "%s. Not adding new spider req. "
+			    "spiderstatusdocsize=%"INT32, (int32_t)*fip,url,
+			    m_addedStatusDocSize);
 			// also count it as a crawl attempt
 			cr->m_localCrawlInfo.m_pageDownloadAttempts++;
 			cr->m_globalCrawlInfo.m_pageDownloadAttempts++;
@@ -3134,8 +3136,9 @@ bool isRobotsTxtFile ( char *u , int32_t ulen ) {
 bool XmlDoc::isContainerDoc ( ) {
 	if ( m_firstUrlValid && m_firstUrl.isWarc() ) return true;
 	if ( m_firstUrlValid && m_firstUrl.isArc () ) return true;
-	if ( ! m_contentDelimValid ) { char *xx=NULL;*xx=0; }
-	if ( m_contentDelim ) return true;
+	//if ( ! m_contentDelimValid ) { char *xx=NULL;*xx=0; }
+	//if ( m_contentDelim ) return true;
+	if ( m_contentDelimValid && m_contentDelim ) return true;
 	return false;
 }
 
@@ -28695,6 +28698,11 @@ SafeBuf *XmlDoc::getSpiderStatusDocMetaList2 ( SpiderReply *reply1 ) {
 		jd.safePrintf("\"gbssHttpStatus\":%"INT32",\n",
 			      (int32_t)m_httpStatus);
 
+	// do not index gbssIsSeedUrl:0 because there will be too many usually
+	bool isSeed = ( m_sreqValid && m_sreq.m_isAddUrl );
+	if ( isSeed )
+		jd.safePrintf("\"gbssIsSeedUrl\":1,\n");
+
 	if ( od )
 		jd.safePrintf("\"gbssWasIndexed\":1,\n");
 	else
@@ -28719,6 +28727,18 @@ SafeBuf *XmlDoc::getSpiderStatusDocMetaList2 ( SpiderReply *reply1 ) {
 		else
 			jd.safePrintf("\"gbssDiffbotUri\":"
 				      "\"none\",\n");
+		// show the type as gbssDiffbotType:"article" etc.
+		JsonItem *dti = NULL;
+		if ( jp1 ) 
+			dti = jp1->getItem("type");
+		if ( dti ) {
+			jd.safePrintf("\"gbssDiffbotType\":\"");
+			int32_t vlen;
+			char *val = dti->getValueAsString( &vlen );
+			if ( val ) jd.jsonEncode ( val , vlen );
+			jd.safePrintf("\",\n");
+		}
+
 	}
 	else { // if ( cr->m_isCustomCrawl ) {
 		jd.safePrintf("\"gbssIsDiffbotObject\":0,\n");
