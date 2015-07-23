@@ -759,18 +759,21 @@ void PosdbTable::init ( Query     *q               ,
 	// set this now
 	//m_collnum = cr->m_collnum;
 
-
 	// save it
 	m_topTree = topTree;
 	// a ptr for debugging i guess
 	g_topTree = topTree;
 	// remember the query class, it has all the info about the termIds
 	m_q = q;
+	m_nqt = q->getNumTerms();
 	// for debug msgs
 	m_logstate = logstate;
 
 	m_realMaxTop = r->m_realMaxTop;
 	if ( m_realMaxTop > MAX_TOP ) m_realMaxTop = MAX_TOP;
+
+	m_siteRankMultiplier = SITERANKMULTIPLIER;
+	if ( m_q->m_isBoolean ) m_siteRankMultiplier = 0.0;
 
 	// seo.cpp supplies a NULL msg2 because it already sets
 	// QueryTerm::m_posdbListPtrs
@@ -1060,6 +1063,26 @@ bool PosdbTable::allocTopTree ( ) {
 		// make it nongrowable because we'll be in a thread
 		qt->m_facetHashTable.setNonGrow();
 	}
+
+	// m_stackBuf
+	int32_t   nqt = m_q->m_numTerms;
+	int32_t need  = 0;
+	need += 4 * nqt;
+	need += 4 * nqt;
+	need += 4 * nqt;
+	need += 4 * nqt;
+	need += sizeof(float ) * nqt;
+	need += sizeof(char *) * nqt;
+	need += sizeof(char *) * nqt;
+	need += sizeof(char *) * nqt;
+	need += sizeof(char *) * nqt;
+	need += sizeof(char *) * nqt;
+	need += sizeof(char  ) * nqt;
+	need += sizeof(float ) * nqt * nqt; // square matrix
+	m_stackBuf.setLabel("stkbuf1");
+	if ( ! m_stackBuf.reserve( need ) )
+		return false;
+
 	return true;
 }
 
@@ -1378,8 +1401,8 @@ void PosdbTable::evalSlidingWindow ( char **ptrs ,
 		max *= m_freqWeights[i] * m_freqWeights[j];
 
 		// use score from scoreMatrix if bigger
-		if ( scoreMatrix[MAX_QUERY_TERMS*i+j] > max ) {
-			max = scoreMatrix[MAX_QUERY_TERMS*i+j];
+		if ( scoreMatrix[m_nqt*i+j] > max ) {
+			max = scoreMatrix[m_nqt*i+j];
 			//if ( m_ds ) {
 			//	winners1[i*MAX_QUERY_TERMS+j] = NULL;
 			//	winners2[i*MAX_QUERY_TERMS+j] = NULL;
@@ -4815,6 +4838,8 @@ bool PosdbTable::setQueryTermInfo ( ) {
 	// below when trying to grow it. they could all be OR'd together
 	// so alloc the most!
 	int32_t maxSlots = (grand/12) * 2;
+	// try to speed up. this doesn't *seem* to matter, so i took out:
+	//maxSlots *= 2;
 	// get total operands we used
 	//int32_t numOperands = m_q->m_numWords;//Operands;
 	// a quoted phrase counts as a single operand
@@ -4826,15 +4851,15 @@ bool PosdbTable::setQueryTermInfo ( ) {
 	// allow an extra byte for remainders
 	if ( m_numQueryTermInfos % 8 ) m_vecSize++;
 	// now preallocate the hashtable. 0 niceness.
-	if ( m_q->m_isBoolean && 
-	     ! m_bt.set (8,m_vecSize,maxSlots,NULL,0,false,0,"booltbl"))
+	if ( m_q->m_isBoolean &&  // true = useKeyMagic
+	     ! m_bt.set (8,m_vecSize,maxSlots,NULL,0,false,0,"booltbl",true))
 		return false;
 	// . m_ct maps a boolean "bit vector" to a true/false value
 	// . each "bit" in the "bit vector" indicates if docid has that 
 	//   particular query term
-	if ( m_q->m_isBoolean && 
+	if ( m_q->m_isBoolean && // true = useKeyMagic
 	     ! m_ct.set (8,1,maxSlots,NULL,0,false,0,
-			 "booltbl"))
+			 "booltbl",true))
 		return false;
 
 	return true;
@@ -4999,13 +5024,13 @@ int64_t PosdbTable::countUniqueDocids( QueryTermInfo *qti ) {
 	// inc the TOTAL val count
 	if ( fe ) fe->m_outsideSearchResultsCount++;
 
-	// skip that docid record in our termlist. it MUST have been
-	// 12 bytes, a docid heading record.
-	recPtr += 12;
-	count++;
-	// skip any following keys that are 6 bytes, that means they
-	// share the same docid
-	for ( ; recPtr < subListEnd && ((*recPtr)&0x04); recPtr += 6 );
+	// Increment ptr to the next record
+        int32_t recSize = qti->m_subLists[0]->getRecSize(recPtr);
+        recPtr += recSize;
+
+        // Records that are 6 bytes share the same doc id, so only increment
+        // 'count' if it refers to a record with a new (unique) docId
+        if (recSize > 6) count++;
 	goto loop;
 }
 
@@ -5882,6 +5907,8 @@ void PosdbTable::intersectLists10_r ( ) {
 		if ( qti->m_bigramFlags[0] & BF_NEGATIVE ) continue;
 		// inc this
 		listGroupNum++;
+		// if it hits 256 then wrap back down to 1
+		if ( listGroupNum >= 256 ) listGroupNum = 1;
 		// add it
 		addDocIdVotes ( qti , listGroupNum );
 	}
@@ -5966,11 +5993,28 @@ void PosdbTable::intersectLists10_r ( ) {
 	//
 	// TRANSFORM QueryTermInfo::m_* vars into old style arrays
 	//
-	int32_t  wikiPhraseIds  [MAX_QUERY_TERMS];
-	int32_t  quotedStartIds[MAX_QUERY_TERMS];
-	int32_t  qpos           [MAX_QUERY_TERMS];
-	int32_t  qtermNums      [MAX_QUERY_TERMS];
-	float freqWeights    [MAX_QUERY_TERMS];
+	// int32_t  wikiPhraseIds  [MAX_QUERY_TERMS];
+	// int32_t  quotedStartIds[MAX_QUERY_TERMS];
+	// int32_t  qpos           [MAX_QUERY_TERMS];
+	// int32_t  qtermNums      [MAX_QUERY_TERMS];
+	// float freqWeights    [MAX_QUERY_TERMS];
+	// now dynamically allocate to avoid stack smashing
+	char     *pp  = m_stackBuf.getBufStart();
+	int32_t   nqt = m_q->m_numTerms;
+	int32_t  *wikiPhraseIds  = (int32_t *)pp; pp += 4 * nqt;
+	int32_t  *quotedStartIds = (int32_t *)pp; pp += 4 * nqt;
+	int32_t  *qpos           = (int32_t *)pp; pp += 4 * nqt;
+	int32_t  *qtermNums      = (int32_t *)pp; pp += 4 * nqt;
+	float    *freqWeights    = (float   *)pp; pp += sizeof(float) * nqt;
+	char    **miniMergedList = (char   **)pp; pp += sizeof(char *) * nqt;
+	char    **miniMergedEnd  = (char   **)pp; pp += sizeof(char *) * nqt;
+	char    **bestPos        = (char   **)pp; pp += sizeof(char *) * nqt;
+	char    **winnerStack    = (char   **)pp; pp += sizeof(char *) * nqt;
+	char    **xpos           = (char   **)pp; pp += sizeof(char *) * nqt;
+	char     *bflags         = (char    *)pp; pp += sizeof(char) * nqt;
+	float    *scoreMatrix    = (float   *)pp; pp += sizeof(float) *nqt*nqt;
+	if ( pp > m_stackBuf.getBufEnd() ) {char *xx=NULL;*xx=0; }
+
 	for ( int32_t i = 0 ; i < m_numQueryTermInfos ; i++ ) {
 		// get it
 		QueryTermInfo *qti = &qip[i];
@@ -6012,17 +6056,11 @@ void PosdbTable::intersectLists10_r ( ) {
 	float minPairScore;
 	float minSingleScore;
 	//int64_t docId;
-	char *miniMergedList [MAX_QUERY_TERMS];
-	char *miniMergedEnd  [MAX_QUERY_TERMS];
-	char  bflags         [MAX_QUERY_TERMS];
 	m_bflags = bflags;
 	int32_t qdist;
 	float wts;
 	float pss;
-	float scoreMatrix[MAX_QUERY_TERMS*MAX_QUERY_TERMS];
-	char *bestPos[MAX_QUERY_TERMS];
 	float maxNonBodyScore;
-	char *winnerStack[MAX_QUERY_TERMS];
 	// new vars for removing supplanted docid score infos and
 	// corresponding pair and single score infos
 	char *sx;
@@ -6340,12 +6378,7 @@ void PosdbTable::intersectLists10_r ( ) {
 	}
 
 	if ( m_q->m_isBoolean ) {
-		minScore = 1.0;
-		// since we are jumping, we need to set m_docId here
-		//m_docId = *(uint32_t *)(docIdPtr+1);
-		//m_docId <<= 8;
-		//m_docId |= (unsigned char)docIdPtr[0];
-		//m_docId >>= 2;
+		//minScore = 1.0;
 		// we can't jump over setting of miniMergeList. do that.
 		goto boolJump1;
 	}
@@ -6556,6 +6589,30 @@ void PosdbTable::intersectLists10_r ( ) {
  skipPreAdvance:
 
  boolJump1:
+
+	if ( m_q->m_isBoolean ) {
+		//minScore = 1.0;
+		// this is somewhat wasteful since it is set below again
+		m_docId = *(uint32_t *)(docIdPtr+1);
+		m_docId <<= 8;
+		m_docId |= (unsigned char)docIdPtr[0];
+		m_docId >>= 2;
+		// add one point for each term matched in the bool query
+		// this is really just for when the terms are from different
+		// fields. if we have unfielded boolean terms we should
+		// do proximity matching.
+		int32_t slot = m_bt.getSlot ( &m_docId );
+		if ( slot >= 0 ) {
+			uint8_t *bv = (uint8_t *)m_bt.getValueFromSlot(slot);
+			// then a score based on the # of terms that matched
+			int16_t bitsOn = getNumBitsOnX ( bv , m_vecSize );
+			// but store in hashtable now
+			minScore = (float)bitsOn;
+		}
+		else {
+			minScore = 1.0;
+		}
+	}
 
 	// we need to do this for seo hacks to merge the synonyms together
 	// into one list
@@ -6922,7 +6979,7 @@ void PosdbTable::intersectLists10_r ( ) {
 						   &pss);
 		// it's -1 if one term is in the body/header/menu/etc.
 		if ( pss < 0 ) {
-			scoreMatrix[i*MAX_QUERY_TERMS+j] = -1.00;
+			scoreMatrix[i*nqt+j] = -1.00;
 			wts = -1.0;
 		}
 		else {
@@ -6931,7 +6988,7 @@ void PosdbTable::intersectLists10_r ( ) {
 			wts *= m_freqWeights[j];//sfw[j];
 			// store in matrix for "sub out" algo below
 			// when doing sliding window
-			scoreMatrix[i*MAX_QUERY_TERMS+j] = wts;
+			scoreMatrix[i*nqt+j] = wts;
 			// if terms is a special wiki half stop bigram
 			//if ( bflags[i] == 1 ) wts *= WIKI_BIGRAM_WEIGHT;
 			//if ( bflags[j] == 1 ) wts *= WIKI_BIGRAM_WEIGHT;
@@ -7053,7 +7110,7 @@ void PosdbTable::intersectLists10_r ( ) {
 
 	// use special ptrs for the windows so we do not mangle 
 	// miniMergedList[] array because we use that below!
-	char *xpos[MAX_QUERY_TERMS];
+	//char *xpos[MAX_QUERY_TERMS];
 	for ( int32_t i = 0 ; i < m_numQueryTermInfos ; i++ ) 
 		xpos[i] = miniMergedList[i];
 
@@ -7262,7 +7319,7 @@ void PosdbTable::intersectLists10_r ( ) {
  boolJump2:
 
 	// try dividing it by 3! (or multiply by .33333 faster)
-	score = minScore * (((float)siteRank)*SITERANKMULTIPLIER+1.0);
+	score = minScore * (((float)siteRank)*m_siteRankMultiplier+1.0);
 
 	// . not foreign language? give a huge boost
 	// . use "qlang" parm to set the language. i.e. "&qlang=fr"
@@ -7932,7 +7989,7 @@ float PosdbTable::getMaxPossibleScore ( QueryTermInfo *qti ,
 		score *= WIKI_BIGRAM_WEIGHT;
 	}
 	//score *= perfectWordSpamWeight * perfectWordSpamWeight;
-	score *= (((float)siteRank)*SITERANKMULTIPLIER+1.0);
+	score *= (((float)siteRank)*m_siteRankMultiplier+1.0);
 
 	// language boost if same language (or no lang specified)
 	if ( m_r->m_language == docLang ||
@@ -8165,6 +8222,10 @@ bool PosdbTable::makeDocIdVoteBufForBoolQuery_r ( ) {
 	}
 
 
+	// debug info
+	// int32_t nc = m_bt.getLongestString();
+	// log("posdb: string of %"INT32" filled slots!",nc);
+
 	char *dst = m_docIdVoteBuf.getBufStart();
 
 	// . now our hash table is filled with all the docids
@@ -8223,13 +8284,15 @@ bool PosdbTable::makeDocIdVoteBufForBoolQuery_r ( ) {
 			// a 6 byte key means you pass
 			gbmemcpy ( dst , &docId , 6 );
 			// test it
-			int64_t d2;
-			d2 = *(uint32_t *)(dst+1);
-			d2 <<= 8;
-			d2 |= (unsigned char)dst[0];
-			d2 >>= 2;
-			docId >>= 2;
-			if ( d2 != docId ) { char *xx=NULL;*xx=0; }
+			if ( m_debug ) {
+				int64_t d2;
+				d2 = *(uint32_t *)(dst+1);
+				d2 <<= 8;
+				d2 |= (unsigned char)dst[0];
+				d2 >>= 2;
+				docId >>= 2;
+				if ( d2 != docId ) { char *xx=NULL;*xx=0; }
+			}
 			// end test
 			dst += 6;
 		}

@@ -50,14 +50,16 @@ void SearchInput::clear ( int32_t niceness ) {
 key_t SearchInput::makeKey ( ) {
 	// hash the query
 	int32_t       n       = m_q.getNumTerms  ();
-	int64_t *termIds = m_q.getTermIds   ();
-	char      *signs   = m_q.getTermSigns ();
+	//int64_t *termIds = m_q.getTermIds   ();
+	//char      *signs   = m_q.getTermSigns ();
 	key_t k;
 	k.n1 = 0;
-	k.n0 = hash64 ( (char *)termIds , n * sizeof(int64_t) );
-	k.n0 = hash64 ( (char *)signs   , n , k.n0 );
+	//k.n0 = hash64 ( (char *)termIds , n * sizeof(int64_t) );
+	//k.n0 = hash64 ( (char *)signs   , n , k.n0 );
 	// user defined weights, for weighting each query term separately
 	for ( int32_t i = 0 ; i < n ; i++ ) {
+		k.n0 = hash64 ((char *)&m_q.m_qterms[i].m_termId    ,4, k.n0);
+		k.n0 = hash64 ((char *)&m_q.m_qterms[i].m_termSign  ,1, k.n0);
 		k.n0 = hash64 ((char *)&m_q.m_qterms[i].m_userWeight,4, k.n0);
 		k.n0 = hash64 ((char *)&m_q.m_qterms[i].m_userType  ,1, k.n0);
 	}
@@ -468,14 +470,16 @@ bool SearchInput::set ( TcpSocket *sock , HttpRequest *r ) { //, Query *q ) {
 		log("query: qlang of \"%s\" is NOT SUPPORTED. using "
 		    "langUnknown, \"xx\".",langAbbr);
 
+	int32_t maxQueryTerms = cr->m_maxQueryTerms;
+
 	// . the query to use for highlighting... can be overriden with "hq"
 	// . we need the language id for doing synonyms
 	if ( m_prepend && m_prepend[0] )
-		m_hqq.set2 ( m_prepend , m_queryLangId , true );
+		m_hqq.set2 ( m_prepend , m_queryLangId , true ,maxQueryTerms);
 	else if ( m_highlightQuery && m_highlightQuery[0] )
-		m_hqq.set2 ( m_highlightQuery , m_queryLangId , true );
+		m_hqq.set2 (m_highlightQuery,m_queryLangId,true,maxQueryTerms);
 	else if ( m_query && m_query[0] )
-		m_hqq.set2 ( m_query , m_queryLangId , true );
+		m_hqq.set2 ( m_query , m_queryLangId , true,maxQueryTerms);
 
 	// log it here
 	log(LOG_INFO,
@@ -487,7 +491,9 @@ bool SearchInput::set ( TcpSocket *sock , HttpRequest *r ) { //, Query *q ) {
 	// . returns false and sets g_errno on error (ETOOMANYOPERANDS)
 	if ( ! m_q.set2 ( m_sbuf1.getBufStart(), 
 			  m_queryLangId , 
-			  m_queryExpansion ) ) {
+			  m_queryExpansion ,
+			  true , // use QUERY stopwords?
+			  maxQueryTerms ) ) {
 		g_msg = " (error: query has too many operands)";
 		return false;
 	}
@@ -823,6 +829,9 @@ bool SearchInput::setQueryBuffers ( HttpRequest *hr ) {
 			m_sbuf2.safeStrcpy(" AND ");
 		}
 	}
+	m_sbuf1.setLabel("sisbuf1");
+	m_sbuf2.setLabel("sisbuf2");
+	m_sbuf3.setLabel("sisbuf3");
 	// append the natural query
 	if ( m_query && m_query[0] ) {
 		//if ( p  > pstart  ) *p++  = ' ';

@@ -252,18 +252,18 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 			  &secs,
 			  &msecs);
 
-	int64_t avgTier0Time = 0;
-	int64_t avgTier1Time = 0;
-	int64_t avgTier2Time = 0;
-	if ( g_stats.m_tierHits[0] > 0 )
-		avgTier0Time = g_stats.m_tierTimes[0] /
-			(int64_t)g_stats.m_tierHits[0];
-	if ( g_stats.m_tierHits[1] > 0 )
-		avgTier1Time = g_stats.m_tierTimes[1] /
-			(int64_t)g_stats.m_tierHits[1];
-	if ( g_stats.m_tierHits[2] > 0 )
-		avgTier2Time = g_stats.m_tierTimes[2] /
-			(int64_t)g_stats.m_tierHits[2];
+	// int64_t avgTier0Time = 0;
+	// int64_t avgTier1Time = 0;
+	// int64_t avgTier2Time = 0;
+	// if ( g_stats.m_tierHits[0] > 0 )
+	// 	avgTier0Time = g_stats.m_tierTimes[0] /
+	// 		(int64_t)g_stats.m_tierHits[0];
+	// if ( g_stats.m_tierHits[1] > 0 )
+	// 	avgTier1Time = g_stats.m_tierTimes[1] /
+	// 		(int64_t)g_stats.m_tierHits[1];
+	// if ( g_stats.m_tierHits[2] > 0 )
+	// 	avgTier2Time = g_stats.m_tierTimes[2] /
+	// 		(int64_t)g_stats.m_tierHits[2];
 
 	if ( format == FORMAT_HTML )
 		p.safePrintf ( 

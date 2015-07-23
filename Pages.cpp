@@ -3519,6 +3519,7 @@ bool printApiForPage ( SafeBuf *sb , int32_t PAGENUM , CollectionRec *cr ) {
 		if ( pageNum != PAGENUM ) continue;
 
 		SafeBuf tmp;
+		tmp.setLabel("apisb");
 		char diff = 0;
 		bool printVal = false;
 		if ( parm->m_type != TYPE_CMD &&
@@ -3857,6 +3858,25 @@ bool printApiForPage ( SafeBuf *sb , int32_t PAGENUM , CollectionRec *cr ) {
 
 
 		sb->brify2 ( 
+			"\t\t# List of space separated words in the "
+			"query that were ignored for the most part. "
+			"Because they were common words for the "
+			"query language they are in.\n"
+			, cols , "\n\t\t# " , false );
+		sb->safePrintf("<b>\t\t\"ignoredWords\":\"to the\",\n\n"
+			       "</b>");
+
+		sb->brify2 ( 
+			"\t\t# There is a maximum limit placed on the "
+			"number of query terms we search on to keep things "
+			"fast. This can "
+			"be changed in the search controls.\n"
+			, cols , "\n\t\t# " , false );
+		sb->safePrintf("<b>\t\t\"queryNumTermsTotal\":52,\n</b>");
+		sb->safePrintf("<b>\t\t\"queryNumTermsUsed\":20,\n</b>");
+		sb->safePrintf("<b>\t\t\"queryWasTruncated\":1,\n\n</b>");
+
+		sb->brify2 ( 
 			"\t\t# The start of the terms array. Each query "
 			"is broken down into a list of terms. Each "
 			"term is described here.\n"
@@ -4037,7 +4057,8 @@ bool printApiForPage ( SafeBuf *sb , int32_t PAGENUM , CollectionRec *cr ) {
 		// end instance
 		sb->safePrintf("<b>\t\t}\n\n</b>");
 		// end gigabit
-		sb->safePrintf("<b>\t\t},\n\n</b>");
+		sb->safePrintf("\t\t# End of the first gigabit\n"
+			       "<b>\t\t},\n\n</b>");
 
 		sb->safePrintf("\t\t...\n\n");
 
@@ -4047,6 +4068,59 @@ bool printApiForPage ( SafeBuf *sb , int32_t PAGENUM , CollectionRec *cr ) {
 		sb->safePrintf("<b>\t],\n\n</b>");
 
 
+		// BEGIN FACETS
+		sb->safePrintf( "\t# Start of the facets array, if any.\n");
+		sb->safePrintf("<b>\t\"facets\":[\n</b>\n");
+
+		sb->safePrintf("\t\t# The first facet in the array.\n");
+		sb->safePrintf("<b>\t\t{\n</b>");
+
+		sb->brify2 ( "\t\t\t"
+			     "# The field you are faceting over\n"
+			     , cols , "\n\t\t\t# " , false );
+		sb->safePrintf ( "<b>\t\t\t\"field\":\"Company\",\n\n</b>");
+		sb->brify2 ( "\t\t\t"
+			     "# How many documents in the collection had "
+			     "this particular field? 64-bit integer.\n"
+			     , cols , "\n\t\t\t# " , false );
+		sb->safePrintf ( "<b>\t\t\t\"totalDocsWithField\":148553,"
+				 "\n\n</b>");
+
+		sb->brify2 ( "\t\t\t"
+			     "# How many documents in the collection had "
+			     "this particular field with the same value "
+			     "as the value line directly below? This should "
+			     "always be less than or equal to the "
+			     "totalDocsWithField count. 64-bit integer.\n"
+			     , cols , "\n\t\t\t# " , false );
+		sb->safePrintf ( "<b>\t\t\t\"totalDocsWithFieldAndValue\":"
+				 "44184,\n\n</b>");
+
+		sb->brify2 ( "\t\t\t"
+			     "# The value of the field in the case of "
+			     "this facet. Can be a string or an integer or "
+			     "a float, depending on the type described in "
+			     "the gbfacet query term. i.e. gbfacetstr, "
+			     "gbfacetint or gbfacetfloat.\n"
+			     , cols , "\n\t\t\t# " , false );
+		sb->safePrintf ( "<b>\t\t\t\"value\":"
+				 "\"Widgets, Inc.\",\n\n</b>");
+
+
+		sb->brify2 ( "\t\t\t"
+			     "# Should be the same as totalDocsWith"
+			     "FieldAndValue, "
+			     "above. 64-bit integer.\n"
+			     , cols , "\n\t\t\t# " , false );
+		sb->safePrintf ( "<b>\t\t\t\"docCount\":"
+				 "44184\n\n</b>");
+
+		sb->safePrintf("\t\t# End of the first facet in the array.\n");
+		sb->safePrintf("<b>\t\t}\n\n</b>");
+
+		sb->safePrintf( "\t# End of the facets array.\n");
+		sb->safePrintf("<b>\t],\n\n</b>");
+		// END FACETS
 
 
 
@@ -4670,7 +4744,7 @@ bool printRedBox ( SafeBuf *mb , TcpSocket *sock , HttpRequest *hr ) {
 		mb->safePrintf("%s",box);
 		mb->safePrintf("%"INT32" %s dead and not responding to "
 			      "pings. See the "
-			       "<a href=/admin/host?c=%s>hosts table</a>.",
+			       "<a href=/admin/hosts?c=%s>hosts table</a>.",
 			       ps->m_numHostsDead ,s ,coll);
 		mb->safePrintf("%s",boxEnd);
 	}

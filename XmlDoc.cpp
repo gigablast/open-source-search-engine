@@ -2565,11 +2565,10 @@ bool XmlDoc::indexDoc ( ) {
 			SafeBuf *ssDocMetaList = NULL;
 			// save this
 			int32_t saved = m_indexCode;
-			// and make it the real reason for the spider status doc
+			// make it the real reason for the spider status doc
 			m_indexCode = EDNSERROR;
-			// get the spiderreply ready to be added
-			
-			ssDocMetaList = getSpiderStatusDocMetaList(NULL ,false);//del
+			// get the spiderreply ready to be added. false=del
+			ssDocMetaList =getSpiderStatusDocMetaList(NULL ,false);
 			// revert
 			m_indexCode = saved;
 			// error?
@@ -2586,8 +2585,11 @@ bool XmlDoc::indexDoc ( ) {
 
 			char *url = "unknown";
 			if ( m_sreqValid ) url = m_sreq.m_url;
-			log("build: error2 getting real firstip of %"INT32" for "
-			    "%s. Not adding new spider req", (int32_t)*fip,url);
+			log("build: error2 getting real firstip of "
+			    "%"INT32" for "
+			    "%s. Not adding new spider req. "
+			    "spiderstatusdocsize=%"INT32, (int32_t)*fip,url,
+			    m_addedStatusDocSize);
 			// also count it as a crawl attempt
 			cr->m_localCrawlInfo.m_pageDownloadAttempts++;
 			cr->m_globalCrawlInfo.m_pageDownloadAttempts++;
@@ -3130,8 +3132,9 @@ bool isRobotsTxtFile ( char *u , int32_t ulen ) {
 bool XmlDoc::isContainerDoc ( ) {
 	if ( m_firstUrlValid && m_firstUrl.isWarc() ) return true;
 	if ( m_firstUrlValid && m_firstUrl.isArc () ) return true;
-	if ( ! m_contentDelimValid ) { char *xx=NULL;*xx=0; }
-	if ( m_contentDelim ) return true;
+	//if ( ! m_contentDelimValid ) { char *xx=NULL;*xx=0; }
+	//if ( m_contentDelim ) return true;
+	if ( m_contentDelimValid && m_contentDelim ) return true;
 	return false;
 }
 
@@ -9617,11 +9620,15 @@ float computeSimilarity ( int32_t   *vec0 ,
 		// . stock the query term hash table
 		// . use the lower 32 bits of the termids to make compatible 
 		//   with the other vectors we use
-		int64_t *qtids = q->getTermIds ();
+		//int64_t *qtids = q->getTermIds ();
 		int32_t       nt    = q->getNumTerms();
 		for ( int32_t i = 0 ; i < nt ; i++ ) {
+			// get query term
+			QueryTerm *QT = &q->m_qterms[i];
+			// get the termid
+			int64_t termId = QT->m_termId;
 			// get it
-			uint32_t h = (uint32_t)(qtids[i] & 0xffffffff);
+			uint32_t h = (uint32_t)(termId & 0xffffffff);
 			// hash it
 			if ( ! qt.addKey ( &h ) ) return -1;
 		}
@@ -28672,6 +28679,11 @@ SafeBuf *XmlDoc::getSpiderStatusDocMetaList2 ( SpiderReply *reply1 ) {
 		jd.safePrintf("\"gbssHttpStatus\":%"INT32",\n",
 			      (int32_t)m_httpStatus);
 
+	// do not index gbssIsSeedUrl:0 because there will be too many usually
+	bool isSeed = ( m_sreqValid && m_sreq.m_isAddUrl );
+	if ( isSeed )
+		jd.safePrintf("\"gbssIsSeedUrl\":1,\n");
+
 	if ( od )
 		jd.safePrintf("\"gbssWasIndexed\":1,\n");
 	else
@@ -28696,6 +28708,18 @@ SafeBuf *XmlDoc::getSpiderStatusDocMetaList2 ( SpiderReply *reply1 ) {
 		else
 			jd.safePrintf("\"gbssDiffbotUri\":"
 				      "\"none\",\n");
+		// show the type as gbssDiffbotType:"article" etc.
+		JsonItem *dti = NULL;
+		if ( jp1 ) 
+			dti = jp1->getItem("type");
+		if ( dti ) {
+			jd.safePrintf("\"gbssDiffbotType\":\"");
+			int32_t vlen;
+			char *val = dti->getValueAsString( &vlen );
+			if ( val ) jd.jsonEncode ( val , vlen );
+			jd.safePrintf("\",\n");
+		}
+
 	}
 	else { // if ( cr->m_isCustomCrawl ) {
 		jd.safePrintf("\"gbssIsDiffbotObject\":0,\n");
@@ -45262,7 +45286,7 @@ SafeBuf *XmlDoc::getMatchingQueriesScoredForFullQuery ( ) {
 	// prepend to the query?
 	int32_t ulen = m_firstUrl.m_ulen;
 	// go to next guy if this query is too big already
-	if ( ulen + qlen + 10 > MAX_QUERY_LEN ) {
+	if ( ulen + qlen + 10 > ABS_MAX_QUERY_LEN ) {
 		m_queryNum++;
 		goto loop;
 	}

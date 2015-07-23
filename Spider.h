@@ -39,6 +39,7 @@
 #define SP_INPROGRESS   7 // it is going on!
 #define SP_ADMIN_PAUSED 8 // g_conf.m_spideringEnabled = false
 #define SP_COMPLETED    9 // crawl is done, and no repeatCrawl is scheduled
+#define SP_SEEDSERROR  10 // all seeds had an error preventing crawling
 
 bool tryToDeleteSpiderColl ( SpiderColl *sc , char *msg ) ;
 void spiderRoundIncremented ( class CollectionRec *cr ) ;

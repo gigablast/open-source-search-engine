@@ -142,6 +142,7 @@ class Matches {
 	Matches ( ) ;
 	~Matches( ) ;
 	void reset ( ) ;
+	void reset2 ( ) ;
 
 	// BIG HACK support
 	//int32_t getTermsFound ( bool *hadPhrases , bool *hadWords );
@@ -183,7 +184,10 @@ class Matches {
 
 	// . 1-1 with Query::m_qwords[] array of QWords
 	// . shows the match flags for that query word
-	mf_t      m_qwordFlags[MAX_QUERY_WORDS];
+	//mf_t      m_qwordFlags[MAX_QUERY_WORDS];
+	mf_t     *m_qwordFlags;
+	int32_t m_qwordAllocSize;
+	char m_tmpBuf[128];
 
 	//stuff for detecting whether a match is part of a larger phrase
 	void setSubPhraseDetection();

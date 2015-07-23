@@ -666,7 +666,7 @@ bool Msg40::federatedLoop ( ) {
 	mr.size_whiteList              = slen;
 	mr.m_timeout                   = -1; // auto-determine based on #terms
 	// make sure query term counts match in msg39
-	mr.m_maxQueryTerms             = m_si->m_maxQueryTerms; 
+	//mr.m_maxQueryTerms             = m_si->m_maxQueryTerms; 
 	mr.m_realMaxTop                = m_si->m_realMaxTop;
 
 	mr.m_minSerpDocId              = m_si->m_minSerpDocId;
@@ -698,6 +698,9 @@ bool Msg40::federatedLoop ( ) {
 	// prevent going OOM for type:article AND html
 	//if ( numDocIdSplits < 5 ) numDocIdSplits = 5;
 	//}
+
+	if ( cr ) mr.m_maxQueryTerms = cr->m_maxQueryTerms; 
+	else      mr.m_maxQueryTerms = 100;
 
 	// special oom hack fix
 	if ( cr && cr->m_isCustomCrawl && numDocIdSplits < 4 ) 
@@ -3496,7 +3499,10 @@ bool Msg40::computeGigabits( TopicGroup *tg ) {
 			log("gbits: too many words in samples. "
 			    "Discarding the remaining samples "
 			    "(maxWords=%"INT32")", maxWords);
-			char *xx=NULL;*xx=0;
+			// return -1 with g_errno set on error
+			g_errno = EBUFTOOSMALL;
+			return -1;
+			//char *xx=NULL;*xx=0;
 		}
 		// the thing we are counting!!!!
 		maxWords += sampleWords;
@@ -4330,7 +4336,8 @@ void hashExcerpt ( Query *q ,
 		int32_t m_posPtr;
 	};
 	SafeBuf posBuf;
-	int32_t need2 = MAX_QUERY_TERMS * sizeof(PosInfo);
+	//int32_t need2 = MAX_QUERY_TERMS * sizeof(PosInfo);
+	int32_t need2 = q->m_numTerms * sizeof(PosInfo);
 	posBuf.setLabel("m40posbuf");
 	if ( ! posBuf.reserve ( need2 ) ) {
 		log("gigabits: could not allocate 2 local buffer "

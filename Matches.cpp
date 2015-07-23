@@ -24,10 +24,24 @@
 Matches::Matches ( ) {
 	m_detectSubPhrases = false;
 	m_numMatchGroups = 0;
+	m_qwordFlags = NULL;
+	m_qwordAllocSize = 0;
 	reset();
 }
 Matches::~Matches( ) { reset(); }
 void Matches::reset   ( ) { 
+	reset2();
+	if ( m_qwordFlags && m_qwordFlags != (mf_t *)m_tmpBuf ) {
+		mfree ( m_qwordFlags , m_qwordAllocSize , "mmqw" );
+		m_qwordFlags = NULL;
+	}
+	//m_explicitsMatched = 0;
+	//m_matchableRequiredBits = 0;
+	//m_hasAllQueryTerms = false;
+	//m_matchesQuery = false;
+}
+
+void Matches::reset2() {
 	m_numMatches = 0;
 	//m_maxNQT     = -1;
 	m_numAlnums  = 0;
@@ -39,10 +53,6 @@ void Matches::reset   ( ) {
 		m_bitsArray    [i].reset();
 	}
 	m_numMatchGroups = 0;
-	//m_explicitsMatched = 0;
-	//m_matchableRequiredBits = 0;
-	//m_hasAllQueryTerms = false;
-	//m_matchesQuery = false;
 }
 
 bool Matches::isMatchableTerm ( QueryTerm *qt ) { // , int32_t i ) {
@@ -102,6 +112,20 @@ void Matches::setQuery ( Query *q ) {
 	//memset ( m_foundTermVector , 0 , m_q->getNumTerms() );
 
 	//memset ( m_foundNegTermVector, 0, m_q->getNumTerms() );
+
+	if ( m_qwordFlags ) { char *xx=NULL;*xx=0; }
+
+	int32_t need = m_q->m_numWords * sizeof(mf_t) ;
+	m_qwordAllocSize = need;
+	if ( need < 128 ) 
+		m_qwordFlags = (mf_t *)m_tmpBuf;
+	else
+		m_qwordFlags = (mf_t *)mmalloc ( need , "mmqf" );
+
+	if ( ! m_qwordFlags ) {
+		log("matches: alloc failed for query %s",q->m_orig);
+		return;
+	}
 
 	// this is word based. these are each 1 byte
 	memset ( m_qwordFlags  , 0 , m_q->m_numWords * sizeof(mf_t));
@@ -278,7 +302,7 @@ bool Matches::set ( XmlDoc   *xd         ,
 		    int32_t      niceness   ) {
 
 	// don't reset query info!
-	reset();
+	reset2();
 
 	// sanity check
 	if ( ! xd->m_docIdValid ) { char *xx=NULL;*xx=0; }
