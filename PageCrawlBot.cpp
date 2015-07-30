@@ -1825,6 +1825,12 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 		fmt = FORMAT_HTML;
 	}
 
+	if (token){
+			for ( int32_t i = 0 ; i < gbstrlen(token) ; i++ ){
+				token[i]=tolower(token[i]);
+			}
+		}
+
 
 	char *fs = hr->getString("format",NULL,NULL);
 	// give john a json api
