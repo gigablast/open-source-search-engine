@@ -5565,6 +5565,9 @@ bool Expression::isTruth ( unsigned char *bitVec ,int32_t vecSize ) {
 			// fix title:"notre dame" AND NOT irish
 			if ( ! qt ) qt = qw->m_queryPhraseTerm;
 			if ( ! qt ) continue;
+			// phrase terms are not required and therefore
+			// do not have a v alid qt->m_bitNum set, so dont core
+			if ( ! qt->m_isRequired ) continue;
 			// . m_bitNum is set in Posdb.cpp when it sets its
 			//   QueryTermInfo array
 			// . it is basically the query term #
