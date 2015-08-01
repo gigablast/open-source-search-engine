@@ -2702,6 +2702,19 @@ bool Query::setQWords ( char boolFlag ,
 				for ( ; s < send && *s != '-' ; s++ );
 				// stop if not hyphen
 				if ( *s != '-' ) break;
+
+                                // If the first character is a hyphen, check
+                                // if its part of a negative number. If it is,
+                                // don't consider it a hyphen
+                                if ( sav == s && is_digit(s[1]) ) {
+                                  // Read the entire negative number
+                                  char *s2 = s + 1;
+                                  for ( ; s2 < send && is_digit(s2[0]); s2++);
+                                  // If there's a hyphen after the negative
+                                  // number, use that as the hyphen separator
+                                  if ( *s2 == '-' ) s = s2;
+                                }
+
 				// skip hyphen
 				s++;
 				// must be a digit or . or - or *
@@ -2746,6 +2759,23 @@ bool Query::setQWords ( char boolFlag ,
 				for ( ; s < send && *s != '-' ; s++ );
 				// stop if not hyphen
 				if ( *s != '-' ) break;
+
+                                // If the first character is a hyphen, check
+                                // if its part of a negative number. If it is,
+                                // don't consider it a hyphen
+                                if ( sav == s && (is_digit(s[1]) ||
+						  (s[1] == '.' &&
+						   s + 2 < send &&
+						   is_digit(s[2]))) ) {
+                                  // Read the entire negative number
+                                  char *s2 = s + 1;
+                                  for ( ; s2 < send &&
+					  (is_digit(s2[0]) || s2[0] == '.'); s2++);
+                                  // If there's a hyphen after the negative
+                                  // number, use that as the hyphen separator
+                                  if ( *s2 == '-' ) s = s2;
+                                }
+ 
 				// save that
 				char *cma = s;
 				// skip hyphen
