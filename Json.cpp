@@ -378,6 +378,9 @@ JsonItem *Json::parseJsonStringIntoJsonItems ( char *json , int32_t niceness ) {
 	if ( mem != memEnd )
 		log("json: json parser reallocated buffer. inefficient.");
 
+	// return NULL if no json items were found
+	if ( m_sb.length() <= 0 ) return NULL;
+
 	return (JsonItem *)m_sb.getBufStart();
 }
 
