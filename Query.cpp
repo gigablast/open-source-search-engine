@@ -618,7 +618,7 @@ bool Query::setQTerms ( Words &words , Phrases &phrases ) {
 		     qw->m_userTypePhrase   == 'a'  ) continue;
 		nqt++;
 	}
-	// count phrase terms too!!!
+	// count single terms
 	for ( int32_t i = 0 ; i < m_numWords; i++ ) {
 		QueryWord *qw  = &m_qwords[i];
  		if ( qw->m_ignoreWord && 
@@ -705,7 +705,7 @@ bool Query::setQTerms ( Words &words , Phrases &phrases ) {
 	}
 
 
-	//char u8Buf[256]; 
+	// count phrase terms
 	for ( int32_t i = 0 ; i < m_numWords ; i++ ) {
 		// break out if no more explicit bits!
 		/*
@@ -1019,6 +1019,13 @@ bool Query::setQTerms ( Words &words , Phrases &phrases ) {
 		if (fieldLen > 0) {
 			qt->m_term    = m_qwords[fieldStart].m_word;
 			qt->m_termLen = fieldLen;
+			// fix for query
+			// text:""  foo bar   ""
+			if ( pw-1 < i ) {
+				log("query: bad query %s",m_orig);
+				g_errno = EMALFORMEDQUERY;
+				return false;
+			}
 			// skip past the end of the field value
 			i = pw-1;
 		}
