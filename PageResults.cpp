@@ -3753,14 +3753,15 @@ bool printInlinkText ( SafeBuf *sb , Msg20Reply *mr , SearchInput *si ,
 		if ( firstTime ) {
 			sb->safePrintf("<font size=-1>");
 			sb->safePrintf("<table border=1>"
-				      "<tr><td colspan=3>"
+				      "<tr><td colspan=10>"
 				      "<center>"
 				      "<b>Inlinks with Query Terms</b>"
 				      "</center>"
 				      "</td></tr>"
 				      "<tr>"
 				      "<td>Inlink Text</td>"
-				      "<td>From</td>"
+				      "<td>From Site</td>"
+				      "<td>Site IP</td>"
 				      "<td>Site Rank</td>"
 				      "</tr>"
 				      );
@@ -3780,7 +3781,13 @@ bool printInlinkText ( SafeBuf *sb , Msg20Reply *mr , SearchInput *si ,
 		char *host = getHostFast(k->getUrl(),&hostLen,NULL);
 		sb->safePrintf("</td><td>");
 		if ( host ) sb->safeMemcpy(host,hostLen);
-		sb->safePrintf("</td><td>%"INT32"</td></tr>",(int32_t)k->m_siteRank);
+		sb->safePrintf("</td><td>");
+		sb->safePrintf("<a href=/search?c=%s&q=ip%%3A%s"
+			       "+gbsortbyint%%3Agbsitenuminlinks&n=100>"
+			       ,si->m_cr->m_coll,iptoa(k->m_ip));
+		sb->safePrintf("%s</a>",iptoa(k->m_ip));
+		sb->safePrintf("</td><td>%"INT32"</td></tr>"
+			       ,(int32_t)k->m_siteRank);
 		//sb->safePrintf("<br>");
 		printedInlinkText = true;
 		*numPrinted = *numPrinted + 1;
