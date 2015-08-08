@@ -229,8 +229,8 @@ void RdbDump::doneDumping ( ) {
 	// did collection get deleted/reset from under us?
 	if ( saved == ENOCOLLREC ) return;
 
-	// save the map to disk
-	if ( m_map ) m_map->writeMap();
+	// save the map to disk. true = allDone
+	if ( m_map ) m_map->writeMap( true );
 #ifdef GBSANITYCHECK
 	// sanity check
 	log("DOING SANITY CHECK FOR MAP -- REMOVE ME");

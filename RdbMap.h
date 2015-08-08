@@ -111,7 +111,7 @@ class RdbMap {
 	// . this is totally MTUnsafe
 	// . don't be calling addRecord with this is dumping
 	// . flushes when done
-	bool writeMap  ( );
+	bool writeMap  ( bool allDone );
 	bool writeMap2 ( );
 	int64_t writeSegment ( int32_t segment , int64_t offset );
 

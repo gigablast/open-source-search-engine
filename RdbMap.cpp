@@ -48,7 +48,7 @@ void RdbMap::set ( char *dir , char *mapFilename,
 
 bool RdbMap::close ( bool urgent ) {
 	bool status = true;
-	if ( /*mdw m_numPages > 0 &&*/ m_needToWrite ) status = writeMap ( );
+	if ( /*mdw m_numPages > 0 &&*/ m_needToWrite ) status=writeMap(false);
 	// clears and frees everything
 	if ( ! urgent ) reset ();
 	return status;
@@ -96,7 +96,7 @@ void RdbMap::reset ( ) {
 }
 
 
-bool RdbMap::writeMap ( ) {
+bool RdbMap::writeMap ( bool allDone ) {
 	if ( g_conf.m_readOnlyMode ) return true;
 	// return true if nothing to write out
 	// mdw if ( m_numPages <= 0 ) return true;
@@ -112,10 +112,8 @@ bool RdbMap::writeMap ( ) {
 	// . close map
 	// . no longer since we use BigFile
 	//m_file.close ( );
-
-	// after saving a map to disk try to reduce its mem used
-	reduceMemFootPrint () ;
-
+	// map is done so save some memory
+	if ( allDone ) reduceMemFootPrint () ;
 	// return status
 	return status;
 }

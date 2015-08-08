@@ -871,7 +871,8 @@ int32_t RdbBase::addFile ( int32_t id , bool isNew , int32_t mergeNum , int32_t 
 		// these writes because it is not initialized yet and will
 		// cause this write to fail!
 		g_statsdb.m_disabled = true;
-		bool status = m->writeMap();
+		// true = alldone
+		bool status = m->writeMap( true );
 		g_statsdb.m_disabled = false;
 		if ( ! status ) return log("db: Save failed.");
 	}
@@ -1027,7 +1028,8 @@ bool RdbBase::incorporateMerge ( ) {
 	log(LOG_INFO,"db: Writing map %s.",m_maps[x]->getFilename());
 	// . ensure we can save the map before deleting other files
 	// . sets g_errno and return false on error
-	m_maps[x]->writeMap();
+	// . allDone = true
+	m_maps[x]->writeMap( true );
 
 	// tfndb has his own merge class since titledb merges write tfndb recs
 	RdbMerge *m = &g_merge;
@@ -2489,7 +2491,7 @@ void RdbBase::saveMaps ( bool useThread ) {
 			log("base: map for file #%i is null",i);
 			continue;
 		}
-		m_maps[i]->writeMap ( );
+		m_maps[i]->writeMap ( false );
 	}
 }
 
