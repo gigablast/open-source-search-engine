@@ -112,6 +112,10 @@ bool RdbMap::writeMap ( ) {
 	// . close map
 	// . no longer since we use BigFile
 	//m_file.close ( );
+
+	// after saving a map to disk try to reduce its mem used
+	reduceMemFootPrint () ;
+
 	// return status
 	return status;
 }
@@ -1267,6 +1271,8 @@ bool RdbMap::addSegmentPtr ( int32_t n ) {
 void RdbMap::reduceMemFootPrint () {
 	if ( m_numSegments != 1 ) return;
 	if ( m_numPages >= 100 ) return;
+	// if already reduced, return now
+	if ( m_newPagesPerSegment > 0 ) return;
 	//return;
 	char *oldKeys = m_keys[0];
 	short *oldOffsets = m_offsets[0];
