@@ -1669,6 +1669,12 @@ bool Rdb::dumpCollLoop ( ) {
 
 void doneDumpingCollWrapper ( void *state ) {
 	Rdb *THIS = (Rdb *)state;
+
+	// we just finished dumping to a file, 
+	// so allow it to try to merge again.
+	RdbBase *base = THIS->getBase(THIS->m_dumpCollnum);
+	if ( base ) base->m_checkedForMerge = false;
+
 	// return if the loop blocked
 	if ( ! THIS->dumpCollLoop() ) return;
 	// otherwise, call big wrapper
@@ -1720,6 +1726,16 @@ void Rdb::doneDumping ( ) {
 // this should be called every few seconds by the sleep callback, too
 void attemptMergeAll ( int fd , void *state ) {
 
+	// wait an additional 1ms for every collection we have lest this
+	// slows things down since it is called every 2 seconds. so if
+	// we have 20,000 collections, wait an extra 20000 ms = 20 seconds.
+	// int64_t extraWait = g_collectiondb.m_numRecsUsed;
+	// static int64_t s_lastTry = 0;
+	// int64_t nowms = gettimeofdayInMilliseconds();
+	// if ( nowms - s_lastTry < extraWait ) return;
+	// s_lastTry = nowms;
+
+
 	if ( state && g_conf.m_logDebugDb ) state = NULL;
 	//g_checksumdb.getRdb()->attemptMerge ( 1 , false , !state);
 	g_linkdb.getRdb()->attemptMerge     ( 1 , false , !state);
@@ -1763,13 +1779,18 @@ void attemptMergeAll ( int fd , void *state ) {
 void Rdb::attemptMerge ( int32_t niceness , bool forced , bool doLog ) {
 
 	for ( int32_t i = 0 ; i < getNumBases() ; i++ ) {
-
+		// we need this quickpoll for when we got 20,000+ collections
+		QUICKPOLL ( niceness );
 		CollectionRec *cr = g_collectiondb.m_recs[i];
 		if ( ! cr ) continue;
 		// if swapped out, this will be NULL, so skip it
 		RdbBase *base = cr->getBasePtr(m_rdbId);
 		//RdbBase *base = getBase(i);
 		if ( ! base ) continue;
+		// if we already checked it then skip it. we set this
+		// flag back to false in doneDumpingCollWrapper() when we
+		// add a file to disk for it.
+		if ( base->m_checkedForMerge ) continue;
 		base->attemptMerge(niceness,forced,doLog);
 		// stop if we got unlink/rename threads out from a merge
 		// in RdbBase.cpp beause the merge can't go until this is 0

@@ -3838,7 +3838,8 @@ int main2 ( int argc , char *argv[] ) {
 	// . put this in here instead of Rdb.cpp because we don't want
 	//   generator commands merging on us
 	// . the (void *)1 prevents gb from logging merge info every 2 seconds
-	if ( ! g_loop.registerSleepCallback(2000,(void *)1,attemptMergeAll))
+	// . niceness is 1
+	if ( ! g_loop.registerSleepCallback(2000,(void *)1,attemptMergeAll,1))
 		log("db: Failed to init merge sleep callback.");
 
 	// SEO MODULE

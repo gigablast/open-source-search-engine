@@ -99,6 +99,7 @@ void RdbBase::reset ( ) {
 	m_hasMergeFile = false;
 	m_isUnlinking  = false;
 	m_numThreads = 0;
+	m_checkedForMerge = false;
 }
 
 RdbBase::~RdbBase ( ) {
@@ -1367,6 +1368,7 @@ static void gotTokenForMergeWrapper ( void *state ) ;
 // to "2". (i.e. perform a merge if you got 2 or more files)
 void RdbBase::attemptMerge ( int32_t niceness, bool forceMergeAll, bool doLog ,
 			     int32_t minToMergeOverride ) {
+
 	// don't do merge if we're in read only mode
 	if ( g_conf.m_readOnlyMode ) return ;
 	// or if we are copying our files to a new host
@@ -1633,7 +1635,14 @@ void RdbBase::attemptMerge ( int32_t niceness, bool forceMergeAll, bool doLog ,
 
 	// . don't merge if we don't have the min # of files
 	// . but skip this check if there is a merge to be resumed from b4
-	if ( ! resuming && ! forceMergeAll && numFiles < minToMerge ) return;
+	if ( ! resuming && ! forceMergeAll && numFiles < minToMerge ) {
+		// now we no longer have to check this collection rdb for
+		// merging. this will save a lot of cpu time when we have
+		// 20,000+ collections. if we dump a file to disk for it
+		// then we set this flag back to false in Rdb.cpp.
+		m_checkedForMerge = true;
+		return;
+	}
 
 	// bail if already merging THIS class
 	if ( m_isMerging ) {

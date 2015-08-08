@@ -420,7 +420,9 @@ class RdbBase {
 
 	// key size
 	char      m_ks;
-	
+
+	bool m_checkedForMerge;
+
 	int32_t      m_pageSize;
 
 	// are we waiting on another merge/dump to complete before our turn?
