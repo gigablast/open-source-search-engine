@@ -6209,8 +6209,8 @@ bool printPairScore ( SafeBuf *sb , SearchInput *si , PairScore *ps ,
 	//int64_t tf1 = ps->m_termFreq1;//sz1 / 10;
 	//int64_t tf2 = ps->m_termFreq2;//sz2 / 10;
 	
-	QueryTerm *qt1 = &msg40->m_msg3a.m_q->m_qterms[qtn1];
-	QueryTerm *qt2 = &msg40->m_msg3a.m_q->m_qterms[qtn2];
+	QueryTerm *qt1 = &q->m_qterms[qtn1];
+	QueryTerm *qt2 = &q->m_qterms[qtn2];
 
 	//int64_t tf1 = msg40->m_msg3a.m_termFreqs[qtn1];
 	//int64_t tf2 = msg40->m_msg3a.m_termFreqs[qtn2];
@@ -6932,7 +6932,7 @@ bool printSingleScore ( SafeBuf *sb ,
 	//int64_t tf = ss->m_termFreq;//ss->m_listSize;
 	int32_t qtn = ss->m_qtermNum;
 	//int64_t tf = msg40->m_msg3a.m_termFreqs[qtn];
-	QueryTerm *qt = &msg40->m_msg3a.m_q->m_qterms[qtn];
+	QueryTerm *qt = &q->m_qterms[qtn];
 	int64_t tf = qt->m_termFreq;
 	float tfw = ss->m_tfWeight;
 	
