@@ -7236,7 +7236,8 @@ bool SpiderLoop::gotDoledbList2 ( ) {
 	if ( lock && lock->m_confirmed ) {
 		// why is it not getting unlocked!?!?!
 		log("spider: spider request locked but still in doledb. "
-		    "uh48=%"INT64" firstip=%s %s",
+		    "uh48=%"INT64" firstip=%s (spidering same url in "
+		    "different collections?) %s",
 		    sreq->getUrlHash48(), iptoa(sreq->m_firstIp),sreq->m_url );
 		// just increment then i guess
 		m_list.skipCurrentRecord();
