@@ -7207,6 +7207,11 @@ bool SpiderLoop::gotDoledbList2 ( ) {
 		XmlDoc *xd = m_docs[i];
 		if ( ! xd ) continue;
 		if ( ! xd->m_sreqValid ) continue;
+		// to prevent one collection from hogging all the urls for
+		// particular IP and starving other collections, let's make 
+		// this a per collection count.
+		// then allow msg13.cpp to handle the throttling on its end.
+		if ( xd->m_collnum != cr->m_collnum ) continue;
 		if ( xd->m_sreq.m_firstIp == sreq->m_firstIp ) ipOut++;
 	}
 	if ( ipOut >= maxSpidersOutPerIp ) goto hitMax;
