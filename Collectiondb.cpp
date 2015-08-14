@@ -1987,6 +1987,15 @@ bool CollectionRec::load ( char *coll , int32_t i ) {
 	// always turn off gigabits so &s=1000 can do summary skipping
 	if ( m_isCustomCrawl ) m_docsToScanForTopics = 0;
 
+	// make min to merge smaller than normal since most collections are
+	// small and we want to reduce the # of vfds (files) we have
+	if ( m_isCustomCrawl ) {
+		m_posdbMinFilesToMerge   = 6;
+		m_titledbMinFilesToMerge = 4;
+		m_linkdbMinFilesToMerge  = 3;
+		m_tagdbMinFilesToMerge   = 2;
+	}
+
 	// always turn on distributed spider locking because otherwise
 	// we end up calling Msg50 which calls Msg25 for the same root url
 	// at the same time, thereby wasting massive resources. it is also

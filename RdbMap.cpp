@@ -349,7 +349,10 @@ bool RdbMap::verifyMap2 ( ) {
 		log("db: %s",cmd.getBufStart() );
 		gbsystem ( cmd.getBufStart() );
 
-		exit(0);
+		//exit(0);
+		// make the bash shell restart us by returning a 1 error code
+		exit(1);
+
 		//char *xx=NULL;*xx=0;
 		// was k too small?
 		//if ( i + 1 < m_numPages && lastKey <= getKey(i+1) ) {

@@ -246,9 +246,13 @@ void * operator new (size_t size) throw (std::bad_alloc) {
 	//if ( ! g_stats.m_gotLock || g_threads.amThread() ) mutexLock();
 	//else                                               unlock = false;
 
+	// hack so hostid #0 can use more mem
+	int64_t max = g_conf.m_maxMem;
+	//if ( g_hostdb.m_hostId == 0 )  max += 2000000000;
+
 	// don't go over max
-	if ( g_mem.m_used + (int32_t)size >= g_mem.m_maxMem &&
-	     g_mem.m_maxMem > 1000000 ) {
+	if ( g_mem.m_used + (int32_t)size >= max &&
+	     g_conf.m_maxMem > 1000000 ) {
 		log("mem: new(%"UINT32"): Out of memory.", (uint32_t)size );
 		//if ( unlock ) mutexUnlock();
 		throw std::bad_alloc();
@@ -334,9 +338,13 @@ void * operator new [] (size_t size) throw (std::bad_alloc) {
 	//	// return NULL; }
 	//} 
 	
+	// hack so hostid #0 can use more mem
+	int64_t max = g_conf.m_maxMem;
+	//if ( g_hostdb.m_hostId == 0 )  max += 2000000000;
+
 	// don't go over max
-	if ( g_mem.m_used + (int32_t)size >= g_mem.m_maxMem &&
-	     g_mem.m_maxMem > 1000000 ) {
+	if ( g_mem.m_used + (int32_t)size >= max &&
+	     g_conf.m_maxMem > 1000000 ) {
 		log("mem: new(%"UINT32"): Out of memory.", (uint32_t)size );
 		throw std::bad_alloc();
 		//throw 1;
@@ -406,7 +414,7 @@ newmemloop:
 Mem::Mem() {
 	m_used = 0;
 	// assume large max until this gets set for real
-	m_maxMem  = 50000000;
+	//m_maxMem  = 50000000;
 	m_numAllocated = 0;
 	m_numTotalAllocated = 0;
 	m_maxAlloc = 0;
@@ -447,17 +455,16 @@ pid_t Mem::getPid() {
 	return s_pid;
 }
 
-bool Mem::init  ( int64_t maxMem ) { 
+bool Mem::init  ( ) { // int64_t maxMem ) { 
 	// set main process pid
 	s_pid = getpid();
-
 	// . don't swap our memory out, man...
 	// . damn, linux 2.4.17 seems to crash the kernel sometimes w/ this
 	//if ( mlockall( MCL_CURRENT | MCL_FUTURE ) == -1 ) {
 	//	log("Mem::init: mlockall: %s" , strerror(errno) );
 	//	errno = 0;
 	//}
-	m_maxMem  = maxMem;
+	//m_maxMem  = maxMem;
 	// set it 
 	//struct rlimit lim;
 	//lim.rlim_max = maxMem;
@@ -542,7 +549,8 @@ void Mem::addMem ( void *mem , int32_t size , const char *note , char isnew ) {
 	if ( ! s_initialized ) {
 		//m_memtablesize = m_maxMem / 6510;
 		// support 1.2M ptrs for now. good for about 8GB
-		m_memtablesize = 3000*1024;//m_maxMem / 6510;
+		// raise from 3000 to 8194 to fix host #1
+		m_memtablesize = 8194*1024;//m_maxMem / 6510;
 		//if ( m_maxMem < 8000000000 ) { char *xx=NULL;*xx=0; }
 	}
 
@@ -1338,8 +1346,13 @@ void *Mem::gbmalloc ( int size , const char *note ) {
 	} 
 
  retry:
+
+	// hack so hostid #0 can use more mem
+	int64_t max = g_conf.m_maxMem;
+	//if ( g_hostdb.m_hostId == 0 )  max += 2000000000;
+
 	// don't go over max
-	if ( m_used + size + UNDERPAD + OVERPAD >= m_maxMem ) {
+	if ( m_used + size + UNDERPAD + OVERPAD >= max ) {
 		// try to free temp mem. returns true if it freed some.
 		if ( freeCacheMem() ) goto retry;
 		g_errno = ENOMEM;
@@ -1398,7 +1411,7 @@ mallocmemloop:
 		static int64_t s_lastTime;
 		static int32_t s_missed = 0;
 		int64_t now = gettimeofdayInMillisecondsLocal();
-		int64_t avail = (int64_t)m_maxMem - 
+		int64_t avail = (int64_t)g_conf.m_maxMem - 
 			(int64_t)m_used;
 		if ( now - s_lastTime >= 1000LL ) {
 			log("mem: system malloc(%i,%s) availShouldBe=%"INT64": "
@@ -1502,8 +1515,13 @@ void *Mem::gbrealloc ( void *ptr , int oldSize , int newSize ,
 	//	return NULL;
 	//}
  retry:
+
+	// hack so hostid #0 can use more mem
+	int64_t max = g_conf.m_maxMem;
+	//if ( g_hostdb.m_hostId == 0 )  max += 2000000000;
+
 	// don't go over max
-	if ( m_used + newSize - oldSize >= m_maxMem ) {
+	if ( m_used + newSize - oldSize >= max ) {
 		// try to free temp mem. returns true if it freed some.
 		if ( freeCacheMem() ) goto retry;
 		g_errno = ENOMEM;

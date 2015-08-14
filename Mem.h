@@ -81,7 +81,7 @@ class Mem {
 	Mem();
 	~Mem();
 
-	bool init ( int64_t maxMem );
+	bool init ( );//int64_t maxMem );
 
 	void  setPid();
 	pid_t getPid();
@@ -161,7 +161,7 @@ class Mem {
 	int64_t m_maxAlloced; // at any one time
 	int64_t m_maxAlloc; // the biggest single alloc ever done
 	const char *m_maxAllocBy; // the biggest single alloc ever done
-	int64_t m_maxMem;
+	//int64_t m_maxMem;
 
 	// shared mem used
 	int64_t m_sharedUsed;

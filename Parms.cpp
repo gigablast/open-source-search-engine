@@ -5082,18 +5082,6 @@ void Parms::init ( ) {
 	m++;
 	*/
 
-	m->m_title = "max mem";
-	m->m_desc  = "Mem available to this process. May be exceeded due "
-		"to fragmentation.";
-	m->m_off   = (char *)&g_conf.m_maxMem - g;
-	m->m_def   = "8000000000";
-	m->m_cgi   = "maxmem";
-	m->m_obj   = OBJ_CONF;
-	m->m_page  = PAGE_NONE;
-	m->m_type  = TYPE_LONG_LONG;
-	m->m_flags = PF_NOAPI;
-	m++;
-
 	/*
 	m->m_title = "indexdb split";
 	m->m_desc  = "Number of times to split indexdb across groups. "
@@ -9916,6 +9904,18 @@ void Parms::init ( ) {
 	m->m_def   = "1";
 	m->m_page  = PAGE_MASTER;
 	m->m_obj   = OBJ_CONF;
+	m++;
+
+	m->m_title = "max mem";
+	m->m_desc  = "Mem available to this process. May be exceeded due "
+		"to fragmentation.";
+	m->m_cgi   = "maxmem";
+	m->m_off   = (char *)&g_conf.m_maxMem - g;
+	m->m_def   = "8000000000";
+	m->m_obj   = OBJ_CONF;
+	m->m_page  = PAGE_MASTER; // PAGE_NONE;
+	m->m_type  = TYPE_LONG_LONG;
+	//m->m_flags = PF_NOAPI;
 	m++;
 
 	
@@ -19349,6 +19349,16 @@ void Parms::init ( ) {
 	m->m_title = "log debug disk messages";
 	m->m_cgi   = "lddi";
 	m->m_off   = (char *)&g_conf.m_logDebugDisk - g;
+	m->m_type  = TYPE_BOOL;
+	m->m_def   = "0";
+	m->m_priv  = 1;
+	m->m_page  = PAGE_LOG;
+	m->m_obj   = OBJ_CONF;
+	m++;
+
+	m->m_title = "log debug disk page cache";
+	m->m_cgi   = "ldpc";
+	m->m_off   = (char *)&g_conf.m_logDebugDiskPageCache - g;
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "0";
 	m->m_priv  = 1;

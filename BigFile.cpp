@@ -176,6 +176,8 @@ bool BigFile::doesPartExist ( int32_t n ) {
 	return exists;
 }
 
+static int64_t s_vfd = 0;
+
 // . overide File::open so we can set m_numParts
 // . set maxFileSize when opening a new file for writing and using 
 //   DiskPageCache
@@ -192,10 +194,10 @@ bool BigFile::open ( int flags , class DiskPageCache *pc ,
 	// . this returns our "virtual fd", not the same as File::m_vfd
 	// . returns -1 and sets g_errno on failure
 	// . we pass m_vfd to getPages() and addPages()
-	if ( m_pc ) {
-		if ( maxFileSize == -1 ) maxFileSize = getFileSize();
-		m_vfd = m_pc->getVfd ( maxFileSize, m_vfdAllowed );
-		g_errno = 0;
+	if ( m_pc && m_vfd == -1 ) {
+		//if ( maxFileSize == -1 ) maxFileSize = getFileSize();
+		m_vfd = ++s_vfd;
+		//g_errno = 0;
 	}
 	return true;
 }
@@ -221,7 +223,7 @@ void BigFile::makeFilename_r ( char *baseFilename    ,
 
 // . get the fd of the nth file
 // . will try to open the file if it hasn't yet been opened
-int BigFile::getfd ( int32_t n , bool forReading , int32_t *vfd ) {
+int BigFile::getfd ( int32_t n , bool forReading ) { // , int64_t *vfd ) {
 	// boundary check
 	if ( n >= MAX_PART_FILES ) 
 		return log("disk: Part number %"INT32" > %"INT32". fd not available.",
@@ -237,14 +239,14 @@ int BigFile::getfd ( int32_t n , bool forReading , int32_t *vfd ) {
 		f = m_files[n];
 	}
 	// open it if not opened
-	if ( ! f->isOpen() ) {
+	if ( ! f->calledOpen() ) {
 		if ( ! f->open ( m_flags , m_permissions ) ) {
 			log("disk: Failed to open file part #%"INT32".",n);
 			return -1;
 		}
 	}
 	// set it virtual fd, too
-	if ( vfd ) *vfd = f->m_vfd;
+	//if ( vfd ) *vfd = f->m_vfd;
 	// get it's file descriptor
 	int fd = f->getfd ( ) ;
 	if ( fd >= -1 ) return fd;
@@ -406,29 +408,32 @@ bool BigFile::readwrite ( void         *buf      ,
 	int32_t  allocSize;
 	// reset this
 	fstate->m_errno = 0;
+	fstate->m_inPageCache = false;
 	// . try to get as much as we can from page cache first
 	// . the vfd of the big file will be the vfd of its last File class
 	if ( ! doWrite && m_pc && allowPageCache ) {
-		int32_t oldOff  = offset;
+		//int32_t oldOff  = offset;
 		// we have to set these so RdbScan doesn't freak out if we
 		// have it all cached and return without hitting disk
 		fstate->m_bytesDone = size;
 		fstate->m_bytesToGo = size;
+		// sanity
+		if ( m_vfd == -1 ) { char *xx=NULL;*xx=0; }
 		//log("getting pages off=%"INT64" size=%"INT32"",offset,size);
 		// now we pass in a ptr to the buf ptr, because if buf is NULL
 		// this will allocate one for us if it has some pages in the
 		// cache that we can use.
-		m_pc->getPages (m_vfd,(char **)&buf,size,offset,&size,&offset,
-				&allocBuf,&allocSize,allocOff);
+		char *readBuf = m_pc->getPages ( m_vfd, offset, size );
 		//log("got     pages off=%"INT64" size=%"INT32"",offset,size);
-		bufOff = offset - oldOff;
+		//bufOff = offset - oldOff;
 		// comment out for test
-		if ( size == 0 ) {
+		if ( readBuf ) {
 			// let caller/RdbScan know about the newly alloc'd buf
-			fstate->m_buf         = (char *)buf;
-			fstate->m_allocBuf    = allocBuf;
-			fstate->m_allocSize   = allocSize;
-			fstate->m_allocOff    = allocOff;
+			fstate->m_buf         = (char *)readBuf;
+			fstate->m_allocBuf    = readBuf;
+			fstate->m_allocSize   = size;
+			fstate->m_allocOff    = 0;
+			fstate->m_inPageCache = true;
 			return true;
 		}
 		// check
@@ -494,8 +499,8 @@ bool BigFile::readwrite ( void         *buf      ,
 	//				&fstate->m_vfd2);
 	fstate->m_fd1  = -3;
 	fstate->m_fd2  = -3;
-	fstate->m_vfd1 = -3;
-	fstate->m_vfd2 = -3;
+	// fstate->m_vfd1 = -3;
+	// fstate->m_vfd2 = -3;
 	// . if we are writing, prevent these fds from being closed on us
 	//   by File::closedLeastUsed(), because the fd could then be re-opened
 	//   by someone else doing a write and we end up writing to THAT FILE!
@@ -504,14 +509,12 @@ bool BigFile::readwrite ( void         *buf      ,
 	if ( doWrite ) {
 		// actually have to do the open here for writing so it
 		// can prevent the fds from being closed on us
-		fstate->m_fd1         = getfd ( fstate->m_filenum1 , !doWrite, 
-						&fstate->m_vfd1);
-		fstate->m_fd2         = getfd ( fstate->m_filenum2 , !doWrite, 
-						&fstate->m_vfd2);
+		fstate->m_fd1 = getfd ( fstate->m_filenum1 , !doWrite);
+		fstate->m_fd2 = getfd ( fstate->m_filenum2 , !doWrite);
 		//File *f1 = m_files [ fstate->m_filenum1 ];
 		//File *f2 = m_files [ fstate->m_filenum2 ];
-		enterWriteMode( fstate->m_vfd1 );
-		enterWriteMode( fstate->m_vfd2 );
+		enterWriteMode( fstate->m_fd1 );
+		enterWriteMode( fstate->m_fd2 );
 		fstate->m_closeCount1 = getCloseCount_r ( fstate->m_fd1 );
 		fstate->m_closeCount2 = getCloseCount_r ( fstate->m_fd2 );
 	}
@@ -603,10 +606,8 @@ bool BigFile::readwrite ( void         *buf      ,
 	// come here if we haven't spawned a thread
  skipThread:
 	// if there was no room in the thread queue, then we must do this here
-	fstate->m_fd1         = getfd ( fstate->m_filenum1 , !doWrite , 
-					&fstate->m_vfd1);
-	fstate->m_fd2         = getfd ( fstate->m_filenum2 , !doWrite , 
-					&fstate->m_vfd2);
+	fstate->m_fd1         = getfd ( fstate->m_filenum1 , !doWrite );
+	fstate->m_fd2         = getfd ( fstate->m_filenum2 , !doWrite );
 	fstate->m_closeCount1 = getCloseCount_r ( fstate->m_fd1 );
 	fstate->m_closeCount2 = getCloseCount_r ( fstate->m_fd2 );
 	// clear g_errno from the failed thread spawn
@@ -720,8 +721,8 @@ bool BigFile::readwrite ( void         *buf      ,
 		//File *f2 = m_files [ fstate->m_filenum2 ];
 		//f1->exitWriteMode();
 		//f2->exitWriteMode();
-		exitWriteMode( fstate->m_vfd1 );
-		exitWriteMode( fstate->m_vfd2 );
+		exitWriteMode( fstate->m_fd1 );
+		exitWriteMode( fstate->m_fd2 );
 	}
 
 	// set this up here
@@ -765,9 +766,9 @@ bool BigFile::readwrite ( void         *buf      ,
 	// store read/written pages into page cache
 	if ( ! g_errno && fstate->m_pc )
 		fstate->m_pc->addPages ( fstate->m_vfd       ,
-					 fstate->m_buf       ,
-					 fstate->m_bytesDone ,
 					 fstate->m_offset    ,
+					 fstate->m_bytesDone ,
+					 fstate->m_buf       ,
 					 fstate->m_niceness  );
 	// now log our stuff here
 	if ( g_errno && g_errno != EBADENGINEER ) 
@@ -823,8 +824,8 @@ void doneWrapper ( void *state , ThreadEntry *t ) {
 		//File *f2 = THIS->m_files [ fstate->m_filenum2 ];
 		//f1->exitWriteMode();
 		//f2->exitWriteMode();
-		exitWriteMode( fstate->m_vfd1 );
-		exitWriteMode( fstate->m_vfd2 );
+		exitWriteMode( fstate->m_fd1 );
+		exitWriteMode( fstate->m_fd2 );
 	}
 	// if it read less than 8MB/s bitch
 	int64_t took = fstate->m_doneTime - fstate->m_startTime;
@@ -849,9 +850,9 @@ void doneWrapper ( void *state , ThreadEntry *t ) {
 	// reference it...
 	if ( ! g_errno && fstate->m_pc )
 		fstate->m_pc->addPages ( fstate->m_vfd       ,
-					 fstate->m_buf       ,
-					 fstate->m_bytesDone ,
 					 fstate->m_offset    ,
+					 fstate->m_bytesDone ,
+					 fstate->m_buf       ,
 					 fstate->m_niceness  );
 
 	// add the stat
@@ -908,12 +909,13 @@ void doneWrapper ( void *state , ThreadEntry *t ) {
 	if ( g_errno && g_errno != EDISKSTUCK ) {
 		//int fd1  = fstate->m_fd1;
 		//int fd2  = fstate->m_fd2;
-		int vfd1 = fstate->m_vfd1;
-		int vfd2 = fstate->m_vfd2;
-		int ofd1 = getfdFromVfd(vfd1);
-		int ofd2 = getfdFromVfd(vfd2);
-		log(tt,"disk: vfd1=%i s_fds[%i]=%i.",vfd1,vfd1,ofd1);
-		log(tt,"disk: vfd2=%i s_fds[%i]=%i.",vfd2,vfd2,ofd2);
+		//int vfd1 = fstate->m_vfd1;
+		//int vfd2 = fstate->m_vfd2;
+		//int ofd1 = getfdFromVfd(vfd1);
+		//int ofd2 = getfdFromVfd(vfd2);
+		//log(tt,"disk: vfd1=%i s_fds[%i].",vfd1,vfd1);//,ofd1);
+		//log(tt,"disk: vfd2=%i s_fds[%i].",vfd2,vfd2);//,ofd2);
+		log("disk: nondstuckerr=%s",mstrerror(g_errno));
 	}
 	// . this EBADENGINEER can happen right after a merge if
 	//   the file is renamed because the fd may have changed from
@@ -1179,16 +1181,27 @@ bool readwrite_r ( FileState *fstate , ThreadEntry *t ) {
 	g_lastDiskReadCompleted = g_now; // gettimeofdayInMilliseconds_r();
 
 	// debug msg
-	//char *s = "read";
-	//if ( fstate->m_doWrite ) s = "wrote";
-	//char *t = "no";	// are we blocking?
-	//if ( fstate->m_this->getFlags() & O_NONBLOCK ) t = "yes";
-	// this is bad for real-time threads cuz our unlink() routine may
-	// have been called by RdbMerge and our m_files may be altered 
-	//log("disk::readwrite: %s %"INT32" bytes from %s(nonBlock=%s)",s,n,
-	//    m_files[filenum]->getFilename(),t);
-	//log("disk::readwrite_r: %s %"INT32" bytes (nonBlock=%s)", s,n,t);
-	//log("disk::readwrite_r: did %"INT32" bytes", n);
+	if ( g_conf.m_logDebugDisk ) {
+		char *s = "read";
+		if ( fstate->m_doWrite ) s = "wrote";
+		char *t = "no";	// are we blocking?
+		if ( fstate->m_this->getFlags() & O_NONBLOCK ) t = "yes";
+		// this is bad for real-time threads cuz our unlink() routine 
+		// may have been called by RdbMerge and our m_files may be 
+		// altered 
+		log("disk::readwrite: %s %i bytes from %s(nonBlock=%s) fd %i "
+		    "cc1=%i=?%i cc2=%i=?%i",
+		    s,n,
+		    fstate->m_this->getFilename(),
+		    t,fd,
+		    (int)fstate->m_closeCount1 , 
+		    (int)getCloseCount_r ( fstate->m_fd1 ) ,
+		    (int)fstate->m_closeCount2 ,
+		    (int)getCloseCount_r ( fstate->m_fd2 ) );
+		//log("disk::readwrite_r: %s %"INT32" bytes (nonBlock=%s)",
+		//s,n,t);
+		//log("disk::readwrite_r: did %"INT32" bytes", n);
+	}
 
 	// . if n is 0 that's strange!!
 	// . i think the fd will have been closed and re-opened on us if this
@@ -1442,7 +1455,8 @@ bool BigFile::unlinkRename ( // non-NULL for renames, NULL for unlinks
 	if ( m_isUnlink && part == -1 ) {
 		// release it first, cuz the removeThreads() below
 		// may call QUICKPOLL() and we end up reading from same file!
-		if ( m_pc ) m_pc->rmVfd ( m_vfd );
+		// this is no longer needed since we use rdbcache basically now
+		//if ( m_pc ) m_pc->rmVfd ( m_vfd );
 		// remove all queued threads that point to us that have not
 		// yet been launched
 		g_threads.m_threadQueues[DISK_THREAD].removeThreads(this);
@@ -1658,15 +1672,15 @@ bool BigFile::close ( ) {
 	// the done wrapper, sending back an error reply, shutting down the 
 	// udp server, calling main.cpp::resetAll(), which resets the Rdb and
 	// free this big file
-	DiskPageCache *pc  = m_pc;
-	int32_t           vfd = m_vfd;
+	//DiskPageCache *pc  = m_pc;
+	//int32_t           vfd = m_vfd;
 
 	// remove all queued threads that point to us that have not
 	// yet been launched
 	g_threads.m_threadQueues[DISK_THREAD].removeThreads(this);
 	// release our pages from the DiskPageCache
 	//if ( m_pc ) m_pc->rmVfd ( m_vfd );
-	if ( pc ) pc->rmVfd ( vfd );
+	//if ( pc ) pc->rmVfd ( vfd );
 	return true;
 }
 

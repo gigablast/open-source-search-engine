@@ -28,8 +28,8 @@
 //   allocating if the record size is 256k or more. Copying 256k only
 //   takes .1 ms on the P4 2.60CGHz. This is on the TODO list.
 
-#ifndef _RDBCACHE_H_
-#define _RDBCACHE_H_
+#ifndef RDBCACHE_H
+#define RDBCACHE_H
 
 // . TODO:
 // . if size of added rec is ABOVE this, then don't use our memory buffer

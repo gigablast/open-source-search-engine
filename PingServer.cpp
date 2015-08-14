@@ -3253,6 +3253,10 @@ void doneGettingNotifyUrlWrapper ( void *state , TcpSocket *sock ) {
 //   or maxToProcess limitation.
 bool sendNotification ( EmailInfo *ei ) {
 
+	// disable for now
+	//log("ping: NOT SENDING NOTIFICATION -- DEBUG!!");
+	//return true;
+
 	if ( ei->m_inUse ) { char *xx=NULL;*xx=0; }
 
 	// caller must set this, as well as m_finalCallback/m_finalState

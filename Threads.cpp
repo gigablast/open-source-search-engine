@@ -1984,8 +1984,8 @@ bool ThreadQueue::launchThread2 ( ThreadEntry *te ) {
 		// . we know the stored File is still around because of that
 		bool doWrite = fs->m_doWrite;
 		BigFile *bb = fs->m_this;
-		fs->m_fd1 = bb->getfd (fs->m_filenum1, !doWrite, &fs->m_vfd1);
-		fs->m_fd2 = bb->getfd (fs->m_filenum2, !doWrite, &fs->m_vfd2);
+		fs->m_fd1 = bb->getfd (fs->m_filenum1,!doWrite);//&fs->m_vfd1);
+		fs->m_fd2 = bb->getfd (fs->m_filenum2,!doWrite);//&fs->m_vfd2);
 		// is this bad?
 		if ( fs->m_fd1 < 0 ) log("disk: fd1 is %i for %s",
 					 fs->m_fd1,bb->m_baseFilename);

@@ -12,6 +12,8 @@ Conf g_conf;
 Conf::Conf ( ) {
 	m_save = true;
 	m_doingCommandLine = false;
+	// set max mem to 16GB at least until we load on disk
+	m_maxMem = 16000000000;
 }
 
 // . does this requester have ROOT admin privledges???
@@ -285,8 +287,11 @@ bool Conf::init ( char *dir ) { // , int32_t hostId ) {
 	//}
 
 	// make sure g_mem.maxMem is big enough temporarily
-	if ( g_mem.m_maxMem < 10000000 ) g_mem.m_maxMem = 10000000;
+	g_conf.m_maxMem = 8000000000; // 8gb temp
+
 	bool status = g_parms.setFromFile ( this , fname , NULL , OBJ_CONF );
+
+	if ( g_conf.m_maxMem < 10000000 ) g_conf.m_maxMem = 10000000;
 
 	// if not there, create it!
 	if ( ! status ) {
@@ -323,7 +328,7 @@ bool Conf::init ( char *dir ) { // , int32_t hostId ) {
 
 	// update g_mem
 	//g_mem.m_maxMem = g_conf.m_maxMem;
-	if ( ! g_mem.init ( g_conf.m_maxMem ) ) return false;
+	if ( ! g_mem.init ( ) ) return false;
 	// always turn this off
 	g_conf.m_testMem      = false;
 	// and this, in case you forgot to turn it off

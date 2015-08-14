@@ -15382,7 +15382,7 @@ void gotDiffbotReplyWrapper ( void *state , TcpSocket *s ) {
 
 	// set the mime
 	HttpMime mime;
-	if ( s->m_readOffset>0 && 
+	if ( ! hadError && s && s->m_readOffset>0 && 
 	     // set location url to "null"
 	     ! mime.set ( s->m_readBuf , s->m_readOffset , NULL ) ) {
 		// g_errno should be set

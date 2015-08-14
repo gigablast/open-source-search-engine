@@ -26,9 +26,7 @@ bool Monitordb::init ( ) {
 	if ( ! m_pc.init ( "monitordb" ,
 			   RDB_MONITORDB,
 			   pcmem    ,
-			   pageSize ,
-			   true     ,  // use shared mem?
-			   false    )) // minimizeDiskSeeks?
+			   pageSize ))
 		return log("db: Monitordb init failed.");
 	// init the rdb
 	return m_rdb.init ( g_hostdb.m_dir ,

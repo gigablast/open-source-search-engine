@@ -1543,7 +1543,7 @@ bool HttpServer::sendReply ( TcpSocket  *s , HttpRequest *r , bool isAdmin) {
 	//   case, as it is only set to true in TcpServer::readSocketWrapper()
 	//   which should never be called by TcpServer::sendMsg() above.
 	//   so let cleanUp know it is no longer valid
-	if ( ! f->isOpen() ) f->open( O_RDONLY );
+	if ( ! f->calledOpen() ) f->open( O_RDONLY );
 	int fd = f->getfd();
 	cleanUp ( f , NULL/*TcpSocket */ );
 	// . AND we need to do this ourselves here

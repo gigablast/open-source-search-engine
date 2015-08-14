@@ -652,9 +652,7 @@ bool Spiderdb::init ( ) {
 	if ( ! m_pc.init ( "spiderdb", 
 			   RDB_SPIDERDB ,
 			   pcmem     ,
-			   pageSize  ,
-			   false     ,  // use shared mem?
-			   false     )) // minimizeDiskSeeks?
+			   pageSize  ))
 		return log(LOG_INIT,"spiderdb: Init failed.");
 
 	// initialize our own internal rdb
@@ -854,9 +852,7 @@ bool Doledb::init ( ) {
 	if ( ! m_pc.init ( "doledb"  , 
 			   RDB_DOLEDB ,
 			   pcmem     ,
-			   pageSize  ,
-			   true      ,  // use shared mem?
-			   false     )) // minimizeDiskSeeks?
+			   pageSize  ))
 		return log(LOG_INIT,"doledb: Init failed.");
 
 	// initialize our own internal rdb
@@ -7540,7 +7536,7 @@ bool SpiderLoop::spiderUrl9 ( SpiderRequest *sreq ,
 	// this causes us to dead lock when spiders use up all the mem, and
 	// file merge operation can not get any, and spiders need to add to 
 	// titledb but can not until the merge completes!!
-	if ( g_mem.m_maxMem - g_mem.m_used < 25*1024*1024 ) {
+	if ( g_conf.m_maxMem - g_mem.m_used < 25*1024*1024 ) {
 		static int32_t s_lastTime = 0;
 		static int32_t s_missed   = 0;
 		s_missed++;
@@ -7549,7 +7545,7 @@ bool SpiderLoop::spiderUrl9 ( SpiderRequest *sreq ,
 		if ( now - s_lastTime > 10 ) {
 			log("spider: Need 25MB of free mem to launch spider, "
 			    "only have %"INT64". Failed to launch %"INT32" times so "
-			    "far.", g_mem.m_maxMem - g_mem.m_used , s_missed );
+			    "far.", g_conf.m_maxMem - g_mem.m_used , s_missed );
 			s_lastTime = now;
 		}
 	}
