@@ -1726,6 +1726,16 @@ void Rdb::doneDumping ( ) {
 // this should be called every few seconds by the sleep callback, too
 void attemptMergeAll ( int fd , void *state ) {
 
+	// if fd is MAX_NUM_FDS that means it is from the sleep callback
+	if ( fd != 0 ) {
+		static int s_count = -1;
+		s_count++;
+		// instead of every 2 seconds, try every 60
+		if ( s_count == 30 ) s_count = 0;
+		if ( s_count != 0 ) return;
+		log("rdb: attempting to merge all files from sleep callback");
+	}
+
 	// wait an additional 1ms for every collection we have lest this
 	// slows things down since it is called every 2 seconds. so if
 	// we have 20,000 collections, wait an extra 20000 ms = 20 seconds.
@@ -1734,6 +1744,9 @@ void attemptMergeAll ( int fd , void *state ) {
 	// int64_t nowms = gettimeofdayInMilliseconds();
 	// if ( nowms - s_lastTry < extraWait ) return;
 	// s_lastTry = nowms;
+
+	// wait for any current merge to stop!
+	if ( g_merge.isMerging() ) return;
 
 
 	if ( state && g_conf.m_logDebugDb ) state = NULL;
@@ -1778,6 +1791,9 @@ void attemptMergeAll ( int fd , void *state ) {
 // called by main.cpp
 void Rdb::attemptMerge ( int32_t niceness , bool forced , bool doLog ) {
 
+	// wait for any current merge to stop!
+	if ( g_merge.isMerging() ) return;
+
 	for ( int32_t i = 0 ; i < getNumBases() ; i++ ) {
 		// we need this quickpoll for when we got 20,000+ collections
 		QUICKPOLL ( niceness );
@@ -1797,6 +1813,8 @@ void Rdb::attemptMerge ( int32_t niceness , bool forced , bool doLog ) {
 		// lest we have 2000 collections all trying to merge tagdb
 		// at the same time!!!! this happened once...
 		if ( g_numThreads > 0 ) break;
+		// if we started a merge, stop checking then
+		if ( g_merge.isMerging() ) break;
 	}
 }
 

@@ -653,6 +653,7 @@ class Conf {
 	bool  m_logDebugDb      ;
 	bool  m_logDebugDirty   ;
 	bool  m_logDebugDisk    ;
+	bool  m_logDebugDiskPageCache;
 	bool  m_logDebugDns     ;
 	bool  m_logDebugDownloads;
 	bool  m_logDebugFacebook;

@@ -24,6 +24,10 @@ ssize_t gbpwrite(int fd, const void *buf, size_t count, off_t offset);
 
 // have enough part files to do a 2048gig file
 #define MAX_PART_FILES (((2048LL*1000LL*1000LL*1000LL)/MAX_PART_SIZE)+1LL)
+
+// HACK to save mem. support a 128GB file
+//#define MAX_PART_FILES (((128LL*1000LL*1000LL*1000LL)/MAX_PART_SIZE)+1LL)
+
 // debug define
 //#define MAX_PART_FILES 100
 
@@ -53,6 +57,8 @@ public:
 	void          (*m_callback) ( void *state ) ;
 	// goes from 0 to 1, the lower the niceness, the higher the priority
 	int32_t            m_niceness;
+	// was it found in the disk page cache?
+	char m_inPageCache;
 	// . if signal is still pending we need to know if BigFile got deleted
 	// . m_files must be NULL terminated
 	//class BigFile **m_files;
@@ -76,15 +82,15 @@ public:
 	class DiskPageCache *m_pc;
 	// this is just used for accessing the DiskPageCache, m_pc, it is
 	// a "virtual fd" for this whole file
-	int32_t            m_vfd;
+	int64_t            m_vfd;
 	// test parms
 	//int32_t  m_osize;
 	//char *m_obuf;
 	// for avoiding unlink/reopens while doing a threaded read
 	int32_t m_closeCount1 ;
 	int32_t m_closeCount2 ;
-	int32_t m_vfd1;
-	int32_t m_vfd2;
+	//int32_t m_vfd1;
+	//int32_t m_vfd2;
 
 	//char m_baseFilename[32];
 	int32_t m_flags;	
@@ -217,7 +223,7 @@ class BigFile {
 
 	// . opens the nth file if necessary to get it's fd
 	// . returns -1 if none, >=0 on success
-	int getfd ( int32_t n , bool forReading , int32_t *vfd = NULL );
+	int getfd ( int32_t n , bool forReading );//, int32_t *vfd = NULL );
 
 	// public for wrapper to call
 	//bool readwrite_r ( FileState *fstate );

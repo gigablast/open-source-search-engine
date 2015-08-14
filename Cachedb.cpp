@@ -41,9 +41,7 @@ bool Cachedb::init ( ) {
 	if ( ! m_pc.init ( m_name ,
 			   m_rdbId, // RDB_CACHEDB,
 			   pcmem    ,
-			   pageSize ,
-			   true     ,  // use shared mem?
-			   false    )) // minimizeDiskSeeks?
+			   pageSize ))
 		return log("db: %s init failed.",m_name);
 	// init the rdb
 	if ( ! m_rdb.init ( g_hostdb.m_dir ,

@@ -341,6 +341,11 @@ bool RdbBase::init ( char  *dir            ,
 	// load any saved tree
 	//if ( ! loadTree ( ) ) return false;
 
+	// now diskpagecache is much simpler, just basically rdbcache...
+	return true;
+
+	/*
+
 	// . init BigFile::m_fileSize and m_lastModifiedTime
 	// . m_lastModifiedTime is now used by the merge to select older
 	//   titledb files to merge
@@ -424,6 +429,7 @@ bool RdbBase::init ( char  *dir            ,
 	//int32_t n = f.write ( buf , 128*1024*5+10 , 0 );
 	//fprintf(stderr,"n=%"INT32"\n",n);
 	return true;
+	*/
 }
 
 // . move all files into trash subdir
@@ -727,12 +733,12 @@ int32_t RdbBase::addFile ( int32_t id , bool isNew , int32_t mergeNum , int32_t 
 	// HACK: skip to avoid a OOM lockup. if RdbBase cannot dump
 	// its data to disk it can backlog everyone and memory will
 	// never get freed up.
-	int64_t mm = g_mem.m_maxMem;
-	g_mem.m_maxMem = 0x0fffffffffffffffLL;
+	int64_t mm = g_conf.m_maxMem;
+	g_conf.m_maxMem = 0x0fffffffffffffffLL;
 	BigFile *f ;
 	try { f = new (BigFile); }
 	catch ( ...  ) { 
-		g_mem.m_maxMem = mm;
+		g_conf.m_maxMem = mm;
 		g_errno = ENOMEM;
 		log("RdbBase: new(%i): %s", 
 		    (int)sizeof(BigFile),mstrerror(g_errno));
@@ -742,7 +748,7 @@ int32_t RdbBase::addFile ( int32_t id , bool isNew , int32_t mergeNum , int32_t 
 	RdbMap  *m ;
 	try { m = new (RdbMap); }
 	catch ( ... ) { 
-		g_mem.m_maxMem = mm;
+		g_conf.m_maxMem = mm;
 		g_errno = ENOMEM;
 		log("RdbBase: new(%i): %s", 
 		    (int)sizeof(RdbMap),mstrerror(g_errno));
@@ -752,7 +758,7 @@ int32_t RdbBase::addFile ( int32_t id , bool isNew , int32_t mergeNum , int32_t 
 	}
 	mnew ( m , sizeof(RdbMap) , "RdbBMap" );
 	// reinstate the memory limit
-	g_mem.m_maxMem = mm;
+	g_conf.m_maxMem = mm;
 	// sanity check
 	if ( id2 < 0 && m_isTitledb ) { char *xx = NULL; *xx = 0; }
 
@@ -2497,10 +2503,12 @@ void RdbBase::saveMaps ( bool useThread ) {
 
 void RdbBase::verifyDiskPageCache ( ) {
 	if ( !m_pc ) return;
-	for ( int32_t i = 0; i < m_numFiles; i++ ){
-		BigFile *f = m_files[i];
-		m_pc->verifyData(f);
-	}
+	// disable for now
+	return;
+	// for ( int32_t i = 0; i < m_numFiles; i++ ){
+	// 	BigFile *f = m_files[i];
+	// 	m_pc->verifyData(f);
+	// }
 }
 
 bool RdbBase::verifyFileSharding ( ) {

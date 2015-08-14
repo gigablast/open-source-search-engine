@@ -112,9 +112,7 @@ bool Indexdb::init ( ) {
 	if ( ! m_pc.init ( "indexdb",
 			   RDB_INDEXDB,
 			   pcmem    ,
-			   pageSize , 
-			   true     ,  // use RAM disk?
-			   false    )) // minimize disk seeks?
+			   pageSize ))
 		return log("db: Indexdb init failed.");
 
 	// . set our own internal rdb

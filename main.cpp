@@ -1805,7 +1805,7 @@ int main2 ( int argc , char *argv[] ) {
 		// Load categories and generate country table
 		char structureFile[256];
 		g_conf.m_maxMem = 1000000000LL; // 1G
-		g_mem.m_maxMem  = 1000000000LL; // 1G
+		//g_mem.m_maxMem  = 1000000000LL; // 1G
 		sprintf(structureFile, "%scatdb/gbdmoz.structure.dat", g_hostdb.m_dir);
 		g_categories = &g_categories1;
 		if (g_categories->loadCategories(structureFile) != 0) {
@@ -2396,7 +2396,7 @@ int main2 ( int argc , char *argv[] ) {
 	if ( strcmp ( cmd , "freecache" ) == 0 ) {	
 		int32_t max = 7000000;
 		if ( cmdarg + 1 < argc ) max = atoi ( argv[cmdarg+1] );
-		freeAllSharedMem( max );
+		//freeAllSharedMem( max );
 		return true;
 	}
 
@@ -10727,7 +10727,7 @@ bool gbgunzip (char *filename) {
 // time speed of inserts into RdbTree for indexdb
 bool bucketstest ( char* dbname ) {
 	g_conf.m_maxMem = 2000000000LL; // 2G
-	g_mem.m_maxMem  = 2000000000LL; // 2G
+	//g_mem.m_maxMem  = 2000000000LL; // 2G
 
 
 	if ( dbname ) {
@@ -12224,7 +12224,7 @@ void dumpTagdb (char *coll,int32_t startFileNum,int32_t numFiles,
 
 bool parseTest ( char *coll , int64_t docId , char *query ) {
 	g_conf.m_maxMem = 2000000000LL; // 2G
-	g_mem.m_maxMem  = 2000000000LL; // 2G
+	//g_mem.m_maxMem  = 2000000000LL; // 2G
 	//g_conf.m_checksumdbMaxDiskPageCacheMem = 0;
 	//g_conf.m_spiderdbMaxDiskPageCacheMem   = 0;
 	g_conf.m_tfndbMaxDiskPageCacheMem = 0;
@@ -14547,7 +14547,8 @@ int injectFile ( char *filename , char *ips ,
 	int64_t startDocId = 0LL;
 	int64_t endDocId = MAX_DOCID;
 
-	g_mem.init ( 4000000000LL );
+	g_conf.m_maxMem = 4000000000LL;
+	g_mem.init ( );//4000000000LL );
 
 	// set up the loop
 	if ( ! g_loop.init() ) return log("build: inject: Loop init "
@@ -16325,8 +16326,8 @@ bool memTest() {
 	// if ( ! g_log.init( "./memlog" ) ) {//g_hostdb.m_logFilename )        ) {
 	// 	fprintf (stderr,"db: Log file init failed.\n" ); return 1; }
 	//g_mem.init(0xffffffff);
-	g_mem.m_maxMem = 0xffffffffLL;
-	g_mem.init( g_mem.m_maxMem );
+	g_conf.m_maxMem = 0xffffffffLL;
+	g_mem.init( );//g_mem.m_maxMem );
 	
 
 	fprintf(stderr, "memtest: Testing memory bus bandwidth.\n");
@@ -16344,7 +16345,7 @@ bool memTest() {
 	membustest ( 8000 , 100000 , true );
 
 	fprintf(stderr, "memtest: Allocating up to %"INT64" bytes\n",
-		g_mem.m_maxMem);
+		g_conf.m_maxMem);
 	for (i=0;i<4096;i++) {
 		ptrs[numPtrs] = mmalloc(1024*1024, "memtest");
 		if (!ptrs[numPtrs]) break;
@@ -16354,7 +16355,7 @@ bool memTest() {
 	fprintf(stderr, "memtest: Was able to allocate %"INT64" bytes of a "
 		"total of "
 	    "%"INT64" bytes of memory attempted.\n",
-	    g_mem.m_used,g_mem.m_maxMem);
+	    g_mem.m_used,g_conf.m_maxMem);
 
 	return true;
 
@@ -16484,7 +16485,7 @@ void membustest ( int32_t nb , int32_t loops , bool readf ) {
 bool cacheTest() {
 
 	g_conf.m_maxMem = 2000000000LL; // 2G
-	g_mem.m_maxMem  = 2000000000LL; // 2G
+	//g_mem.m_maxMem  = 2000000000LL; // 2G
 
 	hashinit();
 
