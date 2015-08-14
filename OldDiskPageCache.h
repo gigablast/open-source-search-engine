@@ -34,8 +34,7 @@
 
 // how many BigFiles can be using the same DiskPageCache?
 #include "File.h"
-//#define MAX_NUM_VFDS2 MAX_NUM_VFDS
-#define MAX_NUM_VFDS2 100*1024
+#define MAX_NUM_VFDS2 MAX_NUM_VFDS
 
 extern void freeAllSharedMem ( int32_t max );
 
