@@ -1006,6 +1006,7 @@ class XmlDoc {
 
 	// we we started spidering it, in milliseconds since the epoch
 	int64_t    m_startTime;
+	int64_t    m_injectStartTime;
 
 	// when set() was called by Msg20.cpp so we can time how long it took
 	// to generate the summary

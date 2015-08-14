@@ -253,7 +253,7 @@ bool sendPagePerf ( TcpSocket *s , HttpRequest *r ) {
 		       // bright green
 		       "<tr class=poo>"
 		       "<td bgcolor=#ccffcc>&nbsp; &nbsp;</td>"
-		       "<td> Compute reference pages. "
+		       "<td> Inject a document"
 		       "</td>"
 
 		       // dark green

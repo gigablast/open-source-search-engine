@@ -35,7 +35,7 @@ def genHostsConf(fname, ips, numHostsPerMachine):
         udpPort = int(startUdpPort)
         directory = 0
         for diskId in xrange(numHostsPerMachine):
-            print "{0} {1} {2} {3} {4} {5} {6} /{7:02d}/gigablast/ note".format(hostCount, dnsPort, httpsPort, httpPort, udpPort, ip, ip, directory)
+            print "{0} {1} {2} {3} {4} {5} {6} /{7:02d}/gigablast/ /{7:02d}/gigablast/".format(hostCount, dnsPort, httpsPort, httpPort, udpPort, ip, ip, directory)
             hostCount, dnsPort, httpsPort, httpPort, udpPort, directory = \
             hostCount+ 1, dnsPort+ 1, httpsPort+ 1, httpPort+ 1, udpPort + 1, directory + 1
             

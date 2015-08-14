@@ -2098,6 +2098,7 @@ bool XmlDoc::injectDoc ( char *url ,
 			 uint32_t metadataLen
 			 ) {
 
+
 	// wait until we are synced with host #0
 	if ( ! isClockInSync() ) {
 		log("xmldocl: got injection request but clock not yet "
@@ -3547,7 +3548,7 @@ bool XmlDoc::indexWarcOrArc ( char ctype ) {
 		// get Content-Length: of WARC header for its content
 		if ( ! warcLen ) {
 			// this is a critical stop.
-			log("build: could not find WARC Content-Length:");
+			log("build: warc problem: could not find WARC Content-Length:");
 			goto warcDone;
 		}
 
@@ -3635,8 +3636,9 @@ bool XmlDoc::indexWarcOrArc ( char ctype ) {
 		// find end of arc header not the content
 		char *arcHeaderEnd = strstr(arcHeader+1,"\n");
 		if ( ! arcHeaderEnd ) {
-			log("inject: could not find end of ARC header.");
-			exit(0);
+			log("build: warc problem: could not find end of ARC header. file=%s",
+                m_firstUrl.getUrl());
+			goto warcDone;
 		}
 		// \0 term for strstrs below
 		*arcHeaderEnd = '\0';
@@ -3645,19 +3647,31 @@ bool XmlDoc::indexWarcOrArc ( char ctype ) {
 		char *url = arcHeader + 1;
 		char *hp = url;
 		for ( ; *hp && *hp != ' ' ; hp++ );
-		if ( ! *hp ) {log("inject: bad arc header 1.");exit(0);}
+		if ( ! *hp ) {
+            log("build: warc problem: bad arc header 1.file=%s", m_firstUrl.getUrl());
+            goto warcDone;
+        }
 		*hp++ = '\0';
 		char *ipStr = hp;
 		for ( ; *hp && *hp != ' ' ; hp++ );
-		if ( ! *hp ) {log("inject: bad arc header 2.");exit(0);}
+		if ( ! *hp ) {
+            log("build: warc problem: bad arc header 2.file=%s", m_firstUrl.getUrl());
+            goto warcDone;
+        }
 		*hp++ = '\0';
 		char *timeStr = hp;
 		for ( ; *hp && *hp != ' ' ; hp++ );
-		if ( ! *hp ) {log("inject: bad arc header 3.");exit(0);}
+		if ( ! *hp ) {
+            log("build: warc problem: bad arc header 3.file=%s", m_firstUrl.getUrl());
+            goto warcDone;
+        }
 		*hp++ = '\0'; // null term timeStr
 		char *arcConType = hp;
 		for ( ; *hp && *hp != ' ' ; hp++ );
-		if ( ! *hp ) {log("inject: bad arc header 4.");exit(0);}
+		if ( ! *hp ) {
+            log("build: warc problem: bad arc header 4.file=%s", m_firstUrl.getUrl());
+            goto warcDone;
+        }
 		*hp++ = '\0'; // null term arcContentType
 		char *arcContentLenStr = hp;
 		// get arc content len
@@ -3725,9 +3739,9 @@ bool XmlDoc::indexWarcOrArc ( char ctype ) {
 
 	// how can there be no more to read?
 	if ( m_fptr > m_fptrEnd && ! m_hasMoreToRead ) {
-		log("build: archive file %s exceeded file length.",
-		    file->getFilename());
-		goto loop;
+		log("build: warc problem: archive file %s exceeded file length.",
+            m_firstUrl.getUrl());
+		goto warcDone;
 	}
 
 	// if we fall outside of the current read buf, read next rec if too big
@@ -50238,7 +50252,7 @@ Msg25 *XmlDoc::getAllInlinks ( bool forSite ) {
 					      NULL, // qbuf
 					      0, // qbufSize
 					      m_masterState, // state
-				      m_masterLoop, // callback
+						  m_masterLoop, // callback
 					      false, // isInjecting?
 					      false, // pbuf (for printing)
 					      this, // xd holder (Msg25::m_xd)

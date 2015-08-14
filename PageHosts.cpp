@@ -1030,72 +1030,75 @@ skipReplaceHost:
 	sb.safePrintf ( "</table><br>\n" );
 
 	
-	/*
-	// print spare hosts table
-	sb.safePrintf ( 
-		  "<table %s>"
-		  "<tr class=hdrow><td colspan=10><center>"
-		  //"<font size=+1>"
-		  "<b>Spares</b>"
-		  //"</font>"
-		  "</td></tr>" 
-		  "<tr bgcolor=#%s>"
-		  "<td><b>spareId</td>"
-		  "<td><b>host name</td>"
-		  "<td><b>ip1</td>"
-		  "<td><b>ip2</td>"
-		  //"<td><b>udp port</td>"
-		  //"<td><b>priority udp port</td>"
-		  //"<td><b>dns client port</td>"
-		  "<td><b>http port</td>"
-		  //"<td><b>switch id</td>"
 
-		  // this is now fairly obsolete
-		  //"<td><b>ide channel</td>"
+	if( g_hostdb.m_numSpareHosts ) {
+		// print spare hosts table
+		sb.safePrintf ( 
+					   "<table %s>"
+					   "<tr class=hdrow><td colspan=10><center>"
+					   //"<font size=+1>"
+					   "<b>Spares</b>"
+					   //"</font>"
+					   "</td></tr>" 
+					   "<tr bgcolor=#%s>"
+					   "<td><b>spareId</td>"
+					   "<td><b>host name</td>"
+					   "<td><b>ip1</td>"
+					   "<td><b>ip2</td>"
+					   //"<td><b>udp port</td>"
+					   //"<td><b>priority udp port</td>"
+					   //"<td><b>dns client port</td>"
+					   "<td><b>http port</td>"
+					   //"<td><b>switch id</td>"
 
-		  "<td><b>note</td>",
-		  TABLE_STYLE,
-		  DARK_BLUE  );
+					   // this is now fairly obsolete
+					   //"<td><b>ide channel</td>"
 
-	for ( int32_t i = 0; i < g_hostdb.m_numSpareHosts; i++ ) {
-		// get the ith host (hostId)
-		Host *h = g_hostdb.getSpare ( i );
+					   "<td><b>note</td>",
+					   TABLE_STYLE,
+					   DARK_BLUE  );
 
-		char ipbuf1[64];
-		char ipbuf2[64];
-		strcpy(ipbuf1,iptoa(h->m_ip));
-		strcpy(ipbuf2,iptoa(h->m_ipShotgun));
+		for ( int32_t i = 0; i < g_hostdb.m_numSpareHosts; i++ ) {
+			// get the ith host (hostId)
+			Host *h = g_hostdb.getSpare ( i );
 
-		// print it
-		sb.safePrintf (
-			  "<tr bgcolor=#%s>"
-			  "<td>%"INT32"</td>"
-			  "<td>%s</td>"
-			  "<td>%s</td>"
-			  "<td>%s</td>"
-			  //"<td>%hi</td>"
-			  //"<td>%hi</td>" // priority udp port
-			  //"<td>%hi</td>"
-			  "<td>%hi</td>"
-			  //"<td>%i</td>" // switch id
-			  //"<td>%"INT32"</td>" // ide channel
-			  "<td>%s</td>"
-			  "</tr>" , 
-			  LIGHT_BLUE,
-			  i , 
-			  h->m_hostname,
-			  ipbuf1,
-			  ipbuf2,
-			  //h->m_port , 
-			  //h->m_port2 , 
-			  //h->m_dnsClientPort ,
-			  h->m_httpPort ,
-			  //h->m_switchId,
-			  //h->m_ideChannel ,
-			  h->m_note );
+			char ipbuf1[64];
+			char ipbuf2[64];
+			strcpy(ipbuf1,iptoa(h->m_ip));
+			strcpy(ipbuf2,iptoa(h->m_ipShotgun));
+
+			// print it
+			sb.safePrintf (
+						   "<tr bgcolor=#%s>"
+						   "<td>%"INT32"</td>"
+						   "<td>%s</td>"
+						   "<td>%s</td>"
+						   "<td>%s</td>"
+						   //"<td>%hi</td>"
+						   //"<td>%hi</td>" // priority udp port
+						   //"<td>%hi</td>"
+						   "<td>%hi</td>"
+						   //"<td>%i</td>" // switch id
+						   //"<td>%"INT32"</td>" // ide channel
+						   "<td>%s</td>"
+						   "</tr>" , 
+						   LIGHT_BLUE,
+						   i , 
+						   h->m_hostname,
+						   ipbuf1,
+						   ipbuf2,
+						   //h->m_port , 
+						   //h->m_port2 , 
+						   //h->m_dnsClientPort ,
+						   h->m_httpPort ,
+						   //h->m_switchId,
+						   //h->m_ideChannel ,
+						   h->m_note );
+		}
+		sb.safePrintf ( "</table><br>" );
 	}
-	sb.safePrintf ( "</table><br>" );
-	*/
+
+
 
 	/*
 	// print proxy hosts table

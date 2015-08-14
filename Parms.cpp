@@ -11647,7 +11647,9 @@ void Parms::init ( ) {
 	m->m_obj   = OBJ_CONF;
         m++;
 
-	/*
+
+
+		/*
         m->m_title = "use data feed account server";
         m->m_desc  = "Enable/disable the use of a remote account verification "
                 "for Data Feed Customers. This should ONLY be used for the "
@@ -21071,7 +21073,7 @@ Parm *Parms::getParmFast1 ( char *cgi , int32_t *occNum ) {
 
 ////////////
 //
-// functions for distrubting/syncing parms to/with all hosts
+// functions for distributing/syncing parms to/with all hosts
 //
 ////////////
 

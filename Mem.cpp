@@ -607,7 +607,12 @@ void Mem::addMem ( void *mem , int32_t size , const char *note , char isnew ) {
 			((char *)mem)[0+size+i] = MAGICCHAR;
 	}
 	// hey!
-	if ( s_pid == -1 && m_numTotalAllocated >1000 ) { char *xx=NULL;*xx=0;}
+	if ( s_pid == -1 && m_numTotalAllocated >1000 ) {
+        log(LOG_WARN, "pid is %i and numAllocs is %i", s_pid,  m_numTotalAllocated);
+        //char *xx=NULL;*xx=0;}
+        //	if ( s_pid == -1 && m_numTotalAllocated >1000 ) { char *xx=NULL;*xx=0;}
+    }
+
 	// threads can't be here!
 	if ( s_pid != -1 && getpid() != s_pid ) {
 		log("mem: addMem: Called from thread.");
@@ -955,7 +960,10 @@ bool Mem::rmMem  ( void *mem , int32_t size , const char *note ) {
 	// don't free 0 bytes
 	if ( size == 0 ) return true;
 	// hey!
-	if ( s_pid == -1 && m_numTotalAllocated >1000 ) { char *xx=NULL;*xx=0;}
+	if ( s_pid == -1 && m_numTotalAllocated >1000 ) {
+        log(LOG_WARN, "pid is %i and numAllocs is %i", s_pid,  m_numTotalAllocated);
+        //char *xx=NULL;*xx=0;}
+    }
 	// threads can't be here!
 	if ( s_pid != -1 && getpid() != s_pid ) {
 		log("mem: rmMem: Called from thread.");

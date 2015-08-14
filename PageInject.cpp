@@ -9,6 +9,7 @@
 #include "Repair.h"
 #include "PageCrawlBot.h"
 #include "HttpRequest.h"
+#include "Stats.h"
 
 // from XmlDoc.cpp
 bool isRobotsTxtFile ( char *url , int32_t urlLen ) ;
@@ -586,6 +587,17 @@ void sendUdpReply7 ( void *state ) {
 
 	XmlDoc *xd = (XmlDoc *)state;
 	UdpSlot *slot = xd->m_injectionSlot;
+
+    uint32_t statColor = 0xccffcc;
+    if(xd->m_indexCode) {
+        statColor = 0x4e99e9;
+    }
+	g_stats.addStat_r ( xd->m_rawUtf8ContentSize,
+						xd->m_injectStartTime, 
+						gettimeofdayInMilliseconds(),
+						statColor );
+
+
 	// injecting a warc seems to not set m_indexCodeValid to true
 	// for the container doc... hmmm...
 	int32_t indexCode = -1;
@@ -594,6 +606,8 @@ void sendUdpReply7 ( void *state ) {
 	if ( xd && xd->m_docIdValid     ) docId = xd->m_docId;
 	mdelete ( xd, sizeof(XmlDoc) , "PageInject" );
 	delete (xd);
+
+
 	if ( g_errno ) {
 		g_udpServer.sendErrorReply(slot,g_errno);
 		return;
@@ -612,6 +626,7 @@ void sendUdpReply7 ( void *state ) {
 	
 
 void handleRequest7 ( UdpSlot *slot , int32_t netnice ) {
+
 
 	InjectionRequest *ir = (InjectionRequest *)slot->m_readBuf;
 
@@ -638,7 +653,7 @@ void handleRequest7 ( UdpSlot *slot , int32_t netnice ) {
 	mnew ( xd, sizeof(XmlDoc) , "PageInject" );
 
 	xd->m_injectionSlot = slot;
-
+	xd->m_injectStartTime = gettimeofdayInMilliseconds();
 
 	if ( ! xd->injectDoc ( ir->ptr_url , // m_injectUrlBuf.getBufStart() ,
 			       cr ,
@@ -829,6 +844,7 @@ void handleRequest7Import ( UdpSlot *slot , int32_t netnice ) {
 
 	//m_state = state;
 	//m_callback = callback;
+
 
 	XmlDoc *xd;
 	try { xd = new (XmlDoc); }
