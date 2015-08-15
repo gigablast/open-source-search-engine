@@ -940,7 +940,7 @@ bool Msg3::doneScanning ( ) {
 			    "%s: %s/%s. vfd=%"INT32" parts=%"INT32". "
 			    "This is likely caused by corrupted "
 			    "data on disk.", 
-			    mstrerror(g_errno), ff->m_dir ,
+			    mstrerror(g_errno), ff->getDir(),
 			    ff->getFilename(), ff->m_vfd , 
 			    (int32_t)ff->m_numParts );
 		}

@@ -238,7 +238,7 @@ bool RdbMap::verifyMap ( BigFile *dataFile ) {
 		    "db: Map file %s says that file %s should be %"INT64" bytes "
 		    "long, but it is %"INT64" bytes.",
 		    m_file.getFilename(),
-		    dataFile->m_baseFilename ,
+		    dataFile->getFilename() ,
 		    m_offset - m_fileStartOffset ,
 		    dataFile->getFileSize() );
 		// we let headless files squeak by on this because we cannot
@@ -330,7 +330,7 @@ bool RdbMap::verifyMap2 ( ) {
 		    "Map or data file is "
 		    "corrupt, but it is probably the data file. Please "
 		    "delete the map file and restart.", 
-		    m_file.m_dir,m_file.getFilename() ,
+		    m_file.getDir(),m_file.getFilename() ,
 		    i,(int64_t)m_pageSize*(int64_t)i+getOffset(i));
 
 		//log("db: oldk.n1=%08"XINT32" n0=%016"XINT64"",
@@ -343,7 +343,7 @@ bool RdbMap::verifyMap2 ( ) {
 
 		SafeBuf cmd;
 		cmd.safePrintf("mv %s/%s %s/trash/",
-			       m_file.m_dir,
+			       m_file.getDir(),
 			       m_file.getFilename(),
 			       g_hostdb.m_dir);
 		log("db: %s",cmd.getBufStart() );
@@ -559,7 +559,7 @@ bool RdbMap::addRecord ( char *key, char *rec , int32_t recSize ) {
 		//pageNum > 0 && getKey(pageNum-1) > getKey(pageNum) ) {
 		log(LOG_LOGIC,"build: RdbMap: added key out of order. "
 		    "count=%"INT64" file=%s/%s.",m_badKeys,
-		    m_file.m_dir,m_file.getFilename());
+		    m_file.getDir(),m_file.getFilename());
 		//log(LOG_LOGIC,"build: k.n1=%"XINT32" %"XINT64"  lastKey.n1=%"XINT32" %"XINT64"",
 		//    key.n1,key.n0,m_lastKey.n1,m_lastKey.n0 );
 		log(LOG_LOGIC,"build: offset=%"INT64"",
@@ -1398,7 +1398,7 @@ bool RdbMap::generateMap ( BigFile *f ) {
 	reset();
 	if ( g_conf.m_readOnlyMode ) return false;
 
-	log("db: Generating map for %s/%s",f->m_dir,f->getFilename());
+	log("db: Generating map for %s/%s",f->getDir(),f->getFilename());
 
 	// we don't support headless datafiles right now
 	if ( ! f->doesPartExist(0) ) {

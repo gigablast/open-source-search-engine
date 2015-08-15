@@ -77,6 +77,10 @@ SafeBuf::SafeBuf(char *heapBuf, int32_t bufMax, int32_t bytesInUse, bool ownData
 }
 
 SafeBuf::~SafeBuf() {
+	destructor();
+}
+
+void SafeBuf::destructor() {
 	if(!m_usingStack && m_buf) 
 		mfree(m_buf, m_capacity, "SafeBuf");
 	m_buf = NULL;

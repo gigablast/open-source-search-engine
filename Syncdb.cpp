@@ -1349,10 +1349,10 @@ void Syncdb::syncStart_r ( bool amThread ) {
 	for ( int32_t m = 0 ; m < f->m_numParts ; m++ ) {
 
 	// get part file
-	File *p = f->m_files[m];
+	File *p = f->getFile(m);//m_files[m];
 	// copy that
 	sprintf ( cmd , "rcp %s %s:%scoll.%s.%"INT32"/'",
-		  p->m_filename,ips,dir,coll,collnum);
+		  p->getFilename(),ips,dir,coll,collnum);
 	// excecute
 	log ( LOG_INFO, "sync: %s", cmd );
 	// MDW: take out for now

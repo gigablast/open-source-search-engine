@@ -36,12 +36,12 @@ BigFile::BigFile () {
 	m_permissions = S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH ;
 	m_flags       = O_RDWR ; // | O_DIRECT;
 	// NULLify all ptrs to files
-	for ( int32_t i = 0 ; i < MAX_PART_FILES ; i++ ) m_files[i] = NULL;
+	//for ( int32_t i = 0 ; i < MAX_PART_FILES ; i++ ) m_files[i] = NULL;
 	m_maxParts = 0;
 	m_numParts = 0;
 	m_pc  = NULL;
 	m_vfd = -1;
-	m_vfdAllowed = false;
+	//m_vfdAllowed = false;
 	m_fileSize = -1;
 	m_lastModified = -1;
 	m_numThreads = 0;
@@ -52,22 +52,33 @@ BigFile::BigFile () {
 }
 
 // we alternate parts into "dirname" and "stripeDir"
+// . return false and set g_errno on error
 bool BigFile::set ( char *dir , char *baseFilename , char *stripeDir ) {
 	// reset filsize
 	m_fileSize = -1;
 	m_lastModified = -1;
 	// m_baseFilename contains the "dir" in it
 	//sprintf(m_baseFilename ,"%s/%s", dirname  , baseFilename );
-	strcpy ( m_baseFilename , baseFilename  );
-	strcpy ( m_dir          , dir           );
-	if ( stripeDir ) strcpy ( m_stripeDir    , stripeDir     );
-	else             m_stripeDir[0] = '\0';
+
+	m_dir.reset();
+	m_baseFilename.reset();
+
+	m_dir         .setLabel("bfd");
+	m_baseFilename.setLabel("bfbf");
+
+	if ( ! m_dir.safeStrcpy          ( dir          ) ) return false;
+	if ( ! m_baseFilename.safeStrcpy ( baseFilename ) ) return false;
+
+	//strcpy ( m_baseFilename , baseFilename  );
+	//strcpy ( m_dir          , dir           );
+	//if ( stripeDir ) strcpy ( m_stripeDir    , stripeDir     );
+	//else             m_stripeDir[0] = '\0';
 	// reset # of parts
 	m_numParts = 0;
 	m_maxParts = 0;
 	// now add parts from both directories
-	if ( ! addParts ( m_dir       ) ) return false;
-	if ( ! addParts ( m_stripeDir ) ) return false;
+	if ( ! addParts ( dir       ) ) return false;
+	//if ( ! addParts ( m_stripeDir ) ) return false;
 	return true;
 }
 
@@ -85,8 +96,8 @@ bool BigFile::reset ( ) {
 	m_numParts = 0;
 	m_maxParts = 0;
 	// now add parts from both directories
-	if ( ! addParts ( m_dir       ) ) return false;
-	if ( ! addParts ( m_stripeDir ) ) return false;
+	if ( ! addParts ( m_dir.getBufStart() ) ) return false;
+	//if ( ! addParts ( m_stripeDir ) ) return false;
 	return true;
 }
 	
@@ -102,9 +113,9 @@ bool BigFile::addParts ( char *dirname ) {
 	if (!dir.open()) return log("disk: openDir (\"%s\") failed",dirname);
 	// match files with this pattern in the directory
 	char pattern[256];
-	sprintf(pattern,"%s*", m_baseFilename );
+	sprintf(pattern,"%s*", m_baseFilename.getBufStart() );
 	// length of the base filename
-	int32_t blen = gbstrlen ( m_baseFilename );
+	int32_t blen = gbstrlen ( m_baseFilename.getBufStart() );
 	// . set our m_files array
 	// . addFile() will return false on problems
 	// . the lower the fileId the older the file (w/ exception of #0)
@@ -127,12 +138,12 @@ bool BigFile::addParts ( char *dirname ) {
 		}
 		else part = atoi ( filename + blen + 5 );
 		// ensure not too big
-		if ( part >= MAX_PART_FILES ) {
-			log ("disk: Part number of %"INT32" is too big for "
-			     "\"%s\". Should be less than %"INT32".", 
-			     (int32_t)part,filename,(int32_t)MAX_PART_FILES);
-			continue;
-		}
+		// if ( part >= MAX_PART_FILES ) {
+		// 	log ("disk: Part number of %"INT32" is too big for "
+		// 	     "\"%s\". Should be less than %"INT32".", 
+		// 	     (int32_t)part,filename,(int32_t)MAX_PART_FILES);
+		// 	continue;
+		// }
 		// make this part file
 		if ( ! addPart ( part ) ) return false;
 	}
@@ -143,22 +154,32 @@ bool BigFile::addParts ( char *dirname ) {
 }
 
 bool BigFile::addPart ( int32_t n ) {
-	if ( n >= MAX_PART_FILES ) 
-		return log("disk: Part number %"INT32" > %"INT32".",
-			   n,(int32_t)MAX_PART_FILES);
+	// if ( n >= MAX_PART_FILES ) 
+	// 	return log("disk: Part number %"INT32" > %"INT32".",
+	// 		   n,(int32_t)MAX_PART_FILES);
+	// grow our dynamic array and return ptr to last element
+	if ( ! m_fileBuf.reserve ( sizeof(File) ) )
+		return false;
 
-	File *f ;
-	try { f = new (File); }
-	catch ( ... ) { 
-		g_errno = ENOMEM;
-		return log("BigFile: new(%i): %s",(int)sizeof(File), 
-			   mstrerror(g_errno)); 
-	}
-	mnew ( f , sizeof(File) , "BigFile" );
+	File *f = (File *) m_fileBuf.getBufCursor();
+	m_fileBuf.incrementLength ( sizeof(File) );
+
+	// we have to call constructor ourself then
+	f->constructor();
+	// File *f ;
+	// try { f = new (File); }
+	// catch ( ... ) { 
+	// 	g_errno = ENOMEM;
+	// 	return log("BigFile: new(%i): %s",(int)sizeof(File), 
+	// 		   mstrerror(g_errno)); 
+	// }
+	// mnew ( f , sizeof(File) , "BigFile" );
 	char buf[1024];
-	makeFilename_r ( m_baseFilename , NULL, n , buf );
+	// make the filename for this new File class
+	makeFilename_r ( m_baseFilename.getBufStart() , NULL, n , buf , 1024 );
+	// and set it with that
 	f->set ( buf );
-	m_files [ n ] = f;
+	//m_files [ n ] = f;
 	m_numParts++;
 	// set maxPart
 	if ( n+1 > m_maxParts ) m_maxParts = n+1;
@@ -171,9 +192,10 @@ bool BigFile::doesExist ( ) {
 
 // if we can open it with a valid fd, then it exists
 bool BigFile::doesPartExist ( int32_t n ) {
-	if ( n >= MAX_PART_FILES ) return false;
-	bool exists = (bool)m_files[n];
-	return exists;
+	//if ( n >= MAX_PART_FILES ) return false;
+	if ( n >= m_maxParts ) return false;
+	File *f = getFile(n);
+	return f->calledSet();
 }
 
 static int64_t s_vfd = 0;
@@ -206,15 +228,31 @@ bool BigFile::open ( int flags , class DiskPageCache *pc ,
 void BigFile::makeFilename_r ( char *baseFilename    , 
 			       char *baseFilenameDir , 
 			       int32_t  n               , 
-			       char *buf             ) {
-	char *dir = m_dir;
+			       char *buf             ,
+			       int32_t bufSize ) {
+	char *dir = m_dir.getBufStart();
 	if ( baseFilenameDir && baseFilenameDir[0] ) dir = baseFilenameDir;
+	int32_t r;
+	// ensure we do not breach the buffer
+	// int32_t dirLen = gbstrlen(dir);
+	// int32_t baseLen = gbstrlen(baseFilename);
+	// int32_t need = dirLen + 1 + baseLen + 1;
+	// if ( need < bufSize ) { char *xx=NULL;*xx=0; }
 	//static char s[1024];
-	if ( (n % 2) == 0 || ! m_stripeDir[0] ) 
-		sprintf ( buf, "%s/%s",   dir      , baseFilename );
-	else    sprintf ( buf, "%s/%s", m_stripeDir, baseFilename );
-	if ( n == 0 ) return ;
-	sprintf ( buf + gbstrlen(buf) , ".part%"INT32"", n );
+	// if ( (n % 2) == 0 || ! m_stripeDir[0] ) 
+	// 	sprintf ( buf, "%s/%s",   dir      , baseFilename );
+	// else    sprintf ( buf, "%s/%s", m_stripeDir, baseFilename );
+	if ( n == 0 ) {
+		r = snprintf ( buf, bufSize, "%s/%s",dir,baseFilename);
+		if ( r < bufSize ) return;
+		// truncation is bad
+		char *xx=NULL; *xx=0;
+	}
+	// return if it fit into "buf"
+	r = snprintf ( buf, bufSize, "%s/%s.part%"INT32,dir,baseFilename,n);
+	if ( r < bufSize ) return;
+	// truncation is bad
+	char *xx=NULL; *xx=0;
 }
 
 //int BigFile::getfdByOffset ( int64_t offset ) {
@@ -224,19 +262,24 @@ void BigFile::makeFilename_r ( char *baseFilename    ,
 // . get the fd of the nth file
 // . will try to open the file if it hasn't yet been opened
 int BigFile::getfd ( int32_t n , bool forReading ) { // , int64_t *vfd ) {
+
 	// boundary check
-	if ( n >= MAX_PART_FILES ) 
-		return log("disk: Part number %"INT32" > %"INT32". fd not available.",
-			   n,(int32_t)MAX_PART_FILES) - 1;
+	if ( n >= m_maxParts ) { // MAX_PART_FILES ) 
+		if ( ! addPart ( n ) ) 
+		log("disk: Part number %"INT32" > %"INT32". fd not available.",
+		    n,m_maxParts);
+		// return -1 to indicate can't do it
+		return -1;
+	}
 
 	// get the File ptr from the table
-	File *f = m_files[n];
-	// if part does not exist then create it!
-	if ( ! f ) {
+	File *f = getFile(n);
+	// if part does not exist then create it! addPart(n) will call
+	// File::set() on it and set m_setCalled to true.
+	if ( ! f->calledSet() ) {
 		// don't create File if we're getting it for reading
 		if ( forReading    ) return -1;
 		if ( ! addPart (n) ) return -1;
-		f = m_files[n];
 	}
 	// open it if not opened
 	if ( ! f->calledOpen() ) {
@@ -266,11 +309,18 @@ int64_t BigFile::getFileSize ( ) {
 	// add up the sizes of each file
 	int64_t totalSize = 0;
 	for ( int32_t n = 0 ; n < m_maxParts ; n++ ) {
-		// we can have headless big files... count the heads
-		if ( ! m_files[n] ) { totalSize += MAX_PART_SIZE; continue; }
+		// shortcut
+		File *f = getFile(n);
+		// we can have headless big files... count the heads.
+		// this can happen if the first Files were deleted because
+		// of an ongoing merge operation.
+		if ( ! f->calledSet() ) { 
+			totalSize += MAX_PART_SIZE; 
+			continue; 
+		}
 		// . returns -2 on error, -1 if does not exist
 		// . TODO: it returns 0 if does not exist! FIX...
-		int32_t size = m_files[n]->getFileSize();
+		int32_t size = f->getFileSize();
 		if ( size == -2 ) return -2;
 		if ( size == -1 ) break;
 		totalSize += size;
@@ -290,10 +340,12 @@ time_t BigFile::getLastModifiedTime ( ) {
 	// add up the sizes of each file
 	time_t min = -1;
 	for ( int32_t n = 0 ; n < m_maxParts ; n++ ) {
+		// shortcut
+		File *f = getFile(n);
 		// we can have headless big files... count the heads
-		if ( ! m_files[n] ) continue;
+		if ( ! f->calledSet() ) continue;
 		// returns -1 on error, 0 if file does not exist
-		time_t date = m_files[n]->getLastModifiedTime();
+		time_t date = f->getLastModifiedTime();
 		if ( date == -1 ) return -2;
 		if ( date ==  0 ) break;
 		// check min
@@ -390,7 +442,7 @@ bool BigFile::readwrite ( void         *buf      ,
 		log(LOG_LOGIC,"disk: readwrite() offset is %"INT64" "
 		    "< 0. filename=%s/%s. dumping core. try deleting "
 		    "the .map file for it and restarting.",offset,
-		    m_dir,m_baseFilename);
+		    m_dir.getBufStart(),m_baseFilename.getBufStart());
 		char *xx = NULL; *xx = 0;
 	}
 	// if we're not blocking use a fake fstate
@@ -1011,9 +1063,9 @@ void *readwriteWrapper_r ( void *state , ThreadEntry *t ) {
 	File *f2 = NULL;
 	// when we exit, m_this is invalid!!!
 	if ( fstate->m_filenum1 < fstate->m_this->m_maxParts )
-		f1 = fstate->m_this->m_files[fstate->m_filenum1];
+		f1 = fstate->m_this->getFile(fstate->m_filenum1);
 	if ( fstate->m_filenum2 < fstate->m_this->m_maxParts )
-		f2 = fstate->m_this->m_files[fstate->m_filenum2];
+		f2 = fstate->m_this->getFile(fstate->m_filenum2);
 
 	// . if open count changed on us our file got unlinked from under us
 	//   and another file was opened with that same fd!!! 
@@ -1272,7 +1324,7 @@ bool BigFile::unlink ( ) {
 }
 
 bool BigFile::move ( char *newDir ) {
-	return rename ( m_baseFilename , newDir );
+	return rename ( m_baseFilename.getBufStart() , newDir );
 }
 
 bool BigFile::rename ( char *newBaseFilename , char *newBaseFilenameDir ) {
@@ -1343,6 +1395,21 @@ bool BigFile::unlinkRename ( // non-NULL for renames, NULL for unlinks
 		// into the trash subdir, so we must preserve the full path
 		char *s ;
 		while( (s=strchr(newBaseFilename,'/'))) newBaseFilename = s+1;
+
+		// now this is dynamic to save mem when we have 100,000+ files
+		m_newBaseFilename   .reset();
+		m_newBaseFilenameDir.reset();
+
+		m_newBaseFilename   .setLabel("nbfn");
+		m_newBaseFilenameDir.setLabel("nbfnd");
+
+		if ( ! m_newBaseFilename.safeStrcpy ( newBaseFilename ) )
+			return false;
+		if ( ! m_newBaseFilenameDir.safeStrcpy ( newBaseFilenameDir ) )
+			return false;
+		// in case newBaseFilenameDir was NULL
+		m_newBaseFilenameDir.nullTerm();
+		
 		// close all files -- they close themselves when we call rename
 		// close ();
 		// . set a new base filename for us
@@ -1351,12 +1418,12 @@ bool BigFile::unlinkRename ( // non-NULL for renames, NULL for unlinks
 		//   done (doneWrapper) it will call File::set.
 		// . when all renames have completed then 
 		//   m_bigFile::m_baseFilename will be set to m_newBaseFilename
-		strcpy ( m_newBaseFilename , newBaseFilename );
+		//strcpy ( m_newBaseFilename , newBaseFilename );
 		// save this guy
-		if ( newBaseFilenameDir )
-			strcpy ( m_newBaseFilenameDir , newBaseFilenameDir );
-		else 
-			m_newBaseFilenameDir[0] = '\0';
+		//if ( newBaseFilenameDir )
+		//	strcpy ( m_newBaseFilenameDir , newBaseFilenameDir );
+		//else 
+		//	m_newBaseFilenameDir[0] = '\0';
 		// set the op flag
 		m_isUnlink = false;
 	}
@@ -1384,8 +1451,8 @@ bool BigFile::unlinkRename ( // non-NULL for renames, NULL for unlinks
 		// break out if we should only unlink one part
 		if ( m_part >= 0 && i != m_part ) break;
 		// get the ith file to rename/unlink
-		File *f = m_files[i];
-		if ( ! f ) {
+		File *f = getFile(i);
+		if ( ! f->calledSet() ) {
 			// one less part to do
 			m_partsRemaining--;
 			continue;
@@ -1466,7 +1533,9 @@ bool BigFile::unlinkRename ( // non-NULL for renames, NULL for unlinks
 	// if one blocked, we block, but never return false if !useThread
 	if ( m_numThreads > 0 && useThread ) return false;
 	// . if we launched no threads update OUR base filename right now
-	if ( ! m_isUnlink ) strcpy ( m_baseFilename , m_newBaseFilename );
+	//if ( ! m_isUnlink ) strcpy ( m_baseFilename , m_newBaseFilename );
+	if ( ! m_isUnlink ) 
+		m_baseFilename.set ( m_newBaseFilename.getBufStart() );
 	// we did not block
 	return true;
 }
@@ -1487,15 +1556,17 @@ void *renameWrapper_r ( void *state , ThreadEntry *t ) {
 	// . get the new full name for this file
 	// . based on m_dir/m_stripeDir and m_baseFilename
 	char newFilename [ 1024 ];
-	THIS->makeFilename_r ( THIS->m_newBaseFilename    , 
-			       THIS->m_newBaseFilenameDir , 
+	THIS->makeFilename_r ( THIS->m_newBaseFilename.getBufStart()    , 
+			       THIS->m_newBaseFilenameDir.getBufStart() , 
 			       i                          , 
-			       newFilename                );
+			       newFilename                ,
+			       1024 );
 	char oldFilename [ 1024 ];
-	THIS->makeFilename_r ( THIS->m_baseFilename       ,
+	THIS->makeFilename_r ( THIS->m_baseFilename.getBufStart()       ,
 			       NULL                       ,
 			       i                          , 
-			       oldFilename                );
+			       oldFilename                ,
+			       1024 );
 	//if ( m_files[i]->rename ( newFilename ) ) continue;
 	// this returns 0 on success
 	if ( ::rename ( oldFilename , newFilename ) ) {
@@ -1566,15 +1637,17 @@ void doneRenameWrapper ( void *state , ThreadEntry *t ) {
 			     THIS->getFilename(),mstrerror(g_errno));
 	// get the ith file we just unlinked
 	int32_t      i = f->m_i;
+	File *fi = THIS->getFile ( i );
 	// rename the part if it checks out
-	if ( f == THIS->m_files[i] ) {
+	if ( f == fi ) {
 		// set his new name
 		char newFilename [ 1024 ];
-		THIS->makeFilename_r  ( THIS->m_newBaseFilename,
-					THIS->m_newBaseFilenameDir,
-					i,
-					newFilename);
-		THIS->m_files[i]->set ( newFilename );
+		THIS->makeFilename_r (THIS->m_newBaseFilename.getBufStart(),
+				      THIS->m_newBaseFilenameDir.getBufStart(),
+				      i,
+				      newFilename ,
+				      1024 );
+		fi->set ( newFilename );
 	}
 	// otherwise bitch about it
 	else log(LOG_LOGIC,"disk: Rename had bad file ptr.");
@@ -1585,7 +1658,10 @@ void doneRenameWrapper ( void *state , ThreadEntry *t ) {
 	// return if more to do
 	if ( THIS->m_partsRemaining > 0 ) return;
 	// update OUR base filename now after all Files are renamed
-	strcpy ( THIS->m_baseFilename , THIS->m_newBaseFilename );
+	//strcpy ( THIS->m_baseFilename , THIS->m_newBaseFilename );
+	THIS->m_baseFilename.reset();
+	THIS->m_baseFilename.setLabel("nbfnn");
+	THIS->m_baseFilename.safeStrcpy(THIS->m_newBaseFilename.getBufStart());
 	// . all done, call the main callback
 	// . this is NULL if we were not called in a thread
 	if ( THIS->m_callback ) THIS->m_callback ( THIS->m_state );
@@ -1609,7 +1685,8 @@ void doneUnlinkWrapper ( void *state , ThreadEntry *t ) {
 	int32_t      i = f->m_i;
 	// . remove the part if it checks out
 	// . this will also close the file when it deletes it
-	if ( f == THIS->m_files[i] ) THIS->removePart ( i );
+	File *fi = THIS->getFile(i);
+	if ( f == fi ) THIS->removePart ( i );
 	// otherwise bitch about it
 	else log(LOG_LOGIC,"disk: Unlink had bad file ptr.");
 	// bail if more to do
@@ -1623,21 +1700,24 @@ void doneUnlinkWrapper ( void *state , ThreadEntry *t ) {
 
 void BigFile::removePart ( int32_t i ) {
 
-	File *f = m_files[i];
+	File *f = getFile(i);
 	// . thread should have stored the filename for unlinking
 	// . now delete it from memory
-	mdelete ( f , sizeof(File) , "BigFile" );
-	delete (f);
+	f->destructor();
+	// mdelete ( f , sizeof(File) , "BigFile" );
+	// delete (f);
 	// and clear from our table
-	m_files[i] = NULL;
+	//m_files[i] = NULL;
 	// we have one less part
 	m_numParts--;
 	// max part num may be different
 	if ( m_maxParts != i+1 ) return;
 	// set m_maxParts
 	int32_t j;
-	for ( j = i ; j >= 0 ; j-- ) 
-		if ( m_files[j] ) { m_maxParts = j+1; break; }
+	for ( j = i ; j >= 0 ; j-- ) {
+		File *fj = getFile(j);
+		if ( fj->calledSet() ) { m_maxParts = j+1; break; }
+	}
 	// may have no more part files left which means no max part num
 	if ( j < 0 ) m_maxParts = 0;
 }
@@ -1647,8 +1727,9 @@ void BigFile::removePart ( int32_t i ) {
 // doesn't work.
 bool BigFile::closeFds ( ) {
 	for ( int32_t i = 0 ; i < m_maxParts ; i++ ) {
-		if ( ! m_files[i] ) continue;
-		m_files[i]->close();
+		File *f = getFile(i);
+		if ( ! f->calledSet() ) continue;
+		f->close();
 	}
 	return true;
 }
@@ -1660,14 +1741,17 @@ bool BigFile::close ( ) {
 	// subroutines, so put a stop to that circle
 	m_isClosing = true;
 	for ( int32_t i = 0 ; i < m_maxParts ; i++ ) {
-		if ( ! m_files[i] ) continue;
-		m_files[i]->close();
-		mdelete ( m_files[i] , sizeof(File) , "BigFile" );
-		delete (m_files[i]);
-		m_files[i]   = NULL;
+		File *f = getFile(i);
+		if ( ! f->calledSet() ) continue;
+		f->close();
+		f->destructor();
+		// mdelete ( m_files[i] , sizeof(File) , "BigFile" );
+		// delete (m_files[i]);
+		// m_files[i]   = NULL;
 	}
 	m_numParts   = 0;
 	m_maxParts   = 0;
+
 	// save vfd and pc because removeThreads() actually ends up calling 
 	// the done wrapper, sending back an error reply, shutting down the 
 	// udp server, calling main.cpp::resetAll(), which resets the Rdb and

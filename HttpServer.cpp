@@ -2244,7 +2244,7 @@ int32_t getMsgPiece ( TcpSocket *s ) {
 		char *p = s->m_sendBuf;
 		char *pend = p + s->m_sendBufUsed;
 		// skip if not a doc.234567 filename format
-		if ( ! gb_strcasestr(f->m_filename,"/doc." ) ) p = pend;
+		if ( ! gb_strcasestr(f->getFilename(),"/doc." ) ) p = pend;
 		// do the replace
 		for ( ; p < pend ; p++ ) {
 			if ( strncasecmp(p,"google",6)) continue;

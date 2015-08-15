@@ -786,7 +786,7 @@ int32_t RdbBase::addFile ( int32_t id , bool isNew , int32_t mergeNum , int32_t 
 	// if new insure does not exist
 	if ( isNew && f->doesExist() ) {
 		log("rdb: creating NEW file %s/%s which already exists!",
-		    f->m_dir,
+		    f->getDir(),
 		    f->getFilename());
 		char *xx=NULL;*xx=0;
 	}
@@ -794,7 +794,7 @@ int32_t RdbBase::addFile ( int32_t id , bool isNew , int32_t mergeNum , int32_t 
 	// debug help
 	if ( isNew )
 		log("rdb: adding new file %s/%s",// m_numFiles=%"INT32"",
-		    f->m_dir,f->getFilename());//,m_numFiles);
+		    f->getDir(),f->getFilename());//,m_numFiles);
 
 	// rename bug fix?
 	/*
@@ -812,7 +812,7 @@ int32_t RdbBase::addFile ( int32_t id , bool isNew , int32_t mergeNum , int32_t 
 
 	// if not a new file sanity check it
 	for ( int32_t j = 0 ; ! isNew && j < f->m_maxParts - 1 ; j++ ) {
-		File *ff = f->m_files[j];
+		File *ff = f->getFile(j);//m_files[j];
 		if ( ! ff ) continue;
 		if ( ff->getFileSize() == MAX_PART_SIZE ) continue;
 		log ( "db: File %s has length %"INT64", but it should be %"INT64". "
@@ -1111,7 +1111,7 @@ bool RdbBase::incorporateMerge ( ) {
 		if ( ! m_files[i] ) continue;
 		// debug msg
 		log(LOG_INFO,"merge: Unlinking merged file %s/%s (#%"INT32").",
-		    m_files[i]->m_dir,m_files[i]->getFilename(),i);
+		    m_files[i]->getDir(),m_files[i]->getFilename(),i);
 		// . append it to "sync" state we have in memory
 		// . when host #0 sends a OP_SYNCTIME signal we dump to disk
 		//g_sync.addOp ( OP_UNLINK , m_files[i] , 0 );

@@ -1548,7 +1548,7 @@ bool Rdb::dumpCollLoop ( ) {
 				m_dbname,mstrerror(g_errno) );
 
 	log(LOG_INFO,"build: Dumping to %s/%s for coll \"%s\".",
-	    base->m_files[m_fn]->m_dir,
+	    base->m_files[m_fn]->getDir(),
 	    base->m_files[m_fn]->getFilename() , 
 	    g_collectiondb.getCollName ( m_dumpCollnum ) );
 	// . append it to "sync" state we have in memory
