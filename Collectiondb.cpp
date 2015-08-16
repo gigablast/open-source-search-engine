@@ -36,6 +36,7 @@ Collectiondb::Collectiondb ( ) {
 	m_numRecs = 0;
 	m_numRecsUsed = 0;
 	m_numCollsSwappedOut = 0;
+	m_initializing = false;
 	//m_lastUpdateTime = 0LL;
 	m_needsSave = false;
 	// sanity
@@ -111,6 +112,9 @@ bool Collectiondb::save ( ) {
 //
 ///////////
 bool Collectiondb::loadAllCollRecs ( ) {
+
+	m_initializing = true;
+
 	char dname[1024];
 	// MDW: sprintf ( dname , "%s/collections/" , g_hostdb.m_dir );
 	sprintf ( dname , "%s" , g_hostdb.m_dir );
@@ -171,6 +175,8 @@ bool Collectiondb::loadAllCollRecs ( ) {
 			     // to add the same collnum to every shard
 			     0 );
 	}
+
+	m_initializing = false;
 
 	// note it
 	//log(LOG_INFO,"db: Loaded data for %"INT32" collections. Ranging from "
@@ -1902,7 +1908,7 @@ bool CollectionRec::load ( char *coll , int32_t i ) {
 		gbmemcpy ( &m_localCrawlInfo , sb.getBufStart(),sb.length() );
 
 
-	if ( ! g_conf.m_doingCommandLine )
+	if ( ! g_conf.m_doingCommandLine && ! g_collectiondb.m_initializing )
 		log("coll: Loaded %s (%"INT32") local hasurlsready=%"INT32"",
 		    m_coll,
 		    (int32_t)m_collnum,
@@ -1949,7 +1955,7 @@ bool CollectionRec::load ( char *coll , int32_t i ) {
 		// it is binary now
 		gbmemcpy ( &m_globalCrawlInfo , sb.getBufStart(),sb.length() );
 
-	if ( ! g_conf.m_doingCommandLine )
+	if ( ! g_conf.m_doingCommandLine && ! g_collectiondb.m_initializing )
 		log("coll: Loaded %s (%"INT32") global hasurlsready=%"INT32"",
 		    m_coll,
 		    (int32_t)m_collnum,
@@ -3901,7 +3907,7 @@ bool CollectionRec::rebuildUrlFiltersDiffbot() {
 // . it is also called on load of the collection at startup
 bool CollectionRec::rebuildUrlFilters ( ) {
 
-	if ( ! g_conf.m_doingCommandLine )
+	if ( ! g_conf.m_doingCommandLine && ! g_collectiondb.m_initializing )
 		log("coll: Rebuilding url filters for %s ufp=%s",m_coll,
 		    m_urlFiltersProfile.getBufStart());
 

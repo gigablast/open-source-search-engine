@@ -174,6 +174,7 @@ class Collectiondb  {
 
 	int32_t m_numCollsSwappedOut;
 
+	bool m_initializing;
 	//int64_t            m_lastUpdateTime;
 };
 

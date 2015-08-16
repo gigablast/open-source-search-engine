@@ -924,6 +924,46 @@ bool File::closeLeastUsed () {
 
 int64_t getFileSize ( char *filename ) {
 
+#ifdef CYGWIN
+	return getFileSize_cygwin ( filename );
+#endif
+
+	//
+	// CAUTION: i think this fails in cygwin... so for cygwin use the
+	// old slower code
+	//
+
+	// allow the substitution of another filename
+        struct stat stats;
+
+        stats.st_size = 0;
+
+        int status = stat ( filename , &stats );
+
+        // return the size if the status was ok
+        if ( status == 0 ) {
+		//int64_t tmp = getFileSize_cygwin ( filename );
+		//if ( tmp>=0 && tmp != stats.st_size ) {char *xx=NULL;*xx=0; }
+		return stats.st_size;
+	}
+
+	// copy errno to g_errno
+	g_errno = errno;
+
+        // return 0 and reset g_errno if it just does not exist
+	if ( g_errno == ENOENT ) { g_errno = 0; return 0; }
+
+        // resource temporarily unavailable (for newer libc)
+	if ( g_errno == EAGAIN ) { g_errno = 0; return 0; }
+
+        // log & return -1 on any other error
+	log("disk: error getFileSize(%s) : %s",filename,strerror(g_errno));
+	return -1;
+}
+
+// this solution is quite slow, but i think cygwin needs it
+int64_t getFileSize_cygwin ( char *filename ) {
+
 	FILE *fd = fopen ( filename , "r" );
 	if ( ! fd ) {
 		//log("disk: error getFileSize(%s) : %s",
@@ -938,6 +978,8 @@ int64_t getFileSize ( char *filename ) {
 
 	return fileSize;
 }
+
+
 
 // . returns -2 on error
 // . returns -1 if does not exist

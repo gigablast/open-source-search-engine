@@ -264,9 +264,9 @@ void BigFile::makeFilename_r ( char *baseFilename    ,
 int BigFile::getfd ( int32_t n , bool forReading ) { // , int64_t *vfd ) {
 
 	// boundary check
-	if ( n >= m_maxParts ) { // MAX_PART_FILES ) 
-		if ( ! addPart ( n ) ) 
-		log("disk: Part number %"INT32" > %"INT32". fd not available.",
+	if ( n >= m_maxParts && ! addPart ( n ) ) {
+		log("disk: Part number %"INT32" > %"INT32". fd "
+		    "not available.",
 		    n,m_maxParts);
 		// return -1 to indicate can't do it
 		return -1;

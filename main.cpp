@@ -3453,9 +3453,15 @@ int main2 ( int argc , char *argv[] ) {
 	//}
 
 	// test all collection dirs for write permission -- metalincs' request
+	int32_t pcount = 0;
 	for ( int32_t i = 0 ; i < g_collectiondb.m_numRecs ; i++ ) {
 		CollectionRec *cr = g_collectiondb.m_recs[i];
 		if ( ! cr ) continue;
+		if ( ++pcount >= 100 ) {
+			log("rdb: not checking directory permission for "
+			    "more than first 100 collections to save time.");
+			break;
+		}
 		char tt[1024 + MAX_COLL_LEN ];
 		sprintf ( tt , "%scoll.%s.%"INT32"",
 			  g_hostdb.m_dir, cr->m_coll , (int32_t)cr->m_collnum );

@@ -36,6 +36,8 @@
 
 int64_t getFileSize ( char *filename ) ;
 
+int64_t getFileSize_cygwin ( char *filename ) ;
+
 // for avoiding unlink/opens that mess up our threaded read
 int32_t getCloseCount_r ( int fd );
 

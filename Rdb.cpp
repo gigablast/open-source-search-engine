@@ -1815,21 +1815,33 @@ void attemptMergeAll2 ( ) {
 	// . if a collection is deleted then we remove it from this list too!
 	cr = s_mergeHead;
 	while ( cr ) {
+		QUICKPOLL(niceness);
+		// this is a requirement in RdbBase::attemptMerge() so check
+		// for it here so we can bail out early
+		if ( g_numThreads > 0 ) break;
 		// pre advance
 		CollectionRec *next = cr->m_nextLink;
 		// try to merge the next guy in line, in the linked list
 		RdbBase *base ;
 		base = cr->getBasePtr(RDB_POSDB);
 		// args = niceness, forceMergeAll, doLog, minToMergeOverride
-		if ( base && base->attemptMerge(niceness,force,true) ) return;
+		// if RdbBase::attemptMerge() returns true that means it
+		// launched a merge and it will call attemptMergeAll2() when
+		// the merge completes.
+		if ( base && base->attemptMerge(niceness,force,true) ) 
+			return;
 		base = cr->getBasePtr(RDB_TITLEDB);
-		if ( base && base->attemptMerge(niceness,force,true) ) return;
+		if ( base && base->attemptMerge(niceness,force,true) ) 
+			return;
 		base = cr->getBasePtr(RDB_TAGDB);
-		if ( base && base->attemptMerge(niceness,force,true) ) return;
+		if ( base && base->attemptMerge(niceness,force,true) ) 
+			return;
 		base = cr->getBasePtr(RDB_LINKDB);
-		if ( base && base->attemptMerge(niceness,force,true) ) return;
+		if ( base && base->attemptMerge(niceness,force,true) ) 
+			return;
 		base = cr->getBasePtr(RDB_SPIDERDB);
-		if ( base && base->attemptMerge(niceness,force,true) ) return;
+		if ( base && base->attemptMerge(niceness,force,true) ) 
+			return;
 		// hey, why was it in the list? remove it. we also remove
 		// guys if the collection gets deleted in Collectiondb.cpp,
 		// so this is a function.
