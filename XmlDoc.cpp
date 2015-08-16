@@ -2492,6 +2492,10 @@ bool XmlDoc::indexDoc ( ) {
 	if ( g_errno == ESHUTTINGDOWN )
 		return true;
 
+	// i saw this on shard 9, how is it happening
+	if ( g_errno == EBADRDBID )
+		return true;
+
 	// if docid not found when trying to do a query reindex...
 	// this really shouldn't happen but i think we were adding
 	// additional SpiderRequests since we were using a fake first ip.

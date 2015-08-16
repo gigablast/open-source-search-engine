@@ -1457,6 +1457,11 @@ bool RdbMap::generateMap ( BigFile *f ) {
 		mfree ( buf , bufSize , "RdbMap");
 		return true;
 	}
+
+	// debug msg
+	//fprintf(stderr,"reading map @ off=%"INT64" size=%"INT64"\n"
+	//	, offset , readSize );
+
 	// otherwise, read it in
 	if ( ! f->read ( buf , readSize , offset ) ) {
 		mfree ( buf , bufSize , "RdbMap");

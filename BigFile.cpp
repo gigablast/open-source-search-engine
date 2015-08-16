@@ -157,12 +157,26 @@ bool BigFile::addPart ( int32_t n ) {
 	// if ( n >= MAX_PART_FILES ) 
 	// 	return log("disk: Part number %"INT32" > %"INT32".",
 	// 		   n,(int32_t)MAX_PART_FILES);
-	// grow our dynamic array and return ptr to last element
-	if ( ! m_fileBuf.reserve ( sizeof(File) ) )
+	// . grow our dynamic array and return ptr to last element
+	// . n's come in NOT necessarily in order!!!
+	int32_t need = (n+1) * sizeof(File);
+	// capacity must be length always for this
+	if ( m_fileBuf.getCapacity() != m_fileBuf.getLength() ) {
+		char *xx=NULL;*xx=0;}
+	// how much more mem do we need?
+	int32_t delta = need - m_fileBuf.getLength();
+	// . make sure our CAPACITY is increased by what we need
+	// . SafeBuf::reserve() ADDS this much to current capacity
+	if ( need > 0 && ! m_fileBuf.reserve ( delta ) )
 		return false;
+	// make length the capacity. so if buf is resized in call to
+	// SafeBuf::reserve() it will copy over all of the old buf to new buf
+	if ( m_fileBuf.getLength() < m_fileBuf.getCapacity() ) 
+		m_fileBuf.setLength ( m_fileBuf.getCapacity() );
 
-	File *f = (File *) m_fileBuf.getBufCursor();
-	m_fileBuf.incrementLength ( sizeof(File) );
+	File *files = (File *)m_fileBuf.getBufStart();
+
+	File *f = &files[n];
 
 	// we have to call constructor ourself then
 	f->constructor();
@@ -1225,13 +1239,6 @@ bool readwrite_r ( FileState *fstate , ThreadEntry *t ) {
 	if ( doWrite ) 	n = pwrite ( fd , p , len , localOffset );
 	else           	n = pread  ( fd , p , len , localOffset );
 
-	// interrupted system call?
-	if ( n < 0 && errno == EINTR ) 
-		goto retry25;
-
-	// this is thread safe...
-	g_lastDiskReadCompleted = g_now; // gettimeofdayInMilliseconds_r();
-
 	// debug msg
 	if ( g_conf.m_logDebugDisk ) {
 		char *s = "read";
@@ -1241,19 +1248,28 @@ bool readwrite_r ( FileState *fstate , ThreadEntry *t ) {
 		// this is bad for real-time threads cuz our unlink() routine 
 		// may have been called by RdbMerge and our m_files may be 
 		// altered 
-		log("disk::readwrite: %s %i bytes from %s(nonBlock=%s) fd %i "
-		    "cc1=%i=?%i cc2=%i=?%i",
-		    s,n,
+		log("disk::readwrite: %s %i bytes of %i @ offset %i "
+		    "from %s(nonBlock=%s) fd %i "
+		    "cc1=%i=?%i cc2=%i=?%i errno=%s",
+		    s,n,len,localOffset,
 		    fstate->m_this->getFilename(),
 		    t,fd,
 		    (int)fstate->m_closeCount1 , 
 		    (int)getCloseCount_r ( fstate->m_fd1 ) ,
 		    (int)fstate->m_closeCount2 ,
-		    (int)getCloseCount_r ( fstate->m_fd2 ) );
+		    (int)getCloseCount_r ( fstate->m_fd2 ) ,
+		    mstrerror(errno) );
 		//log("disk::readwrite_r: %s %"INT32" bytes (nonBlock=%s)",
 		//s,n,t);
 		//log("disk::readwrite_r: did %"INT32" bytes", n);
 	}
+
+	// interrupted system call?
+	if ( n < 0 && errno == EINTR ) 
+		goto retry25;
+
+	// this is thread safe...
+	g_lastDiskReadCompleted = g_now; // gettimeofdayInMilliseconds_r();
 
 	// . if n is 0 that's strange!!
 	// . i think the fd will have been closed and re-opened on us if this
