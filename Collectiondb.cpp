@@ -1692,6 +1692,8 @@ static CollectionRec g_default;
 
 
 CollectionRec::CollectionRec() {
+	m_nextLink = NULL;
+	m_prevLink = NULL;
 	m_spiderCorruptCount = 0;
 	m_collnum = -1;
 	m_coll[0] = '\0';

@@ -1671,6 +1671,27 @@ static CollectionRec *s_mergeHead = NULL;
 static CollectionRec *s_mergeTail = NULL;
 static bool s_needsBuild = true;
 
+void addCollnumToLinkedListOfMergeCandidates ( collnum_t dumpCollnum ) {
+	// add this collection to the linked list of merge candidates
+	CollectionRec *cr = g_collectiondb.getRec ( dumpCollnum );
+	if ( ! cr ) return;
+	// do not double add it, if already there just return
+	if ( cr->m_nextLink ) return;
+	if ( cr->m_prevLink ) return;
+	if ( s_mergeTail && cr ) {
+		s_mergeTail->m_nextLink = cr;
+		cr         ->m_nextLink = NULL;
+		cr         ->m_prevLink = s_mergeTail;
+		s_mergeTail = cr;
+	}
+	else if ( cr ) {
+		cr->m_prevLink = NULL;
+		cr->m_nextLink = NULL;
+		s_mergeHead = cr;
+		s_mergeTail = cr;
+	}
+}
+
 // this is also called in Collectiondb::deleteRec2()
 void removeFromMergeLinkedList ( CollectionRec *cr ) {
 	CollectionRec *prev = cr->m_prevLink;
@@ -1690,21 +1711,6 @@ void doneDumpingCollWrapper ( void *state ) {
 	// so allow it to try to merge again.
 	//RdbBase *base = THIS->getBase(THIS->m_dumpCollnum);
 	//if ( base ) base->m_checkedForMerge = false;
-
-	// add this collection to the linked list of merge candidates
-	CollectionRec *cr = g_collectiondb.getRec ( THIS->m_dumpCollnum );
-	if ( s_mergeTail && cr ) {
-		s_mergeTail->m_nextLink = cr;
-		cr         ->m_nextLink = NULL;
-		cr         ->m_prevLink = s_mergeTail;
-		s_mergeTail = cr;
-	}
-	else if ( cr ) {
-		cr->m_prevLink = NULL;
-		cr->m_nextLink = NULL;
-		s_mergeHead = cr;
-		s_mergeTail = cr;
-	}
 
 	// return if the loop blocked
 	if ( ! THIS->dumpCollLoop() ) return;
@@ -1847,6 +1853,17 @@ void attemptMergeAll2 ( ) {
 		// so this is a function.
 		removeFromMergeLinkedList ( cr );
 		cr = next;
+	}
+
+	// every 60 seconds try to merge collectionless rdbs
+	static int32_t s_count = 0;
+	if ( ++s_count == 30 ) {
+		s_count = 0;
+		// try to merge collectionless rdbs like statsdb/catdb
+		RdbBase *base1 = g_catdb.getRdb()->getBase(0);
+		if ( base1 ) base1->attemptMerge(niceness,force,true);
+		RdbBase *base2 = g_statsdb.getRdb()->getBase(0);
+		if ( base2 ) base2->attemptMerge(niceness,force,true);
 	}
 }
 

@@ -16,6 +16,7 @@
 bool makeTrashDir() ;
 
 void removeFromMergeLinkedList ( class CollectionRec *cr ) ;
+void addCollnumToLinkedListOfMergeCandidates ( collnum_t dumpCollnum ) ;
 
 // . each Rdb instance has an ID
 // . these ids are also return values for getIdFromRdb()

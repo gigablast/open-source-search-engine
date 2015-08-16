@@ -231,6 +231,13 @@ void RdbDump::doneDumping ( ) {
 
 	// save the map to disk. true = allDone
 	if ( m_map ) m_map->writeMap( true );
+
+	// now try to merge this collection/db again
+	// if not already in the linked list. but do not add to linked list
+	// if it is statsdb or catdb.
+	if ( m_rdb && ! m_rdb->m_isCollectionLess )
+		addCollnumToLinkedListOfMergeCandidates ( m_collnum );
+
 #ifdef GBSANITYCHECK
 	// sanity check
 	log("DOING SANITY CHECK FOR MAP -- REMOVE ME");
