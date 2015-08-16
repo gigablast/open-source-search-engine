@@ -671,44 +671,52 @@ bool CommandSpiderTestCont ( char *rec ) {
 
 // some of these can block a little. if threads are off, a lot!
 bool CommandMerge ( char *rec ) {
+	forceMergeAll ( RDB_POSDB ,1);
+	forceMergeAll ( RDB_TITLEDB ,1);
+	forceMergeAll ( RDB_TAGDB ,1);
+	forceMergeAll ( RDB_SPIDERDB ,1);
+	forceMergeAll ( RDB_LINKDB ,1);
 	// most of these are probably already in good shape
 	//g_checksumdb.getRdb()->attemptMerge (1,true);
-	g_clusterdb.getRdb()->attemptMerge  (1,true); // niceness, force?
-	g_tagdb.getRdb()->attemptMerge     (1,true);
-	g_catdb.getRdb()->attemptMerge      (1,true);
-	//g_tfndb.getRdb()->attemptMerge      (1,true);
-	g_spiderdb.getRdb()->attemptMerge   (1,true);
-	// these 2 will probably need the merge the most
-	g_indexdb.getRdb()->attemptMerge    (1,true);
-	g_datedb.getRdb()->attemptMerge     (1,true);
-	g_titledb.getRdb()->attemptMerge    (1,true);
-	//g_sectiondb.getRdb()->attemptMerge  (1,true);
-	g_statsdb.getRdb()->attemptMerge    (1,true);
-	g_linkdb .getRdb()->attemptMerge    (1,true);
+	// g_clusterdb.getRdb()->attemptMerge  (1,true); // niceness, force?
+	// g_tagdb.getRdb()->attemptMerge     (1,true);
+	// g_catdb.getRdb()->attemptMerge      (1,true);
+	// //g_tfndb.getRdb()->attemptMerge      (1,true);
+	// g_spiderdb.getRdb()->attemptMerge   (1,true);
+	// // these 2 will probably need the merge the most
+	// g_indexdb.getRdb()->attemptMerge    (1,true);
+	// g_datedb.getRdb()->attemptMerge     (1,true);
+	// g_titledb.getRdb()->attemptMerge    (1,true);
+	// //g_sectiondb.getRdb()->attemptMerge  (1,true);
+	// g_statsdb.getRdb()->attemptMerge    (1,true);
+	// g_linkdb .getRdb()->attemptMerge    (1,true);
 	return true;
 }
 
 
 bool CommandMergePosdb ( char *rec ) {
-	g_posdb.getRdb()->attemptMerge    (1,true);
+	forceMergeAll ( RDB_POSDB ,1);
+	// set this for each posdb base
 	return true;
 }
 
 
 bool CommandMergeSectiondb ( char *rec ) {
-	g_sectiondb.getRdb()->attemptMerge    (1,true); // nice , force
+	//g_sectiondb.getRdb()->attemptMerge    (1,true); // nice , force
 	return true;
 }
 
 
 bool CommandMergeTitledb ( char *rec ) {
-	g_titledb.getRdb()->attemptMerge    (1,true);
+	forceMergeAll ( RDB_TITLEDB ,1);
+	//g_titledb.getRdb()->attemptMerge    (1,true);
 	return true;
 }
 
 
 bool CommandMergeSpiderdb ( char *rec ) {
-	g_spiderdb.getRdb()->attemptMerge    (1,true);
+	forceMergeAll ( RDB_SPIDERDB ,1);
+	//g_spiderdb.getRdb()->attemptMerge    (1,true);
 	return true;
 }
 

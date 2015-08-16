@@ -1,7 +1,7 @@
 #include "gb-include.h"
 
 #include "Rdb.h"
-#include "Msg35.h"
+//#include "Msg35.h"
 //#include "Tfndb.h"
 //#include "Checksumdb.h"
 #include "Clusterdb.h"
@@ -1010,7 +1010,7 @@ bool RdbBase::incorporateMerge ( ) {
 		// exit merge mode
 		m_isMerging = false;
 		// return the merge token, no need for a callback
-		g_msg35.releaseToken ( );
+		//g_msg35.releaseToken ( );
 		//return true; 
 	}
 	// file #x is the merge file
@@ -1252,7 +1252,7 @@ void RdbBase::doneWrapper4 ( ) {
 		if ( --m_numThreads > 0 ) return;
 	}
 
-	// some int16_thand variable notation
+	// some shorthand variable notation
 	int32_t a = m_mergeStartFileNum;
 	int32_t b = m_mergeStartFileNum + m_numFilesToMerge;
 
@@ -1299,7 +1299,7 @@ void RdbBase::doneWrapper4 ( ) {
 	// exit merge mode
 	m_isMerging = false;
 	// return the merge token, no need for a callback
-	g_msg35.releaseToken ( );
+	//g_msg35.releaseToken ( );
 	// the rename has completed at this point, so tell sync table in mem
 	//g_sync.addOp ( OP_CLOSE , m_files[x] , 0 );
 	// unlink old merge filename from sync table
@@ -1313,6 +1313,7 @@ void RdbBase::doneWrapper4 ( ) {
 	//attemptMerge ( 1/*niceness*/ , false /*don't force it*/ ) ;
 	// try all in case they were waiting (and not using tokens)
 	//g_tfndb.getRdb()->attemptMerge      ( 1 , false );
+	/*
 	g_clusterdb.getRdb()->attemptMerge  ( 1 , false );
 	g_linkdb.getRdb()->attemptMerge     ( 1 , false );
 	//g_sectiondb.getRdb()->attemptMerge  ( 1 , false );
@@ -1332,6 +1333,10 @@ void RdbBase::doneWrapper4 ( ) {
 	g_posdb.getRdb()->attemptMerge    ( 1 , false );
 	//g_datedb.getRdb()->attemptMerge     ( 1 , false );
 	g_spiderdb.getRdb()->attemptMerge   ( 1 , false );
+	*/
+
+	// try to merge more when we are done
+	attemptMergeAll2 ( );
 }
 
 void RdbBase::buryFiles ( int32_t a , int32_t b ) {
@@ -1369,29 +1374,31 @@ void attemptMergeWrapper ( int fd , void *state ) {
 }
 */
 
-static void gotTokenForMergeWrapper ( void *state ) ;
+//static void gotTokenForMergeWrapper ( void *state ) ;
 
-// the DailyMerge.cpp will set minToMergeOverride for titledb, and this
-// overrides "forceMergeAll" which is the same as setting "minToMergeOverride"
-// to "2". (i.e. perform a merge if you got 2 or more files)
-void RdbBase::attemptMerge ( int32_t niceness, bool forceMergeAll, bool doLog ,
+// . the DailyMerge.cpp will set minToMergeOverride for titledb, and this
+//   overrides "forceMergeAll" which is the same as setting 
+//   "minToMergeOverride" to "2". (i.e. perform a merge if you got 2 or more 
+//   files)
+// . now return true if we started a merge, false otherwise
+bool RdbBase::attemptMerge ( int32_t niceness, bool forceMergeAll, bool doLog ,
 			     int32_t minToMergeOverride ) {
 
 	// don't do merge if we're in read only mode
-	if ( g_conf.m_readOnlyMode ) return ;
+	if ( g_conf.m_readOnlyMode ) return false;
 	// or if we are copying our files to a new host
 	//if ( g_hostdb.m_syncHost == g_hostdb.m_myHost ) return;
 	// nor if EITHER of the merge classes are suspended
-	if ( g_merge.m_isSuspended  ) return;
-	if ( g_merge2.m_isSuspended ) return;
+	if ( g_merge.m_isSuspended  ) return false;
+	if ( g_merge2.m_isSuspended ) return false;
 
 	// shutting down? do not start another merge then
-	if ( g_process.m_mode == EXIT_MODE ) return;
+	if ( g_process.m_mode == EXIT_MODE ) return false;
 
 	// sanity checks
 	if (   g_loop.m_inQuickPoll ) { 
 		log("rdb: cant attempt merge in quickpoll");
-		return;
+		return false;
 	}
 
 	if (   niceness == 0 ) { char *xx=NULL;*xx=0; }
@@ -1408,7 +1415,7 @@ void RdbBase::attemptMerge ( int32_t niceness, bool forceMergeAll, bool doLog ,
 		if ( doLog ) 
 			log(LOG_INFO,"db: Can not merge titledb while it "
 			    "is dumping.");
-		return;
+		return false;
 	}
 
 	// or if in repair mode, do not mess with any files in any coll
@@ -1443,7 +1450,7 @@ void RdbBase::attemptMerge ( int32_t niceness, bool forceMergeAll, bool doLog ,
 			log(LOG_INFO,"merge: Waiting for unlink/rename "
 			    "operations to finish before attempting merge "
 			    "for %s. (collnum=%"INT32")",m_dbname,(int32_t)m_collnum);
-		return;
+		return false;
 	}
 
 	if ( g_numThreads > 0 ) {
@@ -1452,7 +1459,7 @@ void RdbBase::attemptMerge ( int32_t niceness, bool forceMergeAll, bool doLog ,
 			    "collection's unlink/rename "
 			    "operations to finish before attempting merge "
 			    "for %s (collnum=%"INT32").",m_dbname,(int32_t)m_collnum);
-		return;
+		return false;
 	}
 
 
@@ -1584,7 +1591,7 @@ void RdbBase::attemptMerge ( int32_t niceness, bool forceMergeAll, bool doLog ,
 	// tfndb has his own merge class since titledb merges write tfndb recs
 	RdbMerge *m = &g_merge;
 	if ( m->isMerging() )
-		return;
+		return false;
 
 	// if we are tfndb and someone else is merging, do not merge unless
 	// we have 3 or more files
@@ -1608,7 +1615,7 @@ void RdbBase::attemptMerge ( int32_t niceness, bool forceMergeAll, bool doLog ,
 
 	// this triggers the negative rec concentration msg below and
 	// tries to merge on one file...
-	if ( ! resuming && m_numFiles <= 1 ) return;
+	if ( ! resuming && m_numFiles <= 1 ) return false;
 
 	// what percent of recs in the collections' rdb are negative?
 	// the rdbmaps hold this info
@@ -1649,7 +1656,7 @@ void RdbBase::attemptMerge ( int32_t niceness, bool forceMergeAll, bool doLog ,
 		// 20,000+ collections. if we dump a file to disk for it
 		// then we set this flag back to false in Rdb.cpp.
 		m_checkedForMerge = true;
-		return;
+		return false;
 	}
 
 	// bail if already merging THIS class
@@ -1658,14 +1665,14 @@ void RdbBase::attemptMerge ( int32_t niceness, bool forceMergeAll, bool doLog ,
 			log(LOG_INFO,
 			    "merge: Waiting for other merge to complete "
 			    "before merging %s.",m_dbname);
-		return;
+		return false;
 	}
 	// bail if already waiting for it
 	if ( m_waitingForTokenForMerge ) {
 		if ( doLog ) 
 			log(LOG_INFO,"merge: Already requested token. "
 			    "Request for %s pending.",m_dbname);
-		return;
+		return false;
 	}
 	// score it
 	m_waitingForTokenForMerge = true;
@@ -1721,15 +1728,15 @@ void RdbBase::attemptMerge ( int32_t niceness, bool forceMergeAll, bool doLog ,
 	//   gotTokenForMergeWrapper() may be called multiple times
 	// . if a host is always in urgent mode he may starve another host
 	//   whose is too, but his old request has an low priority.
-	int32_t priority = 0;
+	//int32_t priority = 0;
 	// save this so gotTokenForMerge() can use it
 	m_doLog = doLog;
 	//if ( m_mergeUrgent ) priority = 2;
 	//else                 priority = 0;
 	// tfndb doesn't need token, since titledb merge writes tfndb recs
-	if ( //m_rdb != g_tfndb.getRdb() &&
-	     ! g_msg35.getToken ( this , gotTokenForMergeWrapper, priority ) )
-		return ;
+	// if ( //m_rdb != g_tfndb.getRdb() &&
+	//      ! g_msg35.getToken ( this , gotTokenForMergeWrapper, priority))
+	// 	return ;
 	// bitch if we got token because there was an error somewhere
 	if ( g_errno ) {
 		log(LOG_LOGIC,"merge: attemptMerge: %s failed: %s",
@@ -1739,13 +1746,14 @@ void RdbBase::attemptMerge ( int32_t niceness, bool forceMergeAll, bool doLog ,
 		// undo request
 		m_waitingForTokenForMerge = false;		 
 		// we don't have the token, so we're fucked...
-		return;
+		return false;
 	}
 	// debug msg
 	//if ( doLog )
 	//log(LOG_INFO,"merge: Got merge token for %s without blocking.",
 	//    m_dbname);
 	// if did not block
+/*
 	gotTokenForMerge ( );
 }
 
@@ -1755,14 +1763,16 @@ void gotTokenForMergeWrapper ( void *state ) {
 }
 
 void RdbBase::gotTokenForMerge ( ) {
+*/
 	// debug mg
 	//log("RdbBase::gotTokenForMerge: for %s",m_dbname);
 	// don't repeat
 	m_waitingForTokenForMerge = false;
 	// if a dump is happening it will always be the last file, do not
 	// include it in the merge
-	int32_t numFiles = m_numFiles;
-	if ( numFiles > 0 && m_dump->isDumping() ) numFiles--;
+	//int32_t numFiles = m_numFiles;
+	//if ( numFiles > 0 && m_dump->isDumping() ) numFiles--;
+
 	// . if we are significantly over our m_minToMerge limit
 	//   then set m_mergeUrgent to true so merge disk operations will
 	//   starve any spider disk reads (see Threads.cpp for that)
@@ -1777,7 +1787,7 @@ void RdbBase::gotTokenForMerge ( ) {
 		g_numUrgentMerges++;
 	}
 	// tfndb has his own merge class since titledb merges write tfndb recs
-	RdbMerge *m = &g_merge;
+	//RdbMerge *m = &g_merge;
 	//if ( m_rdb == g_tfndb.getRdb() ) m = &g_merge2;
 	// sanity check
 	if ( m_isMerging || m->isMerging() ) {
@@ -1786,11 +1796,11 @@ void RdbBase::gotTokenForMerge ( ) {
 			//"merge: Someone already merging. Waiting for "
 			//"merge token "
 			//"in order to merge %s.",m_dbname);
-		return;
+		return false;
 	}
 
 	// or if # threads out is positive
-	if ( m_numThreads > 0 ) return;
+	if ( m_numThreads > 0 ) return false;
 
 	// clear for take-off
 	//m_inWaiting = false;
@@ -1810,7 +1820,7 @@ void RdbBase::gotTokenForMerge ( ) {
 	int32_t      mini ;
 	bool      minOld ;
 	int32_t      id2  = -1;
-	int32_t      minToMerge;
+	//int32_t      minToMerge;
 	bool      overide = false;
 	//int32_t      smini = - 1;
 	//int32_t      sn ;
@@ -1824,7 +1834,7 @@ void RdbBase::gotTokenForMerge ( ) {
 	//	goto skip;
 	//}
 
-	char rdbId = getIdFromRdb ( m_rdb );
+	//char rdbId = getIdFromRdb ( m_rdb );
 
 	// if one file is even #'ed then we were merging into that, but
 	// got interrupted and restarted. maybe the power went off or maybe
@@ -1855,8 +1865,8 @@ void RdbBase::gotTokenForMerge ( ) {
 		if ( n <= 1 ) {
 			log(LOG_LOGIC,"merge: attemptMerge: Resuming. bad "
 			    "engineer");
-			g_msg35.releaseToken();
-			return;
+			//g_msg35.releaseToken();
+			return false;
 		}
 		// make a log note
 		log(LOG_INFO,"merge: Resuming killed merge for %s coll=%s.",
@@ -1920,7 +1930,7 @@ void RdbBase::gotTokenForMerge ( ) {
 			//File *mf = m_maps[j]->getFile();
 			m_maps[j]->rename(fbuf);
 			log("merge: renaming final merged file %s",fbuf);
-			return;
+			return false;
 		}
 
 		// resume the merging
@@ -2133,8 +2143,8 @@ void RdbBase::gotTokenForMerge ( ) {
 	if ( mini == -1 ) { 
 		log(LOG_LOGIC,"merge: gotTokenForMerge: Bad engineer. mini "
 		    "is -1.");
-		g_msg35.releaseToken(); 
-		return; 
+		//g_msg35.releaseToken(); 
+		return false; 
 	}
 	// . merge from file #mini through file #(mini+n)
 	// . these files should all have ODD fileIds so we can sneak a new
@@ -2150,8 +2160,8 @@ void RdbBase::gotTokenForMerge ( ) {
 			log(LOG_LOGIC,"merge: attemptMerge: could not add "
 			    "new file for titledb. No avail ids."); 
 			g_errno = 0;
-			g_msg35.releaseToken();
-			return; 
+			//g_msg35.releaseToken();
+			return false; 
 		}
 	}
 	// . make a filename for the merge
@@ -2165,8 +2175,8 @@ void RdbBase::gotTokenForMerge ( ) {
 	if ( mergeFileNum < 0 ) {
 		log(LOG_LOGIC,"merge: attemptMerge: Could not add new file."); 
 		g_errno = 0;
-		g_msg35.releaseToken();
-		return; 
+		//g_msg35.releaseToken();
+		return false; 
 	}
 	// we just opened a new file
 	//g_sync.addOp ( OP_OPEN , m_files[mergeFileNum] , 0 );
@@ -2184,8 +2194,8 @@ void RdbBase::gotTokenForMerge ( ) {
 	if ( n <= 1 && ! overide ) {
 	       log(LOG_LOGIC,"merge: gotTokenForMerge: Not merging %"INT32" files.",
 		    n);
-		g_msg35.releaseToken(); 
-		return; 
+	       //g_msg35.releaseToken(); 
+		return false; 
 	}
 
 	// . save the # of files we're merging for the cleanup process
@@ -2193,7 +2203,7 @@ void RdbBase::gotTokenForMerge ( ) {
 	m_numFilesToMerge   = n  ; // numFiles - 1;
 	m_mergeStartFileNum = mergeFileNum + 1; // 1
 
-	CollectionRec *cr = g_collectiondb.getRec ( m_collnum );
+	//CollectionRec *cr = g_collectiondb.getRec ( m_collnum );
 	char *coll = "";
 	if ( cr ) coll = cr->m_coll;
 
@@ -2241,7 +2251,9 @@ void RdbBase::gotTokenForMerge ( ) {
 			  m_niceness            ,
 			  m_pc                  ,
 			  mint /*maxTargetFileSize*/ ,
-			  m_ks                  ) ) return;
+			  m_ks                  ) ) 
+		// we started the merge so return true here
+		return true;
 	// hey, we're no longer merging i guess
 	m_isMerging = false;
 	// decerment this count
@@ -2260,9 +2272,12 @@ void RdbBase::gotTokenForMerge ( ) {
 		    m_dbname,mstrerror(g_errno));
 	g_errno = 0;
 	// give token back
-	g_msg35.releaseToken();
+	//g_msg35.releaseToken();
 	// try again
-	m_rdb->attemptMerge( m_niceness, false , true );
+	//m_rdb->attemptMerge( m_niceness, false , true );
+	// how did this happen?
+	log("merge: did not block for some reason.");
+	return true;
 }
 
 // . use the maps and tree to estimate the size of this list w/o hitting disk

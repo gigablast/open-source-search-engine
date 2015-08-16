@@ -77,7 +77,7 @@
 #include "Msg9b.h"
 #include "Msg17.h"
 //#include "Msg34.h"
-#include "Msg35.h"
+//#include "Msg35.h"
 //#include "Msg24.h"
 //#include "Msg28.h"
 //#include "Msg30.h"
@@ -5841,7 +5841,7 @@ bool registerMsgHandlers2(){
 bool registerMsgHandlers3(){
 	Msg17 msg17;    if ( ! msg17.registerHandler () ) return false;
 	//Msg34 msg34;    if ( ! msg34.registerHandler () ) return false;
-	Msg35 msg35;    if ( ! msg35.registerHandler () ) return false;
+	//Msg35 msg35;    if ( ! msg35.registerHandler () ) return false;
 	//Msg24 msg24;    if ( ! msg24.registerHandler () ) return false;
 	//Msg40 msg40;    if ( ! msg40.registerHandler () ) return false;
 	//MsgB  msgb;     if ( ! msgb.registerHandler  () ) return false;

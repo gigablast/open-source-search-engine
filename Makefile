@@ -32,7 +32,7 @@ OBJS =  UdpSlot.o Rebalance.o \
 	Msg39.o Msg3.o \
 	Msg22.o \
 	Msg20.o Msg2.o \
-	Msg1.o Msg35.o \
+	Msg1.o \
 	Msg0.o Mem.o Matches.o Loop.o \
 	Log.o Lang.o \
 	Indexdb.o Posdb.o Clusterdb.o IndexList.o Revdb.o \

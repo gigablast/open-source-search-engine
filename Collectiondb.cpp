@@ -996,7 +996,9 @@ bool Collectiondb::deleteRec2 ( collnum_t collnum ) { //, WaitEntry *we ) {
 		bf.set ( bu.getBufStart() );
 		if ( bf.doesExist() ) bf.unlink();
 	}
-	
+
+	// now remove from list of collections that might need a disk merge
+	removeFromMergeLinkedList ( cr );
 
 	//////
 	//

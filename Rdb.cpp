@@ -1267,6 +1267,7 @@ bool Rdb::dumpTree ( int32_t niceness ) {
 	if ( m_isTitledb && max > 240 ) max = 240;
 	// . keep the number of files down
 	// . dont dump all the way up to the max, leave one open for merging
+	/*
 	for ( int32_t i = 0 ; i < getNumBases() ; i++ ) {
 		CollectionRec *cr = g_collectiondb.m_recs[i];
 		if ( ! cr ) continue;
@@ -1279,7 +1280,7 @@ bool Rdb::dumpTree ( int32_t niceness ) {
 			break;
 		}
 	}
-
+	*/
 	// . wait for all unlinking and renaming activity to flush out
 	// . we do not want to dump to a filename in the middle of being
 	//   unlinked
@@ -1450,7 +1451,6 @@ bool Rdb::dumpCollLoop ( ) {
  loop:
 	// if no more, we're done...
 	if ( m_dumpCollnum >= getNumBases() ) return true;
-
 	// the only was g_errno can be set here is from a previous dump
 	// error?
 	if ( g_errno ) {
@@ -1667,13 +1667,44 @@ bool Rdb::dumpCollLoop ( ) {
 	goto loop;
 }	
 
+static CollectionRec *s_mergeHead = NULL;
+static CollectionRec *s_mergeTail = NULL;
+static bool s_needsBuild = true;
+
+// this is also called in Collectiondb::deleteRec2()
+void removeFromMergeLinkedList ( CollectionRec *cr ) {
+	CollectionRec *prev = cr->m_prevLink;
+	CollectionRec *next = cr->m_nextLink;
+	cr->m_prevLink = NULL;
+	cr->m_nextLink = NULL;
+	if ( prev ) prev->m_nextLink = next;
+	if ( next ) next->m_prevLink = prev;
+	if ( s_mergeTail == cr ) s_mergeTail = prev;
+	if ( s_mergeHead == cr ) s_mergeHead = next;
+}
+
 void doneDumpingCollWrapper ( void *state ) {
 	Rdb *THIS = (Rdb *)state;
 
 	// we just finished dumping to a file, 
 	// so allow it to try to merge again.
-	RdbBase *base = THIS->getBase(THIS->m_dumpCollnum);
-	if ( base ) base->m_checkedForMerge = false;
+	//RdbBase *base = THIS->getBase(THIS->m_dumpCollnum);
+	//if ( base ) base->m_checkedForMerge = false;
+
+	// add this collection to the linked list of merge candidates
+	CollectionRec *cr = g_collectiondb.getRec ( THIS->m_dumpCollnum );
+	if ( s_mergeTail && cr ) {
+		s_mergeTail->m_nextLink = cr;
+		cr         ->m_nextLink = NULL;
+		cr         ->m_prevLink = s_mergeTail;
+		s_mergeTail = cr;
+	}
+	else if ( cr ) {
+		cr->m_prevLink = NULL;
+		cr->m_nextLink = NULL;
+		s_mergeHead = cr;
+		s_mergeTail = cr;
+	}
 
 	// return if the loop blocked
 	if ( ! THIS->dumpCollLoop() ) return;
@@ -1723,98 +1754,87 @@ void Rdb::doneDumping ( ) {
 	attemptMergeAll(0,NULL);
 }
 
-// this should be called every few seconds by the sleep callback, too
-void attemptMergeAll ( int fd , void *state ) {
-
-	// if fd is MAX_NUM_FDS that means it is from the sleep callback
-	if ( fd != 0 ) {
-		static int s_count = -1;
-		s_count++;
-		// instead of every 2 seconds, try every 60
-		if ( s_count == 30 ) s_count = 0;
-		if ( s_count != 0 ) return;
-		log("rdb: attempting to merge all files from sleep callback");
-	}
-
-	// wait an additional 1ms for every collection we have lest this
-	// slows things down since it is called every 2 seconds. so if
-	// we have 20,000 collections, wait an extra 20000 ms = 20 seconds.
-	// int64_t extraWait = g_collectiondb.m_numRecsUsed;
-	// static int64_t s_lastTry = 0;
-	// int64_t nowms = gettimeofdayInMilliseconds();
-	// if ( nowms - s_lastTry < extraWait ) return;
-	// s_lastTry = nowms;
-
-	// wait for any current merge to stop!
-	if ( g_merge.isMerging() ) return;
-
-
-	if ( state && g_conf.m_logDebugDb ) state = NULL;
-	//g_checksumdb.getRdb()->attemptMerge ( 1 , false , !state);
-	g_linkdb.getRdb()->attemptMerge     ( 1 , false , !state);
-	//g_sectiondb.getRdb()->attemptMerge    ( 1 , false , !state);
-	//g_indexdb.getRdb()->attemptMerge    ( 1 , false , !state);
-	g_posdb.getRdb()->attemptMerge    ( 1 , false , !state);
-	//g_datedb.getRdb()->attemptMerge     ( 1 , false , !state);
-	g_titledb.getRdb()->attemptMerge    ( 1 , false , !state);
-	//g_tfndb.getRdb()->attemptMerge      ( 1 , false , !state);
-	g_tagdb.getRdb()->attemptMerge     ( 1 , false , !state);
-	g_catdb.getRdb()->attemptMerge      ( 1 , false , !state);
-	g_clusterdb.getRdb()->attemptMerge  ( 1 , false , !state);
-	g_statsdb.getRdb()->attemptMerge    ( 1 , false , !state);
-	g_syncdb.getRdb()->attemptMerge    ( 1 , false , !state);
-	//g_placedb.getRdb()->attemptMerge     ( 1 , false , !state);
-	g_doledb.getRdb()->attemptMerge     ( 1 , false , !state);
-	//g_revdb.getRdb()->attemptMerge     ( 1 , false , !state);
-	g_spiderdb.getRdb()->attemptMerge   ( 1 , false , !state);
-	g_cachedb.getRdb()->attemptMerge     ( 1 , false , !state);
-	g_serpdb.getRdb()->attemptMerge     ( 1 , false , !state);
-	g_monitordb.getRdb()->attemptMerge     ( 1 , false , !state);
-	// if we got a rebuild going on
-	g_spiderdb2.getRdb()->attemptMerge   ( 1 , false , !state);
-	//g_checksumdb2.getRdb()->attemptMerge ( 1 , false , !state);
-	//g_indexdb2.getRdb()->attemptMerge    ( 1 , false , !state);
-	g_posdb2.getRdb()->attemptMerge    ( 1 , false , !state);
-	//g_datedb2.getRdb()->attemptMerge     ( 1 , false , !state);
-	//g_sectiondb2.getRdb()->attemptMerge    ( 1 , false , !state);
-	g_titledb2.getRdb()->attemptMerge    ( 1 , false , !state);
-	//g_tfndb2.getRdb()->attemptMerge      ( 1 , false , !state);
-	//g_tagdb2.getRdb()->attemptMerge     ( 1 , false , !state);
-	//g_catdb2.getRdb()->attemptMerge      ( 1 , false , !state);
-	g_clusterdb2.getRdb()->attemptMerge  ( 1 , false , !state);
-	//g_statsdb2.getRdb()->attemptMerge    ( 1 , false , !state);
-	g_linkdb2.getRdb()->attemptMerge     ( 1 , false , !state);
-	//g_placedb2.getRdb()->attemptMerge     ( 1 , false , !state);
-	//g_revdb2.getRdb()->attemptMerge     ( 1 , false , !state);
-}
-
-// called by main.cpp
-void Rdb::attemptMerge ( int32_t niceness , bool forced , bool doLog ) {
-
-	// wait for any current merge to stop!
-	if ( g_merge.isMerging() ) return;
-
-	for ( int32_t i = 0 ; i < getNumBases() ; i++ ) {
+void forceMergeAll ( char rdbId , char niceness ) {
+	// set flag on all RdbBases
+	for ( int32_t i = 0 ; i < g_collectiondb.m_numRecs ; i++ ) {
 		// we need this quickpoll for when we got 20,000+ collections
 		QUICKPOLL ( niceness );
 		CollectionRec *cr = g_collectiondb.m_recs[i];
 		if ( ! cr ) continue;
-		// if swapped out, this will be NULL, so skip it
-		RdbBase *base = cr->getBasePtr(m_rdbId);
-		//RdbBase *base = getBase(i);
+		RdbBase *base = cr->getBase ( rdbId );
 		if ( ! base ) continue;
-		// if we already checked it then skip it. we set this
-		// flag back to false in doneDumpingCollWrapper() when we
-		// add a file to disk for it.
-		if ( base->m_checkedForMerge ) continue;
-		base->attemptMerge(niceness,forced,doLog);
-		// stop if we got unlink/rename threads out from a merge
-		// in RdbBase.cpp beause the merge can't go until this is 0
-		// lest we have 2000 collections all trying to merge tagdb
-		// at the same time!!!! this happened once...
-		if ( g_numThreads > 0 ) break;
-		// if we started a merge, stop checking then
-		if ( g_merge.isMerging() ) break;
+		base->m_nextMergeForced = true;
+	}
+	// rebuild the linked list
+	s_needsBuild = true;
+	// and try to merge now
+	attemptMergeAll2 ();
+}
+
+// this should be called every few seconds by the sleep callback, too
+void attemptMergeAll ( int fd , void *state ) {
+	attemptMergeAll2 ( );
+}
+
+// called by main.cpp
+void attemptMergeAll2 ( ) {
+
+	// wait for any current merge to stop!
+	if ( g_merge.isMerging() ) return;
+
+	int32_t niceness = MAX_NICENESS;
+	CollectionRec *last = NULL;
+	CollectionRec *cr;
+
+	//
+	// . if the first time then build the linked list
+	// . or if we set s_needsBuild to false, like above, re-build it
+	//
+	if ( s_needsBuild ) {
+		s_mergeHead = NULL;
+		s_mergeTail = NULL;
+	}
+	for ( int32_t i=0 ; s_needsBuild && i<g_collectiondb.m_numRecs ; i++) {
+		// we need this quickpoll for when we got 20,000+ collections
+		QUICKPOLL ( niceness );
+		cr = g_collectiondb.m_recs[i];
+		if ( ! cr ) continue;
+		// add it
+		if ( ! s_mergeHead ) s_mergeHead = cr;
+		if ( last ) last->m_nextLink = cr;
+		cr->m_prevLink = last;
+		cr->m_nextLink = NULL;
+		s_mergeTail = cr;
+		last = cr;
+	}
+	s_needsBuild = false;
+
+	bool force = false;
+
+	// . just scan the linked list that we now maintain
+	// . if a collection is deleted then we remove it from this list too!
+	cr = s_mergeHead;
+	while ( cr ) {
+		// pre advance
+		CollectionRec *next = cr->m_nextLink;
+		// try to merge the next guy in line, in the linked list
+		RdbBase *base ;
+		base = cr->getBasePtr(RDB_POSDB);
+		// args = niceness, forceMergeAll, doLog, minToMergeOverride
+		if ( base && base->attemptMerge(niceness,force,true) ) return;
+		base = cr->getBasePtr(RDB_TITLEDB);
+		if ( base && base->attemptMerge(niceness,force,true) ) return;
+		base = cr->getBasePtr(RDB_TAGDB);
+		if ( base && base->attemptMerge(niceness,force,true) ) return;
+		base = cr->getBasePtr(RDB_LINKDB);
+		if ( base && base->attemptMerge(niceness,force,true) ) return;
+		base = cr->getBasePtr(RDB_SPIDERDB);
+		if ( base && base->attemptMerge(niceness,force,true) ) return;
+		// hey, why was it in the list? remove it. we also remove
+		// guys if the collection gets deleted in Collectiondb.cpp,
+		// so this is a function.
+		removeFromMergeLinkedList ( cr );
+		cr = next;
 	}
 }
 

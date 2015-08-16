@@ -420,6 +420,9 @@ class CollectionRec {
 	int32_t m_dailyMergeStarted; // time_t
 	int32_t m_dailyMergeTrigger;
 
+	class CollectionRec *m_nextLink;
+	class CollectionRec *m_prevLink;
+
 	char m_dailyMergeDOWList[48];
 
 	int32_t m_treeCount;
