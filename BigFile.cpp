@@ -104,7 +104,7 @@ bool BigFile::reset ( ) {
 
 bool BigFile::addParts ( char *dirname ) {
 	// if dirname is NULL return true
-	if ( ! dirname[0] ) return true;
+	if ( ! dirname || ! dirname[0] ) return true;
 	// . now set the names of all the Files that we consist of
 	// . get the directory entry and find out what parts we have
 	Dir dir;
