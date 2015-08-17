@@ -169,11 +169,8 @@ bool BigFile::addPart ( int32_t n ) {
 	// avoid a malloc for small files.
 	// this way we can save in memory RdbMaps upon a core, even malloc/free
 	// related cores, cuz we won't have to do a malloc to save!
-	if ( delta <= LITTLEBUFSIZE && ! m_fileBuf.m_buf ) {
-		m_fileBuf.m_usingStack = true;
-		m_fileBuf.m_buf        = m_littleBuf;
-		m_fileBuf.m_capacity   = LITTLEBUFSIZE;
-		m_fileBuf.m_length     = 0;
+	if ( delta <= LITTLEBUFSIZE && ! m_fileBuf.getBufStart() ) {
+		m_fileBuf.setBuf ( m_littleBuf,LITTLEBUFSIZE,0,false);
 		// do not call reserve() below:
 		delta = 0;
 	}

@@ -388,7 +388,7 @@ public:
 public:
 	int32_t  m_capacity;
 	int32_t  m_length;
-	//protected:
+protected:
 	char *m_buf;
 public:
 	char *m_label;
