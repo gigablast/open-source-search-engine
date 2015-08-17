@@ -93,6 +93,8 @@ void RdbMap::reset ( ) {
 	m_lastLogTime = 0;
 	m_badKeys     = 0;
 	m_needVerify  = false;
+
+	m_file.reset();
 }
 
 

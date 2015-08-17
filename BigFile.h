@@ -31,6 +31,8 @@ ssize_t gbpwrite(int fd, const void *buf, size_t count, off_t offset);
 // debug define
 //#define MAX_PART_FILES 100
 
+#define LITTLEBUFSIZE 80
+
 // use this state class for doing non-blocking reads/writes
 #ifdef ASYNCIO
 #include <aio.h> // TODO: use kaio, uses only 4 threads
@@ -262,6 +264,8 @@ class BigFile {
 
 	// to hold the array of Files
 	SafeBuf m_fileBuf;
+
+	char m_littleBuf[LITTLEBUFSIZE];
 
 	// ptrs to the part files
 	//File *m_files ;//[ MAX_PART_FILES ];
