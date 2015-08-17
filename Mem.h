@@ -17,6 +17,8 @@
 //#include <dmalloc.h>
 //#endif
 
+extern bool g_inMemFunction;
+
 // we share malloc between threads, so you need to get the lock
 //void mutexLock   ( );
 //void mutexUnlock ( );

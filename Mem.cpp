@@ -27,6 +27,8 @@
 #undef calloc
 #undef realloc
 
+bool g_inMemFunction = false;
+
 // from malloc.c (dlmalloc)
 //void *dlmalloc(size_t);
 //void  dlfree(void*);
@@ -258,6 +260,9 @@ void * operator new (size_t size) throw (std::bad_alloc) {
 		throw std::bad_alloc();
 		//throw 1;
 	}
+
+	g_inMemFunction = true;
+
 #ifdef EFENCE
 	void *mem = getElecMem(size);
 #elif EFENCE_SIZE
@@ -270,6 +275,9 @@ void * operator new (size_t size) throw (std::bad_alloc) {
 	//void *mem = dlmalloc ( size );
 	void *mem = sysmalloc ( size );
 #endif
+
+	g_inMemFunction = false;
+
 	int32_t  memLoop = 0;
 newmemloop:
 	//void *mem = s_pool.malloc ( size );
@@ -349,6 +357,9 @@ void * operator new [] (size_t size) throw (std::bad_alloc) {
 		throw std::bad_alloc();
 		//throw 1;
 	}
+
+	g_inMemFunction = true;
+
 #ifdef EFENCE
 	void *mem = getElecMem(size);
 #elif EFENCE_SIZE
@@ -361,6 +372,9 @@ void * operator new [] (size_t size) throw (std::bad_alloc) {
 	//void *mem = dlmalloc ( size );
 	void *mem = sysmalloc ( size );
 #endif
+
+	g_inMemFunction = false;
+
 
 	int32_t  memLoop = 0;
 newmemloop:
@@ -1368,6 +1382,9 @@ void *Mem::gbmalloc ( int size , const char *note ) {
 
 	void *mem;
 
+
+	g_inMemFunction = true;
+
 	// to find bug that cores on malloc do this
 	//printBreeches(true);
 	//g_errno=ENOMEM;return (void *)log("Mem::malloc: reached mem limit");}
@@ -1385,6 +1402,9 @@ void *Mem::gbmalloc ( int size , const char *note ) {
 	//void *mem = dlmalloc ( size );
 	mem = (void *)sysmalloc ( size + UNDERPAD + OVERPAD );
 #endif
+
+	g_inMemFunction = false;
+
 	// initialization debug
 	//char *pend = (char *)mem + UNDERPAD + size;
 	//for ( char *p = (char *)mem + UNDERPAD ; p < pend ; p++ )
@@ -1639,8 +1659,12 @@ void Mem::gbfree ( void *ptr , int size , const char *note ) {
 	// if this returns false it was an unbalanced free
 	if ( ! rmMem ( ptr , size , note ) ) return;
 
+	g_inMemFunction = true;
+
 	if ( isnew ) sysfree ( (char *)ptr );
 	else         sysfree ( (char *)ptr - UNDERPAD );
+
+	g_inMemFunction = false;
 }
 
 int32_t getLowestLitBitLL ( uint64_t bits ) {
