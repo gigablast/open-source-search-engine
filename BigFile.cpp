@@ -167,7 +167,10 @@ bool BigFile::addPart ( int32_t n ) {
 	int32_t delta = need - m_fileBuf.getLength();
 	// . make sure our CAPACITY is increased by what we need
 	// . SafeBuf::reserve() ADDS this much to current capacity
-	if ( need > 0 && ! m_fileBuf.reserve ( delta ) )
+	// . true = clear new mem so File::m_calledSet is false for Files
+	//   that may be gaps or not exist because the BigFile was being
+	//   merged.
+	if ( delta > 0 && ! m_fileBuf.reserve ( delta ,"bfbuf",true ) ) 
 		return false;
 	// make length the capacity. so if buf is resized in call to
 	// SafeBuf::reserve() it will copy over all of the old buf to new buf
