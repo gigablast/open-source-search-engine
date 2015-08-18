@@ -1802,7 +1802,9 @@ void RdbBuckets::cleanBuckets ( ) {
 	for ( int32_t i = 0; i < m_numBuckets; i++ ) {
 		RdbBucket *b = m_buckets[i];
 		collnum_t collnum = b->getCollnum();
-		CollectionRec *cr = g_collectiondb.m_recs[collnum];
+		CollectionRec *cr = NULL;
+		if ( collnum < g_collectiondb.m_numRecs ) 
+			cr = g_collectiondb.m_recs[collnum];
 		if ( cr ) continue;
 		// count # deleted
 		count += b->getNumKeys();

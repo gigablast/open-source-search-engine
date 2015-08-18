@@ -318,6 +318,10 @@ bool Collectiondb::addNewColl ( char *coll ,
 				// to add the same collnum to every shard
 				collnum_t newCollnum ) {
 
+
+	//do not send add/del coll request until we are in sync with shard!!
+	// just return ETRYAGAIN for the parmlist...
+
 	// ensure coll name is legit
 	char *p = coll;
 	for ( ; *p ; p++ ) {
@@ -1068,6 +1072,8 @@ bool Collectiondb::growRecPtrBuf ( collnum_t collnum ) {
 		m_recs [ collnum ] = NULL;
 		return true;
 	}
+
+	m_recPtrBuf.setLabel ("crecptrb");
 
 	// . true here means to clear the new space to zeroes
 	// . this shit works based on m_length not m_capacity

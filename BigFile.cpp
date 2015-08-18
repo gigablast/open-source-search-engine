@@ -83,6 +83,9 @@ bool BigFile::set ( char *dir , char *baseFilename , char *stripeDir ) {
 }
 
 bool BigFile::reset ( ) {
+	// RdbMap calls BigFile (m_file)::reset() so we need to free
+	// the files and their safebufs for their filename and dir.
+	close ();
 	// reset filsize
 	m_fileSize = -1;
 	m_lastModified = -1;
@@ -93,10 +96,11 @@ bool BigFile::reset ( ) {
 	//if ( stripeDir ) strcpy ( m_stripeDir    , stripeDir     );
 	//else             m_stripeDir[0] = '\0';
 	// reset # of parts
-	m_numParts = 0;
-	m_maxParts = 0;
+	//m_numParts = 0;
+	//m_maxParts = 0;
 	// now add parts from both directories
-	if ( ! addParts ( m_dir.getBufStart() ) ) return false;
+	// MDW: why is this in reset() function? remove...
+	//if ( ! addParts ( m_dir.getBufStart() ) ) return false;
 	//if ( ! addParts ( m_stripeDir ) ) return false;
 	return true;
 }

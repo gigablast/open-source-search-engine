@@ -551,9 +551,9 @@ void Mem::addMem ( void *mem , int32_t size , const char *note , char isnew ) {
 
 	//validate();
 
-	// if ( note && note[0] == 'S' && note[1] == 'a' &&
-	//      note[2] == 'f' && size == 13371521 )
-	// 	log("mem: got mystery safebuf");
+	 // if ( note && note[0] == 'S' && note[1] == 'a' &&
+	 //      note[2] == 'f' && size == 1179 )
+	 // 	log("mem: got mystery safebuf");
 
 
         //m_memtablesize = 0;//DMEMTABLESIZE;

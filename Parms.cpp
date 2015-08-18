@@ -385,6 +385,13 @@ bool CommandAddColl ( char *rec , char customCrawl ) {
 		return true;
 	}
 
+	// if ( ! g_parms.m_inSyncWithHost0 ) {
+	// 	log("parms: can not add coll #%i %s until in sync with host 0",
+	// 	    (int)newCollnum,collName);
+	// 	g_errno = EBADENGINEER;
+	// 	return true;
+	// }
+
 	// this saves it to disk! returns false and sets g_errno on error.
 	if ( ! g_collectiondb.addNewColl ( collName,
 					   customCrawl ,
@@ -421,6 +428,14 @@ bool CommandResetProxyTable ( char *rec ) {
 // . returns false if would block
 bool CommandDeleteColl ( char *rec , WaitEntry *we ) {
 	collnum_t collnum = getCollnumFromParmRec ( rec );
+
+	// if ( ! g_parms.m_inSyncWithHost0 ) {
+	// 	log("parms: can not del collnum %i until in sync with host 0",
+	// 	    (int)collnum);
+	// 	g_errno = EBADENGINEER;
+	// 	return true;
+	// }
+
 	// the delete might block because the tree is saving and we can't
 	// remove our collnum recs from it while it is doing that
 	if ( ! g_collectiondb.deleteRec2 ( collnum ) )
@@ -436,6 +451,14 @@ bool CommandDeleteColl2 ( char *rec , WaitEntry *we ) {
 	char *data = rec + sizeof(key96_t) + 4;
 	char *coll = (char *)data;
 	collnum_t collnum = g_collectiondb.getCollnum ( coll );
+
+	// if ( ! g_parms.m_inSyncWithHost0 ) {
+	// 	log("parms: can not del collnum %i until in sync with host 0",
+	// 	    (int)collnum);
+	// 	g_errno = EBADENGINEER;
+	// 	return true;
+	// }
+
 	if ( collnum < 0 ) {
 		g_errno = ENOCOLLREC;
 		return true;;
@@ -16100,6 +16123,7 @@ void Parms::init ( ) {
 
 	m->m_title = "home page";
 	static SafeBuf s_tmpBuf;
+	s_tmpBuf.setLabel("stmpb1");
 	s_tmpBuf.safePrintf (
 			  "Html to display for the home page. "
 			  "Leave empty for default home page. "
@@ -16176,6 +16200,7 @@ void Parms::init ( ) {
 
 	m->m_title = "html head";
         static SafeBuf s_tmpBuf2;
+	s_tmpBuf2.setLabel("stmpb2");
 	s_tmpBuf2.safePrintf("Html to display before the search results. ");
 	char *fff = "Leave empty for default. "
 		"Convenient "
@@ -16286,6 +16311,7 @@ void Parms::init ( ) {
 
 	m->m_title = "html tail";
         static SafeBuf s_tmpBuf3;
+	s_tmpBuf3.setLabel("stmpb3");
 	s_tmpBuf3.safePrintf("Html to display after the search results. ");
 	s_tmpBuf3.safeStrcpy(fff);
 	s_tmpBuf3.htmlEncode (
@@ -20563,7 +20589,17 @@ bool Parms::addCurrentParmToList2 ( SafeBuf *parmList ,
 
 	//int32_t occNum = -1;
 	key96_t key = makeParmKey ( collnum , m ,  occNum );
-
+	/*
+	// debug it
+	log("parms: adding parm collnum=%i title=%s "
+	    "key=%s datasize=%i data=%s hash=%"UINT32
+	    ,(int)collnum
+	    ,m->m_title
+	    ,KEYSTR(&key,sizeof(key))
+	    ,(int)dataSize
+	    ,data
+	    ,(uint32_t)hash32(data,dataSize));
+	*/
 	// then key
 	if ( ! parmList->safeMemcpy ( &key , sizeof(key) ) )
 		return false;
@@ -21814,6 +21850,9 @@ void handleRequest3e ( UdpSlot *slot , int32_t niceness ) {
 		// get collnum
 		collnum_t c = *(collnum_t *)p;
 		p += sizeof(collnum_t);
+		// then coll NAME hash
+		uint32_t collNameHash32 = *(int32_t *)p;
+		p += 4;
 		// sanity check. -1 means g_conf. i guess.
 		if ( c < -1 ) { char *xx=NULL;*xx=0; }
 		// and parm hash
@@ -21823,6 +21862,14 @@ void handleRequest3e ( UdpSlot *slot , int32_t niceness ) {
 		// him to delete it!
 		CollectionRec *cr = NULL;
 		if ( c >= 0 ) cr = g_collectiondb.getRec ( c );
+
+		// if collection names are different delete it
+		if ( cr && collNameHash32 != hash32n ( cr->m_coll ) ) {
+			log("sync: host had collnum %i but wrong name, "
+			    "name not %s like it should be",(int)c,cr->m_coll);
+			cr = NULL;
+		}
+
 		if ( c >= 0 && ! cr ) {
 			// note in log
 			logf(LOG_INFO,"sync: telling host #%"INT32" to delete "
@@ -21870,7 +21917,8 @@ void handleRequest3e ( UdpSlot *slot , int32_t niceness ) {
 		if ( cr->m_isCustomCrawl == 2 ) cmdStr = "addBulk";
 		// note in log
 		logf(LOG_INFO,"sync: telling host #%"INT32" to add "
-		     "collnum %"INT32"", hostId,(int32_t)cr->m_collnum);
+		     "collnum %"INT32" coll=%s", hostId,(int32_t)cr->m_collnum,
+		     cr->m_coll);
 		// add the parm rec as a parm cmd
 		if ( ! g_parms.addNewParmToList1 ( &replyBuf,
 						   (collnum_t)i,
@@ -21921,17 +21969,25 @@ bool Parms::makeSyncHashList ( SafeBuf *hashList ) {
 
 	// first do g_conf, collnum -1!
 	for ( int32_t i = -1 ; i < g_collectiondb.m_numRecs ; i++ ) {
+		// shortcut
+		CollectionRec *cr = NULL;
+		if ( i >= 0 ) cr = g_collectiondb.m_recs[i];
 		// skip if empty
-		if ( i >=0 && ! g_collectiondb.m_recs[i] ) continue;
+		if ( i >=0 && ! cr ) continue;
 		// clear since last time
 		tmp.reset();
-		// g_conf?
+		// g_conf? if i is -1 do g_conf
 		if ( ! addAllParmsToList ( &tmp , i ) )
 			return false;
 		// store collnum first as 4 bytes
 		if ( ! hashList->safeMemcpy ( &i , sizeof(collnum_t) ) )
 			return false;
-		// hash that shit
+		// then store the collection name hash, 32 bit hash
+		uint32_t collNameHash32 = 0;
+		if ( cr ) collNameHash32 = hash32n ( cr->m_coll );
+		if ( ! hashList->safeMemcpy ( &collNameHash32, 4 ) )
+			return false;
+		// hash the parms
 		int64_t h64 = hash64 ( tmp.getBufStart(),tmp.length() );
 		// and store it
 		if ( ! hashList->pushLongLong ( h64 ) )

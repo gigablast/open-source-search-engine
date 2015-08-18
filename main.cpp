@@ -3903,6 +3903,7 @@ int main2 ( int argc , char *argv[] ) {
 
 	Json json;
 	json.test();
+	json.reset();
 
 	// . start the spiderloop
 	// . comment out when testing SpiderCache
