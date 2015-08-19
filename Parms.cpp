@@ -973,6 +973,7 @@ private:
 Parms::Parms ( ) {
 	m_isDefaultLoaded = false;
 	m_inSyncWithHost0 = false;
+	m_triedToSync     = false;
 }
 
 void Parms::detachSafeBufs ( CollectionRec *cr ) {
@@ -21736,19 +21737,36 @@ void handleRequest3f ( UdpSlot *slot , int32_t niceness ) {
 //    have with ETRYAGAIN in Msg4.cpp
 
 
+void tryToSyncWrapper ( int fd , void *state ) {
+	g_parms.syncParmsWithHost0();
+}
+
 // host #0 just sends back an empty reply, but it will hit us with
 // 0x3f parmlist requests. that way it uses the same mechanism and can
 // guarantee ordering of the parm update requests
 void gotReplyFromHost0Wrapper ( void *state , UdpSlot *slot ) {
 	// ignore his reply unless error?
-	if ( g_errno )
-		log("parms: got error syncing with host 0: %s",
+	if ( g_errno ) {
+		log("parms: got error syncing with host 0: %s. Retrying.",
 		    mstrerror(g_errno));
+		// re-try it!
+		g_parms.m_triedToSync = false;
+	}
+	else {
+		log("parms: synced with host #0");
+		// do not re-call
+		g_loop.unregisterSleepCallback(NULL,tryToSyncWrapper);
+	}
+
 	g_errno = 0;
 }
-	
+
 // returns false and sets g_errno on error, true otherwise
 bool Parms::syncParmsWithHost0 ( ) {
+
+	if ( m_triedToSync ) return true;
+
+	m_triedToSync = true;
 
 	m_inSyncWithHost0 = false;
 
@@ -21781,6 +21799,8 @@ bool Parms::syncParmsWithHost0 ( ) {
 	sendBuf.detachBuf();
 
 	Host *h = g_hostdb.getHost(0);
+
+	log("parms: trying to sync with host #0");
 
 	// . send it off. use 3e i guess
 	// . host #0 will reply using msg4 really

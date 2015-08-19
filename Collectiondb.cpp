@@ -252,6 +252,26 @@ bool Collectiondb::addExistingColl ( char *coll, collnum_t collnum ) {
 		char *xx=NULL;*xx=0;
 	}
 
+	// also try by #, i've seen this happen too
+	CollectionRec *ocr = getRec ( i );
+	if ( ocr ) {
+		g_errno = EEXIST;
+		log("admin: Collection id %i is in use already by "
+		    "%s, so we can not add %s. moving %s to trash."
+		    ,(int)i,ocr->m_coll,coll,coll);
+		SafeBuf cmd;
+		int64_t now = gettimeofdayInMilliseconds();
+		cmd.safePrintf ( "mv coll.%s.%i trash/coll.%s.%i.%"UINT64
+				 , coll
+				 ,(int)i
+				 , coll
+				 ,(int)i
+				 , now );
+		//log("admin: %s",cmd.getBufStart());
+		gbsystem ( cmd.getBufStart() );
+		return true;
+	}
+
 	// create the record in memory
 	CollectionRec *cr = new (CollectionRec);
 	if ( ! cr ) 

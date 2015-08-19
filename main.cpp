@@ -373,6 +373,7 @@ extern void resetQuery         ( );
 extern void resetStopWords     ( );
 extern void resetUnicode       ( );
 
+extern void tryToSyncWrapper ( int fd , void *state ) ;
 
 #if 0
 void stack_test();
@@ -3855,7 +3856,9 @@ int main2 ( int argc , char *argv[] ) {
 	     ! g_loop.registerSleepCallback(2000,(void *)1,runSEOQueryLoop))
 		log("db: Failed to register seo query loop");
 
-
+	// try to sync parms (and collection recs) with host 0
+	if ( ! g_loop.registerSleepCallback(1000,NULL,tryToSyncWrapper,0))
+		return false;
 
 	//if( !g_loop.registerSleepCallback(2000,(void *)1,controlDumpTopDocs) )
 	//	log("db: Failed to init dump TopDocs sleep callback.");
@@ -3873,11 +3876,11 @@ int main2 ( int argc , char *argv[] ) {
 	//msg3e.checkForNewParms();
 
 	// this stuff is similar to alden's msg3e but will sync collections
-	// that were added/deleted
-	if ( ! g_parms.syncParmsWithHost0() ) {
-		log("parms: error syncing parms: %s",mstrerror(g_errno));
-		return 0;
-	}
+	// that were added/deletede
+	//if ( ! g_parms.syncParmsWithHost0() ) {
+	//	log("parms: error syncing parms: %s",mstrerror(g_errno));
+	//	return 0;
+	//}
 
 
 	if(g_recoveryMode) {
