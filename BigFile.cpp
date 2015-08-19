@@ -49,6 +49,10 @@ BigFile::BigFile () {
 	g_lastDiskReadStarted = 0;
 	g_lastDiskReadCompleted = 0;
 	g_diskIsStuck = false;
+	if ( LITTLEBUFSIZE < sizeof(File) ) {
+		log("file: littlebufsize too small.");
+		char *xx=NULL;*xx=0; 
+	}
 }
 
 // we alternate parts into "dirname" and "stripeDir"
@@ -1291,11 +1295,12 @@ bool readwrite_r ( FileState *fstate , ThreadEntry *t ) {
 	// . i think the fd will have been closed and re-opened on us if this
 	//   happens... usually
 	if (n==0 && len > 0 ) {
-		log("disk: Read of %"INT32" bytes at offset %"INT64" for %s "
-		    "failed because file is too int16_t for that "
+		log("disk: Read of %"INT32" bytes at offset %"INT64" for %s/%s"
+		    " failed because file is too short for that "
 		    "offset? Our fd was probably stolen from us by another "
 		    "thread. Will retry. error=%s.",
 		    (int32_t)len,fstate->m_offset,
+		    fstate->m_this->getDir(),
 		    fstate->m_this->getFilename(),mstrerror(errno));
 		errno = EBADENGINEER;
 		return false; // log("disk::read/write: offset too big");

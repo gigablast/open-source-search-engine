@@ -107,10 +107,10 @@ void File::constructor ( ) {
 	// m_prevActive = NULL;
 	m_calledOpen = false;
 	m_calledSet  = false;
-	m_filename.constructor();
+	//m_filename.constructor();
 	// use the stack thing for now until we find the bug
-	m_filename.setBuf ( m_filenameBuf,MAX_FILENAME_LEN-1 ,0,false,0);
-	m_filename.setLabel   ("sbfnm");
+	//m_filename.setBuf ( m_filenameBuf,MAX_FILENAME_LEN-1 ,0,false,0);
+	//m_filename.setLabel   ("sbfnm");
 	if ( g_conf.m_logDebugDisk )
 		log("disk: constructor fd %i this=0x%"PTRFMT,
 		    (int)m_fd,(PTRTYPE)this);
@@ -124,7 +124,7 @@ void File::destructor ( ) {
 	// set m_calledSet to false so BigFile.cpp see it as 'empty'
 	m_calledSet  = false;
 	m_calledOpen = false;
-	m_filename.destructor();
+	//m_filename.destructor();
 }
 
 void File::set ( char *dir , char *filename ) {
@@ -139,30 +139,30 @@ void File::set ( char *dir , char *filename ) {
 
 void File::set ( char *filename ) {
 	// reset m_filename
-	//m_filename[0] = '\0';
-	m_filename.reset();
+	m_filename[0] = '\0';
+	//m_filename.reset();
 	// return if NULL
 	if ( ! filename ) { 
 		log ( LOG_LOGIC,"disk: Provided filename is NULL");
 		return;
 	}
 	// bail if too long
-	// int32_t len = gbstrlen ( filename );
-	// // account for terminating '\0'
-	// if ( len + 1 >= MAX_FILENAME_LEN ) { 
-	// 	log ( "disk: Provdied filename %s length of %"INT32" "
-	//            "is bigger "
-	// 	      "than %"INT32".",filename,len,
-	//            (int32_t)MAX_FILENAME_LEN-1); 
-	// 	return; 
-	// }
+	int32_t len = gbstrlen ( filename );
+	// account for terminating '\0'
+	if ( len + 1 >= MAX_FILENAME_LEN ) { 
+	 	log ( "disk: Provdied filename %s length of %"INT32" "
+		      "is bigger "
+	 	      "than %"INT32".",filename,len,
+		      (int32_t)MAX_FILENAME_LEN-1); 
+	 	return; 
+	}
 	// if we already had another file open then we must close it first.
 	if ( m_fd >= 0 ) close();
 	// copy into m_filename and NULL terminate
-	// gbmemcpy ( m_filename , filename , len );
-	// m_filename [ len ] = '\0';
-	m_filename.setLabel   ("sbfnm");
-	m_filename.safeStrcpy ( filename );
+	gbmemcpy ( m_filename , filename , len );
+	m_filename [ len ] = '\0';
+	//m_filename.setLabel   ("sbfnm");
+	//m_filename.safeStrcpy ( filename );
 	m_calledSet  = true;
 	// TODO: make this a bool returning function if ( ! m_filename ) g_log
 }
@@ -1146,7 +1146,7 @@ bool File::initialize ( ) {
 char *File::getExtension ( ) {
 	// keep backing up over m_filename till we hit a . or / or beginning
 	char *f = getFilename();
-	int32_t i = m_filename.getLength();
+	int32_t i = gbstrlen(m_filename);//m_filename.getLength();
 	while ( --i > 0 ) {
 		if ( f[i] == '.' ) break;
 		if ( f[i] == '/' ) break;

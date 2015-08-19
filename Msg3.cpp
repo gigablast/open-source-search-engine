@@ -829,7 +829,7 @@ bool Msg3::doneScanning ( ) {
 		if ( now - s_time > 5 || g_errno != ENOTHREADSLOTS ) {
 			log("net: Had error reading %s: %s. Retrying. "
 			    "(retry #%"INT32")", 
-			    base->m_dbname,mstrerror(g_errno) , m_retryNum );
+			    base->m_dbname,mstrerror(m_errno) , m_retryNum );
 			s_time = now;
 		}
 		// send email alert if in an infinite loop, but don't send

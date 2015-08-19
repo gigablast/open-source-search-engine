@@ -31,7 +31,7 @@ ssize_t gbpwrite(int fd, const void *buf, size_t count, off_t offset);
 // debug define
 //#define MAX_PART_FILES 100
 
-#define LITTLEBUFSIZE 80
+#define LITTLEBUFSIZE 210
 
 // use this state class for doing non-blocking reads/writes
 #ifdef ASYNCIO

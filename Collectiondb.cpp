@@ -89,10 +89,16 @@ bool Collectiondb::init ( bool isDump ) {
 }
 */
 
+extern bool g_inAutoSave;
+
 // . save to disk
 // . returns false if blocked, true otherwise
 bool Collectiondb::save ( ) {
 	if ( g_conf.m_readOnlyMode ) return true;
+
+	if ( g_inAutoSave && m_numRecsUsed > 20 && g_hostdb.m_hostId != 0 )
+		return true;
+
 	// which collection rec needs a save
 	for ( int32_t i = 0 ; i < m_numRecs ; i++ ) {
 		if ( ! m_recs[i]              ) continue;

@@ -53,6 +53,7 @@
 // normally in seo.cpp, but here so it compiles
 SafeBuf    g_qbuf;
 int32_t       g_qbufNeedSave = 0;
+bool g_inAutoSave;
 
 // for resetAll()
 //#include "Msg6.h"
@@ -467,6 +468,7 @@ Process::Process ( ) {
 }
 
 bool Process::init ( ) {
+	g_inAutoSave = false;
 	// -1 means unknown
 	m_diskUsage = -1.0;
 	m_diskAvail = -1LL;
@@ -1331,7 +1333,9 @@ void processSleepWrapper ( int fd , void *state ) {
 	g_process.m_lastSaveTime = nextLastSaveTime;//now;
 	// save everything
 	logf(LOG_INFO,"db: Autosaving.");
+	g_inAutoSave = 1;
 	g_process.save();
+	g_inAutoSave = 0;
 }
 
 bool Process::save ( ) {
@@ -1874,9 +1878,10 @@ bool Process::saveBlockingFiles1 ( ) {
 	if ( g_hostdb.m_myHost && g_hostdb.m_myHost->m_isProxy )
 		g_proxy.saveUserBufs();
 
-	// save the Conf file now
+	// save the gb.conf file now
 	g_conf.save();
 	// save the conf files
+	// if autosave and we have over 20 colls, just make host #0 do it
         g_collectiondb.save();
 	// . save repair state
 	// . this is repeated above too

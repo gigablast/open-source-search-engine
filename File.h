@@ -156,14 +156,15 @@ class File {
 	// return -1 if not opened, otherwise, return the opened fd
 	int   getfdNoOpen ( ) ;
 
-	char *getFilename ( ) { return m_filename.getBufStart(); };
+	//char *getFilename ( ) { return m_filename.getBufStart(); };
+	char *getFilename ( ) { return m_filename; };
 
 	// our filename allocated with strdup
 	// we publicize for ease of use
-	//char m_filename [ MAX_FILENAME_LEN ];
-	SafeBuf m_filename;
+	char m_filename [ MAX_FILENAME_LEN ];
+	//SafeBuf m_filename;
 
-	char m_filenameBuf [ MAX_FILENAME_LEN ];
+	//char m_filenameBuf [ MAX_FILENAME_LEN ];
 
 	// File::rename() uses this
 	//char m_oldFilename [ MAX_FILENAME_LEN ];
