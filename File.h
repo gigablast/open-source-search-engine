@@ -163,6 +163,8 @@ class File {
 	//char m_filename [ MAX_FILENAME_LEN ];
 	SafeBuf m_filename;
 
+	char m_filenameBuf [ MAX_FILENAME_LEN ];
+
 	// File::rename() uses this
 	//char m_oldFilename [ MAX_FILENAME_LEN ];
 

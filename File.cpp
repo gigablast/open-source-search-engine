@@ -108,6 +108,9 @@ void File::constructor ( ) {
 	m_calledOpen = false;
 	m_calledSet  = false;
 	m_filename.constructor();
+	// use the stack thing for now until we find the bug
+	m_filename.setBuf ( m_filenameBuf,MAX_FILENAME_LEN-1 ,0,false,0);
+	m_filename.setLabel   ("sbfnm");
 	if ( g_conf.m_logDebugDisk )
 		log("disk: constructor fd %i this=0x%"PTRFMT,
 		    (int)m_fd,(PTRTYPE)this);
