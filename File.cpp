@@ -609,6 +609,17 @@ int File::getfd () {
 		char *xx=NULL; *xx=0; 
 		return -2;
 	}
+
+	// if someone closed our fd, why didn't our m_fd get set to -1 ??!?!?!!
+	if ( m_fd >= 0 && m_closeCount != s_closeCounts[m_fd] ) {
+		log(LOG_DEBUG,"disk: invalidating existing fd %i "
+		    "for %s this=0x%"PTRFMT" ccSaved=%i ccNow=%i", 
+		    (int)m_fd,getFilename(),(PTRTYPE)this,
+		    (int)m_closeCount,
+		    (int)s_closeCounts[m_fd]);
+		m_fd = -1;
+	}
+
 	// . sanity check
 	// . no caller should call open/getfd after unlink was queued for thred
 	//if ( m_gone ) { char *xx = NULL; *xx = 0; }
@@ -617,8 +628,12 @@ int File::getfd () {
 	// return true if it's already opened
 	if ( m_fd >=  0 ) { 
 		// debug msg
-		log(LOG_DEBUG,"disk: returning existing fd %i for %s", 
-		    (int)m_fd,getFilename());
+		if ( g_conf.m_logDebugDisk )
+			log(LOG_DEBUG,"disk: returning existing fd %i for %s "
+			    "this=0x%"PTRFMT" ccSaved=%i ccNow=%i", 
+			    (int)m_fd,getFilename(),(PTRTYPE)this,
+			    (int)m_closeCount,
+			    (int)s_closeCounts[m_fd]);
 		if ( m_fd >= MAX_NUM_FDS ) { char *xx=NULL;*xx=0; }
 		// but update the timestamp to reduce chance it closes on us
 		//s_timestamps [ m_vfd ] = getTime();
@@ -678,8 +693,11 @@ int File::getfd () {
 			File *f = s_filePtrs [ fd ];
 			if ( g_conf.m_logDebugDisk )
 				log("disk: swiping fd %i from %s before "
-				    "his close thread returned",fd,
-				    f->getFilename());
+				    "his close thread returned "
+				    "this=0x%"PTRFMT,
+				    fd,
+				    f->getFilename(),
+				    (PTRTYPE)f);
 			// he only incs/decs his counters if he owns it so in
 			// close2() so dec this global counter here
 			s_numOpenFiles--;
@@ -900,7 +918,7 @@ bool File::closeLeastUsed () {
 			if ( f ) fname = f->getFilename();
 			logf(LOG_DEBUG,"disk: force closed fd %i for"
 			     " %s. age=%"INT64" #openfiles=%i this=0x%"PTRFMT,
-			     mini,fname,now-s_timestamps[mini],
+			     fd,fname,now-s_timestamps[mini],
 			     (int)s_numOpenFiles,
 			     (PTRTYPE)this);
 		}

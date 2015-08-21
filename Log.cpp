@@ -367,7 +367,7 @@ bool Log::logR ( int64_t now , int32_t type , char *msg , bool asterisk ,
 
 	// . if filesize would be too big then make a new log file
 	// . should make a new m_fd
-	if ( m_logFileSize + tlen+1 > MAXLOGFILESIZE )
+	if ( m_logFileSize + tlen+1 > MAXLOGFILESIZE && g_conf.m_runAsDaemon )
 		makeNewLogFile();
 
 	if ( m_fd >= 0 ) {

@@ -1269,7 +1269,7 @@ bool readwrite_r ( FileState *fstate , ThreadEntry *t ) {
 		// may have been called by RdbMerge and our m_files may be 
 		// altered 
 		log("disk::readwrite: %s %i bytes of %i @ offset %i "
-		    "from %s(nonBlock=%s) fd %i "
+		    "from BASEfile=%s (nonBlock=%s) fd %i "
 		    "cc1=%i=?%i cc2=%i=?%i errno=%s",
 		    s,n,len,localOffset,
 		    fstate->m_this->getFilename(),
