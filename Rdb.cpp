@@ -1783,6 +1783,8 @@ void attemptMergeAll ( int fd , void *state ) {
 }
 
 // called by main.cpp
+// . TODO: if rdbbase::attemptMerge() needs to launch a merge but can't
+//   then do NOT remove from linked list. maybe set a flag like 'needsMerge'
 void attemptMergeAll2 ( ) {
 
 	// wait for any current merge to stop!

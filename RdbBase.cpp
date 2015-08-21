@@ -717,16 +717,16 @@ bool RdbBase::setFiles ( ) {
 
 // return the fileNum we added it to in the array
 // reutrn -1 and set g_errno on error
-int32_t RdbBase::addFile ( int32_t id , bool isNew , int32_t mergeNum , int32_t id2 ,
-		    bool converting ) {
+int32_t RdbBase::addFile ( int32_t id , bool isNew , int32_t mergeNum , 
+			   int32_t id2 , bool converting ) {
 
 	int32_t n = m_numFiles;
 	// can't exceed this
 	if ( n >= MAX_RDB_FILES ) { 
 		g_errno = ETOOMANYFILES; 
 		log(LOG_LOGIC,
-		    "db: Can not have more than %"INT32" files. File add failed.",
-		    (int32_t)MAX_RDB_FILES);
+		    "db: Can not have more than %"INT32" files. File add "
+		    "failed.",(int32_t)MAX_RDB_FILES);
 		return -1;
 	}
 
@@ -745,6 +745,35 @@ int32_t RdbBase::addFile ( int32_t id , bool isNew , int32_t mergeNum , int32_t 
 		return -1; 
 	}
 	mnew ( f , sizeof(BigFile) , "RdbBFile" );
+
+	// set the data file's filename
+	char name[512];
+	if      ( mergeNum <= 0 && m_isTitledb )
+		snprintf(name,511,"%s%04"INT32"-%03"INT32".dat",
+			 m_dbname,id,id2 );
+	else if ( mergeNum <= 0 )
+		snprintf ( name ,511,"%s%04"INT32".dat"      , m_dbname, id );
+	else if ( m_isTitledb )
+		snprintf ( name ,511,"%s%04"INT32"-%03"INT32".%03"INT32".dat",
+			  m_dbname, id , id2, mergeNum );
+	else
+		snprintf(name,511,"%s%04"INT32".%03"INT32".dat",
+			m_dbname,id,mergeNum);
+
+	f->set ( getDir() , name , NULL ); // getStripeDir() );
+
+	// if new insure does not exist
+	if ( isNew && f->doesExist() ) {
+		log("rdb: creating NEW file %s/%s which already exists!",
+		    f->getDir(),
+		    f->getFilename());
+		mdelete ( f , sizeof(BigFile),"RdbBFile");
+		delete (f); 
+		return -1;
+		char *xx=NULL;*xx=0;
+	}
+
+
 	RdbMap  *m ;
 	try { m = new (RdbMap); }
 	catch ( ... ) { 
@@ -764,32 +793,12 @@ int32_t RdbBase::addFile ( int32_t id , bool isNew , int32_t mergeNum , int32_t 
 
 	CollectionRec *cr = NULL;
 
-	// set the data file's filename
-	char name[256];
 	// if we're converting, just add to m_filesIds and m_fileIds2
 	if ( converting ) {
 	       log("*-*-*-* Converting titledb files to new file name format");
 	       goto skip;
 	}
 
-	if      ( mergeNum <= 0 && m_isTitledb )
-		sprintf ( name , "%s%04"INT32"-%03"INT32".dat" , m_dbname, id , id2 );
-	else if ( mergeNum <= 0 )
-		sprintf ( name , "%s%04"INT32".dat"      , m_dbname, id );
-	else if ( m_isTitledb )
-		sprintf ( name , "%s%04"INT32"-%03"INT32".%03"INT32".dat",
-			  m_dbname, id , id2, mergeNum );
-	else
-		sprintf ( name , "%s%04"INT32".%03"INT32".dat", m_dbname, id , mergeNum);
-	f->set ( getDir() , name , NULL ); // getStripeDir() );
-
-	// if new insure does not exist
-	if ( isNew && f->doesExist() ) {
-		log("rdb: creating NEW file %s/%s which already exists!",
-		    f->getDir(),
-		    f->getFilename());
-		char *xx=NULL;*xx=0;
-	}
 
 	// debug help
 	if ( isNew )
@@ -1239,7 +1248,8 @@ void RdbBase::doneWrapper2 ( ) {
 void doneWrapper3 ( void *state ) {
 	RdbBase *THIS = (RdbBase *)state;
 	log("rdb: thread completed rename operation for collnum=%"INT32" "
-	    "#threads=%"INT32"",(int32_t)THIS->m_collnum,THIS->m_numThreads);
+	    "#thisbaserenamethreads=%"INT32"",
+	    (int32_t)THIS->m_collnum,THIS->m_numThreads-1);
 	THIS->doneWrapper4 ( );
 }
 
@@ -1385,6 +1395,8 @@ void attemptMergeWrapper ( int fd , void *state ) {
 //   "minToMergeOverride" to "2". (i.e. perform a merge if you got 2 or more 
 //   files)
 // . now return true if we started a merge, false otherwise
+// . TODO: fix Rdb::attemptMergeAll() to not remove from linked list if
+//   we had an error in addNewFile() or rdbmerge.cpp's call to rdbbase::addFile
 bool RdbBase::attemptMerge ( int32_t niceness, bool forceMergeAll, bool doLog ,
 			     int32_t minToMergeOverride ) {
 

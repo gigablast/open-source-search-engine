@@ -6662,6 +6662,9 @@ Xml *XmlDoc::getXml ( ) {
 	// return it if it is set
 	if ( m_xmlValid ) return &m_xml;
 
+	// note it
+	setStatus ( "getting xml");
+
 	// get the filtered content
 	char **u8 = getUtf8Content();
 	if ( ! u8 || u8 == (char **)-1 ) return (Xml *)u8;
@@ -6670,8 +6673,6 @@ Xml *XmlDoc::getXml ( ) {
 	uint8_t *ct = getContentType();
 	if ( ! ct || ct == (void *)-1 ) return (Xml *)ct;
 
-	// note it
-	setStatus ( "getting xml");
 	// set it
 	if ( ! m_xml.set ( *u8        , 
 			   u8len      , 
@@ -7463,6 +7464,8 @@ Sections *XmlDoc::getImpliedSections ( ) {
 
 // add in Section::m_sentFlags bits having to do with our voting tables
 Sections *XmlDoc::getSections ( ) {
+
+	setStatus("getting sections");
 
 	// get the sections without implied sections
 	Sections *ss = getImpliedSections();
@@ -9977,6 +9980,8 @@ char *XmlDoc::getIsDup ( ) {
 		return &m_isDup;
 	}
 
+	setStatus ( "checking for dups" );
+
 	// BUT if we are already indexed and a a crawlbot/bulk diffbot job
 	// then do not kick us out just because another indexed doc is
 	// a dup of us because it messes up the TestOnlyProcessIfNew smoketests
@@ -10009,8 +10014,6 @@ char *XmlDoc::getIsDup ( ) {
 
 	// sanity. must be posdb list.
 	if ( ! list->isEmpty() && list->m_ks != 18 ) { char *xx=NULL;*xx=0;}
-
-	setStatus ( "checking for dups" );
 
 	// . see if there are any pages that seem like they are dups of us
 	// . they must also have a HIGHER score than us, for us to be 

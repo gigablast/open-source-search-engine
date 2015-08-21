@@ -55,6 +55,7 @@ bool RdbMap::close ( bool urgent ) {
 }
 
 void RdbMap::reset ( ) {
+	m_reducedMem = false;
 	m_generatingMap = false;
 	int32_t pps = PAGES_PER_SEGMENT;
 	if ( m_newPagesPerSegment > 0 ) pps = m_newPagesPerSegment;
@@ -511,6 +512,7 @@ int64_t RdbMap::readSegment ( int32_t seg , int64_t offset , int32_t fileSize ) 
 bool RdbMap::addRecord ( char *key, char *rec , int32_t recSize ) {
 	// calculate size of the whole slot
 	//int32_t size = sizeof(key_t) ;
+	if ( m_reducedMem ) { char *xx=NULL;*xx=0; }
 	// include the dataSize, 4 bytes, for each slot if it's not fixed
 	//if ( m_fixedDataSize == -1 ) size += 4;
 	// include the data
@@ -668,6 +670,9 @@ bool RdbMap::prealloc ( RdbList *list ) {
 	if ( list->m_ks != m_ks ) { char *xx = NULL; *xx = 0; }
 	// bail now if it's empty
 	if ( list->isEmpty() ) return true;
+
+	if ( m_reducedMem ) { char *xx=NULL;*xx=0; }
+
 	// what is the last page we touch?
 	int32_t lastPageNum = (m_offset + list->getListSize() - 1) / m_pageSize;
 	// . need to pre-alloc up here so malloc does not fail mid stream
@@ -697,6 +702,9 @@ bool RdbMap::addList ( RdbList *list ) {
 
 	// what is the last page we touch?
 	int32_t lastPageNum = (m_offset + list->getListSize() - 1) / m_pageSize;
+
+	if ( m_reducedMem ) { char *xx=NULL;*xx=0; }
+
 	// . need to pre-alloc up here so malloc does not fail mid stream
 	// . TODO: only do it if list is big enough
 	while ( lastPageNum + 2 >= m_maxNumPages ) {
@@ -765,6 +773,8 @@ bool RdbMap::addIndexList ( IndexList *list ) {
 
 	// return now if empty
 	if ( list->isEmpty() ) return true;
+
+	if ( m_reducedMem ) { char *xx=NULL;*xx=0; }
 
 	// we need to call writeMap() before we exit
 	m_needToWrite = true;
@@ -1276,6 +1286,8 @@ void RdbMap::reduceMemFootPrint () {
 	if ( m_numPages >= 100 ) return;
 	// if already reduced, return now
 	if ( m_newPagesPerSegment > 0 ) return;
+	// seems kinda buggy now..
+	m_reducedMem = true;
 	//return;
 	char *oldKeys = m_keys[0];
 	short *oldOffsets = m_offsets[0];
@@ -1303,6 +1315,8 @@ bool RdbMap::addSegment (  ) {
 	// ensure doesn't exceed the max
 	//if ( n >= MAX_SEGMENTS ) return log("db: Mapped file is "
 	//				    "too big. Critical error.");
+
+	if ( m_reducedMem ) { char *xx=NULL;*xx=0; }
 
 	// the array of up to MAX_SEGMENT pool ptrs is now dynamic too!
 	// because diffbot uses thousands of collections, this will save

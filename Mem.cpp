@@ -1284,6 +1284,9 @@ int Mem::printBreeches ( char core ) {
 	if ( ! s_mptrs ) return 0;
 	// do not bother if no padding at all
 	if ( (int32_t)UNDERPAD == 0 && (int32_t)OVERPAD == 0 ) return 0;
+	
+	log("mem: checking mem for breeches");
+
 	// loop through the whole mem table
 	for ( int32_t i = 0 ; i < (int32_t)m_memtablesize ; i++ )
 		// only check if non-empty
