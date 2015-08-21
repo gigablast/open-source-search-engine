@@ -6336,6 +6336,8 @@ void SpiderLoop::spiderDoledUrls ( ) {
 
  subloop:
 
+	QUICKPOLL(MAX_NICENESS);
+
 	// must be spidering to dole out
 	if ( ! g_conf.m_spideringEnabled ) return;
 	// or if trying to exit
@@ -6415,6 +6417,8 @@ void SpiderLoop::spiderDoledUrls ( ) {
 	m_sc->setPriority ( MAX_SPIDER_PRIORITIES - 1 );
 
  subloopNextPriority:
+
+	QUICKPOLL(MAX_NICENESS);
 
 		// wrap it if we should
 		//if ( m_cri >= g_collectiondb.m_numRecs ) m_cri = 0;
@@ -6674,6 +6678,8 @@ void SpiderLoop::spiderDoledUrls ( ) {
 	}
 
  loop:
+
+	QUICKPOLL(MAX_NICENESS);
 
 	// shortcut
 	//CrawlInfo *ci = &cr->m_localCrawlInfo;
