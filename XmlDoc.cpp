@@ -2056,6 +2056,14 @@ void indexDocWrapper ( void *state ) {
 	// return if it blocked
 	if ( ! THIS->indexDoc( ) ) return;
 	// otherwise, all done, call the caller callback
+	
+	// g_statsdb.addStat ( MAX_NICENESS,
+	// 		    "docs_indexed",
+	// 		    20,
+	// 		    21,
+	// 		    );
+
+
 	if ( THIS->m_callback1 ) THIS->m_callback1 ( THIS->m_state );
 	else                     THIS->m_callback2 ( THIS->m_state );
 }
@@ -19209,7 +19217,7 @@ void *systemStartWrapper_r ( void *state , ThreadEntry *t ) {
 	char cmd[MAX_URL_LEN+256];
 	snprintf( cmd,
 		  MAX_URL_LEN+256,
-		  "wget --header=\"Cookie: %s\" \"%s\" -O %s" ,
+		  "wget -q --header=\"Cookie: %s\" \"%s\" -O %s" ,
 		  s_cookieBuf.getBufStart() ,
 		  THIS->m_firstUrl.getUrl() ,
 		  filename );

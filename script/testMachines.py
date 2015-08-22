@@ -5,7 +5,6 @@ import subprocess
 import re
 import requests
 import json
-import pyquery
 import sys
 
 def genHostsConf(fname, ips, numHostsPerMachine):
@@ -98,6 +97,45 @@ def getSplitTime():
     for cell in cells.items():
         print cell.text(), '***'
 
+
+
+
+def copyToTwins(fname):
+    fh = open(fname, 'r')
+    ret = {}
+    hosts = []
+    for line in fh.readlines():
+        line = line.strip()
+        if not line:
+            continue
+        if line.startswith('#'):
+            continue
+        try:
+            hostId, dnsPort, httpsPort, httpPort, udbPort,ip1, ip2, directory, note= re.split('\s+', line, 8)
+            hosts.append((int(hostId), int(dnsPort), int(httpsPort), int(httpPort), int(udbPort),ip1, ip2, directory, note))
+        except:
+            continue
+        #print directory, ip1, note
+    step = len(hosts)/2
+    hostPlex = {}
+    someIp = None
+    for hostId, dnsPort, httpsPort, httpPort, udbPort,ip1, ip2, directory, note in hosts[:step]:
+        if ip1 not in hostPlex:
+            hostPlex[ip1] = []
+            someIp = ip1
+        hostPlex[ip1].append('scp -r %s:%s* %s:%s. ' % (ip1, directory, (hosts[hostId + step][5]), (hosts[hostId + step][7])))
+        #print 'scp -r %s:%s* %s:%s. &' % (ip1, directory, (hosts[hostId + step][5]), (hosts[hostId + step][7]))
+
+    while len(hostPlex[someIp]) > 0:
+        cmd = []
+
+        for ip in hostPlex.iterkeys():
+            cmd.append(hostPlex[ip].pop())
+            #print hostPlex[ip].pop()
+
+        print '&\n'.join(cmd), ';'
+
+
 def testDiskSpeed(host, directory):
     writeSpeedOut = subprocess.Popen('eval `ssh-agent`;ssh-add ~/.ssh/id_ecdsa; ssh {0} "cd {1};dd if=/dev/zero of=test bs=1048576 count=2048"'.format(host,directory),
                                      stdout=subprocess.PIPE,stderr=subprocess.PIPE, shell=True).communicate()[1]
@@ -163,6 +201,10 @@ def graphDiskSpeed(data):
         })
     print json.dumps(reads)
     print json.dumps(writes)
+
+
+def installCluster():
+    genHostsConf('../hosts.conf', sys.argv[2:], 12)
 
 
 if __name__ == '__main__':

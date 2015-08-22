@@ -1631,6 +1631,7 @@ bool qaInjectMetadata ( ) {
 
 		char* metadata = "{\"testtest\":42,\"a-hyphenated-name\":5, "
 			"\"a-string-value\":\"can we search for this\", "
+			"an array:['a','b', 'c', 1,2,3], "
 			"\"a field with spaces\":6, \"compound\":{\"field\":7}}";
 		
 		s_flags[ADD_INITIAL_URLS]++;
