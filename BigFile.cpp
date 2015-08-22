@@ -1099,13 +1099,14 @@ void *readwriteWrapper_r ( void *state , ThreadEntry *t ) {
 	//pthread_testcancel();
 
 	// get the two files
-	File *f1 = NULL;
-	File *f2 = NULL;
-	// when we exit, m_this is invalid!!!
-	if ( fstate->m_filenum1 < fstate->m_this->m_maxParts )
-		f1 = fstate->m_this->getFile2(fstate->m_filenum1);
-	if ( fstate->m_filenum2 < fstate->m_this->m_maxParts )
-		f2 = fstate->m_this->getFile2(fstate->m_filenum2);
+	// mdw: no we can't access bigfile it might be deleted!
+	// File *f1 = NULL;
+	// File *f2 = NULL;
+	// // when we exit, m_this is invalid!!!
+	// if ( fstate->m_filenum1 < fstate->m_this->m_maxParts )
+	// 	f1 = fstate->m_this->getFile2(fstate->m_filenum1);
+	// if ( fstate->m_filenum2 < fstate->m_this->m_maxParts )
+	// 	f2 = fstate->m_this->getFile2(fstate->m_filenum2);
 
 	// . if open count changed on us our file got unlinked from under us
 	//   and another file was opened with that same fd!!! 
@@ -1119,16 +1120,20 @@ void *readwriteWrapper_r ( void *state , ThreadEntry *t ) {
 	//   i saw this happen on gk153... i preserved the core/gb on there
 	//if ( (getCloseCount_r (fstate->m_fd1) != fstate->m_closeCount1 || 
 	//      getCloseCount_r (fstate->m_fd2) != fstate->m_closeCount2   )) {
-	if ( ! f1 || 
-	     ! f2 ||
-	     f1->m_closeCount != fstate->m_closeCount1 || 
-	     f2->m_closeCount != fstate->m_closeCount2   ) {
-
-		int32_t cc1 = -1;
-		int32_t cc2 = -1;
-		if ( f1 ) cc1 = f1->m_closeCount;
-		if ( f2 ) cc2 = f2->m_closeCount;
-		log("file: c1a=%"INT32" c1b=%"INT32" c2a=%"INT32" c2b=%"INT32"",
+	// get current close counts. we can't access BigFile because it
+	// might have been deleted or closed on us, i saw this before.
+	int32_t cc1 = getCloseCount_r ( fstate->m_fd1 );
+	int32_t cc2 = getCloseCount_r ( fstate->m_fd2 );
+	if ( //! f1 || 
+	     //! f2 ||
+	     cc1 != fstate->m_closeCount1 || 
+	     cc2 != fstate->m_closeCount2  ) {
+		// int32_t cc1 = -1;
+		// int32_t cc2 = -1;
+		// if ( f1 ) cc1 = f1->m_closeCount;
+		// if ( f2 ) cc2 = f2->m_closeCount;
+		log("file: c1a=%"INT32" c1b=%"INT32" "
+		    "c2a=%"INT32" c2b=%"INT32"",
 		    cc1,fstate->m_closeCount1,
 		    cc2,fstate->m_closeCount2);
 		    
