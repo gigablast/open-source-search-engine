@@ -1286,6 +1286,16 @@ void RdbMap::reduceMemFootPrint () {
 	if ( m_numPages >= 100 ) return;
 	// if already reduced, return now
 	if ( m_newPagesPerSegment > 0 ) return;
+
+	// if it is like posdb0054.map then it is being merged into and
+	// we'll resume a killed merge, so don't mess with it, we'll need to
+	// add more pages.
+	char *s = m_file.getFilename();
+	for ( ; s && *s && ! is_digit(*s) ; s++ );
+	int id = 0;
+	if ( s ) id = atoi(s);
+	if ( id && (id % 2) == 0 ) return;
+	
 	// seems kinda buggy now..
 	m_reducedMem = true;
 	//return;

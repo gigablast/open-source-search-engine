@@ -3866,8 +3866,9 @@ bool Parms::saveToXml ( char *THIS , char *f , char objType ) {
 	if ( g_conf.m_readOnlyMode ) return true;
 	// print into buffer
 	// "seeds" can be pretty big so go with safebuf now
-	//char  buf[MAX_CONF_SIZE];
-	SafeBuf sb;
+	// fix so if we core in malloc/free we can still save conf
+	char  tmpbuf[200000];
+	SafeBuf sb(tmpbuf,200000);
 	//char *p    = buf;
 	//char *pend = buf + MAX_CONF_SIZE;
 	int32_t  len ;
