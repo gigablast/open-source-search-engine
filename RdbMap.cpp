@@ -295,7 +295,7 @@ bool RdbMap::verifyMap ( BigFile *dataFile ) {
 		dataFile->doesPartExist ( numMissingParts-1 ) ) 
 		numMissingParts--;
 	if ( numMissingParts > 0 ) {
-		File *f = dataFile->getFile ( numMissingParts );
+		File *f = dataFile->getFile2 ( numMissingParts );
 		if ( f ) log("db: Missing part file before %s.",
 			     f->getFilename());
 	}
@@ -1678,7 +1678,7 @@ bool RdbMap::truncateFile ( BigFile *f ) {
 	int32_t numParts = f->getNumParts();
 	// what part num are we on?
 	int32_t partnum = f->getPartNum ( m_offset );
-	File *p = f->getFile ( partnum );
+	File *p = f->getFile2 ( partnum );
 	if ( ! p ) return log("db: Unable to get part file.");
 	// get offset relative to the part file
 	int32_t newSize = m_offset % (int64_t)MAX_PART_SIZE;
@@ -1699,7 +1699,7 @@ bool RdbMap::truncateFile ( BigFile *f ) {
 	// MAX_TRUNC_SIZE bytes big
 	File *p2 = NULL;
 	if ( partnum == numParts-2 ) {
-		p2 = f->getFile ( partnum + 1 );
+		p2 = f->getFile2 ( partnum + 1 );
 		if ( ! p2 ) return log("db: Could not get next part in line.");
 		if ( p2->getFileSize() > MAX_TRUNC_SIZE )
 			return log("db: Next part file is bigger than %"INT32" "

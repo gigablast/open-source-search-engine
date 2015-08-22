@@ -479,7 +479,8 @@ int32_t SafeBuf::safeSave (char *filename ) {
  retry22:
 
 	// first write to tmp file
-	SafeBuf fn;
+	char tmp[1024];
+	SafeBuf fn(tmp,1024);
 	fn.safePrintf( "%s.saving",filename );
 
 	int32_t fd = open ( fn.getBufStart() ,

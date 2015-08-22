@@ -53,6 +53,14 @@ BigFile::BigFile () {
 		log("file: littlebufsize too small.");
 		char *xx=NULL;*xx=0; 
 	}
+	memset ( m_littleBuf , 0 , LITTLEBUFSIZE );
+	// avoid a malloc for small files.
+	// this way we can save in memory RdbMaps upon a core, even malloc/free
+	// related cores, cuz we won't have to do a malloc to save!
+	m_fileBuf.setBuf ( m_littleBuf,LITTLEBUFSIZE,0,false);
+	// for this make the length always equal the capacity so when we
+	// call reserve it builds on the whole thing
+	m_fileBuf.setLength ( m_fileBuf.getCapacity() );
 }
 
 // we alternate parts into "dirname" and "stripeDir"
@@ -173,30 +181,26 @@ bool BigFile::addPart ( int32_t n ) {
 		char *xx=NULL;*xx=0;}
 	// how much more mem do we need?
 	int32_t delta = need - m_fileBuf.getLength();
-
-	// avoid a malloc for small files.
-	// this way we can save in memory RdbMaps upon a core, even malloc/free
-	// related cores, cuz we won't have to do a malloc to save!
-	if ( delta <= LITTLEBUFSIZE && ! m_fileBuf.getBufStart() ) {
-		m_fileBuf.setBuf ( m_littleBuf,LITTLEBUFSIZE,0,false);
-		// do not call reserve() below:
-		delta = 0;
-	}
 	// . make sure our CAPACITY is increased by what we need
 	// . SafeBuf::reserve() ADDS this much to current capacity
 	// . true = clear new mem so File::m_calledSet is false for Files
 	//   that may be gaps or not exist because the BigFile was being
 	//   merged.
-	if ( delta > 0 && ! m_fileBuf.reserve ( delta ,"bfbuf",true ) ) 
+	if ( delta > 0 && ! m_fileBuf.reserve ( delta ,"bfbuf",true ) ) {
+		log("file: failed to reserve %i more mem for part",delta);
 		return false;
+	}
 	// make length the capacity. so if buf is resized in call to
 	// SafeBuf::reserve() it will copy over all of the old buf to new buf
-	if ( m_fileBuf.getLength() < m_fileBuf.getCapacity() ) 
-		m_fileBuf.setLength ( m_fileBuf.getCapacity() );
+	m_fileBuf.setLength ( m_fileBuf.getCapacity() );
 
 	File *files = (File *)m_fileBuf.getBufStart();
 
 	File *f = &files[n];
+
+	// sanity to ensure we do not breach the buffer
+	char *fend = ((char *)f) + sizeof(File);
+	if ( fend > m_fileBuf.getBuf() ) { char *xx=NULL;*xx=0; }
 
 	// we have to call constructor ourself then
 	f->constructor();
@@ -228,8 +232,10 @@ bool BigFile::doesExist ( ) {
 bool BigFile::doesPartExist ( int32_t n ) {
 	//if ( n >= MAX_PART_FILES ) return false;
 	if ( n >= m_maxParts ) return false;
-	File *f = getFile(n);
-	return f->calledSet();
+	// f will be null if part does not exist
+	File *f = getFile2(n);
+	if ( f ) return true;
+	return false;
 }
 
 static int64_t s_vfd = 0;
@@ -307,10 +313,10 @@ int BigFile::getfd ( int32_t n , bool forReading ) { // , int64_t *vfd ) {
 	}
 
 	// get the File ptr from the table
-	File *f = getFile(n);
+	File *f = getFile2(n);
 	// if part does not exist then create it! addPart(n) will call
 	// File::set() on it and set m_setCalled to true.
-	if ( ! f->calledSet() ) {
+	if ( ! f ) {
 		// don't create File if we're getting it for reading
 		if ( forReading    ) return -1;
 		if ( ! addPart (n) ) return -1;
@@ -344,11 +350,11 @@ int64_t BigFile::getFileSize ( ) {
 	int64_t totalSize = 0;
 	for ( int32_t n = 0 ; n < m_maxParts ; n++ ) {
 		// shortcut
-		File *f = getFile(n);
+		File *f = getFile2(n);
 		// we can have headless big files... count the heads.
 		// this can happen if the first Files were deleted because
 		// of an ongoing merge operation.
-		if ( ! f->calledSet() ) { 
+		if ( ! f ) { 
 			totalSize += MAX_PART_SIZE; 
 			continue; 
 		}
@@ -375,9 +381,9 @@ time_t BigFile::getLastModifiedTime ( ) {
 	time_t min = -1;
 	for ( int32_t n = 0 ; n < m_maxParts ; n++ ) {
 		// shortcut
-		File *f = getFile(n);
+		File *f = getFile2(n);
 		// we can have headless big files... count the heads
-		if ( ! f->calledSet() ) continue;
+		if ( ! f ) continue;
 		// returns -1 on error, 0 if file does not exist
 		time_t date = f->getLastModifiedTime();
 		if ( date == -1 ) return -2;
@@ -1097,9 +1103,9 @@ void *readwriteWrapper_r ( void *state , ThreadEntry *t ) {
 	File *f2 = NULL;
 	// when we exit, m_this is invalid!!!
 	if ( fstate->m_filenum1 < fstate->m_this->m_maxParts )
-		f1 = fstate->m_this->getFile(fstate->m_filenum1);
+		f1 = fstate->m_this->getFile2(fstate->m_filenum1);
 	if ( fstate->m_filenum2 < fstate->m_this->m_maxParts )
-		f2 = fstate->m_this->getFile(fstate->m_filenum2);
+		f2 = fstate->m_this->getFile2(fstate->m_filenum2);
 
 	// . if open count changed on us our file got unlinked from under us
 	//   and another file was opened with that same fd!!! 
@@ -1488,8 +1494,8 @@ bool BigFile::unlinkRename ( // non-NULL for renames, NULL for unlinks
 		// break out if we should only unlink one part
 		if ( m_part >= 0 && i != m_part ) break;
 		// get the ith file to rename/unlink
-		File *f = getFile(i);
-		if ( ! f->calledSet() ) {
+		File *f = getFile2(i);
+		if ( ! f ) {
 			// one less part to do
 			m_partsRemaining--;
 			continue;
@@ -1674,7 +1680,7 @@ void doneRenameWrapper ( void *state , ThreadEntry *t ) {
 			     THIS->getFilename(),mstrerror(g_errno));
 	// get the ith file we just unlinked
 	int32_t      i = f->m_i;
-	File *fi = THIS->getFile ( i );
+	File *fi = THIS->getFile2 ( i );
 	// rename the part if it checks out
 	if ( f == fi ) {
 		// set his new name
@@ -1722,7 +1728,7 @@ void doneUnlinkWrapper ( void *state , ThreadEntry *t ) {
 	int32_t      i = f->m_i;
 	// . remove the part if it checks out
 	// . this will also close the file when it deletes it
-	File *fi = THIS->getFile(i);
+	File *fi = THIS->getFile2(i);
 	if ( f == fi ) THIS->removePart ( i );
 	// otherwise bitch about it
 	else log(LOG_LOGIC,"disk: Unlink had bad file ptr.");
@@ -1737,7 +1743,7 @@ void doneUnlinkWrapper ( void *state , ThreadEntry *t ) {
 
 void BigFile::removePart ( int32_t i ) {
 
-	File *f = getFile(i);
+	File *f = getFile2(i);
 	// . thread should have stored the filename for unlinking
 	// . now delete it from memory
 	f->destructor();
@@ -1752,8 +1758,8 @@ void BigFile::removePart ( int32_t i ) {
 	// set m_maxParts
 	int32_t j;
 	for ( j = i ; j >= 0 ; j-- ) {
-		File *fj = getFile(j);
-		if ( fj->calledSet() ) { m_maxParts = j+1; break; }
+		File *fj = getFile2(j);
+		if ( fj ) { m_maxParts = j+1; break; }
 	}
 	// may have no more part files left which means no max part num
 	if ( j < 0 ) m_maxParts = 0;
@@ -1764,8 +1770,8 @@ void BigFile::removePart ( int32_t i ) {
 // doesn't work.
 bool BigFile::closeFds ( ) {
 	for ( int32_t i = 0 ; i < m_maxParts ; i++ ) {
-		File *f = getFile(i);
-		if ( ! f->calledSet() ) continue;
+		File *f = getFile2(i);
+		if ( ! f ) continue;
 		f->close();
 	}
 	return true;
@@ -1778,8 +1784,8 @@ bool BigFile::close ( ) {
 	// subroutines, so put a stop to that circle
 	m_isClosing = true;
 	for ( int32_t i = 0 ; i < m_maxParts ; i++ ) {
-		File *f = getFile(i);
-		if ( ! f->calledSet() ) continue;
+		File *f = getFile2(i);
+		if ( ! f ) continue;
 		f->close();
 		f->destructor();
 		// mdelete ( m_files[i] , sizeof(File) , "BigFile" );

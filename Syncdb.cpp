@@ -1349,7 +1349,7 @@ void Syncdb::syncStart_r ( bool amThread ) {
 	for ( int32_t m = 0 ; m < f->m_numParts ; m++ ) {
 
 	// get part file
-	File *p = f->getFile(m);//m_files[m];
+	File *p = f->getFile2(m);//m_files[m];
 	// copy that
 	sprintf ( cmd , "rcp %s %s:%scoll.%s.%"INT32"/'",
 		  p->getFilename(),ips,dir,coll,collnum);

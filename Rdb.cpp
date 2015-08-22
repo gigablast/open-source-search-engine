@@ -1794,6 +1794,8 @@ void attemptMergeAll2 ( ) {
 	CollectionRec *last = NULL;
 	CollectionRec *cr;
 
+ rebuild:
+
 	//
 	// . if the first time then build the linked list
 	// . or if we set s_needsBuild to false, like above, re-build it
@@ -1805,7 +1807,7 @@ void attemptMergeAll2 ( ) {
 	for ( int32_t i=0 ; s_needsBuild && i<g_collectiondb.m_numRecs ; i++) {
 		// we need this quickpoll for when we got 20,000+ collections
 		QUICKPOLL ( niceness );
-		cr = g_collectiondb.m_recs[i];
+		cr = g_collectiondb.getRec(i);//m_recs[i];
 		if ( ! cr ) continue;
 		// add it
 		if ( ! s_mergeHead ) s_mergeHead = cr;
@@ -1827,6 +1829,15 @@ void attemptMergeAll2 ( ) {
 		// this is a requirement in RdbBase::attemptMerge() so check
 		// for it here so we can bail out early
 		if ( g_numThreads > 0 ) break;
+		// sanity
+		CollectionRec *vr = g_collectiondb.getRec(cr->m_collnum);
+		if ( vr != cr ) {
+			log("rdb: attemptmergeall: bad collnum %i. how "
+			    "did this happen?",
+			    (int)cr->m_collnum);
+			s_needsBuild = true;
+			goto rebuild;
+		}
 		// pre advance
 		CollectionRec *next = cr->m_nextLink;
 		// try to merge the next guy in line, in the linked list

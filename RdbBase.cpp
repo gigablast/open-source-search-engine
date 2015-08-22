@@ -822,10 +822,8 @@ int32_t RdbBase::addFile ( int32_t id , bool isNew , int32_t mergeNum ,
 	// if not a new file sanity check it
 	for ( int32_t j = 0 ; ! isNew && j < f->m_maxParts - 1 ; j++ ) {
 		// might be headless
-		File *ff = f->getFile(j);//m_files[j];
+		File *ff = f->getFile2(j);//m_files[j];
 		if ( ! ff ) continue;
-		// now we don't use NULL, but m_calledSet flag
-		if ( ! ff->calledSet() ) continue;
 		if ( ff->getFileSize() == MAX_PART_SIZE ) continue;
 		log ( "db: File %s/%s has length %"INT64", but it should be %"INT64". "
 		      "You should move it to a temporary directory "

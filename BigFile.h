@@ -304,13 +304,16 @@ class BigFile {
 
 	//bool unlinkPart ( int32_t n , bool block );
 
-	File *getFile ( int32_t n ) { 
+	File *getFile2 ( int32_t n ) { 
+		if ( n >= m_maxParts ) return NULL;
 		File *files = (File *)m_fileBuf.getBufStart();
-		return &files[n];
+		File *f = &files[n];
+		if ( ! f->calledSet() ) return NULL;
+		return f;
 	};
 
 	// if part file not created, will create it
-	File *getPartFile ( int32_t n ) { return getFile(n); }
+	//File *getPartFile2 ( int32_t n ) { return getFile2(n); }
 
 	// . put a signal on the queue to do reading/writing
 	// . we call readwrite ( FileState *) when we handle the signal
