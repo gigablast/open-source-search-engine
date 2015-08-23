@@ -71,8 +71,8 @@ void RdbMap::reset ( ) {
 
 	// the ptrs themselves are now a dynamic array to save mem
 	// when we have thousands of collections
-	mfree(m_keys,m_numSegmentPtrs*sizeof(char *),"MapPtrs");
-	mfree(m_offsets,m_numSegmentOffs*sizeof(int16_t *),"MapPtrs");
+	mfree(m_keys,m_numSegmentPtrs*sizeof(char *),"MapPtrs1");
+	mfree(m_offsets,m_numSegmentOffs*sizeof(int16_t *),"MapPtrs2");
 	m_numSegmentPtrs = 0;
 	m_numSegmentOffs = 0;
 
@@ -1248,6 +1248,7 @@ int64_t RdbMap::getMemAlloced ( ) {
 }
 
 bool RdbMap::addSegmentPtr ( int32_t n ) {
+	if ( m_reducedMem ) { char *xx=NULL;*xx=0; }
 	// realloc
 	if ( n >= m_numSegmentPtrs ) {
 		char **k;
@@ -1255,7 +1256,7 @@ bool RdbMap::addSegmentPtr ( int32_t n ) {
 		k = (char **) mrealloc (m_keys,
 					m_numSegmentPtrs * sizeof(char *) ,
 					nn * sizeof(char *) ,
-					"MapPtrs" );
+					"MapPtrs1" );
 		// failed?
 		if ( ! k ) return false;
 		// succeeded
@@ -1270,7 +1271,7 @@ bool RdbMap::addSegmentPtr ( int32_t n ) {
 		o = (int16_t **) mrealloc (m_offsets,
 					 m_numSegmentOffs * sizeof(int16_t *) ,
 					 nn * sizeof(int16_t *) ,
-					 "MapPtrs" );
+					 "MapPtrs2" );
 		// failed?
 		if ( ! o ) return false;
 		// succeeded
@@ -1295,6 +1296,10 @@ void RdbMap::reduceMemFootPrint () {
 	int id = 0;
 	if ( s ) id = atoi(s);
 	if ( id && (id % 2) == 0 ) return;
+
+	// log("map: reducing mem footprint for %s/%s",
+	//     m_file.getDir(),
+	//     m_file.getFilename());
 	
 	// seems kinda buggy now..
 	m_reducedMem = true;

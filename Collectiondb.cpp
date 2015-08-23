@@ -105,6 +105,14 @@ bool Collectiondb::save ( ) {
 		// temp debug message
 		//logf(LOG_DEBUG,"admin: SAVING collection #%"INT32" ANYWAY",i);
 		if ( ! m_recs[i]->m_needsSave ) continue;
+
+		// if we core in malloc we won't be able to save the 
+		// coll.conf files
+		if ( m_recs[i]->m_isCustomCrawl && 
+		     g_inMemFunction &&
+		     g_hostdb.m_hostId != 0 )
+			continue;
+
 		//log(LOG_INFO,"admin: Saving collection #%"INT32".",i);
 		m_recs[i]->save ( );
 	}
