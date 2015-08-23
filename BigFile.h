@@ -232,7 +232,7 @@ class BigFile {
 	// public for wrapper to call
 	//bool readwrite_r ( FileState *fstate );
 
-	int64_t m_currentOffset;
+	//int64_t m_currentOffset;
 
 	DiskPageCache *getDiskPageCache ( ) { return m_pc;  };
 	int32_t       getVfd       ( ) { return m_vfd; };
@@ -320,6 +320,9 @@ class BigFile {
 	void addSig ( FileState *fstate ) ;
 
 	bool reset ( );
+
+	// for basefilename
+	char m_tmpBaseBuf[32];
 
 	// our most important the directory and filename
 	SafeBuf m_dir      ;//    [256];

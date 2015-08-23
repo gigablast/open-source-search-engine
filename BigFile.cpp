@@ -78,6 +78,9 @@ bool BigFile::set ( char *dir , char *baseFilename , char *stripeDir ) {
 	m_dir         .setLabel("bfd");
 	m_baseFilename.setLabel("bfbf");
 
+	// use this 32 byte char buf to avoid a malloc if possible
+	m_baseFilename.setBuf (m_tmpBaseBuf,32,0,false);
+
 	if ( ! m_dir.safeStrcpy          ( dir          ) ) return false;
 	if ( ! m_baseFilename.safeStrcpy ( baseFilename ) ) return false;
 
