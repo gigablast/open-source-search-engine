@@ -70,10 +70,10 @@ extern bool g_isYippy;
 
 bool freeCacheMem();
 
-#if defined(EFENCE) || defined(EFENCE_SIZE)
+//#if defined(EFENCE) || defined(EFENCE_SIZE)
 static void *getElecMem ( int32_t size ) ;
 static void  freeElecMem ( void *p  ) ;
-#endif
+//#endif
 
 /*
 static int32_t s_mutexLockAvail = 1;
@@ -1401,9 +1401,17 @@ void *Mem::gbmalloc ( int size , const char *note ) {
 	else
 		mem = (void *)sysmalloc ( size + UNDERPAD + OVERPAD );
 #else			
-
-	//void *mem = dlmalloc ( size );
-	mem = (void *)sysmalloc ( size + UNDERPAD + OVERPAD );
+	// debug where tagrec in xmldoc.cpp's msge0 tag list is overrunning
+	if ( note[0] == 'u' &&
+	     note[1] == 'm' &&
+	     note[2] == 's' &&
+	     note[3] == 'g' &&
+	     note[4] == '0' &&
+	     note[5] == '0' )
+		mem = getElecMem(size);
+	else
+		//void *mem = dlmalloc ( size );
+		mem = (void *)sysmalloc ( size + UNDERPAD + OVERPAD );
 #endif
 
 	g_inMemFunction = false;
@@ -1659,12 +1667,24 @@ void Mem::gbfree ( void *ptr , int size , const char *note ) {
 	}
 #endif	
 
+	// debug where tagrec in xmldoc.cpp's msge0 tag list is overrunning
+	char *label = &s_labels[slot*16];
+	bool special = false;
+	if ( label[0] == 'u' &&
+	     label[1] == 'm' &&
+	     label[2] == 's' &&
+	     label[3] == 'g' &&
+	     label[4] == '0' &&
+	     label[5] == '0' )
+		special = true;
+
 	// if this returns false it was an unbalanced free
 	if ( ! rmMem ( ptr , size , note ) ) return;
 
 	g_inMemFunction = true;
 
-	if ( isnew ) sysfree ( (char *)ptr );
+	if ( special ) freeElecMem ((char *)ptr - 0 );
+	else if ( isnew ) sysfree ( (char *)ptr );
 	else         sysfree ( (char *)ptr - UNDERPAD );
 
 	g_inMemFunction = false;

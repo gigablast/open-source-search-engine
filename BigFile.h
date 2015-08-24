@@ -263,8 +263,9 @@ class BigFile {
 	int32_t   m_partsRemaining;
 
 	// to hold the array of Files
-	SafeBuf m_fileBuf;
+	SafeBuf m_filePtrsBuf;
 
+	// enough mem for our first File so we can avoid a malloc
 	char m_littleBuf[LITTLEBUFSIZE];
 
 	// ptrs to the part files
@@ -306,9 +307,10 @@ class BigFile {
 
 	File *getFile2 ( int32_t n ) { 
 		if ( n >= m_maxParts ) return NULL;
-		File *files = (File *)m_fileBuf.getBufStart();
-		File *f = &files[n];
-		if ( ! f->calledSet() ) return NULL;
+		File **filePtrs = (File **)m_filePtrsBuf.getBufStart();
+		File *f = filePtrs[n];
+		//if ( ! f ->calledSet() ) return NULL;
+		// this will be NULL if addPart(n) never called
 		return f;
 	};
 
@@ -321,7 +323,7 @@ class BigFile {
 
 	bool reset ( );
 
-	// for basefilename
+	// for basefilename to avoid an alloc
 	char m_tmpBaseBuf[32];
 
 	// our most important the directory and filename
