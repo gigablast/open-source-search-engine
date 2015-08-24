@@ -133,7 +133,7 @@ def copyToTwins(fname):
             cmd.append(hostPlex[ip].pop())
             #print hostPlex[ip].pop()
 
-        print '&\n'.join(cmd), ';'
+        print '&\n'.join(cmd), '&'
 
 
 def testDiskSpeed(host, directory):
