@@ -1598,6 +1598,31 @@ void *Mem::gbrealloc ( void *ptr , int oldSize , int newSize ,
 	return mem;
 #endif
 
+
+	int32_t slot = g_mem.getMemSlot ( ptr );
+
+	// debug where tagrec in xmldoc.cpp's msge0 tag list is overrunning
+	// for umsg00
+	if ( slot >= 0 ) {
+		char *label = &s_labels[slot*16];
+		if ( label[0] == 'u' &&
+		     label[1] == 'm' &&
+		     label[2] == 's' &&
+		     label[3] == 'g' &&
+		     label[4] == '0' &&
+		     label[5] == '0' ) {
+			// just make a new buf
+			mem = (char *)mmalloc ( newSize , note );
+			if ( ! mem ) return NULL;
+			// copy over to it
+			gbmemcpy ( mem , ptr , oldSize );
+			// free the old
+			mfree ( ptr , oldSize , note );
+			return mem;
+		}
+	}
+	
+
 	// assume it will be successful. we can't call rmMem() after
 	// calling sysrealloc() because it will mess up our MAGICCHAR buf
 	rmMem  ( ptr , oldSize , note );
