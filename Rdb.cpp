@@ -1873,10 +1873,10 @@ void attemptMergeAll2 ( ) {
 	if ( ++s_count == 30 ) {
 		s_count = 0;
 		// try to merge collectionless rdbs like statsdb/catdb
-		RdbBase *base1 = g_catdb.getRdb()->getBase(0);
-		if ( base1 ) base1->attemptMerge(niceness,force,true);
-		RdbBase *base2 = g_statsdb.getRdb()->getBase(0);
-		if ( base2 ) base2->attemptMerge(niceness,force,true);
+		// RdbBase *base1 = g_catdb.getRdb()->getBase(0);
+		// if ( base1 ) base1->attemptMerge(niceness,force,true);
+		// RdbBase *base2 = g_statsdb.getRdb()->getBase(0);
+		// if ( base2 ) base2->attemptMerge(niceness,force,true);
 	}
 }
 

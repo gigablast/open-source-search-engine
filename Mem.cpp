@@ -622,7 +622,17 @@ void Mem::addMem ( void *mem , int32_t size , const char *note , char isnew ) {
 		*xx = 0;
 	}
 
-	if ( ! isnew ) {
+	// umsg00
+	bool useMagicChars = true;
+	if ( note[0] == 'u' &&
+	     note[1] == 'm' &&
+	     note[2] == 's' &&
+	     note[3] == 'g' &&
+	     note[4] == '0' &&
+	     note[5] == '0' )
+		useMagicChars = false;
+
+	if ( ! isnew && useMagicChars ) {
 		for ( int32_t i = 0 ; i < UNDERPAD ; i++ )
 			((char *)mem)[0-i-1] = MAGICCHAR;
 		for ( int32_t i = 0 ; i < OVERPAD ; i++ )
@@ -1159,6 +1169,14 @@ int Mem::printBreech ( int32_t i , char core ) {
 	if ( s_labels[i*16+0] == 'T' &&
 	     s_labels[i*16+1] == 'h' &&
 	     !strcmp(&s_labels[i*16  ],"ThreadStack" ) ) return 0;
+	// for now this is efence. umsg00
+	if ( s_labels[i*16+0] == 'u' &&
+	     s_labels[i*16+1] == 'm' &&
+	     s_labels[i*16+2] == 's' &&
+	     s_labels[i*16+3] == 'g' &&
+	     s_labels[i*16+4] == '0' &&
+	     s_labels[i*16+5] == '0' )
+		return 0;
 	char flag = 0;
 	// check for underruns
 	char *mem = (char *)s_mptrs[i];
@@ -1385,7 +1403,6 @@ void *Mem::gbmalloc ( int size , const char *note ) {
 
 	void *mem;
 
-
 	g_inMemFunction = true;
 
 	// to find bug that cores on malloc do this
@@ -1402,16 +1419,20 @@ void *Mem::gbmalloc ( int size , const char *note ) {
 		mem = (void *)sysmalloc ( size + UNDERPAD + OVERPAD );
 #else			
 	// debug where tagrec in xmldoc.cpp's msge0 tag list is overrunning
+	// for umsg00
 	if ( note[0] == 'u' &&
 	     note[1] == 'm' &&
 	     note[2] == 's' &&
 	     note[3] == 'g' &&
 	     note[4] == '0' &&
-	     note[5] == '0' )
-		mem = getElecMem(size);
-	else
-		//void *mem = dlmalloc ( size );
-		mem = (void *)sysmalloc ( size + UNDERPAD + OVERPAD );
+	     note[5] == '0' ) {
+		mem = getElecMem(size+0+0);
+		addMem ( (char *)mem + 0 , size , note , 0 );
+		return (char *)mem + 0;
+	}
+
+	//void *mem = dlmalloc ( size );
+	mem = (void *)sysmalloc ( size + UNDERPAD + OVERPAD );
 #endif
 
 	g_inMemFunction = false;
@@ -1667,27 +1688,32 @@ void Mem::gbfree ( void *ptr , int size , const char *note ) {
 	}
 #endif	
 
+	g_inMemFunction = true;
+
 	// debug where tagrec in xmldoc.cpp's msge0 tag list is overrunning
+	// for umsg00
 	char *label = &s_labels[slot*16];
-	bool special = false;
 	if ( label[0] == 'u' &&
 	     label[1] == 'm' &&
 	     label[2] == 's' &&
 	     label[3] == 'g' &&
 	     label[4] == '0' &&
-	     label[5] == '0' )
-		special = true;
+	     label[5] == '0' ) {
+		// this calls rmMem() itself
+		freeElecMem ((char *)ptr - 0 );
+		g_inMemFunction = false;
+		// if this returns false it was an unbalanced free
+		if ( ! rmMem ( ptr , size , note ) ) return;
+		return;
+	}
+
+	g_inMemFunction = false;
 
 	// if this returns false it was an unbalanced free
 	if ( ! rmMem ( ptr , size , note ) ) return;
 
-	g_inMemFunction = true;
-
-	if ( special ) freeElecMem ((char *)ptr - 0 );
-	else if ( isnew ) sysfree ( (char *)ptr );
+	if ( isnew ) sysfree ( (char *)ptr );
 	else         sysfree ( (char *)ptr - UNDERPAD );
-
-	g_inMemFunction = false;
 }
 
 int32_t getLowestLitBitLL ( uint64_t bits ) {
@@ -2119,6 +2145,7 @@ void *getElecMem ( int32_t size ) {
 	// store the ptrs
 	*(char **)(returnMem- sizeof(char *)) = realMem;
 	*(char **)(returnMem- sizeof(char *)*2) = realMemEnd;
+	//log("protect2 0x%"PTRFMT"\n",(PTRTYPE)protMem);
 	// protect that after we wrote our ptr
 	if ( mprotect ( protMem , MEMPAGESIZE , PROT_NONE) < 0 )
 		log("mem: mprotect failed: %s",mstrerror(errno));
@@ -2170,6 +2197,7 @@ void *getElecMem ( int32_t size ) {
 	*(char **)(returnMem- sizeof(char *)*2) = realMemEnd;
 	// sanity
 	if ( returnMem - sizeof(char *)*2 < realMem ) { char *xx=NULL;*xx=0; }
+	//log("protect3 0x%"PTRFMT"\n",(PTRTYPE)protMem);
 	// protect that after we wrote our ptr
 	if ( mprotect ( protMem , MEMPAGESIZE , PROT_NONE) < 0 )
 		log("mem: mprotect failed: %s",mstrerror(errno));
@@ -2222,6 +2250,9 @@ void freeElecMem ( void *fakeMem ) {
 	char *oldProtMem = cp + fakeSize;
 #endif
 
+	// hack
+	//oldProtMem -= 4;
+	//log("unprotect1 0x%"PTRFMT"\n",(PTRTYPE)oldProtMem);
 	// unprotect it
 	if ( mprotect ( oldProtMem , MEMPAGESIZE, PROT_READ|PROT_WRITE) < 0 )
 		log("mem: munprotect failed: %s",mstrerror(errno));
@@ -2243,6 +2274,7 @@ void freeElecMem ( void *fakeMem ) {
 	// sanity
 	if ( protMem < realMem ) { char *xx=NULL;*xx=0; }
 	if ( protMem - realMem > (int32_t)MEMPAGESIZE) { char *xx=NULL;*xx=0; }
+	//log("protect1 0x%"PTRFMT"\n",(PTRTYPE)protMem);
 	// before adding it into the ring, protect it
 	if ( mprotect ( protMem , protEnd-protMem, PROT_NONE) < 0 )
 		log("mem: mprotect2 failed: %s",mstrerror(errno));
@@ -2256,6 +2288,8 @@ void freeElecMem ( void *fakeMem ) {
 		g_mem.rmMem ( s_freeCursor->m_fakeMem,
 			      s_freeCursor->m_fakeSize,
 			      s_freeCursor->m_note );
+		// log("unprotect2 0x%"PTRFMT"\n",
+		//     (PTRTYPE)s_freeCursor->m_protMem);
 		// unprotect it
 		if ( mprotect (s_freeCursor->m_protMem,
 			       s_freeCursor->m_protSize,
@@ -2294,6 +2328,8 @@ void freeElecMem ( void *fakeMem ) {
 		g_mem.rmMem ( s_freeCursor->m_fakeMem,
 			      s_freeCursor->m_fakeSize,
 			      s_freeCursor->m_note );
+		// log("unprotect3 0x%"PTRFMT"\n",
+		//     (PTRTYPE)s_freeCursor->m_protMem);
 		// unprotect it
 		if ( mprotect (s_freeCursor->m_protMem,
 			       s_freeCursor->m_protSize,
