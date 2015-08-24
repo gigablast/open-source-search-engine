@@ -1703,7 +1703,7 @@ void Mem::gbfree ( void *ptr , int size , const char *note ) {
 		freeElecMem ((char *)ptr - 0 );
 		g_inMemFunction = false;
 		// if this returns false it was an unbalanced free
-		if ( ! rmMem ( ptr , size , note ) ) return;
+		//if ( ! rmMem ( ptr , size , note ) ) return;
 		return;
 	}
 
