@@ -623,16 +623,15 @@ void Mem::addMem ( void *mem , int32_t size , const char *note , char isnew ) {
 	}
 
 	// umsg00
-	bool useMagicChars = true;
+	bool useElectricFence = false;
 	if ( note[0] == 'u' &&
 	     note[1] == 'm' &&
 	     note[2] == 's' &&
 	     note[3] == 'g' &&
 	     note[4] == '0' &&
 	     note[5] == '0' )
-		useMagicChars = false;
-
-	if ( ! isnew && useMagicChars ) {
+		useElectricFence = true;
+	if ( ! isnew && ! useElectricFence ) {
 		for ( int32_t i = 0 ; i < UNDERPAD ; i++ )
 			((char *)mem)[0-i-1] = MAGICCHAR;
 		for ( int32_t i = 0 ; i < OVERPAD ; i++ )
@@ -1170,13 +1169,15 @@ int Mem::printBreech ( int32_t i , char core ) {
 	     s_labels[i*16+1] == 'h' &&
 	     !strcmp(&s_labels[i*16  ],"ThreadStack" ) ) return 0;
 	// for now this is efence. umsg00
+	bool useElectricFence = false;
 	if ( s_labels[i*16+0] == 'u' &&
 	     s_labels[i*16+1] == 'm' &&
 	     s_labels[i*16+2] == 's' &&
 	     s_labels[i*16+3] == 'g' &&
 	     s_labels[i*16+4] == '0' &&
 	     s_labels[i*16+5] == '0' )
-		return 0;
+		useElectricFence = true;
+	if ( useElectricFence ) return 0;
 	char flag = 0;
 	// check for underruns
 	char *mem = (char *)s_mptrs[i];
@@ -1420,12 +1421,15 @@ void *Mem::gbmalloc ( int size , const char *note ) {
 #else			
 	// debug where tagrec in xmldoc.cpp's msge0 tag list is overrunning
 	// for umsg00
+	bool useElectricFence = false;
 	if ( note[0] == 'u' &&
 	     note[1] == 'm' &&
 	     note[2] == 's' &&
 	     note[3] == 'g' &&
 	     note[4] == '0' &&
-	     note[5] == '0' ) {
+	     note[5] == '0' ) 
+		useElectricFence = true;
+	if ( useElectricFence ) {
 		mem = getElecMem(size+0+0);
 		addMem ( (char *)mem + 0 , size , note , 0 );
 		return (char *)mem + 0;
@@ -1605,12 +1609,15 @@ void *Mem::gbrealloc ( void *ptr , int oldSize , int newSize ,
 	// for umsg00
 	if ( slot >= 0 ) {
 		char *label = &s_labels[slot*16];
+		bool useElectricFence = false;
 		if ( label[0] == 'u' &&
 		     label[1] == 'm' &&
 		     label[2] == 's' &&
 		     label[3] == 'g' &&
 		     label[4] == '0' &&
-		     label[5] == '0' ) {
+		     label[5] == '0' ) 
+			useElectricFence = true;
+		if ( useElectricFence ) {
 			// just make a new buf
 			mem = (char *)mmalloc ( newSize , note );
 			if ( ! mem ) return NULL;
@@ -1717,13 +1724,16 @@ void Mem::gbfree ( void *ptr , int size , const char *note ) {
 
 	// debug where tagrec in xmldoc.cpp's msge0 tag list is overrunning
 	// for umsg00
+	bool useElectricFence = false;
 	char *label = &s_labels[slot*16];
 	if ( label[0] == 'u' &&
 	     label[1] == 'm' &&
 	     label[2] == 's' &&
 	     label[3] == 'g' &&
 	     label[4] == '0' &&
-	     label[5] == '0' ) {
+	     label[5] == '0' ) 
+		useElectricFence = true;
+	if ( useElectricFence ) {
 		// this calls rmMem() itself
 		freeElecMem ((char *)ptr - 0 );
 		g_inMemFunction = false;
