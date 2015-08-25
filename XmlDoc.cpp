@@ -6663,7 +6663,7 @@ Xml *XmlDoc::getXml ( ) {
 	if ( m_xmlValid ) return &m_xml;
 
 	// note it
-	setStatus ( "getting xml");
+	setStatus ( "parsing html");
 
 	// get the filtered content
 	char **u8 = getUtf8Content();
@@ -19362,6 +19362,8 @@ char **XmlDoc::getUtf8Content ( ) {
 
 	CollectionRec *cr = getCollRec();
 	if ( ! cr ) return NULL;
+
+	setStatus("getting utf8 content");
 
 	// recycle?
 	if ( cr->m_recycleContent || m_recycleContent ||
