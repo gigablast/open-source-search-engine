@@ -12,6 +12,9 @@
 //#include "Stats.h"
 #include "Pages.h"
 
+// uncomment this #define to electric fence just on umsg00 buffers:
+//#define SPECIAL
+
 // put me back
 //#define EFENCE
 //#define EFENCE_SIZE 50000
@@ -70,10 +73,10 @@ extern bool g_isYippy;
 
 bool freeCacheMem();
 
-//#if defined(EFENCE) || defined(EFENCE_SIZE)
+#if defined(EFENCE) || defined(EFENCE_SIZE) || defined(SPECIAL)
 static void *getElecMem ( int32_t size ) ;
 static void  freeElecMem ( void *p  ) ;
-//#endif
+#endif
 
 /*
 static int32_t s_mutexLockAvail = 1;
@@ -624,6 +627,7 @@ void Mem::addMem ( void *mem , int32_t size , const char *note , char isnew ) {
 
 	// umsg00
 	bool useElectricFence = false;
+#ifdef SPECIAL
 	if ( note[0] == 'u' &&
 	     note[1] == 'm' &&
 	     note[2] == 's' &&
@@ -631,6 +635,7 @@ void Mem::addMem ( void *mem , int32_t size , const char *note , char isnew ) {
 	     note[4] == '0' &&
 	     note[5] == '0' )
 		useElectricFence = true;
+#endif
 	if ( ! isnew && ! useElectricFence ) {
 		for ( int32_t i = 0 ; i < UNDERPAD ; i++ )
 			((char *)mem)[0-i-1] = MAGICCHAR;
@@ -1168,6 +1173,7 @@ int Mem::printBreech ( int32_t i , char core ) {
 	if ( s_labels[i*16+0] == 'T' &&
 	     s_labels[i*16+1] == 'h' &&
 	     !strcmp(&s_labels[i*16  ],"ThreadStack" ) ) return 0;
+#ifdef SPECIAL
 	// for now this is efence. umsg00
 	bool useElectricFence = false;
 	if ( s_labels[i*16+0] == 'u' &&
@@ -1178,6 +1184,7 @@ int Mem::printBreech ( int32_t i , char core ) {
 	     s_labels[i*16+5] == '0' )
 		useElectricFence = true;
 	if ( useElectricFence ) return 0;
+#endif
 	char flag = 0;
 	// check for underruns
 	char *mem = (char *)s_mptrs[i];
@@ -1418,7 +1425,9 @@ void *Mem::gbmalloc ( int size , const char *note ) {
 		mem = getElecMem(size+0+0);
 	else
 		mem = (void *)sysmalloc ( size + UNDERPAD + OVERPAD );
-#else			
+#else		
+
+#ifdef SPECIAL	
 	// debug where tagrec in xmldoc.cpp's msge0 tag list is overrunning
 	// for umsg00
 	bool useElectricFence = false;
@@ -1434,6 +1443,7 @@ void *Mem::gbmalloc ( int size , const char *note ) {
 		addMem ( (char *)mem + 0 , size , note , 0 );
 		return (char *)mem + 0;
 	}
+#endif
 
 	//void *mem = dlmalloc ( size );
 	mem = (void *)sysmalloc ( size + UNDERPAD + OVERPAD );
@@ -1603,8 +1613,8 @@ void *Mem::gbrealloc ( void *ptr , int oldSize , int newSize ,
 #endif
 
 
+#ifdef SPECIAL
 	int32_t slot = g_mem.getMemSlot ( ptr );
-
 	// debug where tagrec in xmldoc.cpp's msge0 tag list is overrunning
 	// for umsg00
 	if ( slot >= 0 ) {
@@ -1628,7 +1638,7 @@ void *Mem::gbrealloc ( void *ptr , int oldSize , int newSize ,
 			return mem;
 		}
 	}
-	
+#endif
 
 	// assume it will be successful. we can't call rmMem() after
 	// calling sysrealloc() because it will mess up our MAGICCHAR buf
@@ -1720,8 +1730,9 @@ void Mem::gbfree ( void *ptr , int size , const char *note ) {
 	}
 #endif	
 
-	g_inMemFunction = true;
 
+#ifdef SPECIAL
+	g_inMemFunction = true;
 	// debug where tagrec in xmldoc.cpp's msge0 tag list is overrunning
 	// for umsg00
 	bool useElectricFence = false;
@@ -1741,14 +1752,16 @@ void Mem::gbfree ( void *ptr , int size , const char *note ) {
 		//if ( ! rmMem ( ptr , size , note ) ) return;
 		return;
 	}
-
 	g_inMemFunction = false;
+#endif
 
 	// if this returns false it was an unbalanced free
 	if ( ! rmMem ( ptr , size , note ) ) return;
 
+	g_inMemFunction = true;
 	if ( isnew ) sysfree ( (char *)ptr );
 	else         sysfree ( (char *)ptr - UNDERPAD );
+	g_inMemFunction = false;
 }
 
 int32_t getLowestLitBitLL ( uint64_t bits ) {
