@@ -184,6 +184,14 @@ bool BigFile::addPart ( int32_t n ) {
 	// capacity must be length always for this
 	if ( m_filePtrsBuf.getCapacity() != m_filePtrsBuf.getLength() ) {
 		char *xx=NULL;*xx=0;}
+
+	// init using tiny buf to save a malloc for small files
+	if ( m_filePtrsBuf.getCapacity() == 0 ) {
+		memset (m_tinyBuf,0,8);
+		m_filePtrsBuf.setBuf ( m_tinyBuf,8,0,false);
+		m_filePtrsBuf.setLength ( m_filePtrsBuf.getCapacity() );
+	}
+
 	// how much more mem do we need?
 	int32_t delta = need - m_filePtrsBuf.getLength();
 	// . make sure our CAPACITY is increased by what we need
