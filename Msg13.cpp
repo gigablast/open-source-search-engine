@@ -3132,6 +3132,8 @@ bool addToHammerQueue ( Msg13Request *r ) {
 		// we gotta update the crawldelay here in case we modified
 		// it in the above logic.
 		r->m_crawlDelayMS = crawlDelayMS;
+		// when we stored it in the hammer queue
+		r->m_stored = nowms;
 		// add it to queue
 		if ( ! s_hammerQueueHead ) {
 			s_hammerQueueHead = r;
@@ -12052,4 +12054,76 @@ char *getRandUserAgent ( int32_t urlIp , int32_t proxyIp , int32_t proxyPort ) {
 	//    urlIp,proxyIp,proxyPort,n);
 
 	return s_agentList[n];
+}
+
+bool printHammerQueueTable ( SafeBuf *sb ) {
+
+	char *title = "Queued Download Requests";
+	sb->safePrintf ( "<br>"
+			 "<table %s>"
+			 "<tr class=hdrow><td colspan=19>"
+			 "<center>"
+			 "<b>%s</b>"
+			 "</td></tr>"
+
+			 "<tr bgcolor=#%s>"
+			 "<td><b>#</td>"
+			 "<td><b>age</td>"
+			 "<td><b>first ip</td>"
+			 "<td><b>actual ip</td>"
+			 "<td><b>crawlDelayMS</td>"
+			 "<td><b># proxies banning</td>"
+			 
+			 "<td><b>coll</td>"
+			 "<td><b>url</td>"
+
+			 "</tr>\n"
+			 , TABLE_STYLE
+			 , title 
+			 , DARK_BLUE
+			 );
+
+	Msg13Request *r = s_hammerQueueHead ;
+
+	int32_t count = 0;
+	int64_t nowms = gettimeofdayInMilliseconds();
+
+ loop:
+	if ( ! r ) return true;
+
+	// print row
+	sb->safePrintf( "<tr>"
+		       "<td>%i</td>" // #
+		       "<td>%ims</td>" // age in hammer queue
+		       "<td>%s</td>"
+		       ,(int)count
+		       ,(int)(nowms - r->m_stored)
+		       ,iptoa(r->m_firstIp)
+		       );
+	sb->safePrintf("<td>%s</td>" // actual ip
+		      "<td>%i</td>" // crawl delay MS
+		      "<td>%i</td>" // proxies banning
+		      , iptoa(r->m_urlIp)
+		      , r->m_crawlDelayMS
+		      , r->m_numBannedProxies
+		      );
+	// show collection name as a link, also truncate to 32 chars
+	CollectionRec *cr = g_collectiondb.getRec ( r->m_collnum );
+	char *coll = "none";
+	if ( cr ) coll = cr->m_coll;
+	sb->safePrintf("<td>");
+	if ( cr ) sb->safePrintf("<a href=/admin/sockets?c=%s",coll);
+	sb->safeTruncateEllipsis ( coll , 32 );
+	if ( cr ) sb->safePrintf("</a>");
+	sb->safePrintf("</td>");
+	// then the url itself
+	sb->safePrintf("<td><a href=%s>",r->ptr_url);
+	sb->safeTruncateEllipsis ( r->ptr_url , 128 );
+	sb->safePrintf("</a></td>");
+	sb->safePrintf("</tr>\n");
+
+	// print next entry now
+	r = r->m_nextLink;
+	goto loop;
+
 }

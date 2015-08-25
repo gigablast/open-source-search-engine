@@ -16,6 +16,7 @@
 #define MAX_PROXYCRAWLDELAYMS 60000
 
 void resetMsg13Caches ( ) ;
+bool printHammerQueueTable ( SafeBuf *sb ) ;
 
 extern char *g_fakeReply;
 
@@ -54,6 +55,9 @@ public:
 
 	int64_t m_urlHash48;
 	int32_t  m_firstIp;
+
+	// when it was stored in the hammer queue
+	int64_t m_stored;
 
 	// a tmp hack var referencing into m_url[] below
 	char *m_proxiedUrl;
