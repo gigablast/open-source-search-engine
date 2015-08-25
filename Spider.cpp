@@ -5823,7 +5823,9 @@ bool isAssignedToUs ( int32_t firstIp ) {
 	int32_t i = ((uint32_t)h64) % hpg;
 	Host *h = &shard[i];
 	// return that if alive
-	if ( ! g_hostdb.isDead(h) ) return (h->m_hostId == g_hostdb.m_hostId);
+	if ( ! g_hostdb.isDead(h) && h->m_spiderEnabled) {
+		return (h->m_hostId == g_hostdb.m_hostId);
+	}
 	// . select another otherwise
 	// . put all alive in an array now
 	Host *alive[64];
@@ -5831,6 +5833,7 @@ bool isAssignedToUs ( int32_t firstIp ) {
 	for ( int32_t j = 0 ; j < hpg ; j++ ) {
 		Host *h = &shard[i];
 		if ( g_hostdb.isDead(h) ) continue;
+		if(!h->m_spiderEnabled) continue;
 		alive[upc++] = h;
 	}
 	// if none, that is bad! return the first one that we wanted to

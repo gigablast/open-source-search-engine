@@ -337,6 +337,10 @@ class Host {
 	int32_t m_lastTryError;
 	int32_t m_lastTryTime;
 
+	bool m_spiderEnabled;
+	bool m_queryEnabled;
+	
+
 	//char  m_requestBuf[MAX_PING_SIZE];
 	PingInfo m_pingInfo;//RequestBuf;
 };

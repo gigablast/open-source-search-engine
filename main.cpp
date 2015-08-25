@@ -4998,7 +4998,7 @@ int install ( install_flag_konst_t installFlag , int32_t hostId , char *dir ,
 			if ( ! f.doesExist() ) target = "gb";
 
 			sprintf(tmp,
-				"scp -c arcfour " // blowfish is faster
+				"scp  " // blowfish is faster
 				"%s%s "
 				"%s:%s/gb.installed%s",
 				dir,
