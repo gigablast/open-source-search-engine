@@ -3302,7 +3302,10 @@ RdbBase *getRdbBase ( uint8_t rdbId , char *coll ) {
 		collnum = (collnum_t) 0;
 	else    
 		collnum = g_collectiondb.getCollnum ( coll );
-	if(collnum == -1) return NULL;
+	if(collnum == -1) {
+		g_errno = ENOCOLLREC;
+		return NULL;
+	}
 	//return rdb->m_bases [ collnum ];
 	return rdb->getBase(collnum);
 }
