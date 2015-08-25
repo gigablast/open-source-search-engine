@@ -113,11 +113,13 @@ LIBS = ./libz.a ./libssl.a ./libcrypto.a ./libiconv.a ./libm.a
 # are we a 32-bit architecture? use different libraries then
 else ifeq ($(ARCH), i686)
 CPPFLAGS= -m32 -g -Wall -pipe -fno-stack-protector -Wno-write-strings -Wstrict-aliasing=0 -Wno-uninitialized -DPTHREADS -Wno-unused-but-set-variable $(STATIC)
-LIBS= -L. ./libz.a ./libssl.a ./libcrypto.a ./libiconv.a ./libm.a ./libstdc++.a -lpthread
+#LIBS= -L. ./libz.a ./libssl.a ./libcrypto.a ./libiconv.a ./libm.a ./libstdc++.a -lpthread
+LIBS=  -lm -lpthread -lssl -lcrypto ./libiconv.a ./libz.a
 
 else ifeq ($(ARCH), i386)
 CPPFLAGS= -m32 -g -Wall -pipe -fno-stack-protector -Wno-write-strings -Wstrict-aliasing=0 -Wno-uninitialized -DPTHREADS -Wno-unused-but-set-variable $(STATIC)
-LIBS= -L. ./libz.a ./libssl.a ./libcrypto.a ./libiconv.a ./libm.a ./libstdc++.a -lpthread
+#LIBS= -L. ./libz.a ./libssl.a ./libcrypto.a ./libiconv.a ./libm.a ./libstdc++.a -lpthread
+LIBS=  -lm -lpthread -lssl -lcrypto ./libiconv.a ./libz.a
 
 else
 #
