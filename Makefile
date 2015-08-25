@@ -86,7 +86,10 @@ STATIC :=
 XMLDOCOPT := -O2
 else
 OS_DEB := true
-STATIC := -static
+# let's remove static now by default to be safe because we don't always
+# detect red hat installs like on aws. do 'make static' to make as static.
+#STATIC := -static
+STATIC :=
 # MDW: i get some parsing inconsistencies when running the first qa injection
 # test if this is -O3. strange.
 # now debian jesse doesn't like -O3, it will core right away when spidering
@@ -189,6 +192,9 @@ vclean:
 
 gb: vclean $(OBJS) main.o $(LIBFILES)
 	$(CC) $(DEFS) $(CPPFLAGS) -o $@ main.o $(OBJS) $(LIBS)
+
+static: vclean $(OBJS) main.o $(LIBFILES)
+	$(CC) $(DEFS) $(CPPFLAGS) -static -o gb main.o $(OBJS) $(LIBS)
 
 
 # use this for compiling on CYGWIN: 
