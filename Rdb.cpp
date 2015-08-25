@@ -1791,6 +1791,54 @@ void attemptMergeAll2 ( ) {
 	if ( g_merge.isMerging() ) return;
 
 	int32_t niceness = MAX_NICENESS;
+	collnum_t s_lastCollnum = 0;
+	int32_t count = 0;
+
+ tryLoop:
+
+	// if a collection got deleted, reset this to 0
+	if ( s_lastCollnum >= g_collectiondb.m_numRecs )
+		s_lastCollnum = 0;
+
+	// limit to 1000 checks to save the cpu since we call this once
+	// every 2 seconds.
+	if ( ++count >= 1000 ) return;
+
+	CollectionRec *cr = g_collectiondb.m_recs[s_lastCollnum];
+	if ( ! cr ) goto tryLoop;
+
+	bool force = false;
+	RdbBase *base ;
+	// args = niceness, forceMergeAll, doLog, minToMergeOverride
+	// if RdbBase::attemptMerge() returns true that means it
+	// launched a merge and it will call attemptMergeAll2() when
+	// the merge completes.
+	base = cr->getBasePtr(RDB_POSDB);
+	if ( base && base->attemptMerge(niceness,force,true) ) 
+		return;
+	base = cr->getBasePtr(RDB_TITLEDB);
+	if ( base && base->attemptMerge(niceness,force,true) ) 
+		return;
+	base = cr->getBasePtr(RDB_TAGDB);
+	if ( base && base->attemptMerge(niceness,force,true) ) 
+		return;
+	base = cr->getBasePtr(RDB_LINKDB);
+	if ( base && base->attemptMerge(niceness,force,true) ) 
+		return;
+	base = cr->getBasePtr(RDB_SPIDERDB);
+	if ( base && base->attemptMerge(niceness,force,true) ) 
+		return;
+
+	// try next collection
+	s_lastCollnum++;
+
+	goto tryLoop;
+
+	/* 
+
+	   MDW: linked list approach is too prone to error. just try to 
+	   merge 1000 collection recs  in a call and keep a cursor.
+
 	CollectionRec *last = NULL;
 	CollectionRec *cr;
 
@@ -1878,6 +1926,7 @@ void attemptMergeAll2 ( ) {
 		// RdbBase *base2 = g_statsdb.getRdb()->getBase(0);
 		// if ( base2 ) base2->attemptMerge(niceness,force,true);
 	}
+	*/
 }
 
 // . return false and set g_errno on error
