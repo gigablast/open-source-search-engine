@@ -12069,7 +12069,7 @@ bool printHammerQueueTable ( SafeBuf *sb ) {
 			 "<tr bgcolor=#%s>"
 			 "<td><b>#</td>"
 			 "<td><b>age</td>"
-			 "<td><b>first ip</td>"
+			 "<td><b>first ip found</td>"
 			 "<td><b>actual ip</td>"
 			 "<td><b>crawlDelayMS</td>"
 			 "<td><b># proxies banning</td>"
@@ -12092,27 +12092,51 @@ bool printHammerQueueTable ( SafeBuf *sb ) {
 	if ( ! r ) return true;
 
 	// print row
-	sb->safePrintf( "<tr>"
+	sb->safePrintf( "<tr bgcolor=#%s>"
 		       "<td>%i</td>" // #
 		       "<td>%ims</td>" // age in hammer queue
 		       "<td>%s</td>"
+			,LIGHT_BLUE
 		       ,(int)count
 		       ,(int)(nowms - r->m_stored)
 		       ,iptoa(r->m_firstIp)
 		       );
+
 	sb->safePrintf("<td>%s</td>" // actual ip
-		      "<td>%i</td>" // crawl delay MS
-		      "<td>%i</td>" // proxies banning
-		      , iptoa(r->m_urlIp)
-		      , r->m_crawlDelayMS
-		      , r->m_numBannedProxies
-		      );
+		       , iptoa(r->m_urlIp));
+
+	// print crawl delay as link to robots.txt
+	sb->safePrintf( "<td><a href=\"");
+	Url cu;
+	cu.set ( r->ptr_url );
+	bool isHttps = false;
+	if ( cu.m_url && cu.m_url[4] == 's' ) isHttps = true;
+	if ( isHttps ) sb->safeStrcpy ( "https://");
+	else           sb->safeStrcpy ( "http://" );
+        sb->safeMemcpy ( cu.getHost() , cu.getHostLen() );
+	int32_t port = cu.getPort();
+	int32_t defPort = 80;
+	if ( isHttps ) defPort = 443;
+	if ( port != defPort ) sb->safePrintf ( ":%"INT32"",port );
+	sb->safePrintf ( "/robots.txt\">"
+			 "%i"
+			 "</a>"
+			 "</td>" // crawl delay MS
+			 "<td>%i</td>" // proxies banning
+			 , r->m_crawlDelayMS
+			 , r->m_numBannedProxies
+			 );
+
 	// show collection name as a link, also truncate to 32 chars
 	CollectionRec *cr = g_collectiondb.getRec ( r->m_collnum );
 	char *coll = "none";
 	if ( cr ) coll = cr->m_coll;
 	sb->safePrintf("<td>");
-	if ( cr ) sb->safePrintf("<a href=/admin/sockets?c=%s",coll);
+	if ( cr ) {
+		sb->safePrintf("<a href=/admin/sockets?c=");
+		sb->urlEncode(coll);
+		sb->safePrintf(">");
+	}
 	sb->safeTruncateEllipsis ( coll , 32 );
 	if ( cr ) sb->safePrintf("</a>");
 	sb->safePrintf("</td>");
