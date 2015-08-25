@@ -224,9 +224,6 @@ void printTcpTable ( SafeBuf* p, char *title, TcpServer *server ) {
 			       "<td>%s</td>"  // ip
 			       "<td>%hu</td>" // port
 			       "<td>%s</td>"  // state
-			       "<td>%"INT32"</td>" // bytes read
-			       "<td>%"INT32"</td>" // bytes to read
-			       "<td>%"INT32"</td>" // bytes sent
 			       ,
 			       bg ,
 			       i,
@@ -236,8 +233,26 @@ void printTcpTable ( SafeBuf* p, char *title, TcpServer *server ) {
 			       //s->m_timeout ,
 			       iptoa(s->m_ip) ,
 			       s->m_port ,
-			       st ,
-			       s->m_readOffset ,
+			       st );
+
+
+		// tool tip to show top 500 bytes of send buf
+		if ( s->m_readOffset && s->m_readBuf ) {
+			p->safePrintf("<td><a title=\"");
+			SafeBuf tmp;
+			tmp.safeTruncateEllipsis ( s->m_readBuf , 
+						   s->m_readOffset ,
+						   500 );
+			p->htmlEncode ( tmp.getBufStart() );
+			p->safePrintf("\">");
+			p->safePrintf("<u>%"INT32"</u></td>",s->m_readOffset);
+		}
+		else
+			p->safePrintf("<td>0</td>");
+
+		p->safePrintf( "<td>%"INT32"</td>" // bytes to read
+			       "<td>%"INT32"</td>" // bytes sent
+			       ,
 			       s->m_totalToRead ,
 			       s->m_sendOffset
 			       );
@@ -246,8 +261,10 @@ void printTcpTable ( SafeBuf* p, char *title, TcpServer *server ) {
 		if ( s->m_totalToSend && s->m_sendBuf ) {
 			p->safePrintf("<td><a title=\"");
 			SafeBuf tmp;
-			tmp.safeTruncateEllipsis ( s->m_sendBuf , 500 );
-			p->urlEncode ( tmp.getBufStart() );
+			tmp.safeTruncateEllipsis ( s->m_sendBuf , 
+						   s->m_totalToSend ,
+						   500 );
+			p->htmlEncode ( tmp.getBufStart() );
 			p->safePrintf("\">");
 			p->safePrintf("<u>%"INT32"</u></td>",s->m_totalToSend);
 		}

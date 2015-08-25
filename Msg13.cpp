@@ -12059,7 +12059,7 @@ char *getRandUserAgent ( int32_t urlIp , int32_t proxyIp , int32_t proxyPort ) {
 bool printHammerQueueTable ( SafeBuf *sb ) {
 
 	char *title = "Queued Download Requests";
-	sb->safePrintf ( "<br>"
+	sb->safePrintf ( 
 			 "<table %s>"
 			 "<tr class=hdrow><td colspan=19>"
 			 "<center>"
