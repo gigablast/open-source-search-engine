@@ -100,7 +100,7 @@ def getSplitTime():
 
 
 
-def copyToTwins(fname):
+def copyToTwins(fname, backToFront=False):
     fh = open(fname, 'r')
     ret = {}
     hosts = []
@@ -117,23 +117,25 @@ def copyToTwins(fname):
             continue
         #print directory, ip1, note
     step = len(hosts)/2
-    hostPlex = {}
-    someIp = None
+    cmds = []
     for hostId, dnsPort, httpsPort, httpPort, udbPort,ip1, ip2, directory, note in hosts[:step]:
-        if ip1 not in hostPlex:
-            hostPlex[ip1] = []
-            someIp = ip1
-        hostPlex[ip1].append('scp -r %s:%s* %s:%s. ' % (ip1, directory, (hosts[hostId + step][5]), (hosts[hostId + step][7])))
+        backHostId, backDnsPort, backHttpsPort, backHttpPort, backUdbPort,backIp1, backIp2, backDirectory, backNote = hosts[hostId + step]
+
+        if note != directory:
+            print 'oh looks like you overlooked host %s' % hostId
+        if backNote != backDirectory:
+            print 'oh looks like you overlooked host %s' % backHostId
+
+        if backToFront:
+            cmd = 'scp -r %s:%s* %s:%s. &' % (backIp1, backDirectory, ip1, directory )
+        else:
+            cmd = 'scp -r %s:%s* %s:%s. &' % (ip1, directory, backIp1, backDirectory)
+        cmds.append(cmd)
         #print 'scp -r %s:%s* %s:%s. &' % (ip1, directory, (hosts[hostId + step][5]), (hosts[hostId + step][7]))
 
-    while len(hostPlex[someIp]) > 0:
-        cmd = []
+    for cmd in cmds:
+        print cmd
 
-        for ip in hostPlex.iterkeys():
-            cmd.append(hostPlex[ip].pop())
-            #print hostPlex[ip].pop()
-
-        print '&\n'.join(cmd), '&'
 
 
 def testDiskSpeed(host, directory):
