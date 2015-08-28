@@ -2300,7 +2300,8 @@ bool getTestDoc ( char *u , TcpSocket *ts , Msg13Request *r ) {
 
 	// log it for now
 	//if ( g_conf.m_logDebugSpider )
-		log("test: GOT doc in test cache: %s (%"UINT64")",u,h);
+		log("test: GOT doc in test cache: %s (qa/doc.%"UINT64".html)",
+		    u,h);
 		
 	//fprintf(stderr,"scp gk252:/e/test-spider/doc.%"UINT64".* /home/mwells/gigablast/test-parser/\n",h);
 

@@ -443,6 +443,7 @@ bool Xml::set ( char  *s             ,
 		bool inComment1 = false;
 		bool inComment2 = false;
 		bool inComment3 = false;
+		bool inComment4 = false;
 		bool escaped    = false;
 		// bool foo = false;
 		// if ( m_xmlLen == 13257 ) { //pstart - m_xml == 88881 ) {
@@ -456,7 +457,9 @@ bool Xml::set ( char  *s             ,
 			// adding these new quote checks may cause a few
 			// parsing inconsistencies for pages a hanful of pages
 			//
-			if ( p[0] =='\n' )  {
+			// windows-based html pages use 13 sometimes and no
+			// \n at all...
+			if ( p[0] =='\n' || p[0] == 13 )  { // ^m = 13 = CR
 				//newLine = true;
 				inComment1 = false;
 			}
@@ -470,7 +473,8 @@ bool Xml::set ( char  *s             ,
 			     p[2] == '-' && p[2] == '-' &&
 			     ! inSingles && ! inDoubles &&
 			     ! inComment1 &&
-			     ! inComment2 ) 
+			     ! inComment2 &&
+			     ! inComment4 ) 
 				inComment3 = true;
 			if ( p[0] == '-' && p[1] == '-' && 
 			     p[2] == '>' && 
@@ -478,14 +482,46 @@ bool Xml::set ( char  *s             ,
 				inComment3 = false;
 			if ( p[0] == '/' && p[1]=='/'&& 
 			     ! inSingles && ! inDoubles &&
-			     ! inComment2 && ! inComment3 )
+			     ! inComment2 && 
+			     ! inComment3 &&
+			     // allow for "//<![CDATA[..." to end in
+			     // "//]]>" so ignore if inComment4 is true.
+			     // i'd say these are the weaker of all 4 
+			     // comment types in that regard.
+			     ! inComment4 )
 				inComment1 = true;
 			// handle /* */ comments
 			if ( p[0] == '/' && p[1]=='*' &&
 			     ! inSingles && ! inDoubles &&
-			     ! inComment1 && ! inComment3 )
+			     ! inComment1 && 
+			     ! inComment3 &&
+			     ! inComment4 )
 				inComment2 = true;
-			if ( p[0] == '*' && p[1]=='/' )
+			// <![CDATA[...]]> "comments" in <script> tags
+			// are common. CDATA tags seem to prevail even if
+			// within another comment tag, like i am seeing
+			// "//<![CDATA[..." a lot.
+			if ( p[0] == '<' &&
+			     p[1] == '!' &&
+			     p[2] == '[' &&
+			     p[3] == 'C' &&
+			     p[4] == 'D' &&
+			     p[5] == 'A' &&
+			     p[6] == 'T' &&
+			     p[7] == 'A' &&
+			     p[8] == '[' 
+			     //! inComment1 &&
+			     //! inComment2 && 
+			     //! inComment3 )
+			     )
+				inComment4 = true;
+			if ( p[0] == ']' &&
+			     p[1] == ']' &&
+			     p[2] == '>' )
+				inComment4 = false;
+			if ( p[0] == '*' && 
+			     p[1]=='/' &&
+			     ! inComment4 )
 				inComment2 = false;
 			// no longer the start of a newLine
 			//newLine = false;
@@ -499,6 +535,10 @@ bool Xml::set ( char  *s             ,
 				continue;
 			}
 			if ( inComment3 && newVersion ) {
+				escaped = false;
+				continue;
+			}
+			if ( inComment4 && newVersion ) {
 				escaped = false;
 				continue;
 			}
