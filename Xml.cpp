@@ -433,22 +433,91 @@ bool Xml::set ( char  *s             ,
 		char *pend   = &m_xml[0] + m_xmlLen;
 		bool inDoubles = false;
 		bool inSingles = false;
+		bool inComment1 = false;
+		bool inComment2 = false;
+		bool inComment3 = false;
+		bool escaped    = false;
+		// use this for parsing consistency when deleting records
+		// so they equal what we added.
+		bool newVersion = true;
+		if ( version <= 120 ) newVersion = false;
+		// bool foo = false;
+		// if ( m_xmlLen == 13257 ) { //pstart - m_xml == 88881 ) {
+		// 	foo = true;
+		// }
 		// scan -- 5 continues -- node 1570 is text of script
 		for ( ; p < pend ; p++ ) {
 			// breathe
 			QUICKPOLL(m_niceness);
 			//
-			// adding these two quote checks may cause a few
+			// adding these new quote checks may cause a few
 			// parsing inconsistencies for pages a hanful of pages
 			//
+			if ( p[0] =='\n' )  {
+				//newLine = true;
+				inComment1 = false;
+			}
+			if ( p[0] == '\\' ) {
+				escaped = ! escaped;
+				continue;
+			}
+			//if ( newLine && is_wspace_a(p[0]) )
+			//	continue;
+			if ( p[0] == '<' && p[1] == '!' && 
+			     p[2] == '-' && p[2] == '-' &&
+			     ! inSingles && ! inDoubles &&
+			     ! inComment1 &&
+			     ! inComment2 ) 
+				inComment3 = true;
+			if ( p[0] == '-' && p[1] == '-' && 
+			     p[2] == '>' && 
+			     inComment3 ) 
+				inComment3 = false;
+			if ( p[0] == '/' && p[1]=='/'&& 
+			     ! inSingles && ! inDoubles &&
+			     ! inComment2 && ! inComment3 )
+				inComment1 = true;
+			// handle /* */ comments
+			if ( p[0] == '/' && p[1]=='*' &&
+			     ! inSingles && ! inDoubles &&
+			     ! inComment1 && ! inComment3 )
+				inComment2 = true;
+			if ( p[0] == '*' && p[1]=='/' )
+				inComment2 = false;
+			// no longer the start of a newLine
+			//newLine = false;
+			// don't check for quotes or </script> if in comment
+			if ( inComment1 && newVersion ) {
+				escaped = false;
+				continue;
+			}
+			if ( inComment2 && newVersion ) {
+				escaped = false;
+				continue;
+			}
+			if ( inComment3 && newVersion ) {
+				escaped = false;
+				continue;
+			}
 			// if an unescaped double quote
-			if ( p[0] == '\"' && p[-1] !='/' ) 
+			if ( p[0] == '\"' && ! escaped && ! inSingles ) 
 				inDoubles = ! inDoubles;
-			// if an unescaped single quote
-			if ( p[0] == '\'' && p[-1] !='/' ) 
+			// if an unescaped single quote. 
+			if ( p[0] == '\'' && ! escaped && ! inDoubles ) 
 				inSingles = ! inSingles;
-			if ( inSingles ) continue;
-			if ( inDoubles ) continue;
+			// no longer escaped
+			escaped = false;
+			// if ( foo ) {
+			// 	fprintf(stderr,"%c [%lu](inDoubles=%i,"
+			// 		"inSingles=%i)\n",*p,
+			// 		(unsigned long)(uint8_t)*p,
+			// 		(int)inDoubles,
+			// 		(int)inSingles);
+			// }
+			// if ( inSingles ) 
+			// 	continue;
+			// if ( inDoubles ) 
+			// 	continue;
 			// keep going if not a tag
 			if ( p[0]  != '<' ) continue;
 			// </script> or </gbframe> stops it
@@ -458,8 +527,11 @@ bool Xml::set ( char  *s             ,
 				     to_lower_a(p[4]) == 'r' &&
 				     to_lower_a(p[5]) == 'i' &&
 				     to_lower_a(p[6]) == 'p' &&
-				     to_lower_a(p[7]) == 't' ) 
+				     to_lower_a(p[7]) == 't' ) {
+					if((inDoubles||inSingles)&& newVersion)
+						continue;
 					break;
+				}
 				if ( to_lower_a(p[2]) == 'g' &&
 				     to_lower_a(p[3]) == 'b' &&
 				     to_lower_a(p[4]) == 'f' &&
@@ -474,9 +546,14 @@ bool Xml::set ( char  *s             ,
 			     to_lower_a(p[3]) == 'r' &&
 			     to_lower_a(p[4]) == 'i' &&
 			     to_lower_a(p[5]) == 'p' &&
-			     to_lower_a(p[6]) == 't' ) 
+			     to_lower_a(p[6]) == 't' ) {
+				if ( (inDoubles || inSingles) && newVersion )
+					continue;
 				break;
+			}
 		}
+		// if ( foo )
+		// 	log("done");
 		// make sure we do not breach! i saw this happen once!
 		if ( m_numNodes >= m_maxNumNodes ) break;
 		// was it like <script></script> then no scripttext tag?
