@@ -431,10 +431,24 @@ bool Xml::set ( char  *s             ,
 		char *pstart = &m_xml[i];
 		char *p      = pstart;
 		char *pend   = &m_xml[0] + m_xmlLen;
+		bool inDoubles = false;
+		bool inSingles = false;
 		// scan -- 5 continues -- node 1570 is text of script
 		for ( ; p < pend ; p++ ) {
 			// breathe
 			QUICKPOLL(m_niceness);
+			//
+			// adding these two quote checks may cause a few
+			// parsing inconsistencies for pages a hanful of pages
+			//
+			// if an unescaped double quote
+			if ( p[0] == '\"' && p[-1] !='/' ) 
+				inDoubles = ! inDoubles;
+			// if an unescaped single quote
+			if ( p[0] == '\'' && p[-1] !='/' ) 
+				inSingles = ! inSingles;
+			if ( inSingles ) continue;
+			if ( inDoubles ) continue;
 			// keep going if not a tag
 			if ( p[0]  != '<' ) continue;
 			// </script> or </gbframe> stops it
