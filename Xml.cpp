@@ -427,6 +427,13 @@ bool Xml::set ( char  *s             ,
 		}
 		// ok, we got a <script> tag now
 		m_numNodes++;
+
+		// use this for parsing consistency when deleting records
+		// so they equal what we added.
+		bool newVersion = true;
+		if ( version <= 120 ) newVersion = false;
+
+		//	retry:
 		// scan for </script>
 		char *pstart = &m_xml[i];
 		char *p      = pstart;
@@ -437,10 +444,6 @@ bool Xml::set ( char  *s             ,
 		bool inComment2 = false;
 		bool inComment3 = false;
 		bool escaped    = false;
-		// use this for parsing consistency when deleting records
-		// so they equal what we added.
-		bool newVersion = true;
-		if ( version <= 120 ) newVersion = false;
 		// bool foo = false;
 		// if ( m_xmlLen == 13257 ) { //pstart - m_xml == 88881 ) {
 		// 	foo = true;
@@ -559,6 +562,16 @@ bool Xml::set ( char  *s             ,
 		// was it like <script></script> then no scripttext tag?
 		if ( p - pstart == 0 )
 			continue;
+
+		// none found? allow for </script> in quotes then, maybe
+		// they were unbalanced quotes. also allow for </script>
+		// in a comment. do we need to do this? just enable it if
+		// we find a page that needs it.
+		// if ( p == pend && newVersion ) {
+		// 	newVersion = false;
+		// 	goto retry;
+		// }
+
 		XmlNode *xn      = &m_nodes[m_numNodes++];
 		xn->m_nodeId     = TAG_SCRIPTTEXT;//0; // TEXT NODE
 		xn->m_node       =     pstart;
