@@ -432,6 +432,7 @@ bool Xml::set ( char  *s             ,
 		// so they equal what we added.
 		bool newVersion = true;
 		if ( version <= 120 ) newVersion = false;
+		//newVersion = false;
 
 		//	retry:
 		// scan for </script>
@@ -480,6 +481,9 @@ bool Xml::set ( char  *s             ,
 			     p[2] == '>' && 
 			     inComment3 ) 
 				inComment3 = false;
+			/*
+			  no. i saw <script>//</script> and </script> was
+			  not considered to be in a comment
 			if ( p[0] == '/' && p[1]=='/'&& 
 			     ! inSingles && ! inDoubles &&
 			     ! inComment2 && 
@@ -490,6 +494,7 @@ bool Xml::set ( char  *s             ,
 			     // comment types in that regard.
 			     ! inComment4 )
 				inComment1 = true;
+			*/
 			// handle /* */ comments
 			if ( p[0] == '/' && p[1]=='*' &&
 			     ! inSingles && ! inDoubles &&
