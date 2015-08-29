@@ -12432,15 +12432,15 @@ void Parms::init ( ) {
 	m->m_group = 0;
 	m++;
 
-	m->m_title = "do synchronous writes";
+	m->m_title = "flush disk writes";
 	m->m_desc  = "If enabled then all writes will be flushed to disk. "
-		"This is generally a good thing.";
+		"If not enabled, then gb uses the Linux disk write cache.";
 	m->m_cgi   = "fw";
 	m->m_off   = (char *)&g_conf.m_flushWrites - g;
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "0";
 	m->m_group = 0;
-	m->m_flags = PF_HIDDEN | PF_NOSAVE;
+	m->m_flags = 0;//PF_HIDDEN | PF_NOSAVE;
 	m->m_page  = PAGE_MASTER;
 	m->m_obj   = OBJ_CONF;
 	m->m_group = 0;
