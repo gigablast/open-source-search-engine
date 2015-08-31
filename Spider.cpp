@@ -7209,11 +7209,15 @@ bool SpiderLoop::gotDoledbList2 ( ) {
 		XmlDoc *xd = m_docs[i];
 		if ( ! xd ) continue;
 		if ( ! xd->m_sreqValid ) continue;
+		// only count for our same collection otherwise another
+		// collection can starve us out
+		if ( xd->m_collnum != cr->m_collnum ) continue;
 		if ( xd->m_sreq.m_firstIp == sreq->m_firstIp ) ipOut++;
 	}
 	if ( ipOut >= maxSpidersOutPerIp ) goto hitMax;
 	if ( g_conf.m_logDebugSpider )
-		log("spider: %"INT32" spiders out for %s for %s",ipOut,iptoa(sreq->m_firstIp),
+		log("spider: %"INT32" spiders out for %s for %s",
+		    ipOut,iptoa(sreq->m_firstIp),
 		    sreq->m_url);
 
 	// sometimes we have it locked, but is still in doledb i guess.
