@@ -1358,6 +1358,18 @@ int main2 ( int argc , char *argv[] ) {
 	}
 	*/
 
+	if ( strcmp ( cmd ,"isportinuse") == 0 ) {
+		if ( cmdarg+1 >= argc ) goto printHelp;
+		int port = atol ( argv[cmdarg+1] );
+		// make sure port is available. returns false if in use.
+		if ( ! g_httpServer.m_tcp.testBind(port,false) )
+			// and we should return with 1 so the keep alive
+			// script will exit
+			exit (1);
+		// port is not in use, return 0
+		exit(0);
+	}
+
 	// need threads here for tests?
 
 	// gb thrutest <testDir> <fileSize>
@@ -3048,7 +3060,8 @@ int main2 ( int argc , char *argv[] ) {
 	// make sure port is available, no use loading everything up then
 	// failing because another process is already running using this port
 	//if ( ! g_udpServer.testBind ( g_hostdb.getMyPort() ) )
-	if ( ! g_httpServer.m_tcp.testBind(g_hostdb.getMyHost()->m_httpPort))
+	if ( ! g_httpServer.m_tcp.testBind(g_hostdb.getMyHost()->m_httpPort,
+					   true)) // printmsg?
 		return 1;
 
 	int32_t *ips;
@@ -5202,6 +5215,23 @@ int install ( install_flag_konst_t installFlag , int32_t hostId , char *dir ,
 				 "while [ \\$EXITSTATUS != 0 ]; do "
  				 "{ "
 
+				// if gb still running, then do not try to
+				// run it again. we
+				// probably double-called './gb start'.
+				// so see if the port is bound to. 
+				"./gb isportinuse %i ; "
+				"if [ \\$? -eq 1 ] ; then "
+				"echo \"gb or something else "
+				"is already running on "
+				"port %i. Not starting.\" ; "
+				"exit 0; "
+				"fi ; "
+
+				// ok, the port is available
+				//"echo \"Starting gb\"; "
+
+				//"exit 0; "
+
 				// in case gb was updated...
 				"mv -f gb.installed gb ; "
 
@@ -5222,10 +5252,15 @@ int install ( install_flag_konst_t installFlag , int32_t hostId , char *dir ,
 				"ADDARGS='-r'\\$INC ; "
 				"INC=\\$((INC+1));"
 				"} " 
- 				"done >& /dev/null & \" %s",
+ 				//"done >& /dev/null & \" %s",
+ 				"done & \" %s",
 				//"\" %s",
 				iptoa(h2->m_ip),
 				h2->m_dir      ,
+
+				// for ./gb isportinuse %i
+				h2->m_httpPort ,
+				h2->m_httpPort ,
 
 				// for moving log file
 				 h2->m_hostId   ,
