@@ -55,13 +55,13 @@ void SafeBuf::setLabel ( char *label ) {
 	m_label = label;
 }
 
-SafeBuf::SafeBuf(char* stackBuf, int32_t cap) {
+SafeBuf::SafeBuf(char* stackBuf, int32_t cap, char* label) {
 	m_usingStack = true;
 	m_capacity = cap;
 	m_buf = stackBuf;
 	m_length = 0;
 	m_encoding = csUTF8;
-	m_label = NULL;
+	m_label = label;
 }
 
 SafeBuf::SafeBuf(char *heapBuf, int32_t bufMax, int32_t bytesInUse, bool ownData) {

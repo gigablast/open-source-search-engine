@@ -5674,6 +5674,8 @@ bool printResult ( State0 *st, int32_t ix , int32_t *numPrintedSoFar ) {
 
 
 	if ( mr->size_metadataBuf && si->m_format == FORMAT_HTML) {
+		sb->safePrintf("<br>");
+
 		Json md;
 		JsonItem *ji = md.parseJsonStringIntoJsonItems(mr->ptr_metadataBuf,
 													   0);
@@ -5682,6 +5684,7 @@ bool printResult ( State0 *st, int32_t ix , int32_t *numPrintedSoFar ) {
 		SafeBuf nameBuf(tmpBuf1, 1024);
 		for ( ; ji ; ji = ji->m_next ) {
 			if(ji->isInArray()) continue;
+			if(ji->m_type == JT_ARRAY) continue;
 			ji->getCompoundName ( nameBuf ) ;
 			if(nameBuf.length() == 0) {
 				continue;

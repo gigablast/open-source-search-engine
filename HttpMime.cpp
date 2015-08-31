@@ -220,6 +220,8 @@ bool HttpMime::parse ( char *mime , int32_t mimeLen , Url *url ) {
 // . #3: Sun Nov  6 08:49:37 1994       ;ANSI C's asctime() format
 // . #4: 06 Nov 1994 08:49:37 GMT  ... my own
 // . #5: 2007-12-31
+// . #6: 2008-04-30T20:48:25Z (ISO8601)
+
 time_t atotime ( char *s ) {
 
 	// skip non-alnum padding
@@ -398,6 +400,7 @@ time_t atotime4 ( char *s ) {
 }
 
 // 2007-12-31
+// 2008-04-30T20:48:25Z (ISO8601)
 time_t atotime5 ( char *s ) {
 	// this time structure, once filled, will help yield a time_t
 	struct tm t;
@@ -429,6 +432,7 @@ time_t atotime5 ( char *s ) {
 	t.tm_mday = atol ( s );
 	while ( isdigit (*s) ) s++;
 	while ( isspace (*s) ) s++;	
+        if (*s == 'T')         s++;
 
 	// TIME
 	getTime ( s , &t.tm_sec , &t.tm_min , &t.tm_hour );

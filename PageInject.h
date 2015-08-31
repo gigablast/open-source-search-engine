@@ -73,6 +73,8 @@ public:
 	//GigablastRequest m_gr;
 	InjectionRequest m_injectionRequest;
 
+	int64_t    m_startTime;
+
 	int32_t m_replyIndexCode;
 	int64_t m_replyDocId;
 

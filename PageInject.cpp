@@ -9,6 +9,7 @@
 #include "Repair.h"
 #include "PageCrawlBot.h"
 #include "HttpRequest.h"
+#include "Stats.h"
 
 // from XmlDoc.cpp
 bool isRobotsTxtFile ( char *url , int32_t urlLen ) ;
@@ -166,6 +167,13 @@ bool Msg7::sendInjectionRequestToHost ( InjectionRequest *ir ,
 
 	//if ( strcmp ( ir->ptr_url , "http://www.indyweek.com/durham/current/news.html" )  == 0 )
 	//	fprintf(stderr,"ey\n");
+
+	// ensure url not beyond limit
+	if ( ir->ptr_url &&
+	     gbstrlen(ir->ptr_url) > MAX_URL_LEN ) {
+		g_errno = EURLTOOBIG;
+		return log("inject: url too big.");
+	}
 
 	int32_t sirSize = 0;
 	char *sir = serializeMsg2 ( ir ,
@@ -375,7 +383,8 @@ bool sendHttpReply ( void *state ) {
 
 	int64_t docId  = msg7->m_replyDocId; // xd->m_docId;
 
-	g_errno = msg7->m_replyIndexCode;
+	// might already be EURLTOOBIG set from above
+	if ( ! g_errno ) g_errno = msg7->m_replyIndexCode;
 
 	int32_t      hostId = 0;//msg7->m_msg7.m_hostId;
 
@@ -578,6 +587,17 @@ void sendUdpReply7 ( void *state ) {
 
 	XmlDoc *xd = (XmlDoc *)state;
 	UdpSlot *slot = xd->m_injectionSlot;
+
+    uint32_t statColor = 0xccffcc;
+    if(xd->m_indexCode) {
+        statColor = 0x4e99e9;
+    }
+	g_stats.addStat_r ( xd->m_rawUtf8ContentSize,
+						xd->m_injectStartTime, 
+						gettimeofdayInMilliseconds(),
+						statColor );
+
+
 	// injecting a warc seems to not set m_indexCodeValid to true
 	// for the container doc... hmmm...
 	int32_t indexCode = -1;
@@ -586,6 +606,8 @@ void sendUdpReply7 ( void *state ) {
 	if ( xd && xd->m_docIdValid     ) docId = xd->m_docId;
 	mdelete ( xd, sizeof(XmlDoc) , "PageInject" );
 	delete (xd);
+
+
 	if ( g_errno ) {
 		g_udpServer.sendErrorReply(slot,g_errno);
 		return;
@@ -605,6 +627,7 @@ void sendUdpReply7 ( void *state ) {
 
 void handleRequest7 ( UdpSlot *slot , int32_t netnice ) {
 
+
 	InjectionRequest *ir = (InjectionRequest *)slot->m_readBuf;
 
 	// now just supply the first guy's char ** and size ptr
@@ -612,7 +635,8 @@ void handleRequest7 ( UdpSlot *slot , int32_t netnice ) {
 
 	CollectionRec *cr = g_collectiondb.getRec ( ir->m_collnum );
 	if ( ! cr ) {
-		log("inject: cr rec is null");
+		log("inject: cr rec is null %i", ir->m_collnum);
+		g_errno = ENOCOLLREC;
 		g_udpServer.sendErrorReply(slot,g_errno);
 		return;
 	}
@@ -629,7 +653,7 @@ void handleRequest7 ( UdpSlot *slot , int32_t netnice ) {
 	mnew ( xd, sizeof(XmlDoc) , "PageInject" );
 
 	xd->m_injectionSlot = slot;
-
+	xd->m_injectStartTime = gettimeofdayInMilliseconds();
 
 	if ( ! xd->injectDoc ( ir->ptr_url , // m_injectUrlBuf.getBufStart() ,
 			       cr ,
@@ -820,6 +844,7 @@ void handleRequest7Import ( UdpSlot *slot , int32_t netnice ) {
 
 	//m_state = state;
 	//m_callback = callback;
+
 
 	XmlDoc *xd;
 	try { xd = new (XmlDoc); }

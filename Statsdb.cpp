@@ -76,8 +76,10 @@ static Label s_labels[] = {
 
 	// . 20 is the max dps regardless to stop graph shrinkage
 	// . use .03 qps as the min resolution per pixel
-	{GRAPH_OPS,10,"parse_doc", .005,"%.1f dps" , 1.0 , 0x00fea915,"parsed doc" },
+	{GRAPH_OPS,20,"parse_doc", .005,"%.1f dps" , 1.0 , 0x00fea915,"parsed doc" },
 
+
+	{GRAPH_QUANTITY_PER_OP,1000,"docs_per_second", .005,"%.1f docs" , .001 , 0x1F2F5C,"docs per second" },
 
 	// . use .1 * 1000 docs as the min resolution per pixel
 	// . max = -1, means dynamic size the ymax!
@@ -249,6 +251,7 @@ void Statsdb::addDocsIndexed ( ) {
 	int32_t now = getTimeLocal();
 	static int32_t s_lastTime = 0;
 	if ( now - s_lastTime < 5 ) return;
+	int32_t interval = now - s_lastTime;
 	s_lastTime = now;
 
 	int64_t total = 0LL;
@@ -257,20 +260,25 @@ void Statsdb::addDocsIndexed ( ) {
 	for ( int32_t i = 0 ; i < g_hostdb.m_numHosts ; i++ ) {
 		Host *h = &g_hostdb.m_hosts[i];
 		// must have something
-		if ( h->m_pingInfo.m_totalDocsIndexed <= 0 ) return;
+		if ( h->m_pingInfo.m_totalDocsIndexed <= 0 ) continue;
 		// add it up
 		total += h->m_pingInfo.m_totalDocsIndexed;
 	}
 	// divide by # of groups
-	total /= g_hostdb.getNumShards();
+	total /= g_hostdb.getNumHostsPerShard();
 	// skip if no change
 	if ( total == s_lastTotal ) return;
 
+    int32_t docsIndexedInInterval = total - s_lastTotal;
+    float docsPerSecond = docsIndexedInInterval / (float)interval;
+
 	s_lastTotal = total;
+	log("build: total docs indexed: %f. docs per second %f %i %i", (float)total, docsPerSecond, docsIndexedInInterval, interval);
 
 	// add it if changed though
 	int64_t nowms = gettimeofdayInMillisecondsGlobal();
 	addStat ( MAX_NICENESS,"docs_indexed", nowms, nowms, (float)total );
+	addStat ( MAX_NICENESS,"docs_per_second", nowms, nowms, docsPerSecond );
 }
 
 // . m_key bitmap in statsdb:
@@ -290,14 +298,14 @@ void Statsdb::addDocsIndexed ( ) {
 // . oldVal, newVal are reflect a state change, like maybe changing the
 //   value of a parm. typically for such things t1 equals t2
 bool Statsdb::addStat ( int32_t        niceness ,
-			char       *label    ,
+			char      *label    ,
 			int64_t   t1Arg    ,
 			int64_t   t2Arg    ,
-			float       value    , // y-value really, "numBytes"
-			int32_t        parmHash ,
-			float       oldVal   ,
-			float       newVal   ,
-			int32_t        userId32 ) {
+			float     value    , // y-value really, "numBytes"
+			int32_t   parmHash ,
+			float     oldVal   ,
+			float     newVal   ,
+			int32_t   userId32 ) {
 
 	if ( ! g_conf.m_useStatsdb ) return true;
 
@@ -630,23 +638,23 @@ bool Statsdb::gifLoop ( ) {
 	// main graphing window
 	//
 	m_gw.safePrintf("<div style=\"position:relative;"
-		      "background-color:#c0c0c0;"
-		      //"overflow-y:hidden;"
-		      "overflow-x:hidden;"
-			"z-index:0;"
-		      // the tick marks we print below are based on it
-		      // being a window of the last 20 seconds... and using
-		      // DX2 pixels
-		      "min-width:%"INT32"px;"
-		      "min-height:%"INT32"px;"
-		      //"width:100%%;"
-		      //"min-height:600px;"
-		      "margin-top:10px;"
-		      "margin-bottom:10px;"
-		      "margin-right:10px;"
-		      "margin-left:10px;\">"
-		      ,(int32_t)DX2 + 2 *m_bx
-			,(int32_t)DY2 + 2*m_by);
+					"background-color:#c0c0c0;"
+					//"overflow-y:hidden;"
+					"overflow-x:hidden;"
+					"z-index:0;"
+					// the tick marks we print below are based on it
+					// being a window of the last 20 seconds... and using
+					// DX2 pixels
+					"min-width:%"INT32"px;"
+					"min-height:%"INT32"px;"
+					//"width:100%%;"
+					//"min-height:600px;"
+					"margin-top:10px;"
+					"margin-bottom:10px;"
+					"margin-right:10px;"
+					"margin-left:10px;\">"
+					,(int32_t)DX2 + 2 *m_bx
+					,(int32_t)DY2 + 2*m_by);
 
 
 	// draw the x-axis
@@ -724,10 +732,14 @@ bool Statsdb::gifLoop ( ) {
 		if ( col == 0 )
 			m_sb2->safePrintf("<tr>");
 
-		m_sb2->safePrintf("<td bgcolor=#%06"XINT32">&nbsp; &nbsp;</td>"
-				 "<td>%s</td>\n",
-				 bb->m_color ,
-				 bb->m_keyDesc );
+		m_sb2->safePrintf("<td bgcolor=#%06"XINT32"><label>"
+						  "<input class=\"graph-toggles\" "
+						  "type=\"checkbox\" "
+						  "value=\"%06"XINT32"\"/></label></td>"
+						  "<td>%s</td>\n",
+						  bb->m_color ,
+						  bb->m_color ,
+						  bb->m_keyDesc );
 
 		if ( col == 1 )
 			m_sb2->safePrintf("</tr>\n");
@@ -874,7 +886,7 @@ char *Statsdb::plotGraph ( char *pstart ,
 	Label *label = getLabel ( graphHash );
 	if ( ! label ) { char *xx=NULL;*xx=0; }
 
-	log("stats: plotting %s",label->m_keyDesc) ;
+	//log("stats: plotting %s",label->m_keyDesc) ;
 
 	// let's first scan m_sb1 to normalize the y values
 	bool needMin = true;
@@ -1136,17 +1148,20 @@ void Statsdb::drawHR ( float z ,
 
 	// LABEL
 	gw.safePrintf("<div style=\"position:absolute;"
-		      "left:%"INT32";"
-		      "bottom:%"INT32";"
-		      "color:#%"XINT32";"
-		      "z-index:110;"
-		      "font-size:14px;"
-		      "min-height:20px;"
-		      "min-width:3px;\">%s</div>\n"
+				  "left:%"INT32";"
+				  "bottom:%"INT32";"
+				  "color:#%"XINT32";"
+				  "z-index:110;"
+				  "font-size:14px;"
+				  "min-height:20px;"
+				  "min-width:3px;\""
+                  " class=\"color-%"XINT32"\";"
+				  ">%s</div>\n"
 		      , (int32_t)(m_bx)
 		      , (int32_t)z2 +m_by
 		      , color
 		      // the label:
+		      , color
 		      , tmp
 		      );
 	
@@ -1566,16 +1581,18 @@ void Statsdb::drawLine3 ( SafeBuf &sb ,
 	m_dupTable.addKey(&key32);
 
 	sb.safePrintf("<div style=\"position:absolute;"
-		      "left:%"INT32";"
-		      "bottom:%"INT32";"
-		      "background-color:#%"XINT32";"
-		      "z-index:-5;"
-		      "min-height:%"INT32"px;"
-		      "min-width:%"INT32"px;\"></div>\n"
+				  "left:%"INT32";"
+				  "bottom:%"INT32";"
+				  "background-color:#%"XINT32";"
+				  "z-index:-5;"
+				  "min-height:%"INT32"px;"
+				  "min-width:%"INT32"px;\""
+				  "class=\"color-%"XINT32"\"></div>\n"
 		      , x1 + m_bx
 		      , (fy1 - width/2) + m_by
 		      , color
 		      , width
 		      , x2 - x1
+		      , color
 		      );
 }
