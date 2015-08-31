@@ -175,9 +175,17 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 			      "<tr class=poo><td><b>current allocations</b>"
 			      "</td>"
 			      "<td>%"INT32"</td></tr>\n" 
+
+
+			      "<tr class=poo><td><b>max allocations</b>"
+			      "</td>"
+			      "<td>%"INT32"</td></tr>\n" 
+
+
 			      "<tr class=poo><td><b>total allocations</b></td>"
 			      "<td>%"INT64"</td></tr>\n" ,
 			      g_mem.getNumAllocated() ,
+			      g_mem.m_memtablesize ,
 			      (int64_t)g_mem.getNumTotalAllocated() );
 
 	}

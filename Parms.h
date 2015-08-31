@@ -516,6 +516,7 @@ class Parms {
 	//
 
 	bool m_inSyncWithHost0;
+	bool m_triedToSync;
 
 	bool m_isDefaultLoaded;
 

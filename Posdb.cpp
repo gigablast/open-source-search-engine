@@ -148,9 +148,7 @@ bool Posdb::init ( ) {
 	if ( ! m_pc.init ( "posdb",
 			   RDB_POSDB,
 			   pcmem    ,
-			   pageSize , 
-			   true     ,  // use RAM disk?
-			   false    )) // minimize disk seeks?
+			   pageSize ))
 		return log("db: Posdb init failed.");
 
 	// . set our own internal rdb

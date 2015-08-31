@@ -2855,7 +2855,10 @@ int TcpServer::sslHandshake ( TcpSocket *s ) {
 		SSL_set_connect_state(s->m_ssl);
 	}
 
+	// SSL_connect() calls malloc()
+	g_inMemFunction = true;
 	int r = SSL_connect(s->m_ssl);
+	g_inMemFunction = false;
 
 	if ( g_conf.m_logDebugTcp )
 		log("tcp: ssl handshake on sd=%"INT32" r=%i",

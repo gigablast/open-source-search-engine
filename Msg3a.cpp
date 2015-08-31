@@ -1247,6 +1247,13 @@ bool Msg3a::mergeLists ( ) {
 
 	int32_t need =  nd * (8+sizeof(double)+
 			   sizeof(key_t)+sizeof(DocIdScore *)+1);
+	if ( need < 0 ) {
+		log("msg3a: need is %i, nd = %i is too many docids",
+		    (int)need,(int)nd);
+		g_errno = EBUFTOOSMALL;
+		return true;
+	}
+		
 	// allocate it
 	m_finalBuf     = (char *)mmalloc ( need , "finalBuf" );
 	m_finalBufSize = need;

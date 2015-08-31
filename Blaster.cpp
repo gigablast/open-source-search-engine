@@ -40,7 +40,7 @@ bool Blaster::init(){
 		log("blaster::hashinit failed" ); return 0; }
 
 	// init the memory class after conf since it gets maxMem from Conf
-	if ( ! g_mem.init ( 200000000 ) ) {
+	if ( ! g_mem.init ( ) ) {//200000000 ) ) {
 		log("blaster::Mem init failed" ); return 0; }
 	// start up log file
 	if ( ! g_log.init( "/tmp/blasterLog" )        ) {

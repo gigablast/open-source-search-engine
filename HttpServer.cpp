@@ -1543,7 +1543,7 @@ bool HttpServer::sendReply ( TcpSocket  *s , HttpRequest *r , bool isAdmin) {
 	//   case, as it is only set to true in TcpServer::readSocketWrapper()
 	//   which should never be called by TcpServer::sendMsg() above.
 	//   so let cleanUp know it is no longer valid
-	if ( ! f->isOpen() ) f->open( O_RDONLY );
+	if ( ! f->calledOpen() ) f->open( O_RDONLY );
 	int fd = f->getfd();
 	cleanUp ( f , NULL/*TcpSocket */ );
 	// . AND we need to do this ourselves here
@@ -2249,7 +2249,7 @@ int32_t getMsgPiece ( TcpSocket *s ) {
 		char *p = s->m_sendBuf;
 		char *pend = p + s->m_sendBufUsed;
 		// skip if not a doc.234567 filename format
-		if ( ! gb_strcasestr(f->m_filename,"/doc." ) ) p = pend;
+		if ( ! gb_strcasestr(f->getFilename(),"/doc." ) ) p = pend;
 		// do the replace
 		for ( ; p < pend ; p++ ) {
 			if ( strncasecmp(p,"google",6)) continue;

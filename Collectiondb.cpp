@@ -36,6 +36,7 @@ Collectiondb::Collectiondb ( ) {
 	m_numRecs = 0;
 	m_numRecsUsed = 0;
 	m_numCollsSwappedOut = 0;
+	m_initializing = false;
 	//m_lastUpdateTime = 0LL;
 	m_needsSave = false;
 	// sanity
@@ -88,16 +89,30 @@ bool Collectiondb::init ( bool isDump ) {
 }
 */
 
+extern bool g_inAutoSave;
+
 // . save to disk
 // . returns false if blocked, true otherwise
 bool Collectiondb::save ( ) {
 	if ( g_conf.m_readOnlyMode ) return true;
+
+	if ( g_inAutoSave && m_numRecsUsed > 20 && g_hostdb.m_hostId != 0 )
+		return true;
+
 	// which collection rec needs a save
 	for ( int32_t i = 0 ; i < m_numRecs ; i++ ) {
 		if ( ! m_recs[i]              ) continue;
 		// temp debug message
 		//logf(LOG_DEBUG,"admin: SAVING collection #%"INT32" ANYWAY",i);
 		if ( ! m_recs[i]->m_needsSave ) continue;
+
+		// if we core in malloc we won't be able to save the 
+		// coll.conf files
+		if ( m_recs[i]->m_isCustomCrawl && 
+		     g_inMemFunction &&
+		     g_hostdb.m_hostId != 0 )
+			continue;
+
 		//log(LOG_INFO,"admin: Saving collection #%"INT32".",i);
 		m_recs[i]->save ( );
 	}
@@ -111,6 +126,9 @@ bool Collectiondb::save ( ) {
 //
 ///////////
 bool Collectiondb::loadAllCollRecs ( ) {
+
+	m_initializing = true;
+
 	char dname[1024];
 	// MDW: sprintf ( dname , "%s/collections/" , g_hostdb.m_dir );
 	sprintf ( dname , "%s" , g_hostdb.m_dir );
@@ -171,6 +189,8 @@ bool Collectiondb::loadAllCollRecs ( ) {
 			     // to add the same collnum to every shard
 			     0 );
 	}
+
+	m_initializing = false;
 
 	// note it
 	//log(LOG_INFO,"db: Loaded data for %"INT32" collections. Ranging from "
@@ -246,6 +266,26 @@ bool Collectiondb::addExistingColl ( char *coll, collnum_t collnum ) {
 		char *xx=NULL;*xx=0;
 	}
 
+	// also try by #, i've seen this happen too
+	CollectionRec *ocr = getRec ( i );
+	if ( ocr ) {
+		g_errno = EEXIST;
+		log("admin: Collection id %i is in use already by "
+		    "%s, so we can not add %s. moving %s to trash."
+		    ,(int)i,ocr->m_coll,coll,coll);
+		SafeBuf cmd;
+		int64_t now = gettimeofdayInMilliseconds();
+		cmd.safePrintf ( "mv coll.%s.%i trash/coll.%s.%i.%"UINT64
+				 , coll
+				 ,(int)i
+				 , coll
+				 ,(int)i
+				 , now );
+		//log("admin: %s",cmd.getBufStart());
+		gbsystem ( cmd.getBufStart() );
+		return true;
+	}
+
 	// create the record in memory
 	CollectionRec *cr = new (CollectionRec);
 	if ( ! cr ) 
@@ -311,6 +351,10 @@ bool Collectiondb::addNewColl ( char *coll ,
 				// Parms.cpp reserves this so it can be sure
 				// to add the same collnum to every shard
 				collnum_t newCollnum ) {
+
+
+	//do not send add/del coll request until we are in sync with shard!!
+	// just return ETRYAGAIN for the parmlist...
 
 	// ensure coll name is legit
 	char *p = coll;
@@ -996,7 +1040,9 @@ bool Collectiondb::deleteRec2 ( collnum_t collnum ) { //, WaitEntry *we ) {
 		bf.set ( bu.getBufStart() );
 		if ( bf.doesExist() ) bf.unlink();
 	}
-	
+
+	// now remove from list of collections that might need a disk merge
+	removeFromMergeLinkedList ( cr );
 
 	//////
 	//
@@ -1060,6 +1106,8 @@ bool Collectiondb::growRecPtrBuf ( collnum_t collnum ) {
 		m_recs [ collnum ] = NULL;
 		return true;
 	}
+
+	m_recPtrBuf.setLabel ("crecptrb");
 
 	// . true here means to clear the new space to zeroes
 	// . this shit works based on m_length not m_capacity
@@ -1684,6 +1732,8 @@ static CollectionRec g_default;
 
 
 CollectionRec::CollectionRec() {
+	m_nextLink = NULL;
+	m_prevLink = NULL;
 	m_spiderCorruptCount = 0;
 	m_collnum = -1;
 	m_coll[0] = '\0';
@@ -1900,7 +1950,7 @@ bool CollectionRec::load ( char *coll , int32_t i ) {
 		gbmemcpy ( &m_localCrawlInfo , sb.getBufStart(),sb.length() );
 
 
-	if ( ! g_conf.m_doingCommandLine )
+	if ( ! g_conf.m_doingCommandLine && ! g_collectiondb.m_initializing )
 		log("coll: Loaded %s (%"INT32") local hasurlsready=%"INT32"",
 		    m_coll,
 		    (int32_t)m_collnum,
@@ -1947,7 +1997,7 @@ bool CollectionRec::load ( char *coll , int32_t i ) {
 		// it is binary now
 		gbmemcpy ( &m_globalCrawlInfo , sb.getBufStart(),sb.length() );
 
-	if ( ! g_conf.m_doingCommandLine )
+	if ( ! g_conf.m_doingCommandLine && ! g_collectiondb.m_initializing )
 		log("coll: Loaded %s (%"INT32") global hasurlsready=%"INT32"",
 		    m_coll,
 		    (int32_t)m_collnum,
@@ -1986,6 +2036,15 @@ bool CollectionRec::load ( char *coll , int32_t i ) {
 
 	// always turn off gigabits so &s=1000 can do summary skipping
 	if ( m_isCustomCrawl ) m_docsToScanForTopics = 0;
+
+	// make min to merge smaller than normal since most collections are
+	// small and we want to reduce the # of vfds (files) we have
+	if ( m_isCustomCrawl ) {
+		m_posdbMinFilesToMerge   = 6;
+		m_titledbMinFilesToMerge = 4;
+		m_linkdbMinFilesToMerge  = 3;
+		m_tagdbMinFilesToMerge   = 2;
+	}
 
 	// always turn on distributed spider locking because otherwise
 	// we end up calling Msg50 which calls Msg25 for the same root url
@@ -3890,7 +3949,7 @@ bool CollectionRec::rebuildUrlFiltersDiffbot() {
 // . it is also called on load of the collection at startup
 bool CollectionRec::rebuildUrlFilters ( ) {
 
-	if ( ! g_conf.m_doingCommandLine )
+	if ( ! g_conf.m_doingCommandLine && ! g_collectiondb.m_initializing )
 		log("coll: Rebuilding url filters for %s ufp=%s",m_coll,
 		    m_urlFiltersProfile.getBufStart());
 

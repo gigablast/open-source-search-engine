@@ -194,6 +194,7 @@ case EJSONMISSINGLASTCURLY: return "JSON was missing last curly bracket";
 case EADMININTERFERENCE: return "Adminstrative interference";
 case	EDNSERROR        : return "DNS lookup error";
 case ETHREADSDISABLED:return "Threads Disabled";
+case EMALFORMEDQUERY: return "Malformed query";
 	}
 	// if the remote error bit is clear it must be a regulare errno
 	//if ( ! ( errnum & REMOTE_ERROR_BIT ) ) return strerror ( errnum );

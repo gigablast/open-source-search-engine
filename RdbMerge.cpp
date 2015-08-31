@@ -303,7 +303,14 @@ bool RdbMerge::getNextList ( ) {
 	// no chop threads
 	m_numThreads = 0;
 	// get base, returns NULL and sets g_errno to ENOCOLLREC on error
-	RdbBase *base; if (!(base=getRdbBase(m_rdbId,m_collnum))) return true;
+	RdbBase *base = getRdbBase(m_rdbId,m_collnum);
+	if ( ! base ) {
+		// hmmm it doesn't set g_errno so we set it here now
+		// otherwise we do an infinite loop sometimes if a collection
+		// rec is deleted for the collnum
+		g_errno = ENOCOLLREC;
+		return true;
+	}
 	// . if a contributor has just surpassed a "part" in his BigFile
 	//   then we can delete that part from the BigFile and the map
 	for ( int32_t i = m_startFileNum ; i < m_startFileNum + m_numFiles; i++ ){

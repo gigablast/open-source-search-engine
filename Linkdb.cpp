@@ -120,9 +120,7 @@ bool Linkdb::init ( ) {
 	if ( ! m_pc.init ( "linkdb" ,
 			   RDB_LINKDB,
 			   pcmem    ,
-			   pageSize ,
-			   true     ,  // use shared mem?
-			   false    )) // minimizeDiskSeeks?
+			   pageSize ))
 		return log("db: Linkdb init failed.");
 	// init the rdb
 	return m_rdb.init ( g_hostdb.m_dir ,
