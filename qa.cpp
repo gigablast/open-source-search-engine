@@ -476,6 +476,9 @@ void processReply ( char *reply , int32_t replyLen ) {
 
 	g_numErrors++;
 	
+	SafeBuf he;
+	he.htmlEncode ( s_url.getUrl() );
+
 	g_qaOutput.safePrintf("<b style=color:red;>FAILED TEST</b><br>%s : "
 			      "<a href=%s>%s</a> (urlhash=%"UINT32")<br>"
 
@@ -496,7 +499,7 @@ void processReply ( char *reply , int32_t replyLen ) {
 			      "<pre id=%"UINT32" style=background-color:0xffffff;>",
 			      s_qt->m_testName,
 			      s_url.getUrl(),
-			      s_url.getUrl(),
+			      he.getBufStart(),
 			      urlHash32,
 
 			      // input checkbox name field
@@ -815,7 +818,7 @@ bool qainject1 ( ) {
 	}
 
 
-	// stop for now
+	// stop for now so we can analyze the index
 	//return true; //
 
 	//

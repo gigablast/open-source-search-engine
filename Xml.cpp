@@ -446,6 +446,7 @@ bool Xml::set ( char  *s             ,
 		bool inComment3 = false;
 		bool inComment4 = false;
 		bool escaped    = false;
+		//bool newLine    = false;
 		// bool foo = false;
 		// if ( m_xmlLen == 13257 ) { //pstart - m_xml == 88881 ) {
 		// 	foo = true;
@@ -481,9 +482,8 @@ bool Xml::set ( char  *s             ,
 			     p[2] == '>' && 
 			     inComment3 ) 
 				inComment3 = false;
-			/*
-			  no. i saw <script>//</script> and </script> was
-			  not considered to be in a comment
+			// no. i saw <script>//</script> and </script> was
+			// not considered to be in a comment
 			if ( p[0] == '/' && p[1]=='/'&& 
 			     ! inSingles && ! inDoubles &&
 			     ! inComment2 && 
@@ -494,7 +494,6 @@ bool Xml::set ( char  *s             ,
 			     // comment types in that regard.
 			     ! inComment4 )
 				inComment1 = true;
-			*/
 			// handle /* */ comments
 			if ( p[0] == '/' && p[1]=='*' &&
 			     ! inSingles && ! inDoubles &&
@@ -531,9 +530,11 @@ bool Xml::set ( char  *s             ,
 			// no longer the start of a newLine
 			//newLine = false;
 			// don't check for quotes or </script> if in comment
+			// no, if've seen <script>//</script> on ibm.com pages,
+			// so just ignore ' and " for // comments
 			if ( inComment1 && newVersion ) {
 				escaped = false;
-				continue;
+				//continue;
 			}
 			if ( inComment2 && newVersion ) {
 				escaped = false;
@@ -548,10 +549,16 @@ bool Xml::set ( char  *s             ,
 				continue;
 			}
 			// if an unescaped double quote
-			if ( p[0] == '\"' && ! escaped && ! inSingles ) 
+			if ( p[0] == '\"' && ! escaped && ! inSingles &&
+			     // i've seen <script>//</script> on ibm.com pages,
+			     // so just ignore ' and " for // comments
+			     ! inComment1 ) 
 				inDoubles = ! inDoubles;
 			// if an unescaped single quote. 
-			if ( p[0] == '\'' && ! escaped && ! inDoubles ) 
+			if ( p[0] == '\'' && ! escaped && ! inDoubles &&
+			     // i've seen <script>//</script> on ibm.com pages,
+			     // so just ignore ' and " for // comments
+			     ! inComment1 ) 
 				inSingles = ! inSingles;
 			// no longer escaped
 			escaped = false;
