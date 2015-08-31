@@ -777,3 +777,10 @@ warcinjector:
 	-rm -r /home/zak/.pex/build/inject-*
 	-rm -r /home/zak/.pex/install/inject-*
 	pex -r requests -r pyopenssl -r ndg-httpsclient -r pyasn1 -r multiprocessing -e inject.inject:main -o script/warc-inject -s '/home/zak/repos/open-source-search-engine/script/' --no-wheel
+
+
+
+zak-test: all
+	-cd host0; ./gb stop
+	cp gb host0/.
+	-cd host0; ./gb installgb;sleep 2;./gb start

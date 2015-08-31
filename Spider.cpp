@@ -2871,6 +2871,7 @@ void SpiderColl::populateWaitingTreeFromSpiderdb ( bool reentry ) {
 	if ( m_deleteMyself ) { char *xx=NULL;*xx=0; }
 	// skip if spiders off
 	if ( ! m_cr->m_spideringEnabled ) return;
+	if ( ! g_hostdb.getMyHost( )->m_spiderEnabled ) return;
 	// if entering for the first time, we need to read list from spiderdb
 	if ( ! reentry ) {
 		// just return if we should not be doing this yet
@@ -3120,6 +3121,8 @@ void SpiderColl::populateDoledbFromWaitingTree ( ) { // bool reentry ) {
 	// since addSpiderRequest() calls addToWaitingTree() which then calls
 	// this. 
 	if ( ! g_conf.m_spideringEnabled ) return;
+	if ( ! g_hostdb.getMyHost( )->m_spiderEnabled ) return;
+
 
 	// try skipping!!!!!!!!!!!
 	// yeah, this makes us scream. in addition to calling
@@ -5618,6 +5621,8 @@ uint64_t SpiderColl::getSpiderTimeMS ( SpiderRequest *sreq,
 	if ( ! srep && sreq->m_isInjecting ) return spiderTimeMS;
 	if ( ! srep && sreq->m_isPageReindex ) return spiderTimeMS;
 
+
+	log("spider: getting spider time %"INT64, spiderTimeMS);
 	// to avoid hammering an ip, get last time we spidered it...
 	int64_t lastMS ;
 	lastMS = m_lastDownloadCache.getLongLong ( m_collnum       ,
@@ -5799,6 +5804,8 @@ bool isAssignedToUs ( int32_t firstIp ) {
 	// . ignore lower 8 bits of ip since one guy often owns a whole block!
 	//int32_t hostId=(((uint32_t)firstIp) >> 8) % g_hostdb.getNumHosts();
 
+	if( !g_hostdb.getMyHost()->m_spiderEnabled ) return false;
+	
 	// get our group
 	//Host *group = g_hostdb.getMyGroup();
 	Host *shard = g_hostdb.getMyShard();
@@ -5830,18 +5837,23 @@ bool isAssignedToUs ( int32_t firstIp ) {
 	// . put all alive in an array now
 	Host *alive[64];
 	int32_t upc = 0;
+
 	for ( int32_t j = 0 ; j < hpg ; j++ ) {
-		Host *h = &shard[i];
+		Host *h = &shard[j];
 		if ( g_hostdb.isDead(h) ) continue;
-		if(!h->m_spiderEnabled) continue;
+		if( ! h->m_spiderEnabled ) continue;
 		alive[upc++] = h;
 	}
 	// if none, that is bad! return the first one that we wanted to
-	if ( upc == 0 ) return (h->m_hostId == g_hostdb.m_hostId);
+	if ( upc == 0 ) {
+		log("spider: no hosts can handle spider request for ip=%s", iptoa(firstIp));
+		return false;
+		//return (h->m_hostId == g_hostdb.m_hostId);
+	}
 	// select from the good ones now
-	i  = ((uint32_t)firstIp) % hpg;
+	i  = ((uint32_t)firstIp) % upc;
 	// get that
-	h = &shard[i];
+	h = alive[i]; //&shard[i];
 	// guaranteed to be alive... kinda
 	return (h->m_hostId == g_hostdb.m_hostId);
 }
@@ -5961,6 +5973,8 @@ void doneSleepingWrapperSL ( int fd , void *state ) {
 
 	// if spidering disabled then do not do this crap
 	if ( ! g_conf.m_spideringEnabled )  return;
+	if ( ! g_hostdb.getMyHost( )->m_spiderEnabled ) return;
+	
 	//if ( ! g_conf.m_webSpideringEnabled )  return;
 	// or if trying to exit
 	if ( g_process.m_mode == EXIT_MODE ) return;	
@@ -5976,6 +5990,8 @@ void doneSleepingWrapperSL ( int fd , void *state ) {
 		}
 		return;
 	}
+
+	//if ( g_hostdb.hasDeadHost() ) return;
 
 	static int32_t s_count = -1;
 	// count these calls
@@ -6000,6 +6016,7 @@ void doneSleepingWrapperSL ( int fd , void *state ) {
 		// if ( ! cr ) continue;
 		// skip if not enabled
 		if ( ! crp->m_spideringEnabled ) continue;
+
 		// get it
 		//SpiderColl *sc = cr->m_spiderColl;
 		SpiderColl *sc = g_spiderCache.getSpiderColl(crp->m_collnum);
@@ -6345,6 +6362,8 @@ void SpiderLoop::spiderDoledUrls ( ) {
 
 	// must be spidering to dole out
 	if ( ! g_conf.m_spideringEnabled ) return;
+	if ( ! g_hostdb.getMyHost( )->m_spiderEnabled ) return;
+
 	// or if trying to exit
 	if ( g_process.m_mode == EXIT_MODE ) return;	
 	// if we don't have all the url counts from all hosts, then wait.

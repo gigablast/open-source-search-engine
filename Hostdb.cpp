@@ -701,7 +701,7 @@ bool Hostdb::init ( int32_t hostIdArg , char *netName ,
 			while ( *n && *n != '\n' && n < pend ) n++;
 
 			// trim of trailing spaces
-			while ( isspace(*n) && n > p ) n--;
+			while ( *n == ' ' && n > p ) n--;
 
 			int32_t noteSize = n - p;
 			if(noteSize >= 7 && strncmp(n-7, "noquery", 7) == 0) {
