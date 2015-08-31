@@ -222,6 +222,8 @@ bool Log::shouldLog ( int32_t type , char *msg ) {
 	return true;
 }
 
+bool g_loggingEnabled = true;
+
 // 1GB max log file size
 #define MAXLOGFILESIZE 1000000000
 // for testing:
@@ -233,6 +235,8 @@ bool Log::logR ( int64_t now , int32_t type , char *msg , bool asterisk ,
 	// filter if we should
 	//if ( forced ) goto skipfilter;
 
+	if ( ! g_loggingEnabled )
+		return true;
 	// return true if we should not log this
 	if ( ! forced && ! shouldLog ( type , msg ) ) return true;
 	// skipfilter:
@@ -398,9 +402,17 @@ bool Log::logR ( int64_t now , int32_t type , char *msg , bool asterisk ,
 }
 
 bool Log::makeNewLogFile ( ) {
+
+	// prevent deadlock. don't log since we are in the middle of logging.
+	// otherwise, safebuf, which is used when renaming files, might
+	// call logR().
+	g_loggingEnabled = false;
 	// . rename old log file like log000 to log000-2013_11_04-18:19:32
 	// . returns false on error
-	if ( ! renameCurrentLogFile() ) return false;
+	bool status = renameCurrentLogFile();
+	// re-enable logging since nothing below should call logR() indirectly
+	g_loggingEnabled = true;
+	if ( ! status ) return false;
 	// close old fd
 	if ( m_fd >= 0 ) ::close ( m_fd );
 	// invalidate
