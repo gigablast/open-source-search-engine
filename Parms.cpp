@@ -17315,16 +17315,19 @@ void Parms::init ( ) {
 	m->m_obj   = OBJ_COLL;
 	m++;
 
-	m->m_title = "compute site num inlinks";
+	m->m_title = "compute inlinks to sites";
 	m->m_desc  = "If this is true Gigablast will "
 		"compute the number of site inlinks for the sites it "
-		"indexes. It will cache them in tagdb for some time. "
+		"indexes. This is a measure of the sites popularity and is "
+		"used for ranking and some times spidering prioritzation. "
+		"It will cache the site information in tagdb. "
 		"The greater the number of inlinks, the longer the cached "
 		"time, because the site is considered more stable.";
 	m->m_cgi   = "csni";
 	m->m_off   = (char *)&cr.m_computeSiteNumInlinks - x;
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "1";
+	m->m_group = 0;
 	m->m_flags = PF_CLONE|PF_API;//PF_HIDDEN | PF_NOSAVE;
 	m->m_page  = PAGE_SPIDER;
 	m->m_obj   = OBJ_COLL;
