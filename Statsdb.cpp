@@ -79,7 +79,7 @@ static Label s_labels[] = {
 	{GRAPH_OPS,20,"parse_doc", .005,"%.1f dps" , 1.0 , 0x00fea915,"parsed doc" },
 
 
-	{GRAPH_QUANTITY_PER_OP,1000,"docs_per_second", .005,"%.1f docs" , .001 , 0x1F2F5C,"docs per second" },
+	{GRAPH_QUANTITY_PER_OP,-1,"docs_per_second", .1,"%.1f docs per second" , -1 , 0x1F2F5C,"docs per second" },
 
 	// . use .1 * 1000 docs as the min resolution per pixel
 	// . max = -1, means dynamic size the ymax!
@@ -88,7 +88,7 @@ static Label s_labels[] = {
 	// . make it 2M now not 50M. seems like it is per pixel and theres
 	//   like 1000 pixels vertically. but we need to autoscale it 
 	//   eventually
-	{GRAPH_QUANTITY,2000000.0,"docs_indexed", .1,"%.0fK docs" , .001 , 0x00cc0099,"docs indexed" }
+	{GRAPH_QUANTITY,-1,"docs_indexed", .1,"%.0f docs" , -1,  0x00cc0099,"docs indexed" }
 
 
 	//{ "termlist_intersect",0x0000ff00},
@@ -121,6 +121,7 @@ Label *Statsdb::getLabel ( int32_t labelHash ) {
 	if ( ! label ) return NULL;
 	return *label;
 }
+
 
 Statsdb::Statsdb ( ) {
 	m_init = false;
@@ -893,7 +894,7 @@ char *Statsdb::plotGraph ( char *pstart ,
 	bool needMax = true;
 	float ymin = 0.0;
 	float ymax = 0.0;
-
+	float yscalar = label->m_yscalar;
 	char *p = pstart;
 
 	for ( ; p < pend ; p += 12 ) {
@@ -906,7 +907,8 @@ char *Statsdb::plotGraph ( char *pstart ,
 		// stop if not us
 		if ( gh != graphHash ) continue;
 		// put into scaled space right away
-		y2 = y2 * label->m_yscalar;
+		if (label->m_yscalar >= 0)
+			y2 = y2 * label->m_yscalar;
 		// . limit y to absolute max
 		// . these units should be scaled as well!
 		if ( y2 > label->m_absYMax && label->m_absYMax > 0.0 )
@@ -924,8 +926,13 @@ char *Statsdb::plotGraph ( char *pstart ,
 	// . -1 indicates dynamic though!
 	if ( label->m_absYMax > 0.0 ) ymax = label->m_absYMax;
 	// add a 20% ceiling
-	else                          ymax *= 1.20;
+	//	else                          ymax *= 1.20;
+	//log("max for %s is %f - %f", label->m_label, (float)ymin, (float)ymax);
 
+	
+	if(label->m_yscalar <= 0 ) {
+		yscalar = (float)DY2 / (ymax - ymin);
+	}
 	// return that!
 	char *retp = p;
 
@@ -984,7 +991,7 @@ char *Statsdb::plotGraph ( char *pstart ,
 		float y2 = *(float *)p; p += 4;
 
 		// scale it right away
-		y2 *= label->m_yscalar;
+		y2 *= yscalar;
 
 		// adjust
 		if ( y2 > ymax ) y2 = ymax;
@@ -1000,8 +1007,11 @@ char *Statsdb::plotGraph ( char *pstart ,
 		float y1 = lasty;
 
 		// normalize y into pixel space
-		y2 = ((float)DY2 * (y2 - ymin)) / (ymax-ymin);
-
+		if(label->m_yscalar >= 0) {
+			y2 = ((float)DY2 * (y2 - ymin)) / (ymax-ymin);
+		}
+		
+		//log("label is %s point is %f", label->m_label,  y2);
 		// set lasts for next iteration of this loop
 		lastx = x2;
 		lasty = y2;
@@ -1596,3 +1606,5 @@ void Statsdb::drawLine3 ( SafeBuf &sb ,
 		      , color
 		      );
 }
+
+
