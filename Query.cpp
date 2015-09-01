@@ -618,7 +618,7 @@ bool Query::setQTerms ( Words &words , Phrases &phrases ) {
 		     qw->m_userTypePhrase   == 'a'  ) continue;
 		nqt++;
 	}
-	// count phrase terms too!!!
+	// count single terms
 	for ( int32_t i = 0 ; i < m_numWords; i++ ) {
 		QueryWord *qw  = &m_qwords[i];
  		if ( qw->m_ignoreWord && 
@@ -705,7 +705,7 @@ bool Query::setQTerms ( Words &words , Phrases &phrases ) {
 	}
 
 
-	//char u8Buf[256]; 
+	// count phrase terms
 	for ( int32_t i = 0 ; i < m_numWords ; i++ ) {
 		// break out if no more explicit bits!
 		/*
@@ -1019,6 +1019,13 @@ bool Query::setQTerms ( Words &words , Phrases &phrases ) {
 		if (fieldLen > 0) {
 			qt->m_term    = m_qwords[fieldStart].m_word;
 			qt->m_termLen = fieldLen;
+			// fix for query
+			// text:""  foo bar   ""
+			if ( pw-1 < i ) {
+				log("query: bad query %s",m_orig);
+				g_errno = EMALFORMEDQUERY;
+				return false;
+			}
 			// skip past the end of the field value
 			i = pw-1;
 		}
@@ -2702,6 +2709,19 @@ bool Query::setQWords ( char boolFlag ,
 				for ( ; s < send && *s != '-' ; s++ );
 				// stop if not hyphen
 				if ( *s != '-' ) break;
+
+                                // If the first character is a hyphen, check
+                                // if its part of a negative number. If it is,
+                                // don't consider it a hyphen
+                                if ( sav == s && is_digit(s[1]) ) {
+                                  // Read the entire negative number
+                                  char *s2 = s + 1;
+                                  for ( ; s2 < send && is_digit(s2[0]); s2++);
+                                  // If there's a hyphen after the negative
+                                  // number, use that as the hyphen separator
+                                  if ( *s2 == '-' ) s = s2;
+                                }
+
 				// skip hyphen
 				s++;
 				// must be a digit or . or - or *
@@ -2746,6 +2766,23 @@ bool Query::setQWords ( char boolFlag ,
 				for ( ; s < send && *s != '-' ; s++ );
 				// stop if not hyphen
 				if ( *s != '-' ) break;
+
+                                // If the first character is a hyphen, check
+                                // if its part of a negative number. If it is,
+                                // don't consider it a hyphen
+                                if ( sav == s && (is_digit(s[1]) ||
+						  (s[1] == '.' &&
+						   s + 2 < send &&
+						   is_digit(s[2]))) ) {
+                                  // Read the entire negative number
+                                  char *s2 = s + 1;
+                                  for ( ; s2 < send &&
+					  (is_digit(s2[0]) || s2[0] == '.'); s2++);
+                                  // If there's a hyphen after the negative
+                                  // number, use that as the hyphen separator
+                                  if ( *s2 == '-' ) s = s2;
+                                }
+ 
 				// save that
 				char *cma = s;
 				// skip hyphen

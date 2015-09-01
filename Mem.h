@@ -17,6 +17,8 @@
 //#include <dmalloc.h>
 //#endif
 
+extern bool g_inMemFunction;
+
 // we share malloc between threads, so you need to get the lock
 //void mutexLock   ( );
 //void mutexUnlock ( );
@@ -81,7 +83,7 @@ class Mem {
 	Mem();
 	~Mem();
 
-	bool init ( int64_t maxMem );
+	bool init ( );//int64_t maxMem );
 
 	void  setPid();
 	pid_t getPid();
@@ -130,7 +132,7 @@ class Mem {
 	int  printBreeches ( char core ) ;
 	// print mem usage stats
 	int  printMem      ( ) ;
-	void addMem ( void *mem , int32_t size , const char *note , char isnew ) ;
+	void addMem ( void *mem , int32_t size , const char *note, char isnew);
 	bool rmMem  ( void *mem , int32_t size , const char *note ) ;
 	bool lblMem ( void *mem , int32_t size , const char *note );
 
@@ -161,7 +163,7 @@ class Mem {
 	int64_t m_maxAlloced; // at any one time
 	int64_t m_maxAlloc; // the biggest single alloc ever done
 	const char *m_maxAllocBy; // the biggest single alloc ever done
-	int64_t m_maxMem;
+	//int64_t m_maxMem;
 
 	// shared mem used
 	int64_t m_sharedUsed;

@@ -17,7 +17,8 @@
 //#define TITLEREC_CURRENT_VERSION 118
 // add new link stats into LinkInfo
 //#define TITLEREC_CURRENT_VERSION 119
-#define TITLEREC_CURRENT_VERSION 120
+//#define TITLEREC_CURRENT_VERSION 120
+#define TITLEREC_CURRENT_VERSION 121
 
 #include "Rdb.h"
 #include "Url.h"

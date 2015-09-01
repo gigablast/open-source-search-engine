@@ -3545,6 +3545,10 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			      "</td><td>"
 			      "<a href=/crawlbot/download/%s_urls.csv>"
 			      "csv</a>"
+
+			      " <a href=/v3/crawl/download/%s_urls.csv>"
+			      "new csv format</a>"
+			      
 			      "</td>"
 			      "</tr>"
 
@@ -3613,6 +3617,10 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			      //, cr->m_coll
 			      //, cr->m_coll
 
+			      // urls.csv old
+			      , cr->m_coll
+
+			      // urls.csv new format v3
 			      , cr->m_coll
 
 			      // latest objects in html
@@ -3622,7 +3630,6 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			      // latest objects in csv
 			      , cr->m_coll
 			      , rand64
-
 
 			      // latest products in html
 			      , cr->m_coll

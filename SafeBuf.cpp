@@ -77,6 +77,10 @@ SafeBuf::SafeBuf(char *heapBuf, int32_t bufMax, int32_t bytesInUse, bool ownData
 }
 
 SafeBuf::~SafeBuf() {
+	destructor();
+}
+
+void SafeBuf::destructor() {
 	if(!m_usingStack && m_buf) 
 		mfree(m_buf, m_capacity, "SafeBuf");
 	m_buf = NULL;
@@ -475,7 +479,8 @@ int32_t SafeBuf::safeSave (char *filename ) {
  retry22:
 
 	// first write to tmp file
-	SafeBuf fn;
+	char tmp[1024];
+	SafeBuf fn(tmp,1024);
 	fn.safePrintf( "%s.saving",filename );
 
 	int32_t fd = open ( fn.getBufStart() ,

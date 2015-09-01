@@ -77,7 +77,7 @@
 #include "Msg9b.h"
 #include "Msg17.h"
 //#include "Msg34.h"
-#include "Msg35.h"
+//#include "Msg35.h"
 //#include "Msg24.h"
 //#include "Msg28.h"
 //#include "Msg30.h"
@@ -373,6 +373,7 @@ extern void resetQuery         ( );
 extern void resetStopWords     ( );
 extern void resetUnicode       ( );
 
+extern void tryToSyncWrapper ( int fd , void *state ) ;
 
 #if 0
 void stack_test();
@@ -1357,6 +1358,18 @@ int main2 ( int argc , char *argv[] ) {
 	}
 	*/
 
+	if ( strcmp ( cmd ,"isportinuse") == 0 ) {
+		if ( cmdarg+1 >= argc ) goto printHelp;
+		int port = atol ( argv[cmdarg+1] );
+		// make sure port is available. returns false if in use.
+		if ( ! g_httpServer.m_tcp.testBind(port,false) )
+			// and we should return with 1 so the keep alive
+			// script will exit
+			exit (1);
+		// port is not in use, return 0
+		exit(0);
+	}
+
 	// need threads here for tests?
 
 	// gb thrutest <testDir> <fileSize>
@@ -1805,7 +1818,7 @@ int main2 ( int argc , char *argv[] ) {
 		// Load categories and generate country table
 		char structureFile[256];
 		g_conf.m_maxMem = 1000000000LL; // 1G
-		g_mem.m_maxMem  = 1000000000LL; // 1G
+		//g_mem.m_maxMem  = 1000000000LL; // 1G
 		sprintf(structureFile, "%scatdb/gbdmoz.structure.dat", g_hostdb.m_dir);
 		g_categories = &g_categories1;
 		if (g_categories->loadCategories(structureFile) != 0) {
@@ -2396,7 +2409,7 @@ int main2 ( int argc , char *argv[] ) {
 	if ( strcmp ( cmd , "freecache" ) == 0 ) {	
 		int32_t max = 7000000;
 		if ( cmdarg + 1 < argc ) max = atoi ( argv[cmdarg+1] );
-		freeAllSharedMem( max );
+		//freeAllSharedMem( max );
 		return true;
 	}
 
@@ -3047,7 +3060,8 @@ int main2 ( int argc , char *argv[] ) {
 	// make sure port is available, no use loading everything up then
 	// failing because another process is already running using this port
 	//if ( ! g_udpServer.testBind ( g_hostdb.getMyPort() ) )
-	if ( ! g_httpServer.m_tcp.testBind(g_hostdb.getMyHost()->m_httpPort))
+	if ( ! g_httpServer.m_tcp.testBind(g_hostdb.getMyHost()->m_httpPort,
+					   true)) // printmsg?
 		return 1;
 
 	int32_t *ips;
@@ -3453,9 +3467,15 @@ int main2 ( int argc , char *argv[] ) {
 	//}
 
 	// test all collection dirs for write permission -- metalincs' request
+	int32_t pcount = 0;
 	for ( int32_t i = 0 ; i < g_collectiondb.m_numRecs ; i++ ) {
 		CollectionRec *cr = g_collectiondb.m_recs[i];
 		if ( ! cr ) continue;
+		if ( ++pcount >= 100 ) {
+			log("rdb: not checking directory permission for "
+			    "more than first 100 collections to save time.");
+			break;
+		}
 		char tt[1024 + MAX_COLL_LEN ];
 		sprintf ( tt , "%scoll.%s.%"INT32"",
 			  g_hostdb.m_dir, cr->m_coll , (int32_t)cr->m_collnum );
@@ -3838,7 +3858,8 @@ int main2 ( int argc , char *argv[] ) {
 	// . put this in here instead of Rdb.cpp because we don't want
 	//   generator commands merging on us
 	// . the (void *)1 prevents gb from logging merge info every 2 seconds
-	if ( ! g_loop.registerSleepCallback(2000,(void *)1,attemptMergeAll))
+	// . niceness is 1
+	if ( ! g_loop.registerSleepCallback(2000,(void *)1,attemptMergeAll,1))
 		log("db: Failed to init merge sleep callback.");
 
 	// SEO MODULE
@@ -3848,7 +3869,9 @@ int main2 ( int argc , char *argv[] ) {
 	     ! g_loop.registerSleepCallback(2000,(void *)1,runSEOQueryLoop))
 		log("db: Failed to register seo query loop");
 
-
+	// try to sync parms (and collection recs) with host 0
+	if ( ! g_loop.registerSleepCallback(1000,NULL,tryToSyncWrapper,0))
+		return false;
 
 	//if( !g_loop.registerSleepCallback(2000,(void *)1,controlDumpTopDocs) )
 	//	log("db: Failed to init dump TopDocs sleep callback.");
@@ -3866,11 +3889,11 @@ int main2 ( int argc , char *argv[] ) {
 	//msg3e.checkForNewParms();
 
 	// this stuff is similar to alden's msg3e but will sync collections
-	// that were added/deleted
-	if ( ! g_parms.syncParmsWithHost0() ) {
-		log("parms: error syncing parms: %s",mstrerror(g_errno));
-		return 0;
-	}
+	// that were added/deletede
+	//if ( ! g_parms.syncParmsWithHost0() ) {
+	//	log("parms: error syncing parms: %s",mstrerror(g_errno));
+	//	return 0;
+	//}
 
 
 	if(g_recoveryMode) {
@@ -3896,6 +3919,7 @@ int main2 ( int argc , char *argv[] ) {
 
 	Json json;
 	json.test();
+	json.reset();
 
 	// . start the spiderloop
 	// . comment out when testing SpiderCache
@@ -5191,6 +5215,23 @@ int install ( install_flag_konst_t installFlag , int32_t hostId , char *dir ,
 				 "while [ \\$EXITSTATUS != 0 ]; do "
  				 "{ "
 
+				// if gb still running, then do not try to
+				// run it again. we
+				// probably double-called './gb start'.
+				// so see if the port is bound to. 
+				"./gb isportinuse %i ; "
+				"if [ \\$? -eq 1 ] ; then "
+				"echo \"gb or something else "
+				"is already running on "
+				"port %i. Not starting.\" ; "
+				"exit 0; "
+				"fi ; "
+
+				// ok, the port is available
+				//"echo \"Starting gb\"; "
+
+				//"exit 0; "
+
 				// in case gb was updated...
 				"mv -f gb.installed gb ; "
 
@@ -5211,10 +5252,15 @@ int install ( install_flag_konst_t installFlag , int32_t hostId , char *dir ,
 				"ADDARGS='-r'\\$INC ; "
 				"INC=\\$((INC+1));"
 				"} " 
- 				"done >& /dev/null & \" %s",
+ 				//"done >& /dev/null & \" %s",
+ 				"done & \" %s",
 				//"\" %s",
 				iptoa(h2->m_ip),
 				h2->m_dir      ,
+
+				// for ./gb isportinuse %i
+				h2->m_httpPort ,
+				h2->m_httpPort ,
 
 				// for moving log file
 				 h2->m_hostId   ,
@@ -5840,7 +5886,7 @@ bool registerMsgHandlers2(){
 bool registerMsgHandlers3(){
 	Msg17 msg17;    if ( ! msg17.registerHandler () ) return false;
 	//Msg34 msg34;    if ( ! msg34.registerHandler () ) return false;
-	Msg35 msg35;    if ( ! msg35.registerHandler () ) return false;
+	//Msg35 msg35;    if ( ! msg35.registerHandler () ) return false;
 	//Msg24 msg24;    if ( ! msg24.registerHandler () ) return false;
 	//Msg40 msg40;    if ( ! msg40.registerHandler () ) return false;
 	//MsgB  msgb;     if ( ! msgb.registerHandler  () ) return false;
@@ -10726,7 +10772,7 @@ bool gbgunzip (char *filename) {
 // time speed of inserts into RdbTree for indexdb
 bool bucketstest ( char* dbname ) {
 	g_conf.m_maxMem = 2000000000LL; // 2G
-	g_mem.m_maxMem  = 2000000000LL; // 2G
+	//g_mem.m_maxMem  = 2000000000LL; // 2G
 
 
 	if ( dbname ) {
@@ -12223,7 +12269,7 @@ void dumpTagdb (char *coll,int32_t startFileNum,int32_t numFiles,
 
 bool parseTest ( char *coll , int64_t docId , char *query ) {
 	g_conf.m_maxMem = 2000000000LL; // 2G
-	g_mem.m_maxMem  = 2000000000LL; // 2G
+	//g_mem.m_maxMem  = 2000000000LL; // 2G
 	//g_conf.m_checksumdbMaxDiskPageCacheMem = 0;
 	//g_conf.m_spiderdbMaxDiskPageCacheMem   = 0;
 	g_conf.m_tfndbMaxDiskPageCacheMem = 0;
@@ -14546,7 +14592,8 @@ int injectFile ( char *filename , char *ips ,
 	int64_t startDocId = 0LL;
 	int64_t endDocId = MAX_DOCID;
 
-	g_mem.init ( 4000000000LL );
+	g_conf.m_maxMem = 4000000000LL;
+	g_mem.init ( );//4000000000LL );
 
 	// set up the loop
 	if ( ! g_loop.init() ) return log("build: inject: Loop init "
@@ -16324,8 +16371,8 @@ bool memTest() {
 	// if ( ! g_log.init( "./memlog" ) ) {//g_hostdb.m_logFilename )        ) {
 	// 	fprintf (stderr,"db: Log file init failed.\n" ); return 1; }
 	//g_mem.init(0xffffffff);
-	g_mem.m_maxMem = 0xffffffffLL;
-	g_mem.init( g_mem.m_maxMem );
+	g_conf.m_maxMem = 0xffffffffLL;
+	g_mem.init( );//g_mem.m_maxMem );
 	
 
 	fprintf(stderr, "memtest: Testing memory bus bandwidth.\n");
@@ -16343,7 +16390,7 @@ bool memTest() {
 	membustest ( 8000 , 100000 , true );
 
 	fprintf(stderr, "memtest: Allocating up to %"INT64" bytes\n",
-		g_mem.m_maxMem);
+		g_conf.m_maxMem);
 	for (i=0;i<4096;i++) {
 		ptrs[numPtrs] = mmalloc(1024*1024, "memtest");
 		if (!ptrs[numPtrs]) break;
@@ -16353,7 +16400,7 @@ bool memTest() {
 	fprintf(stderr, "memtest: Was able to allocate %"INT64" bytes of a "
 		"total of "
 	    "%"INT64" bytes of memory attempted.\n",
-	    g_mem.m_used,g_mem.m_maxMem);
+	    g_mem.m_used,g_conf.m_maxMem);
 
 	return true;
 
@@ -16483,7 +16530,7 @@ void membustest ( int32_t nb , int32_t loops , bool readf ) {
 bool cacheTest() {
 
 	g_conf.m_maxMem = 2000000000LL; // 2G
-	g_mem.m_maxMem  = 2000000000LL; // 2G
+	//g_mem.m_maxMem  = 2000000000LL; // 2G
 
 	hashinit();
 

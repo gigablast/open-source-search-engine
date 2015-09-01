@@ -1017,6 +1017,11 @@ void printStackTrace ( int signum , siginfo_t *info , void *ptr ) {
 	logf(LOG_DEBUG,"gb: seg fault. printing stack trace. use "
 	     "'addr2line -e gb' to decode the hex below.");
 
+	if ( g_inMemFunction ) {
+		logf(LOG_DEBUG,"gb: in mem function not doing backtrace");
+		return;
+	}
+
 	static void *s_bt[200];
 	int sz = backtrace(s_bt, 200);
 	//char **strings = backtrace_symbols(s_bt, sz);

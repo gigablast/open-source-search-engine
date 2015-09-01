@@ -20,6 +20,7 @@ public:
 	SafeBuf(int32_t initSize, char *label = NULL);
 
 	void constructor();
+	void destructor ();
 
 	//be careful with passing in a stackBuf! it could go out
 	//of scope independently of the safebuf.
@@ -53,6 +54,8 @@ public:
 
 	//ACCESSORS
 	char *getBuf() { return m_buf + m_length; }
+	char *getBufPtr() { return m_buf + m_length; }
+	char *getBufCursor() { return m_buf + m_length; }
 	char *getBufStart() { return m_buf; }
 	char *getBufEnd() { return m_buf + m_capacity; }
 	int32_t getCapacity() { return m_capacity; }

@@ -231,13 +231,15 @@ class RdbBase {
 	
 	// private:
 
-	void attemptMerge ( int32_t niceness , bool forceMergeAll , 
+	// returns true if merge was started, false if no merge could
+	// be launched right now for some reason.
+	bool attemptMerge ( int32_t niceness , bool forceMergeAll , 
 			    bool doLog = true ,
 			    // -1 means to not override it
 			    int32_t minToMergeOverride = -1 );
 
-	bool gotTokenForDump  ( ) ;
-	void gotTokenForMerge ( ) ;
+	//bool gotTokenForDump  ( ) ;
+	//void gotTokenForMerge ( ) ;
 
 	// called after merge completed
 	bool incorporateMerge ( );
@@ -420,7 +422,9 @@ class RdbBase {
 
 	// key size
 	char      m_ks;
-	
+
+	bool m_checkedForMerge;
+
 	int32_t      m_pageSize;
 
 	// are we waiting on another merge/dump to complete before our turn?

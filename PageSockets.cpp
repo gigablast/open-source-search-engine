@@ -51,6 +51,9 @@ bool sendPageSockets ( TcpSocket *s , HttpRequest *r ) {
 	printUdpTable(&p,"Udp Server (dns)", &g_dns.m_udpServer,
 		      coll,NULL,s->m_ip,true/*isDns?*/);
 
+	// from msg13.cpp print the queued url download requests
+	printHammerQueueTable ( &p );
+
 	// get # of disks per machine
 	int32_t count = 0;
 	for ( int32_t i = 0 ; i < g_hostdb.getNumHosts(); i++ ) {
@@ -221,11 +224,7 @@ void printTcpTable ( SafeBuf* p, char *title, TcpServer *server ) {
 			       "<td>%s</td>"  // ip
 			       "<td>%hu</td>" // port
 			       "<td>%s</td>"  // state
-			       "<td>%"INT32"</td>" // bytes read
-			       "<td>%"INT32"</td>" // bytes to read
-			       "<td>%"INT32"</td>" // bytes sent
-			       "<td>%"INT32"</td>" // bytes to send
-			       "</tr>\n" ,
+			       ,
 			       bg ,
 			       i,
 			       s->m_sd ,
@@ -234,11 +233,46 @@ void printTcpTable ( SafeBuf* p, char *title, TcpServer *server ) {
 			       //s->m_timeout ,
 			       iptoa(s->m_ip) ,
 			       s->m_port ,
-			       st ,
-			       s->m_readOffset ,
+			       st );
+
+
+		// tool tip to show top 500 bytes of send buf
+		if ( s->m_readOffset && s->m_readBuf ) {
+			p->safePrintf("<td><a title=\"");
+			SafeBuf tmp;
+			tmp.safeTruncateEllipsis ( s->m_readBuf , 
+						   s->m_readOffset ,
+						   500 );
+			p->htmlEncode ( tmp.getBufStart() );
+			p->safePrintf("\">");
+			p->safePrintf("<u>%"INT32"</u></td>",s->m_readOffset);
+		}
+		else
+			p->safePrintf("<td>0</td>");
+
+		p->safePrintf( "<td>%"INT32"</td>" // bytes to read
+			       "<td>%"INT32"</td>" // bytes sent
+			       ,
 			       s->m_totalToRead ,
-			       s->m_sendOffset  ,
-			       s->m_totalToSend );
+			       s->m_sendOffset
+			       );
+
+		// tool tip to show top 500 bytes of send buf
+		if ( s->m_totalToSend && s->m_sendBuf ) {
+			p->safePrintf("<td><a title=\"");
+			SafeBuf tmp;
+			tmp.safeTruncateEllipsis ( s->m_sendBuf , 
+						   s->m_totalToSend ,
+						   500 );
+			p->htmlEncode ( tmp.getBufStart() );
+			p->safePrintf("\">");
+			p->safePrintf("<u>%"INT32"</u></td>",s->m_totalToSend);
+		}
+		else
+			p->safePrintf("<td>0</td>");
+
+		p->safePrintf("</tr>\n");
+
 	}
 	// end the table
 	p->safePrintf ("</table><br>\n" );
@@ -358,7 +392,7 @@ void printUdpTable ( SafeBuf *p, char *title, UdpServer *server ,
 			"<center>"
 			//"<font size=+1>"
 			"<b>%s</b> (%"INT32" transactions)"
-			"(%"INT32" reads ready)"
+			"(%"INT32" requests waiting to processed)"
 			//"</font>"
 			"</td></tr>"
 			"<tr bgcolor=#%s>"

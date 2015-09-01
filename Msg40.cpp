@@ -5971,7 +5971,7 @@ bool Msg40::printCSVHeaderRow ( SafeBuf *sb ) {
 	SafeBuf nameBuf (tmp2, 1024);
 
 	int32_t ct = 0;
-	if ( msg20s[0] ) ct = msg20s[0]->m_r->m_contentType;
+	if ( msg20s[0] && msg20s[0]->m_r ) ct = msg20s[0]->m_r->m_contentType;
 
 	CollectionRec *cr =g_collectiondb.getRec(m_firstCollnum);
 
