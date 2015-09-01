@@ -13814,14 +13814,6 @@ int32_t *XmlDoc::getSiteNumInlinks ( ) {
 			int32_t wwwHash32 = m_firstUrl.getHash32WithWWW();
 			min = g_tagdb.getMinSiteInlinks ( wwwHash32 );
 		}
-		// if still not in sitelinks.txt, just use 0
-		if ( min < 0 ) {
-			m_siteNumInlinksValid = true;
-			m_siteNumInlinks = 0;
-			return &m_siteNumInlinks;
-		}
-		m_siteNumInlinks = min;
-		m_siteNumInlinksValid = true;
 		// fix core by setting these
 		m_siteNumInlinksUniqueIp          = 0;
 		m_siteNumInlinksUniqueCBlock      = 0;
@@ -13829,6 +13821,14 @@ int32_t *XmlDoc::getSiteNumInlinks ( ) {
 		m_siteNumInlinksUniqueIpValid     = true;
 		m_siteNumInlinksUniqueCBlockValid = true;
 		m_siteNumInlinksTotalValid        = true;
+		//a nd this
+		m_siteNumInlinksValid = true;
+		m_siteNumInlinks      = 0;
+		// if still not in sitelinks.txt, just use 0
+		if ( min < 0 ) {
+			return &m_siteNumInlinks;
+		}
+		m_siteNumInlinks = min;
 		return &m_siteNumInlinks;
 	}
 
