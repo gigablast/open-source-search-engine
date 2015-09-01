@@ -1828,6 +1828,9 @@ void attemptMergeAll2 ( ) {
 	base = cr->getBasePtr(RDB_SPIDERDB);
 	if ( base && base->attemptMerge(niceness,force,true) ) 
 		return;
+	base = cr->getBasePtr(RDB_CLUSTERDB);
+	if ( base && base->attemptMerge(niceness,force,true) ) 
+		return;
 
 	// try next collection
 	s_lastCollnum++;
