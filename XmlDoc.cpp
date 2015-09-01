@@ -13822,6 +13822,13 @@ int32_t *XmlDoc::getSiteNumInlinks ( ) {
 		}
 		m_siteNumInlinks = min;
 		m_siteNumInlinksValid = true;
+		// fix core by setting these
+		m_siteNumInlinksUniqueIp          = 0;
+		m_siteNumInlinksUniqueCBlock      = 0;
+		m_siteNumInlinksTotal             = 0;
+		m_siteNumInlinksUniqueIpValid     = true;
+		m_siteNumInlinksUniqueCBlockValid = true;
+		m_siteNumInlinksTotalValid        = true;
 		return &m_siteNumInlinks;
 	}
 
