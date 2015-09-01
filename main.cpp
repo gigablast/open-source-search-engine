@@ -5219,13 +5219,13 @@ int install ( install_flag_konst_t installFlag , int32_t hostId , char *dir ,
 				// run it again. we
 				// probably double-called './gb start'.
 				// so see if the port is bound to. 
-				"./gb isportinuse %i ; "
-				"if [ \\$? -eq 1 ] ; then "
-				"echo \"gb or something else "
-				"is already running on "
-				"port %i. Not starting.\" ; "
-				"exit 0; "
-				"fi ; "
+				// "./gb isportinuse %i ; "
+				// "if [ \\$? -eq 1 ] ; then "
+				// "echo \"gb or something else "
+				// "is already running on "
+				// "port %i. Not starting.\" ; "
+				// "exit 0; "
+				// "fi ; "
 
 				// ok, the port is available
 				//"echo \"Starting gb\"; "
@@ -5252,15 +5252,15 @@ int install ( install_flag_konst_t installFlag , int32_t hostId , char *dir ,
 				"ADDARGS='-r'\\$INC ; "
 				"INC=\\$((INC+1));"
 				"} " 
- 				//"done >& /dev/null & \" %s",
- 				"done & \" %s",
+ 				"done >& /dev/null & \" %s",
+ 				//"done & \" %s",
 				//"\" %s",
 				iptoa(h2->m_ip),
 				h2->m_dir      ,
 
 				// for ./gb isportinuse %i
-				h2->m_httpPort ,
-				h2->m_httpPort ,
+				// h2->m_httpPort ,
+				// h2->m_httpPort ,
 
 				// for moving log file
 				 h2->m_hostId   ,
