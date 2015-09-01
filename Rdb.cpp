@@ -1805,7 +1805,7 @@ void attemptMergeAll2 ( ) {
 	if ( ++count >= 1000 ) return;
 
 	CollectionRec *cr = g_collectiondb.m_recs[s_lastCollnum];
-	if ( ! cr ) goto tryLoop;
+	if ( ! cr ) { s_lastCollnum++; goto tryLoop; }
 
 	bool force = false;
 	RdbBase *base ;
