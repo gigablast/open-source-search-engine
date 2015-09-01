@@ -5945,6 +5945,9 @@ void SpiderLoop::startLoop ( ) {
 		log("build: failed to register updatecrawlinfowrapper");
 }
 
+// lower from 1300 to 200
+#define MAXUDPSLOTS 200
+
 // call this every 50ms it seems to try to spider urls and populate doledb
 // from the waiting tree
 void doneSleepingWrapperSL ( int fd , void *state ) {
@@ -5957,6 +5960,8 @@ void doneSleepingWrapperSL ( int fd , void *state ) {
 	//if ( ! g_conf.m_webSpideringEnabled )  return;
 	// or if trying to exit
 	if ( g_process.m_mode == EXIT_MODE ) return;	
+	// skip if udp table is full
+	if ( g_udpServer.getNumUsedSlotsIncoming() >= MAXUDPSLOTS ) return;
 
 	// wait for clock to sync with host #0
 	if ( ! isClockInSync() ) { 
@@ -6278,9 +6283,6 @@ void gotDoledbListWrapper2 ( void *state , RdbList *list , Msg5 *msg5 ) ;
 //
 //////////////////////////
 //////////////////////////
-
-// lower from 1300 to 200
-#define MAXUDPSLOTS 200
 
 // now check our RDB_DOLEDB for SpiderRequests to spider!
 void SpiderLoop::spiderDoledUrls ( ) {
