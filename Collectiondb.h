@@ -535,6 +535,7 @@ class CollectionRec {
 	char  m_recycleContent          ;
 	char  m_recycleCatdb            ;
 	char  m_getLinkInfo             ; // turn off to save seeks
+	char  m_computeSiteNumInlinks   ;
 	//char  m_recycleLinkInfo2        ; // ALWAYS recycle linkInfo2?
 	//char  m_useLinkInfo2ForQuality  ;
 	char  m_indexInlinkNeighborhoods;

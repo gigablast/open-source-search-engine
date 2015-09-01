@@ -13801,6 +13801,30 @@ int32_t *XmlDoc::getSiteNumInlinks ( ) {
 	// sanity check
 	if ( m_setFromTitleRec && ! m_useSecondaryRdbs) {char *xx=NULL;*xx=0;}
 
+	CollectionRec *cr = getCollRec();
+	if ( ! cr ) return NULL;
+
+	// hacks of speed. computeSiteNumInlinks is true by default
+	// but if the user turns it off the just use sitelinks.txt
+	if ( ! cr->m_computeSiteNumInlinks ) {
+		int32_t hostHash32 = getHostHash32a();
+		int32_t min = g_tagdb.getMinSiteInlinks ( hostHash32 );
+		// try with www if not there
+		if ( min < 0 && ! m_firstUrl.hasSubdomain() ) {
+			int32_t wwwHash32 = m_firstUrl.getHash32WithWWW();
+			min = g_tagdb.getMinSiteInlinks ( wwwHash32 );
+		}
+		// if still not in sitelinks.txt, just use 0
+		if ( min < 0 ) {
+			m_siteNumInlinksValid = true;
+			m_siteNumInlinks = 0;
+			return &m_siteNumInlinks;
+		}
+		m_siteNumInlinks = min;
+		m_siteNumInlinksValid = true;
+		return &m_siteNumInlinks;
+	}
+
 	setStatus ( "getting site num inlinks");
 
 	// get it from the tag rec if we can
@@ -13837,9 +13861,6 @@ int32_t *XmlDoc::getSiteNumInlinks ( ) {
 	// 0 means error, i guess g_errno should be set, -1 means blocked
 	if ( ! wfts ) return NULL;
 	if ( wfts == -1 ) return (int32_t *)-1;
-
-	CollectionRec *cr = getCollRec();
-	if ( ! cr ) return NULL;
 
 	setStatus ( "getting site num inlinks");
 	// check the tag first
