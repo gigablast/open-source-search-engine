@@ -17322,7 +17322,13 @@ void Parms::init ( ) {
 		"used for ranking and some times spidering prioritzation. "
 		"It will cache the site information in tagdb. "
 		"The greater the number of inlinks, the longer the cached "
-		"time, because the site is considered more stable.";
+		"time, because the site is considered more stable. If this "
+		"is NOT true then Gigablast will use the included file, "
+		"sitelinks.txt, which stores the site inlinks of millions "
+		"of the most popular sites. This is the fastest way. If you "
+		"notice a lot of <i>getting link info</i> requests in the "
+		"<i>sockets table</i> you may want to disable this "
+		"parm.";
 	m->m_cgi   = "csni";
 	m->m_off   = (char *)&cr.m_computeSiteNumInlinks - x;
 	m->m_type  = TYPE_BOOL;
