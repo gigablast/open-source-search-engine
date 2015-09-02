@@ -342,7 +342,7 @@ class RdbMap {
 	int16_t         **m_offsets;
 	int32_t            m_numSegmentOffs;
 
-
+	bool m_reducedMem;
 
 	// number of valid pages in the map.
 	int32_t          m_numPages;     

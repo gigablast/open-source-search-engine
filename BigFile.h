@@ -23,13 +23,15 @@ ssize_t gbpwrite(int fd, const void *buf, size_t count, off_t offset);
 //#define MAX_PART_SIZE  (32LL*1024LL*1024LL)
 
 // have enough part files to do a 2048gig file
-#define MAX_PART_FILES (((2048LL*1000LL*1000LL*1000LL)/MAX_PART_SIZE)+1LL)
+//#define MAX_PART_FILES (((2048LL*1000LL*1000LL*1000LL)/MAX_PART_SIZE)+1LL)
 
 // HACK to save mem. support a 128GB file
 //#define MAX_PART_FILES (((128LL*1000LL*1000LL*1000LL)/MAX_PART_SIZE)+1LL)
 
 // debug define
 //#define MAX_PART_FILES 100
+
+#define LITTLEBUFSIZE 210
 
 // use this state class for doing non-blocking reads/writes
 #ifdef ASYNCIO
@@ -153,7 +155,9 @@ class BigFile {
 	int64_t getSize     ( ) { return getFileSize(); };
 
 	// use the base filename as our filename
-	char *getFilename() { return m_baseFilename; };
+	char *getFilename() { return m_baseFilename.getBufStart(); };
+
+	char *getDir() { return m_dir.getBufStart(); };
 
 	// . returns false if blocked, true otherwise
 	// . sets g_errno on error
@@ -228,7 +232,7 @@ class BigFile {
 	// public for wrapper to call
 	//bool readwrite_r ( FileState *fstate );
 
-	int64_t m_currentOffset;
+	//int64_t m_currentOffset;
 
 	DiskPageCache *getDiskPageCache ( ) { return m_pc;  };
 	int32_t       getVfd       ( ) { return m_vfd; };
@@ -236,13 +240,12 @@ class BigFile {
 	// WARNING: some may have been unlinked from call to chopHead()
 	int32_t getNumParts ( ) { return m_numParts; };
 
-	File *getFile ( int32_t n ) { return m_files[n]; };
-
 	// makes the filename of part file #n
 	void makeFilename_r ( char *baseFilename    , 
 			      char *baseFilenameDir ,
 			      int32_t  n               , 
-			      char *buf             );
+			      char *buf             ,
+			      int32_t maxBufSize );
 
 	void removePart ( int32_t i ) ;
 
@@ -259,17 +262,16 @@ class BigFile {
 	// number of parts remaining to be unlinked/renamed
 	int32_t   m_partsRemaining;
 
-	// rename stores the new name here so we can rename the m_files[i] 
-	// after the rename has completed and the rename thread returns
-	char m_newBaseFilename    [256];
-	// if first char in this dir is 0 then use m_dir
-	char m_newBaseFilenameDir [256];
+	char m_tinyBuf[8];
 
-	// store our base filename here
-	char m_baseFilename [256];
+	// to hold the array of Files
+	SafeBuf m_filePtrsBuf;
+
+	// enough mem for our first File so we can avoid a malloc
+	char m_littleBuf[LITTLEBUFSIZE];
 
 	// ptrs to the part files
-	File *m_files [ MAX_PART_FILES ];
+	//File *m_files ;//[ MAX_PART_FILES ];
 
 	// private: 
 
@@ -305,8 +307,17 @@ class BigFile {
 
 	//bool unlinkPart ( int32_t n , bool block );
 
+	File *getFile2 ( int32_t n ) { 
+		if ( n >= m_maxParts ) return NULL;
+		File **filePtrs = (File **)m_filePtrsBuf.getBufStart();
+		File *f = filePtrs[n];
+		//if ( ! f ->calledSet() ) return NULL;
+		// this will be NULL if addPart(n) never called
+		return f;
+	};
+
 	// if part file not created, will create it
-	File *getPartFile ( int32_t n ) { return m_files[n]; };
+	//File *getPartFile2 ( int32_t n ) { return getFile2(n); }
 
 	// . put a signal on the queue to do reading/writing
 	// . we call readwrite ( FileState *) when we handle the signal
@@ -314,9 +325,19 @@ class BigFile {
 
 	bool reset ( );
 
-	// store our base filename here
-	char m_dir          [256];
-	char m_stripeDir    [256];
+	// for basefilename to avoid an alloc
+	char m_tmpBaseBuf[32];
+
+	// our most important the directory and filename
+	SafeBuf m_dir      ;//    [256];
+	SafeBuf m_baseFilename ;//[256];
+
+	// rename stores the new name here so we can rename the m_files[i] 
+	// after the rename has completed and the rename thread returns
+	SafeBuf m_newBaseFilename ;//   [256];
+	// if first char in this dir is 0 then use m_dir
+	SafeBuf m_newBaseFilenameDir ;//[256];
+
 
 	int32_t m_permissions;
 	int32_t m_flags;
@@ -328,7 +349,7 @@ class BigFile {
 
 	class DiskPageCache *m_pc;
 	int32_t             m_vfd;
-	bool             m_vfdAllowed;
+	//bool             m_vfdAllowed;
 
 	// prevent circular calls to BigFile::close() with this
 	char m_isClosing;

@@ -32,8 +32,11 @@
 #include <sys/stat.h>        // for stat
 #include "Mem.h"             // for g_mem
 #include "Loop.h"            // for g_loop.setNonBlocking(int fd)
+#include "SafeBuf.h"
 
 int64_t getFileSize ( char *filename ) ;
+
+int64_t getFileSize_cygwin ( char *filename ) ;
 
 // for avoiding unlink/opens that mess up our threaded read
 int32_t getCloseCount_r ( int fd );
@@ -57,6 +60,9 @@ class File {
 	 File ( );
 	~File ( );
 
+	void constructor();
+	void destructor ();
+
 	// . if you don't need to do a full open then just set the filename
 	// . useful for unlink/rename/reserve/...
 	// . IMPORTANT: if bytes were already reserved can only increase the 
@@ -68,6 +74,7 @@ class File {
 	bool rename ( char *newFilename );
 
 	bool calledOpen () { return m_calledOpen; };
+	bool calledSet  () { return m_calledSet; };
 
 	bool isNonBlocking () ;
 
@@ -149,11 +156,15 @@ class File {
 	// return -1 if not opened, otherwise, return the opened fd
 	int   getfdNoOpen ( ) ;
 
+	//char *getFilename ( ) { return m_filename.getBufStart(); };
 	char *getFilename ( ) { return m_filename; };
 
 	// our filename allocated with strdup
 	// we publicize for ease of use
 	char m_filename [ MAX_FILENAME_LEN ];
+	//SafeBuf m_filename;
+
+	//char m_filenameBuf [ MAX_FILENAME_LEN ];
 
 	// File::rename() uses this
 	//char m_oldFilename [ MAX_FILENAME_LEN ];
@@ -179,11 +190,13 @@ class File {
 	// now just the real fd. is -1 if not opened
 	int m_fd;
 
+
 	// save the permission and flag sets in case of re-opening
 	int m_flags;
 	int m_permissions;
 	
 	char m_calledOpen;
+	char m_calledSet;
 
 	time_t m_st_mtime;  // file last mod date
 	int32_t   m_st_size;   // file size

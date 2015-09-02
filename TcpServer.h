@@ -65,7 +65,7 @@ class TcpServer {
 		    //int32_t      maxReadBufSize = 128*1024  , 
 		    //int32_t      maxSendBufSize = 128*1024  );
 
-	bool testBind ( uint16_t port ) ;
+	bool testBind ( uint16_t port , bool printMsg ) ;
 
 	// . returns false if blocked, true otherwise
 	// . sets errno on error

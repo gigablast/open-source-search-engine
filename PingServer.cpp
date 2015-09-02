@@ -3221,7 +3221,8 @@ void doneSendingNotifyEmailWrapper ( void *state ) {
 	EmailInfo *ei = (EmailInfo *)state;
 	ei->m_notifyBlocked--;
 	// error?
-	log("build: email notification status: %s",mstrerror(g_errno));
+	log("build: email notification status (count=%i) (ei=0x%"PTRFMT"): %s",
+	    (int)ei->m_notifyBlocked,(PTRTYPE)ei,mstrerror(g_errno));
 	// ignore it for rest
 	g_errno = 0;
 	// wait for post url to get done
@@ -3236,7 +3237,8 @@ void doneGettingNotifyUrlWrapper ( void *state , TcpSocket *sock ) {
 	EmailInfo *ei = (EmailInfo *)state;
 	ei->m_notifyBlocked--;
 	// error?
-	log("build: url notification status: %s",mstrerror(g_errno));
+	log("build: url notification status (count=%i) (ei=0x%"PTRFMT"): %s",
+	    (int)ei->m_notifyBlocked,(PTRTYPE)ei,mstrerror(g_errno));
 	// wait for email to get done
 	if ( ei->m_notifyBlocked > 0 ) return;
 	// unmark it

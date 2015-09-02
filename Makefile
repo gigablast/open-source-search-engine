@@ -32,7 +32,7 @@ OBJS =  UdpSlot.o Rebalance.o \
 	Msg39.o Msg3.o \
 	Msg22.o \
 	Msg20.o Msg2.o \
-	Msg1.o Msg35.o \
+	Msg1.o \
 	Msg0.o Mem.o Matches.o Loop.o \
 	Log.o Lang.o \
 	Indexdb.o Posdb.o Clusterdb.o IndexList.o Revdb.o \
@@ -86,7 +86,10 @@ STATIC :=
 XMLDOCOPT := -O2
 else
 OS_DEB := true
-STATIC := -static
+# let's remove static now by default to be safe because we don't always
+# detect red hat installs like on aws. do 'make static' to make as static.
+#STATIC := -static
+STATIC :=
 # MDW: i get some parsing inconsistencies when running the first qa injection
 # test if this is -O3. strange.
 # now debian jesse doesn't like -O3, it will core right away when spidering
@@ -110,11 +113,13 @@ LIBS = ./libz.a ./libssl.a ./libcrypto.a ./libiconv.a ./libm.a
 # are we a 32-bit architecture? use different libraries then
 else ifeq ($(ARCH), i686)
 CPPFLAGS= -m32 -g -Wall -pipe -fno-stack-protector -Wno-write-strings -Wstrict-aliasing=0 -Wno-uninitialized -DPTHREADS -Wno-unused-but-set-variable $(STATIC)
-LIBS= -L. ./libz.a ./libssl.a ./libcrypto.a ./libiconv.a ./libm.a ./libstdc++.a -lpthread
+#LIBS= -L. ./libz.a ./libssl.a ./libcrypto.a ./libiconv.a ./libm.a ./libstdc++.a -lpthread
+LIBS=  -lm -lpthread -lssl -lcrypto ./libiconv.a ./libz.a
 
 else ifeq ($(ARCH), i386)
 CPPFLAGS= -m32 -g -Wall -pipe -fno-stack-protector -Wno-write-strings -Wstrict-aliasing=0 -Wno-uninitialized -DPTHREADS -Wno-unused-but-set-variable $(STATIC)
-LIBS= -L. ./libz.a ./libssl.a ./libcrypto.a ./libiconv.a ./libm.a ./libstdc++.a -lpthread
+#LIBS= -L. ./libz.a ./libssl.a ./libcrypto.a ./libiconv.a ./libm.a ./libstdc++.a -lpthread
+LIBS=  -lm -lpthread -lssl -lcrypto ./libiconv.a ./libz.a
 
 else
 #
@@ -189,6 +194,9 @@ vclean:
 
 gb: vclean $(OBJS) main.o $(LIBFILES)
 	$(CC) $(DEFS) $(CPPFLAGS) -o $@ main.o $(OBJS) $(LIBS)
+
+static: vclean $(OBJS) main.o $(LIBFILES)
+	$(CC) $(DEFS) $(CPPFLAGS) -static -o gb main.o $(OBJS) $(LIBS)
 
 
 # use this for compiling on CYGWIN: 
@@ -776,4 +784,14 @@ install-pkgs-local:
 warcinjector: 
 	-rm -r /home/zak/.pex/build/inject-*
 	-rm -r /home/zak/.pex/install/inject-*
-	pex -r requests -r pyopenssl -r ndg-httpsclient -r pyasn1 -r multiprocessing -e inject.inject:main -o script/warc-inject -s '/home/zak/repos/open-source-search-engine/script/' --no-wheel
+	cd script && pex -v . requests pyopenssl ndg-httpsclient pyasn1 multiprocessing flask -e inject -o warc-inject --inherit-path --no-wheel
+
+
+
+#pex -v inject requests pyopenssl ndg-httpsclient pyasn1 multiprocessing flask -e inject:main -o script/warc-inject -f '/home/zak/repos/open-source-search-engine/script' --inherit-path --no-wheel
+
+
+#pex -v inject requests pyopenssl ndg-httpsclient pyasn1 multiprocessing flask -e inject:main -o script/warc-inject -f '/home/zak/repos/open-source-search-engine/script' --inherit-path --no-wheel
+
+
+#	pex -r requests -r pyopenssl -r ndg-httpsclient -r pyasn1 -r multiprocessing -e inject.inject:main -o script/warc-inject -f '/home/zak/repos/open-source-search-engine/script/' --inherit-path --no-wheel

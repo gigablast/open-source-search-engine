@@ -12,6 +12,9 @@
 //#include "Stats.h"
 #include "Pages.h"
 
+// uncomment this #define to electric fence just on umsg00 buffers:
+//#define SPECIAL
+
 // put me back
 //#define EFENCE
 //#define EFENCE_SIZE 50000
@@ -26,6 +29,8 @@
 #undef malloc
 #undef calloc
 #undef realloc
+
+bool g_inMemFunction = false;
 
 // from malloc.c (dlmalloc)
 //void *dlmalloc(size_t);
@@ -68,7 +73,7 @@ extern bool g_isYippy;
 
 bool freeCacheMem();
 
-#if defined(EFENCE) || defined(EFENCE_SIZE)
+#if defined(EFENCE) || defined(EFENCE_SIZE) || defined(SPECIAL)
 static void *getElecMem ( int32_t size ) ;
 static void  freeElecMem ( void *p  ) ;
 #endif
@@ -258,6 +263,9 @@ void * operator new (size_t size) throw (std::bad_alloc) {
 		throw std::bad_alloc();
 		//throw 1;
 	}
+
+	g_inMemFunction = true;
+
 #ifdef EFENCE
 	void *mem = getElecMem(size);
 #elif EFENCE_SIZE
@@ -270,6 +278,9 @@ void * operator new (size_t size) throw (std::bad_alloc) {
 	//void *mem = dlmalloc ( size );
 	void *mem = sysmalloc ( size );
 #endif
+
+	g_inMemFunction = false;
+
 	int32_t  memLoop = 0;
 newmemloop:
 	//void *mem = s_pool.malloc ( size );
@@ -349,6 +360,9 @@ void * operator new [] (size_t size) throw (std::bad_alloc) {
 		throw std::bad_alloc();
 		//throw 1;
 	}
+
+	g_inMemFunction = true;
+
 #ifdef EFENCE
 	void *mem = getElecMem(size);
 #elif EFENCE_SIZE
@@ -361,6 +375,9 @@ void * operator new [] (size_t size) throw (std::bad_alloc) {
 	//void *mem = dlmalloc ( size );
 	void *mem = sysmalloc ( size );
 #endif
+
+	g_inMemFunction = false;
+
 
 	int32_t  memLoop = 0;
 newmemloop:
@@ -537,9 +554,9 @@ void Mem::addMem ( void *mem , int32_t size , const char *note , char isnew ) {
 
 	//validate();
 
-	// if ( note && note[0] == 'S' && note[1] == 'a' &&
-	//      note[2] == 'f' && size == 13371521 )
-	// 	log("mem: got mystery safebuf");
+	 // if ( note && note[0] == 'S' && note[1] == 'a' &&
+	 //      note[2] == 'f' && size == 1179 )
+	 // 	log("mem: got mystery safebuf");
 
 
         //m_memtablesize = 0;//DMEMTABLESIZE;
@@ -608,14 +625,31 @@ void Mem::addMem ( void *mem , int32_t size , const char *note , char isnew ) {
 		*xx = 0;
 	}
 
-	if ( ! isnew ) {
+	// umsg00
+	bool useElectricFence = false;
+#ifdef SPECIAL
+	if ( note[0] == 'u' &&
+	     note[1] == 'm' &&
+	     note[2] == 's' &&
+	     note[3] == 'g' &&
+	     note[4] == '0' &&
+	     note[5] == '0' )
+		useElectricFence = true;
+#endif
+	if ( ! isnew && ! useElectricFence ) {
 		for ( int32_t i = 0 ; i < UNDERPAD ; i++ )
 			((char *)mem)[0-i-1] = MAGICCHAR;
 		for ( int32_t i = 0 ; i < OVERPAD ; i++ )
 			((char *)mem)[0+size+i] = MAGICCHAR;
 	}
 	// hey!
-	if ( s_pid == -1 && m_numTotalAllocated >1000 ) { char *xx=NULL;*xx=0;}
+	if ( s_pid == -1 && m_numTotalAllocated >1000 ) {
+		log(LOG_WARN, "pid is %i and numAllocs is %i", (int)s_pid,  
+		    (int)m_numTotalAllocated);
+        //char *xx=NULL;*xx=0;}
+        //	if ( s_pid == -1 && m_numTotalAllocated >1000 ) { char *xx=NULL;*xx=0;}
+    }
+
 	// threads can't be here!
 	if ( s_pid != -1 && getpid() != s_pid ) {
 		log("mem: addMem: Called from thread.");
@@ -963,7 +997,11 @@ bool Mem::rmMem  ( void *mem , int32_t size , const char *note ) {
 	// don't free 0 bytes
 	if ( size == 0 ) return true;
 	// hey!
-	if ( s_pid == -1 && m_numTotalAllocated >1000 ) { char *xx=NULL;*xx=0;}
+	if ( s_pid == -1 && m_numTotalAllocated >1000 ) {
+		log(LOG_WARN, "pid is %i and numAllocs is %i", 
+		    (int)s_pid,  (int)m_numTotalAllocated);
+        //char *xx=NULL;*xx=0;}
+	}
 	// threads can't be here!
 	if ( s_pid != -1 && getpid() != s_pid ) {
 		log("mem: rmMem: Called from thread.");
@@ -1145,6 +1183,18 @@ int Mem::printBreech ( int32_t i , char core ) {
 	if ( s_labels[i*16+0] == 'T' &&
 	     s_labels[i*16+1] == 'h' &&
 	     !strcmp(&s_labels[i*16  ],"ThreadStack" ) ) return 0;
+#ifdef SPECIAL
+	// for now this is efence. umsg00
+	bool useElectricFence = false;
+	if ( s_labels[i*16+0] == 'u' &&
+	     s_labels[i*16+1] == 'm' &&
+	     s_labels[i*16+2] == 's' &&
+	     s_labels[i*16+3] == 'g' &&
+	     s_labels[i*16+4] == '0' &&
+	     s_labels[i*16+5] == '0' )
+		useElectricFence = true;
+	if ( useElectricFence ) return 0;
+#endif
 	char flag = 0;
 	// check for underruns
 	char *mem = (char *)s_mptrs[i];
@@ -1270,6 +1320,9 @@ int Mem::printBreeches ( char core ) {
 	if ( ! s_mptrs ) return 0;
 	// do not bother if no padding at all
 	if ( (int32_t)UNDERPAD == 0 && (int32_t)OVERPAD == 0 ) return 0;
+	
+	log("mem: checking mem for breeches");
+
 	// loop through the whole mem table
 	for ( int32_t i = 0 ; i < (int32_t)m_memtablesize ; i++ )
 		// only check if non-empty
@@ -1368,6 +1421,8 @@ void *Mem::gbmalloc ( int size , const char *note ) {
 
 	void *mem;
 
+	g_inMemFunction = true;
+
 	// to find bug that cores on malloc do this
 	//printBreeches(true);
 	//g_errno=ENOMEM;return (void *)log("Mem::malloc: reached mem limit");}
@@ -1380,11 +1435,32 @@ void *Mem::gbmalloc ( int size , const char *note ) {
 		mem = getElecMem(size+0+0);
 	else
 		mem = (void *)sysmalloc ( size + UNDERPAD + OVERPAD );
-#else			
+#else		
+
+#ifdef SPECIAL	
+	// debug where tagrec in xmldoc.cpp's msge0 tag list is overrunning
+	// for umsg00
+	bool useElectricFence = false;
+	if ( note[0] == 'u' &&
+	     note[1] == 'm' &&
+	     note[2] == 's' &&
+	     note[3] == 'g' &&
+	     note[4] == '0' &&
+	     note[5] == '0' ) 
+		useElectricFence = true;
+	if ( useElectricFence ) {
+		mem = getElecMem(size+0+0);
+		addMem ( (char *)mem + 0 , size , note , 0 );
+		return (char *)mem + 0;
+	}
+#endif
 
 	//void *mem = dlmalloc ( size );
 	mem = (void *)sysmalloc ( size + UNDERPAD + OVERPAD );
 #endif
+
+	g_inMemFunction = false;
+
 	// initialization debug
 	//char *pend = (char *)mem + UNDERPAD + size;
 	//for ( char *p = (char *)mem + UNDERPAD ; p < pend ; p++ )
@@ -1546,6 +1622,34 @@ void *Mem::gbrealloc ( void *ptr , int oldSize , int newSize ,
 	return mem;
 #endif
 
+
+#ifdef SPECIAL
+	int32_t slot = g_mem.getMemSlot ( ptr );
+	// debug where tagrec in xmldoc.cpp's msge0 tag list is overrunning
+	// for umsg00
+	if ( slot >= 0 ) {
+		char *label = &s_labels[slot*16];
+		bool useElectricFence = false;
+		if ( label[0] == 'u' &&
+		     label[1] == 'm' &&
+		     label[2] == 's' &&
+		     label[3] == 'g' &&
+		     label[4] == '0' &&
+		     label[5] == '0' ) 
+			useElectricFence = true;
+		if ( useElectricFence ) {
+			// just make a new buf
+			mem = (char *)mmalloc ( newSize , note );
+			if ( ! mem ) return NULL;
+			// copy over to it
+			gbmemcpy ( mem , ptr , oldSize );
+			// free the old
+			mfree ( ptr , oldSize , note );
+			return mem;
+		}
+	}
+#endif
+
 	// assume it will be successful. we can't call rmMem() after
 	// calling sysrealloc() because it will mess up our MAGICCHAR buf
 	rmMem  ( ptr , oldSize , note );
@@ -1636,11 +1740,38 @@ void Mem::gbfree ( void *ptr , int size , const char *note ) {
 	}
 #endif	
 
+
+#ifdef SPECIAL
+	g_inMemFunction = true;
+	// debug where tagrec in xmldoc.cpp's msge0 tag list is overrunning
+	// for umsg00
+	bool useElectricFence = false;
+	char *label = &s_labels[slot*16];
+	if ( label[0] == 'u' &&
+	     label[1] == 'm' &&
+	     label[2] == 's' &&
+	     label[3] == 'g' &&
+	     label[4] == '0' &&
+	     label[5] == '0' ) 
+		useElectricFence = true;
+	if ( useElectricFence ) {
+		// this calls rmMem() itself
+		freeElecMem ((char *)ptr - 0 );
+		g_inMemFunction = false;
+		// if this returns false it was an unbalanced free
+		//if ( ! rmMem ( ptr , size , note ) ) return;
+		return;
+	}
+	g_inMemFunction = false;
+#endif
+
 	// if this returns false it was an unbalanced free
 	if ( ! rmMem ( ptr , size , note ) ) return;
 
+	g_inMemFunction = true;
 	if ( isnew ) sysfree ( (char *)ptr );
 	else         sysfree ( (char *)ptr - UNDERPAD );
+	g_inMemFunction = false;
 }
 
 int32_t getLowestLitBitLL ( uint64_t bits ) {
@@ -2072,6 +2203,7 @@ void *getElecMem ( int32_t size ) {
 	// store the ptrs
 	*(char **)(returnMem- sizeof(char *)) = realMem;
 	*(char **)(returnMem- sizeof(char *)*2) = realMemEnd;
+	//log("protect2 0x%"PTRFMT"\n",(PTRTYPE)protMem);
 	// protect that after we wrote our ptr
 	if ( mprotect ( protMem , MEMPAGESIZE , PROT_NONE) < 0 )
 		log("mem: mprotect failed: %s",mstrerror(errno));
@@ -2123,6 +2255,7 @@ void *getElecMem ( int32_t size ) {
 	*(char **)(returnMem- sizeof(char *)*2) = realMemEnd;
 	// sanity
 	if ( returnMem - sizeof(char *)*2 < realMem ) { char *xx=NULL;*xx=0; }
+	//log("protect3 0x%"PTRFMT"\n",(PTRTYPE)protMem);
 	// protect that after we wrote our ptr
 	if ( mprotect ( protMem , MEMPAGESIZE , PROT_NONE) < 0 )
 		log("mem: mprotect failed: %s",mstrerror(errno));
@@ -2175,6 +2308,9 @@ void freeElecMem ( void *fakeMem ) {
 	char *oldProtMem = cp + fakeSize;
 #endif
 
+	// hack
+	//oldProtMem -= 4;
+	//log("unprotect1 0x%"PTRFMT"\n",(PTRTYPE)oldProtMem);
 	// unprotect it
 	if ( mprotect ( oldProtMem , MEMPAGESIZE, PROT_READ|PROT_WRITE) < 0 )
 		log("mem: munprotect failed: %s",mstrerror(errno));
@@ -2196,6 +2332,7 @@ void freeElecMem ( void *fakeMem ) {
 	// sanity
 	if ( protMem < realMem ) { char *xx=NULL;*xx=0; }
 	if ( protMem - realMem > (int32_t)MEMPAGESIZE) { char *xx=NULL;*xx=0; }
+	//log("protect1 0x%"PTRFMT"\n",(PTRTYPE)protMem);
 	// before adding it into the ring, protect it
 	if ( mprotect ( protMem , protEnd-protMem, PROT_NONE) < 0 )
 		log("mem: mprotect2 failed: %s",mstrerror(errno));
@@ -2209,6 +2346,8 @@ void freeElecMem ( void *fakeMem ) {
 		g_mem.rmMem ( s_freeCursor->m_fakeMem,
 			      s_freeCursor->m_fakeSize,
 			      s_freeCursor->m_note );
+		// log("unprotect2 0x%"PTRFMT"\n",
+		//     (PTRTYPE)s_freeCursor->m_protMem);
 		// unprotect it
 		if ( mprotect (s_freeCursor->m_protMem,
 			       s_freeCursor->m_protSize,
@@ -2247,6 +2386,8 @@ void freeElecMem ( void *fakeMem ) {
 		g_mem.rmMem ( s_freeCursor->m_fakeMem,
 			      s_freeCursor->m_fakeSize,
 			      s_freeCursor->m_note );
+		// log("unprotect3 0x%"PTRFMT"\n",
+		//     (PTRTYPE)s_freeCursor->m_protMem);
 		// unprotect it
 		if ( mprotect (s_freeCursor->m_protMem,
 			       s_freeCursor->m_protSize,

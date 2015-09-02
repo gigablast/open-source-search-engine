@@ -1988,9 +1988,9 @@ bool ThreadQueue::launchThread2 ( ThreadEntry *te ) {
 		fs->m_fd2 = bb->getfd (fs->m_filenum2,!doWrite);//&fs->m_vfd2);
 		// is this bad?
 		if ( fs->m_fd1 < 0 ) log("disk: fd1 is %i for %s",
-					 fs->m_fd1,bb->m_baseFilename);
+					 fs->m_fd1,bb->getFilename());
 		if ( fs->m_fd2 < 0 ) log("disk: fd2 is %i for %s.",
-					 fs->m_fd2,bb->m_baseFilename);
+					 fs->m_fd2,bb->getFilename());
 		fs->m_closeCount1 = getCloseCount_r ( fs->m_fd1 );
 		fs->m_closeCount2 = getCloseCount_r ( fs->m_fd2 );
 	}

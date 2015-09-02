@@ -174,6 +174,7 @@ class Collectiondb  {
 
 	int32_t m_numCollsSwappedOut;
 
+	bool m_initializing;
 	//int64_t            m_lastUpdateTime;
 };
 
@@ -420,6 +421,9 @@ class CollectionRec {
 	int32_t m_dailyMergeStarted; // time_t
 	int32_t m_dailyMergeTrigger;
 
+	class CollectionRec *m_nextLink;
+	class CollectionRec *m_prevLink;
+
 	char m_dailyMergeDOWList[48];
 
 	int32_t m_treeCount;
@@ -531,6 +535,7 @@ class CollectionRec {
 	char  m_recycleContent          ;
 	char  m_recycleCatdb            ;
 	char  m_getLinkInfo             ; // turn off to save seeks
+	char  m_computeSiteNumInlinks   ;
 	//char  m_recycleLinkInfo2        ; // ALWAYS recycle linkInfo2?
 	//char  m_useLinkInfo2ForQuality  ;
 	char  m_indexInlinkNeighborhoods;

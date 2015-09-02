@@ -17,6 +17,8 @@
 //#include <dmalloc.h>
 //#endif
 
+extern bool g_inMemFunction;
+
 // we share malloc between threads, so you need to get the lock
 //void mutexLock   ( );
 //void mutexUnlock ( );
@@ -130,7 +132,7 @@ class Mem {
 	int  printBreeches ( char core ) ;
 	// print mem usage stats
 	int  printMem      ( ) ;
-	void addMem ( void *mem , int32_t size , const char *note , char isnew ) ;
+	void addMem ( void *mem , int32_t size , const char *note, char isnew);
 	bool rmMem  ( void *mem , int32_t size , const char *note ) ;
 	bool lblMem ( void *mem , int32_t size , const char *note );
 

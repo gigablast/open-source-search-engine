@@ -37,12 +37,12 @@ int startup ( void *state ) {
 	int bytes = read(-9,buf,5);
 	//errno = 7; // E2BIG;
 	//assert ( errno && bytes == -1 );
-	g_errno = errno;
+	//g_errno = errno;
 }
 
 
 int main() {
-	errno = 10; // EINVAL;
+	//errno = 10; // EINVAL;
 	g_errno = 10;
 	char stack[10000];
 	pid_t pid = clone( startup , 
@@ -53,8 +53,8 @@ int main() {
 	int status;
 	waitpid ( pid , &status, 0  );
 
-	if ( s_called ) fprintf(stderr,"__errno_location() was called %i "
-				"times\n",s_called);
+	fprintf(stderr,"__errno_location() was called %i "
+		"times\n",s_called);
 
 	if ( errno != 10 ) fprintf(stderr,"errno=%i (failed)\n",errno);
 	else fprintf(stderr,"errno=%i (success)\n",errno);

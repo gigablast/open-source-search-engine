@@ -268,7 +268,7 @@ void timePollWrapper ( int fd , void *state ) {
 	THIS->closeLeastUsed( 60 );
 }
 
-bool TcpServer::testBind ( uint16_t port ) {
+bool TcpServer::testBind ( uint16_t port , bool printMsg ) {
 	// assign port for the test
 	m_port = port;
 	// sockaddr_in provides interface to sockaddr
@@ -321,6 +321,8 @@ retry19:
 		g_errno = errno;
 		//if ( g_errno == EINVAL ) { port++; goto again; }
 		close ( m_sock );
+		if ( ! printMsg ) 
+			return false;
 		fprintf(stderr,"Failed to bind socket on port %"INT32": %s."
 			"\n"
 			"Are you already running gb?\n"
@@ -2855,7 +2857,10 @@ int TcpServer::sslHandshake ( TcpSocket *s ) {
 		SSL_set_connect_state(s->m_ssl);
 	}
 
+	// SSL_connect() calls malloc()
+	g_inMemFunction = true;
 	int r = SSL_connect(s->m_ssl);
+	g_inMemFunction = false;
 
 	if ( g_conf.m_logDebugTcp )
 		log("tcp: ssl handshake on sd=%"INT32" r=%i",

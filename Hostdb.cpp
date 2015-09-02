@@ -2633,6 +2633,7 @@ bool Hostdb::createHostsConf( char *cwd ) {
 	sb.safePrintf("# List of hosts. Limited to 512 from MAX_HOSTS in Hostdb.h. Increase that\n");
 	sb.safePrintf("# if you want more.\n");
 	sb.safePrintf("#\n");
+
 	sb.safePrintf("# Format:\n");
 	sb.safePrintf("#\n");
 	sb.safePrintf("# first   column: hostID (starts at 0 and increments from there)\n");
@@ -2641,9 +2642,12 @@ bool Hostdb::createHostsConf( char *cwd ) {
 	sb.safePrintf("# fourth  column: port that HTTP  listens on\n");
 	sb.safePrintf("# fifth   column: port that udp server listens on\n");
 	sb.safePrintf("# sixth   column: IP address or hostname that has an IP address in /etc/hosts\n");
-	sb.safePrintf("# seventh column: like sixth column but for secondary ethernet port. (optional)\n");
+	sb.safePrintf("# seventh column: like sixth column but for secondary ethernet port. Can be the same as the sixth column.\n");
+	sb.safePrintf("# eigth column: An optional text note that will "
+		      "display in the hosts table for this host.\n");
 	sb.safePrintf("\n");
 	sb.safePrintf("\n");
+	/*
 	sb.safePrintf("# This file consists of a list of lines like this:\n");
 	sb.safePrintf("#\n");
 	sb.safePrintf("# <ClientDnsPort> <HttpsPort> <HttpPort> <UdpPort> <IP1> <IP2> <Path>\n");
@@ -2672,6 +2676,7 @@ bool Hostdb::createHostsConf( char *cwd ) {
 	sb.safePrintf("# The working directory is the last string on each line. That is where the\n");
 	sb.safePrintf("# 'gb' binary resides.\n");
 	sb.safePrintf("#\n");
+	*/
 
 	sb.safePrintf("#\n");
 	sb.safePrintf("# Example of a four-node distributed search index running on a single\n");
@@ -2680,7 +2685,7 @@ bool Hostdb::createHostsConf( char *cwd ) {
 	sb.safePrintf("# different ports for each gb instance since they are all on the same\n");
 	sb.safePrintf("# server.\n");
 	sb.safePrintf("#\n");
-	sb.safePrintf("# Use './gb 2' to run as the host on IP 1.2.3.8 for example.\n");
+	//sb.safePrintf("# Use './gb 2' to run as the host on IP 1.2.3.8 for example.\n");
 	sb.safePrintf("#\n");
 	sb.safePrintf("#0 5998 7000 8000 9000 1.2.3.4 1.2.3.5 /home/mwells/host0/\n");
 	sb.safePrintf("#1 5997 7001 8001 9001 1.2.3.4 1.2.3.5 /home/mwells/host1/\n");
@@ -2707,6 +2712,7 @@ bool Hostdb::createHostsConf( char *cwd ) {
 	sb.safePrintf("#5 5998 7000 8000 9000 se5 se5b /home/mwells/gigablast/\n");
 	sb.safePrintf("#6 5998 7000 8000 9000 se6 se6b /home/mwells/gigablast/\n");
 	sb.safePrintf("#7 5998 7000 8000 9000 se7 se7b /home/mwells/gigablast/\n");
+	/*
 	sb.safePrintf("\n");
 	sb.safePrintf("\n");
 	sb.safePrintf("# Proxies\n");
@@ -2732,6 +2738,7 @@ bool Hostdb::createHostsConf( char *cwd ) {
 	sb.safePrintf("# Example:\n");
 	sb.safePrintf("# A proxy will be running on 10.5.66.18:\n");
 	sb.safePrintf("#proxy 6001 7001 8001 9001 10.5.66.18\n");
+	*/
 
 	log("%shosts.conf does not exist, creating.",cwd);
 	sb.save ( cwd , "hosts.conf" );

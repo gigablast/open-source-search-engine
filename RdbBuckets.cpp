@@ -1802,7 +1802,9 @@ void RdbBuckets::cleanBuckets ( ) {
 	for ( int32_t i = 0; i < m_numBuckets; i++ ) {
 		RdbBucket *b = m_buckets[i];
 		collnum_t collnum = b->getCollnum();
-		CollectionRec *cr = g_collectiondb.m_recs[collnum];
+		CollectionRec *cr = NULL;
+		if ( collnum < g_collectiondb.m_numRecs ) 
+			cr = g_collectiondb.m_recs[collnum];
 		if ( cr ) continue;
 		// count # deleted
 		count += b->getNumKeys();
@@ -2244,14 +2246,16 @@ int64_t RdbBuckets::fastLoadColl( BigFile *f,
 
 	m_dbname = dbname;
 
-	if ( g_errno ) return -1;
+	if ( g_errno ) 
+		return -1;
 
 	for (int32_t i = 0; i < numBuckets; i++ ) {
 		m_buckets[i] = bucketFactory();
 		if(m_buckets[i] == NULL) return -1;
 		offset = m_buckets[i]->fastLoad(f, offset);
 		// returns -1 on error
-		if ( offset < 0 ) return -1;
+		if ( offset < 0 ) 
+			return -1;
 		m_numBuckets++;
 	}
 	return offset;
@@ -2312,7 +2316,7 @@ int64_t RdbBucket::fastSave_r(int fd, int64_t offset) {
 }
 
 int64_t RdbBucket::fastLoad(BigFile *f, int64_t offset) {
-	errno = 0;
+	//errno = 0;
 
 	f->read  ( &m_collnum,sizeof(collnum_t), offset ); 
 	offset += sizeof(collnum_t);
@@ -2333,7 +2337,10 @@ int64_t RdbBucket::fastLoad(BigFile *f, int64_t offset) {
 	offset += recSize*m_numKeys;
 
 	m_endKey = m_keys + endKeyOffset;
+	if ( g_errno ) {
+		log("bucket: fastload %s",mstrerror(g_errno));
+		return -1;
+	}
 
-	if(errno) return -1;
 	return offset;
 }

@@ -337,12 +337,18 @@ key224_t Linkdb::makeKey_uk ( uint32_t  linkeeSiteHash32       ,
 
 	// sanity checks
 	//if(discoveryDate && discoveryDate < 1025376000){char *xx=NULL;*xx=0;}
-	if ( lostDate && lostDate < LINKDBEPOCH){char *xx=NULL;*xx=0;}
+	if ( lostDate && lostDate < LINKDBEPOCH){
+        lostDate = LINKDBEPOCH;
+        //char *xx=NULL;*xx=0;
+    }
 
 	// . convert discovery date from utc into days since jan 2008 epoch
 	// . the number is for jan 2012, so subtract 4 years to do 2008
 	uint32_t epoch = LINKDBEPOCH;
-	if ( discoveryDate && discoveryDate < epoch ) { char *xx=NULL;*xx=0; }
+	if ( discoveryDate && discoveryDate < epoch ) {
+        discoveryDate = epoch;
+        //char *xx=NULL;*xx=0;
+    }
 	uint32_t nd = (discoveryDate - epoch) / 86400;
 	if ( discoveryDate == 0 ) nd = 0;
 	// makeEndKey_uk() maxes this out!
@@ -708,6 +714,14 @@ void  handleRequest25 ( UdpSlot *slot , int32_t netnice ) {
 	// used by sendReply()
 	req->m_udpSlot = slot;
 
+	if ( g_conf.m_logDebugLinkInfo && req->m_mode == MODE_SITELINKINFO ) {
+		log("linkdb: got msg25 request sitehash64=%"INT64" "
+		    "site=%s "
+		    ,req->m_siteHash64
+		    ,req->ptr_site
+		    );
+	}
+
 	// set up the hashtable if our first time
 	if ( ! g_lineTable.isInitialized() )
 		g_lineTable.set ( 8,sizeof(Msg25Request *),256,
@@ -732,7 +746,8 @@ void  handleRequest25 ( UdpSlot *slot , int32_t netnice ) {
 			req->m_next = head->m_next;
 		head->m_next = req;
 		// note it for debugging
-		log("build: msg25 request waiting in line for %s slot=0x%"PTRFMT"",
+		log("build: msg25 request waiting in line for %s "
+		    "udpslot=0x%"PTRFMT"",
 		    req->ptr_url,(PTRTYPE)slot);
 		// we will send a reply back for this guy when done
 		// getting the reply for the head msg25request
@@ -1110,9 +1125,9 @@ bool Msg25::doReadLoop ( ) {
 	if ( g_conf.m_logDebugLinkInfo ) {
 		char *ms = "page";
 		if ( m_mode == MODE_SITELINKINFO ) ms = "site";
-		log("msg25: getting full linkinfo mode=%s site=%s url=%s "
-		    "docid=%"INT64"",
-		    ms,m_site,m_url,m_docId);
+		log("msg25: reading linkdb list mode=%s site=%s url=%s "
+		    "docid=%"INT64" linkdbstartkey=%s",
+		    ms,m_site,m_url,m_docId,KEYSTR(&startKey,LDBKS));
 	}
 
 	m_gettingList = true;
@@ -2302,8 +2317,9 @@ bool Msg25::gotLinkText ( Msg20Request *req ) { // LinkTextReply *linkText ) {
 		}
 		// debug
 		if ( g_conf.m_logDebugLinkInfo ) {
-			log("linkdb: recalling round=%"INT32" for %s=%s",
-			    m_round,ms,m_site);
+			log("linkdb: recalling round=%"INT32" for %s=%s "
+			    "req=0x%"PTRFMT" numlinkerreplies=%"INT32,
+			    m_round,ms,m_site,(PTRTYPE)m_req25,m_numReplyPtrs);
 		}
 		// and re-call. returns true if did not block.
 		// returns true with g_errno set on error.

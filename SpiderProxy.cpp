@@ -249,6 +249,10 @@ bool resetProxyStats ( ) {
 // save the stats
 bool saveSpiderProxyStats ( ) {
 
+	// do not save if coring in a malloc/free because we call malloc/free
+	// below to save stuff possibly
+	if ( g_inMemFunction ) return true;
+
 	// save hashtable
 	s_proxyBannedTable.save(g_hostdb.m_dir,"proxybantable.dat");
 

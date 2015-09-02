@@ -829,7 +829,7 @@ bool Msg3::doneScanning ( ) {
 		if ( now - s_time > 5 || g_errno != ENOTHREADSLOTS ) {
 			log("net: Had error reading %s: %s. Retrying. "
 			    "(retry #%"INT32")", 
-			    base->m_dbname,mstrerror(g_errno) , m_retryNum );
+			    base->m_dbname,mstrerror(m_errno) , m_retryNum );
 			s_time = now;
 		}
 		// send email alert if in an infinite loop, but don't send
@@ -928,19 +928,23 @@ bool Msg3::doneScanning ( ) {
 		// . this returns false and sets g_errno on error
 		// . like if data is corrupt
 		BigFile *ff = base->getFile(m_fileNums[i]);
+		// if we did a merge really quick and delete one of the 
+		// files we were reading, i've seen 'ff' be NULL
+		char *filename = "lostfilename";
+		if ( ff ) filename = ff->getFilename();
 		if ( ! m_lists[i].constrain ( m_startKey       ,
 					      m_constrainKey   , // m_endKey
 					      mrs           , // m_minRecSizes
 					      m_hintOffsets[i] ,
 					      //m_hintKeys   [i] ,
 					      &m_hintKeys   [i*m_ks] ,
-					      ff->getFilename() ,
+					      filename,//ff->getFilename() ,
 					      m_niceness ) ) {
 			log("net: Had error while constraining list read from "
 			    "%s: %s/%s. vfd=%"INT32" parts=%"INT32". "
 			    "This is likely caused by corrupted "
 			    "data on disk.", 
-			    mstrerror(g_errno), ff->m_dir ,
+			    mstrerror(g_errno), ff->getDir(),
 			    ff->getFilename(), ff->m_vfd , 
 			    (int32_t)ff->m_numParts );
 		}

@@ -2835,6 +2835,9 @@ static void gotSpiderdbListWrapper2( void *state , RdbList *list,Msg5 *msg5) {
 	THIS->populateWaitingTreeFromSpiderdb ( true );
 }
 
+// lower from 1300 to 300
+#define MAXUDPSLOTS 300
+
 //////////////////
 //////////////////
 //
@@ -2867,6 +2870,8 @@ void SpiderColl::populateWaitingTreeFromSpiderdb ( bool reentry ) {
 	if ( m_deleteMyself ) { char *xx=NULL;*xx=0; }
 	// skip if spiders off
 	if ( ! m_cr->m_spideringEnabled ) return;
+	// skip if udp table is full
+	if ( g_udpServer.getNumUsedSlotsIncoming() >= MAXUDPSLOTS ) return;
 	// if entering for the first time, we need to read list from spiderdb
 	if ( ! reentry ) {
 		// just return if we should not be doing this yet
@@ -3116,6 +3121,9 @@ void SpiderColl::populateDoledbFromWaitingTree ( ) { // bool reentry ) {
 	// since addSpiderRequest() calls addToWaitingTree() which then calls
 	// this. 
 	if ( ! g_conf.m_spideringEnabled ) return;
+
+	// skip if udp table is full
+	if ( g_udpServer.getNumUsedSlotsIncoming() >= MAXUDPSLOTS ) return;
 
 	// try skipping!!!!!!!!!!!
 	// yeah, this makes us scream. in addition to calling
@@ -5957,6 +5965,8 @@ void doneSleepingWrapperSL ( int fd , void *state ) {
 	//if ( ! g_conf.m_webSpideringEnabled )  return;
 	// or if trying to exit
 	if ( g_process.m_mode == EXIT_MODE ) return;	
+	// skip if udp table is full
+	if ( g_udpServer.getNumUsedSlotsIncoming() >= MAXUDPSLOTS ) return;
 
 	// wait for clock to sync with host #0
 	if ( ! isClockInSync() ) { 
@@ -6279,7 +6289,6 @@ void gotDoledbListWrapper2 ( void *state , RdbList *list , Msg5 *msg5 ) ;
 //////////////////////////
 //////////////////////////
 
-
 // now check our RDB_DOLEDB for SpiderRequests to spider!
 void SpiderLoop::spiderDoledUrls ( ) {
 
@@ -6336,6 +6345,8 @@ void SpiderLoop::spiderDoledUrls ( ) {
 
  subloop:
 
+	QUICKPOLL(MAX_NICENESS);
+
 	// must be spidering to dole out
 	if ( ! g_conf.m_spideringEnabled ) return;
 	// or if trying to exit
@@ -6351,7 +6362,7 @@ void SpiderLoop::spiderDoledUrls ( ) {
 	// or if doing a daily merge
 	if ( g_dailyMerge.m_mergeMode ) return;
 	// skip if too many udp slots being used
-	if ( g_udpServer.getNumUsedSlots() >= 1300 ) return;
+	if ( g_udpServer.getNumUsedSlotsIncoming() >= MAXUDPSLOTS ) return;
 	// stop if too many out. this is now 50 down from 500.
 	if ( m_numSpidersOut >= MAX_SPIDERS ) return;
 	// a new global conf rule
@@ -6415,6 +6426,8 @@ void SpiderLoop::spiderDoledUrls ( ) {
 	m_sc->setPriority ( MAX_SPIDER_PRIORITIES - 1 );
 
  subloopNextPriority:
+
+	QUICKPOLL(MAX_NICENESS);
 
 		// wrap it if we should
 		//if ( m_cri >= g_collectiondb.m_numRecs ) m_cri = 0;
@@ -6674,6 +6687,8 @@ void SpiderLoop::spiderDoledUrls ( ) {
 	}
 
  loop:
+
+	QUICKPOLL(MAX_NICENESS);
 
 	// shortcut
 	//CrawlInfo *ci = &cr->m_localCrawlInfo;
@@ -6937,7 +6952,7 @@ bool SpiderLoop::gotDoledbList2 ( ) {
 	// or if doing a daily merge
 	if ( g_dailyMerge.m_mergeMode ) bail = true;
 	// skip if too many udp slots being used
-	if ( g_udpServer.getNumUsedSlots() >= 1300 ) bail = true;
+	if ( g_udpServer.getNumUsedSlotsIncoming() >= MAXUDPSLOTS ) bail =true;
 	// stop if too many out
 	if ( m_numSpidersOut >= MAX_SPIDERS ) bail = true;
 
@@ -7212,7 +7227,8 @@ bool SpiderLoop::gotDoledbList2 ( ) {
 	}
 	if ( ipOut >= maxSpidersOutPerIp ) goto hitMax;
 	if ( g_conf.m_logDebugSpider )
-		log("spider: %"INT32" spiders out for %s for %s",ipOut,iptoa(sreq->m_firstIp),
+		log("spider: %"INT32" spiders out for %s for %s",
+		    ipOut,iptoa(sreq->m_firstIp),
 		    sreq->m_url);
 
 	// sometimes we have it locked, but is still in doledb i guess.
@@ -13891,7 +13907,7 @@ bool getSpiderStatusMsg ( CollectionRec *cx , SafeBuf *msg , int32_t *status ) {
 				       "paused.");
 	}
 
-	if ( g_udpServer.getNumUsedSlots() >= 1300 ) {
+	if ( g_udpServer.getNumUsedSlotsIncoming() >= MAXUDPSLOTS ) {
 		*status = SP_ADMIN_PAUSED;
 		return msg->safePrintf("Too many UDP slots in use, "
 				       "spidering paused.");

@@ -87,6 +87,14 @@ void File::incCloseCount_r ( ) {
 */
 
 File::File ( ) {
+	constructor();
+}
+
+File::~File ( ) {
+	destructor();
+}
+
+void File::constructor ( ) {
 	m_fd = -1; 
 	// initialize m_maxFileSize and the virtual fd table
 	if ( ! s_isInitialized ) initialize ();
@@ -98,17 +106,25 @@ File::File ( ) {
 	// m_nextActive = NULL;
 	// m_prevActive = NULL;
 	m_calledOpen = false;
+	m_calledSet  = false;
+	//m_filename.constructor();
+	// use the stack thing for now until we find the bug
+	//m_filename.setBuf ( m_filenameBuf,MAX_FILENAME_LEN-1 ,0,false,0);
+	//m_filename.setLabel   ("sbfnm");
 	if ( g_conf.m_logDebugDisk )
 		log("disk: constructor fd %i this=0x%"PTRFMT,
 		    (int)m_fd,(PTRTYPE)this);
 }
 
-
-File::~File ( ) {
+void File::destructor ( ) {
 	if ( g_conf.m_logDebugDisk )
 		log("disk: destructor fd %i this=0x%"PTRFMT,
 		    (int)m_fd,(PTRTYPE)this);
 	close ();
+	// set m_calledSet to false so BigFile.cpp see it as 'empty'
+	m_calledSet  = false;
+	m_calledOpen = false;
+	//m_filename.destructor();
 }
 
 void File::set ( char *dir , char *filename ) {
@@ -124,6 +140,7 @@ void File::set ( char *dir , char *filename ) {
 void File::set ( char *filename ) {
 	// reset m_filename
 	m_filename[0] = '\0';
+	//m_filename.reset();
 	// return if NULL
 	if ( ! filename ) { 
 		log ( LOG_LOGIC,"disk: Provided filename is NULL");
@@ -133,15 +150,20 @@ void File::set ( char *filename ) {
 	int32_t len = gbstrlen ( filename );
 	// account for terminating '\0'
 	if ( len + 1 >= MAX_FILENAME_LEN ) { 
-		log ( "disk: Provdied filename %s length of %"INT32" is bigger "
-		      "than %"INT32".",filename,len,(int32_t)MAX_FILENAME_LEN-1); 
-		return; 
+	 	log ( "disk: Provdied filename %s length of %"INT32" "
+		      "is bigger "
+	 	      "than %"INT32".",filename,len,
+		      (int32_t)MAX_FILENAME_LEN-1); 
+	 	return; 
 	}
 	// if we already had another file open then we must close it first.
 	if ( m_fd >= 0 ) close();
 	// copy into m_filename and NULL terminate
 	gbmemcpy ( m_filename , filename , len );
 	m_filename [ len ] = '\0';
+	//m_filename.setLabel   ("sbfnm");
+	//m_filename.safeStrcpy ( filename );
+	m_calledSet  = true;
 	// TODO: make this a bool returning function if ( ! m_filename ) g_log
 }
 
@@ -149,7 +171,8 @@ bool File::rename ( char *newFilename ) {
 	// close ourselves if we were open... why? historical reasons?
 	close();
 	// do the rename
-	if ( ::rename ( m_filename , newFilename ) != 0 ) return false;
+	if ( ::rename ( getFilename() , newFilename ) != 0 ) 
+		return false;
 	// sync it to disk in case power goes out
 	sync();
 	//return log("file::rename: from %s to %s failed", 
@@ -287,7 +310,7 @@ int File::write ( void *buf             ,
 	// log an error
 	if ( n < 0 ) 
 		log("disk: write(%s) : %s" ,  
-		    m_filename/*s_filenames[m_vfd]*/, strerror ( g_errno ) );
+		    getFilename(), strerror ( g_errno ) );
 	return n;
 }
 
@@ -316,7 +339,7 @@ int File::read ( void *buf            ,
 	if ( g_errno == EAGAIN ) { g_errno = 0; n = 0; }
 	if ( n < 0 ) 
 		log("disk: read(%s) : %s" ,  
-		    m_filename/*s_filenames[m_vfd]*/, strerror ( g_errno ) );
+		    getFilename(), strerror ( g_errno ) );
 	return n;
 }
 
@@ -357,7 +380,7 @@ void File::close1_r ( ) {
 
 	// debug. don't log in thread - might hurt us
 	log(LOG_DEBUG,"disk: close1_r: Closing  fd %i for %s after "
-	    "unlink/rename.",m_fd,m_filename);
+	    "unlink/rename.",m_fd,getFilename());
 
 	// problem. this could be a closed map file, m_vfd=-1.
 	if ( m_fd < 0 ) {
@@ -475,7 +498,8 @@ void File::close2 ( ) {
 	if ( g_conf.m_logDebugDisk )
 		log("disk: close2 fd %i for %s #openfiles=%i "
 		    "this=0x%"PTRFMT,
-		    fd,m_filename,(int)s_numOpenFiles,(PTRTYPE)this);
+		    fd,getFilename(),
+		    (int)s_numOpenFiles,(PTRTYPE)this);
 
 	if ( g_conf.m_logDebugDisk ) sanityCheck();
 }
@@ -519,7 +543,7 @@ bool File::close ( ) {
 		// copy errno to g_errno
 		g_errno = errno;
 		return log("disk: fcntl(%s) : %s",
-			   m_filename,strerror(g_errno));
+			   getFilename(),strerror(g_errno));
 	} 
 	// . tally up another close for this fd, if any
 	// . so if an open happens int16_tly here after, and 
@@ -537,7 +561,7 @@ bool File::close ( ) {
 	// there was a closing error if status is non-zero. --- not checking 
 	// the error may lead to silent loss of data --- see "man 2 close"
 	if ( status != 0 ) {
-		log("disk: close(%s) : %s" , m_filename,mstrerrno(g_errno)); 
+		log("disk: close(%s) : %s" ,getFilename(),mstrerrno(g_errno)); 
 		return false; 
 	}
 	// sanity
@@ -551,7 +575,7 @@ bool File::close ( ) {
 	// debug log
 	if ( g_conf.m_logDebugDisk )
 		log("disk: close0 fd %i for %s #openfiles=%i",
-		    m_fd,m_filename,(int)s_numOpenFiles);
+		    m_fd,getFilename(),(int)s_numOpenFiles);
 	// set this to -1 to indicate closed
 	m_fd = -1;
 	// excise from linked list of active files
@@ -585,6 +609,17 @@ int File::getfd () {
 		char *xx=NULL; *xx=0; 
 		return -2;
 	}
+
+	// if someone closed our fd, why didn't our m_fd get set to -1 ??!?!?!!
+	if ( m_fd >= 0 && m_closeCount != s_closeCounts[m_fd] ) {
+		log(LOG_DEBUG,"disk: invalidating existing fd %i "
+		    "for %s this=0x%"PTRFMT" ccSaved=%i ccNow=%i", 
+		    (int)m_fd,getFilename(),(PTRTYPE)this,
+		    (int)m_closeCount,
+		    (int)s_closeCounts[m_fd]);
+		m_fd = -1;
+	}
+
 	// . sanity check
 	// . no caller should call open/getfd after unlink was queued for thred
 	//if ( m_gone ) { char *xx = NULL; *xx = 0; }
@@ -593,8 +628,12 @@ int File::getfd () {
 	// return true if it's already opened
 	if ( m_fd >=  0 ) { 
 		// debug msg
-		log(LOG_DEBUG,"disk: returning existing fd %i for %s", 
-		    (int)m_fd,m_filename);
+		if ( g_conf.m_logDebugDisk )
+			log(LOG_DEBUG,"disk: returning existing fd %i for %s "
+			    "this=0x%"PTRFMT" ccSaved=%i ccNow=%i", 
+			    (int)m_fd,getFilename(),(PTRTYPE)this,
+			    (int)m_closeCount,
+			    (int)s_closeCounts[m_fd]);
 		if ( m_fd >= MAX_NUM_FDS ) { char *xx=NULL;*xx=0; }
 		// but update the timestamp to reduce chance it closes on us
 		//s_timestamps [ m_vfd ] = getTime();
@@ -629,16 +668,18 @@ int File::getfd () {
 	if ( fd == -1 ) {
 		t1 = gettimeofdayInMilliseconds();
  retry7:
-		fd = ::open ( m_filename , m_flags , m_permissions );
+		fd = ::open ( getFilename() , m_flags , m_permissions );
 		// valgrind
 		if ( fd == -1 && errno == EINTR ) goto retry7;
 		// 0 means stdout, right? why am i seeing it get assigned???
 		if ( fd == 0 ) 
-			log("disk: Got fd of 0 when opening %s.",m_filename);
+			log("disk: Got fd of 0 when opening %s.",
+			    getFilename());
 		if ( fd == 0 )
-			fd = ::open ( m_filename , m_flags , m_permissions );
+			fd = ::open ( getFilename(), m_flags , m_permissions );
 		if ( fd == 0 ) 
-			log("disk: Got fd of 0 when opening2 %s.",m_filename);
+			log("disk: Got fd of 0 when opening2 %s.",
+			    getFilename());
 		if ( fd >= MAX_NUM_FDS )
 			log("disk: got fd of %i out of bounds 1 of %i",
 			    (int)fd,(int)MAX_NUM_FDS);
@@ -652,8 +693,11 @@ int File::getfd () {
 			File *f = s_filePtrs [ fd ];
 			if ( g_conf.m_logDebugDisk )
 				log("disk: swiping fd %i from %s before "
-				    "his close thread returned",fd,
-				    f->m_filename);
+				    "his close thread returned "
+				    "this=0x%"PTRFMT,
+				    fd,
+				    f->getFilename(),
+				    (PTRTYPE)f);
 			// he only incs/decs his counters if he owns it so in
 			// close2() so dec this global counter here
 			s_numOpenFiles--;
@@ -687,13 +731,13 @@ int File::getfd () {
 		int64_t dt = gettimeofdayInMilliseconds() - t1 ;
 		if ( dt > 1 ) log(LOG_INFO,
 				  "disk: call to open(%s) blocked for "
-				  "%"INT64" ms.",m_filename,dt);
+				  "%"INT64" ms.",getFilename(),dt);
 	}
 	// copy errno to g_errno
 	if ( fd <= -1 ) {
 		g_errno = errno;
 		log("disk: error open(%s) : %s fd %i",
-		    m_filename,strerror(g_errno),(int)fd);
+		    getFilename(),strerror(g_errno),(int)fd);
 		return -1;
 	}
 
@@ -705,14 +749,14 @@ int File::getfd () {
 	// debug log
 	if ( g_conf.m_logDebugDisk )
 		log("disk: opened1 fd %i for %s #openfiles=%i this=0x%"PTRFMT,
-		    (int)fd,m_filename,(int)s_numOpenFiles,(PTRTYPE)this);
+		    (int)fd,getFilename(),(int)s_numOpenFiles,(PTRTYPE)this);
 
 	// set this file descriptor, the other stuff remains the same
 	//s_fds [ m_vfd ] = fd;
 	m_fd = fd;
 	// 0 means stdout, right? why am i seeing it get assigned???
 	if ( fd == 0 ) 
-		log("disk: Found fd of 0 when opening %s.",m_filename);
+		log("disk: Found fd of 0 when opening %s.",getFilename());
 	// reset
 	s_writing   [ fd ] = 0;
 	s_unlinking [ fd ] = 0;
@@ -871,10 +915,10 @@ bool File::closeLeastUsed () {
 		if ( g_conf.m_logDebugDisk ) {
 			File *f = s_filePtrs [ fd ];
 			char *fname = "";
-			if ( f ) fname = f->m_filename;
+			if ( f ) fname = f->getFilename();
 			logf(LOG_DEBUG,"disk: force closed fd %i for"
 			     " %s. age=%"INT64" #openfiles=%i this=0x%"PTRFMT,
-			     mini,fname,now-s_timestamps[mini],
+			     fd,fname,now-s_timestamps[mini],
 			     (int)s_numOpenFiles,
 			     (PTRTYPE)this);
 		}
@@ -901,6 +945,46 @@ bool File::closeLeastUsed () {
 
 int64_t getFileSize ( char *filename ) {
 
+#ifdef CYGWIN
+	return getFileSize_cygwin ( filename );
+#endif
+
+	//
+	// CAUTION: i think this fails in cygwin... so for cygwin use the
+	// old slower code
+	//
+
+	// allow the substitution of another filename
+        struct stat stats;
+
+        stats.st_size = 0;
+
+        int status = stat ( filename , &stats );
+
+        // return the size if the status was ok
+        if ( status == 0 ) {
+		//int64_t tmp = getFileSize_cygwin ( filename );
+		//if ( tmp>=0 && tmp != stats.st_size ) {char *xx=NULL;*xx=0; }
+		return stats.st_size;
+	}
+
+	// copy errno to g_errno
+	g_errno = errno;
+
+        // return 0 and reset g_errno if it just does not exist
+	if ( g_errno == ENOENT ) { g_errno = 0; return 0; }
+
+        // resource temporarily unavailable (for newer libc)
+	if ( g_errno == EAGAIN ) { g_errno = 0; return 0; }
+
+        // log & return -1 on any other error
+	log("disk: error getFileSize(%s) : %s",filename,strerror(g_errno));
+	return -1;
+}
+
+// this solution is quite slow, but i think cygwin needs it
+int64_t getFileSize_cygwin ( char *filename ) {
+
 	FILE *fd = fopen ( filename , "r" );
 	if ( ! fd ) {
 		//log("disk: error getFileSize(%s) : %s",
@@ -916,6 +1000,8 @@ int64_t getFileSize ( char *filename ) {
 	return fileSize;
 }
 
+
+
 // . returns -2 on error
 // . returns -1 if does not exist
 // . otherwise returns file size in bytes
@@ -928,7 +1014,7 @@ int64_t File::getFileSize ( ) {
 
         //int status = stat ( m_filename , &stats );
 
-	return ::getFileSize ( m_filename );
+	return ::getFileSize ( getFilename() );
 
         // return the size if the status was ok
         //if ( status == 0 ) return stats.st_size;
@@ -956,14 +1042,14 @@ time_t File::getLastModifiedTime ( ) {
         stats.st_size = 0;
 
         // bitch & return 0 on error (stat returns 0 on success)
-        if ( stat ( m_filename , &stats ) == 0 ) return stats.st_mtime;
+        if ( stat ( getFilename() , &stats ) == 0 ) return stats.st_mtime;
 
         // resource temporarily unavailable (for newer libc)
         if ( errno == EAGAIN ) return 0;
 
 	// copy errno to g_errno
 	g_errno = errno;
-	log("disk: error stat2(%s) : %s", m_filename,strerror(g_errno));
+	log("disk: error stat2(%s) : %s", getFilename(),strerror(g_errno));
 	return 0;
 }
 
@@ -977,7 +1063,7 @@ int32_t File::doesExist ( ) {
 	// allow the substitution of another filename
         struct stat stats;
 	// return true if it exists
-        if ( stat ( m_filename , &stats ) == 0 ) return 1;
+        if ( stat ( getFilename() , &stats ) == 0 ) return 1;
 	// copy errno to g_errno
 	g_errno = errno;
         // return 0 if it just does not exist and reset g_errno
@@ -990,7 +1076,7 @@ int32_t File::doesExist ( ) {
 		    "but were unsuccessful. you need to be using pthreads.");
 		char *xx=NULL;*xx=0; 
 	}
-        log("disk: error stat3(%s): %s", m_filename , strerror(g_errno));
+        log("disk: error stat3(%s): %s", getFilename() , strerror(g_errno));
         return -1;
 }
 
@@ -1009,27 +1095,27 @@ bool File::unlink ( ) {
 	if ( status  < 0 ) return false;
 	// . log it so we can see what happened to timedb!
 	// . don't log startup unlinks of "tmpfile"
-	if ( ! strstr(m_filename,"tmpfile") )
-		log(LOG_INFO,"disk: unlinking %s", m_filename );
+	if ( ! strstr(getFilename(),"tmpfile") )
+		log(LOG_INFO,"disk: unlinking %s", getFilename() );
 	// remove ourselves from the disk
-	if ( ::unlink ( m_filename ) == 0 ) return true;
+	if ( ::unlink ( getFilename() ) == 0 ) return true;
 	// sync it to disk in case power goes out
 	sync();
 	// copy errno to g_errno
 	g_errno = errno;
 	// return false and set g_errno on error
-	return log("disk: unlink(%s) : %s" , m_filename,strerror(g_errno));
+	return log("disk: unlink(%s) : %s" , getFilename(),strerror(g_errno));
 }
 
 bool File::flush ( ) {
 	//int fd =s_fds[m_vfd];
 	if ( m_fd < 0 ) return false;
-	//return log("file::flush(%s): no fd", m_filename );
+	//return log("file::flush(%s): no fd", getFilename() );
 	int status = fsync ( m_fd );
 	if ( status == 0 ) return true;
 	// copy errno to g_errno
 	g_errno = errno;
-	return log("disk: fsync(%s): %s" ,m_filename,strerror ( g_errno ) );
+	return log("disk: fsync(%s): %s" ,getFilename(),strerror ( g_errno ) );
 }
 
 // a wrapper for lseek
@@ -1042,7 +1128,7 @@ int32_t File::lseek ( int32_t offset , int whence ) {
 	// copy errno to g_errno
 	g_errno = errno;
 
-	log("disk: lseek ( %s(%i) , %"INT32" , whence ): %s" , m_filename , 
+	log("disk: lseek ( %s(%i) , %"INT32" , whence ): %s" , getFilename() , 
 	      m_fd, offset , strerror ( g_errno ) );
 
 	return -1;
@@ -1077,14 +1163,15 @@ bool File::initialize ( ) {
 
 char *File::getExtension ( ) {
 	// keep backing up over m_filename till we hit a . or / or beginning
-	int32_t i = gbstrlen(m_filename) ;
+	char *f = getFilename();
+	int32_t i = gbstrlen(m_filename);//m_filename.getLength();
 	while ( --i > 0 ) {
-		if ( m_filename[i] == '.' ) break;
-		if ( m_filename[i] == '/' ) break;
+		if ( f[i] == '.' ) break;
+		if ( f[i] == '/' ) break;
 	}
 	if ( i == 0               ) return NULL;
-	if ( m_filename[i] == '/' ) return NULL;
-	return &m_filename[i+1];
+	if ( f[i] == '/' ) return NULL;
+	return &f[i+1];
 }
 
 // We do not close the fd in closeLeastUsed() for fear of getting it 

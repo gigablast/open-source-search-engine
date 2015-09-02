@@ -219,6 +219,10 @@ void XmlDoc::reset ( ) {
 	for ( int i = 0 ; i < MAXMSG7S ; i++ ) {
 		Msg7 *msg7 = m_msg7s[i];
 		if ( ! msg7 ) continue;
+        if(msg7->m_inUse) {
+            log("build: archive: reseting xmldoc when msg7s are outstanding");
+            
+        }
 		mdelete ( msg7 , sizeof(Msg7) , "xdmsg7" );
 		delete ( msg7 );
 		m_msg7s[i] = NULL;
@@ -2052,6 +2056,14 @@ void indexDocWrapper ( void *state ) {
 	// return if it blocked
 	if ( ! THIS->indexDoc( ) ) return;
 	// otherwise, all done, call the caller callback
+	
+	// g_statsdb.addStat ( MAX_NICENESS,
+	// 		    "docs_indexed",
+	// 		    20,
+	// 		    21,
+	// 		    );
+
+
 	if ( THIS->m_callback1 ) THIS->m_callback1 ( THIS->m_state );
 	else                     THIS->m_callback2 ( THIS->m_state );
 }
@@ -2093,6 +2105,7 @@ bool XmlDoc::injectDoc ( char *url ,
 			 char *metadata,
 			 uint32_t metadataLen
 			 ) {
+
 
 	// wait until we are synced with host #0
 	if ( ! isClockInSync() ) {
@@ -2490,6 +2503,10 @@ bool XmlDoc::indexDoc ( ) {
 
 	// and do not add spider reply if shutting down the server
 	if ( g_errno == ESHUTTINGDOWN )
+		return true;
+
+	// i saw this on shard 9, how is it happening
+	if ( g_errno == EBADRDBID )
 		return true;
 
 	// if docid not found when trying to do a query reindex...
@@ -3458,7 +3475,7 @@ bool XmlDoc::indexWarcOrArc ( char ctype ) {
 	if ( max > MAXMSG7S ) max = MAXMSG7S;
 
 	// wait for one to come back before launching another msg7
-	if ( m_numInjectionsOut > max ) return false;
+	if ( m_numInjectionsOut >= max ) return false;
 
 	char *realStart = m_fptr;
 
@@ -3481,9 +3498,15 @@ bool XmlDoc::indexWarcOrArc ( char ctype ) {
 	//
 	// set recUrl, recIp, recTime, recContent, recContentLen and recSize
 	//
+
 	if ( ctype == CT_WARC ) {
 		// find "WARC/1.0" or whatever
 		char *whp = m_fptr;
+		if( ! whp ) {
+			// FIXME: shouldn't get here with a NULL
+			log("build: No buffer for file=%s",  file->getFilename());
+			goto warcDone;
+		}
 		// we do terminate last warc rec with \0 so be aware of that...
 		int32_t maxCount = 10;
 		for ( ; *whp && strncmp(whp,"WARC/",5) && --maxCount>0; whp++);
@@ -3537,7 +3560,7 @@ bool XmlDoc::indexWarcOrArc ( char ctype ) {
 		// get Content-Length: of WARC header for its content
 		if ( ! warcLen ) {
 			// this is a critical stop.
-			log("build: could not find WARC Content-Length:");
+			log("build: warc problem: could not find WARC Content-Length:");
 			goto warcDone;
 		}
 
@@ -3625,8 +3648,9 @@ bool XmlDoc::indexWarcOrArc ( char ctype ) {
 		// find end of arc header not the content
 		char *arcHeaderEnd = strstr(arcHeader+1,"\n");
 		if ( ! arcHeaderEnd ) {
-			log("inject: could not find end of ARC header.");
-			exit(0);
+			log("build: warc problem: could not find end of ARC header. file=%s",
+                m_firstUrl.getUrl());
+			goto warcDone;
 		}
 		// \0 term for strstrs below
 		*arcHeaderEnd = '\0';
@@ -3635,19 +3659,31 @@ bool XmlDoc::indexWarcOrArc ( char ctype ) {
 		char *url = arcHeader + 1;
 		char *hp = url;
 		for ( ; *hp && *hp != ' ' ; hp++ );
-		if ( ! *hp ) {log("inject: bad arc header 1.");exit(0);}
+		if ( ! *hp ) {
+            log("build: warc problem: bad arc header 1.file=%s", m_firstUrl.getUrl());
+            goto warcDone;
+        }
 		*hp++ = '\0';
 		char *ipStr = hp;
 		for ( ; *hp && *hp != ' ' ; hp++ );
-		if ( ! *hp ) {log("inject: bad arc header 2.");exit(0);}
+		if ( ! *hp ) {
+            log("build: warc problem: bad arc header 2.file=%s", m_firstUrl.getUrl());
+            goto warcDone;
+        }
 		*hp++ = '\0';
 		char *timeStr = hp;
 		for ( ; *hp && *hp != ' ' ; hp++ );
-		if ( ! *hp ) {log("inject: bad arc header 3.");exit(0);}
+		if ( ! *hp ) {
+            log("build: warc problem: bad arc header 3.file=%s", m_firstUrl.getUrl());
+            goto warcDone;
+        }
 		*hp++ = '\0'; // null term timeStr
 		char *arcConType = hp;
 		for ( ; *hp && *hp != ' ' ; hp++ );
-		if ( ! *hp ) {log("inject: bad arc header 4.");exit(0);}
+		if ( ! *hp ) {
+            log("build: warc problem: bad arc header 4.file=%s", m_firstUrl.getUrl());
+            goto warcDone;
+        }
 		*hp++ = '\0'; // null term arcContentType
 		char *arcContentLenStr = hp;
 		// get arc content len
@@ -3715,9 +3751,9 @@ bool XmlDoc::indexWarcOrArc ( char ctype ) {
 
 	// how can there be no more to read?
 	if ( m_fptr > m_fptrEnd && ! m_hasMoreToRead ) {
-		log("build: archive file %s exceeded file length.",
-		    file->getFilename());
-		goto loop;
+		log("build: warc problem: archive file %s exceeded file length.",
+            m_firstUrl.getUrl());
+		goto warcDone;
 	}
 
 	// if we fall outside of the current read buf, read next rec if too big
@@ -3760,16 +3796,25 @@ bool XmlDoc::indexWarcOrArc ( char ctype ) {
 	for ( int32_t i = 0 ; i < MAXMSG7S ; i++ ) {
 		msg7 = m_msg7s[i];
 		// if we got an available one stop
-		if ( msg7 && ! msg7->m_inUse ) break;
+		if ( msg7 ) {
+			if( msg7->m_inUse ) continue;
+			break; // reuse this one.
+		}
 		// ok, create one, 1MB each about
 		try { msg7 = new ( Msg7 ); }
 		catch ( ... ) {g_errno=ENOMEM;m_warcError=g_errno;return true;}
 		mnew ( msg7 , sizeof(Msg7),"xdmsgs7");
+
 		// store it for re-use
 		m_msg7s[i] = msg7;
 		break;
 	}
 
+    if(!msg7 || msg7->m_inUse) {
+        // shouldn't happen, but it does... why?
+        log("build: archive: Ran out of msg7s to inject doc.");
+        return false;
+    }
 
 	// inject input parms:
 	InjectionRequest *ir = &msg7->m_injectionRequest;
@@ -6658,6 +6703,9 @@ Xml *XmlDoc::getXml ( ) {
 	// return it if it is set
 	if ( m_xmlValid ) return &m_xml;
 
+	// note it
+	setStatus ( "parsing html");
+
 	// get the filtered content
 	char **u8 = getUtf8Content();
 	if ( ! u8 || u8 == (char **)-1 ) return (Xml *)u8;
@@ -6666,8 +6714,6 @@ Xml *XmlDoc::getXml ( ) {
 	uint8_t *ct = getContentType();
 	if ( ! ct || ct == (void *)-1 ) return (Xml *)ct;
 
-	// note it
-	setStatus ( "getting xml");
 	// set it
 	if ( ! m_xml.set ( *u8        , 
 			   u8len      , 
@@ -7459,6 +7505,8 @@ Sections *XmlDoc::getImpliedSections ( ) {
 
 // add in Section::m_sentFlags bits having to do with our voting tables
 Sections *XmlDoc::getSections ( ) {
+
+	setStatus("getting sections");
 
 	// get the sections without implied sections
 	Sections *ss = getImpliedSections();
@@ -9973,6 +10021,8 @@ char *XmlDoc::getIsDup ( ) {
 		return &m_isDup;
 	}
 
+	setStatus ( "checking for dups" );
+
 	// BUT if we are already indexed and a a crawlbot/bulk diffbot job
 	// then do not kick us out just because another indexed doc is
 	// a dup of us because it messes up the TestOnlyProcessIfNew smoketests
@@ -10005,8 +10055,6 @@ char *XmlDoc::getIsDup ( ) {
 
 	// sanity. must be posdb list.
 	if ( ! list->isEmpty() && list->m_ks != 18 ) { char *xx=NULL;*xx=0;}
-
-	setStatus ( "checking for dups" );
 
 	// . see if there are any pages that seem like they are dups of us
 	// . they must also have a HIGHER score than us, for us to be 
@@ -13753,6 +13801,37 @@ int32_t *XmlDoc::getSiteNumInlinks ( ) {
 	// sanity check
 	if ( m_setFromTitleRec && ! m_useSecondaryRdbs) {char *xx=NULL;*xx=0;}
 
+	CollectionRec *cr = getCollRec();
+	if ( ! cr ) return NULL;
+
+	// hacks of speed. computeSiteNumInlinks is true by default
+	// but if the user turns it off the just use sitelinks.txt
+	if ( ! cr->m_computeSiteNumInlinks ) {
+		int32_t hostHash32 = getHostHash32a();
+		int32_t min = g_tagdb.getMinSiteInlinks ( hostHash32 );
+		// try with www if not there
+		if ( min < 0 && ! m_firstUrl.hasSubdomain() ) {
+			int32_t wwwHash32 = m_firstUrl.getHash32WithWWW();
+			min = g_tagdb.getMinSiteInlinks ( wwwHash32 );
+		}
+		// fix core by setting these
+		m_siteNumInlinksUniqueIp          = 0;
+		m_siteNumInlinksUniqueCBlock      = 0;
+		m_siteNumInlinksTotal             = 0;
+		m_siteNumInlinksUniqueIpValid     = true;
+		m_siteNumInlinksUniqueCBlockValid = true;
+		m_siteNumInlinksTotalValid        = true;
+		//a nd this
+		m_siteNumInlinksValid = true;
+		m_siteNumInlinks      = 0;
+		// if still not in sitelinks.txt, just use 0
+		if ( min < 0 ) {
+			return &m_siteNumInlinks;
+		}
+		m_siteNumInlinks = min;
+		return &m_siteNumInlinks;
+	}
+
 	setStatus ( "getting site num inlinks");
 
 	// get it from the tag rec if we can
@@ -13789,9 +13868,6 @@ int32_t *XmlDoc::getSiteNumInlinks ( ) {
 	// 0 means error, i guess g_errno should be set, -1 means blocked
 	if ( ! wfts ) return NULL;
 	if ( wfts == -1 ) return (int32_t *)-1;
-
-	CollectionRec *cr = getCollRec();
-	if ( ! cr ) return NULL;
 
 	setStatus ( "getting site num inlinks");
 	// check the tag first
@@ -19176,7 +19252,7 @@ void *systemStartWrapper_r ( void *state , ThreadEntry *t ) {
 	char cmd[MAX_URL_LEN+256];
 	snprintf( cmd,
 		  MAX_URL_LEN+256,
-		  "wget --header=\"Cookie: %s\" \"%s\" -O %s" ,
+		  "wget -q --header=\"Cookie: %s\" \"%s\" -O %s" ,
 		  s_cookieBuf.getBufStart() ,
 		  THIS->m_firstUrl.getUrl() ,
 		  filename );
@@ -19355,6 +19431,8 @@ char **XmlDoc::getUtf8Content ( ) {
 
 	CollectionRec *cr = getCollRec();
 	if ( ! cr ) return NULL;
+
+	setStatus("getting utf8 content");
 
 	// recycle?
 	if ( cr->m_recycleContent || m_recycleContent ||
@@ -50222,7 +50300,7 @@ Msg25 *XmlDoc::getAllInlinks ( bool forSite ) {
 					      NULL, // qbuf
 					      0, // qbufSize
 					      m_masterState, // state
-				      m_masterLoop, // callback
+						  m_masterLoop, // callback
 					      false, // isInjecting?
 					      false, // pbuf (for printing)
 					      this, // xd holder (Msg25::m_xd)
@@ -52004,6 +52082,13 @@ bool XmlDoc::storeFacetValues ( char *qs , SafeBuf *sb , FacetValHash_t fvh ) {
 
 	storeFacetValuesSite ( qs, sb, fvh );
 
+	if ( m_hasMetadata) {
+		Json jpMetadata;
+		if (jpMetadata.parseJsonStringIntoJsonItems (ptr_metadata, m_niceness)) {
+			storeFacetValuesJSON ( qs, sb, fvh, &jpMetadata );
+		}
+	}
+
 	// if "qa" is a gbxpathsitehash123456 type of beastie then we
 	// gotta scan the sections
 	if ( strncasecmp(qs,"gbxpathsitehash",15) == 0 )
@@ -52013,6 +52098,7 @@ bool XmlDoc::storeFacetValues ( char *qs , SafeBuf *sb , FacetValHash_t fvh ) {
 	// spider status docs are really json now
 	if ( m_contentType == CT_JSON || m_contentType == CT_STATUS ) 
 		return storeFacetValuesJSON ( qs , sb , fvh, getParsedJson());
+	
 
 	if ( m_contentType == CT_HTML ) 
 		return storeFacetValuesHtml ( qs , sb , fvh );
@@ -52020,12 +52106,6 @@ bool XmlDoc::storeFacetValues ( char *qs , SafeBuf *sb , FacetValHash_t fvh ) {
 	if ( m_contentType == CT_XML ) 
 		return storeFacetValuesXml ( qs , sb , fvh );
 
-	if ( m_hasMetadata) {
-		Json jpMetadata;
-		if (jpMetadata.parseJsonStringIntoJsonItems (ptr_metadata, m_niceness)) {
-			storeFacetValuesJSON ( qs, sb, fvh, &jpMetadata );
-		}
-	}
 
 	return true;
 }

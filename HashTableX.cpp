@@ -457,6 +457,9 @@ bool HashTableX::load ( char *dir, char *filename, char **tbuf, int32_t *tsize )
 
 	// bogus key size?
 	if ( ks <= 0 ) {
+		// is very common for this file so skip it
+		if ( strstr(filename,"ipstouseproxiesfor.dat") )
+			return false;
 		log("htable: reading hashtable from %s%s: "
 		    "bogus keysize of %"INT32"",
 		    dir,filename,ks );

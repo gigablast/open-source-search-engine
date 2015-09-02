@@ -90,6 +90,7 @@ class Json {
 	JsonItem *m_stack[MAXJSONPARENTS];
 	int32_t m_stackPtr;
 	class JsonItem *m_prev;
+	void reset() { m_sb.purge(); };
 };
 
 #endif
