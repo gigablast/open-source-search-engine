@@ -2634,8 +2634,6 @@ bool Hostdb::createHostsConf( char *cwd ) {
 	sb.safePrintf("# if you want more.\n");
 	sb.safePrintf("#\n");
 
-	/*
-
 	sb.safePrintf("# Format:\n");
 	sb.safePrintf("#\n");
 	sb.safePrintf("# first   column: hostID (starts at 0 and increments from there)\n");
@@ -2644,9 +2642,12 @@ bool Hostdb::createHostsConf( char *cwd ) {
 	sb.safePrintf("# fourth  column: port that HTTP  listens on\n");
 	sb.safePrintf("# fifth   column: port that udp server listens on\n");
 	sb.safePrintf("# sixth   column: IP address or hostname that has an IP address in /etc/hosts\n");
-	sb.safePrintf("# seventh column: like sixth column but for secondary ethernet port. (optional)\n");
+	sb.safePrintf("# seventh column: like sixth column but for secondary ethernet port. Can be the same as the sixth column.\n");
+	sb.safePrintf("# eigth column: An optional text note that will "
+		      "display in the hosts table for this host.\n");
 	sb.safePrintf("\n");
 	sb.safePrintf("\n");
+	/*
 	sb.safePrintf("# This file consists of a list of lines like this:\n");
 	sb.safePrintf("#\n");
 	sb.safePrintf("# <ClientDnsPort> <HttpsPort> <HttpPort> <UdpPort> <IP1> <IP2> <Path>\n");
