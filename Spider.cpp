@@ -5945,6 +5945,9 @@ void SpiderLoop::startLoop ( ) {
 		log("build: failed to register updatecrawlinfowrapper");
 }
 
+// lower from 1300 to 200
+#define MAXUDPSLOTS 200
+
 // call this every 50ms it seems to try to spider urls and populate doledb
 // from the waiting tree
 void doneSleepingWrapperSL ( int fd , void *state ) {
@@ -5957,6 +5960,8 @@ void doneSleepingWrapperSL ( int fd , void *state ) {
 	//if ( ! g_conf.m_webSpideringEnabled )  return;
 	// or if trying to exit
 	if ( g_process.m_mode == EXIT_MODE ) return;	
+	// skip if udp table is full
+	if ( g_udpServer.getNumUsedSlotsIncoming() >= MAXUDPSLOTS ) return;
 
 	// wait for clock to sync with host #0
 	if ( ! isClockInSync() ) { 
@@ -6279,7 +6284,6 @@ void gotDoledbListWrapper2 ( void *state , RdbList *list , Msg5 *msg5 ) ;
 //////////////////////////
 //////////////////////////
 
-
 // now check our RDB_DOLEDB for SpiderRequests to spider!
 void SpiderLoop::spiderDoledUrls ( ) {
 
@@ -6353,7 +6357,7 @@ void SpiderLoop::spiderDoledUrls ( ) {
 	// or if doing a daily merge
 	if ( g_dailyMerge.m_mergeMode ) return;
 	// skip if too many udp slots being used
-	if ( g_udpServer.getNumUsedSlots() >= 1300 ) return;
+	if ( g_udpServer.getNumUsedSlotsIncoming() >= MAXUDPSLOTS ) return;
 	// stop if too many out. this is now 50 down from 500.
 	if ( m_numSpidersOut >= MAX_SPIDERS ) return;
 	// a new global conf rule
@@ -6943,7 +6947,7 @@ bool SpiderLoop::gotDoledbList2 ( ) {
 	// or if doing a daily merge
 	if ( g_dailyMerge.m_mergeMode ) bail = true;
 	// skip if too many udp slots being used
-	if ( g_udpServer.getNumUsedSlots() >= 1300 ) bail = true;
+	if ( g_udpServer.getNumUsedSlotsIncoming() >= MAXUDPSLOTS ) bail =true;
 	// stop if too many out
 	if ( m_numSpidersOut >= MAX_SPIDERS ) bail = true;
 
@@ -13895,7 +13899,7 @@ bool getSpiderStatusMsg ( CollectionRec *cx , SafeBuf *msg , int32_t *status ) {
 				       "paused.");
 	}
 
-	if ( g_udpServer.getNumUsedSlots() >= 1300 ) {
+	if ( g_udpServer.getNumUsedSlotsIncoming() >= MAXUDPSLOTS ) {
 		*status = SP_ADMIN_PAUSED;
 		return msg->safePrintf("Too many UDP slots in use, "
 				       "spidering paused.");
