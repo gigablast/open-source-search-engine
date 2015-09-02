@@ -1797,8 +1797,11 @@ void attemptMergeAll2 ( ) {
  tryLoop:
 
 	// if a collection got deleted, reset this to 0
-	if ( s_lastCollnum >= g_collectiondb.m_numRecs )
+	if ( s_lastCollnum >= g_collectiondb.m_numRecs ) {
 		s_lastCollnum = 0;
+		// and return so we don't spin 1000 times over a single coll.
+		return;
+	}
 
 	// limit to 1000 checks to save the cpu since we call this once
 	// every 2 seconds.
