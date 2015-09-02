@@ -566,7 +566,8 @@ skipReplaceHost:
 		     h->m_pingInfo.m_udpSlotsInUseIncoming ) {
 			char *f1 = "";
 			char *f2 = "";
-			if ( h->m_pingInfo.m_udpSlotsInUseIncoming >= 200 ) {
+			// MAXUDPSLOTS in Spider.cpp is 300 right now
+			if ( h->m_pingInfo.m_udpSlotsInUseIncoming >= 300 ) {
 				f1 = "<b>";
 				f2 = "</b>";
 			}

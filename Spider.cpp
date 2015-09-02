@@ -2835,6 +2835,9 @@ static void gotSpiderdbListWrapper2( void *state , RdbList *list,Msg5 *msg5) {
 	THIS->populateWaitingTreeFromSpiderdb ( true );
 }
 
+// lower from 1300 to 300
+#define MAXUDPSLOTS 300
+
 //////////////////
 //////////////////
 //
@@ -2867,6 +2870,8 @@ void SpiderColl::populateWaitingTreeFromSpiderdb ( bool reentry ) {
 	if ( m_deleteMyself ) { char *xx=NULL;*xx=0; }
 	// skip if spiders off
 	if ( ! m_cr->m_spideringEnabled ) return;
+	// skip if udp table is full
+	if ( g_udpServer.getNumUsedSlotsIncoming() >= MAXUDPSLOTS ) return;
 	// if entering for the first time, we need to read list from spiderdb
 	if ( ! reentry ) {
 		// just return if we should not be doing this yet
@@ -3116,6 +3121,9 @@ void SpiderColl::populateDoledbFromWaitingTree ( ) { // bool reentry ) {
 	// since addSpiderRequest() calls addToWaitingTree() which then calls
 	// this. 
 	if ( ! g_conf.m_spideringEnabled ) return;
+
+	// skip if udp table is full
+	if ( g_udpServer.getNumUsedSlotsIncoming() >= MAXUDPSLOTS ) return;
 
 	// try skipping!!!!!!!!!!!
 	// yeah, this makes us scream. in addition to calling
@@ -5944,9 +5952,6 @@ void SpiderLoop::startLoop ( ) {
 					   updateAllCrawlInfosSleepWrapper))
 		log("build: failed to register updatecrawlinfowrapper");
 }
-
-// lower from 1300 to 200
-#define MAXUDPSLOTS 200
 
 // call this every 50ms it seems to try to spider urls and populate doledb
 // from the waiting tree
