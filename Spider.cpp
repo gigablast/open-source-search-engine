@@ -14080,7 +14080,7 @@ bool getSpiderStatusMsg ( CollectionRec *cx , SafeBuf *msg , int32_t *status ) {
 	// out CollectionRec::m_globalCrawlInfo counts do not have a dead
 	// host's counts tallied into it, which could make a difference on
 	// whether we have exceed a maxtocrawl limit or some such, so wait...
-	if ( ! s_countsAreValid ) {
+	if ( ! s_countsAreValid && g_hostdb.hasDeadHost() ) {
 		*status = SP_ADMIN_PAUSED;
 		return msg->safePrintf("All crawling temporarily paused "
 				       "because a shard is down.");
