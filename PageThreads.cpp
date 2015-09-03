@@ -97,10 +97,21 @@ bool sendPageThreads ( TcpSocket *s , HttpRequest *r ) {
 				p.safePrintf("<td>%s</td>",  g_profiler.getFnName((PTRTYPE)t->m_startRoutine));
 				if(diskThread && fs) {
 					int64_t took = (t->m_exitTime - t->m_launchedTime);
-					if(took <= 0) took = 1;
-					p.safePrintf("<td>%"INT32"/%"INT32"</td>", t->m_bytesToGo, t->m_bytesToGo);
-					p.safePrintf("<td>%.2f MB/s</td>", (float)t->m_bytesToGo/(1024.0*1024.0)/((float)took/1000.0));
-					p.safePrintf("<td>%s</td>",t->m_doWrite? "<font color=red>Write</font>":"Read");
+					char *sign = "";
+					if(took <= 0) {sign=">";took = 1;}
+					p.safePrintf("<td>%"INT32"/%"INT32""
+						     "</td>", 
+						     t->m_bytesToGo, 
+						     t->m_bytesToGo);
+					p.safePrintf("<td>%s%.2f MB/s</td>", 
+						     sign,
+						     (float)t->m_bytesToGo/
+						     (1024.0*1024.0)/
+						     ((float)took/1000.0));
+					p.safePrintf("<td>%s</td>",
+						     t->m_doWrite? 
+						     "<font color=red>"
+						     "Write</font>":"Read");
 				}
 				else {
 					p.safePrintf("<td>--</td>");
