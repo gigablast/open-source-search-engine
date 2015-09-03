@@ -1463,6 +1463,9 @@ Profiler::getStackFrame(int sig) {
 	// somewhere. but for now just ignore.
 	if ( g_inMemcpy ) return;
 
+	// likewise, not if in system malloc since backtrace() mallocs
+	if ( g_inMemFunction ) return;
+
 	//void *trace[32];
 
 	// the innermost line number

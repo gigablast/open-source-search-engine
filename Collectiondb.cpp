@@ -329,6 +329,12 @@ bool Collectiondb::addExistingColl ( char *coll, collnum_t collnum ) {
 	if ( cr->m_isCustomCrawl )
 		cr->m_indexSpiderReplies = true;
 
+	// and don't do link voting, will help speed up
+	if ( cr->m_isCustomCrawl ) {
+		cr->m_getLinkInfo = false;
+		cr->m_computeSiteNumInlinks = false;
+	}
+
 	// we need to compile the regular expressions or update the url
 	// filters with new logic that maps crawlbot parms to url filters
 	return cr->rebuildUrlFilters ( );
