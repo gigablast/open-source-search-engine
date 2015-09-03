@@ -121,7 +121,7 @@ bool sendPageThreads ( TcpSocket *s , HttpRequest *r ) {
 					int64_t took = (now - t->m_launchedTime);
 					if(took <= 0) took = 1;
 					p.safePrintf("<td>%c%c%c/%"INT32"</td>", '?','?','?',t->m_bytesToGo);
-					p.safePrintf("<td>%.2f kbps</td>", 0.0);//(float)fs->m_bytesDone/took);
+					p.safePrintf("<td>%.2f MB/s</td>", 0.0);//(float)fs->m_bytesDone/took);
 					p.safePrintf("<td>%s</td>",t->m_doWrite? "Write":"Read");
 				}
 				else {
