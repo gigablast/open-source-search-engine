@@ -2017,12 +2017,12 @@ void Loop::doPoll ( ) {
 			// if shutting down was it a sigterm ?
 			if ( m_shutdown ) goto again;
 			// handle returned threads for niceness 0
-			if ( g_threads.m_needsCleanup )
-				g_threads.timedCleanUp(-3,0); // 3 ms
+			//if ( g_threads.m_needsCleanup )
+			g_threads.timedCleanUp(-3,0); // 3 ms
 			if ( m_inQuickPoll ) goto again;
 			// high niceness threads
-			if ( g_threads.m_needsCleanup )
-				g_threads.timedCleanUp(-4,MAX_NICENESS); //3 ms
+			//if ( g_threads.m_needsCleanup )
+			g_threads.timedCleanUp(-4,MAX_NICENESS); //3 ms
 
 			goto again;
 		}

@@ -1273,9 +1273,9 @@ bool readwrite_r ( FileState *fstate , ThreadEntry *t ) {
 	if ( t && t->m_callback == ohcrap ) return false;
 
 	// only set this now if we are the first one
-	if ( g_threads.m_threadQueues[DISK_THREAD].m_hiReturned ==
-	     g_threads.m_threadQueues[DISK_THREAD].m_hiLaunched ) 
-		g_lastDiskReadStarted = fstate->m_startTime;
+	// if ( g_threads.m_threadQueues[DISK_THREAD].m_hiReturned ==
+	//      g_threads.m_threadQueues[DISK_THREAD].m_hiLaunched ) 
+	// 	g_lastDiskReadStarted = fstate->m_startTime;
 
 	// fake it out
 	//static int32_t s_poo = 0;
