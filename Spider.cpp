@@ -13683,8 +13683,8 @@ void handleRequestc1 ( UdpSlot *slot , int32_t niceness ) {
 	if ( ! slot->m_host ) {
 		log("handc1: no slot->m_host from ip=%s udpport=%i",
 		    iptoa(slot->m_ip),(int)slot->m_port);
-		g_errno = ENOHOST;
-		us->sendErrorReply ( slot , g_errno );
+		g_errno = ENOHOSTS;
+		g_udpServer.sendErrorReply ( slot , g_errno );
 		return;
 	}
 
