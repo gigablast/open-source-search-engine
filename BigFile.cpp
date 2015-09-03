@@ -852,7 +852,8 @@ bool BigFile::readwrite ( void         *buf      ,
 	int32_t      rate  = 100000;
 	if ( took  > 500 ) rate = fstate->m_bytesDone / took ;
 	if ( rate < 8000 && fstate->m_niceness <= 0 ) {
-		log(LOG_INFO,"disk: Read %"INT32" bytes in %"INT64" ms (%"INT32"MB/s).",
+		log(LOG_INFO,"disk: Read %"INT32" bytes in %"INT64" "
+		    "ms (%"INT32"KB/s).",
 		    fstate->m_bytesDone,took,rate);
 		g_stats.m_slowDiskReads++;
 	}
@@ -952,7 +953,8 @@ void doneWrapper ( void *state , ThreadEntry *t ) {
 	if ( fstate->m_errno == EDISKSTUCK ) slow = true;
 	if ( slow && fstate->m_niceness <= 0 ) {
 		if ( fstate->m_errno != EDISKSTUCK )
-		  log(LOG_INFO, "disk: Read %"INT32" bytes in %"INT64" ms (%"INT32"MB/s).",
+		  log(LOG_INFO, "disk: Read %"INT32" bytes in %"INT64" "
+		      "ms (%"INT32"KB/s).",
 		    fstate->m_bytesDone,took,rate);
 		g_stats.m_slowDiskReads++;
 	}
