@@ -286,6 +286,7 @@ bool UdpServer::init ( uint16_t port, UdpProtocol *proto, int32_t niceness,
 	// no requests waiting yet
 	m_requestsInWaiting = 0;
 	// special count
+	m_msg07sInWaiting = 0;
 	m_msg10sInWaiting = 0;
 	m_msgc1sInWaiting = 0;
 	//m_msgDsInWaiting = 0;
@@ -1005,7 +1006,7 @@ UdpSlot *UdpServer::getBestSlotToSend ( int64_t now ) {
 	UdpSlot *maxi     = NULL;
 	int32_t     score;  
 	//UdpSlot *slot;
-	// . we send dgrams with the lowest "score" first
+  	// . we send dgrams with the lowest "score" first
 	// . the "score" is just number of ACKs you're waiting for
 	// . that way transmissions that are the most caught up to their ACKs
 	//   are considered faster so we send to them first
@@ -1482,6 +1483,9 @@ int32_t UdpServer::readSock_ass ( UdpSlot **slotPtr , int64_t now ) {
 		// rate, these are pretty lightweight. msg 0x10 reply gen times
 		// are VERY low. MDW
 		bool getSlot = true;
+		if ( msgType == 0x07 && m_msg07sInWaiting >= 100 )
+			getSlot = false;
+
 		if ( msgType == 0x10 && m_msg10sInWaiting >= 50 ) 
 			getSlot = false;
 		// crawl update info from Spider.cpp
@@ -1669,6 +1673,7 @@ int32_t UdpServer::readSock_ass ( UdpSlot **slotPtr , int64_t now ) {
 			// if we connected to a request slot, count it
 			m_requestsInWaiting++;
 			// special count
+			if ( msgType == 0x07 ) m_msg07sInWaiting++;
 			if ( msgType == 0x10 ) m_msg10sInWaiting++;
 			if ( msgType == 0xc1 ) m_msgc1sInWaiting++;
 			//if ( msgType == 0xd  ) m_msgDsInWaiting++;
@@ -3120,6 +3125,7 @@ void UdpServer::destroySlot ( UdpSlot *slot ) {
 		// one less request in waiting
 		m_requestsInWaiting--;
 		// special count
+		if ( slot->m_msgType == 0x07 ) m_msg07sInWaiting--;
 		if ( slot->m_msgType == 0x10 ) m_msg10sInWaiting--;
 		if ( slot->m_msgType == 0xc1 ) m_msgc1sInWaiting--;
 		//if ( slot->m_msgType == 0xd  ) m_msgDsInWaiting--;

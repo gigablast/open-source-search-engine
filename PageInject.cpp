@@ -590,7 +590,7 @@ void sendUdpReply7 ( void *state ) {
 
     uint32_t statColor = 0xccffcc;
     if(xd->m_indexCode) {
-        statColor = 0x4e99e9;
+        statColor = 0xaaddaa;//0x4e99e9;
     }
 	g_stats.addStat_r ( xd->m_rawUtf8ContentSize,
 						xd->m_injectStartTime, 

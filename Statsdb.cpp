@@ -65,14 +65,12 @@ static Label s_labels[] = {
 	// . 300MB/s is max read rate regardless to stop graph shrinkage
 	// . use 1KB as the min resolution per pixel
 	// . stored in Bps so use 1/1000 as scalar to get into KBps
-	{ GRAPH_QUANTITY,200,"disk_read",1,"%.0f MBps",1.0/(1000.0*1000.0),0x000000,
-	"disk read"},
+	{ GRAPH_QUANTITY,200,"disk_read",1,"%.0f MBps",1.0/(1000.0*1000.0),0x000000,"disk read"},
 
 	// . 300MB/s is max write rate regardless to stop graph shrinkage
 	// . use 1KB as the min resolution per pixel
 	// . stored in Bps so use 1/1000 as scalar to get into KBps
-	{GRAPH_QUANTITY,200,"disk_write",1,"%.0f Mbps",1.0/(1000.0*1000.0), 0xff0000,
-	"disk write"},
+	{GRAPH_QUANTITY,200,"disk_write",1,"%.0f Mbps",1.0/(1000.0*1000.0), 0xff0000,	"disk write"},
 
 	// . 20 is the max dps regardless to stop graph shrinkage
 	// . use .03 qps as the min resolution per pixel
@@ -247,6 +245,8 @@ void flushStatsWrapper ( int fd , void *state ) {
 void Statsdb::addDocsIndexed ( ) {
 
 	if ( ! isClockInSync() ) return;
+	if ( g_hostdb.hasDeadHost() ) return;
+
 
 	// only once per five seconds
 	int32_t now = getTimeLocal();
@@ -273,13 +273,17 @@ void Statsdb::addDocsIndexed ( ) {
     int32_t docsIndexedInInterval = total - s_lastTotal;
     float docsPerSecond = docsIndexedInInterval / (float)interval;
 
-	s_lastTotal = total;
 	log("build: total docs indexed: %f. docs per second %f %i %i", (float)total, docsPerSecond, docsIndexedInInterval, interval);
 
 	// add it if changed though
 	int64_t nowms = gettimeofdayInMillisecondsGlobal();
 	addStat ( MAX_NICENESS,"docs_indexed", nowms, nowms, (float)total );
-	addStat ( MAX_NICENESS,"docs_per_second", nowms, nowms, docsPerSecond );
+    // Prevent a datapoint which adds all of the docs indexed to date.
+    if( s_lastTotal != 0 ) {
+        addStat ( MAX_NICENESS,"docs_per_second", nowms, nowms, docsPerSecond );
+    }
+
+	s_lastTotal = total;
 }
 
 // . m_key bitmap in statsdb:
@@ -991,7 +995,7 @@ char *Statsdb::plotGraph ( char *pstart ,
 		float y2 = *(float *)p; p += 4;
 
 		// scale it right away
-		y2 *= yscalar;
+		y2 = (y2 - ymin) * yscalar;
 
 		// adjust
 		if ( y2 > ymax ) y2 = ymax;
@@ -1011,7 +1015,7 @@ char *Statsdb::plotGraph ( char *pstart ,
 			y2 = ((float)DY2 * (y2 - ymin)) / (ymax-ymin);
 		}
 		
-		//log("label is %s point is %f", label->m_label,  y2);
+		//log("label is %s point is %f %f- %f %f", label->m_label,  (float)y2, (float)ymin, (float)ymax, (float)yscalar);
 		// set lasts for next iteration of this loop
 		lastx = x2;
 		lasty = y2;
