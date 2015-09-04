@@ -4305,6 +4305,25 @@ bool SpiderColl::scanListForWinners ( ) {
 			m_cr->m_spiderCorruptCount++;
 			continue;
 		}
+		int32_t delta = sreq->m_addedTime - nowGlobal;
+		if ( delta > 86400 ) {
+			static bool s_first = true;
+			if ( m_cr->m_spiderCorruptCount == 0 || s_first ) {
+				s_first = false;
+				log("spider: got corrupt 6 spiderRequest in "
+				    "scan because added time is %"INT32" "
+				    "(delta=%"INT32" "
+				    "which is well into the future. url=%s "
+				    "(cn=%i)"
+				    ,(int32_t)sreq->m_addedTime
+				    ,delta
+				    ,sreq->m_url
+				    ,(int)m_collnum);
+			}
+			m_cr->m_spiderCorruptCount++;
+			continue;
+		}
+
 
 		// update SpiderRequest::m_siteNumInlinks to most recent value
 		int32_t sni = sreq->m_siteNumInlinks;
@@ -9842,11 +9861,11 @@ bool sendPage ( State11 *st ) {
 				"SpiderRequest?</font></b>)";
 		// get the rest of the data
 		sb.safePrintf("<tr bgcolor=#%s>"
-			      "<td>%"UINT64"%s</td>"
+			      "<td>%"INT64"%s</td>"
 			      "<td>%s</td>"
 			      "</tr>\n",
 			      LIGHT_BLUE,
-			      spiderTimeMS,
+			      (int64_t)spiderTimeMS,
 			      note,
 			      iptoa(firstIp));
 		// stop after 20

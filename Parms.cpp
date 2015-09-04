@@ -12477,7 +12477,7 @@ void Parms::init ( ) {
 	m->m_cgi   = "smbdt";
 	m->m_off   = (char *)&g_conf.m_spiderMaxBigDiskThreads - g;
 	m->m_type  = TYPE_LONG;
-	m->m_def   = "2"; // 1
+	m->m_def   = "1";
 	m->m_units = "threads";
 	m->m_group = 0;
 	m->m_flags = 0;//PF_HIDDEN | PF_NOSAVE;
@@ -12493,7 +12493,7 @@ void Parms::init ( ) {
 	m->m_cgi   = "smmdt";
 	m->m_off   = (char *)&g_conf.m_spiderMaxMedDiskThreads - g;
 	m->m_type  = TYPE_LONG;
-	m->m_def   = "7"; // 3
+	m->m_def   = "3";
 	m->m_units = "threads";
 	m->m_group = 0;
 	m->m_flags = 0;//PF_HIDDEN | PF_NOSAVE;
@@ -12509,7 +12509,7 @@ void Parms::init ( ) {
 	m->m_cgi   = "smsdt";
 	m->m_off   = (char *)&g_conf.m_spiderMaxSmaDiskThreads - g;
 	m->m_type  = TYPE_LONG;
-	m->m_def   = "10";
+	m->m_def   = "17";
 	m->m_units = "threads";
 	m->m_group = 0;
 	m->m_flags = 0;//PF_HIDDEN | PF_NOSAVE;
@@ -12559,7 +12559,7 @@ void Parms::init ( ) {
 	m->m_cgi   = "qmbdt";
 	m->m_off   = (char *)&g_conf.m_queryMaxBigDiskThreads - g;
 	m->m_type  = TYPE_LONG;
-	m->m_def   = "3"; // 1
+	m->m_def   = "5"; // 1
 	m->m_units = "threads";
 	m->m_group = 0;
 	m->m_flags = 0;//PF_HIDDEN | PF_NOSAVE;

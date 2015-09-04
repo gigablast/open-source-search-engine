@@ -11,9 +11,9 @@
 #include <sys/types.h>  // pid_t
 
 // this also limit the maximum number of outstanding (live) threads
-//#define MAX_STACKS 20
+#define MAX_STACKS 20
 // try going up to 40, we use about 2MB per stack... so this is 80MB
-#define MAX_STACKS 40
+//#define MAX_STACKS 40
 
 // if we are a thread this gets the threadid, otherwise, the main process id
 //pid_t getpidtid();
