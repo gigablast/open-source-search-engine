@@ -12471,11 +12471,13 @@ void Parms::init ( ) {
 
 	m->m_title = "max spider big read threads";
 	m->m_desc  = "This particular number applies to all disk "
-		"reads above 1MB.";
+		"reads above 1MB. "
+		"The number of total threads is also "
+		"limited to MAX_STACKS which is currently 20.";
 	m->m_cgi   = "smbdt";
 	m->m_off   = (char *)&g_conf.m_spiderMaxBigDiskThreads - g;
 	m->m_type  = TYPE_LONG;
-	m->m_def   = "8"; // 1
+	m->m_def   = "2"; // 1
 	m->m_units = "threads";
 	m->m_group = 0;
 	m->m_flags = 0;//PF_HIDDEN | PF_NOSAVE;
@@ -12485,11 +12487,13 @@ void Parms::init ( ) {
 
 	m->m_title = "max spider medium read threads";
 	m->m_desc  = "This particular number applies to all disk "
-		"reads above 100K.";
+		"reads above 100K. "
+		"The number of total threads is also "
+		"limited to MAX_STACKS which is currently 20.";
 	m->m_cgi   = "smmdt";
 	m->m_off   = (char *)&g_conf.m_spiderMaxMedDiskThreads - g;
 	m->m_type  = TYPE_LONG;
-	m->m_def   = "19"; // 3
+	m->m_def   = "7"; // 3
 	m->m_units = "threads";
 	m->m_group = 0;
 	m->m_flags = 0;//PF_HIDDEN | PF_NOSAVE;
@@ -12499,11 +12503,13 @@ void Parms::init ( ) {
 
 	m->m_title = "max spider small read threads";
 	m->m_desc  = "This particular number applies to all disk "
-		"reads above 1MB.";
+		"reads above 1MB. "
+		"The number of total threads is also "
+		"limited to MAX_STACKS which is currently 20.";
 	m->m_cgi   = "smsdt";
 	m->m_off   = (char *)&g_conf.m_spiderMaxSmaDiskThreads - g;
 	m->m_type  = TYPE_LONG;
-	m->m_def   = "20";
+	m->m_def   = "10";
 	m->m_units = "threads";
 	m->m_group = 0;
 	m->m_flags = 0;//PF_HIDDEN | PF_NOSAVE;
@@ -12547,11 +12553,13 @@ void Parms::init ( ) {
 	*/
 
 	m->m_title = "max query big read threads";
-	m->m_desc  = "This particular number applies to all reads above 1MB.";
+	m->m_desc  = "This particular number applies to all reads above 1MB. "
+		"The number of total threads is also "
+		"limited to MAX_STACKS which is currently 20.";
 	m->m_cgi   = "qmbdt";
 	m->m_off   = (char *)&g_conf.m_queryMaxBigDiskThreads - g;
 	m->m_type  = TYPE_LONG;
-	m->m_def   = "60"; // 1
+	m->m_def   = "3"; // 1
 	m->m_units = "threads";
 	m->m_group = 0;
 	m->m_flags = 0;//PF_HIDDEN | PF_NOSAVE;
@@ -12561,11 +12569,13 @@ void Parms::init ( ) {
 
 	m->m_title = "max query medium read threads";
 	m->m_desc  = "This particular number applies to all disk "
-		"reads above 100K.";
+		"reads above 100K. "
+		"The number of total threads is also "
+		"limited to MAX_STACKS which is currently 20.";
 	m->m_cgi   = "qmmdt";
 	m->m_off   = (char *)&g_conf.m_queryMaxMedDiskThreads - g;
 	m->m_type  = TYPE_LONG;
-	m->m_def   = "80"; // 3
+	m->m_def   = "5"; // 3
 	m->m_units = "threads";
 	m->m_group = 0;
 	m->m_flags = 0;//PF_HIDDEN | PF_NOSAVE;
@@ -12575,11 +12585,13 @@ void Parms::init ( ) {
 
 	m->m_title = "max query small read threads";
 	m->m_desc  = "This particular number applies to all disk "
-		"reads above 1MB.";
+		"reads above 1MB. "
+		"The number of total threads is also "
+		"limited to MAX_STACKS which is currently 20.";
 	m->m_cgi   = "qmsdt";
 	m->m_off   = (char *)&g_conf.m_queryMaxSmaDiskThreads - g;
 	m->m_type  = TYPE_LONG;
-	m->m_def   = "80";
+	m->m_def   = "10";
 	m->m_units = "threads";
 	m->m_group = 0;
 	m->m_flags = 0;//PF_HIDDEN | PF_NOSAVE;

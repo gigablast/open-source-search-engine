@@ -2871,7 +2871,7 @@ void SpiderColl::populateWaitingTreeFromSpiderdb ( bool reentry ) {
 	// skip if spiders off
 	if ( ! m_cr->m_spideringEnabled ) return;
 	// skip if udp table is full
-	if ( g_udpServer.getNumUsedSlotsIncoming() >= MAXUDPSLOTS ) return;
+	//if ( g_udpServer.getNumUsedSlotsIncoming() >= MAXUDPSLOTS ) return;
 	// if entering for the first time, we need to read list from spiderdb
 	if ( ! reentry ) {
 		// just return if we should not be doing this yet
@@ -3123,7 +3123,7 @@ void SpiderColl::populateDoledbFromWaitingTree ( ) { // bool reentry ) {
 	if ( ! g_conf.m_spideringEnabled ) return;
 
 	// skip if udp table is full
-	if ( g_udpServer.getNumUsedSlotsIncoming() >= MAXUDPSLOTS ) return;
+	//if ( g_udpServer.getNumUsedSlotsIncoming() >= MAXUDPSLOTS ) return;
 
 	// try skipping!!!!!!!!!!!
 	// yeah, this makes us scream. in addition to calling
@@ -5966,7 +5966,7 @@ void doneSleepingWrapperSL ( int fd , void *state ) {
 	// or if trying to exit
 	if ( g_process.m_mode == EXIT_MODE ) return;	
 	// skip if udp table is full
-	if ( g_udpServer.getNumUsedSlotsIncoming() >= MAXUDPSLOTS ) return;
+	//if ( g_udpServer.getNumUsedSlotsIncoming() >= MAXUDPSLOTS ) return;
 
 	// wait for clock to sync with host #0
 	if ( ! isClockInSync() ) { 
@@ -6952,7 +6952,7 @@ bool SpiderLoop::gotDoledbList2 ( ) {
 	// or if doing a daily merge
 	if ( g_dailyMerge.m_mergeMode ) bail = true;
 	// skip if too many udp slots being used
-	if ( g_udpServer.getNumUsedSlotsIncoming() >= MAXUDPSLOTS ) bail =true;
+	//if(g_udpServer.getNumUsedSlotsIncoming() >= MAXUDPSLOTS ) bail =true;
 	// stop if too many out
 	if ( m_numSpidersOut >= MAX_SPIDERS ) bail = true;
 

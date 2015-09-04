@@ -124,9 +124,6 @@ int *__errno_location (void) {
 
 #endif
 
-// this also limit the maximum number of outstanding (live) threads
-#define MAX_STACKS 20
-
 // stack must be page aligned for mprotect
 #define THRPAGESIZE 8192
 
