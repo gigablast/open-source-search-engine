@@ -12450,7 +12450,7 @@ void Parms::init ( ) {
 
 
 
-
+	/*
 	m->m_title = "max spider read threads";
 	m->m_desc  = "Maximum number of threads to use per Gigablast process "
 		"for accessing the disk "
@@ -12467,6 +12467,7 @@ void Parms::init ( ) {
 	m->m_obj   = OBJ_CONF;
 	m->m_group = 0;
 	m++;
+	*/
 
 	m->m_title = "max spider big read threads";
 	m->m_desc  = "This particular number applies to all disk "
@@ -12525,7 +12526,7 @@ void Parms::init ( ) {
 	m++;
 
 
-
+	/*
 	m->m_title = "max query read threads";
 	m->m_desc  = "Maximum number of threads to use per Gigablast process "
 		"for accessing the disk "
@@ -12543,6 +12544,7 @@ void Parms::init ( ) {
 	m->m_obj   = OBJ_CONF;
 	m->m_group = 0;
 	m++;
+	*/
 
 	m->m_title = "max query big read threads";
 	m->m_desc  = "This particular number applies to all reads above 1MB.";

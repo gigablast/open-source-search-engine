@@ -2156,10 +2156,10 @@ bool ThreadQueue::launchThread2 ( ThreadEntry *te ) {
 		else                                  launchedSma1++;
 	}
 
-	int32_t max = g_conf.m_spiderMaxDiskThreads;
-	if ( max <= 0 ) max = 1;
-	if ( activeCount >= max ) 
-		return false;
+	// int32_t max = g_conf.m_spiderMaxDiskThreads;
+	// if ( max <= 0 ) max = 1;
+	// if ( activeCount >= max ) 
+	// 	return false;
 
 	// get best thread candidate from best linked list of candidates
 	ThreadEntry **bestHeadPtr = NULL;
