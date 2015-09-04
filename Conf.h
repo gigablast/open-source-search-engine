@@ -252,18 +252,18 @@ class Conf {
 	//int32_t  m_spiderdbMaxCacheMem ;
 	//int32_t  m_spiderdbMaxDiskPageCacheMem ;
 	//int32_t  m_spiderdbMinFilesToMerge;
-	//int32_t  m_spiderMaxDiskThreads    ;
-	int32_t  m_spiderMaxBigDiskThreads ; // > 1M read
-	int32_t  m_spiderMaxMedDiskThreads ; // 100k - 1M read
-	int32_t  m_spiderMaxSmaDiskThreads ; // < 100k read
+	int32_t  m_spiderMaxDiskThreads    ;
+	//int32_t  m_spiderMaxBigDiskThreads ; // > 1M read
+	//int32_t  m_spiderMaxMedDiskThreads ; // 100k - 1M read
+	//int32_t  m_spiderMaxSmaDiskThreads ; // < 100k read
 	//int32_t  m_queryMaxDiskThreads     ;
-	int32_t  m_queryMaxBigDiskThreads  ; // > 1M read
-	int32_t  m_queryMaxMedDiskThreads  ; // 100k - 1M read
-	int32_t  m_queryMaxSmaDiskThreads  ; // < 100k per read
+	//int32_t  m_queryMaxBigDiskThreads  ; // > 1M read
+	//int32_t  m_queryMaxMedDiskThreads  ; // 100k - 1M read
+	//int32_t  m_queryMaxSmaDiskThreads  ; // < 100k per read
 	// categorize the disk read sizes by these here
-	int32_t  m_bigReadSize;
-	int32_t  m_medReadSize;
-	int32_t  m_smaReadSize;
+	//int32_t  m_bigReadSize;
+	//int32_t  m_medReadSize;
+	//int32_t  m_smaReadSize;
 
 	char m_separateDiskReads;
 

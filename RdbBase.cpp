@@ -1421,6 +1421,10 @@ bool RdbBase::attemptMerge ( int32_t niceness, bool forceMergeAll, bool doLog ,
 
 	if ( m_nextMergeForced ) forceMergeAll = true;
 
+	if ( forceMergeAll )
+		log(LOG_INFO,"merge: forcing merge for "
+		    "for %s. (collnum=%"INT32")",m_dbname,(int32_t)m_collnum);
+
 	// if we are trying to merge titledb but a titledb dump is going on
 	// then do not do the merge, we do not want to overwrite tfndb via
 	// RdbDump::updateTfndbLoop() 
@@ -1629,7 +1633,10 @@ bool RdbBase::attemptMerge ( int32_t niceness, bool forceMergeAll, bool doLog ,
 
 	// this triggers the negative rec concentration msg below and
 	// tries to merge on one file...
-	if ( ! resuming && m_numFiles <= 1 ) return false;
+	if ( ! resuming && m_numFiles <= 1 ) {
+		m_nextMergeForced = false;
+		return false;
+	}
 
 	// what percent of recs in the collections' rdb are negative?
 	// the rdbmaps hold this info

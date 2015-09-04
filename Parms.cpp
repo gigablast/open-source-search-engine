@@ -12450,7 +12450,6 @@ void Parms::init ( ) {
 
 
 
-	/*
 	m->m_title = "max spider read threads";
 	m->m_desc  = "Maximum number of threads to use per Gigablast process "
 		"for accessing the disk "
@@ -12460,15 +12459,15 @@ void Parms::init ( ) {
 	m->m_cgi   = "smdt";
 	m->m_off   = (char *)&g_conf.m_spiderMaxDiskThreads - g;
 	m->m_type  = TYPE_LONG;
-	m->m_def   = "30";
+	m->m_def   = "20";
 	m->m_units = "threads";
 	m->m_flags = 0;//PF_HIDDEN | PF_NOSAVE;
 	m->m_page  = PAGE_MASTER;
 	m->m_obj   = OBJ_CONF;
 	m->m_group = 0;
 	m++;
-	*/
 
+	/*
 	m->m_title = "max spider big read threads";
 	m->m_desc  = "This particular number applies to all disk "
 		"reads above 1MB. "
@@ -12516,6 +12515,7 @@ void Parms::init ( ) {
 	m->m_page  = PAGE_MASTER;
 	m->m_obj   = OBJ_CONF;
 	m++;
+	*/
 
 	m->m_title = "separate disk reads";
 	m->m_desc  = "If enabled then we will not launch a low priority "
@@ -12552,6 +12552,7 @@ void Parms::init ( ) {
 	m++;
 	*/
 
+	/*
 	m->m_title = "max query big read threads";
 	m->m_desc  = "This particular number applies to all reads above 1MB. "
 		"The number of total threads is also "
@@ -12598,6 +12599,7 @@ void Parms::init ( ) {
 	m->m_page  = PAGE_MASTER;
 	m->m_obj   = OBJ_CONF;
 	m++;
+	*/
 
 	m->m_title = "min popularity for speller";
 	m->m_desc  = "Word or phrase must be present in this percent "

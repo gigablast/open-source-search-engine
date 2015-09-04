@@ -106,21 +106,19 @@ class ThreadQueue {
 	// 8 heads/tails for linked lists of thread entries waiting to launch
 	ThreadEntry *m_waitHead0;
 	ThreadEntry *m_waitHead1;
-	ThreadEntry *m_waitHead2;
+	//ThreadEntry *m_waitHead2;
 	ThreadEntry *m_waitHead3;
 	ThreadEntry *m_waitHead4;
 	ThreadEntry *m_waitHead5;
 	ThreadEntry *m_waitHead6;
-	ThreadEntry *m_waitHead7;
 
 	ThreadEntry *m_waitTail0;
 	ThreadEntry *m_waitTail1;
-	ThreadEntry *m_waitTail2;
+	//ThreadEntry *m_waitTail2;
 	ThreadEntry *m_waitTail3;
 	ThreadEntry *m_waitTail4;
 	ThreadEntry *m_waitTail5;
 	ThreadEntry *m_waitTail6;
-	ThreadEntry *m_waitTail7;
 
 
 	/*

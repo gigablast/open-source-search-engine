@@ -1791,7 +1791,7 @@ void attemptMergeAll2 ( ) {
 	if ( g_merge.isMerging() ) return;
 
 	int32_t niceness = MAX_NICENESS;
-	collnum_t s_lastCollnum = 0;
+	static collnum_t s_lastCollnum = 0;
 	int32_t count = 0;
 
  tryLoop:
