@@ -12510,6 +12510,22 @@ void Parms::init ( ) {
 	m->m_obj   = OBJ_CONF;
 	m++;
 
+	m->m_title = "separate disk reads";
+	m->m_desc  = "If enabled then we will not launch a low priority "
+		"disk read or write while a high priority is outstanding. "
+		"Help improve query response time at the expense of "
+		"spider performance.";
+	m->m_cgi   = "sdt";
+	m->m_off   = (char *)&g_conf.m_separateDiskReads - g;
+	m->m_type  = TYPE_BOOL;
+	m->m_def   = "1";
+	m->m_flags = 0;
+	m->m_page  = PAGE_MASTER;
+	m->m_obj   = OBJ_CONF;
+	m++;
+
+
+
 	m->m_title = "max query read threads";
 	m->m_desc  = "Maximum number of threads to use per Gigablast process "
 		"for accessing the disk "

@@ -265,6 +265,8 @@ class Conf {
 	int32_t  m_medReadSize;
 	int32_t  m_smaReadSize;
 
+	char m_separateDiskReads;
+
 	int32_t m_statsdbMaxTreeMem;
 	int32_t m_statsdbMaxCacheMem;
 	int32_t m_statsdbMaxDiskPageCacheMem;

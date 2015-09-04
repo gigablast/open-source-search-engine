@@ -2188,7 +2188,8 @@ bool ThreadQueue::launchThread2 ( ThreadEntry *te ) {
 	// if we have a niceness 0 disk read/write outstandind and we are 
 	// 1 or 2, do not launch! we do not want low priority disk reads 
 	// having to contend with high priority ones.
-	if ( hasLowNicenessOut && ! bestHeadPtr )
+	// now we only do this if the 'separate disk reads' parms is true.
+	if ( g_conf.m_separateDiskReads && hasLowNicenessOut && ! bestHeadPtr )
 		return false;
 
 	// threads to save conf and tree/bucket files to disk go in waitHead3
