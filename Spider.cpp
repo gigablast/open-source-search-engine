@@ -2871,7 +2871,7 @@ void SpiderColl::populateWaitingTreeFromSpiderdb ( bool reentry ) {
 	// skip if spiders off
 	if ( ! m_cr->m_spideringEnabled ) return;
 	// skip if udp table is full
-	//if ( g_udpServer.getNumUsedSlotsIncoming() >= MAXUDPSLOTS ) return;
+	if ( g_udpServer.getNumUsedSlotsIncoming() >= MAXUDPSLOTS ) return;
 	// if entering for the first time, we need to read list from spiderdb
 	if ( ! reentry ) {
 		// just return if we should not be doing this yet
@@ -3123,7 +3123,7 @@ void SpiderColl::populateDoledbFromWaitingTree ( ) { // bool reentry ) {
 	if ( ! g_conf.m_spideringEnabled ) return;
 
 	// skip if udp table is full
-	//if ( g_udpServer.getNumUsedSlotsIncoming() >= MAXUDPSLOTS ) return;
+	if ( g_udpServer.getNumUsedSlotsIncoming() >= MAXUDPSLOTS ) return;
 
 	// try skipping!!!!!!!!!!!
 	// yeah, this makes us scream. in addition to calling
@@ -4292,7 +4292,10 @@ bool SpiderColl::scanListForWinners ( ) {
 		}
 
 		// sanity check. check for http(s)://
-		if ( sreq->m_url[0] != 'h' &&
+		if ( ( sreq->m_url[0] != 'h' ||
+		       sreq->m_url[1] != 't' ||
+		       sreq->m_url[2] != 't' ||
+		       sreq->m_url[3] != 'p' ) &&
 		     // might be a docid from a pagereindex.cpp
 		     ! is_digit(sreq->m_url[0]) ) { 
 			if ( m_cr->m_spiderCorruptCount == 0 )
@@ -5618,6 +5621,8 @@ uint64_t SpiderColl::getSpiderTimeMS ( SpiderRequest *sreq,
 	// . get the scheduled spiderTime for it
 	// . assume this SpiderRequest never been successfully spidered
 	int64_t spiderTimeMS = ((uint64_t)sreq->m_addedTime) * 1000LL;
+	// how can added time be in the future? did admin set clock back?
+	//if ( spiderTimeMS > nowGlobalMS ) spiderTimeMS = nowGlobalMS;
 	// if injecting for first time, use that!
 	if ( ! srep && sreq->m_isInjecting ) return spiderTimeMS;
 	if ( ! srep && sreq->m_isPageReindex ) return spiderTimeMS;
@@ -5966,7 +5971,7 @@ void doneSleepingWrapperSL ( int fd , void *state ) {
 	// or if trying to exit
 	if ( g_process.m_mode == EXIT_MODE ) return;	
 	// skip if udp table is full
-	//if ( g_udpServer.getNumUsedSlotsIncoming() >= MAXUDPSLOTS ) return;
+	if ( g_udpServer.getNumUsedSlotsIncoming() >= MAXUDPSLOTS ) return;
 
 	// wait for clock to sync with host #0
 	if ( ! isClockInSync() ) { 
@@ -6952,7 +6957,7 @@ bool SpiderLoop::gotDoledbList2 ( ) {
 	// or if doing a daily merge
 	if ( g_dailyMerge.m_mergeMode ) bail = true;
 	// skip if too many udp slots being used
-	//if(g_udpServer.getNumUsedSlotsIncoming() >= MAXUDPSLOTS ) bail =true;
+	if(g_udpServer.getNumUsedSlotsIncoming() >= MAXUDPSLOTS ) bail =true;
 	// stop if too many out
 	if ( m_numSpidersOut >= MAX_SPIDERS ) bail = true;
 
@@ -13912,11 +13917,11 @@ bool getSpiderStatusMsg ( CollectionRec *cx , SafeBuf *msg , int32_t *status ) {
 				       "paused.");
 	}
 
-	if ( g_udpServer.getNumUsedSlotsIncoming() >= MAXUDPSLOTS ) {
-		*status = SP_ADMIN_PAUSED;
-		return msg->safePrintf("Too many UDP slots in use, "
-				       "spidering paused.");
-	}
+	// if ( g_udpServer.getNumUsedSlotsIncoming() >= MAXUDPSLOTS ) {
+	// 	*status = SP_ADMIN_PAUSED;
+	// 	return msg->safePrintf("Too many UDP slots in use, "
+	// 			       "spidering paused.");
+	// }
 
 	if ( g_repairMode ) {
 		*status = SP_ADMIN_PAUSED;
