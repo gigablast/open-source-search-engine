@@ -1472,11 +1472,16 @@ bool RdbBase::attemptMerge ( int32_t niceness, bool forceMergeAll, bool doLog ,
 	}
 
 	if ( g_numThreads > 0 ) {
-		if ( doLog )
+		// prevent log spam
+		static int32_t s_lastTime = 0;
+		int32_t now = getTimeLocal();
+		if ( now - s_lastTime > 0 && doLog )
 			log(LOG_INFO,"merge: Waiting for another "
 			    "collection's unlink/rename "
 			    "operations to finish before attempting merge "
-			    "for %s (collnum=%"INT32").",m_dbname,(int32_t)m_collnum);
+			    "for %s (collnum=%"INT32").",
+			    m_dbname,(int32_t)m_collnum);
+		s_lastTime = now;
 		return false;
 	}
 
