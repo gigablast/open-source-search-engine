@@ -10056,6 +10056,10 @@ char *XmlDoc::getIsDup ( ) {
 	// sanity. must be posdb list.
 	if ( ! list->isEmpty() && list->m_ks != 18 ) { char *xx=NULL;*xx=0;}
 
+	// so getSiteRank() does not core
+	int32_t *sni = getSiteNumInlinks();
+	if ( ! sni || sni == (int32_t *)-1 ) return (char *)sni;
+
 	// . see if there are any pages that seem like they are dups of us
 	// . they must also have a HIGHER score than us, for us to be 
 	//   considered the dup
@@ -13806,7 +13810,7 @@ int32_t *XmlDoc::getSiteNumInlinks ( ) {
 
 	// hacks of speed. computeSiteNumInlinks is true by default
 	// but if the user turns it off the just use sitelinks.txt
-	if ( ! cr->m_computeSiteNumInlinks ) {
+	if ( cr && ! cr->m_computeSiteNumInlinks ) {
 		int32_t hostHash32 = getHostHash32a();
 		int32_t min = g_tagdb.getMinSiteInlinks ( hostHash32 );
 		// try with www if not there

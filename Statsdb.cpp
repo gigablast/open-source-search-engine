@@ -248,6 +248,9 @@ void Statsdb::addDocsIndexed ( ) {
 	if ( g_hostdb.hasDeadHost() ) return;
 
 
+	// only host #0 needs this
+	if ( g_hostdb.m_hostId != 0 ) return;
+
 	// only once per five seconds
 	int32_t now = getTimeLocal();
 	static int32_t s_lastTime = 0;
