@@ -453,7 +453,7 @@ class Spiderdb {
 	*/
 
 	// print the spider rec
-	int32_t print( char *srec );
+	int32_t print( char *srec , SafeBuf *sb = NULL );
 
   private:
 

@@ -590,12 +590,12 @@ Spiderdb g_spiderdb2;
 void Spiderdb::reset() { m_rdb.reset(); }
 
 // print the spider rec
-int32_t Spiderdb::print( char *srec ) {
+int32_t Spiderdb::print( char *srec , SafeBuf *sb ) {
 	// get if request or reply and print it
 	if ( isSpiderRequest ( (key128_t *)srec ) )
-		((SpiderRequest *)srec)->print(NULL);
+		((SpiderRequest *)srec)->print(sb);
 	else
-		((SpiderReply *)srec)->print(NULL);
+		((SpiderReply *)srec)->print(sb);
 	return 0;
 }
 
@@ -4429,7 +4429,22 @@ bool SpiderColl::scanListForWinners ( ) {
 			    (int32_t)m_collnum);
 			continue;
 		}
-
+		// 100 days out is corruption. ppl sometimes put
+		// 3000 days to re-spider... so take this out
+		/*
+		int64_t delta2 = spiderTimeMS - nowGlobalMS;
+		if ( delta2 > 86400LL*1000LL*100LL ) {
+			log("spider: got corrupt 7 spiderRequest in "
+			    "scan (cn=%"INT32") (delta=%"INT64") url=%s",
+			    (int32_t)m_collnum,
+			    delta2,
+			    sreq->m_url);
+			SafeBuf sb; g_spiderdb.print ( (char *)sreq , &sb );
+			if ( srep ) g_spiderdb.print ( (char *)srep , &sb );
+			log("spider: %s",sb.getBufStart());
+			continue;
+		}
+		*/
 
 		// save this shit for storing in doledb
 		sreq->m_ufn = ufn;
@@ -5671,6 +5686,9 @@ uint64_t SpiderColl::getSpiderTimeMS ( SpiderRequest *sreq,
 	/////////////////////////////////////////////////
 	int32_t *cdp = (int32_t *)m_cdTable.getValue ( &sreq->m_domHash32 );
 	int64_t minSpiderTimeMS2 = 0;
+	// limit to 60 seconds crawl delay. 
+	// help fight SpiderReply corruption too
+	if ( cdp && *cdp > 60000 ) *cdp = 60000;
 	if ( cdp && *cdp >= 0 ) minSpiderTimeMS2 = lastMS + *cdp;
 
 	// wait 5 seconds for all outlinks in order for them to have a
