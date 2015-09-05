@@ -505,7 +505,9 @@ bool Threads::call ( char   type                         ,
 	// . try to launch as many threads as we can
 	// . this sets g_errno on error
 	// . if it has an error, just ignore it, our thread is queued
-	m_threadQueues[i].launchThread2 ( NULL );
+ launchLoop:
+	if ( m_threadQueues[i].launchThread2 ( ) ) 
+		goto launchLoop;
 	//if ( ! m_threadQueues[i].launchThread2 ( t ) && g_errno ) {
 	//	log("thread: failed thread launch: %s",mstrerror(g_errno));
 	//	return false;
@@ -554,11 +556,13 @@ static void killStalledFiltersWrapper ( int fd , void *state ) {
 int32_t Threads::launchThreads ( ) {
 	// try launching from each queue
 	int32_t numLaunched = 0;
+	// try to launch DISK threads last so cpu-based threads get precedence
 	for ( int32_t i = m_numQueues - 1 ; i >= 0 ; i-- ) {
 		// clear g_errno
 		g_errno = 0;
 		// launch as many threads as we can from queue #i
-		while ( m_threadQueues[i].launchThread2(NULL) ) numLaunched++;
+		while ( m_threadQueues[i].launchThread2( ) ) 
+			numLaunched++;
 		// continue if no g_errno set
 	        if ( ! g_errno ) continue;
 		// otherwise bitch about it
@@ -805,7 +809,7 @@ bool ThreadQueue::init ( char threadType, int32_t maxThreads, int32_t maxEntries
 	m_emptyHead = NULL;
 	m_waitHead0 = NULL;
 	m_waitHead1 = NULL;
-	//m_waitHead2 = NULL;
+	m_waitHead2 = NULL;
 	m_waitHead3 = NULL;
 	m_waitHead4 = NULL;
 	m_waitHead5 = NULL;
@@ -813,7 +817,7 @@ bool ThreadQueue::init ( char threadType, int32_t maxThreads, int32_t maxEntries
 
 	m_waitTail0 = NULL;
 	m_waitTail1 = NULL;
-	//m_waitTail2 = NULL;
+	m_waitTail2 = NULL;
 	m_waitTail3 = NULL;
 	m_waitTail4 = NULL;
 	m_waitTail5 = NULL;
@@ -976,9 +980,15 @@ ThreadEntry *ThreadQueue::addEntry ( int32_t   niceness                     ,
 			bestHeadPtr = &m_waitHead0;
 			bestTailPtr = &m_waitTail0;
 		}
-		else {
+		// 'merge' threads from disk merge ops have niceness 1
+		else if ( niceness == 1 ) {
 			bestHeadPtr = &m_waitHead1;
 			bestTailPtr = &m_waitTail1;
+		}
+		// niceness is 2? MAX_NICENESS
+		else {
+			bestHeadPtr = &m_waitHead2;
+			bestTailPtr = &m_waitTail2;
 		}
 		// remove from empty list
 		removeLink ( &m_emptyHead , t );
@@ -2026,7 +2036,7 @@ int32_t Threads::getNumActiveHighPriorityThreads() {
 // . sets g_errno on error
 // . don't launch a low priority thread if a high priority thread is running
 // . i.e. don't launch a high niceness thread if a low niceness is running
-bool ThreadQueue::launchThread2 ( ThreadEntry *te ) {
+bool ThreadQueue::launchThread2 ( ) {
 
 	// or if no stacks left, don't even try
 	if ( s_head == -1 ) return false;
@@ -2051,6 +2061,11 @@ bool ThreadQueue::launchThread2 ( ThreadEntry *te ) {
 		if ( ! *bestHeadPtr ) {
 			bestHeadPtr = &m_waitHead1;
 			bestTailPtr = &m_waitTail1;
+		}
+		// then niceness 2
+		if ( ! *bestHeadPtr ) {
+			bestHeadPtr = &m_waitHead2;
+			bestTailPtr = &m_waitTail2;
 		}
 		// if bother empty, that was easy
 		if ( ! *bestHeadPtr ) return false;
@@ -3107,7 +3122,7 @@ void ThreadQueue::removeThreads ( BigFile *bf ) {
 	//ThreadEntry *head ;
 	removeThreads2 ( &m_waitHead0 , &m_waitTail0 , bf );
 	removeThreads2 ( &m_waitHead1 , &m_waitTail1 , bf );
-	//removeThreads2 ( &m_waitHead2 , &m_waitTail2 , bf );
+	removeThreads2 ( &m_waitHead2 , &m_waitTail2 , bf );
 	removeThreads2 ( &m_waitHead3 , &m_waitTail3 , bf );
 	removeThreads2 ( &m_waitHead4 , &m_waitTail4 , bf );
 	removeThreads2 ( &m_waitHead5 , &m_waitTail5 , bf );

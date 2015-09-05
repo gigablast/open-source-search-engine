@@ -106,7 +106,7 @@ class ThreadQueue {
 	// 8 heads/tails for linked lists of thread entries waiting to launch
 	ThreadEntry *m_waitHead0;
 	ThreadEntry *m_waitHead1;
-	//ThreadEntry *m_waitHead2;
+	ThreadEntry *m_waitHead2;
 	ThreadEntry *m_waitHead3;
 	ThreadEntry *m_waitHead4;
 	ThreadEntry *m_waitHead5;
@@ -114,7 +114,7 @@ class ThreadQueue {
 
 	ThreadEntry *m_waitTail0;
 	ThreadEntry *m_waitTail1;
-	//ThreadEntry *m_waitTail2;
+	ThreadEntry *m_waitTail2;
 	ThreadEntry *m_waitTail3;
 	ThreadEntry *m_waitTail4;
 	ThreadEntry *m_waitTail5;
@@ -179,7 +179,7 @@ class ThreadQueue {
 
 	// . launch a thread from our queue
 	// . returns false and sets errno on error
-	bool         launchThread2 ( ThreadEntry *te );
+	bool         launchThread2 ( );
 
 	bool launchThreadForReals ( ThreadEntry **headPtr ,
 				    ThreadEntry **tailPtr ) ;
