@@ -383,16 +383,17 @@ void printUdpTable ( SafeBuf *p, char *title, UdpServer *server ,
 		     "<td><b>hostname</b></td>";
 	}
 
-	UdpSlot *slot = server->m_head3;
-	int32_t callbackReadyCount = 0;
-	for ( ; slot ; slot = slot->m_next3 , callbackReadyCount++ ); 
+	//UdpSlot *slot = server->m_head3;
+	//int32_t callbackReadyCount = 0;
+	//for ( ; slot ; slot = slot->m_next3 , callbackReadyCount++ ); 
 
 	p->safePrintf ( "<table %s>"
 			"<tr class=hdrow><td colspan=19>"
 			"<center>"
 			//"<font size=+1>"
 			"<b>%s</b> (%"INT32" transactions)"
-			"(%"INT32" requests waiting to processed)"
+			//"(%"INT32" requests waiting to processed)"
+			"(%"INT32" incoming)"
 			//"</font>"
 			"</td></tr>"
 			"<tr bgcolor=#%s>"
@@ -419,7 +420,8 @@ void printUdpTable ( SafeBuf *p, char *title, UdpServer *server ,
 			"</tr>\n" , 
 			TABLE_STYLE,
 			title , server->getNumUsedSlots() , 
-			callbackReadyCount ,
+			//callbackReadyCount ,
+			server->getNumUsedSlotsIncoming() ,
 			DARK_BLUE ,
 			dd );
 
