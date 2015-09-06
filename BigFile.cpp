@@ -1017,12 +1017,14 @@ void doneWrapper ( void *state , ThreadEntry *t ) {
 	int32_t tt = LOG_WARN;
 	if ( g_errno == EFILECLOSED ) tt = LOG_INFO;
 	if ( g_errno && g_errno != EDISKSTUCK ) 
-		log (tt,"disk: %s. fd1=%"INT32" vfd=%"INT32" "
-			    "off=%"INT64" toread=%"INT32".", 
-			    mstrerror(g_errno),
-			    (int32_t)fstate->m_fd1,(int32_t)fstate->m_vfd,
-			    (int64_t)fstate->m_offset , 
-			    (int32_t)fstate->m_bytesToGo );
+		log (tt,"disk: %s. fd1=%"INT32" fd2=%"INT32" "
+		     "off=%"INT64" toread=%"INT32,
+		     mstrerror(g_errno),
+		     (int32_t)fstate->m_fd1,
+		     (int32_t)fstate->m_fd2,
+		     (int64_t)fstate->m_offset , 
+		     (int32_t)fstate->m_bytesToGo
+		     );
 	// someone is closing our fd without setting File::s_vfds[fd] to -1
 	if ( g_errno && g_errno != EDISKSTUCK ) {
 		//int fd1  = fstate->m_fd1;
