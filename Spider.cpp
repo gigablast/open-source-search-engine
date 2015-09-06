@@ -7286,10 +7286,16 @@ bool SpiderLoop::gotDoledbList2 ( ) {
 		lock = (UrlLock *)ht->getValueFromSlot ( slot );
 	// if there and confirmed, why still in doledb?
 	if ( lock && lock->m_confirmed ) {
-		// why is it not getting unlocked!?!?!
-		log("spider: spider request locked but still in doledb. "
-		    "uh48=%"INT64" firstip=%s %s",
-		    sreq->getUrlHash48(), iptoa(sreq->m_firstIp),sreq->m_url );
+		// fight log spam
+		static int32_t s_lastTime = 0;
+		if ( nowGlobal - s_lastTime >= 2 ) {
+			// why is it not getting unlocked!?!?!
+			log("spider: spider request locked but still in "
+			    "doledb. uh48=%"INT64" firstip=%s %s",
+			    sreq->getUrlHash48(), 
+			    iptoa(sreq->m_firstIp),sreq->m_url );
+			s_lastTime = nowGlobal;
+		}
 		// just increment then i guess
 		m_list.skipCurrentRecord();
 		// let's return false here to avoid an infinite loop
