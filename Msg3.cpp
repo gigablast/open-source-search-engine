@@ -812,6 +812,10 @@ bool Msg3::doneScanning ( ) {
 	}
 #endif
 
+	// try to fix this error i've seen
+	if ( g_errno == EBADENGINEER && max == -1 )
+		max = 100;
+
 	// . if we had a ETRYAGAIN error, then try again now
 	// . it usually means the whole file or a part of it was deleted 
 	//   before we could finish reading it, so we should re-read all now
