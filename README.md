@@ -1,6 +1,8 @@
 open-source-search-engine
 =========================
 
+[![Build Status](https://travis-ci.org/bowlofstew/served.png)](https://travis-ci.org/bowlofstew/open-source-search-engine)
+
 An open source web and enterprise search engine and spider/crawler. As can be seen on http://www.gigablast.com/ .
 
 RUNNING GIGABLAST
