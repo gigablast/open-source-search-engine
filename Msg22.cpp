@@ -937,8 +937,10 @@ void gotTitleList ( void *state , RdbList *list , Msg5 *msg5 ) {
 		else if ( r->m_url[0] ) {
 			// get it
 			int64_t uh48 = g_titledb.getUrlHash48(k);
-			// sanity check
-			if ( st->m_uh48 == 0 ) { char *xx=NULL;*xx=0; }
+			// sanity check. MDW: looks like we allow 0 to
+			// be a valid hash. so let this through. i've seen
+			// it core here before.
+			//if ( st->m_uh48 == 0 ) { char *xx=NULL;*xx=0; }
 			// make sure our available docids are availble!
 			if ( dd == ad1 ) ad1++;
 			if ( dd == ad2 ) ad2++;
