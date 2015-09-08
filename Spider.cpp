@@ -6106,12 +6106,17 @@ void doneSendingNotification ( void *state ) {
 	EmailInfo *ei = (EmailInfo *)state;
 	collnum_t collnum = ei->m_collnum;
 	CollectionRec *cr = g_collectiondb.m_recs[collnum];
+	if ( cr != ei->m_collRec ) cr = NULL;
 	char *coll = "lostcoll";
 	if ( cr ) coll = cr->m_coll;
-	log(LOG_INFO,"spider: done sending notifications for coll=%s", coll);
+	log(LOG_INFO,"spider: done sending notifications for coll=%s (%i)", 
+	    coll,(int)ei->m_collnum);
 
 	// all done if collection was deleted from under us
 	if ( ! cr ) return;
+
+	// do not re-call this stuff
+	cr->m_sendingAlertInProgress = false;
 
 	// we can re-use the EmailInfo class now
 	// pingserver.cpp sets this
@@ -6268,11 +6273,19 @@ bool sendNotificationForCollRec ( CollectionRec *cr )  {
 	// since we reset global.
 	//if ( cr->m_localCrawlInfo.m_sentCrawlDoneAlert ) return true;
 
+	if ( cr->m_sendingAlertInProgress ) return true;
+
 	// ok, send it
-	EmailInfo *ei = &cr->m_emailInfo;
+	//EmailInfo *ei = &cr->m_emailInfo;
+	EmailInfo *ei = (EmailInfo *)mcalloc ( sizeof(EmailInfo),"eialrt");
+	if ( ! ei ) {
+		log("spider: could not send email alert: %s",
+		    mstrerror(g_errno));
+		return true;
+	}
 
 	// in use already?
-	if ( ei->m_inUse ) return true;
+	//if ( ei->m_inUse ) return true;
 
 	// pingserver.cpp sets this
 	//ei->m_inUse = true;
@@ -6281,6 +6294,8 @@ bool sendNotificationForCollRec ( CollectionRec *cr )  {
 	ei->m_finalCallback = doneSendingNotification;
 	ei->m_finalState    = ei;
 	ei->m_collnum       = cr->m_collnum;
+	// collnums can be recycled, so ensure collection with the ptr
+	ei->m_collRec       = cr;
 
 	SafeBuf *buf = &ei->m_spiderStatusMsg;
 	// stop it from accumulating status msgs
@@ -6292,6 +6307,9 @@ bool sendNotificationForCollRec ( CollectionRec *cr )  {
 	// DISABLE THIS UNTIL FIXED
 
 	//log("spider: SENDING EMAIL NOT");
+
+	// do not re-call this stuff
+	cr->m_sendingAlertInProgress = true;
 
 	// ok, put it back...
 	if ( ! sendNotification ( ei ) ) return false;
