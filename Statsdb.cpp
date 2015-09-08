@@ -1001,7 +1001,6 @@ char *Statsdb::plotGraph ( char *pstart ,
 		// then y pos
 		float y2 = *(float *)p; p += 4;
 
-		float unscaled = y2;
 		// scale it right away
 		if(label->m_yscalar < 0) {
 			y2 = (y2 - ymin) * yscalar;
