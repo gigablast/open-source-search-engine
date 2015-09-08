@@ -271,6 +271,7 @@ void Statsdb::addDocsIndexed ( ) {
 	// divide by # of groups
 	total /= g_hostdb.getNumHostsPerShard();
 	// skip if no change
+
 	if ( total == s_lastTotal ) return;
 
     int32_t docsIndexedInInterval = total - s_lastTotal;
@@ -928,17 +929,20 @@ char *Statsdb::plotGraph ( char *pstart ,
 	}
 
 	// force to zero for now
-	ymin = 0.0;
+	//ymin = 0.0;
 	// . and force to ymax for now as well
 	// . -1 indicates dynamic though!
 	if ( label->m_absYMax > 0.0 ) ymax = label->m_absYMax;
 	// add a 20% ceiling
 	//	else                          ymax *= 1.20;
-	//log("max for %s is %f - %f", label->m_label, (float)ymin, (float)ymax);
 
 	
-	if(label->m_yscalar <= 0 ) {
-		yscalar = (float)DY2 / (ymax - ymin);
+	if( label->m_yscalar <= 0 ) {
+        if(ymax == ymin) {
+            yscalar = 0;
+        } else {
+            yscalar = (float)DY2 / (ymax - ymin);
+        }
 	}
 	// return that!
 	char *retp = p;
@@ -962,7 +966,7 @@ char *Statsdb::plotGraph ( char *pstart ,
 
 	// . pad y range if total range is small
 	// . only do this for certain types of stats, like qps and disk i/o
-	if ( ourDiff < minDiff ) {
+	if ( label->m_yscalar >=0 && ourDiff < minDiff ) {
 		float pad = (minDiff - ourDiff) / 2;
 		// pad it out
 		ymin -= pad ;
@@ -997,11 +1001,18 @@ char *Statsdb::plotGraph ( char *pstart ,
 		// then y pos
 		float y2 = *(float *)p; p += 4;
 
+		float unscaled = y2;
 		// scale it right away
-		y2 = (y2 - ymin) * yscalar;
+		if(label->m_yscalar < 0) {
+			y2 = (y2 - ymin) * yscalar;
+		}
+		else {
+			y2 *= yscalar;
 
+		}
 		// adjust
 		if ( y2 > ymax ) y2 = ymax;
+		if ( y2 < 0 ) y2 = 0;
 
 		// then graphHash
 		int32_t  gh = *(int32_t *)p; p += 4;
@@ -1014,11 +1025,10 @@ char *Statsdb::plotGraph ( char *pstart ,
 		float y1 = lasty;
 
 		// normalize y into pixel space
-		if(label->m_yscalar >= 0) {
+		if(label->m_yscalar >= 0 && ymax != ymin) {
 			y2 = ((float)DY2 * (y2 - ymin)) / (ymax-ymin);
 		}
 		
-		//log("label is %s point is %f %f- %f %f", label->m_label,  (float)y2, (float)ymin, (float)ymax, (float)yscalar);
 		// set lasts for next iteration of this loop
 		lastx = x2;
 		lasty = y2;
@@ -1206,6 +1216,13 @@ bool Statsdb::processList ( ) {
 		// done if wrapped
 		if ( m_startKey.n0 == 0LL && m_startKey.n1 == 0 )
 			m_done = true;
+	}
+
+	// HACK: the user can request all of the events, it can
+	// become quite large. so limit to 100 mb right now.
+	if( m_sb3.length() > 100000000) {
+		log("statsdb: truncating statsdb results.");
+		m_done = true;
 	}
 
 
