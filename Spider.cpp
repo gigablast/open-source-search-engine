@@ -2832,6 +2832,8 @@ static void gotSpiderdbListWrapper2( void *state , RdbList *list,Msg5 *msg5) {
 	// m_deleteMyself flag will have been set.
 	if ( tryToDeleteSpiderColl ( THIS ,"2") ) return;
 
+	THIS->m_gettingList2 = false;
+
 	THIS->populateWaitingTreeFromSpiderdb ( true );
 }
 
@@ -3071,6 +3073,12 @@ void SpiderColl::populateWaitingTreeFromSpiderdb ( bool reentry ) {
 		m_nextKey2.setMin();
 		// no longer need rebuild
 		m_waitingTreeNeedsRebuild = false;
+		// and re-send the crawlinfo in handerequestc1 to each host
+		// so they no if we have urls ready to spider or not. because
+		// if we told them no before we completed this rebuild we might
+		// have found some urls.
+		// MDW: let's not do this unless we find it is a problem
+		//m_cr->localCrawlInfoUpdate();
 	}
 
 	// free list to save memory
@@ -7461,6 +7469,11 @@ bool SpiderLoop::gotDoledbList2 ( ) {
 	if ( cr->m_spiderStatus == SP_INITIALIZING ) {
 		// this is the GLOBAL crawl info, not the LOCAL, which
 		// is what "ci" represents...
+		// MDW: is this causing the bug?
+		// the other have already reported that there are no urls
+		// to spider, so they do not re-report. we already
+		// had 'hasurlsreadytospider' set to true so we didn't get
+		// the reviving log msg.
 		cr->m_globalCrawlInfo.m_hasUrlsReadyToSpider = true;
 		// set this right i guess...?
 		ci->m_lastSpiderAttempt = nowGlobal;
@@ -13477,6 +13490,7 @@ void gotCrawlInfoReply ( void *state , UdpSlot *slot ) {
 			cr->m_crawlInfoBuf.reserve(need);
 			// in case one was udp server timed out or something
 			cr->m_crawlInfoBuf.zeroOut();
+			cr->m_crawlInfoBuf.setLabel("cibuf");
 		}
 
 		CrawlInfo *cia = (CrawlInfo *)cr->m_crawlInfoBuf.getBufStart();
@@ -13674,6 +13688,10 @@ void gotCrawlInfoReply ( void *state , UdpSlot *slot ) {
 
 		// if spidering disabled in master controls then send no
 		// notifications
+		// crap, but then we can not update the round start time
+		// because that is done in doneSendingNotification().
+		// but why does it say all 32 report done, but then
+		// it has urls ready to spider?
 		if ( ! g_conf.m_spideringEnabled )
 			continue;
 
@@ -14483,6 +14501,9 @@ void SpiderLoop::buildActiveList ( ) {
 			// 	m_recalcTimeValid = true;
 			// }
 		}
+
+		// MDW: let's not do this either unless it proves to be a prob
+		//if ( sc->m_needsRebuild ) active = true;
 
 		// we are at the tail of the linked list OR not in the list
 		cr->m_nextActive = NULL;
