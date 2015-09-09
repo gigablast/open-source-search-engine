@@ -1219,7 +1219,7 @@ SpiderColl::SpiderColl () {
 	m_gettingList1 = false;
 	m_gettingList2 = false;
 	m_lastScanTime = 0;
-	m_isPopulating = false;
+	m_isPopulatingDoledb = false;
 	m_numAdded = 0;
 	m_numBytesScanned = 0;
 	m_lastPrintCount = 0;
@@ -1270,7 +1270,7 @@ bool SpiderColl::load ( ) {
 
 	// reset this once
 	//m_msg1Avail    = true;
-	m_isPopulating = false;
+	m_isPopulatingDoledb = false;
 
 	// keep it kinda low if we got a ton of collections
 	int32_t maxMem = 15000;
@@ -1820,7 +1820,7 @@ void SpiderColl::reset ( ) {
 	m_twinDied = false;
 	m_lastUrlFiltersUpdate = 0;
 
-	m_isPopulating = false;
+	m_isPopulatingDoledb = false;
 
 	char *coll = "unknown";
 	if ( m_coll[0] ) coll = m_coll;
@@ -2967,6 +2967,9 @@ void SpiderColl::populateWaitingTreeFromSpiderdb ( bool reentry ) {
 		SpiderRequest *sreq = (SpiderRequest *)rec;
 		// get first ip
 		int32_t firstIp = sreq->m_firstIp;
+		// corruption?
+		// if ( firstIp == 0 || firstIp == -1 )
+		// 	gotCorruption = true;
 		// if same as last, skip it
 		if ( firstIp == lastOne ) continue;
 		// set this lastOne for speed
@@ -3016,7 +3019,7 @@ void SpiderColl::populateWaitingTreeFromSpiderdb ( bool reentry ) {
 	}
 
 	// are we the final list in the scan?
-	bool int16_tRead = ( list->getListSize() <= 0);// (int32_t)SR_READ_SIZE ) ;
+	bool shortRead = ( list->getListSize() <= 0);//(int32_t)SR_READ_SIZE) ;
 
 	m_numBytesScanned += list->getListSize();
 
@@ -3038,21 +3041,40 @@ void SpiderColl::populateWaitingTreeFromSpiderdb ( bool reentry ) {
 	g_errno = 0;
 
 	// if not done, keep going
-	if ( ! int16_tRead ) {
+	if ( ! shortRead ) {
 		// . inc it here
 		// . it can also be reset on a collection rec update
-		key128_t endKey  = *(key128_t *)list->getLastKey();
-		m_nextKey2       = endKey;
-		m_nextKey2      += (uint32_t) 1;
+		key128_t lastKey  = *(key128_t *)list->getLastKey();
+
+		if ( lastKey < m_nextKey2 ) {
+			log("spider: got corruption 9. spiderdb "
+			    "keys out of order for "
+			    "collnum=%"INT32, (int32_t)m_collnum);
+			g_corruptCount++;
+			// this should result in an empty list read for
+			// our next scan of spiderdb. unfortunately we could
+			// miss a lot of spider requests then
+			m_nextKey2  = m_endKey2;
+		}
+		else {
+			m_nextKey2  = lastKey;
+			m_nextKey2 += (uint32_t) 1;
+		}
+
 		// watch out for wrap around
-		if ( m_nextKey2 < endKey ) int16_tRead = true;
+		if ( m_nextKey2 < lastKey ) shortRead = true;
 		// nah, advance the firstip, should be a lot faster when
 		// we are only a few firstips...
-		if ( lastOne && lastOne != -1 )
-			m_nextKey2 = g_spiderdb.makeFirstKey(lastOne+1);
+		if ( lastOne && lastOne != -1 ) { // && ! gotCorruption ) {
+			key128_t cand = g_spiderdb.makeFirstKey(lastOne+1);
+			// corruption still seems to happen, so only
+			// do this part if it increases the key to avoid
+			// putting us into an infinite loop.
+			if ( cand > m_nextKey2 ) m_nextKey2 = cand;
+		}
 	}
 
-	if ( int16_tRead ) {
+	if ( shortRead ) {
 		// mark when the scan completed so we can do another one
 		// like 24 hrs from that...
 		m_lastScanTime = getTimeLocal();
@@ -3121,9 +3143,13 @@ void SpiderColl::populateWaitingTreeFromSpiderdb ( bool reentry ) {
 void SpiderColl::populateDoledbFromWaitingTree ( ) { // bool reentry ) {
 	// only one loop can run at a time!
 	//if ( ! reentry && m_isPopulating ) return;
-	if ( m_isPopulating ) return;
+	if ( m_isPopulatingDoledb ) return;
 	// skip if in repair mode
 	if ( g_repairMode ) return;
+	// if rebuilding the waiting tree, do that first
+	// MDW. re-allow us to populate doledb while waiting tree is being
+	// build so spiders can go right away. i had this in there to debug.
+	//if ( m_waitingTreeNeedsRebuild ) return;
 
 	// let's skip if spiders off so we can inject/popoulate the index quick
 	// since addSpiderRequest() calls addToWaitingTree() which then calls
@@ -3144,27 +3170,34 @@ void SpiderColl::populateDoledbFromWaitingTree ( ) { // bool reentry ) {
 	// 	    m_waitingTree.m_numUsedNodes);
 
 	// set this flag so we are not re-entered
-	m_isPopulating = true;
+	m_isPopulatingDoledb = true;
  loop:
 
 	// if waiting tree is being saved, we can't write to it
 	// so in that case, bail and wait to be called another time
 	RdbTree *wt = &m_waitingTree;
 	if( wt->m_isSaving || ! wt->m_isWritable ) {
-		m_isPopulating = false;
+		m_isPopulatingDoledb = false;
 		return;
 	}
 
 	// . get next IP that is due to be spidered from
 	// . also sets m_waitingTreeKey so we can delete it easily!
 	int32_t ip = getNextIpFromWaitingTree();
+	
 	// . return if none. all done. unset populating flag.
 	// . it returns 0 if the next firstip has a spidertime in the future
-	if ( ip == 0 ) { m_isPopulating = false; return; }
+	if ( ip == 0 ) { m_isPopulatingDoledb = false; return; }
 
 	// set read range for scanning spiderdb
 	m_nextKey = g_spiderdb.makeFirstKey(ip);
 	m_endKey  = g_spiderdb.makeLastKey (ip);
+
+	if ( g_conf.m_logDebugSpider )
+		log("spider: for cn=%i nextip=%s nextkey=%s",
+		    (int)m_collnum,
+		    iptoa(ip),
+		    KEYSTR(&m_nextKey,sizeof(key128_t)));
 
 	//////
 	//
@@ -3287,7 +3320,7 @@ void SpiderColl::populateDoledbFromWaitingTree ( ) { // bool reentry ) {
 				  false, // useprotection?
 				  false, // allowdups?
 				  -1 ) ) { // rdbid
-		m_isPopulating = false;
+		m_isPopulatingDoledb = false;
 		log("spider: winntree set: %s",mstrerror(g_errno));
 		return;
 	}
@@ -3301,7 +3334,7 @@ void SpiderColl::populateDoledbFromWaitingTree ( ) { // bool reentry ) {
 				   false , // allow dups?
 				   MAX_NICENESS ,
 				   "wtdedup" ) ) {
-		m_isPopulating = false;
+		m_isPopulatingDoledb = false;
 		log("spider: wintable set: %s",mstrerror(g_errno));
 		return;
 	}
@@ -3329,7 +3362,7 @@ void SpiderColl::populateDoledbFromWaitingTree ( ) { // bool reentry ) {
 	// oom error? i've seen this happen and we end up locking up!
 	if ( g_errno ) { 
 		log("spider: evalIpLoop: %s",mstrerror(g_errno));
-		m_isPopulating = false; 
+		m_isPopulatingDoledb = false; 
 		return; 
 	}
 	// try more
@@ -3485,8 +3518,8 @@ static void gotSpiderdbListWrapper ( void *state , RdbList *list , Msg5 *msg5){
 	// return if that blocked
 	if ( ! THIS->evalIpLoop() ) return;
 	// we are done, re-entry popuatedoledb
-	THIS->m_isPopulating = false;
-	// gotta set m_isPopulating to false lest it won't work
+	THIS->m_isPopulatingDoledb = false;
+	// gotta set m_isPopulatingDoledb to false lest it won't work
 	THIS->populateDoledbFromWaitingTree ( );
 }
 
@@ -3632,16 +3665,32 @@ bool SpiderColl::evalIpLoop ( ) {
 	if ( ! m_list.isEmpty() ) {
 		// update m_nextKey for successive reads of spiderdb by
 		// calling readListFromSpiderdb()
-		key128_t endKey  = *(key128_t *)m_list.getLastKey();
+		key128_t lastKey  = *(key128_t *)m_list.getLastKey();
 		// sanity
 		//if ( endKey != finalKey ) { char *xx=NULL;*xx=0; }
-		m_nextKey        = endKey;
-		m_nextKey       += (uint32_t) 1;
+		// crazy corruption?
+		if ( lastKey < m_nextKey ) {
+			log("spider: got corruption. spiderdb "
+			    "keys out of order for "
+			    "collnum=%"INT32" for evaluation of "
+			    "firstip=%s so terminating evaluation of that "
+			    "firstip." ,
+			    (int32_t)m_collnum,
+			    iptoa(m_scanningIp));
+			g_corruptCount++;
+			// this should result in an empty list read for
+			// m_scanningIp in spiderdb
+			m_nextKey  = m_endKey;
+		}
+		else {
+			m_nextKey  = lastKey;
+			m_nextKey += (uint32_t) 1;
+		}
 		// . watch out for wrap around
 		// . normally i would go by this to indicate that we are
 		//   done reading, but there's some bugs... so we go
 		//   by whether our list is empty or not for now
-		if ( m_nextKey < endKey ) m_nextKey = endKey;
+		if ( m_nextKey < lastKey ) m_nextKey = lastKey;
 		// reset list to save mem
 		m_list.reset();
 		// read more! return if it blocked
@@ -6034,20 +6083,46 @@ void doneSleepingWrapperSL ( int fd , void *state ) {
 	// count these calls
 	s_count++;
 
- top:
+	int32_t now = getTimeLocal();
+
 
 	// reset SpiderColl::m_didRound and m_nextDoledbKey if it is maxed
 	// because we might have had a lock collision
 	//int32_t nc = g_collectiondb.m_numRecs;
-	// start again at head
-	class CollectionRec *crp = g_spiderLoop.getActiveList();
+
+ redo:
+
+	// point to head of active linked list of collection recs
+	CollectionRec *nextActive = g_spiderLoop.getActiveList(); 
+	collnum_t nextActiveCollnum ;
+	if ( nextActive ) nextActiveCollnum = nextActive->m_collnum;
 
 	//for ( int32_t i = 0 ; i < nc ; i++ ) {
-	for ( ; crp ; crp = crp->m_nextActive ) {
+	for ( ; nextActive ;  ) {
 		// breathe
 		QUICKPOLL(MAX_NICENESS);
+		// before we assign crp to nextActive, ensure that it did
+		// not get deleted on us.
+		// if the next collrec got deleted, tr will be NULL
+		CollectionRec *tr = g_collectiondb.getRec( nextActiveCollnum );
+		// if it got deleted or restarted then it will not
+		// match most likely
+		if ( tr != nextActive ) {
+			// this shouldn't happen much so log it
+			log("spider: collnum %"INT32" got deleted. "
+			    "rebuilding active list",
+			    (int32_t)nextActiveCollnum);
+			// rebuild the active list now
+			goto redo;
+		}
+		// now we become him
+		CollectionRec *crp = nextActive;
+		// update these two vars for next iteration
+		nextActive        = crp->m_nextActive;
+		nextActiveCollnum = -1;
+		if ( nextActive ) nextActiveCollnum = nextActive->m_collnum;
 		// if list was modified a collection was deleted/added
-		if ( g_spiderLoop.m_activeListModified ) goto top;
+		//if ( g_spiderLoop.m_activeListModified ) goto top;
 		// // get collectionrec
 		// CollectionRec *cr = g_collectiondb.getRec(i);
 		// if ( ! cr ) continue;
@@ -6060,28 +6135,30 @@ void doneSleepingWrapperSL ( int fd , void *state ) {
 		if ( ! sc ) continue;
 		// also scan spiderdb to populate waiting tree now but
 		// only one read per 100ms!!
-		if ( (s_count % 10) == 0 ) {
-			// always do a scan at startup & every 24 hrs
-			// AND at process startup!!!
-			if ( ! sc->m_waitingTreeNeedsRebuild &&
-			     getTimeLocal() - sc->m_lastScanTime > 24*3600) {
-				// if a scan is ongoing, this will re-set it
-				sc->m_nextKey2.setMin();
-				sc->m_waitingTreeNeedsRebuild = true;
-				log(LOG_INFO,
-				    "spider: hit spider queue "
-				    "rebuild timeout for %s (%"INT32")",
-				    crp->m_coll,(int32_t)crp->m_collnum);
-				// flush the ufn table
-				//clearUfnTable();
-			}
-			// try this then. it just returns if
-			// sc->m_waitingTreeNeedsRebuild is false so it
-			// should be fast in those cases
-			sc->populateWaitingTreeFromSpiderdb ( false );
+		// MDW: try taking this out
+		//if ( (s_count % 10) == 0 ) {
+		// always do a scan at startup & every 24 hrs
+		// AND at process startup!!!
+		if ( ! sc->m_waitingTreeNeedsRebuild &&
+		     now - sc->m_lastScanTime > 24*3600) {
+			// if a scan is ongoing, this will re-set it
+			sc->m_nextKey2.setMin();
+			sc->m_waitingTreeNeedsRebuild = true;
+			log(LOG_INFO,
+			    "spider: hit spider queue "
+			    "rebuild timeout for %s (%"INT32")",
+			    crp->m_coll,(int32_t)crp->m_collnum);
+			// flush the ufn table
+			//clearUfnTable();
 		}
+		// try this then. it just returns if
+		// sc->m_waitingTreeNeedsRebuild is false so it
+		// should be fast in those cases
+		sc->populateWaitingTreeFromSpiderdb ( false );
+		//}
 		// if list was modified a collection was deleted/added
-		if ( g_spiderLoop.m_activeListModified ) goto top;
+		//if ( g_spiderLoop.m_activeListModified ) goto top;
+
 		// re-entry is false because we are entering for the first time
 		sc->populateDoledbFromWaitingTree ( );
 		// . skip if still loading doledb lists from disk this round
@@ -6100,7 +6177,7 @@ void doneSleepingWrapperSL ( int fd , void *state ) {
 		//sc->m_encounteredDoledbRecs = false;
 		//sc->m_nextDoledbKey.setMin();
 		// if list was modified a collection was deleted/added
-		if ( g_spiderLoop.m_activeListModified ) goto top;
+		//if ( g_spiderLoop.m_activeListModified ) goto top;
 	}
 
 	// set initial priority to the highest to start spidering there
