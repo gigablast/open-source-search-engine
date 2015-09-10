@@ -1847,6 +1847,8 @@ void CollectionRec::reset() {
 	m_hasucr = false;
 	m_hasupr = false;
 
+	m_sendingAlertInProgress = false;
+
 	// make sure we do not leave spiders "hanging" waiting for their
 	// callback to be called... and it never gets called
 	//if ( m_callbackQueue.length() > 0 ) { char *xx=NULL;*xx=0; }

@@ -1132,6 +1132,8 @@ bool RdbBase::incorporateMerge ( ) {
 		if ( ! m_files[i]->unlink ( doneWrapper , this ) ) {
 			m_numThreads++; g_numThreads++; }
 		// debug msg
+		// MDW this cores if file is bad... if collection
+		// got delete from under us i guess!!
 		else log(LOG_INFO,"merge: Unlinked %s (#%"INT32").",
 			 m_files[i]->getFilename(),i);
 		// debug msg

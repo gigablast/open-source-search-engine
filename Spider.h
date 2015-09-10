@@ -1136,7 +1136,7 @@ class SpiderColl {
 	bool m_isLoading;
 
 	// for scanning the wait tree...
-	bool m_isPopulating;
+	bool m_isPopulatingDoledb;
 	// for reading from spiderdb
 	//bool m_isReadDone;
 	bool m_didRead;
