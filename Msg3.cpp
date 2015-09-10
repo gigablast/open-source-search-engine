@@ -154,6 +154,10 @@ bool Msg3::readList  ( char           rdbId         ,
 		       bool           justGetEndKey ,
 		       bool           allowPageCache ,
 		       bool           hitDisk        ) {
+
+	// set this to true to validate
+	m_validateCache = false;//true;
+
 	// clear, this MUST be done so if we return true g_errno is correct
 	g_errno = 0;
 	// assume lists are not checked for corruption
@@ -679,17 +683,20 @@ bool Msg3::readList  ( char           rdbId         ,
 		////////
 		BigFile *ff = base->getFile(m_fileNums[i]);
 		RdbCache *rpc = getDiskPageCache ( m_rdbId );
-		// vfd is unique 64 bit file id
-		key192_t ck = makeCacheKey (ff->getVfd(), offset, bytesToRead);
+		// . vfd is unique 64 bit file id
+		// . if file is opened vfd is -1, only set in call to open()
+		int64_t vfd = ff->getVfd();
+		key192_t ck = makeCacheKey ( vfd , offset, bytesToRead);
 		char *rec; int32_t recSize;
 		bool inCache = false;
-		if ( rpc ) inCache = rpc->getRecord ( (collnum_t)0 , // collnum
-						      (char *)&ck , 
-						      &rec , 
-						      &recSize ,
-						      true , // copy?
-						      -1 , // maxAge, none 
-						      true ); // inccounts?
+		if ( rpc && vfd != -1 && ! m_validateCache ) 
+			inCache = rpc->getRecord ( (collnum_t)0 , // collnum
+						   (char *)&ck , 
+						   &rec , 
+						   &recSize ,
+						   true , // copy?
+						   -1 , // maxAge, none 
+						   true ); // inccounts?
 		m_scans[i].m_inPageCache = false;
 		if ( inCache ) {
 			m_scans[i].m_inPageCache = true;
@@ -1045,6 +1052,34 @@ bool Msg3::doneScanning ( ) {
 		char *filename = "lostfilename";
 		if ( ff ) filename = ff->getFilename();
 
+		// compute cache info
+		RdbCache *rpc = getDiskPageCache ( m_rdbId );
+		int64_t vfd = ff->getVfd();
+		key192_t ck ;
+		ck = makeCacheKey ( vfd ,
+				    m_scans[i].m_offset ,
+				    m_scans[i].m_bytesToRead );
+
+
+		if ( m_validateCache && ff && rpc && vfd != -1 ) {
+			bool inCache;
+			char *rec; int32_t recSize;
+			inCache = rpc->getRecord ( (collnum_t)0 , // collnum
+						   (char *)&ck , 
+						   &rec , 
+						   &recSize ,
+						   true , // copy?
+						   -1 , // maxAge, none 
+						   true ); // inccounts?
+			if ( inCache && 
+			     ( m_lists[i].m_listSize != recSize ||
+			       memcmp ( m_lists[i].m_list , rec , recSize ))) {
+				log("msg3: cache did not validate");
+				char *xx=NULL;*xx=0;
+			}
+		}
+
+
 		///////
 		//
 		// STORE IN PAGE CACHE
@@ -1053,19 +1088,12 @@ bool Msg3::doneScanning ( ) {
 		// store what we read in the cache. don't bother storing
 		// if it was a retry, just in case something strange happened.
 		// store pre-constrain call is more efficient.
-		if ( m_retryNum <= 0 && ff && ! m_scans[i].m_inPageCache ) {
-			RdbCache *rpc = getDiskPageCache ( m_rdbId );
-			if ( rpc ) {
-				key192_t ck ;
-				ck = makeCacheKey ( ff->getVfd() ,
-						    m_scans[i].m_offset ,
-						    m_scans[i].m_bytesToRead );
-				rpc->addRecord ( (collnum_t)0 , // collnum
-						 (char *)&ck , 
-						 m_lists[i].getList() ,
-						 m_lists[i].getListSize() );
-			}
-		}
+		if ( m_retryNum<=0 && ff && rpc && vfd != -1 &&
+		     ! m_scans[i].m_inPageCache )
+			rpc->addRecord ( (collnum_t)0 , // collnum
+					 (char *)&ck , 
+					 m_lists[i].getList() ,
+					 m_lists[i].getListSize() );
 
 		// if from our 'page' cache, no need to constrain
 		if ( ! m_lists[i].constrain ( m_startKey       ,

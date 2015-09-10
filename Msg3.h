@@ -116,6 +116,8 @@ class Msg3 {
 	//char *m_coll;
 	collnum_t m_collnum;
 
+	bool m_validateCache;
+
 	// the scan classes, 1 per file, used to read from that file
 	RdbScan *m_scans ; // [ MAX_RDB_FILES ];
 
