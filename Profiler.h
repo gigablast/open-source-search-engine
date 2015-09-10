@@ -263,6 +263,8 @@ protected:
 	HashTableX m_activeFns;
 	HashTableX m_quickpolls;
 
+	int32_t m_totalFrames;
+
 	const char* m_lastQpoll;
 	int32_t m_lastQpollLine;
 	QuickPollInfo m_quickPollInfos[512];
