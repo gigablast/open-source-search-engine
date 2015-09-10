@@ -92,7 +92,7 @@ bool Indexdb::init ( ) {
 	//   enough nodes!!
 	int32_t maxCacheNodes = g_conf.m_indexdbMaxCacheMem / 600;
 
-	int32_t pageSize = GB_INDEXDB_PAGE_SIZE;
+	//int32_t pageSize = GB_INDEXDB_PAGE_SIZE;
 	// we now use a disk page cache as opposed to the
 	// old rec cache. i am trying to do away with the Rdb::m_cache rec
 	// cache in favor of cleverly used disk page caches, because

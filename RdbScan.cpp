@@ -309,7 +309,7 @@ void RdbScan::gotList ( ) {
 		//pc->verifyData ( m_file );
 	}
 	*/
- skip:
+	// skip:
 //#endif
 	// assume we did not shift it
 	m_shifted = 0;//false;

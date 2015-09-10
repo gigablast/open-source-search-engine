@@ -274,7 +274,7 @@ bool Clusterdb::init ( ) {
 	// RdbCache has a 4 byte ptr to each rec in the cache
 	//int32_t maxCacheNodes = maxCacheMem / ( 4 + CLUSTER_REC_SIZE );
 	//int32_t nodeSize      = sizeof(key_t) + sizeof(collnum_t);
-	int32_t pageSize      = GB_TFNDB_PAGE_SIZE;
+	//int32_t pageSize      = GB_TFNDB_PAGE_SIZE;
 	//int32_t nodeSize      = (pageSize + 12) + sizeof(collnum_t) + 20;
 	//int32_t maxCacheNodes = maxCacheMem / nodeSize ;
 	// init the page cache

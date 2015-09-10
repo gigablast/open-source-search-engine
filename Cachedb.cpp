@@ -26,7 +26,7 @@ bool Cachedb::init ( ) {
 	// . >1000 bytes of data per rec
 	int32_t maxTreeNodes = maxTreeMem /(sizeof(key96_t)+16+1000);
 	// disk page cache mem, 100MB on gk0 now
-	int32_t pcmem = 0; // g_conf.m_cachedbMaxDiskPageCacheMem;
+	//int32_t pcmem = 0; // g_conf.m_cachedbMaxDiskPageCacheMem;
 	// keep this low if we are the tmp cluster
 	//if ( g_hostdb.m_useTmpCluster ) pcmem = 0;
 	// TODO: would be nice to just do page caching on the satellite files;

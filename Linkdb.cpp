@@ -101,7 +101,7 @@ bool Linkdb::init ( ) {
 	*/
 
 	// we use the same disk page size as indexdb (for rdbmap.cpp)
-	int32_t pageSize = GB_INDEXDB_PAGE_SIZE;
+	//int32_t pageSize = GB_INDEXDB_PAGE_SIZE;
 	// set this for debugging
 	//int64_t maxTreeMem = 1000000;
 	int64_t maxTreeMem = 40000000; // 40MB
