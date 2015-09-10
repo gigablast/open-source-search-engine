@@ -2319,6 +2319,17 @@ bool CollectionRec::rebuildUrlFilters2 ( ) {
 		m_spiderFreqs [n] = .00347; // 5 mins
 	n++;
 
+	// a non temporary error, like a 404? retry once per 3 months i guess
+	m_regExs[n].set("errorcount>=1");
+	m_harvestLinks       [n] = 1;
+	m_spiderFreqs        [n] = 90; // 90 day retry
+	m_maxSpidersPerRule  [n] = 1; // max spiders
+	m_spiderIpMaxSpiders [n] = 1; // max spiders per ip
+	m_spiderIpWaits      [n] = 1000; // same ip wait
+	m_spiderPriorities   [n] = 2;
+	m_forceDelete        [n] = 1;
+	n++;
+
 	m_regExs[n].set("isaddurl");
 	m_harvestLinks       [n] = 1;
 	m_spiderFreqs        [n] = 7; // 30 days default
