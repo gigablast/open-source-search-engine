@@ -2189,7 +2189,7 @@ void *getElecMem ( int32_t size ) {
 	// parser
 	char *p = realMem;
 	// align p DOWN to nearest 8k boundary
-	int32_t remainder = (uint32_t)realMem % MEMPAGESIZE;
+	int32_t remainder = (uint64_t)realMem % MEMPAGESIZE;
 	// complement
 	remainder = MEMPAGESIZE - remainder;
 	// and add to ptr to be aligned on 8k boundary
@@ -2211,7 +2211,7 @@ void *getElecMem ( int32_t size ) {
 	p += size;
 	// now when we free this it should all be protected, so make sure
 	// we have enough room on top
-	int32_t leftover = MEMPAGESIZE  - ((uint32_t)p % MEMPAGESIZE);
+	int32_t leftover = MEMPAGESIZE  - ((uint64_t)p % MEMPAGESIZE);
 	// skip that
 	p += leftover;
 	// inefficient?

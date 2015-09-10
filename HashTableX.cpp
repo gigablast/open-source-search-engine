@@ -455,6 +455,11 @@ bool HashTableX::load ( char *dir, char *filename, char **tbuf, int32_t *tsize )
 	if ( ! f.read ( &ds         , 4 , off ) ) return false;
 	off += 4;
 
+	if ( numSlots < 0 || numSlotsUsed < 0 ) {
+		log("htable: bogus saved hashtable file %s%s.",dir,filename);
+		return false;
+	}
+
 	// bogus key size?
 	if ( ks <= 0 ) {
 		// is very common for this file so skip it
