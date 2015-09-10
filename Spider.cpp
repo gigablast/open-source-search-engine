@@ -11447,6 +11447,10 @@ int32_t getUrlFilterNum2 ( SpiderRequest *sreq       ,
 			if ( errCode != EDNSTIMEDOUT &&
 			     errCode != ETCPTIMEDOUT &&
 			     errCode != EDNSDEAD &&
+			     // add this here too now because we had some
+			     // seeds that failed one time and the crawl
+			     // never repeated after that!
+			     errCode != EBADIP &&
 			     // assume diffbot is temporarily experiencing errs
 			     errCode != EDIFFBOTINTERNALERROR &&
 			     // if diffbot received empty content when d'lding
