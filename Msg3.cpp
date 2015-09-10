@@ -1077,6 +1077,7 @@ bool Msg3::doneScanning ( ) {
 				log("msg3: cache did not validate");
 				char *xx=NULL;*xx=0;
 			}
+			mfree ( rec , recSize , "vca" );
 		}
 
 
