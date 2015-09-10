@@ -145,11 +145,11 @@ bool Posdb::init ( ) {
 	//pcmem = 0;
 	// . init the page cache
 	// . MDW: "minimize disk seeks" not working otherwise i'd enable it!
-	if ( ! m_pc.init ( "posdb",
-			   RDB_POSDB,
-			   pcmem    ,
-			   pageSize ))
-		return log("db: Posdb init failed.");
+	// if ( ! m_pc.init ( "posdb",
+	// 		   RDB_POSDB,
+	// 		   pcmem    ,
+	// 		   pageSize ))
+	// 	return log("db: Posdb init failed.");
 
 	// . set our own internal rdb
 	// . max disk space for bin tree is same as maxTreeMem so that we
@@ -174,7 +174,7 @@ bool Posdb::init ( ) {
 			   // newer systems have tons of ram to use
 			   // for their disk page cache. it is slower than
 			   // ours but the new engine has much slower things
-			   &m_pc                       ,
+			   NULL,//&m_pc                       ,
 			   false , // istitledb?
 			   false , // preloaddiskpagecache?
 			   sizeof(key144_t)

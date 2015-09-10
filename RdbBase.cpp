@@ -128,7 +128,7 @@ bool RdbBase::init ( char  *dir            ,
 		     RdbBuckets          *buckets ,
 		     RdbDump       *dump    ,
 		     class Rdb     *rdb    ,
-		     DiskPageCache *pc      ,
+		     void *pc , // DiskPageCache *pc      ,
 		     bool           isTitledb            ,
 		     bool           preloadDiskPageCache ,
 		     bool           biasDiskPageCache    ) {
@@ -266,7 +266,7 @@ bool RdbBase::init ( char  *dir            ,
 	m_useHalfKeys      = useHalfKeys;
 	m_ks               = keySize;
 	m_pageSize         = pageSize;
-	m_pc               = pc;
+	//m_pc               = pc;
 	m_isTitledb        = isTitledb;
 	// wa haven't done a dump yet
 	//m_lastWrite        = gettimeofdayInMilliseconds();
@@ -900,11 +900,11 @@ int32_t RdbBase::addFile ( int32_t id , bool isNew , int32_t mergeNum ,
 	// open this big data file for reading only
 	if ( ! isNew ) {
 		if ( mergeNum < 0 ) 
-			f->open ( O_RDONLY | O_NONBLOCK | O_ASYNC , m_pc );
+			f->open ( O_RDONLY | O_NONBLOCK | O_ASYNC , NULL );
 		// otherwise, merge will have to be resumed so this file
 		// should be writable
 		else
-			f->open ( O_RDWR | O_NONBLOCK | O_ASYNC , m_pc );
+			f->open ( O_RDWR | O_NONBLOCK | O_ASYNC , NULL );//pc
 	}
  skip:
 	// find the position to add so we maintain order by fileId
@@ -2277,7 +2277,7 @@ void RdbBase::gotTokenForMerge ( ) {
 			  m_mergeStartFileNum   ,
 			  m_numFilesToMerge     ,
 			  m_niceness            ,
-			  m_pc                  ,
+			  NULL,//m_pc                  ,
 			  mint /*maxTargetFileSize*/ ,
 			  m_ks                  ) ) 
 		// we started the merge so return true here
@@ -2545,7 +2545,7 @@ void RdbBase::saveMaps ( bool useThread ) {
 }
 
 void RdbBase::verifyDiskPageCache ( ) {
-	if ( !m_pc ) return;
+	//if ( !m_pc ) return;
 	// disable for now
 	return;
 	// for ( int32_t i = 0; i < m_numFiles; i++ ){

@@ -120,6 +120,7 @@ class RdbCache {
 	// . returns true if found, false if not found in cache
 	// . sets *rec and *recSize iff found
 	// . sets *cachedTime to time the rec was cached
+	// . use maxAge of -1 to have no limit to the age of cached rec
 	bool getRecord ( collnum_t collnum   ,
 			 //key_t    cacheKey   ,
 			 char    *cacheKey   ,

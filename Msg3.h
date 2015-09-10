@@ -3,8 +3,10 @@
 // . gets an RdbList from disk
 // . reads from N specified files and stores results in N RdbLists
 
-#ifndef _MSG3_H_
-#define _MSG3_H_
+#ifndef MSG3_H
+#define MSG3_H
+
+class RdbCache *getDiskPageCache ( char rdbId ) ;
 
 // . max # of rdb files an rdb can have w/o merging
 // . merge your files to keep the number of them low to cut down # of seeks

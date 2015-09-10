@@ -1783,9 +1783,9 @@ bool XmlDoc::set2 ( char    *titleRec ,
 
 	// new stuff
 	m_siteNumInlinksValid         = true;
-	m_siteNumInlinksUniqueIpValid = true;
-	m_siteNumInlinksUniqueCBlockValid = true;
-	m_siteNumInlinksTotalValid        = true;
+	// m_siteNumInlinksUniqueIpValid = true;
+	// m_siteNumInlinksUniqueCBlockValid = true;
+	// m_siteNumInlinksTotalValid        = true;
 	//m_sitePopValid                = true;
 	m_rootLangIdValid             = true;
 	m_hasContactInfoValid         = true;
@@ -5215,9 +5215,9 @@ SafeBuf *XmlDoc::getTitleRecBuf ( ) {
 	*/
 
 	if ( ! m_siteNumInlinksValid         ) { char *xx=NULL;*xx=0; }
-	if ( ! m_siteNumInlinksUniqueIpValid     ) { char *xx=NULL;*xx=0; }
-	if ( ! m_siteNumInlinksUniqueCBlockValid ) { char *xx=NULL;*xx=0; }
-	if ( ! m_siteNumInlinksTotalValid )        { char *xx=NULL;*xx=0; }
+	// if ( ! m_siteNumInlinksUniqueIpValid     ) { char *xx=NULL;*xx=0; }
+	// if ( ! m_siteNumInlinksUniqueCBlockValid ) { char *xx=NULL;*xx=0; }
+	// if ( ! m_siteNumInlinksTotalValid )        { char *xx=NULL;*xx=0; }
 	//if ( ! m_sitePopValid                ) { char *xx=NULL;*xx=0; }
 	if ( ! m_rootLangIdValid             ) { char *xx=NULL;*xx=0; }
 
@@ -13819,12 +13819,12 @@ int32_t *XmlDoc::getSiteNumInlinks ( ) {
 			min = g_tagdb.getMinSiteInlinks ( wwwHash32 );
 		}
 		// fix core by setting these
-		m_siteNumInlinksUniqueIp          = 0;
-		m_siteNumInlinksUniqueCBlock      = 0;
-		m_siteNumInlinksTotal             = 0;
-		m_siteNumInlinksUniqueIpValid     = true;
-		m_siteNumInlinksUniqueCBlockValid = true;
-		m_siteNumInlinksTotalValid        = true;
+		// m_siteNumInlinksUniqueIp          = 0;
+		// m_siteNumInlinksUniqueCBlock      = 0;
+		// m_siteNumInlinksTotal             = 0;
+		// m_siteNumInlinksUniqueIpValid     = true;
+		// m_siteNumInlinksUniqueCBlockValid = true;
+		// m_siteNumInlinksTotalValid        = true;
 		//a nd this
 		m_siteNumInlinksValid = true;
 		m_siteNumInlinks      = 0;
@@ -13851,13 +13851,13 @@ int32_t *XmlDoc::getSiteNumInlinks ( ) {
 	// no site inlinks
 	if ( *ip == 0 ) {
 		m_siteNumInlinks             = 0;
-		m_siteNumInlinksUniqueIp     = 0;
-		m_siteNumInlinksUniqueCBlock = 0;
-		m_siteNumInlinksTotal        = 0;
+		// m_siteNumInlinksUniqueIp     = 0;
+		// m_siteNumInlinksUniqueCBlock = 0;
+		// m_siteNumInlinksTotal        = 0;
 		m_siteNumInlinksValid             = true;
-		m_siteNumInlinksUniqueIpValid     = true;
-		m_siteNumInlinksUniqueCBlockValid = true;
-		m_siteNumInlinksTotalValid        = true;
+		// m_siteNumInlinksUniqueIpValid     = true;
+		// m_siteNumInlinksUniqueCBlockValid = true;
+		// m_siteNumInlinksTotalValid        = true;
 		return &m_siteNumInlinks;
 	}
 
@@ -13944,13 +13944,13 @@ int32_t *XmlDoc::getSiteNumInlinks ( ) {
 		if ( age > maxAge ) valid = false;
 	}
 	// our companion tags, sitePop and fresh inlinks
-	Tag *tag2 = gr->getTag ( "sitenuminlinksuniqueip" );
-	Tag *tag3 = gr->getTag ( "sitenuminlinksuniquecblock");
-	Tag *tag4 = gr->getTag ( "sitenuminlinkstotal");
+	// Tag *tag2 = gr->getTag ( "sitenuminlinksuniqueip" );
+	// Tag *tag3 = gr->getTag ( "sitenuminlinksuniquecblock");
+	// Tag *tag4 = gr->getTag ( "sitenuminlinkstotal");
 	// if we are missing either of those, invalidate as well
-	if ( ! tag2 ) valid = false;
-	if ( ! tag3 ) valid = false;
-	if ( ! tag4 ) valid = false;
+	// if ( ! tag2 ) valid = false;
+	// if ( ! tag3 ) valid = false;
+	// if ( ! tag4 ) valid = false;
 	// if we have already been through this
 	if ( m_updatingSiteLinkInfoTags ) valid = false;
 	// if rebuilding linkdb assume we have no links to sample from!
@@ -13963,14 +13963,14 @@ int32_t *XmlDoc::getSiteNumInlinks ( ) {
 		    "age=%"INT32" ns=%"INT32" sni=%"INT32" "
 		    "maxage=%"INT32" "
 		    "tag=%"PTRFMT" "
-		    "tag2=%"PTRFMT" "
-		    "tag3=%"PTRFMT" "
+		    // "tag2=%"PTRFMT" "
+		    // "tag3=%"PTRFMT" "
 		    "url=%s",
 		    (int32_t)valid,age,ns,sni,
 		    maxAge,
 		    (PTRTYPE)tag,
-		    (PTRTYPE)tag2,
-		    (PTRTYPE)tag3,
+		    // (PTRTYPE)tag2,
+		    // (PTRTYPE)tag3,
 		    m_firstUrl.m_url);
 
 	LinkInfo *sinfo = NULL;
@@ -13983,18 +13983,18 @@ int32_t *XmlDoc::getSiteNumInlinks ( ) {
 		m_siteNumInlinksValid = true;
 
 		// companion tags
-		if ( tag2 ) {
-			m_siteNumInlinksUniqueIp = atol(tag2->getTagData());
-			m_siteNumInlinksUniqueIpValid = true;
-		}
-		if ( tag3 ) {
-			m_siteNumInlinksUniqueCBlock =atol(tag3->getTagData());
-			m_siteNumInlinksUniqueCBlockValid = true;
-		}
-		if ( tag4 ) {
-			m_siteNumInlinksTotal =atol(tag4->getTagData());
-			m_siteNumInlinksTotalValid = true;
-		}
+		// if ( tag2 ) {
+		// 	m_siteNumInlinksUniqueIp = atol(tag2->getTagData());
+		// 	m_siteNumInlinksUniqueIpValid = true;
+		// }
+		// if ( tag3 ) {
+		// 	m_siteNumInlinksUniqueCBlock =atol(tag3->getTagData());
+		// 	m_siteNumInlinksUniqueCBlockValid = true;
+		// }
+		// if ( tag4 ) {
+		// 	m_siteNumInlinksTotal =atol(tag4->getTagData());
+		// 	m_siteNumInlinksTotalValid = true;
+		// }
 
 		// . consult our sitelinks.txt file
 		// . returns -1 if not found
@@ -14053,14 +14053,14 @@ int32_t *XmlDoc::getSiteNumInlinks ( ) {
 	m_siteNumInlinks      = (int32_t)sinfo->m_numGoodInlinks;
 	//m_siteNumInlinksFresh = sinfo->m_numInlinksFresh;
 	//m_sitePop             = sinfo->m_pagePop;
-	m_siteNumInlinksUniqueIp     = sinfo->m_numUniqueIps;
-	m_siteNumInlinksUniqueCBlock = sinfo->m_numUniqueCBlocks;
-	m_siteNumInlinksTotal        = sinfo->m_totalInlinkingDocIds;
+	// m_siteNumInlinksUniqueIp     = sinfo->m_numUniqueIps;
+	// m_siteNumInlinksUniqueCBlock = sinfo->m_numUniqueCBlocks;
+	// m_siteNumInlinksTotal        = sinfo->m_totalInlinkingDocIds;
 
 	m_siteNumInlinksValid      = true;
-	m_siteNumInlinksUniqueIpValid = true;
-	m_siteNumInlinksUniqueCBlockValid = true;
-	m_siteNumInlinksTotalValid = true;
+	// m_siteNumInlinksUniqueIpValid = true;
+	// m_siteNumInlinksUniqueCBlockValid = true;
+	// m_siteNumInlinksTotalValid = true;
 
 
  updateToMin:
@@ -25932,18 +25932,18 @@ void XmlDoc::copyFromOldDoc ( XmlDoc *od ) {
 		m_ip                  = od->m_ip;
 		m_ipValid             = true;
 		m_siteNumInlinks            = od->m_siteNumInlinks;
-		m_siteNumInlinksUniqueIp    = od->m_siteNumInlinksUniqueIp;
-		m_siteNumInlinksUniqueCBlock= od->m_siteNumInlinksUniqueCBlock;
-		m_siteNumInlinksTotal       = od->m_siteNumInlinksTotal;
+		// m_siteNumInlinksUniqueIp    = od->m_siteNumInlinksUniqueIp;
+		// m_siteNumInlinksUniqueCBlock= od->m_siteNumInlinksUniqueCBlo
+		// m_siteNumInlinksTotal       = od->m_siteNumInlinksTotal;
 
 		m_siteNumInlinksValid = 
 			od->m_siteNumInlinksValid;
-		m_siteNumInlinksUniqueIpValid = 
-			od->m_siteNumInlinksUniqueIpValid;
-		m_siteNumInlinksUniqueCBlockValid = 
-			od->m_siteNumInlinksUniqueCBlockValid;
-		m_siteNumInlinksTotal =
-			od->m_siteNumInlinksTotalValid;
+		// m_siteNumInlinksUniqueIpValid = 
+		// 	od->m_siteNumInlinksUniqueIpValid;
+		// m_siteNumInlinksUniqueCBlockValid = 
+		// 	od->m_siteNumInlinksUniqueCBlockValid;
+		// m_siteNumInlinksTotal =
+		// 	od->m_siteNumInlinksTotalValid;
 	}
 
 	m_indexCode      = 0;//od->m_indexCode;
@@ -32242,8 +32242,13 @@ Msg20Reply *XmlDoc::getMsg20Reply ( ) {
 	}
 		
 
-	TagRec *gr = getTagRec();
-	if ( ! gr || gr == (void *)-1 ) return (Msg20Reply *)gr;
+	// if we are showing sites that have been banned in tagdb, we dont
+	// have to do a tagdb lookup. that should speed things up.
+	TagRec *gr = NULL;
+	if ( cr && cr->m_doTagdbLookups ) {
+		gr = getTagRec();
+		if ( ! gr || gr == (void *)-1 ) return (Msg20Reply *)gr;
+	}
 
 	//reply-> ptr_tagRec = (char *)gr;
 	//reply->size_tagRec = gr->getSize();
@@ -32323,7 +32328,8 @@ Msg20Reply *XmlDoc::getMsg20Reply ( ) {
 		if ( cr->m_forceDelete[ufn] ) pr = -3;
 
 		// this is an automatic ban!
-		if ( gr->getLong("manualban",0))pr=-3;//SPIDER_PRIORITY_BANNED;
+		if ( gr && gr->getLong("manualban",0))
+			pr=-3;//SPIDER_PRIORITY_BANNED;
 
 		// is it banned
 		if ( pr == -3 ) { // SPIDER_PRIORITY_BANNED ) { // -2
@@ -32758,9 +32764,9 @@ Msg20Reply *XmlDoc::getMsg20Reply ( ) {
 	//if ( tag1 ) sni  = atol(tag1->m_data);
 	//if ( tag2 ) spop = atol(tag2->m_data);
 	reply->m_siteNumInlinks       = m_siteNumInlinks;
-	reply->m_siteNumInlinksTotal  = m_siteNumInlinksTotal;
-	reply->m_siteNumUniqueIps     = m_siteNumInlinksUniqueIp;
-	reply->m_siteNumUniqueCBlocks = m_siteNumInlinksUniqueCBlock;
+	//reply->m_siteNumInlinksTotal  = m_siteNumInlinksTotal;
+	//reply->m_siteNumUniqueIps     = m_siteNumInlinksUniqueIp;
+	//reply->m_siteNumUniqueCBlocks = m_siteNumInlinksUniqueCBlock;
 	//reply->m_sitePop        = m_sitePop;
 
 	// . get stuff from link info
@@ -38209,25 +38215,25 @@ bool XmlDoc::printGeneralInfo ( SafeBuf *sb , HttpRequest *hr ) {
 			"<tr><td><b>good inlinks to site</b>"
 			"</td><td>%"INT32"</td></tr>\n"
 
-			"<tr><td>unique IP inlinks to site"
-			"</td><td>%"INT32"</td></tr>\n"
+			// "<tr><td>unique IP inlinks to site"
+			// "</td><td>%"INT32"</td></tr>\n"
 
-			"<tr><td>unique CBlock inlinks to site"
-			"</td><td>%"INT32"</td></tr>\n"
+			// "<tr><td>unique CBlock inlinks to site"
+			// "</td><td>%"INT32"</td></tr>\n"
 
 			"<tr><td><b>site rank</b></td><td>%"INT32"</td></tr>\n"
 
 			"<tr><td>good inlinks to page"
 			"</td><td>%"INT32"</td></tr>\n"
 
-			"<tr><td>unique IP inlinks to page"
-			"</td><td>%"INT32"</td></tr>\n"
+			// "<tr><td>unique IP inlinks to page"
+			// "</td><td>%"INT32"</td></tr>\n"
 
-			"<tr><td>unique CBlock inlinks to page"
-			"</td><td>%"INT32"</td></tr>\n"
+			// "<tr><td>unique CBlock inlinks to page"
+			// "</td><td>%"INT32"</td></tr>\n"
 
-			"<tr><td>total inlinks to page"
-			"</td><td>%"INT32"</td></tr>\n"
+			// "<tr><td>total inlinks to page"
+			// "</td><td>%"INT32"</td></tr>\n"
 
 			"<tr><td><nobr>page inlinks last computed</nobr></td>"
 			"<td>%s</td></tr>\n"
@@ -38247,14 +38253,14 @@ bool XmlDoc::printGeneralInfo ( SafeBuf *sb , HttpRequest *hr ) {
 			strLanguage,
 			g_countryCode.getName(m_countryId) ,
 			sni,
-			m_siteNumInlinksUniqueIp,
-			m_siteNumInlinksUniqueCBlock,
+			//m_siteNumInlinksUniqueIp,
+			//m_siteNumInlinksUniqueCBlock,
 			::getSiteRank(sni),
 			//info1->getNumTotalInlinks(),
 			info1->getNumGoodInlinks(),
-			info1->m_numUniqueIps,
-			info1->m_numUniqueCBlocks,
-			info1->m_totalInlinkingDocIds,
+			// info1->m_numUniqueIps,
+			// info1->m_numUniqueCBlocks,
+			// info1->m_totalInlinkingDocIds,
 
 			tmp3
 			);
@@ -38266,26 +38272,26 @@ bool XmlDoc::printGeneralInfo ( SafeBuf *sb , HttpRequest *hr ) {
 			"\t<siteRank>%"INT32"</siteRank>\n"
 
 			"\t<numGoodSiteInlinks>%"INT32"</numGoodSiteInlinks>\n"
-			"\t<numTotalSiteInlinks>%"INT32"</numTotalSiteInlinks>\n"
-			"\t<numUniqueIpsLinkingToSite>%"INT32""
-			"</numUniqueIpsLinkingToSite>\n"
-			"\t<numUniqueCBlocksLinkingToSite>%"INT32""
-			"</numUniqueCBlocksLinkingToSite>\n"
+			//"\t<numTotalSiteInlinks>%"INT32"</numTotalSiteInlinks>\n"
+			// "\t<numUniqueIpsLinkingToSite>%"INT32""
+			// "</numUniqueIpsLinkingToSite>\n"
+			// "\t<numUniqueCBlocksLinkingToSite>%"INT32""
+			// "</numUniqueCBlocksLinkingToSite>\n"
 
 
 
 
 			// how many inlinks, external and internal, we have
 			// to this page not filtered in any way!!!
-			"\t<numTotalPageInlinks>%"INT32"</numTotalPageInlinks>\n"
+			//"\t<numTotalPageInlinks>%"INT32"</numTotalPageInlinks>\n"
 			// how many inlinking ips we got, including our own if
 			// we link to ourself
-			"\t<numUniqueIpsLinkingToPage>%"INT32""
-			"</numUniqueIpsLinkingToPage>\n"
+			// "\t<numUniqueIpsLinkingToPage>%"INT32""
+			// "</numUniqueIpsLinkingToPage>\n"
 			// how many inlinking cblocks we got, including our own
 			// if we link to ourself
-			"\t<numUniqueCBlocksLinkingToPage>%"INT32""
-			"</numUniqueCBlocksLinkingToPage>\n"
+			// "\t<numUniqueCBlocksLinkingToPage>%"INT32""
+			// "</numUniqueCBlocksLinkingToPage>\n"
 
 
 			"\t<numGoodPageInlinks>%"INT32"</numGoodPageInlinks>\n"
@@ -38297,13 +38303,13 @@ bool XmlDoc::printGeneralInfo ( SafeBuf *sb , HttpRequest *hr ) {
 			,(int32_t)m_isLinkSpam
 			,::getSiteRank(sni)
 			,sni
-			,m_siteNumInlinksTotal
-			,m_siteNumInlinksUniqueIp
-			,m_siteNumInlinksUniqueCBlock
+			// ,m_siteNumInlinksTotal
+			// ,m_siteNumInlinksUniqueIp
+			// ,m_siteNumInlinksUniqueCBlock
 
-			,info1->m_totalInlinkingDocIds
-			,info1->m_numUniqueIps
-			,info1->m_numUniqueCBlocks
+			//,info1->m_totalInlinkingDocIds
+			//,info1->m_numUniqueIps
+			//,info1->m_numUniqueCBlocks
 			
 			,info1->getNumGoodInlinks()
 			//,tmp3
@@ -39935,7 +39941,7 @@ SafeBuf *XmlDoc::getNewTagBuf ( ) {
 			return NULL;
 	}
 
-	int32_t old2, old3, old4;
+	//int32_t old2, old3, old4;
 
 	// if running for diffbot crawlbot then isCustomCrawl is true
 	// so do not update the siteinlink info already in tagdb since i 
@@ -39948,31 +39954,31 @@ SafeBuf *XmlDoc::getNewTagBuf ( ) {
 	//if ( strcmp(cr->m_coll,"GLOBAL-INDEX") == 0 ) ) goto skipSiteInlinks;
 
 	// sitenuminlinksfresh
-	old2 = gr->getLong("sitenuminlinksuniqueip",-1,NULL,&timestamp);
-	if ( old2 == -1 || old2 != m_siteNumInlinksUniqueIp ||
-	     m_updatingSiteLinkInfoTags )
-		if ( ! tbuf->addTag2(mysite,"sitenuminlinksuniqueip",
-				     now,"xmldoc",
-				    *ip,m_siteNumInlinksUniqueIp,rdbId)) 
-			return NULL;
-	// sitepop
-	old3 = gr->getLong("sitenuminlinksuniquecblock",-1,NULL,
-				&timestamp);
-	if ( old3 == -1 || old3 != m_siteNumInlinksUniqueCBlock || 
-	     m_updatingSiteLinkInfoTags )
-		if ( ! tbuf->addTag2(mysite,"sitenuminlinksuniquecblock",
-				     now,"xmldoc",
-				    *ip,m_siteNumInlinksUniqueCBlock,rdbId)) 
-			return NULL;
-	// total site inlinks
-	old4 = gr->getLong("sitenuminlinkstotal",-1,NULL,
-				&timestamp);
-	if ( old4 == -1 || old4 != m_siteNumInlinksTotal || 
-	     m_updatingSiteLinkInfoTags )
-		if ( ! tbuf->addTag2(mysite,"sitenuminlinkstotal",
-				     now,"xmldoc",
-				    *ip,m_siteNumInlinksTotal,rdbId)) 
-			return NULL;
+	// old2 = gr->getLong("sitenuminlinksuniqueip",-1,NULL,&timestamp);
+	// if ( old2 == -1 || old2 != m_siteNumInlinksUniqueIp ||
+	//      m_updatingSiteLinkInfoTags )
+	// 	if ( ! tbuf->addTag2(mysite,"sitenuminlinksuniqueip",
+	// 			     now,"xmldoc",
+	// 			    *ip,m_siteNumInlinksUniqueIp,rdbId)) 
+	// 		return NULL;
+	// // sitepop
+	// old3 = gr->getLong("sitenuminlinksuniquecblock",-1,NULL,
+	// 			&timestamp);
+	// if ( old3 == -1 || old3 != m_siteNumInlinksUniqueCBlock || 
+	//      m_updatingSiteLinkInfoTags )
+	// 	if ( ! tbuf->addTag2(mysite,"sitenuminlinksuniquecblock",
+	// 			     now,"xmldoc",
+	// 			    *ip,m_siteNumInlinksUniqueCBlock,rdbId)) 
+	// 		return NULL;
+	// // total site inlinks
+	// old4 = gr->getLong("sitenuminlinkstotal",-1,NULL,
+	// 			&timestamp);
+	// if ( old4 == -1 || old4 != m_siteNumInlinksTotal || 
+	//      m_updatingSiteLinkInfoTags )
+	// 	if ( ! tbuf->addTag2(mysite,"sitenuminlinkstotal",
+	// 			     now,"xmldoc",
+	// 			    *ip,m_siteNumInlinksTotal,rdbId)) 
+	// 		return NULL;
 
 	// skipSiteInlinks:
 

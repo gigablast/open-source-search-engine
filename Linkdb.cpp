@@ -110,18 +110,18 @@ bool Linkdb::init ( ) {
 	// . 32 bytes per record when in the tree
 	int32_t maxTreeNodes = maxTreeMem /(sizeof(key224_t)+16);
 	// disk page cache mem, 100MB on gk0 now
-	int32_t pcmem = 0; // g_conf.m_linkdbMaxDiskPageCacheMem;
+	//int32_t pcmem = 0; // g_conf.m_linkdbMaxDiskPageCacheMem;
 	// give it a little
-	pcmem = 10000000; // 10MB
+	//pcmem = 10000000; // 10MB
 	// keep this low if we are the tmp cluster
 	//if ( g_hostdb.m_useTmpCluster ) pcmem = 0;
 	// TODO: would be nice to just do page caching on the satellite files;
 	//       look into "minimizeDiskSeeks" at some point...
-	if ( ! m_pc.init ( "linkdb" ,
-			   RDB_LINKDB,
-			   pcmem    ,
-			   pageSize ))
-		return log("db: Linkdb init failed.");
+	// if ( ! m_pc.init ( "linkdb" ,
+	// 		   RDB_LINKDB,
+	// 		   pcmem    ,
+	// 		   pageSize ))
+	// 	return log("db: Linkdb init failed.");
 	// init the rdb
 	return m_rdb.init ( g_hostdb.m_dir ,
 			    "linkdb" ,
@@ -141,7 +141,7 @@ bool Linkdb::init ( ) {
 			    0        , // cache nodes
 			    false, // true     , // use half keys
 			    false    , // load cache from disk
-			    &m_pc    ,
+			    NULL,//&m_pc    ,
 			    false    , // false
 			    false    , // preload page cache
 			    sizeof(key224_t) ,

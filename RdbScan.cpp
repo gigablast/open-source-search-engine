@@ -253,6 +253,7 @@ void RdbScan::gotList ( ) {
 	// so i effectively disabled it by changing to _GBSANITYCHECK2_
 //#ifdef GBSANITYCHECK2
 	// this first test, tests to make sure the read from cache worked
+	/*
 	DiskPageCache *pc = m_file->getDiskPageCache();
 	if ( pc && 
 	     ! g_errno && 
@@ -307,6 +308,7 @@ void RdbScan::gotList ( ) {
 		// . go through each page in page cache and verify on disk
 		//pc->verifyData ( m_file );
 	}
+	*/
  skip:
 //#endif
 	// assume we did not shift it

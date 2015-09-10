@@ -280,8 +280,10 @@ class XmlDoc {
 	// this is a hash of all adjacent tag pairs for templated identificatn
 	uint32_t  m_tagPairHash32;
 	int32_t      m_siteNumInlinks;
-	int32_t      m_siteNumInlinksUniqueIp; // m_siteNumInlinksFresh
-	int32_t      m_siteNumInlinksUniqueCBlock; // m_sitePop;
+	//int32_t      m_siteNumInlinksUniqueIp; // m_siteNumInlinksFresh
+	//int32_t      m_siteNumInlinksUniqueCBlock; // m_sitePop;
+	int32_t    m_reserved1;
+	int32_t    m_reserved2;
 	uint32_t   m_spideredTime; // time_t
 	// just don't throw away any relevant SpiderRequests and we have
 	// the data that m_minPubDate and m_maxPubDate provided
@@ -297,7 +299,8 @@ class XmlDoc {
 	uint16_t  m_countryId;
 	//uint16_t  m_reserved1;//titleWeight;
 	//uint16_t  m_reserved2;//headerWeight;
-	int32_t      m_siteNumInlinksTotal;
+	//int32_t      m_siteNumInlinksTotal;
+	int32_t      m_reserved3;
 	//uint16_t  m_reserved3;//urlPathWeight;
 	uint8_t   m_metaListCheckSum8; // bring it back!!
 	char      m_reserved3b;
@@ -1432,9 +1435,9 @@ class XmlDoc {
 	//bool m_aboutUsLinkValid;
 	//bool m_contactLinksValid;
 	bool m_siteNumInlinksValid;
-	bool m_siteNumInlinksUniqueIpValid;//FreshValid;
-	bool m_siteNumInlinksUniqueCBlockValid;//sitePopValid
-	bool m_siteNumInlinksTotalValid;
+	//bool m_siteNumInlinksUniqueIpValid;//FreshValid;
+	//bool m_siteNumInlinksUniqueCBlockValid;//sitePopValid
+	//bool m_siteNumInlinksTotalValid;
 	bool m_siteNumInlinks8Valid;
 	bool m_siteLinkInfoValid;
 	bool m_isWWWDupValid;

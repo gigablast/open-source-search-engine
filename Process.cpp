@@ -2088,22 +2088,30 @@ void Process::resetAll ( ) {
 	resetTestIpTable();
 }
 
+#include "Msg3.h"
+
 void Process::resetPageCaches ( ) {
 	log("gb: Resetting page caches.");
-	g_posdb           .getDiskPageCache()->reset();
-	//g_datedb          .getDiskPageCache()->reset();
-	g_linkdb          .getDiskPageCache()->reset();
-	g_titledb         .getDiskPageCache()->reset();
-	g_sectiondb       .getDiskPageCache()->reset();
-	g_tagdb           .getDiskPageCache()->reset();
-	g_spiderdb        .getDiskPageCache()->reset();
-	//g_tfndb           .getDiskPageCache()->reset();
-	//g_checksumdb      .getDiskPageCache()->reset();
-	g_clusterdb       .getDiskPageCache()->reset();
-	g_catdb           .getDiskPageCache()->reset();
-	//g_placedb         .getDiskPageCache()->reset();
-	g_doledb          .getDiskPageCache()->reset();
-	//g_statsdb	  .getDiskPageCache()->reset();
+	for ( int32_t i = 0 ; i < RDB_END ; i++ ) {
+		RdbCache *rpc = getDiskPageCache ( i ); // rdbid = i
+		if ( ! rpc ) continue;
+		rpc->reset();
+	}
+		
+	// g_posdb           .getDiskPageCache()->reset();
+	// //g_datedb          .getDiskPageCache()->reset();
+	// g_linkdb          .getDiskPageCache()->reset();
+	// g_titledb         .getDiskPageCache()->reset();
+	// g_sectiondb       .getDiskPageCache()->reset();
+	// g_tagdb           .getDiskPageCache()->reset();
+	// g_spiderdb        .getDiskPageCache()->reset();
+	// //g_tfndb           .getDiskPageCache()->reset();
+	// //g_checksumdb      .getDiskPageCache()->reset();
+	// g_clusterdb       .getDiskPageCache()->reset();
+	// g_catdb           .getDiskPageCache()->reset();
+	// //g_placedb         .getDiskPageCache()->reset();
+	// g_doledb          .getDiskPageCache()->reset();
+	// //g_statsdb	  .getDiskPageCache()->reset();
 }
 
 // ============================================================================

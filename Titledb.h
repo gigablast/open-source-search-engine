@@ -160,9 +160,9 @@ class Titledb {
 	// holds binary format title entries
 	Rdb m_rdb;
 
-	DiskPageCache *getDiskPageCache ( ) { return &m_pc; };
+	//DiskPageCache *getDiskPageCache ( ) { return &m_pc; };
 
-	DiskPageCache m_pc;
+	//DiskPageCache m_pc;
 };
 
 extern class Titledb g_titledb;

@@ -32,7 +32,7 @@
 
 #include "Conf.h"
 #include "Rdb.h"
-#include "DiskPageCache.h"
+//#include "DiskPageCache.h"
 #include "Titledb.h"
 
 void  handleRequest25 ( UdpSlot *slot , int32_t netnice ) ;
@@ -358,8 +358,8 @@ class Linkdb {
 
 	Rdb           *getRdb()           { return &m_rdb; };
 
-	DiskPageCache *getDiskPageCache () { return &m_pc; };
-	DiskPageCache m_pc;
+	//DiskPageCache *getDiskPageCache () { return &m_pc; };
+	//DiskPageCache m_pc;
 
  private:
 	Rdb           m_rdb;

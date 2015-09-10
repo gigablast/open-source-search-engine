@@ -393,9 +393,9 @@ class Posdb {
 
 	Rdb m_rdb;
 
-	DiskPageCache *getDiskPageCache ( ) { return &m_pc; };
+	//DiskPageCache *getDiskPageCache ( ) { return &m_pc; };
 
-	DiskPageCache m_pc;
+	//DiskPageCache m_pc;
 };
 
 class FacetEntry {

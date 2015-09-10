@@ -5943,15 +5943,15 @@ bool printResult ( State0 *st, int32_t ix , int32_t *numPrintedSoFar ) {
 			       "</numGoodSiteInlinks>\n",
 			       (int32_t)mr->m_siteNumInlinks );
 
-		sb->safePrintf ("\t\t<numTotalSiteInlinks>%"INT32""
-			       "</numTotalSiteInlinks>\n",
-			       (int32_t)mr->m_siteNumInlinksTotal );
-		sb->safePrintf ("\t\t<numUniqueIpsLinkingToSite>%"INT32""
-			       "</numUniqueIpsLinkingToSite>\n",
-			       (int32_t)mr->m_siteNumUniqueIps );
-		sb->safePrintf ("\t\t<numUniqueCBlocksLinkingToSite>%"INT32""
-			       "</numUniqueCBlocksLinkingToSite>\n",
-			       (int32_t)mr->m_siteNumUniqueCBlocks );
+		// sb->safePrintf ("\t\t<numTotalSiteInlinks>%"INT32""
+		// 	       "</numTotalSiteInlinks>\n",
+		// 	       (int32_t)mr->m_siteNumInlinksTotal );
+		// sb->safePrintf ("\t\t<numUniqueIpsLinkingToSite>%"INT32""
+		// 	       "</numUniqueIpsLinkingToSite>\n",
+		// 	       (int32_t)mr->m_siteNumUniqueIps );
+		// sb->safePrintf("\t\t<numUniqueCBlocksLinkingToSite>%"INT32""
+		// 	       "</numUniqueCBlocksLinkingToSite>\n",
+		// 	       (int32_t)mr->m_siteNumUniqueCBlocks );
 
 
 		struct tm *timeStruct3;

@@ -8,7 +8,7 @@
 #include "Xml.h"
 #include "Url.h"
 #include "Loop.h"
-#include "DiskPageCache.h"
+//#include "DiskPageCache.h"
 //#include "CollectionRec.h"
 #include "SafeBuf.h"
 #include "Msg0.h"
@@ -353,7 +353,7 @@ class Tagdb  {
 	char *getRec ( RdbList *list , Url *url , int32_t *recSize ,char* coll, 
 		       int32_t collLen, RdbList *retList) ;
 
-	DiskPageCache *getDiskPageCache() { return &m_pc; };
+	//DiskPageCache *getDiskPageCache() { return &m_pc; };
 
 	//int32_t getGroupId (key_t *key) {return key->n1 & g_hostdb.m_groupMask;}
 
@@ -374,7 +374,7 @@ class Tagdb  {
 	//   and "not-founds" stored remotely (net cache)
 	Rdb   m_rdb;
 
-	DiskPageCache m_pc;
+	//DiskPageCache m_pc;
 
 	bool    loadMinSiteInlinksBuffer ( );
 	bool    loadMinSiteInlinksBuffer2 ( );
@@ -392,7 +392,7 @@ class Turkdb {
 	bool addColl ( char *coll, bool doVerify = true );
 	Rdb *getRdb ( ) { return &m_rdb; };
 	Rdb   m_rdb;
-	DiskPageCache m_pc;	
+	//DiskPageCache m_pc;	
 };
 
 extern class Tagdb  g_tagdb;

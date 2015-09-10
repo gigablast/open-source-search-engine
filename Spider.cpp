@@ -611,13 +611,13 @@ bool Spiderdb::init ( ) {
 	// . used only by SpiderLoop
 	//int32_t maxCacheNodes = 32;
 	// we use the same disk page size as indexdb (for rdbmap.cpp)
-	int32_t pageSize = GB_INDEXDB_PAGE_SIZE;
+	//int32_t pageSize = GB_INDEXDB_PAGE_SIZE;
 	// disk page cache mem, 100MB on gk0 now
-	int32_t pcmem = 20000000;//g_conf.m_spiderdbMaxDiskPageCacheMem;
+	//int32_t pcmem = 20000000;//g_conf.m_spiderdbMaxDiskPageCacheMem;
 	// keep this low if we are the tmp cluster
-	if ( g_hostdb.m_useTmpCluster ) pcmem = 0;
+	//if ( g_hostdb.m_useTmpCluster ) pcmem = 0;
 	// turn off to prevent blocking up cpu
-	pcmem = 0;
+	//pcmem = 0;
 	// key parser checks
 	//int32_t      ip         = 0x1234;
 	char      priority   = 12;
@@ -649,11 +649,11 @@ bool Spiderdb::init ( ) {
 	testWinnerTreeKey();
 
 	// we now use a page cache
-	if ( ! m_pc.init ( "spiderdb", 
-			   RDB_SPIDERDB ,
-			   pcmem     ,
-			   pageSize  ))
-		return log(LOG_INIT,"spiderdb: Init failed.");
+	// if ( ! m_pc.init ( "spiderdb", 
+	// 		   RDB_SPIDERDB ,
+	// 		   pcmem     ,
+	// 		   pageSize  ))
+	// 	return log(LOG_INIT,"spiderdb: Init failed.");
 
 	// initialize our own internal rdb
 	return m_rdb.init ( g_hostdb.m_dir ,
@@ -672,7 +672,7 @@ bool Spiderdb::init ( ) {
 			    0,//maxCacheNodes               ,
 			    false                       , // half keys?
 			    false                       , // save cache?
-			    &m_pc                       ,
+			    NULL,//&m_pc                       ,
 			    false                       ,
 			    false                       ,
 			    sizeof(key128_t)            );
@@ -841,19 +841,19 @@ bool Doledb::init ( ) {
 	int32_t maxTreeMem    = 150000000; // 150MB
 	int32_t maxTreeNodes  = maxTreeMem / 78;
 	// we use the same disk page size as indexdb (for rdbmap.cpp)
-	int32_t pageSize = GB_INDEXDB_PAGE_SIZE;
+	//int32_t pageSize = GB_INDEXDB_PAGE_SIZE;
 	// disk page cache mem, hard code to 5MB
-	int32_t pcmem = 5000000; // g_conf.m_spiderdbMaxDiskPageCacheMem;
+	// int32_t pcmem = 5000000; // g_conf.m_spiderdbMaxDiskPageCacheMem;
 	// keep this low if we are the tmp cluster
-	if ( g_hostdb.m_useTmpCluster ) pcmem = 0;
+	// if ( g_hostdb.m_useTmpCluster ) pcmem = 0;
 	// we no longer dump doledb to disk, Rdb::dumpTree() does not allow it
-	pcmem = 0;
+	// pcmem = 0;
 	// we now use a page cache
-	if ( ! m_pc.init ( "doledb"  , 
-			   RDB_DOLEDB ,
-			   pcmem     ,
-			   pageSize  ))
-		return log(LOG_INIT,"doledb: Init failed.");
+	// if ( ! m_pc.init ( "doledb"  , 
+	// 		   RDB_DOLEDB ,
+	// 		   pcmem     ,
+	// 		   pageSize  ))
+	// 	return log(LOG_INIT,"doledb: Init failed.");
 
 	// initialize our own internal rdb
 	if ( ! m_rdb.init ( g_hostdb.m_dir              ,
@@ -868,7 +868,7 @@ bool Doledb::init ( ) {
 			    0                           , // maxCacheNodes 
 			    false                       , // half keys?
 			    false                       , // save cache?
-			    &m_pc                       ))
+			    NULL))//&m_pc                       ))
 		return false;
 	return true;
 }

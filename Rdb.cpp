@@ -135,7 +135,8 @@ bool Rdb::init ( char          *dir                  ,
 		  int32_t           maxCacheNodes        ,
 		  bool           useHalfKeys          ,
 		  bool           loadCacheFromDisk    ,
-		  DiskPageCache *pc                   ,
+		 //DiskPageCache *pc                   ,
+		 void *pc ,
 		  bool           isTitledb            ,
 		  bool           preloadDiskPageCache ,
 		  char           keySize              ,
@@ -158,7 +159,7 @@ bool Rdb::init ( char          *dir                  ,
 	m_fixedDataSize    = fixedDataSize;
 	m_maxTreeMem       = maxTreeMem;
 	m_useHalfKeys      = useHalfKeys;
-	m_pc               = pc;
+	//m_pc               = pc;
 	m_isTitledb        = isTitledb;
 	m_preloadCache     = preloadDiskPageCache;
 	m_biasDiskPageCache = biasDiskPageCache;
@@ -571,7 +572,7 @@ bool Rdb::addRdbBase2 ( collnum_t collnum ) { // addColl2()
 					buckets         ,
 					&m_dump         ,
 					this            ,
-					m_pc            ,
+					NULL            ,
 					m_isTitledb     ,
 					m_preloadCache  ,
 					m_biasDiskPageCache ) ) {
@@ -1643,7 +1644,7 @@ bool Rdb::dumpCollLoop ( ) {
 			     //0              ,  // prev last key
 			     KEYMIN()       ,  // prev last key
 			     m_ks           ,  // keySize
-			     m_pc           ,  // DiskPageCache ptr
+			     NULL,//m_pc           ,  // DiskPageCache ptr
 			     maxFileSize    ,
 			     this           )) {// for setting m_needsToSave
 		return false;

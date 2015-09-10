@@ -39,6 +39,79 @@ void Msg3::reset() {
 	m_alloc = NULL;
 }
 
+key192_t makeCacheKey ( int64_t vfd ,
+			int64_t offset ,
+			int64_t readSize ) {
+	key192_t k;
+	k.n2 = vfd;
+	k.n1 = readSize;
+	k.n0 = offset;
+	return k;
+}
+
+RdbCache g_rdbCaches[4];
+
+class RdbCache *getDiskPageCache ( char rdbId ) {
+
+	RdbCache *rpc = NULL;
+	int64_t *maxSizePtr = NULL;
+	int64_t maxMem;
+	int64_t maxRecs;
+	char *dbname;
+	if ( rdbId == RDB_POSDB ) {
+		rpc = &g_rdbCaches[0];
+		maxSizePtr = &g_conf.m_posdbFileCacheSize;
+		maxMem = *maxSizePtr;
+		maxRecs = maxMem / 5000;
+		dbname = "posdbcache";
+	}
+	if ( rdbId == RDB_TAGDB ) {
+		rpc = &g_rdbCaches[1];
+		maxSizePtr = &g_conf.m_tagdbFileCacheSize;
+		maxMem = *maxSizePtr;
+		maxRecs = maxMem / 200;
+		dbname = "tagdbcache";
+	}
+	if ( rdbId == RDB_CLUSTERDB ) {
+		rpc = &g_rdbCaches[2];
+		maxSizePtr = &g_conf.m_clusterdbFileCacheSize;
+		maxMem = *maxSizePtr;
+		maxRecs = maxMem / 16;
+		dbname = "clustcache";
+	}
+	if ( rdbId == RDB_TITLEDB ) {
+		rpc = &g_rdbCaches[3];
+		maxSizePtr = &g_conf.m_titledbFileCacheSize;
+		maxMem = *maxSizePtr;
+		maxRecs = maxMem / 3000;
+		dbname = "titdbcache";
+	}
+
+	if ( ! rpc )
+		return NULL;
+
+	if ( maxMem < 0 ) maxMem = 0;
+
+	// did size change? if not, return it
+	if ( rpc->m_maxMem == maxMem )
+		return rpc;
+
+	// re-init or init for the first time here
+	if ( ! rpc->init ( maxMem ,
+			   -1 , // fixedDataSize. -1 since we are lists
+			   false , // support lists?
+			   maxRecs ,
+			   false , // use half keys?
+			   dbname ,
+			   false , // loadfromdisk
+			   sizeof(key192_t), // cache key size
+			   0 , // data key size
+			   -1 ) )  // numptrsmax
+		return NULL;
+
+	return rpc;
+}
+
 // . return false if blocked, true otherwise
 // . set g_errno on error
 // . read list of keys in [startKey,endKey] range
@@ -599,6 +672,41 @@ bool Msg3::readList  ( char           rdbId         ,
 			break;
 		}
 
+		////////
+		//
+		// try to get from PAGE CACHE
+		//
+		////////
+		BigFile *ff = base->getFile(m_fileNums[i]);
+		RdbCache *rpc = getDiskPageCache ( m_rdbId );
+		// vfd is unique 64 bit file id
+		key192_t ck = makeCacheKey (ff->getVfd(), offset, bytesToRead);
+		char *rec; int32_t recSize;
+		bool inCache = false;
+		if ( rpc ) inCache = rpc->getRecord ( (collnum_t)0 , // collnum
+						      (char *)&ck , 
+						      &rec , 
+						      &recSize ,
+						      true , // copy?
+						      -1 , // maxAge, none 
+						      true ); // inccounts?
+		m_scans[i].m_inPageCache = false;
+		if ( inCache ) {
+			m_scans[i].m_inPageCache = true;
+			m_numScansCompleted++;
+			m_lists[i].set ( rec ,
+					 recSize ,
+					 rec , // alloc
+					 recSize , // allocSize
+					 startKey2 ,
+					 endKey2 ,
+					 base->m_fixedDataSize ,
+					 true , // owndata
+					 base->useHalfKeys() ,
+					 getKeySizeFromRdbId ( m_rdbId ) );
+			continue;
+		}
+
 		// . do the scan/read of file #i
 		// . this returns false if blocked, true otherwise
 		// . this will set g_errno on error
@@ -936,6 +1044,30 @@ bool Msg3::doneScanning ( ) {
 		// files we were reading, i've seen 'ff' be NULL
 		char *filename = "lostfilename";
 		if ( ff ) filename = ff->getFilename();
+
+		///////
+		//
+		// STORE IN PAGE CACHE
+		//
+		///////
+		// store what we read in the cache. don't bother storing
+		// if it was a retry, just in case something strange happened.
+		// store pre-constrain call is more efficient.
+		if ( m_retryNum <= 0 && ff && ! m_scans[i].m_inPageCache ) {
+			RdbCache *rpc = getDiskPageCache ( m_rdbId );
+			if ( rpc ) {
+				key192_t ck ;
+				ck = makeCacheKey ( ff->getVfd() ,
+						    m_scans[i].m_offset ,
+						    m_scans[i].m_bytesToRead );
+				rpc->addRecord ( (collnum_t)0 , // collnum
+						 (char *)&ck , 
+						 m_lists[i].getList() ,
+						 m_lists[i].getListSize() );
+			}
+		}
+
+		// if from our 'page' cache, no need to constrain
 		if ( ! m_lists[i].constrain ( m_startKey       ,
 					      m_constrainKey   , // m_endKey
 					      mrs           , // m_minRecSizes
@@ -951,6 +1083,7 @@ bool Msg3::doneScanning ( ) {
 			    mstrerror(g_errno), ff->getDir(),
 			    ff->getFilename(), ff->m_vfd , 
 			    (int32_t)ff->m_numParts );
+			continue;
 		}
 	}
 

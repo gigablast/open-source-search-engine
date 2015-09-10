@@ -626,6 +626,7 @@ class CollectionRec {
 	int32_t m_adWidth; // how wide the ad Column is in pixels
 
 	char  m_dedupResultsByDefault   ;
+	char  m_doTagdbLookups        ;
 	char  m_clusterByTopicDefault    ;
 	char  m_restrictTitledbForQuery ; // move this down here
 	char  m_useOldIps               ;

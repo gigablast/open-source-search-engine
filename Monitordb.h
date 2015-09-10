@@ -15,7 +15,7 @@
 #define MONITORDBKS sizeof(key96_t)
 
 #include "Rdb.h"
-#include "DiskPageCache.h"
+//#include "DiskPageCache.h"
 
 class Monitordb {
  public:
@@ -29,8 +29,8 @@ class Monitordb {
 
 	Rdb           *getRdb()           { return &m_rdb; };
 
-	DiskPageCache *getDiskPageMonitor () { return &m_pc; };
-	DiskPageCache m_pc;
+	//DiskPageCache *getDiskPageMonitor () { return &m_pc; };
+	//DiskPageCache m_pc;
 
  private:
 	Rdb           m_rdb;
