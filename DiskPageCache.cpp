@@ -35,7 +35,7 @@ bool DiskPageCache::init ( const char *dbname ,
 	m_enabled = true;
 
 	// disable for now
-	//return true;
+	return true;
 
 	return m_rc.init( maxMem ,
 			  -1 , // fixedDataSize (-1->variable)
@@ -67,7 +67,7 @@ char *DiskPageCache::getPages ( int64_t vfd ,
 				int64_t readSize ) {
 	if ( ! m_enabled ) return NULL;
 	// disable for now
-	//return NULL;
+	return NULL;
 	// make the key
 	key192_t k = makePCKey ( vfd , offset , readSize );
 	char *rec = NULL;
@@ -95,7 +95,7 @@ bool DiskPageCache::addPages ( int64_t vfd ,
 			       char    niceness ) {
 	if ( ! m_enabled ) return false;
 	// disable for now
-	//return true;
+	return true;
 	// make the key
 	key192_t k = makePCKey ( vfd , offset , readSize );
 	time_t now = getTimeLocal();
