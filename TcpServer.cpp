@@ -1936,7 +1936,7 @@ int32_t TcpServer::writeSocket ( TcpSocket *s ) {
 		// another debug
 		//if ( g_conf.m_logDebugTcp )
 			log("tcp: only wrote %"INT32" of %"INT32" bytes "
-			    "tried.",n,toSend);
+			    "tried. sd=%i",n,toSend,s->m_sd);
 		// need to listen for writability now since our write
 		// failed to write everythin gout
 		if ( ! s->m_writeRegistered &&
@@ -2278,7 +2278,13 @@ void TcpServer::destroySocket ( TcpSocket *s ) {
 
 	if ( g_hostdb.m_hostId == 0 ) {
 		SafeBuf sb;
-		sb.safePrintf("tcp: closing sd=%i sendbuf=",s->m_sd);
+		sb.safePrintf("tcp: closing sd=%i bytessent=%i "
+			      "sendbufsize=%i streaming=%i "
+			      "sendbuf=",
+			      s->m_sd,
+			      s->m_sendOffset,
+			      s->m_sendBufSize,
+			      (int)s->m_streamingMode);
 		if ( s->m_sendBuf )
 			sb.safeTruncateEllipsis(s->m_sendBuf,
 						s->m_sendBufSize,
@@ -2290,6 +2296,10 @@ void TcpServer::destroySocket ( TcpSocket *s ) {
 						200);
 		log("%s",sb.getBufStart());
 	}
+
+	// force it out of streaming mode since we closed it. then we
+	// should avoid the "not timing out streaming socket fd=123" msgs.
+	s->m_streamingMode = false;
 
 	if ( cret != 0 ) { // == -1 ) 
 		log("tcp: s=%"PTRFMT" close(%"INT32") = %"INT32" = %s",
@@ -2770,7 +2780,8 @@ bool TcpServer::sslAccept ( TcpSocket *s ) {
 void TcpServer::makeCallback ( TcpSocket * s ) {
 	if ( ! s->m_callback ) {
 		// note it
-		log("tcp: null callback for s=0x%"PTRFMT"",(PTRTYPE)s);
+		if ( g_conf.m_logDebugTcp )
+			log("tcp: null callback for s=0x%"PTRFMT"",(PTRTYPE)s);
 		return;
 	}
 	// record times for profiler
@@ -2821,7 +2832,8 @@ bool TcpServer::sendChunk ( TcpSocket *s ,
 			    // sendChunk() again.
 			    void (* doneSendingWrapper)( void *,TcpSocket *)){
 
-	log("tcp: sending chunk of %"INT32" bytes", sb->length() );
+	log("tcp: sending chunk of %"INT32" bytes sd=%i", sb->length() ,
+	    s->m_sd );
 
 	// if socket had shit on there already, free that memory
 	// just like TcpServer::destroySocket would
@@ -2862,6 +2874,11 @@ bool TcpServer::sendChunk ( TcpSocket *s ,
 	log("tcp: chunkend=%s",sb->getBuf() - minus);
 	*/
 
+	// char *p = sb->getBufStart();
+	// char *pend = p + sb->length();
+	// for ( ; p < pend ; p++ ) {
+	// 	if ( *p == '\0' ) { char *xx=NULL;*xx=0; }
+	// }
 
 	// . start the send process
 	// . returns false if send did not complete

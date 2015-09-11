@@ -9971,7 +9971,7 @@ bool sendPage ( State11 *st ) {
 	// the the waiting tree
 	int32_t node = sc->m_waitingTree.getFirstNode();
 	int32_t count = 0;
-	uint64_t nowMS = gettimeofdayInMillisecondsGlobal();
+	//uint64_t nowMS = gettimeofdayInMillisecondsGlobal();
 	for ( ; node >= 0 ; node = sc->m_waitingTree.getNextNode(node) ) {
 		// breathe
 		QUICKPOLL(MAX_NICENESS);
