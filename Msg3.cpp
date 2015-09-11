@@ -1054,13 +1054,13 @@ bool Msg3::doneScanning ( ) {
 
 		// compute cache info
 		RdbCache *rpc = getDiskPageCache ( m_rdbId );
-		int64_t vfd = ff->getVfd();
+		int64_t vfd ;
+		if ( ff ) vfd = ff->getVfd();
 		key192_t ck ;
-		ck = makeCacheKey ( vfd ,
-				    m_scans[i].m_offset ,
-				    m_scans[i].m_bytesToRead );
-
-
+		if ( ff )
+			ck = makeCacheKey ( vfd ,
+					    m_scans[i].m_offset ,
+					    m_scans[i].m_bytesToRead );
 		if ( m_validateCache && ff && rpc && vfd != -1 ) {
 			bool inCache;
 			char *rec; int32_t recSize;

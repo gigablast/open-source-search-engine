@@ -600,7 +600,7 @@ bool TcpServer::sendMsg ( int32_t   ip       ,
 	// had not closed it.
 	if ( g_hostdb.m_hostId == 0 ) {
 		SafeBuf sb;
-		sb.safePrintf("tcp: newsd=%i readbuf=",s->m_sd);
+		sb.safePrintf("tcp: open newsd=%i sendbuf=",s->m_sd);
 		sb.safeTruncateEllipsis (sendBuf,sendBufSize,200);
 		log("%s",sb.getBufStart());
 	}
@@ -2275,6 +2275,22 @@ void TcpServer::destroySocket ( TcpSocket *s ) {
 	// if sd is 0 do not really close it. seems to fix that bug.
 	// 0 is the FD for stdin so i don't know how that is happening.
 	if ( sd != 0 ) cret = ::close ( sd );
+
+	if ( g_hostdb.m_hostId == 0 ) {
+		SafeBuf sb;
+		sb.safePrintf("tcp: closing sd=%i sendbuf=",s->m_sd);
+		if ( s->m_sendBuf )
+			sb.safeTruncateEllipsis(s->m_sendBuf,
+						s->m_sendBufSize,
+						200);
+		sb.safePrintf(" readbuf=");
+		if ( s->m_readBuf )
+			sb.safeTruncateEllipsis(s->m_readBuf,
+						s->m_readBufSize,
+						200);
+		log("%s",sb.getBufStart());
+	}
+
 	if ( cret != 0 ) { // == -1 ) 
 		log("tcp: s=%"PTRFMT" close(%"INT32") = %"INT32" = %s",
 		    (PTRTYPE)s,(int32_t)sd,cret,mstrerror(errno));
