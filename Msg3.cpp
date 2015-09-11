@@ -683,6 +683,7 @@ bool Msg3::readList  ( char           rdbId         ,
 		////////
 		BigFile *ff = base->getFile(m_fileNums[i]);
 		RdbCache *rpc = getDiskPageCache ( m_rdbId );
+		if ( ! m_allowPageCache ) rpc = NULL;
 		// . vfd is unique 64 bit file id
 		// . if file is opened vfd is -1, only set in call to open()
 		int64_t vfd = ff->getVfd();
@@ -1057,6 +1058,7 @@ bool Msg3::doneScanning ( ) {
 
 		// compute cache info
 		RdbCache *rpc = getDiskPageCache ( m_rdbId );
+		if ( ! m_allowPageCache ) rpc = NULL;
 		int64_t vfd ;
 		if ( ff ) vfd = ff->getVfd();
 		key192_t ck ;
