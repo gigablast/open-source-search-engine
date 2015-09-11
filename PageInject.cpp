@@ -627,7 +627,6 @@ void sendUdpReply7 ( void *state ) {
 
 void handleRequest7 ( UdpSlot *slot , int32_t netnice ) {
 
-
 	InjectionRequest *ir = (InjectionRequest *)slot->m_readBuf;
 
 	// now just supply the first guy's char ** and size ptr
