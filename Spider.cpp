@@ -9987,10 +9987,12 @@ bool sendPage ( State11 *st ) {
 		spiderTimeMS |= (key->n0 >> 32);
 		char *note = "";
 		// if a day more in the future -- complain
-		if ( spiderTimeMS > nowMS + 1000 * 86400 )
-			note = " (<b><font color=red>This should not be "
-				"this far into the future. Probably a corrupt "
-				"SpiderRequest?</font></b>)";
+		// no! we set the repeat crawl to 3000 days for crawl jobs that
+		// do not repeat...
+		// if ( spiderTimeMS > nowMS + 1000 * 86400 )
+		// 	note = " (<b><font color=red>This should not be "
+		// 		"this far into the future. Probably a corrupt "
+		// 		"SpiderRequest?</font></b>)";
 		// get the rest of the data
 		sb.safePrintf("<tr bgcolor=#%s>"
 			      "<td>%"INT64"%s</td>"
