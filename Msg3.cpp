@@ -1050,11 +1050,15 @@ bool Msg3::doneScanning ( ) {
 		// if we did a merge really quick and delete one of the 
 		// files we were reading, i've seen 'ff' be NULL
 		char *filename = "lostfilename";
-		if ( ff ) filename = ff->getFilename();
+		int64_t vfd = -1;
+
+		if ( ff ) {
+			filename = ff->getFilename();
+			vfd = ff->getVfd();
+		}
 
 		// compute cache info
 		RdbCache *rpc = getDiskPageCache ( m_rdbId );
-		int64_t vfd = ff->getVfd();
 		key192_t ck ;
 		ck = makeCacheKey ( vfd ,
 				    m_scans[i].m_offset ,
