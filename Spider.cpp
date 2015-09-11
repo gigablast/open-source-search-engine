@@ -9501,6 +9501,24 @@ bool sendPage ( State11 *st ) {
 		// inc count
 		j++;
 	}
+	// now print the injections as well!
+	XmlDoc *xd = getInjectHead ( ) ;
+	for ( ; xd ; xd = xd->m_nextInject ) {
+		// how does this happen?
+		if ( ! xd->m_sreqValid ) continue;
+		// grab it
+		SpiderRequest *oldsr = &xd->m_sreq;
+		// get status
+		SafeBuf xb;
+		xb.safePrintf("[<font color=red><b>injecting</b></font>] %s",
+			      xd->m_statusMsg);
+		char *status = xb.getBufStart();
+		// show that
+		if ( ! oldsr->printToTable ( &sb , status,xd,j) ) return false;
+		// inc count
+		j++;
+	}
+
 	// end the table
 	sb.safePrintf ( "</table>\n" );
 	sb.safePrintf ( "<br>\n" );
