@@ -581,11 +581,29 @@ bool sendHttpReply ( void *state ) {
 //
 ////////////
 
+XmlDoc *s_injectHead = NULL;
+XmlDoc *s_injectTail = NULL;
+
+XmlDoc *getInjectHead ( ) { return s_injectHead; }
 
 // send back a reply to the originator of the msg7 injection request
 void sendUdpReply7 ( void *state ) {
 
 	XmlDoc *xd = (XmlDoc *)state;
+
+	// remove from linked list
+	if ( xd->m_nextInject ) 
+		xd->m_nextInject->m_prevInject = xd->m_prevInject;
+	if ( xd->m_prevInject )
+		xd->m_prevInject->m_nextInject = xd->m_nextInject;
+	if ( s_injectHead == xd )
+		s_injectHead = xd->m_nextInject;
+	if ( s_injectTail == xd )
+		s_injectTail = xd->m_prevInject;
+	xd->m_nextInject = NULL;
+	xd->m_prevInject = NULL;
+
+
 	UdpSlot *slot = xd->m_injectionSlot;
 
     uint32_t statColor = 0xccffcc;
@@ -653,6 +671,19 @@ void handleRequest7 ( UdpSlot *slot , int32_t netnice ) {
 
 	xd->m_injectionSlot = slot;
 	xd->m_injectStartTime = gettimeofdayInMilliseconds();
+
+	// add to linked list
+	xd->m_nextInject = NULL;
+	xd->m_prevInject = NULL;
+	if ( s_injectTail ) {
+		s_injectTail->m_nextInject = xd;
+		xd->m_prevInject = s_injectTail;
+		s_injectTail = xd;
+	}
+	else {
+		s_injectHead = xd;
+		s_injectTail = xd;
+	}
 
 	if ( ! xd->injectDoc ( ir->ptr_url , // m_injectUrlBuf.getBufStart() ,
 			       cr ,
