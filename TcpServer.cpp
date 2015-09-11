@@ -2279,11 +2279,11 @@ void TcpServer::destroySocket ( TcpSocket *s ) {
 	if ( g_hostdb.m_hostId == 0 ) {
 		SafeBuf sb;
 		sb.safePrintf("tcp: closing sd=%i bytessent=%i "
-			      "sendbufsize=%i streaming=%i "
+			      "sendbufused=%i streaming=%i "
 			      "sendbuf=",
 			      s->m_sd,
 			      s->m_sendOffset,
-			      s->m_sendBufSize,
+			      s->m_sendBufUsed,
 			      (int)s->m_streamingMode);
 		if ( s->m_sendBuf )
 			sb.safeTruncateEllipsis(s->m_sendBuf,
