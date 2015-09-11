@@ -683,6 +683,7 @@ bool Msg3::readList  ( char           rdbId         ,
 		////////
 		BigFile *ff = base->getFile(m_fileNums[i]);
 		RdbCache *rpc = getDiskPageCache ( m_rdbId );
+		if ( ! m_allowPageCache ) rpc = NULL;
 		// . vfd is unique 64 bit file id
 		// . if file is opened vfd is -1, only set in call to open()
 		int64_t vfd = ff->getVfd();
@@ -701,8 +702,11 @@ bool Msg3::readList  ( char           rdbId         ,
 		if ( inCache ) {
 			m_scans[i].m_inPageCache = true;
 			m_numScansCompleted++;
-			m_lists[i].set ( rec ,
-					 recSize ,
+			// now we have to store this value, 6 or 12 so
+			// we can modify the hint appropriately
+			m_scans[i].m_shifted = *rec;
+			m_lists[i].set ( rec +1,
+					 recSize-1 ,
 					 rec , // alloc
 					 recSize , // allocSize
 					 startKey2 ,
@@ -1050,21 +1054,18 @@ bool Msg3::doneScanning ( ) {
 		// if we did a merge really quick and delete one of the 
 		// files we were reading, i've seen 'ff' be NULL
 		char *filename = "lostfilename";
-		int64_t vfd = -1;
-
-		if ( ff ) {
-			filename = ff->getFilename();
-			vfd = ff->getVfd();
-		}
+		if ( ff ) filename = ff->getFilename();
 
 		// compute cache info
 		RdbCache *rpc = getDiskPageCache ( m_rdbId );
+		if ( ! m_allowPageCache ) rpc = NULL;
+		int64_t vfd ;
+		if ( ff ) vfd = ff->getVfd();
 		key192_t ck ;
-		ck = makeCacheKey ( vfd ,
-				    m_scans[i].m_offset ,
-				    m_scans[i].m_bytesToRead );
-
-
+		if ( ff )
+			ck = makeCacheKey ( vfd ,
+					    m_scans[i].m_offset ,
+					    m_scans[i].m_bytesToRead );
 		if ( m_validateCache && ff && rpc && vfd != -1 ) {
 			bool inCache;
 			char *rec; int32_t recSize;
@@ -1076,8 +1077,10 @@ bool Msg3::doneScanning ( ) {
 						   -1 , // maxAge, none 
 						   true ); // inccounts?
 			if ( inCache && 
-			     ( m_lists[i].m_listSize != recSize ||
-			       memcmp ( m_lists[i].m_list , rec , recSize ))) {
+			     // 1st byte is RdbScan::m_shifted
+			     ( m_lists[i].m_listSize != recSize-1 ||
+			       memcmp ( m_lists[i].m_list , rec+1,recSize-1) ||
+			       *rec != m_scans[i].m_shifted ) ) {
 				log("msg3: cache did not validate");
 				char *xx=NULL;*xx=0;
 			}
@@ -1097,8 +1100,13 @@ bool Msg3::doneScanning ( ) {
 		     ! m_scans[i].m_inPageCache )
 			rpc->addRecord ( (collnum_t)0 , // collnum
 					 (char *)&ck , 
+					 // rec1 is this little thingy
+					 &m_scans[i].m_shifted,
+					 1,
+					 // rec2
 					 m_lists[i].getList() ,
-					 m_lists[i].getListSize() );
+					 m_lists[i].getListSize() ,
+					 0 ); // timestamp. 0 = now
 
 		// if from our 'page' cache, no need to constrain
 		if ( ! m_lists[i].constrain ( m_startKey       ,

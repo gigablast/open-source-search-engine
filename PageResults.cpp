@@ -68,8 +68,12 @@ bool sendReply ( State0 *st , char *reply ) {
 
 	int32_t savedErr = g_errno;
 
-	TcpSocket *s = st->m_socket;
-	if ( ! s ) { char *xx=NULL;*xx=0; }
+	TcpSocket *sock = st->m_socket;
+	if ( ! sock ) { 
+		log("results: not sending back results on an empty socket."
+		    "socket must have closed on us abruptly.");
+		//char *xx=NULL;*xx=0; }
+	}
 	SearchInput *si = &st->m_si;
 	char *ct = "text/html";
 	if ( si && si->m_format == FORMAT_XML ) ct = "text/xml"; 
@@ -143,7 +147,8 @@ bool sendReply ( State0 *st , char *reply ) {
 		//
 		// send back the actual search results
 		//
-		g_httpServer.sendDynamicPage(s,
+		if ( sock )
+		g_httpServer.sendDynamicPage(sock,
 					     reply,
 					     rlen,//gbstrlen(reply),
 					     // don't let the ajax re-gen
@@ -199,9 +204,9 @@ bool sendReply ( State0 *st , char *reply ) {
 	// if we had a broken pipe from the browser while sending
 	// them the search results, then we end up closing the socket fd
 	// in TcpServer::sendChunk() > sendMsg() > destroySocket()
-	if ( s->m_numDestroys ) {
+	if ( sock && sock->m_numDestroys ) {
 		log("results: not sending back error on destroyed socket "
-		    "sd=%"INT32"",s->m_sd);
+		    "sd=%"INT32"",sock->m_sd);
 		return true;
 	}
 
@@ -212,7 +217,8 @@ bool sendReply ( State0 *st , char *reply ) {
 	    savedErr == ENOCOLLREC) 
 		status = 400;
 
-	g_httpServer.sendQueryErrorReply(s,
+	if ( sock )
+	g_httpServer.sendQueryErrorReply(sock,
 					 status,
 					 mstrerror(savedErr),
 					 format,//xml,
@@ -541,6 +547,9 @@ bool sendPageResults ( TcpSocket *s , HttpRequest *hr ) {
 
 	// set this in case SearchInput::set fails!
 	st->m_socket = s;
+
+	// record timestamp so we know if we got our socket closed and swapped
+	st->m_socketStartTimeHack = s->m_startTime;
 
 	// save this count so we know if TcpServer.cpp calls destroySocket(s)
 	st->m_numDestroys = s->m_numDestroys;
@@ -1153,6 +1162,16 @@ bool gotResults ( void *state ) {
 	//int32_t   qlen = msg40->getQueryLen();
 
 	SearchInput *si = &st->m_si;
+
+	// if we lost the socket because we were streaming and it
+	// got closed from a broken pipe or something, then Msg40.cpp
+	// will set st->m_socket to NULL if the fd ends up ending closed
+	// because someone else might be using it and we do not want to
+	// mess with their TcpSocket settings.
+	if ( ! st->m_socket ) {
+		log("results: socket is NULL. sending failed.");
+		return sendReply(st,NULL);
+	}
 
 	// if in streaming mode and we never sent anything and we had
 	// an error, then send that back. we never really entered streaming
