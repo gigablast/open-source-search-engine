@@ -81,7 +81,7 @@ public:
 	int64_t       m_doneTime;
 	// this is used for calling DiskPageCache::addPages() when done 
 	// with the read/write
-	class DiskPageCache *m_pc;
+	//class DiskPageCache *m_pc;
 	// this is just used for accessing the DiskPageCache, m_pc, it is
 	// a "virtual fd" for this whole file
 	int64_t            m_vfd;
@@ -138,7 +138,8 @@ class BigFile {
 	// . if you are opening a new file for writing, you need to provide it
 	//   if you pass in a DiskPageCache ptr
 	bool open  ( int flags , 
-		     class DiskPageCache *pc = NULL ,
+		     //class DiskPageCache *pc = NULL ,
+		     void *pc = NULL ,
 		     int64_t maxFileSize = -1 ,
 		     int permissions    = 
 		     S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH );
@@ -234,7 +235,7 @@ class BigFile {
 
 	//int64_t m_currentOffset;
 
-	DiskPageCache *getDiskPageCache ( ) { return m_pc;  };
+	//DiskPageCache *getDiskPageCache ( ) { return m_pc;  };
 	int32_t       getVfd       ( ) { return m_vfd; };
 
 	// WARNING: some may have been unlinked from call to chopHead()
@@ -347,7 +348,7 @@ class BigFile {
 	// maximum part #
 	int32_t      m_maxParts;
 
-	class DiskPageCache *m_pc;
+	//class DiskPageCache *m_pc;
 	int32_t             m_vfd;
 	//bool             m_vfdAllowed;
 

@@ -1537,7 +1537,9 @@ int32_t UdpServer::readSock_ass ( UdpSlot **slotPtr , int64_t now ) {
 		// . msg13 is clogging thiings up when we synchost a host
 		//   and it comes back up
 		// . allow spider compression proxy to have a bunch
-		if ( msgType == 0x13 && m_numUsedSlots > 500 && ! isProxy )
+		// . MDW: do we need this one anymore? relax it a little.
+		if ( msgType == 0x13 && m_numUsedSlotsIncoming>400 && 
+		     m_numUsedSlots>800 && !isProxy)
 			getSlot = false;
 		// 2c is clogging crap up
 		if ( msgType == 0x2c && m_msg2csInWaiting >= 100 && niceness )

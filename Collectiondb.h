@@ -626,6 +626,7 @@ class CollectionRec {
 	int32_t m_adWidth; // how wide the ad Column is in pixels
 
 	char  m_dedupResultsByDefault   ;
+	char  m_doTagdbLookups        ;
 	char  m_clusterByTopicDefault    ;
 	char  m_restrictTitledbForQuery ; // move this down here
 	char  m_useOldIps               ;
@@ -766,7 +767,7 @@ class CollectionRec {
 
 	// last time we computed global crawl info
 	//time_t m_globalCrawlInfoUpdateTime;
-	EmailInfo m_emailInfo;
+	//EmailInfo m_emailInfo;
 	// for counting replies
 	//int32_t m_replies;
 	//int32_t m_requests;
@@ -973,6 +974,8 @@ class CollectionRec {
 
 	// NARROW SEARCH
 	char  m_doNarrowSearch;
+
+	char m_sendingAlertInProgress;
 
         // Allow Links: searches on the collection
 	//char  m_allowLinksSearch;

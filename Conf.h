@@ -175,7 +175,7 @@ class Conf {
 
 	// tagdb parameters
 	int32_t  m_tagdbMaxTreeMem;
-	int32_t  m_tagdbMaxDiskPageCacheMem;
+	//int32_t  m_tagdbMaxDiskPageCacheMem;
 	//int32_t  m_tagdbMaxCacheMem;
 	//bool  m_tagdbUseSeals;
 	//int32_t  m_tagdbMinFilesToMerge;
@@ -183,7 +183,7 @@ class Conf {
 	
 	// catdb parameters
 	int32_t  m_catdbMaxTreeMem;
-	int32_t  m_catdbMaxDiskPageCacheMem;
+	//int32_t  m_catdbMaxDiskPageCacheMem;
 	int32_t  m_catdbMaxCacheMem;
 	//int32_t  m_catdbMinFilesToMerge;
 
@@ -216,7 +216,7 @@ class Conf {
 	// linkdb for storing linking relations
 	int32_t  m_linkdbMaxTreeMem;
 	//	int32_t  m_linkdbMaxCacheMem;
-	int32_t  m_linkdbMaxDiskPageCacheMem;
+	//int32_t  m_linkdbMaxDiskPageCacheMem;
 	int32_t  m_linkdbMinFilesToMerge;
 	//	bool  m_linkdbSaveCache;
 
@@ -234,7 +234,7 @@ class Conf {
 
 	// for holding urls that have been entered into the spider queue
 	//int32_t  m_tfndbMaxTreeMem   ;
-	int32_t  m_tfndbMaxDiskPageCacheMem ; // for the DiskPageCache class only
+	//int32_t  m_tfndbMaxDiskPageCacheMem ; // for the DiskPageCache class only
 	//int32_t  m_tfndbMinFilesToMerge;
 	//bool  m_tfndbSaveCache;
 	//int64_t  m_tfndbMaxUrls;
@@ -253,21 +253,23 @@ class Conf {
 	//int32_t  m_spiderdbMaxDiskPageCacheMem ;
 	//int32_t  m_spiderdbMinFilesToMerge;
 	int32_t  m_spiderMaxDiskThreads    ;
-	int32_t  m_spiderMaxBigDiskThreads ; // > 1M read
-	int32_t  m_spiderMaxMedDiskThreads ; // 100k - 1M read
-	int32_t  m_spiderMaxSmaDiskThreads ; // < 100k read
-	int32_t  m_queryMaxDiskThreads     ;
-	int32_t  m_queryMaxBigDiskThreads  ; // > 1M read
-	int32_t  m_queryMaxMedDiskThreads  ; // 100k - 1M read
-	int32_t  m_queryMaxSmaDiskThreads  ; // < 100k per read
+	//int32_t  m_spiderMaxBigDiskThreads ; // > 1M read
+	//int32_t  m_spiderMaxMedDiskThreads ; // 100k - 1M read
+	//int32_t  m_spiderMaxSmaDiskThreads ; // < 100k read
+	//int32_t  m_queryMaxDiskThreads     ;
+	//int32_t  m_queryMaxBigDiskThreads  ; // > 1M read
+	//int32_t  m_queryMaxMedDiskThreads  ; // 100k - 1M read
+	//int32_t  m_queryMaxSmaDiskThreads  ; // < 100k per read
 	// categorize the disk read sizes by these here
-	int32_t  m_bigReadSize;
-	int32_t  m_medReadSize;
-	int32_t  m_smaReadSize;
+	//int32_t  m_bigReadSize;
+	//int32_t  m_medReadSize;
+	//int32_t  m_smaReadSize;
+
+	char m_separateDiskReads;
 
 	int32_t m_statsdbMaxTreeMem;
 	int32_t m_statsdbMaxCacheMem;
-	int32_t m_statsdbMaxDiskPageCacheMem;
+	//int32_t m_statsdbMaxDiskPageCacheMem;
 	//int32_t m_statsdbMinFilesToMerge;
 	bool m_useStatsdb;
 	//bool m_statsdbSnapshots;
@@ -331,7 +333,7 @@ class Conf {
 	// indexdb has a max cached age for getting IndexLists (10 mins deflt)
 	int32_t  m_indexdbMaxTreeMem   ;
 	int32_t  m_indexdbMaxCacheMem;
-	int32_t  m_indexdbMaxDiskPageCacheMem; // for DiskPageCache class only
+	//int32_t  m_indexdbMaxDiskPageCacheMem; // for DiskPageCache class only
 	int32_t  m_indexdbMaxIndexListAge;
 	int32_t  m_indexdbTruncationLimit;
 	int32_t  m_indexdbMinFilesToMerge;
@@ -339,7 +341,7 @@ class Conf {
 
 	int32_t  m_datedbMaxTreeMem   ;
 	int32_t  m_datedbMaxCacheMem;
-	int32_t  m_datedbMaxDiskPageCacheMem; // for DiskPageCache class only
+	//int32_t  m_datedbMaxDiskPageCacheMem; // for DiskPageCache class only
 	int32_t  m_datedbMaxIndexListAge;
 	int32_t  m_datedbTruncationLimit;
 	int32_t  m_datedbMinFilesToMerge;
@@ -568,17 +570,10 @@ class Conf {
 	bool   m_useSHM;
 	bool   m_useQuickpoll;
 
-	bool   m_useDiskPageCacheIndexdb;
-	bool   m_useDiskPageCachePosdb;
-	bool   m_useDiskPageCacheDatedb;
-	bool   m_useDiskPageCacheTitledb;
-	bool   m_useDiskPageCacheSpiderdb;
-	bool   m_useDiskPageCacheTfndb;
-	bool   m_useDiskPageCacheTagdb;
-	bool   m_useDiskPageCacheChecksumdb;
-	bool   m_useDiskPageCacheClusterdb;
-	bool   m_useDiskPageCacheCatdb;
-	bool   m_useDiskPageCacheLinkdb;
+	int64_t m_posdbFileCacheSize;
+	int64_t m_tagdbFileCacheSize;
+	int64_t m_clusterdbFileCacheSize;
+	int64_t m_titledbFileCacheSize;
 
 	//bool   m_quickpollCoreOnError;
 	bool   m_useShotgun;

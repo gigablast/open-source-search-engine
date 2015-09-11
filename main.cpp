@@ -6394,7 +6394,7 @@ void dumpTitledb (char *coll,int32_t startFileNum,int32_t numFiles,bool includeT
 	//g_conf.m_spiderdbMaxTreeMem = 1024*1024*30;
 	//g_conf.m_checksumdbMaxDiskPageCacheMem = 0;
 	//g_conf.m_spiderdbMaxDiskPageCacheMem   = 0;
-	g_conf.m_tfndbMaxDiskPageCacheMem = 0;
+	//g_conf.m_tfndbMaxDiskPageCacheMem = 0;
 	g_titledb.init ();
 	//g_collectiondb.init(true);
 	g_titledb.getRdb()->addRdbBase1(coll);
@@ -7028,7 +7028,7 @@ int32_t dumpSpiderdb ( char *coll,
 	//g_conf.m_spiderdbMaxTreeMem = 1024*1024*30;
 	//g_conf.m_checksumdbMaxDiskPageCacheMem = 0;
 	//g_conf.m_spiderdbMaxDiskPageCacheMem   = 0;
-	g_conf.m_tfndbMaxDiskPageCacheMem = 0;
+	//g_conf.m_tfndbMaxDiskPageCacheMem = 0;
 	g_spiderdb.init ();
 	//g_collectiondb.init(true);
 	g_spiderdb.getRdb()->addRdbBase1(coll );
@@ -8637,8 +8637,8 @@ if ( ! tr.set ( rec , listSize , false ) ) { // own data?
 void dumpMissing ( char *coll ) {
 	// load tfndb, assume it is a perfect reflection of titledb
 	//g_conf.m_spiderdbMaxTreeMem = 1024*1024*30;
-	g_conf.m_tfndbMaxDiskPageCacheMem = 0;
-	g_conf.m_indexdbMaxCacheMem = 0;
+	//g_conf.m_tfndbMaxDiskPageCacheMem = 0;
+	//g_conf.m_indexdbMaxCacheMem = 0;
 	//g_conf.m_clusterdbMaxDiskPageCacheMem = 0;
 
 	//g_tfndb.init ();
@@ -8855,7 +8855,7 @@ void dumpMissing ( char *coll ) {
 void dumpDups ( char *coll ) {
 	// load tfndb, assume it is a perfect reflection of titledb
 	//g_conf.m_spiderdbMaxTreeMem = 1024*1024*30;
-	g_conf.m_indexdbMaxCacheMem = 0;
+	//g_conf.m_indexdbMaxCacheMem = 0;
 
 	//g_conf.m_spiderdbMaxTreeMem = 1024*1024*30;
 	g_indexdb.init ();
@@ -9407,10 +9407,10 @@ void removeDocIds  ( char *coll , char *filename ) {
 	//	g_conf.m_checksumdbMinFilesToMerge = 100;
 	if ( g_conf.m_clusterdbMinFilesToMerge < 100 )
 		g_conf.m_clusterdbMinFilesToMerge = 100;
-	g_conf.m_tfndbMaxDiskPageCacheMem = 0;
+	//g_conf.m_tfndbMaxDiskPageCacheMem = 0;
 	//g_conf.m_checksumdbMaxDiskPageCacheMem = 0;
 	//g_conf.m_clusterdbMaxDiskPageCacheMem = 0;
-	g_conf.m_indexdbMaxCacheMem = 0;
+	//g_conf.m_indexdbMaxCacheMem = 0;
 	//g_conf.m_checksumdbMaxCacheMem = 0;
 	//g_conf.m_clusterdbMaxCacheMem = 0;
 
@@ -12272,7 +12272,7 @@ bool parseTest ( char *coll , int64_t docId , char *query ) {
 	//g_mem.m_maxMem  = 2000000000LL; // 2G
 	//g_conf.m_checksumdbMaxDiskPageCacheMem = 0;
 	//g_conf.m_spiderdbMaxDiskPageCacheMem   = 0;
-	g_conf.m_tfndbMaxDiskPageCacheMem = 0;
+	//g_conf.m_tfndbMaxDiskPageCacheMem = 0;
 	//g_conf.m_titledbMaxTreeMem = 1024*1024*10;
 	g_titledb.init ();
 	//g_collectiondb.init(true);

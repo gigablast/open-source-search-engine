@@ -124,9 +124,6 @@ int *__errno_location (void) {
 
 #endif
 
-// this also limit the maximum number of outstanding (live) threads
-#define MAX_STACKS 20
-
 // stack must be page aligned for mprotect
 #define THRPAGESIZE 8192
 
@@ -258,9 +255,9 @@ bool Threads::init ( ) {
 	//int32_t  m_queryMaxMedDiskThreads  ; // 100k - 1M read
 	//int32_t  m_queryMaxSmaDiskThreads  ; // < 100k per read
 	// categorize the disk read sizes by these here
-	g_conf.m_bigReadSize = 0x7fffffff;
-	g_conf.m_medReadSize = 1000000;
-	g_conf.m_smaReadSize = 100000;
+	// g_conf.m_bigReadSize = 0x7fffffff;
+	// g_conf.m_medReadSize = 1000000;
+	// g_conf.m_smaReadSize = 100000;
 
 	// . register a sleep wrapper to launch threads every 30ms
 	// . somtimes a bunch of threads mark themselves as done and the
@@ -508,7 +505,9 @@ bool Threads::call ( char   type                         ,
 	// . try to launch as many threads as we can
 	// . this sets g_errno on error
 	// . if it has an error, just ignore it, our thread is queued
-	m_threadQueues[i].launchThread2 ( NULL );
+ launchLoop:
+	if ( m_threadQueues[i].launchThread2 ( ) ) 
+		goto launchLoop;
 	//if ( ! m_threadQueues[i].launchThread2 ( t ) && g_errno ) {
 	//	log("thread: failed thread launch: %s",mstrerror(g_errno));
 	//	return false;
@@ -557,11 +556,13 @@ static void killStalledFiltersWrapper ( int fd , void *state ) {
 int32_t Threads::launchThreads ( ) {
 	// try launching from each queue
 	int32_t numLaunched = 0;
+	// try to launch DISK threads last so cpu-based threads get precedence
 	for ( int32_t i = m_numQueues - 1 ; i >= 0 ; i-- ) {
 		// clear g_errno
 		g_errno = 0;
 		// launch as many threads as we can from queue #i
-		while ( m_threadQueues[i].launchThread2(NULL) ) numLaunched++;
+		while ( m_threadQueues[i].launchThread2( ) ) 
+			numLaunched++;
 		// continue if no g_errno set
 	        if ( ! g_errno ) continue;
 		// otherwise bitch about it
@@ -813,7 +814,6 @@ bool ThreadQueue::init ( char threadType, int32_t maxThreads, int32_t maxEntries
 	m_waitHead4 = NULL;
 	m_waitHead5 = NULL;
 	m_waitHead6 = NULL;
-	m_waitHead7 = NULL;
 
 	m_waitTail0 = NULL;
 	m_waitTail1 = NULL;
@@ -822,7 +822,6 @@ bool ThreadQueue::init ( char threadType, int32_t maxThreads, int32_t maxEntries
 	m_waitTail4 = NULL;
 	m_waitTail5 = NULL;
 	m_waitTail6 = NULL;
-	m_waitTail7 = NULL;
 
 	m_launchedHead = NULL;
 
@@ -981,9 +980,15 @@ ThreadEntry *ThreadQueue::addEntry ( int32_t   niceness                     ,
 			bestHeadPtr = &m_waitHead0;
 			bestTailPtr = &m_waitTail0;
 		}
-		else {
+		// 'merge' threads from disk merge ops have niceness 1
+		else if ( niceness == 1 ) {
 			bestHeadPtr = &m_waitHead1;
 			bestTailPtr = &m_waitTail1;
+		}
+		// niceness is 2? MAX_NICENESS
+		else {
+			bestHeadPtr = &m_waitHead2;
+			bestTailPtr = &m_waitTail2;
 		}
 		// remove from empty list
 		removeLink ( &m_emptyHead , t );
@@ -1003,7 +1008,7 @@ ThreadEntry *ThreadQueue::addEntry ( int32_t   niceness                     ,
 	//
 
 	// shortcuts
-	int32_t rs   = t->m_bytesToGo;
+	//int32_t rs   = t->m_bytesToGo;
 	char    nice = t->m_niceness;
 
 	// get best thread candidate from best linked list of candidates
@@ -1012,37 +1017,36 @@ ThreadEntry *ThreadQueue::addEntry ( int32_t   niceness                     ,
 
 	// short/med/long high priority (niceness 0) disk reads in head0/1/2
 	// but we can't launch one more if already at our quota.
-	if ( ! bestHeadPtr && nice == 0 && rs <= g_conf.m_smaReadSize ) {
+	if ( ! bestHeadPtr && nice == 0 ) { //&& rs <= g_conf.m_smaReadSize ) {
 		bestHeadPtr = &m_waitHead0; 
 		bestTailPtr = &m_waitTail0;
 	}
-	if ( ! bestHeadPtr && nice == 0 && rs <= g_conf.m_medReadSize ) {
-		bestHeadPtr = &m_waitHead1; 
-		bestTailPtr = &m_waitTail1;
-	}
-	if ( ! bestHeadPtr && nice == 0 ) {
-		bestHeadPtr = &m_waitHead2; 
-		bestTailPtr = &m_waitTail2;
-	}
+	// if ( ! bestHeadPtr && nice == 0 && rs <= g_conf.m_medReadSize ) {
+	// 	bestHeadPtr = &m_waitHead1; 
+	// 	bestTailPtr = &m_waitTail1;
+	// }
+	// if ( ! bestHeadPtr && nice == 0 ) {
+	// 	bestHeadPtr = &m_waitHead2; 
+	// 	bestTailPtr = &m_waitTail2;
+	// }
 	// low priority (merge or dump) disk WRITES go in waithead4
 	if ( ! bestHeadPtr && t->m_doWrite ) {
 		bestHeadPtr = &m_waitHead4;
 		bestTailPtr = &m_waitTail4;
 	}
-	// short/med/long low priority disk reads go in waitHead5/6/7
-	// but we can't launch one more if already at our quota.
-	if ( ! bestHeadPtr && rs <= g_conf.m_smaReadSize ) {
+
+	// niceness 1 read threads here
+	if ( ! bestHeadPtr && nice == 1 ) {
 		bestHeadPtr = &m_waitHead5; 
 		bestTailPtr = &m_waitTail5;
 	}
-	if ( ! bestHeadPtr && rs <= g_conf.m_medReadSize ) {
+
+	// niceness 2 read threads here
+	if ( ! bestHeadPtr ) {
 		bestHeadPtr = &m_waitHead6; 
 		bestTailPtr = &m_waitTail6;
 	}
-	if ( ! bestHeadPtr ) {
-		bestHeadPtr = &m_waitHead7; 
-		bestTailPtr = &m_waitTail7;
-	}
+
 
 	if ( g_conf.m_logDebugThread )
 		log(LOG_DEBUG,"thread: [t=0x%"PTRFMT"] "
@@ -1334,11 +1338,11 @@ bool ThreadQueue::timedCleanUp ( int32_t maxNiceness ) {
 		if ( tq != this ) { char *xx = NULL; *xx = 0; }
 
 		// get read size before cleaning it up -- it could get nuked
-		int32_t rs = 0;
+		//int32_t rs = 0;
 		bool isWrite = false;
 		if ( tq->m_threadType == DISK_THREAD ) { // && t->m_state ) {
 			//FileState *fs = (FileState *)t->m_state;
-			rs = t->m_bytesToGo;
+			//rs = t->m_bytesToGo;
 			isWrite = t->m_doWrite ;
 		}
 
@@ -2032,7 +2036,7 @@ int32_t Threads::getNumActiveHighPriorityThreads() {
 // . sets g_errno on error
 // . don't launch a low priority thread if a high priority thread is running
 // . i.e. don't launch a high niceness thread if a low niceness is running
-bool ThreadQueue::launchThread2 ( ThreadEntry *te ) {
+bool ThreadQueue::launchThread2 ( ) {
 
 	// or if no stacks left, don't even try
 	if ( s_head == -1 ) return false;
@@ -2057,6 +2061,11 @@ bool ThreadQueue::launchThread2 ( ThreadEntry *te ) {
 		if ( ! *bestHeadPtr ) {
 			bestHeadPtr = &m_waitHead1;
 			bestTailPtr = &m_waitTail1;
+		}
+		// then niceness 2
+		if ( ! *bestHeadPtr ) {
+			bestHeadPtr = &m_waitHead2;
+			bestTailPtr = &m_waitTail2;
 		}
 		// if bother empty, that was easy
 		if ( ! *bestHeadPtr ) return false;
@@ -2131,8 +2140,9 @@ bool ThreadQueue::launchThread2 ( ThreadEntry *te ) {
 	ThreadEntry *t = m_launchedHead;
 	bool hasLowNicenessOut = false;
 	int32_t activeCount = 0;
-	int32_t launchedBig0 = 0 , launchedMed0 = 0 , launchedSma0 = 0;
-	int32_t launchedBig1 = 0 , launchedMed1 = 0 , launchedSma1 = 0;
+	int32_t spiderCount = 0;
+	// int32_t launchedBig0 = 0 , launchedMed0 = 0 , launchedSma0 = 0;
+	// int32_t launchedBig1 = 0 , launchedMed1 = 0 , launchedSma1 = 0;
 	for ( ; t ; t = t->m_nextLink ) {
 		// if he's done, skip him. maybe he hasn't been cleaned up yet
 		if ( t->m_isDone ) continue;
@@ -2140,55 +2150,57 @@ bool ThreadQueue::launchThread2 ( ThreadEntry *te ) {
 		activeCount++;
 		// get the highest niceness for all that are launched
 		//if ( niceness > highest ) highest = niceness;
-		int32_t rs = t->m_bytesToGo;
+		//int32_t rs = t->m_bytesToGo;
 		// is the launched thread niceness 0? (i.e. high priority)
 		if ( t->m_niceness == 0 ) {
 			// set a flag
 			hasLowNicenessOut = true;
 			// count read sizes
-			if      ( rs > g_conf.m_medReadSize ) launchedBig0++;
-			else if ( rs > g_conf.m_smaReadSize ) launchedMed0++;
-			else                                  launchedSma0++;
-			continue;
+			// if      (rs > g_conf.m_medReadSize ) launchedBig0++;
+			// else if (rs > g_conf.m_smaReadSize ) launchedMed0++;
+			// else                                 launchedSma0++;
 		}
-		if      ( rs > g_conf.m_medReadSize ) launchedBig1++;
-		else if ( rs > g_conf.m_smaReadSize ) launchedMed1++;
-		else                                  launchedSma1++;
+		else {
+			spiderCount++;
+		}
+		// if      ( rs > g_conf.m_medReadSize ) launchedBig1++;
+		// else if ( rs > g_conf.m_smaReadSize ) launchedMed1++;
+		// else                                  launchedSma1++;
 	}
 
-	int32_t max = g_conf.m_spiderMaxDiskThreads;
-	if ( max <= 0 ) max = 1;
-	if ( activeCount >= max ) 
-		return false;
+	// int32_t max = g_conf.m_spiderMaxDiskThreads;
+	// if ( max <= 0 ) max = 1;
+	// if ( activeCount >= max ) 
+	// 	return false;
 
 	// get best thread candidate from best linked list of candidates
 	ThreadEntry **bestHeadPtr = NULL;
 	ThreadEntry **bestTailPtr = NULL;
 	// short/med/long high priority (niceness 0) disk reads in head0/1/2
 	// but we can't launch one more if already at our quota.
-	if ( ! bestHeadPtr && 
-	     m_waitHead0   &&
-	     launchedSma0 < g_conf.m_queryMaxSmaDiskThreads ) {
+	if ( ! bestHeadPtr &&  m_waitHead0   ) {
+		//launchedSma0 < g_conf.m_queryMaxSmaDiskThreads ) {
 		bestHeadPtr = &m_waitHead0; 
 		bestTailPtr = &m_waitTail0;
 	}
-	if ( ! bestHeadPtr && 
-	     m_waitHead1   &&
-	     launchedMed0 < g_conf.m_queryMaxMedDiskThreads ) {
-		bestHeadPtr = &m_waitHead1; 
-		bestTailPtr = &m_waitTail1;
-	}
-	if ( ! bestHeadPtr && 
-	     m_waitHead2   &&
-	     launchedBig0 < g_conf.m_queryMaxBigDiskThreads ) {
-		bestHeadPtr = &m_waitHead2; 
-		bestTailPtr = &m_waitTail2;
-	}
+	// if ( ! bestHeadPtr && 
+	//      m_waitHead1   &&
+	//      launchedMed0 < g_conf.m_queryMaxMedDiskThreads ) {
+	// 	bestHeadPtr = &m_waitHead1; 
+	// 	bestTailPtr = &m_waitTail1;
+	// }
+	// if ( ! bestHeadPtr && 
+	//      m_waitHead2   &&
+	//      launchedBig0 < g_conf.m_queryMaxBigDiskThreads ) {
+	// 	bestHeadPtr = &m_waitHead2; 
+	// 	bestTailPtr = &m_waitTail2;
+	// }
 
 	// if we have a niceness 0 disk read/write outstandind and we are 
 	// 1 or 2, do not launch! we do not want low priority disk reads 
 	// having to contend with high priority ones.
-	if ( hasLowNicenessOut && ! bestHeadPtr )
+	// now we only do this if the 'separate disk reads' parms is true.
+	if ( g_conf.m_separateDiskReads && hasLowNicenessOut && ! bestHeadPtr )
 		return false;
 
 	// threads to save conf and tree/bucket files to disk go in waitHead3
@@ -2198,30 +2210,28 @@ bool ThreadQueue::launchThread2 ( ThreadEntry *te ) {
 	// 	bestTail = m_waitTail3;
 	// }
 
+	// do not allow too high niceness read threads out
+	if ( spiderCount >= g_conf.m_spiderMaxDiskThreads )
+		return false;
+
 	// low priority (merge or dump) disk WRITES go in waithead4
 	if ( ! bestHeadPtr && m_waitHead4 ) {
 		bestHeadPtr = &m_waitHead4;
 		bestTailPtr = &m_waitTail4;
 	}
-	// short/med/long low priority disk reads go in waitHead5/6/7
-	// but we can't launch one more if already at our quota.
-	if ( ! bestHeadPtr && 
-	     m_waitHead5   &&
-	     launchedSma1 < g_conf.m_spiderMaxSmaDiskThreads ) {
+
+	// niceness 1. for merge reads so they superscede regular spider reads
+
+	// niceness 1 read threads:
+	if ( ! bestHeadPtr && m_waitHead5 ) {
 		bestHeadPtr = &m_waitHead5; 
 		bestTailPtr = &m_waitTail5;
 	}
-	if ( ! bestHeadPtr && 
-	     m_waitHead6   &&
-	     launchedMed1 < g_conf.m_spiderMaxMedDiskThreads ) {
+
+	// niceness 2 read threads:
+	if ( ! bestHeadPtr && m_waitHead6 ) {
 		bestHeadPtr = &m_waitHead6; 
 		bestTailPtr = &m_waitTail6;
-	}
-	if ( ! bestHeadPtr && 
-	     m_waitHead7   &&
-	     launchedBig1 < g_conf.m_spiderMaxBigDiskThreads ) {
-		bestHeadPtr = &m_waitHead7;
-		bestTailPtr = &m_waitTail7;
 	}
 
 	// if nobody waiting, return false
@@ -3117,7 +3127,6 @@ void ThreadQueue::removeThreads ( BigFile *bf ) {
 	removeThreads2 ( &m_waitHead4 , &m_waitTail4 , bf );
 	removeThreads2 ( &m_waitHead5 , &m_waitTail5 , bf );
 	removeThreads2 ( &m_waitHead6 , &m_waitTail6 , bf );
-	removeThreads2 ( &m_waitHead7 , &m_waitTail7 , bf );
 }
 
 void ThreadQueue::removeThreads2 ( ThreadEntry **headPtr ,

@@ -1847,6 +1847,8 @@ void CollectionRec::reset() {
 	m_hasucr = false;
 	m_hasupr = false;
 
+	m_sendingAlertInProgress = false;
+
 	// make sure we do not leave spiders "hanging" waiting for their
 	// callback to be called... and it never gets called
 	//if ( m_callbackQueue.length() > 0 ) { char *xx=NULL;*xx=0; }
@@ -2317,6 +2319,17 @@ bool CollectionRec::rebuildUrlFilters2 ( ) {
 	m_spiderPriorities   [n] = 45;
 	if ( ! strcmp(s,"news") )
 		m_spiderFreqs [n] = .00347; // 5 mins
+	n++;
+
+	// a non temporary error, like a 404? retry once per 3 months i guess
+	m_regExs[n].set("errorcount>=1");
+	m_harvestLinks       [n] = 1;
+	m_spiderFreqs        [n] = 90; // 90 day retry
+	m_maxSpidersPerRule  [n] = 1; // max spiders
+	m_spiderIpMaxSpiders [n] = 1; // max spiders per ip
+	m_spiderIpWaits      [n] = 1000; // same ip wait
+	m_spiderPriorities   [n] = 2;
+	m_forceDelete        [n] = 1;
 	n++;
 
 	m_regExs[n].set("isaddurl");

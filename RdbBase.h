@@ -83,7 +83,8 @@ class RdbBase {
 		    RdbBuckets          *buckets ,
 		    RdbDump             *dump    ,
 		    class Rdb           *rdb    ,
-		    class DiskPageCache *pc = NULL ,
+		    //class DiskPageCache *pc = NULL ,
+		    void *pc = NULL,
 		    bool                 isTitledb = false , // use fileIds2[]?
 		    bool                 preloadDiskPageCache = false ,
 		    bool                 biasDiskPageCache    = false );
@@ -458,7 +459,7 @@ class RdbBase {
 	// so only one save thread launches at a time
 	//bool m_isSaving;
 
-	class DiskPageCache *m_pc;
+	//class DiskPageCache *m_pc;
 
 	bool m_isTitledb;
 

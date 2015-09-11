@@ -18,7 +18,7 @@
 #define CACHEDBKS sizeof(key96_t)
 
 #include "Rdb.h"
-#include "DiskPageCache.h"
+//#include "DiskPageCache.h"
 
 // do not change these numbers, they are permanent and stored in cachedb
 // that way... just add new numbers to the end.
@@ -109,8 +109,8 @@ class Cachedb {
 
 	Rdb           *getRdb()           { return &m_rdb; };
 
-	DiskPageCache *getDiskPageCache () { return &m_pc; };
-	DiskPageCache m_pc;
+	//DiskPageCache *getDiskPageCache () { return &m_pc; };
+	//DiskPageCache m_pc;
 
  private:
 	Rdb           m_rdb;

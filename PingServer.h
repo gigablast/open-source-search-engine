@@ -30,16 +30,17 @@ public:
 	// ip address of MX record for this domain
 	int32_t m_mxIp;
 	int32_t m_notifyBlocked;
-	bool m_inUse;
+	class CollectionRec *m_collRec;
+	//bool m_inUse;
 
-	EmailInfo() { 
-		memset ( this,0,sizeof(EmailInfo) ); 
-	};
-	void reset() { 
-		if ( m_inUse ) { char *xx=NULL;*xx=0; }
-		if ( m_notifyBlocked ) { char *xx=NULL;*xx=0; }
-		memset ( this,0,sizeof(EmailInfo) ); 
-	};
+	//EmailInfo() { 
+	//	memset ( this,0,sizeof(EmailInfo) ); 
+	//};
+	//void reset() { 
+	//	if ( m_inUse ) { char *xx=NULL;*xx=0; }
+	//	if ( m_notifyBlocked ) { char *xx=NULL;*xx=0; }
+	//	memset ( this,0,sizeof(EmailInfo) ); 
+	//};
 };
 
 class PingServer {

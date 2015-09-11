@@ -30,6 +30,7 @@
 #include "Sections.h"
 //#include "Msg0.h" // g_termlistCache
 #include "Msg13.h"
+#include "Msg3.h"
 
 bool printNumAbbr ( SafeBuf &p, int64_t vvv ) {
 	float val = (float)vvv;
@@ -2076,64 +2077,72 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 	*/
 
 
-	p.safePrintf("<tr class=poo><td><b>page cache hits %%</b></td>");
+	p.safePrintf("<tr class=poo><td><b>file cache hits %%</b></td>");
 	totalf = 0.0;
 	for ( int32_t i = 0 ; i < nr ; i++ ) {
-		if ( ! rdbs[i]->m_pc ) {
+		Rdb *rdb = rdbs[i];
+		RdbCache *rpc = getDiskPageCache ( rdb->m_rdbId );
+		if ( ! rpc ) {
 			p.safePrintf("<td>--</td>");
 			continue;
 		}
-		int64_t hits   = rdbs[i]->m_pc->getNumHits();
-		int64_t misses = rdbs[i]->m_pc->getNumMisses();
+		int64_t hits   = rpc->getNumHits();
+		int64_t misses = rpc->getNumMisses();
 		int64_t sum    = hits + misses;
 		float val = 0.0;
 		if ( sum > 0.0 ) val = ((float)hits * 100.0) / (float)sum;
-		totalf += val;
-		p.safePrintf("<td>%.1f</td>",val);
+		//totalf += val;
+		p.safePrintf("<td>%.1f%%</td>",val);
 	}
-	p.safePrintf("<td>%.1f</td></tr>\n",totalf);
+	p.safePrintf("<td>--</td></tr>\n");
 
 
 
 
 
-	p.safePrintf("<tr class=poo><td><b>page cache hits</b></td>");
+	p.safePrintf("<tr class=poo><td><b>file cache hits</b></td>");
 	total = 0;
 	for ( int32_t i = 0 ; i < nr ; i++ ) {
-		if ( ! rdbs[i]->m_pc ) {
+		Rdb *rdb = rdbs[i];
+		RdbCache *rpc = getDiskPageCache ( rdb->m_rdbId );
+		if ( ! rpc ) {
 			p.safePrintf("<td>--</td>");
 			continue;
 		}
-		int64_t val = rdbs[i]->m_pc->getNumHits();
+		int64_t val = rpc->getNumHits();
 		total += val;
 		p.safePrintf("<td>%"UINT64"</td>",val);
 	}
 	p.safePrintf("<td>%"UINT64"</td></tr>\n",total);
 
 
-	p.safePrintf("<tr class=poo><td><b>page cache misses</b></td>");
+	p.safePrintf("<tr class=poo><td><b>file cache misses</b></td>");
 	total = 0;
 	for ( int32_t i = 0 ; i < nr ; i++ ) {
-		if ( ! rdbs[i]->m_pc ) {
+		Rdb *rdb = rdbs[i];
+		RdbCache *rpc = getDiskPageCache ( rdb->m_rdbId );
+		if ( ! rpc ) {
 			p.safePrintf("<td>--</td>");
 			continue;
 		}
-		int64_t val = rdbs[i]->m_pc->getNumMisses();
+		int64_t val = rpc->getNumMisses();
 		total += val;
 		p.safePrintf("<td>%"UINT64"</td>",val);
 	}
 	p.safePrintf("<td>%"UINT64"</td></tr>\n",total);
 
 
-	p.safePrintf("<tr class=poo><td><b>page cache tries</b></td>");
+	p.safePrintf("<tr class=poo><td><b>file cache tries</b></td>");
 	total = 0;
 	for ( int32_t i = 0 ; i < nr ; i++ ) {
-		if ( ! rdbs[i]->m_pc ) {
+		Rdb *rdb = rdbs[i];
+		RdbCache *rpc = getDiskPageCache ( rdb->m_rdbId );
+		if ( ! rpc ) {
 			p.safePrintf("<td>--</td>");
 			continue;
 		}
-		int64_t hits   = rdbs[i]->m_pc->getNumHits();
-		int64_t misses = rdbs[i]->m_pc->getNumMisses();
+		int64_t hits   = rpc->getNumHits();
+		int64_t misses = rpc->getNumMisses();
 		int64_t val    = hits + misses;
 		total += val;
 		p.safePrintf("<td>%"UINT64"</td>",val);
@@ -2141,28 +2150,32 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 	p.safePrintf("<td>%"UINT64"</td></tr>\n",total);
 
 
-	p.safePrintf("<tr class=poo><td><b>page cache used</b></td>");
+	p.safePrintf("<tr class=poo><td><b>file cache used</b></td>");
 	total = 0;
 	for ( int32_t i = 0 ; i < nr ; i++ ) {
-		if ( ! rdbs[i]->m_pc ) {
+		Rdb *rdb = rdbs[i];
+		RdbCache *rpc = getDiskPageCache ( rdb->m_rdbId );
+		if ( ! rpc ) {
 			p.safePrintf("<td>--</td>");
 			continue;
 		}
-		int64_t val = rdbs[i]->m_pc->getMemUsed();
+		int64_t val = rpc->getMemOccupied();
 		total += val;
 		printNumAbbr ( p , val );
 	}
 	p.safePrintf("<td>%"UINT64"</td></tr>\n",total);
 
 
-	p.safePrintf("<tr class=poo><td><b><nobr>page cache allocated</nobr></b></td>");
+	p.safePrintf("<tr class=poo><td><b><nobr>file cache allocated</nobr></b></td>");
 	total = 0;
 	for ( int32_t i = 0 ; i < nr ; i++ ) {
-		if ( ! rdbs[i]->m_pc ) {
+		Rdb *rdb = rdbs[i];
+		RdbCache *rpc = getDiskPageCache ( rdb->m_rdbId );
+		if ( ! rpc ) {
 			p.safePrintf("<td>--</td>");
 			continue;
 		}
-		int64_t val = rdbs[i]->m_pc->getMemAlloced();
+		int64_t val = rpc->getMemAlloced();
 		total += val;
 		printNumAbbr ( p , val );
 	}

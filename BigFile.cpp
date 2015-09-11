@@ -9,7 +9,7 @@
 #include "Threads.h"
 #include "Stats.h"
 #include "Statsdb.h"
-#include "DiskPageCache.h"
+//#include "DiskPageCache.h"
 
 #ifdef ASYNCIO
 #include <aio.h>
@@ -39,7 +39,7 @@ BigFile::BigFile () {
 	//for ( int32_t i = 0 ; i < MAX_PART_FILES ; i++ ) m_files[i] = NULL;
 	m_maxParts = 0;
 	m_numParts = 0;
-	m_pc  = NULL;
+	//m_pc  = NULL;
 	m_vfd = -1;
 	//m_vfdAllowed = false;
 	m_fileSize = -1;
@@ -269,19 +269,21 @@ static int64_t s_vfd = 0;
 // . set maxFileSize when opening a new file for writing and using 
 //   DiskPageCache
 // . use maxFileSize of -1 for us to use getFileSize() to set it
-bool BigFile::open ( int flags , class DiskPageCache *pc , 
+bool BigFile::open ( int flags , 
+		     //class DiskPageCache *pc , 
+		     void *pc ,
 		     int64_t maxFileSize ,
 		     int permissions ) {
 
         m_flags       = flags;
-	m_pc          = pc;
+	//m_pc          = pc;
 	m_permissions = permissions;
 	m_isClosing   = false;
 	// . init the page cache for this vfd
 	// . this returns our "virtual fd", not the same as File::m_vfd
 	// . returns -1 and sets g_errno on failure
 	// . we pass m_vfd to getPages() and addPages()
-	if ( m_pc && m_vfd == -1 ) {
+	if ( m_vfd == -1 ) {
 		//if ( maxFileSize == -1 ) maxFileSize = getFileSize();
 		m_vfd = ++s_vfd;
 		//g_errno = 0;
@@ -527,6 +529,7 @@ bool BigFile::readwrite ( void         *buf      ,
 	fstate->m_inPageCache = false;
 	// . try to get as much as we can from page cache first
 	// . the vfd of the big file will be the vfd of its last File class
+	/*
 	if ( ! doWrite && m_pc && allowPageCache ) {
 		//int32_t oldOff  = offset;
 		// we have to set these so RdbScan doesn't freak out if we
@@ -559,6 +562,7 @@ bool BigFile::readwrite ( void         *buf      ,
 		//	return true;
 		//}
 	}
+	*/
 	// sanity check. if you set hitDisk to false, you must allow
 	// us to check the page cache! silly bean!
 	if ( ! allowPageCache && ! hitDisk ) { char*xx=NULL;*xx=0; }
@@ -643,9 +647,9 @@ bool BigFile::readwrite ( void         *buf      ,
 	fstate->m_errno       = 0;
 	fstate->m_errno2      = 0;
 	fstate->m_startTime   = gettimeofdayInMilliseconds();
-	fstate->m_pc          = m_pc;
-	if ( ! allowPageCache )
-		fstate->m_pc = NULL;
+	//fstate->m_pc          = NULL;//m_pc;
+	// if ( ! allowPageCache )
+	// 	fstate->m_pc = NULL;
 	fstate->m_vfd         = m_vfd;
 	// if hitDisk was false we only check the page cache!
 	if ( ! hitDisk ) return true;
@@ -881,12 +885,12 @@ bool BigFile::readwrite ( void         *buf      ,
 	//		    fstate->m_bytesDone);
 
 	// store read/written pages into page cache
-	if ( ! g_errno && fstate->m_pc )
-		fstate->m_pc->addPages ( fstate->m_vfd       ,
-					 fstate->m_offset    ,
-					 fstate->m_bytesDone ,
-					 fstate->m_buf       ,
-					 fstate->m_niceness  );
+	// if ( ! g_errno && fstate->m_pc )
+	// 	fstate->m_pc->addPages ( fstate->m_vfd       ,
+	// 				 fstate->m_offset    ,
+	// 				 fstate->m_bytesDone ,
+	// 				 fstate->m_buf       ,
+	// 				 fstate->m_niceness  );
 	// now log our stuff here
 	if ( g_errno && g_errno != EBADENGINEER ) 
 		log("disk: readwrite: %s", mstrerror(g_errno));
@@ -966,12 +970,12 @@ void doneWrapper ( void *state , ThreadEntry *t ) {
 	if ( ! g_errno ) g_errno = fstate->m_errno2;
 	// fstate has his own m_pc in case BigFile got deleted, we cannot
 	// reference it...
-	if ( ! g_errno && fstate->m_pc )
-		fstate->m_pc->addPages ( fstate->m_vfd       ,
-					 fstate->m_offset    ,
-					 fstate->m_bytesDone ,
-					 fstate->m_buf       ,
-					 fstate->m_niceness  );
+	// if ( ! g_errno && fstate->m_pc )
+	// 	fstate->m_pc->addPages ( fstate->m_vfd       ,
+	// 				 fstate->m_offset    ,
+	// 				 fstate->m_bytesDone ,
+	// 				 fstate->m_buf       ,
+	// 				 fstate->m_niceness  );
 
 	// add the stat
 	if ( ! g_errno ) {
@@ -1017,12 +1021,14 @@ void doneWrapper ( void *state , ThreadEntry *t ) {
 	int32_t tt = LOG_WARN;
 	if ( g_errno == EFILECLOSED ) tt = LOG_INFO;
 	if ( g_errno && g_errno != EDISKSTUCK ) 
-		log (tt,"disk: %s. fd1=%"INT32" vfd=%"INT32" "
-			    "off=%"INT64" toread=%"INT32".", 
-			    mstrerror(g_errno),
-			    (int32_t)fstate->m_fd1,(int32_t)fstate->m_vfd,
-			    (int64_t)fstate->m_offset , 
-			    (int32_t)fstate->m_bytesToGo );
+		log (tt,"disk: %s. fd1=%"INT32" fd2=%"INT32" "
+		     "off=%"INT64" toread=%"INT32,
+		     mstrerror(g_errno),
+		     (int32_t)fstate->m_fd1,
+		     (int32_t)fstate->m_fd2,
+		     (int64_t)fstate->m_offset , 
+		     (int32_t)fstate->m_bytesToGo
+		     );
 	// someone is closing our fd without setting File::s_vfds[fd] to -1
 	if ( g_errno && g_errno != EDISKSTUCK ) {
 		//int fd1  = fstate->m_fd1;

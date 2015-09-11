@@ -128,7 +128,7 @@ bool RdbBase::init ( char  *dir            ,
 		     RdbBuckets          *buckets ,
 		     RdbDump       *dump    ,
 		     class Rdb     *rdb    ,
-		     DiskPageCache *pc      ,
+		     void *pc , // DiskPageCache *pc      ,
 		     bool           isTitledb            ,
 		     bool           preloadDiskPageCache ,
 		     bool           biasDiskPageCache    ) {
@@ -266,7 +266,7 @@ bool RdbBase::init ( char  *dir            ,
 	m_useHalfKeys      = useHalfKeys;
 	m_ks               = keySize;
 	m_pageSize         = pageSize;
-	m_pc               = pc;
+	//m_pc               = pc;
 	m_isTitledb        = isTitledb;
 	// wa haven't done a dump yet
 	//m_lastWrite        = gettimeofdayInMilliseconds();
@@ -900,11 +900,11 @@ int32_t RdbBase::addFile ( int32_t id , bool isNew , int32_t mergeNum ,
 	// open this big data file for reading only
 	if ( ! isNew ) {
 		if ( mergeNum < 0 ) 
-			f->open ( O_RDONLY | O_NONBLOCK | O_ASYNC , m_pc );
+			f->open ( O_RDONLY | O_NONBLOCK | O_ASYNC , NULL );
 		// otherwise, merge will have to be resumed so this file
 		// should be writable
 		else
-			f->open ( O_RDWR | O_NONBLOCK | O_ASYNC , m_pc );
+			f->open ( O_RDWR | O_NONBLOCK | O_ASYNC , NULL );//pc
 	}
  skip:
 	// find the position to add so we maintain order by fileId
@@ -1132,6 +1132,8 @@ bool RdbBase::incorporateMerge ( ) {
 		if ( ! m_files[i]->unlink ( doneWrapper , this ) ) {
 			m_numThreads++; g_numThreads++; }
 		// debug msg
+		// MDW this cores if file is bad... if collection
+		// got delete from under us i guess!!
 		else log(LOG_INFO,"merge: Unlinked %s (#%"INT32").",
 			 m_files[i]->getFilename(),i);
 		// debug msg
@@ -1421,6 +1423,10 @@ bool RdbBase::attemptMerge ( int32_t niceness, bool forceMergeAll, bool doLog ,
 
 	if ( m_nextMergeForced ) forceMergeAll = true;
 
+	if ( forceMergeAll )
+		log(LOG_INFO,"merge: forcing merge for "
+		    "for %s. (collnum=%"INT32")",m_dbname,(int32_t)m_collnum);
+
 	// if we are trying to merge titledb but a titledb dump is going on
 	// then do not do the merge, we do not want to overwrite tfndb via
 	// RdbDump::updateTfndbLoop() 
@@ -1468,11 +1474,16 @@ bool RdbBase::attemptMerge ( int32_t niceness, bool forceMergeAll, bool doLog ,
 	}
 
 	if ( g_numThreads > 0 ) {
-		if ( doLog )
+		// prevent log spam
+		static int32_t s_lastTime = 0;
+		int32_t now = getTimeLocal();
+		if ( now - s_lastTime > 0 && doLog )
 			log(LOG_INFO,"merge: Waiting for another "
 			    "collection's unlink/rename "
 			    "operations to finish before attempting merge "
-			    "for %s (collnum=%"INT32").",m_dbname,(int32_t)m_collnum);
+			    "for %s (collnum=%"INT32").",
+			    m_dbname,(int32_t)m_collnum);
+		s_lastTime = now;
 		return false;
 	}
 
@@ -1629,7 +1640,10 @@ bool RdbBase::attemptMerge ( int32_t niceness, bool forceMergeAll, bool doLog ,
 
 	// this triggers the negative rec concentration msg below and
 	// tries to merge on one file...
-	if ( ! resuming && m_numFiles <= 1 ) return false;
+	if ( ! resuming && m_numFiles <= 1 ) {
+		m_nextMergeForced = false;
+		return false;
+	}
 
 	// what percent of recs in the collections' rdb are negative?
 	// the rdbmaps hold this info
@@ -2263,7 +2277,7 @@ void RdbBase::gotTokenForMerge ( ) {
 			  m_mergeStartFileNum   ,
 			  m_numFilesToMerge     ,
 			  m_niceness            ,
-			  m_pc                  ,
+			  NULL,//m_pc                  ,
 			  mint /*maxTargetFileSize*/ ,
 			  m_ks                  ) ) 
 		// we started the merge so return true here
@@ -2531,7 +2545,7 @@ void RdbBase::saveMaps ( bool useThread ) {
 }
 
 void RdbBase::verifyDiskPageCache ( ) {
-	if ( !m_pc ) return;
+	//if ( !m_pc ) return;
 	// disable for now
 	return;
 	// for ( int32_t i = 0; i < m_numFiles; i++ ){

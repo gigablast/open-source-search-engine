@@ -3347,7 +3347,7 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			      "</tr>"
 
 			      "<tr>"
-			      "<td><b>Crawl Completion Time:</td>"
+			      "<td><b>Last Crawl Completion Time:</td>"
 			      "<td>%"UINT32"</td>"
 			      "</tr>"
 
@@ -3362,6 +3362,46 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			      "<td>%"INT32"</td>"
 			      "</tr>"
 
+			      , cr->m_diffbotCrawlName.getBufStart()
+			      
+			      , (int32_t)cr->m_isCustomCrawl
+
+			      , cr->m_diffbotToken.getBufStart()
+
+			      , seedStr
+
+			      , crawlStatus
+			      , tmp.getBufStart()
+
+			      , cr->m_diffbotCrawlStartTime
+			      // this is 0 if not over yet
+			      , cr->m_diffbotCrawlEndTime
+
+			      , cr->m_spiderRoundNum
+			      , cr->m_globalCrawlInfo.m_hasUrlsReadyToSpider
+
+			      );
+
+		// show crawlinfo crap
+		CrawlInfo *cis = (CrawlInfo *)cr->m_crawlInfoBuf.getBufStart();
+		sb.safePrintf("<tr><td><b>Ready Hosts</b></td><td>");
+		for ( int32_t i = 0 ; i < g_hostdb.getNumHosts() ; i++ ) {
+			CrawlInfo *ci = &cis[i];
+			if ( ! ci->m_hasUrlsReadyToSpider ) continue;
+			Host *h = g_hostdb.getHost ( i );
+			if ( ! h ) continue;
+			sb.safePrintf("<a href=http://%s:%i/crawlbot?c=%s>"
+				      "%i</a> "
+				      , iptoa(h->m_ip)
+				      , (int)h->m_httpPort
+				      , cr->m_coll
+				      , (int)i
+				      );
+		}
+		sb.safePrintf("</tr>\n");
+
+
+		sb.safePrintf(
 
 			      // this will  have to be in crawlinfo too!
 			      //"<tr>"
@@ -3416,24 +3456,6 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			      "</tr>"
 
 			      
-			      , cr->m_diffbotCrawlName.getBufStart()
-			      
-			      , (int32_t)cr->m_isCustomCrawl
-
-			      , cr->m_diffbotToken.getBufStart()
-
-			      , seedStr
-
-			      , crawlStatus
-			      , tmp.getBufStart()
-
-			      , cr->m_diffbotCrawlStartTime
-			      // this is 0 if not over yet
-			      , cr->m_diffbotCrawlEndTime
-
-			      , cr->m_spiderRoundNum
-			      , cr->m_globalCrawlInfo.m_hasUrlsReadyToSpider
-
 			      , cr->m_globalCrawlInfo.m_objectsAdded -
 			        cr->m_globalCrawlInfo.m_objectsDeleted
 			      , cr->m_globalCrawlInfo.m_urlsHarvested

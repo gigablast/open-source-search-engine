@@ -10,6 +10,11 @@
 
 #include <sys/types.h>  // pid_t
 
+// this also limit the maximum number of outstanding (live) threads
+#define MAX_STACKS 20
+// try going up to 40, we use about 2MB per stack... so this is 80MB
+//#define MAX_STACKS 40
+
 // if we are a thread this gets the threadid, otherwise, the main process id
 //pid_t getpidtid();
 // on 64-bit architectures pthread_t is 64 bits and pid_t is still 32 bits
@@ -106,7 +111,6 @@ class ThreadQueue {
 	ThreadEntry *m_waitHead4;
 	ThreadEntry *m_waitHead5;
 	ThreadEntry *m_waitHead6;
-	ThreadEntry *m_waitHead7;
 
 	ThreadEntry *m_waitTail0;
 	ThreadEntry *m_waitTail1;
@@ -115,7 +119,6 @@ class ThreadQueue {
 	ThreadEntry *m_waitTail4;
 	ThreadEntry *m_waitTail5;
 	ThreadEntry *m_waitTail6;
-	ThreadEntry *m_waitTail7;
 
 
 	/*
@@ -176,7 +179,7 @@ class ThreadQueue {
 
 	// . launch a thread from our queue
 	// . returns false and sets errno on error
-	bool         launchThread2 ( ThreadEntry *te );
+	bool         launchThread2 ( );
 
 	bool launchThreadForReals ( ThreadEntry **headPtr ,
 				    ThreadEntry **tailPtr ) ;

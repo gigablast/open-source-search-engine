@@ -1835,8 +1835,8 @@ bool Tagdb::init ( ) {
 	// overhead in cache.
 	//int32_t maxCacheNodes = g_conf.m_tagdbMaxCacheMem / 106;
 	// we now use a page cache
-	if ( ! m_pc.init ("tagdb",RDB_TAGDB,pcmem,GB_TFNDB_PAGE_SIZE))
-		return log("tagdb: Tagdb init failed.");
+	// if ( ! m_pc.init ("tagdb",RDB_TAGDB,pcmem,GB_TFNDB_PAGE_SIZE))
+	// 	return log("tagdb: Tagdb init failed.");
 
 	// init this
 	//if ( ! s_lockTable2.set(8,4,32,NULL,0,false,0,"taglocktbl") )
@@ -1858,7 +1858,7 @@ bool Tagdb::init ( ) {
 			    0 , //maxCacheNodes              ,
 			    false                      , // half keys?
 			    false                      , //m_tagdbSaveCache
-			    &m_pc                      ,
+			    NULL,//&m_pc                      ,
 			    false,  // is titledb
 			    true ,  // preload disk page cache
 			    sizeof(key128_t),     // key size

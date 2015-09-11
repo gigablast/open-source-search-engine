@@ -46,14 +46,15 @@ bool sendPageThreads ( TcpSocket *s , HttpRequest *r ) {
 				// "  high: %"INT32""
 				" (launched: %"INT32" "
 			       "returned: %"INT32" "
-			       "total: %"INT32")</td></tr>",
+			       "total: %"INT32" maxpossibleout: %i)</td></tr>",
 			       TABLE_STYLE,
 				q->getThreadType(), 
 				// loActive, mdActive, 
 				// hiActive, 
 			       (int32_t)q->m_launched,
 			       (int32_t)q->m_returned,
-			       total);
+			       total,
+			       (int)MAX_STACKS);
 
 
 		p.safePrintf ("<tr bgcolor=#%s>"
