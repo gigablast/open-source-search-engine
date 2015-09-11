@@ -780,14 +780,15 @@ bool RdbCache::addRecord ( collnum_t collnum ,
 			   int32_t   timestamp ,
 			   char **retRecPtr ) {
 
+	// bail if cache empty. maybe m_maxMem is 0.
+	if ( m_totalBufSize <= 0 ) return true;
+
 	//int64_t startTime = gettimeofdayInMillisecondsLocal();
 	if ( collnum < (collnum_t)0) {char *xx=NULL;*xx=0; }
 	if ( collnum >= m_maxColls ) {char *xx=NULL;*xx=0; }
 	// full key not allowed because we use that in markDeletedRecord()
 	if ( KEYCMP(cacheKey,KEYMAX(),m_cks) == 0 ) { char  *xx=NULL;*xx=0; }
 
-	// bail if cache empty
-	if ( m_totalBufSize <= 0 ) return true;
 	// debug msg
 	int64_t t = 0LL ;
 	if ( g_conf.m_logTimingDb ) t = gettimeofdayInMillisecondsLocal();
