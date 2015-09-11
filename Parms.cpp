@@ -11515,6 +11515,21 @@ void Parms::init ( ) {
 	m->m_group = 0;
 	m++;
 
+	m->m_title = "spiderdb disk cache size";
+	m->m_desc  = "How much file cache size to use in bytes? Titledb "
+		"holds the cached web pages, compressed. Gigablast consults "
+		"it to generate a summary for a search result, or to see if "
+		"a url Gigablast is spidering is already in the index.";
+	m->m_cgi   = "dpcsx";
+	m->m_off   = (char *)&g_conf.m_spiderdbFileCacheSize - g;
+	m->m_type  = TYPE_LONG_LONG;
+	m->m_def   = "30000000";
+	m->m_flags = 0;//PF_HIDDEN | PF_NOSAVE;
+	m->m_page  = PAGE_MASTER;
+	m->m_obj   = OBJ_CONF;
+	m->m_group = 0;
+	m++;
+
 
 
 	/*
