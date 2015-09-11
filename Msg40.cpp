@@ -2120,6 +2120,18 @@ bool Msg40::gotSummary ( ) {
 
 	//g_conf.m_logDebugTcp = 1;
 
+	// do we still own this socket? i am thinking it got closed somewhere
+	// and the socket descriptor was re-assigned to another socket
+	// getting a diffbot reply from XmLDoc::getDiffbotReply()
+	TcpSocket *s = st->m_socket;
+	if ( s->m_startTime != st->m_socketStartTimeHack ) {
+		log("msg40: lost control of socket. sd=%i. closed on us?",
+		    (int)s->m_sd);
+		m_socketHadError = EBADENGINEER;
+		g_errno = EBADENGINEER;
+	}
+
+
 	// . transmit the chunk in sb if non-zero length
 	// . steals the allocated buffer from sb and stores in the 
 	//   TcpSocket::m_sendBuf, which it frees when socket is

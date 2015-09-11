@@ -542,6 +542,9 @@ bool sendPageResults ( TcpSocket *s , HttpRequest *hr ) {
 	// set this in case SearchInput::set fails!
 	st->m_socket = s;
 
+	// record timestamp so we know if we got our socket closed and swapped
+	st->m_socketStartTimeHack = s->m_startTime;
+
 	// save this count so we know if TcpServer.cpp calls destroySocket(s)
 	st->m_numDestroys = s->m_numDestroys;
 
