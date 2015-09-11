@@ -49,7 +49,7 @@ key192_t makeCacheKey ( int64_t vfd ,
 	return k;
 }
 
-RdbCache g_rdbCaches[4];
+RdbCache g_rdbCaches[5];
 
 class RdbCache *getDiskPageCache ( char rdbId ) {
 
@@ -85,6 +85,13 @@ class RdbCache *getDiskPageCache ( char rdbId ) {
 		maxMem = *maxSizePtr;
 		maxRecs = maxMem / 3000;
 		dbname = "titdbcache";
+	}
+	if ( rdbId == RDB_SPIDERDB ) {
+		rpc = &g_rdbCaches[4];
+		maxSizePtr = &g_conf.m_spiderdbFileCacheSize;
+		maxMem = *maxSizePtr;
+		maxRecs = maxMem / 3000;
+		dbname = "spdbcache";
 	}
 
 	if ( ! rpc )
