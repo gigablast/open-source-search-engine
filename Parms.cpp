@@ -9939,6 +9939,21 @@ void Parms::init ( ) {
 	m->m_obj   = OBJ_CONF;
 	m++;
 
+	m->m_title = "return results even if a shard is down";
+	m->m_desc  = "If you turn this off then Gigablast will return "
+		"an error message if a shard was down and did not return "
+		"results for a query. The XML and JSON feed let's you know "
+		"when a shard is down and will give you the results back "
+		"any way, but if you would rather have just and error message "
+		"and no results, then set then set this to 'NO'.";
+	m->m_cgi   = "rra";
+	m->m_off   = (char *)&g_conf.m_returnResultsAnyway - g;
+	m->m_type  = TYPE_BOOL;
+	m->m_def   = "1";
+	m->m_page  = PAGE_MASTER;
+	m->m_obj   = OBJ_CONF;
+	m++;
+
 	m->m_title = "max mem";
 	m->m_desc  = "Mem available to this process. May be exceeded due "
 		"to fragmentation.";
@@ -11520,7 +11535,7 @@ void Parms::init ( ) {
 		"holds the cached web pages, compressed. Gigablast consults "
 		"it to generate a summary for a search result, or to see if "
 		"a url Gigablast is spidering is already in the index.";
-	m->m_cgi   = "dpcsx";
+	m->m_cgi   = "dpcsy";
 	m->m_off   = (char *)&g_conf.m_spiderdbFileCacheSize - g;
 	m->m_type  = TYPE_LONG_LONG;
 	m->m_def   = "30000000";

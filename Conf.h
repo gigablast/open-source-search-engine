@@ -292,6 +292,7 @@ class Conf {
 	//bool  m_refreshFacebookUsersEnabled;
 	bool  m_injectionsEnabled     ;
 	bool  m_queryingEnabled ;
+	bool  m_returnResultsAnyway;
 	// qa testing loop going on? uses "test" subdir
 	bool  m_testParserEnabled     ;
 	bool  m_testSpiderEnabled     ;

@@ -195,6 +195,7 @@ case EADMININTERFERENCE: return "Adminstrative interference";
 case	EDNSERROR        : return "DNS lookup error";
 case ETHREADSDISABLED:return "Threads Disabled";
 case EMALFORMEDQUERY: return "Malformed query";
+case ESHARDDOWN: return "One or more shards are down";
 	}
 	// if the remote error bit is clear it must be a regulare errno
 	//if ( ! ( errnum & REMOTE_ERROR_BIT ) ) return strerror ( errnum );
