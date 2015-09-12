@@ -11,6 +11,7 @@
 #include "PageParser.h" // g_inPageParser
 #include "Users.h"
 #include "Rebalance.h"
+#include "Profiler.h"
 
 // a global class extern'd in Pages.h
 Pages g_pages;
@@ -4664,9 +4665,15 @@ bool printRedBox ( SafeBuf *mb , TcpSocket *sock , HttpRequest *hr ) {
 		mb->safePrintf("%s",boxEnd);
 	}
 
-
-
-
+	if ( g_profiler.m_realTimeProfilerRunning ) {
+		if ( adds ) mb->safePrintf("<br>");
+		adds++;
+		mb->safePrintf("%s",box);
+		mb->safePrintf("Profiler is running. Performance is "
+			       "somewhat compromised. Disable on the "
+			       "profiler page.");
+		mb->safePrintf("%s",boxEnd);
+	}
 
 	if ( g_pingServer.m_hostsConfInDisagreement ) {
 		if ( adds ) mb->safePrintf("<br>");

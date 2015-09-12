@@ -125,19 +125,19 @@ bool Posdb::init ( ) {
 	int32_t nodeSize      = (sizeof(key144_t)+12+4) + sizeof(collnum_t);
 	int32_t maxTreeNodes = maxTreeMem  / nodeSize ;
 
-	int32_t pageSize = GB_INDEXDB_PAGE_SIZE;
+	//int32_t pageSize = GB_INDEXDB_PAGE_SIZE;
 	// we now use a disk page cache as opposed to the
 	// old rec cache. i am trying to do away with the Rdb::m_cache rec
 	// cache in favor of cleverly used disk page caches, because
 	// the rec caches are not real-time and get stale. 
-	int32_t pcmem    = 30000000; // 30MB
+	//int32_t pcmem    = 30000000; // 30MB
 	// make sure at least 30MB
 	//if ( pcmem < 30000000 ) pcmem = 30000000;
 	// keep this low if we are the tmp cluster, 30MB
-	if ( g_hostdb.m_useTmpCluster && pcmem > 30000000 ) pcmem = 30000000;
+	//if ( g_hostdb.m_useTmpCluster && pcmem > 30000000 ) pcmem = 30000000;
 	// do not use any page cache if doing tmp cluster in order to
 	// prevent swapping
-	if ( g_hostdb.m_useTmpCluster ) pcmem = 0;
+	//if ( g_hostdb.m_useTmpCluster ) pcmem = 0;
 	// save more mem!!! allow os to cache it i guess...
 	// let's go back to using it
 	//pcmem = 0;
@@ -145,13 +145,11 @@ bool Posdb::init ( ) {
 	//pcmem = 0;
 	// . init the page cache
 	// . MDW: "minimize disk seeks" not working otherwise i'd enable it!
-	if ( ! m_pc.init ( "posdb",
-			   RDB_POSDB,
-			   pcmem    ,
-			   pageSize , 
-			   true     ,  // use RAM disk?
-			   false    )) // minimize disk seeks?
-		return log("db: Posdb init failed.");
+	// if ( ! m_pc.init ( "posdb",
+	// 		   RDB_POSDB,
+	// 		   pcmem    ,
+	// 		   pageSize ))
+	// 	return log("db: Posdb init failed.");
 
 	// . set our own internal rdb
 	// . max disk space for bin tree is same as maxTreeMem so that we
@@ -176,7 +174,7 @@ bool Posdb::init ( ) {
 			   // newer systems have tons of ram to use
 			   // for their disk page cache. it is slower than
 			   // ours but the new engine has much slower things
-			   &m_pc                       ,
+			   NULL,//&m_pc                       ,
 			   false , // istitledb?
 			   false , // preloaddiskpagecache?
 			   sizeof(key144_t)

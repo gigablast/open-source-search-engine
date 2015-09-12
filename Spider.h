@@ -404,7 +404,7 @@ class Spiderdb {
 
 	Rdb *getRdb  ( ) { return &m_rdb; };
 
-	DiskPageCache *getDiskPageCache() { return &m_pc; };
+	//DiskPageCache *getDiskPageCache() { return &m_pc; };
 
 	// this rdb holds urls waiting to be spidered or being spidered
 	Rdb m_rdb;
@@ -453,11 +453,11 @@ class Spiderdb {
 	*/
 
 	// print the spider rec
-	int32_t print( char *srec );
+	int32_t print( char *srec , SafeBuf *sb = NULL );
 
   private:
 
-	DiskPageCache m_pc;
+	//DiskPageCache m_pc;
 };
 
 void dedupSpiderdbList ( RdbList *list , int32_t niceness , bool removeNegRecs );
@@ -989,7 +989,7 @@ class Doledb {
 
 	bool addColl ( char *coll, bool doVerify = true );
 
-	DiskPageCache *getDiskPageCache() { return &m_pc; };
+	//DiskPageCache *getDiskPageCache() { return &m_pc; };
 
 	// . see "overview of spidercache" below for key definition
 	// . these keys when hashed are clogging up the hash table
@@ -1072,7 +1072,7 @@ class Doledb {
 
 	Rdb m_rdb;
 
-	DiskPageCache m_pc;
+	//DiskPageCache m_pc;
 };
 
 
@@ -1136,7 +1136,7 @@ class SpiderColl {
 	bool m_isLoading;
 
 	// for scanning the wait tree...
-	bool m_isPopulating;
+	bool m_isPopulatingDoledb;
 	// for reading from spiderdb
 	//bool m_isReadDone;
 	bool m_didRead;

@@ -156,13 +156,13 @@ skipReplaceHost:
 			       //"<font size=+1>"
 			       "<b>Hosts "
 			       "(<a href=\"/admin/hosts?c=%s&sort=%"INT32"&resetstats=1\">"
-			       "reset)</b>"
+			       "reset)</a></b>"
 			       //"</font>"
 			       "</td></tr>" 
 			       "<tr bgcolor=#%s>"
 			       "<td><a href=\"/admin/hosts?c=%s&sort=0\">"
 
-			       "<b>hostId</b></td>"
+			       "<b>hostId</b></a></td>"
 			       "<td><b>host ip</b></td>"
 			       "<td><b>shard</b></td>"
 			       "<td><b>mirror</b></td>" // mirror # within the shard
@@ -179,7 +179,7 @@ skipReplaceHost:
 			       //"<td><b>priority udp port</td>"
 
 			       //"<td><b>dns client port</td>"
-			       "<td><b>http port</td>"
+			       "<td><b>http port</b></td>"
 
 			       // this is now obsolete since ide channel is. it was used
 			       // so that only the guy with the token could merge,
@@ -200,10 +200,10 @@ skipReplaceHost:
 
 			       //"<td><b>resends sent</td>"
 			       //"<td><b>errors recvd</td>"
-			       "<td><b>try agains recvd</td>"
+			       "<td><b>try agains recvd</b></td>"
 
 			       "<td><a href=\"/admin/hosts?c=%s&sort=3\">"
-			       "<b>dgrams resent</a></td>"
+			       "<b>dgrams resent</b></a></td>"
 
 			       /*
 
@@ -233,15 +233,15 @@ skipReplaceHost:
 
 
 			       "<td><a href=\"/admin/hosts?c=%s&sort=13\">"
-			       "<b>avg split time</a></td>"
+			       "<b>avg split time</b></a></td>"
 
-			       "<td><b>splits done</a></td>"
+			       "<td><b>splits done</b></a></td>"
 
 			       "<td><a href=\"/admin/hosts?c=%s&sort=12\">"
-			       "<b>status</a></td>"
+			       "<b>status</b></a></td>"
 
 			       "<td><a href=\"/admin/hosts?c=%s&sort=15\">"
-			       "<b>slow reads</a></td>"
+			       "<b>slow reads</b></a></td>"
 
 			       "<td><b>docs indexed</a></td>"
 
@@ -249,26 +249,26 @@ skipReplaceHost:
 			       "<b>mem used</a></td>"
 
 			       "<td><a href=\"/admin/hosts?c=%s&sort=10\">"
-			       "<b>cpu used</a></td>"
+			       "<b>cpu used</b></a></td>"
 
 			       "<td><a href=\"/admin/hosts?c=%s&sort=17\">"
-			       "<b>disk used</a></td>"
+			       "<b>disk used</b></a></td>"
 
 			       "<td><a href=\"/admin/hosts?c=%s&sort=14\">"
-			       "<b>max ping1</a></td>"
+			       "<b>max ping1</b></a></td>"
 
 			       "<td><a href=\"/admin/hosts?c=%s&sort=11\">"
-			       "<b>ping1 age</a></td>"
+			       "<b>ping1 age</b></a></td>"
 
 			       //"<td><b>ip1</td>"
 			       "<td><a href=\"/admin/hosts?c=%s&sort=1\">"
-			       "<b>ping1</a></td>"
+			       "<b>ping1</b></a></td>"
 
 			       "%s"// "<td><b>ip2</td>"
 			       //"<td><b>inSync</td>",
 			       //"<td>avg roundtrip</td>"
 			       //"<td>std. dev.</td></tr>"
-			       "<td><b>note</td>",
+			       "<td><b>note</b></td>",
 			       TABLE_STYLE ,
 			       colspan    ,
 
@@ -566,7 +566,8 @@ skipReplaceHost:
 		     h->m_pingInfo.m_udpSlotsInUseIncoming ) {
 			char *f1 = "";
 			char *f2 = "";
-			if ( h->m_pingInfo.m_udpSlotsInUseIncoming >= 200 ) {
+			// MAXUDPSLOTS in Spider.cpp is 300 right now
+			if ( h->m_pingInfo.m_udpSlotsInUseIncoming >= 300 ) {
 				f1 = "<b>";
 				f2 = "</b>";
 			}
@@ -1054,72 +1055,75 @@ skipReplaceHost:
 	sb.safePrintf ( "</table><br>\n" );
 
 	
-	/*
-	// print spare hosts table
-	sb.safePrintf ( 
-		  "<table %s>"
-		  "<tr class=hdrow><td colspan=10><center>"
-		  //"<font size=+1>"
-		  "<b>Spares</b>"
-		  //"</font>"
-		  "</td></tr>" 
-		  "<tr bgcolor=#%s>"
-		  "<td><b>spareId</td>"
-		  "<td><b>host name</td>"
-		  "<td><b>ip1</td>"
-		  "<td><b>ip2</td>"
-		  //"<td><b>udp port</td>"
-		  //"<td><b>priority udp port</td>"
-		  //"<td><b>dns client port</td>"
-		  "<td><b>http port</td>"
-		  //"<td><b>switch id</td>"
 
-		  // this is now fairly obsolete
-		  //"<td><b>ide channel</td>"
+	if( g_hostdb.m_numSpareHosts ) {
+		// print spare hosts table
+		sb.safePrintf ( 
+					   "<table %s>"
+					   "<tr class=hdrow><td colspan=10><center>"
+					   //"<font size=+1>"
+					   "<b>Spares</b>"
+					   //"</font>"
+					   "</td></tr>" 
+					   "<tr bgcolor=#%s>"
+					   "<td><b>spareId</td>"
+					   "<td><b>host name</td>"
+					   "<td><b>ip1</td>"
+					   "<td><b>ip2</td>"
+					   //"<td><b>udp port</td>"
+					   //"<td><b>priority udp port</td>"
+					   //"<td><b>dns client port</td>"
+					   "<td><b>http port</td>"
+					   //"<td><b>switch id</td>"
 
-		  "<td><b>note</td>",
-		  TABLE_STYLE,
-		  DARK_BLUE  );
+					   // this is now fairly obsolete
+					   //"<td><b>ide channel</td>"
 
-	for ( int32_t i = 0; i < g_hostdb.m_numSpareHosts; i++ ) {
-		// get the ith host (hostId)
-		Host *h = g_hostdb.getSpare ( i );
+					   "<td><b>note</td>",
+					   TABLE_STYLE,
+					   DARK_BLUE  );
 
-		char ipbuf1[64];
-		char ipbuf2[64];
-		strcpy(ipbuf1,iptoa(h->m_ip));
-		strcpy(ipbuf2,iptoa(h->m_ipShotgun));
+		for ( int32_t i = 0; i < g_hostdb.m_numSpareHosts; i++ ) {
+			// get the ith host (hostId)
+			Host *h = g_hostdb.getSpare ( i );
 
-		// print it
-		sb.safePrintf (
-			  "<tr bgcolor=#%s>"
-			  "<td>%"INT32"</td>"
-			  "<td>%s</td>"
-			  "<td>%s</td>"
-			  "<td>%s</td>"
-			  //"<td>%hi</td>"
-			  //"<td>%hi</td>" // priority udp port
-			  //"<td>%hi</td>"
-			  "<td>%hi</td>"
-			  //"<td>%i</td>" // switch id
-			  //"<td>%"INT32"</td>" // ide channel
-			  "<td>%s</td>"
-			  "</tr>" , 
-			  LIGHT_BLUE,
-			  i , 
-			  h->m_hostname,
-			  ipbuf1,
-			  ipbuf2,
-			  //h->m_port , 
-			  //h->m_port2 , 
-			  //h->m_dnsClientPort ,
-			  h->m_httpPort ,
-			  //h->m_switchId,
-			  //h->m_ideChannel ,
-			  h->m_note );
+			char ipbuf1[64];
+			char ipbuf2[64];
+			strcpy(ipbuf1,iptoa(h->m_ip));
+			strcpy(ipbuf2,iptoa(h->m_ipShotgun));
+
+			// print it
+			sb.safePrintf (
+						   "<tr bgcolor=#%s>"
+						   "<td>%"INT32"</td>"
+						   "<td>%s</td>"
+						   "<td>%s</td>"
+						   "<td>%s</td>"
+						   //"<td>%hi</td>"
+						   //"<td>%hi</td>" // priority udp port
+						   //"<td>%hi</td>"
+						   "<td>%hi</td>"
+						   //"<td>%i</td>" // switch id
+						   //"<td>%"INT32"</td>" // ide channel
+						   "<td>%s</td>"
+						   "</tr>" , 
+						   LIGHT_BLUE,
+						   i , 
+						   h->m_hostname,
+						   ipbuf1,
+						   ipbuf2,
+						   //h->m_port , 
+						   //h->m_port2 , 
+						   //h->m_dnsClientPort ,
+						   h->m_httpPort ,
+						   //h->m_switchId,
+						   //h->m_ideChannel ,
+						   h->m_note );
+		}
+		sb.safePrintf ( "</table><br>" );
 	}
-	sb.safePrintf ( "</table><br>" );
-	*/
+
+
 
 	/*
 	// print proxy hosts table

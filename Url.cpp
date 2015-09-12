@@ -190,7 +190,7 @@ void Url::set ( char *t , int32_t tlen , bool addWWW , bool stripSessionId ,
 			tmpBuf[tmpLen++] = *p++;
         }
 		// Wrong,  need a pointer to after the scheme
-		m_tld = ::getTLD ( pstart, p - tstart );
+		m_tld = ::getTLD ( pstart, p - pstart );
 		m_tldLen = gbstrlen ( m_tld );
 		//tmpLen -= m_tldLen;
 

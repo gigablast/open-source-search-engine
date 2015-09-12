@@ -174,6 +174,7 @@ class Collectiondb  {
 
 	int32_t m_numCollsSwappedOut;
 
+	bool m_initializing;
 	//int64_t            m_lastUpdateTime;
 };
 
@@ -420,6 +421,9 @@ class CollectionRec {
 	int32_t m_dailyMergeStarted; // time_t
 	int32_t m_dailyMergeTrigger;
 
+	class CollectionRec *m_nextLink;
+	class CollectionRec *m_prevLink;
+
 	char m_dailyMergeDOWList[48];
 
 	int32_t m_treeCount;
@@ -531,6 +535,7 @@ class CollectionRec {
 	char  m_recycleContent          ;
 	char  m_recycleCatdb            ;
 	char  m_getLinkInfo             ; // turn off to save seeks
+	char  m_computeSiteNumInlinks   ;
 	//char  m_recycleLinkInfo2        ; // ALWAYS recycle linkInfo2?
 	//char  m_useLinkInfo2ForQuality  ;
 	char  m_indexInlinkNeighborhoods;
@@ -621,6 +626,7 @@ class CollectionRec {
 	int32_t m_adWidth; // how wide the ad Column is in pixels
 
 	char  m_dedupResultsByDefault   ;
+	char  m_doTagdbLookups        ;
 	char  m_clusterByTopicDefault    ;
 	char  m_restrictTitledbForQuery ; // move this down here
 	char  m_useOldIps               ;
@@ -761,7 +767,7 @@ class CollectionRec {
 
 	// last time we computed global crawl info
 	//time_t m_globalCrawlInfoUpdateTime;
-	EmailInfo m_emailInfo;
+	//EmailInfo m_emailInfo;
 	// for counting replies
 	//int32_t m_replies;
 	//int32_t m_requests;
@@ -968,6 +974,8 @@ class CollectionRec {
 
 	// NARROW SEARCH
 	char  m_doNarrowSearch;
+
+	char m_sendingAlertInProgress;
 
         // Allow Links: searches on the collection
 	//char  m_allowLinksSearch;

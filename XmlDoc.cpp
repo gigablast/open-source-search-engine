@@ -109,6 +109,7 @@ char *getFirstJSONObject ( char *p ,
 char *getJSONObjectEnd ( char *p , int32_t niceness ) ;
 
 XmlDoc::XmlDoc() { 
+	m_readThreadOut = false;
 	for ( int32_t i = 0 ; i < MAXMSG7S ; i++ ) m_msg7s[i] = NULL;
 	m_esbuf.setLabel("exputfbuf");
 	for ( int32_t i = 0 ; i < MAX_XML_DOCS ; i++ ) m_xmlDocs[i] = NULL;
@@ -208,6 +209,10 @@ class XmlDoc *g_xd;
 
 void XmlDoc::reset ( ) {
 
+	if ( m_readThreadOut ) 
+		log("build: deleting xmldoc class that has a read thread out "
+		    "on a warc file");
+		
 	if ( m_fileValid ) {
 		m_file.close();
 		m_file.unlink();
@@ -219,6 +224,10 @@ void XmlDoc::reset ( ) {
 	for ( int i = 0 ; i < MAXMSG7S ; i++ ) {
 		Msg7 *msg7 = m_msg7s[i];
 		if ( ! msg7 ) continue;
+        if(msg7->m_inUse) {
+            log("build: archive: reseting xmldoc when msg7s are outstanding");
+            
+        }
 		mdelete ( msg7 , sizeof(Msg7) , "xdmsg7" );
 		delete ( msg7 );
 		m_msg7s[i] = NULL;
@@ -1779,9 +1788,9 @@ bool XmlDoc::set2 ( char    *titleRec ,
 
 	// new stuff
 	m_siteNumInlinksValid         = true;
-	m_siteNumInlinksUniqueIpValid = true;
-	m_siteNumInlinksUniqueCBlockValid = true;
-	m_siteNumInlinksTotalValid        = true;
+	// m_siteNumInlinksUniqueIpValid = true;
+	// m_siteNumInlinksUniqueCBlockValid = true;
+	// m_siteNumInlinksTotalValid        = true;
 	//m_sitePopValid                = true;
 	m_rootLangIdValid             = true;
 	m_hasContactInfoValid         = true;
@@ -2052,6 +2061,14 @@ void indexDocWrapper ( void *state ) {
 	// return if it blocked
 	if ( ! THIS->indexDoc( ) ) return;
 	// otherwise, all done, call the caller callback
+	
+	// g_statsdb.addStat ( MAX_NICENESS,
+	// 		    "docs_indexed",
+	// 		    20,
+	// 		    21,
+	// 		    );
+
+
 	if ( THIS->m_callback1 ) THIS->m_callback1 ( THIS->m_state );
 	else                     THIS->m_callback2 ( THIS->m_state );
 }
@@ -2093,6 +2110,7 @@ bool XmlDoc::injectDoc ( char *url ,
 			 char *metadata,
 			 uint32_t metadataLen
 			 ) {
+
 
 	// wait until we are synced with host #0
 	if ( ! isClockInSync() ) {
@@ -2490,6 +2508,10 @@ bool XmlDoc::indexDoc ( ) {
 
 	// and do not add spider reply if shutting down the server
 	if ( g_errno == ESHUTTINGDOWN )
+		return true;
+
+	// i saw this on shard 9, how is it happening
+	if ( g_errno == EBADRDBID )
 		return true;
 
 	// if docid not found when trying to do a query reindex...
@@ -3334,6 +3356,14 @@ void doneInjectingArchiveRec ( void *state ) {
 	xd->m_masterLoop ( xd );
 }
 
+void doneReadingArchiveFileWrapper ( void *state ) {
+	XmlDoc *THIS = (XmlDoc *)state;
+	// . go back to the main entry function
+	// . make sure g_errno is clear from a msg3a g_errno before calling
+	//   this lest it abandon the loop
+	THIS->m_masterLoop ( THIS->m_masterState );
+}
+
 
 #define MAXWARCRECSIZE 1000000
 
@@ -3351,7 +3381,7 @@ bool XmlDoc::indexWarcOrArc ( char ctype ) {
 	// so big we can fit it in memory. just do a wget then gunzip 
 	// then open it. use a system call in a thread.
 	int64_t fileSize = -1;
-	File *file = getUtf8ContentInFile( &fileSize );
+	BigFile *file = getUtf8ContentInFile( &fileSize );
 	// return true with g_errno set on error
 	if ( ! file ) {
 		if ( ! g_errno ) { char *xx=NULL;*xx=0; }
@@ -3427,7 +3457,37 @@ bool XmlDoc::indexWarcOrArc ( char ctype ) {
 			toRead = fileSize - m_fileOff;
 			m_hasMoreToRead = false;
 		}
-		int32_t bytesRead = file->read (m_fileBuf, toRead, m_fileOff);
+
+		bool status;
+
+		if ( m_readThreadOut ) {
+			m_readThreadOut = false;
+			status = false;
+			goto skipRead;
+		}
+
+		// make a thread to read now
+		status = file->read (m_fileBuf, 
+				     toRead, 
+				     m_fileOff,
+				     &m_fileState,
+				     this,
+				     doneReadingArchiveFileWrapper,
+				     MAX_NICENESS );
+
+		// if thread was queue or launched, wait for it to come back
+		if ( ! status ) {
+			// set a signal so we do not recall thread
+			// when callback brings us back here
+			m_readThreadOut = true;
+			// wait for callback
+			return false;
+		}
+
+	skipRead:
+
+		int64_t bytesRead = m_fileState.m_bytesDone;
+
 		if ( bytesRead != toRead ) {
 			log("build: read of %s failed at offset "
 			    "%"INT64"", file->getFilename(), m_fileOff);
@@ -3458,7 +3518,7 @@ bool XmlDoc::indexWarcOrArc ( char ctype ) {
 	if ( max > MAXMSG7S ) max = MAXMSG7S;
 
 	// wait for one to come back before launching another msg7
-	if ( m_numInjectionsOut > max ) return false;
+	if ( m_numInjectionsOut >= max ) return false;
 
 	char *realStart = m_fptr;
 
@@ -3481,9 +3541,15 @@ bool XmlDoc::indexWarcOrArc ( char ctype ) {
 	//
 	// set recUrl, recIp, recTime, recContent, recContentLen and recSize
 	//
+
 	if ( ctype == CT_WARC ) {
 		// find "WARC/1.0" or whatever
 		char *whp = m_fptr;
+		if( ! whp ) {
+			// FIXME: shouldn't get here with a NULL
+			log("build: No buffer for file=%s",  file->getFilename());
+			goto warcDone;
+		}
 		// we do terminate last warc rec with \0 so be aware of that...
 		int32_t maxCount = 10;
 		for ( ; *whp && strncmp(whp,"WARC/",5) && --maxCount>0; whp++);
@@ -3537,7 +3603,7 @@ bool XmlDoc::indexWarcOrArc ( char ctype ) {
 		// get Content-Length: of WARC header for its content
 		if ( ! warcLen ) {
 			// this is a critical stop.
-			log("build: could not find WARC Content-Length:");
+			log("build: warc problem: could not find WARC Content-Length:");
 			goto warcDone;
 		}
 
@@ -3625,8 +3691,9 @@ bool XmlDoc::indexWarcOrArc ( char ctype ) {
 		// find end of arc header not the content
 		char *arcHeaderEnd = strstr(arcHeader+1,"\n");
 		if ( ! arcHeaderEnd ) {
-			log("inject: could not find end of ARC header.");
-			exit(0);
+			log("build: warc problem: could not find end of ARC header. file=%s",
+                m_firstUrl.getUrl());
+			goto warcDone;
 		}
 		// \0 term for strstrs below
 		*arcHeaderEnd = '\0';
@@ -3635,19 +3702,31 @@ bool XmlDoc::indexWarcOrArc ( char ctype ) {
 		char *url = arcHeader + 1;
 		char *hp = url;
 		for ( ; *hp && *hp != ' ' ; hp++ );
-		if ( ! *hp ) {log("inject: bad arc header 1.");exit(0);}
+		if ( ! *hp ) {
+            log("build: warc problem: bad arc header 1.file=%s", m_firstUrl.getUrl());
+            goto warcDone;
+        }
 		*hp++ = '\0';
 		char *ipStr = hp;
 		for ( ; *hp && *hp != ' ' ; hp++ );
-		if ( ! *hp ) {log("inject: bad arc header 2.");exit(0);}
+		if ( ! *hp ) {
+            log("build: warc problem: bad arc header 2.file=%s", m_firstUrl.getUrl());
+            goto warcDone;
+        }
 		*hp++ = '\0';
 		char *timeStr = hp;
 		for ( ; *hp && *hp != ' ' ; hp++ );
-		if ( ! *hp ) {log("inject: bad arc header 3.");exit(0);}
+		if ( ! *hp ) {
+            log("build: warc problem: bad arc header 3.file=%s", m_firstUrl.getUrl());
+            goto warcDone;
+        }
 		*hp++ = '\0'; // null term timeStr
 		char *arcConType = hp;
 		for ( ; *hp && *hp != ' ' ; hp++ );
-		if ( ! *hp ) {log("inject: bad arc header 4.");exit(0);}
+		if ( ! *hp ) {
+            log("build: warc problem: bad arc header 4.file=%s", m_firstUrl.getUrl());
+            goto warcDone;
+        }
 		*hp++ = '\0'; // null term arcContentType
 		char *arcContentLenStr = hp;
 		// get arc content len
@@ -3715,9 +3794,9 @@ bool XmlDoc::indexWarcOrArc ( char ctype ) {
 
 	// how can there be no more to read?
 	if ( m_fptr > m_fptrEnd && ! m_hasMoreToRead ) {
-		log("build: archive file %s exceeded file length.",
-		    file->getFilename());
-		goto loop;
+		log("build: warc problem: archive file %s exceeded file length.",
+            m_firstUrl.getUrl());
+		goto warcDone;
 	}
 
 	// if we fall outside of the current read buf, read next rec if too big
@@ -3760,16 +3839,25 @@ bool XmlDoc::indexWarcOrArc ( char ctype ) {
 	for ( int32_t i = 0 ; i < MAXMSG7S ; i++ ) {
 		msg7 = m_msg7s[i];
 		// if we got an available one stop
-		if ( msg7 && ! msg7->m_inUse ) break;
+		if ( msg7 ) {
+			if( msg7->m_inUse ) continue;
+			break; // reuse this one.
+		}
 		// ok, create one, 1MB each about
 		try { msg7 = new ( Msg7 ); }
 		catch ( ... ) {g_errno=ENOMEM;m_warcError=g_errno;return true;}
 		mnew ( msg7 , sizeof(Msg7),"xdmsgs7");
+
 		// store it for re-use
 		m_msg7s[i] = msg7;
 		break;
 	}
 
+    if(!msg7 || msg7->m_inUse) {
+        // shouldn't happen, but it does... why?
+        log("build: archive: Ran out of msg7s to inject doc.");
+        return false;
+    }
 
 	// inject input parms:
 	InjectionRequest *ir = &msg7->m_injectionRequest;
@@ -5170,9 +5258,9 @@ SafeBuf *XmlDoc::getTitleRecBuf ( ) {
 	*/
 
 	if ( ! m_siteNumInlinksValid         ) { char *xx=NULL;*xx=0; }
-	if ( ! m_siteNumInlinksUniqueIpValid     ) { char *xx=NULL;*xx=0; }
-	if ( ! m_siteNumInlinksUniqueCBlockValid ) { char *xx=NULL;*xx=0; }
-	if ( ! m_siteNumInlinksTotalValid )        { char *xx=NULL;*xx=0; }
+	// if ( ! m_siteNumInlinksUniqueIpValid     ) { char *xx=NULL;*xx=0; }
+	// if ( ! m_siteNumInlinksUniqueCBlockValid ) { char *xx=NULL;*xx=0; }
+	// if ( ! m_siteNumInlinksTotalValid )        { char *xx=NULL;*xx=0; }
 	//if ( ! m_sitePopValid                ) { char *xx=NULL;*xx=0; }
 	if ( ! m_rootLangIdValid             ) { char *xx=NULL;*xx=0; }
 
@@ -6658,6 +6746,9 @@ Xml *XmlDoc::getXml ( ) {
 	// return it if it is set
 	if ( m_xmlValid ) return &m_xml;
 
+	// note it
+	setStatus ( "parsing html");
+
 	// get the filtered content
 	char **u8 = getUtf8Content();
 	if ( ! u8 || u8 == (char **)-1 ) return (Xml *)u8;
@@ -6666,8 +6757,6 @@ Xml *XmlDoc::getXml ( ) {
 	uint8_t *ct = getContentType();
 	if ( ! ct || ct == (void *)-1 ) return (Xml *)ct;
 
-	// note it
-	setStatus ( "getting xml");
 	// set it
 	if ( ! m_xml.set ( *u8        , 
 			   u8len      , 
@@ -7459,6 +7548,8 @@ Sections *XmlDoc::getImpliedSections ( ) {
 
 // add in Section::m_sentFlags bits having to do with our voting tables
 Sections *XmlDoc::getSections ( ) {
+
+	setStatus("getting sections");
 
 	// get the sections without implied sections
 	Sections *ss = getImpliedSections();
@@ -9973,6 +10064,8 @@ char *XmlDoc::getIsDup ( ) {
 		return &m_isDup;
 	}
 
+	setStatus ( "checking for dups" );
+
 	// BUT if we are already indexed and a a crawlbot/bulk diffbot job
 	// then do not kick us out just because another indexed doc is
 	// a dup of us because it messes up the TestOnlyProcessIfNew smoketests
@@ -10006,7 +10099,9 @@ char *XmlDoc::getIsDup ( ) {
 	// sanity. must be posdb list.
 	if ( ! list->isEmpty() && list->m_ks != 18 ) { char *xx=NULL;*xx=0;}
 
-	setStatus ( "checking for dups" );
+	// so getSiteRank() does not core
+	int32_t *sni = getSiteNumInlinks();
+	if ( ! sni || sni == (int32_t *)-1 ) return (char *)sni;
 
 	// . see if there are any pages that seem like they are dups of us
 	// . they must also have a HIGHER score than us, for us to be 
@@ -13753,6 +13848,37 @@ int32_t *XmlDoc::getSiteNumInlinks ( ) {
 	// sanity check
 	if ( m_setFromTitleRec && ! m_useSecondaryRdbs) {char *xx=NULL;*xx=0;}
 
+	CollectionRec *cr = getCollRec();
+	if ( ! cr ) return NULL;
+
+	// hacks of speed. computeSiteNumInlinks is true by default
+	// but if the user turns it off the just use sitelinks.txt
+	if ( cr && ! cr->m_computeSiteNumInlinks ) {
+		int32_t hostHash32 = getHostHash32a();
+		int32_t min = g_tagdb.getMinSiteInlinks ( hostHash32 );
+		// try with www if not there
+		if ( min < 0 && ! m_firstUrl.hasSubdomain() ) {
+			int32_t wwwHash32 = m_firstUrl.getHash32WithWWW();
+			min = g_tagdb.getMinSiteInlinks ( wwwHash32 );
+		}
+		// fix core by setting these
+		// m_siteNumInlinksUniqueIp          = 0;
+		// m_siteNumInlinksUniqueCBlock      = 0;
+		// m_siteNumInlinksTotal             = 0;
+		// m_siteNumInlinksUniqueIpValid     = true;
+		// m_siteNumInlinksUniqueCBlockValid = true;
+		// m_siteNumInlinksTotalValid        = true;
+		//a nd this
+		m_siteNumInlinksValid = true;
+		m_siteNumInlinks      = 0;
+		// if still not in sitelinks.txt, just use 0
+		if ( min < 0 ) {
+			return &m_siteNumInlinks;
+		}
+		m_siteNumInlinks = min;
+		return &m_siteNumInlinks;
+	}
+
 	setStatus ( "getting site num inlinks");
 
 	// get it from the tag rec if we can
@@ -13768,13 +13894,13 @@ int32_t *XmlDoc::getSiteNumInlinks ( ) {
 	// no site inlinks
 	if ( *ip == 0 ) {
 		m_siteNumInlinks             = 0;
-		m_siteNumInlinksUniqueIp     = 0;
-		m_siteNumInlinksUniqueCBlock = 0;
-		m_siteNumInlinksTotal        = 0;
+		// m_siteNumInlinksUniqueIp     = 0;
+		// m_siteNumInlinksUniqueCBlock = 0;
+		// m_siteNumInlinksTotal        = 0;
 		m_siteNumInlinksValid             = true;
-		m_siteNumInlinksUniqueIpValid     = true;
-		m_siteNumInlinksUniqueCBlockValid = true;
-		m_siteNumInlinksTotalValid        = true;
+		// m_siteNumInlinksUniqueIpValid     = true;
+		// m_siteNumInlinksUniqueCBlockValid = true;
+		// m_siteNumInlinksTotalValid        = true;
 		return &m_siteNumInlinks;
 	}
 
@@ -13789,9 +13915,6 @@ int32_t *XmlDoc::getSiteNumInlinks ( ) {
 	// 0 means error, i guess g_errno should be set, -1 means blocked
 	if ( ! wfts ) return NULL;
 	if ( wfts == -1 ) return (int32_t *)-1;
-
-	CollectionRec *cr = getCollRec();
-	if ( ! cr ) return NULL;
 
 	setStatus ( "getting site num inlinks");
 	// check the tag first
@@ -13864,13 +13987,13 @@ int32_t *XmlDoc::getSiteNumInlinks ( ) {
 		if ( age > maxAge ) valid = false;
 	}
 	// our companion tags, sitePop and fresh inlinks
-	Tag *tag2 = gr->getTag ( "sitenuminlinksuniqueip" );
-	Tag *tag3 = gr->getTag ( "sitenuminlinksuniquecblock");
-	Tag *tag4 = gr->getTag ( "sitenuminlinkstotal");
+	// Tag *tag2 = gr->getTag ( "sitenuminlinksuniqueip" );
+	// Tag *tag3 = gr->getTag ( "sitenuminlinksuniquecblock");
+	// Tag *tag4 = gr->getTag ( "sitenuminlinkstotal");
 	// if we are missing either of those, invalidate as well
-	if ( ! tag2 ) valid = false;
-	if ( ! tag3 ) valid = false;
-	if ( ! tag4 ) valid = false;
+	// if ( ! tag2 ) valid = false;
+	// if ( ! tag3 ) valid = false;
+	// if ( ! tag4 ) valid = false;
 	// if we have already been through this
 	if ( m_updatingSiteLinkInfoTags ) valid = false;
 	// if rebuilding linkdb assume we have no links to sample from!
@@ -13883,14 +14006,14 @@ int32_t *XmlDoc::getSiteNumInlinks ( ) {
 		    "age=%"INT32" ns=%"INT32" sni=%"INT32" "
 		    "maxage=%"INT32" "
 		    "tag=%"PTRFMT" "
-		    "tag2=%"PTRFMT" "
-		    "tag3=%"PTRFMT" "
+		    // "tag2=%"PTRFMT" "
+		    // "tag3=%"PTRFMT" "
 		    "url=%s",
 		    (int32_t)valid,age,ns,sni,
 		    maxAge,
 		    (PTRTYPE)tag,
-		    (PTRTYPE)tag2,
-		    (PTRTYPE)tag3,
+		    // (PTRTYPE)tag2,
+		    // (PTRTYPE)tag3,
 		    m_firstUrl.m_url);
 
 	LinkInfo *sinfo = NULL;
@@ -13903,18 +14026,18 @@ int32_t *XmlDoc::getSiteNumInlinks ( ) {
 		m_siteNumInlinksValid = true;
 
 		// companion tags
-		if ( tag2 ) {
-			m_siteNumInlinksUniqueIp = atol(tag2->getTagData());
-			m_siteNumInlinksUniqueIpValid = true;
-		}
-		if ( tag3 ) {
-			m_siteNumInlinksUniqueCBlock =atol(tag3->getTagData());
-			m_siteNumInlinksUniqueCBlockValid = true;
-		}
-		if ( tag4 ) {
-			m_siteNumInlinksTotal =atol(tag4->getTagData());
-			m_siteNumInlinksTotalValid = true;
-		}
+		// if ( tag2 ) {
+		// 	m_siteNumInlinksUniqueIp = atol(tag2->getTagData());
+		// 	m_siteNumInlinksUniqueIpValid = true;
+		// }
+		// if ( tag3 ) {
+		// 	m_siteNumInlinksUniqueCBlock =atol(tag3->getTagData());
+		// 	m_siteNumInlinksUniqueCBlockValid = true;
+		// }
+		// if ( tag4 ) {
+		// 	m_siteNumInlinksTotal =atol(tag4->getTagData());
+		// 	m_siteNumInlinksTotalValid = true;
+		// }
 
 		// . consult our sitelinks.txt file
 		// . returns -1 if not found
@@ -13973,14 +14096,14 @@ int32_t *XmlDoc::getSiteNumInlinks ( ) {
 	m_siteNumInlinks      = (int32_t)sinfo->m_numGoodInlinks;
 	//m_siteNumInlinksFresh = sinfo->m_numInlinksFresh;
 	//m_sitePop             = sinfo->m_pagePop;
-	m_siteNumInlinksUniqueIp     = sinfo->m_numUniqueIps;
-	m_siteNumInlinksUniqueCBlock = sinfo->m_numUniqueCBlocks;
-	m_siteNumInlinksTotal        = sinfo->m_totalInlinkingDocIds;
+	// m_siteNumInlinksUniqueIp     = sinfo->m_numUniqueIps;
+	// m_siteNumInlinksUniqueCBlock = sinfo->m_numUniqueCBlocks;
+	// m_siteNumInlinksTotal        = sinfo->m_totalInlinkingDocIds;
 
 	m_siteNumInlinksValid      = true;
-	m_siteNumInlinksUniqueIpValid = true;
-	m_siteNumInlinksUniqueCBlockValid = true;
-	m_siteNumInlinksTotalValid = true;
+	// m_siteNumInlinksUniqueIpValid = true;
+	// m_siteNumInlinksUniqueCBlockValid = true;
+	// m_siteNumInlinksTotalValid = true;
 
 
  updateToMin:
@@ -15382,7 +15505,7 @@ void gotDiffbotReplyWrapper ( void *state , TcpSocket *s ) {
 
 	// set the mime
 	HttpMime mime;
-	if ( s->m_readOffset>0 && 
+	if ( ! hadError && s && s->m_readOffset>0 && 
 	     // set location url to "null"
 	     ! mime.set ( s->m_readBuf , s->m_readOffset , NULL ) ) {
 		// g_errno should be set
@@ -19176,7 +19299,7 @@ void *systemStartWrapper_r ( void *state , ThreadEntry *t ) {
 	char cmd[MAX_URL_LEN+256];
 	snprintf( cmd,
 		  MAX_URL_LEN+256,
-		  "wget --header=\"Cookie: %s\" \"%s\" -O %s" ,
+		  "wget -q --header=\"Cookie: %s\" \"%s\" -O %s" ,
 		  s_cookieBuf.getBufStart() ,
 		  THIS->m_firstUrl.getUrl() ,
 		  filename );
@@ -19215,7 +19338,7 @@ void systemDoneWrapper ( void *state , ThreadEntry *t ) {
 }
 
 // we download large files to a file on disk, like warcs and arcs
-File *XmlDoc::getUtf8ContentInFile ( int64_t *fileSizeArg ) {
+BigFile *XmlDoc::getUtf8ContentInFile ( int64_t *fileSizeArg ) {
 
 	if ( m_fileValid ) {
 		*fileSizeArg = m_fileSize;
@@ -19229,15 +19352,15 @@ File *XmlDoc::getUtf8ContentInFile ( int64_t *fileSizeArg ) {
 		char filename[2048];
 		snprintf ( filename,
 			   2048,
-			   "%sgbarchivefile%"UINT32"",
-			   g_hostdb.m_dir,
+			   "gbarchivefile%"UINT32"",
 			   (int32_t)(int64_t)this);
 
-		m_file.set ( filename );
+		m_file.set ( g_hostdb.m_dir , filename );
 		m_fileSize = m_file.getFileSize();
 		m_fileValid = true;
 		*fileSizeArg = m_fileSize;
-		m_file.open(O_RDONLY);
+		// open2() has usepartfiles = false!!!
+		m_file.open2(O_RDONLY);
 		return &m_file;
 	}
 
@@ -19275,6 +19398,9 @@ File *XmlDoc::getUtf8ContentInFile ( int64_t *fileSizeArg ) {
 		//int32_t loaded = tmp.load ( "/home/mwells/.config/internetarchive.yml");
 		int32_t loaded = tmp.load ( "auth/internetarchive.yml");
 		if(loaded <= 0) {
+			log("gb: failed to load auth/internetarchive.yml");
+			g_errno = EDOCTOOBIG;
+			return NULL;
 			// FIXME
 			char *xx=NULL;*xx=0;
 		}
@@ -19322,7 +19448,7 @@ File *XmlDoc::getUtf8ContentInFile ( int64_t *fileSizeArg ) {
 			      systemDoneWrapper    ,
 			      systemStartWrapper_r ) ) 
 		// would block, wait for thread
-		return (File *)-1;
+		return (BigFile *)-1;
 	// failed?
 	log("build: failed to launch wget thread");
 	// If we run it in this thread then if we are fetching 
@@ -19352,6 +19478,8 @@ char **XmlDoc::getUtf8Content ( ) {
 
 	CollectionRec *cr = getCollRec();
 	if ( ! cr ) return NULL;
+
+	setStatus("getting utf8 content");
 
 	// recycle?
 	if ( cr->m_recycleContent || m_recycleContent ||
@@ -25847,18 +25975,18 @@ void XmlDoc::copyFromOldDoc ( XmlDoc *od ) {
 		m_ip                  = od->m_ip;
 		m_ipValid             = true;
 		m_siteNumInlinks            = od->m_siteNumInlinks;
-		m_siteNumInlinksUniqueIp    = od->m_siteNumInlinksUniqueIp;
-		m_siteNumInlinksUniqueCBlock= od->m_siteNumInlinksUniqueCBlock;
-		m_siteNumInlinksTotal       = od->m_siteNumInlinksTotal;
+		// m_siteNumInlinksUniqueIp    = od->m_siteNumInlinksUniqueIp;
+		// m_siteNumInlinksUniqueCBlock= od->m_siteNumInlinksUniqueCBlo
+		// m_siteNumInlinksTotal       = od->m_siteNumInlinksTotal;
 
 		m_siteNumInlinksValid = 
 			od->m_siteNumInlinksValid;
-		m_siteNumInlinksUniqueIpValid = 
-			od->m_siteNumInlinksUniqueIpValid;
-		m_siteNumInlinksUniqueCBlockValid = 
-			od->m_siteNumInlinksUniqueCBlockValid;
-		m_siteNumInlinksTotal =
-			od->m_siteNumInlinksTotalValid;
+		// m_siteNumInlinksUniqueIpValid = 
+		// 	od->m_siteNumInlinksUniqueIpValid;
+		// m_siteNumInlinksUniqueCBlockValid = 
+		// 	od->m_siteNumInlinksUniqueCBlockValid;
+		// m_siteNumInlinksTotal =
+		// 	od->m_siteNumInlinksTotalValid;
 	}
 
 	m_indexCode      = 0;//od->m_indexCode;
@@ -32157,8 +32285,13 @@ Msg20Reply *XmlDoc::getMsg20Reply ( ) {
 	}
 		
 
-	TagRec *gr = getTagRec();
-	if ( ! gr || gr == (void *)-1 ) return (Msg20Reply *)gr;
+	// if we are showing sites that have been banned in tagdb, we dont
+	// have to do a tagdb lookup. that should speed things up.
+	TagRec *gr = NULL;
+	if ( cr && cr->m_doTagdbLookups ) {
+		gr = getTagRec();
+		if ( ! gr || gr == (void *)-1 ) return (Msg20Reply *)gr;
+	}
 
 	//reply-> ptr_tagRec = (char *)gr;
 	//reply->size_tagRec = gr->getSize();
@@ -32238,7 +32371,8 @@ Msg20Reply *XmlDoc::getMsg20Reply ( ) {
 		if ( cr->m_forceDelete[ufn] ) pr = -3;
 
 		// this is an automatic ban!
-		if ( gr->getLong("manualban",0))pr=-3;//SPIDER_PRIORITY_BANNED;
+		if ( gr && gr->getLong("manualban",0))
+			pr=-3;//SPIDER_PRIORITY_BANNED;
 
 		// is it banned
 		if ( pr == -3 ) { // SPIDER_PRIORITY_BANNED ) { // -2
@@ -32673,9 +32807,9 @@ Msg20Reply *XmlDoc::getMsg20Reply ( ) {
 	//if ( tag1 ) sni  = atol(tag1->m_data);
 	//if ( tag2 ) spop = atol(tag2->m_data);
 	reply->m_siteNumInlinks       = m_siteNumInlinks;
-	reply->m_siteNumInlinksTotal  = m_siteNumInlinksTotal;
-	reply->m_siteNumUniqueIps     = m_siteNumInlinksUniqueIp;
-	reply->m_siteNumUniqueCBlocks = m_siteNumInlinksUniqueCBlock;
+	//reply->m_siteNumInlinksTotal  = m_siteNumInlinksTotal;
+	//reply->m_siteNumUniqueIps     = m_siteNumInlinksUniqueIp;
+	//reply->m_siteNumUniqueCBlocks = m_siteNumInlinksUniqueCBlock;
 	//reply->m_sitePop        = m_sitePop;
 
 	// . get stuff from link info
@@ -38124,25 +38258,25 @@ bool XmlDoc::printGeneralInfo ( SafeBuf *sb , HttpRequest *hr ) {
 			"<tr><td><b>good inlinks to site</b>"
 			"</td><td>%"INT32"</td></tr>\n"
 
-			"<tr><td>unique IP inlinks to site"
-			"</td><td>%"INT32"</td></tr>\n"
+			// "<tr><td>unique IP inlinks to site"
+			// "</td><td>%"INT32"</td></tr>\n"
 
-			"<tr><td>unique CBlock inlinks to site"
-			"</td><td>%"INT32"</td></tr>\n"
+			// "<tr><td>unique CBlock inlinks to site"
+			// "</td><td>%"INT32"</td></tr>\n"
 
 			"<tr><td><b>site rank</b></td><td>%"INT32"</td></tr>\n"
 
 			"<tr><td>good inlinks to page"
 			"</td><td>%"INT32"</td></tr>\n"
 
-			"<tr><td>unique IP inlinks to page"
-			"</td><td>%"INT32"</td></tr>\n"
+			// "<tr><td>unique IP inlinks to page"
+			// "</td><td>%"INT32"</td></tr>\n"
 
-			"<tr><td>unique CBlock inlinks to page"
-			"</td><td>%"INT32"</td></tr>\n"
+			// "<tr><td>unique CBlock inlinks to page"
+			// "</td><td>%"INT32"</td></tr>\n"
 
-			"<tr><td>total inlinks to page"
-			"</td><td>%"INT32"</td></tr>\n"
+			// "<tr><td>total inlinks to page"
+			// "</td><td>%"INT32"</td></tr>\n"
 
 			"<tr><td><nobr>page inlinks last computed</nobr></td>"
 			"<td>%s</td></tr>\n"
@@ -38162,14 +38296,14 @@ bool XmlDoc::printGeneralInfo ( SafeBuf *sb , HttpRequest *hr ) {
 			strLanguage,
 			g_countryCode.getName(m_countryId) ,
 			sni,
-			m_siteNumInlinksUniqueIp,
-			m_siteNumInlinksUniqueCBlock,
+			//m_siteNumInlinksUniqueIp,
+			//m_siteNumInlinksUniqueCBlock,
 			::getSiteRank(sni),
 			//info1->getNumTotalInlinks(),
 			info1->getNumGoodInlinks(),
-			info1->m_numUniqueIps,
-			info1->m_numUniqueCBlocks,
-			info1->m_totalInlinkingDocIds,
+			// info1->m_numUniqueIps,
+			// info1->m_numUniqueCBlocks,
+			// info1->m_totalInlinkingDocIds,
 
 			tmp3
 			);
@@ -38181,26 +38315,26 @@ bool XmlDoc::printGeneralInfo ( SafeBuf *sb , HttpRequest *hr ) {
 			"\t<siteRank>%"INT32"</siteRank>\n"
 
 			"\t<numGoodSiteInlinks>%"INT32"</numGoodSiteInlinks>\n"
-			"\t<numTotalSiteInlinks>%"INT32"</numTotalSiteInlinks>\n"
-			"\t<numUniqueIpsLinkingToSite>%"INT32""
-			"</numUniqueIpsLinkingToSite>\n"
-			"\t<numUniqueCBlocksLinkingToSite>%"INT32""
-			"</numUniqueCBlocksLinkingToSite>\n"
+			//"\t<numTotalSiteInlinks>%"INT32"</numTotalSiteInlinks>\n"
+			// "\t<numUniqueIpsLinkingToSite>%"INT32""
+			// "</numUniqueIpsLinkingToSite>\n"
+			// "\t<numUniqueCBlocksLinkingToSite>%"INT32""
+			// "</numUniqueCBlocksLinkingToSite>\n"
 
 
 
 
 			// how many inlinks, external and internal, we have
 			// to this page not filtered in any way!!!
-			"\t<numTotalPageInlinks>%"INT32"</numTotalPageInlinks>\n"
+			//"\t<numTotalPageInlinks>%"INT32"</numTotalPageInlinks>\n"
 			// how many inlinking ips we got, including our own if
 			// we link to ourself
-			"\t<numUniqueIpsLinkingToPage>%"INT32""
-			"</numUniqueIpsLinkingToPage>\n"
+			// "\t<numUniqueIpsLinkingToPage>%"INT32""
+			// "</numUniqueIpsLinkingToPage>\n"
 			// how many inlinking cblocks we got, including our own
 			// if we link to ourself
-			"\t<numUniqueCBlocksLinkingToPage>%"INT32""
-			"</numUniqueCBlocksLinkingToPage>\n"
+			// "\t<numUniqueCBlocksLinkingToPage>%"INT32""
+			// "</numUniqueCBlocksLinkingToPage>\n"
 
 
 			"\t<numGoodPageInlinks>%"INT32"</numGoodPageInlinks>\n"
@@ -38212,13 +38346,13 @@ bool XmlDoc::printGeneralInfo ( SafeBuf *sb , HttpRequest *hr ) {
 			,(int32_t)m_isLinkSpam
 			,::getSiteRank(sni)
 			,sni
-			,m_siteNumInlinksTotal
-			,m_siteNumInlinksUniqueIp
-			,m_siteNumInlinksUniqueCBlock
+			// ,m_siteNumInlinksTotal
+			// ,m_siteNumInlinksUniqueIp
+			// ,m_siteNumInlinksUniqueCBlock
 
-			,info1->m_totalInlinkingDocIds
-			,info1->m_numUniqueIps
-			,info1->m_numUniqueCBlocks
+			//,info1->m_totalInlinkingDocIds
+			//,info1->m_numUniqueIps
+			//,info1->m_numUniqueCBlocks
 			
 			,info1->getNumGoodInlinks()
 			//,tmp3
@@ -39850,7 +39984,7 @@ SafeBuf *XmlDoc::getNewTagBuf ( ) {
 			return NULL;
 	}
 
-	int32_t old2, old3, old4;
+	//int32_t old2, old3, old4;
 
 	// if running for diffbot crawlbot then isCustomCrawl is true
 	// so do not update the siteinlink info already in tagdb since i 
@@ -39863,31 +39997,31 @@ SafeBuf *XmlDoc::getNewTagBuf ( ) {
 	//if ( strcmp(cr->m_coll,"GLOBAL-INDEX") == 0 ) ) goto skipSiteInlinks;
 
 	// sitenuminlinksfresh
-	old2 = gr->getLong("sitenuminlinksuniqueip",-1,NULL,&timestamp);
-	if ( old2 == -1 || old2 != m_siteNumInlinksUniqueIp ||
-	     m_updatingSiteLinkInfoTags )
-		if ( ! tbuf->addTag2(mysite,"sitenuminlinksuniqueip",
-				     now,"xmldoc",
-				    *ip,m_siteNumInlinksUniqueIp,rdbId)) 
-			return NULL;
-	// sitepop
-	old3 = gr->getLong("sitenuminlinksuniquecblock",-1,NULL,
-				&timestamp);
-	if ( old3 == -1 || old3 != m_siteNumInlinksUniqueCBlock || 
-	     m_updatingSiteLinkInfoTags )
-		if ( ! tbuf->addTag2(mysite,"sitenuminlinksuniquecblock",
-				     now,"xmldoc",
-				    *ip,m_siteNumInlinksUniqueCBlock,rdbId)) 
-			return NULL;
-	// total site inlinks
-	old4 = gr->getLong("sitenuminlinkstotal",-1,NULL,
-				&timestamp);
-	if ( old4 == -1 || old4 != m_siteNumInlinksTotal || 
-	     m_updatingSiteLinkInfoTags )
-		if ( ! tbuf->addTag2(mysite,"sitenuminlinkstotal",
-				     now,"xmldoc",
-				    *ip,m_siteNumInlinksTotal,rdbId)) 
-			return NULL;
+	// old2 = gr->getLong("sitenuminlinksuniqueip",-1,NULL,&timestamp);
+	// if ( old2 == -1 || old2 != m_siteNumInlinksUniqueIp ||
+	//      m_updatingSiteLinkInfoTags )
+	// 	if ( ! tbuf->addTag2(mysite,"sitenuminlinksuniqueip",
+	// 			     now,"xmldoc",
+	// 			    *ip,m_siteNumInlinksUniqueIp,rdbId)) 
+	// 		return NULL;
+	// // sitepop
+	// old3 = gr->getLong("sitenuminlinksuniquecblock",-1,NULL,
+	// 			&timestamp);
+	// if ( old3 == -1 || old3 != m_siteNumInlinksUniqueCBlock || 
+	//      m_updatingSiteLinkInfoTags )
+	// 	if ( ! tbuf->addTag2(mysite,"sitenuminlinksuniquecblock",
+	// 			     now,"xmldoc",
+	// 			    *ip,m_siteNumInlinksUniqueCBlock,rdbId)) 
+	// 		return NULL;
+	// // total site inlinks
+	// old4 = gr->getLong("sitenuminlinkstotal",-1,NULL,
+	// 			&timestamp);
+	// if ( old4 == -1 || old4 != m_siteNumInlinksTotal || 
+	//      m_updatingSiteLinkInfoTags )
+	// 	if ( ! tbuf->addTag2(mysite,"sitenuminlinkstotal",
+	// 			     now,"xmldoc",
+	// 			    *ip,m_siteNumInlinksTotal,rdbId)) 
+	// 		return NULL;
 
 	// skipSiteInlinks:
 
@@ -50219,7 +50353,7 @@ Msg25 *XmlDoc::getAllInlinks ( bool forSite ) {
 					      NULL, // qbuf
 					      0, // qbufSize
 					      m_masterState, // state
-				      m_masterLoop, // callback
+						  m_masterLoop, // callback
 					      false, // isInjecting?
 					      false, // pbuf (for printing)
 					      this, // xd holder (Msg25::m_xd)
@@ -52001,6 +52135,13 @@ bool XmlDoc::storeFacetValues ( char *qs , SafeBuf *sb , FacetValHash_t fvh ) {
 
 	storeFacetValuesSite ( qs, sb, fvh );
 
+	if ( m_hasMetadata) {
+		Json jpMetadata;
+		if (jpMetadata.parseJsonStringIntoJsonItems (ptr_metadata, m_niceness)) {
+			storeFacetValuesJSON ( qs, sb, fvh, &jpMetadata );
+		}
+	}
+
 	// if "qa" is a gbxpathsitehash123456 type of beastie then we
 	// gotta scan the sections
 	if ( strncasecmp(qs,"gbxpathsitehash",15) == 0 )
@@ -52010,6 +52151,7 @@ bool XmlDoc::storeFacetValues ( char *qs , SafeBuf *sb , FacetValHash_t fvh ) {
 	// spider status docs are really json now
 	if ( m_contentType == CT_JSON || m_contentType == CT_STATUS ) 
 		return storeFacetValuesJSON ( qs , sb , fvh, getParsedJson());
+	
 
 	if ( m_contentType == CT_HTML ) 
 		return storeFacetValuesHtml ( qs , sb , fvh );
@@ -52017,12 +52159,6 @@ bool XmlDoc::storeFacetValues ( char *qs , SafeBuf *sb , FacetValHash_t fvh ) {
 	if ( m_contentType == CT_XML ) 
 		return storeFacetValuesXml ( qs , sb , fvh );
 
-	if ( m_hasMetadata) {
-		Json jpMetadata;
-		if (jpMetadata.parseJsonStringIntoJsonItems (ptr_metadata, m_niceness)) {
-			storeFacetValuesJSON ( qs, sb, fvh, &jpMetadata );
-		}
-	}
 
 	return true;
 }

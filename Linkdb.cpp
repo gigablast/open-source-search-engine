@@ -101,7 +101,7 @@ bool Linkdb::init ( ) {
 	*/
 
 	// we use the same disk page size as indexdb (for rdbmap.cpp)
-	int32_t pageSize = GB_INDEXDB_PAGE_SIZE;
+	//int32_t pageSize = GB_INDEXDB_PAGE_SIZE;
 	// set this for debugging
 	//int64_t maxTreeMem = 1000000;
 	int64_t maxTreeMem = 40000000; // 40MB
@@ -110,20 +110,18 @@ bool Linkdb::init ( ) {
 	// . 32 bytes per record when in the tree
 	int32_t maxTreeNodes = maxTreeMem /(sizeof(key224_t)+16);
 	// disk page cache mem, 100MB on gk0 now
-	int32_t pcmem = 0; // g_conf.m_linkdbMaxDiskPageCacheMem;
+	//int32_t pcmem = 0; // g_conf.m_linkdbMaxDiskPageCacheMem;
 	// give it a little
-	pcmem = 10000000; // 10MB
+	//pcmem = 10000000; // 10MB
 	// keep this low if we are the tmp cluster
 	//if ( g_hostdb.m_useTmpCluster ) pcmem = 0;
 	// TODO: would be nice to just do page caching on the satellite files;
 	//       look into "minimizeDiskSeeks" at some point...
-	if ( ! m_pc.init ( "linkdb" ,
-			   RDB_LINKDB,
-			   pcmem    ,
-			   pageSize ,
-			   true     ,  // use shared mem?
-			   false    )) // minimizeDiskSeeks?
-		return log("db: Linkdb init failed.");
+	// if ( ! m_pc.init ( "linkdb" ,
+	// 		   RDB_LINKDB,
+	// 		   pcmem    ,
+	// 		   pageSize ))
+	// 	return log("db: Linkdb init failed.");
 	// init the rdb
 	return m_rdb.init ( g_hostdb.m_dir ,
 			    "linkdb" ,
@@ -143,7 +141,7 @@ bool Linkdb::init ( ) {
 			    0        , // cache nodes
 			    false, // true     , // use half keys
 			    false    , // load cache from disk
-			    &m_pc    ,
+			    NULL,//&m_pc    ,
 			    false    , // false
 			    false    , // preload page cache
 			    sizeof(key224_t) ,
@@ -339,12 +337,18 @@ key224_t Linkdb::makeKey_uk ( uint32_t  linkeeSiteHash32       ,
 
 	// sanity checks
 	//if(discoveryDate && discoveryDate < 1025376000){char *xx=NULL;*xx=0;}
-	if ( lostDate && lostDate < LINKDBEPOCH){char *xx=NULL;*xx=0;}
+	if ( lostDate && lostDate < LINKDBEPOCH){
+        lostDate = LINKDBEPOCH;
+        //char *xx=NULL;*xx=0;
+    }
 
 	// . convert discovery date from utc into days since jan 2008 epoch
 	// . the number is for jan 2012, so subtract 4 years to do 2008
 	uint32_t epoch = LINKDBEPOCH;
-	if ( discoveryDate && discoveryDate < epoch ) { char *xx=NULL;*xx=0; }
+	if ( discoveryDate && discoveryDate < epoch ) {
+        discoveryDate = epoch;
+        //char *xx=NULL;*xx=0;
+    }
 	uint32_t nd = (discoveryDate - epoch) / 86400;
 	if ( discoveryDate == 0 ) nd = 0;
 	// makeEndKey_uk() maxes this out!
@@ -710,6 +714,14 @@ void  handleRequest25 ( UdpSlot *slot , int32_t netnice ) {
 	// used by sendReply()
 	req->m_udpSlot = slot;
 
+	if ( g_conf.m_logDebugLinkInfo && req->m_mode == MODE_SITELINKINFO ) {
+		log("linkdb: got msg25 request sitehash64=%"INT64" "
+		    "site=%s "
+		    ,req->m_siteHash64
+		    ,req->ptr_site
+		    );
+	}
+
 	// set up the hashtable if our first time
 	if ( ! g_lineTable.isInitialized() )
 		g_lineTable.set ( 8,sizeof(Msg25Request *),256,
@@ -734,7 +746,8 @@ void  handleRequest25 ( UdpSlot *slot , int32_t netnice ) {
 			req->m_next = head->m_next;
 		head->m_next = req;
 		// note it for debugging
-		log("build: msg25 request waiting in line for %s slot=0x%"PTRFMT"",
+		log("build: msg25 request waiting in line for %s "
+		    "udpslot=0x%"PTRFMT"",
 		    req->ptr_url,(PTRTYPE)slot);
 		// we will send a reply back for this guy when done
 		// getting the reply for the head msg25request
@@ -1112,9 +1125,9 @@ bool Msg25::doReadLoop ( ) {
 	if ( g_conf.m_logDebugLinkInfo ) {
 		char *ms = "page";
 		if ( m_mode == MODE_SITELINKINFO ) ms = "site";
-		log("msg25: getting full linkinfo mode=%s site=%s url=%s "
-		    "docid=%"INT64"",
-		    ms,m_site,m_url,m_docId);
+		log("msg25: reading linkdb list mode=%s site=%s url=%s "
+		    "docid=%"INT64" linkdbstartkey=%s",
+		    ms,m_site,m_url,m_docId,KEYSTR(&startKey,LDBKS));
 	}
 
 	m_gettingList = true;
@@ -2304,8 +2317,9 @@ bool Msg25::gotLinkText ( Msg20Request *req ) { // LinkTextReply *linkText ) {
 		}
 		// debug
 		if ( g_conf.m_logDebugLinkInfo ) {
-			log("linkdb: recalling round=%"INT32" for %s=%s",
-			    m_round,ms,m_site);
+			log("linkdb: recalling round=%"INT32" for %s=%s "
+			    "req=0x%"PTRFMT" numlinkerreplies=%"INT32,
+			    m_round,ms,m_site,(PTRTYPE)m_req25,m_numReplyPtrs);
 		}
 		// and re-call. returns true if did not block.
 		// returns true with g_errno set on error.

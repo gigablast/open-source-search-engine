@@ -29,24 +29,32 @@ bool sendPageThreads ( TcpSocket *s , HttpRequest *r ) {
 
 
 
-		int32_t loActive = q->m_loLaunched - q->m_loReturned;
-		int32_t mdActive = q->m_mdLaunched - q->m_mdReturned;
-		int32_t hiActive = q->m_hiLaunched - q->m_hiReturned;
-		int32_t      total    = loActive + mdActive + hiActive;
+		// int32_t loActive = q->m_loLaunched - q->m_loReturned;
+		// int32_t mdActive = q->m_mdLaunched - q->m_mdReturned;
+		// int32_t hiActive = q->m_hiLaunched - q->m_hiReturned;
+		// int32_t      total    = loActive + mdActive + hiActive;
+
+		int32_t total = q->m_launched - q->m_returned;
 		
 		p.safePrintf ( "<table %s>"
 			       "<tr class=hdrow><td colspan=\"11\">"
 			       //"<center>"
 				//"<font size=+1>"
 				"<b>Thread Type: %s"
-				"  (low: %"INT32""
-				"  med: %"INT32""
-				"  high: %"INT32""
-				"  total: %"INT32")</td></tr>",
+				// "  (low: %"INT32""
+				// "  med: %"INT32""
+				// "  high: %"INT32""
+				" (launched: %"INT32" "
+			       "returned: %"INT32" "
+			       "total: %"INT32" maxpossibleout: %i)</td></tr>",
 			       TABLE_STYLE,
 				q->getThreadType(), 
-				loActive, mdActive, 
-				hiActive, total);
+				// loActive, mdActive, 
+				// hiActive, 
+			       (int32_t)q->m_launched,
+			       (int32_t)q->m_returned,
+			       total,
+			       (int)MAX_STACKS);
 
 
 		p.safePrintf ("<tr bgcolor=#%s>"
@@ -59,19 +67,20 @@ bool sendPageThreads ( TcpSocket *s , HttpRequest *r ) {
 			      "<td><b>Callback</b></td>"
 			      "<td><b>Routine</b></td>"
 			      "<td><b>Bytes Done</b></td>"
-			      "<td><b>KBytes/Sec</b></td>"
+			      "<td><b>Megabytes/Sec</b></td>"
 			      "<td><b>Read|Write</b></td>"
 			      "</tr>"
 			      , LIGHT_BLUE
 			      );
 
-		for ( int32_t j = 0 ; j < q->m_top ; j++ ) {
+		for ( int32_t j = 0 ; j < q->m_maxEntries ; j++ ) {
 			ThreadEntry *t = &q->m_entries[j];
 			if(!t->m_isOccupied) continue;
 
 			FileState *fs = (FileState *)t->m_state;
 			bool diskThread = false;
-			if(q->m_threadType == DISK_THREAD && fs) diskThread = true;
+			if(q->m_threadType == DISK_THREAD && fs) 
+				diskThread = true;
 
 			// might have got pre-called from EDISKSTUCK
 			if ( ! t->m_callback ) fs = NULL;
@@ -81,18 +90,29 @@ bool sendPageThreads ( TcpSocket *s , HttpRequest *r ) {
 			if(t->m_isDone) {
 				p.safePrintf("<td><font color='red'><b>done</b></font></td>");
 				p.safePrintf("<td>%"INT32"</td>", t->m_niceness);
-				p.safePrintf("<td>%"INT64"</td>", t->m_launchedTime - t->m_queuedTime); //queued
-				p.safePrintf("<td>%"INT64"</td>", t->m_exitTime - t->m_launchedTime); //run time
-				p.safePrintf("<td>%"INT64"</td>", now - t->m_exitTime); //cleanup
-				p.safePrintf("<td>%"INT64"</td>", now - t->m_queuedTime); //total
+				p.safePrintf("<td>%"INT64"ms</td>", t->m_launchedTime - t->m_queuedTime); //queued
+				p.safePrintf("<td>%"INT64"ms</td>", t->m_exitTime - t->m_launchedTime); //run time
+				p.safePrintf("<td>%"INT64"ms</td>", now - t->m_exitTime); //cleanup
+				p.safePrintf("<td>%"INT64"ms</td>", now - t->m_queuedTime); //total
 				p.safePrintf("<td>%s</td>",  g_profiler.getFnName((PTRTYPE)t->m_callback));
 				p.safePrintf("<td>%s</td>",  g_profiler.getFnName((PTRTYPE)t->m_startRoutine));
 				if(diskThread && fs) {
 					int64_t took = (t->m_exitTime - t->m_launchedTime);
-					if(took <= 0) took = 1;
-					p.safePrintf("<td>%"INT32"/%"INT32"</td>", t->m_bytesToGo, t->m_bytesToGo);
-					p.safePrintf("<td>%.2f kbps</td>", (float)t->m_bytesToGo/took);
-					p.safePrintf("<td>%s</td>",t->m_doWrite? "Write":"Read");
+					char *sign = "";
+					if(took <= 0) {sign=">";took = 1;}
+					p.safePrintf("<td>%"INT32"/%"INT32""
+						     "</td>", 
+						     t->m_bytesToGo, 
+						     t->m_bytesToGo);
+					p.safePrintf("<td>%s%.2f MB/s</td>", 
+						     sign,
+						     (float)t->m_bytesToGo/
+						     (1024.0*1024.0)/
+						     ((float)took/1000.0));
+					p.safePrintf("<td>%s</td>",
+						     t->m_doWrite? 
+						     "<font color=red>"
+						     "Write</font>":"Read");
 				}
 				else {
 					p.safePrintf("<td>--</td>");
@@ -113,7 +133,7 @@ bool sendPageThreads ( TcpSocket *s , HttpRequest *r ) {
 					int64_t took = (now - t->m_launchedTime);
 					if(took <= 0) took = 1;
 					p.safePrintf("<td>%c%c%c/%"INT32"</td>", '?','?','?',t->m_bytesToGo);
-					p.safePrintf("<td>%.2f kbps</td>", 0.0);//(float)fs->m_bytesDone/took);
+					p.safePrintf("<td>%.2f MB/s</td>", 0.0);//(float)fs->m_bytesDone/took);
 					p.safePrintf("<td>%s</td>",t->m_doWrite? "Write":"Read");
 				}
 				else {
@@ -151,7 +171,7 @@ bool sendPageThreads ( TcpSocket *s , HttpRequest *r ) {
 
 	}
 
-
+	/*
 	int32_t loActiveBig = disk->m_loLaunchedBig - disk->m_loReturnedBig;
 	int32_t loActiveMed = disk->m_loLaunchedMed - disk->m_loReturnedMed;
 	int32_t loActiveSma = disk->m_loLaunchedSma - disk->m_loReturnedSma;
@@ -208,7 +228,7 @@ bool sendPageThreads ( TcpSocket *s , HttpRequest *r ) {
 		      "<td><b>Active Write Threads</b></td><td>%"INT32"</td>"
 		      "</tr></table>",
 		      activeWrites);
-
+	*/
 
 	return g_httpServer.sendDynamicPage ( s , (char*) p.getBufStart() ,
 						p.length() );

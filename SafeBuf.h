@@ -20,10 +20,11 @@ public:
 	SafeBuf(int32_t initSize, char *label = NULL);
 
 	void constructor();
+	void destructor ();
 
 	//be careful with passing in a stackBuf! it could go out
 	//of scope independently of the safebuf.
-	SafeBuf(char* stackBuf, int32_t cap);
+	SafeBuf(char* stackBuf, int32_t cap, char* label = NULL);
 	SafeBuf(char *heapBuf, int32_t bufMax, int32_t bytesInUse, bool ownData);
 	~SafeBuf();
 
@@ -53,6 +54,8 @@ public:
 
 	//ACCESSORS
 	char *getBuf() { return m_buf + m_length; }
+	char *getBufPtr() { return m_buf + m_length; }
+	char *getBufCursor() { return m_buf + m_length; }
 	char *getBufStart() { return m_buf; }
 	char *getBufEnd() { return m_buf + m_capacity; }
 	int32_t getCapacity() { return m_capacity; }
@@ -400,12 +403,13 @@ public:
 	char  m_renderHtml;
 };
 
-
+#define XSTRMACRO(s) STRMACRO(s)
+#define STRMACRO(s) #s
 #define TOKENPASTE(x, y) x ## y
 #define TOKENPASTE2(x, y) TOKENPASTE(x, y)
 
 #define StackBuf(name) char TOKENPASTE2(tmpsafebuf, __LINE__)[1024];	\
-	SafeBuf name(TOKENPASTE2(tmpsafebuf, __LINE__), 1024)
+	SafeBuf name(TOKENPASTE2(tmpsafebuf, __LINE__), 1024, STRMACRO(TOKENPASTE2(__FILE__, __LINE__)))
 
 
 #endif

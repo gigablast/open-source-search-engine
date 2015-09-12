@@ -41,7 +41,8 @@ bool RdbDump::set ( //char     *coll          ,
 		    //key_t     prevLastKey   ,
 		    char     *prevLastKey   ,
 		    char      keySize       ,
-		    class DiskPageCache *pc     ,
+		   //class DiskPageCache *pc     ,
+		   void *pc ,
 		    int64_t maxFileSize   ,
 		    Rdb      *rdb           ) {
 
@@ -229,8 +230,15 @@ void RdbDump::doneDumping ( ) {
 	// did collection get deleted/reset from under us?
 	if ( saved == ENOCOLLREC ) return;
 
-	// save the map to disk
-	if ( m_map ) m_map->writeMap();
+	// save the map to disk. true = allDone
+	if ( m_map ) m_map->writeMap( true );
+
+	// now try to merge this collection/db again
+	// if not already in the linked list. but do not add to linked list
+	// if it is statsdb or catdb.
+	if ( m_rdb && ! m_rdb->m_isCollectionLess )
+		addCollnumToLinkedListOfMergeCandidates ( m_collnum );
+
 #ifdef GBSANITYCHECK
 	// sanity check
 	log("DOING SANITY CHECK FOR MAP -- REMOVE ME");
@@ -678,10 +686,11 @@ bool RdbDump::doneDumpingList ( bool addToMap ) {
 			// note it
 			log(LOG_LOGIC,"db: setting fd for vfd to -1.");
 			// mark our fd as not there...
-			int32_t i = (m_offset - m_bytesToWrite) / MAX_PART_SIZE;
+			//int32_t i=(m_offset-m_bytesToWrite) / MAX_PART_SIZE;
 			// sets s_fds[vfd] to -1
-			if ( m_file->m_files[i] )
-				releaseVfd ( m_file->m_files[i]->m_vfd );
+			// MDW: no, can't do this now
+			// if ( m_file->m_files[i] )
+			// 	releaseVfd ( m_file->m_files[i]->m_vfd );
 		}
 		//log("RdbDump::doneDumpingList: retrying.");
 		return dumpList ( m_list , m_niceness , true );

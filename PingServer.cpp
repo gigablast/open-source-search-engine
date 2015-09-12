@@ -3221,28 +3221,34 @@ void doneSendingNotifyEmailWrapper ( void *state ) {
 	EmailInfo *ei = (EmailInfo *)state;
 	ei->m_notifyBlocked--;
 	// error?
-	log("build: email notification status: %s",mstrerror(g_errno));
+	log("build: email notification status (count=%i) (ei=0x%"PTRFMT"): %s",
+	    (int)ei->m_notifyBlocked,(PTRTYPE)ei,mstrerror(g_errno));
 	// ignore it for rest
 	g_errno = 0;
 	// wait for post url to get done
 	if ( ei->m_notifyBlocked > 0 ) return;
 	// unmark it
-	ei->m_inUse = false;
+	//ei->m_inUse = false;
 	// all done
 	ei->m_finalCallback ( ei->m_finalState );
+	// nuke it
+	mfree ( ei , sizeof(EmailInfo) ,"eialrt" );
 }
 
 void doneGettingNotifyUrlWrapper ( void *state , TcpSocket *sock ) {
 	EmailInfo *ei = (EmailInfo *)state;
 	ei->m_notifyBlocked--;
 	// error?
-	log("build: url notification status: %s",mstrerror(g_errno));
+	log("build: url notification status (count=%i) (ei=0x%"PTRFMT"): %s",
+	    (int)ei->m_notifyBlocked,(PTRTYPE)ei,mstrerror(g_errno));
 	// wait for email to get done
 	if ( ei->m_notifyBlocked > 0 ) return;
 	// unmark it
-	ei->m_inUse = false;
+	//ei->m_inUse = false;
 	// all done
 	ei->m_finalCallback ( ei->m_finalState );
+	// nuke it
+	mfree ( ei , sizeof(EmailInfo) ,"eialrt" );
 }
 
 // for printCrawlDetailsInJson()
@@ -3253,7 +3259,11 @@ void doneGettingNotifyUrlWrapper ( void *state , TcpSocket *sock ) {
 //   or maxToProcess limitation.
 bool sendNotification ( EmailInfo *ei ) {
 
-	if ( ei->m_inUse ) { char *xx=NULL;*xx=0; }
+	// disable for now
+	//log("ping: NOT SENDING NOTIFICATION -- DEBUG!!");
+	//return true;
+
+	//if ( ei->m_inUse ) { char *xx=NULL;*xx=0; }
 
 	// caller must set this, as well as m_finalCallback/m_finalState
 	CollectionRec *cr = g_collectiondb.m_recs[ei->m_collnum];
@@ -3269,7 +3279,7 @@ bool sendNotification ( EmailInfo *ei ) {
 	// sanity check, can only call once
 	if ( ei->m_notifyBlocked != 0 ) { char *xx=NULL;*xx=0; }
 
-	ei->m_inUse = true;
+	//ei->m_inUse = true;
 
 
 	if ( email && email[0] ) {
@@ -3365,7 +3375,9 @@ bool sendNotification ( EmailInfo *ei ) {
 	}
 
 	if ( ei->m_notifyBlocked == 0 ) {
-		ei->m_inUse = false;
+		//ei->m_inUse = false;
+		// nuke it
+		mfree ( ei , sizeof(EmailInfo) ,"eialrt" );
 		return true;
 	}
 

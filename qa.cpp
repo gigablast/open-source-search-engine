@@ -476,6 +476,9 @@ void processReply ( char *reply , int32_t replyLen ) {
 
 	g_numErrors++;
 	
+	SafeBuf he;
+	he.htmlEncode ( s_url.getUrl() );
+
 	g_qaOutput.safePrintf("<b style=color:red;>FAILED TEST</b><br>%s : "
 			      "<a href=%s>%s</a> (urlhash=%"UINT32")<br>"
 
@@ -496,7 +499,7 @@ void processReply ( char *reply , int32_t replyLen ) {
 			      "<pre id=%"UINT32" style=background-color:0xffffff;>",
 			      s_qt->m_testName,
 			      s_url.getUrl(),
-			      s_url.getUrl(),
+			      he.getBufStart(),
 			      urlHash32,
 
 			      // input checkbox name field
@@ -815,7 +818,7 @@ bool qainject1 ( ) {
 	}
 
 
-	// stop for now
+	// stop for now so we can analyze the index
 	//return true; //
 
 	//
@@ -1544,15 +1547,13 @@ bool qaWarcFiles ( ) {
 		SafeBuf sb;
 
 		sb.safePrintf("&c=qatest123"
-				"&format=json"
-				  "&strip=1"
-				  "&spiderlinks=1"
-				  "&urls=http://%s:%"INT32"/test.warc.gz"
+					  "&format=json"
+					  "&url=http://%s:%"INT32"/test.warc.gz"
 				  , iptoa(g_hostdb.m_myHost->m_ip)
 				  , (int32_t)g_hostdb.m_myHost->m_httpPort
 
 			      );
-		if ( ! getUrl ( "/admin/addurl",0,sb.getBufStart()) )
+		if ( ! getUrl ( "/admin/inject",0,sb.getBufStart()) )
 			return false;
 	}
 	if ( s_flags[EXAMINE_RESULTS1] == 0) {
@@ -1570,13 +1571,11 @@ bool qaWarcFiles ( ) {
 		SafeBuf sb;
 		sb.safePrintf("&c=qatest123"
 				"&format=json"
-				"&strip=1"
-				"&spiderlinks=1"
-				"&urls=http://%s:%"INT32"/test.arc.gz"
+				"&url=http://%s:%"INT32"/test.arc.gz"
 				, iptoa(g_hostdb.m_myHost->m_ip)
 				, (int32_t)g_hostdb.m_myHost->m_httpPort);
 
-		if ( ! getUrl ( "/admin/addurl",0,sb.getBufStart()) )
+		if ( ! getUrl ( "/admin/inject",0,sb.getBufStart()) )
 			return false;
 	}
 
@@ -1632,8 +1631,10 @@ bool qaInjectMetadata ( ) {
 	// the same url with different content to simulate a site that is updated
 	// at about half the rate that we spider them.
 	if ( s_flags[ADD_INITIAL_URLS] == 0) {
+
 		char* metadata = "{\"testtest\":42,\"a-hyphenated-name\":5, "
 			"\"a-string-value\":\"can we search for this\", "
+			"an array:['a','b', 'c', 1,2,3], "
 			"\"a field with spaces\":6, \"compound\":{\"field\":7}}";
 		
 		s_flags[ADD_INITIAL_URLS]++;
@@ -1687,10 +1688,104 @@ bool qaInjectMetadata ( ) {
 		  return false;
 	}
 
-
-
 	return true;
 }
+
+bool qaMetadataFacetSearch ( ) {
+	if ( ! s_flags[DELETE_COLLECTION] ) {
+		s_flags[DELETE_COLLECTION] = true;
+		if ( ! getUrl ( "/admin/delcoll?xml=1&delcoll=qatest123" ) )
+			return false;
+	}
+
+	if ( ! s_flags[ADD_COLLECTION] ) {
+		s_flags[ADD_COLLECTION] = true;
+		if ( ! getUrl ( "/admin/addcoll?addcoll=qatest123&xml=1&"
+				"collectionips=127.0.0.1" , 
+				// checksum of reply expected
+				238170006 ) )
+			return false;
+	}
+
+	if ( ! s_flags[SET_PARAMETERS] ) {
+		s_flags[SET_PARAMETERS] = true;
+		if ( ! getUrl ( "/admin/spider?c=qatest123&qa=1&mit=0&mns=1"
+				// no spider replies because it messes
+				// up our last test to make sure posdb
+				// is 100% empty. 
+				// see "index spider replies" in Parms.cpp.
+				"&isr=0"
+				// turn off use robots to avoid that
+				// xyz.com/robots.txt redir to seekseek.com
+				"&obeyRobots=0"
+                // This is what we are testing
+				"&usetimeaxis=1"
+				"&de=0"
+				,
+				// checksum of reply expected
+				238170006 ) )
+			return false;
+	}
+
+
+	// this only loads once
+	loadUrls();
+	int32_t numDocsToInject = s_ubuf2.length()/(int32_t)sizeof(char *);
+
+
+	//
+	// Inject urls, return false if not done yet.
+	// Here we alternate sending the same url -> content pair with sending 
+    // the same url with different content to simulate a site that is updated
+    // at about half the rate that we spider them.
+	if ( ! s_flags[ADD_INITIAL_URLS] ) {
+		for ( ; s_flags[URL_COUNTER] < numDocsToInject ; s_flags[URL_COUNTER]++) {
+            // inject using html api
+            SafeBuf sb;
+
+            char* expect = "[Success]";
+
+            sb.safePrintf("&c=qatest123&deleteurl=0&"
+                          "format=xml&u=");
+            sb.urlEncode ( s_urlPtrs[s_flags[URL_COUNTER]]);
+            sb.safePrintf("&hasmime=1");
+            sb.safePrintf("&metadata= {\"string-facets\":\"testing %d\", \"number-facets\":%d }",
+						  s_flags[URL_COUNTER] % 10,s_flags[URL_COUNTER] % 10);
+            sb.safePrintf("&content=");
+            sb.urlEncode(s_contentPtrs[s_flags[URL_COUNTER]]);
+            sb.nullTerm();
+
+
+			s_flags[URL_COUNTER]++;
+            if ( ! getUrl("/admin/inject",
+                          0, // no idea what crc to expect
+                          sb.getBufStart(),
+                          expect,
+                          g_timeAxisIgnore)
+                 )
+                return false;
+            return false;
+        }
+		s_flags[ADD_INITIAL_URLS] = true;
+	}
+
+	if ( ! s_flags[WAIT_A_BIT] ) {
+		wait(1.5);
+		s_flags[3] = true;
+		return false;
+	}
+
+	// if ( ! s_flags[EXAMINE_RESULTS] ) {
+	// 	s_flags[16] = true;
+	// 	if ( ! getUrl ( "/search?c=qatest123&qa=1&q=%2Bthe"
+	// 			"&dsrt=500",
+	// 			702467314 ) )
+	// 		return false;
+	// }
+
+    return true;
+}
+
 
 
 bool qaimport () {
@@ -3309,7 +3404,12 @@ static QATest s_qatests[] = {
 	{qaInjectMetadata,
 	 "injectMetadata",
 	 "When we pass json encoded metadata to an injection, make sure we can"
-     "search for the fields."}
+     "search for the fields."},
+
+	{qaMetadataFacetSearch,
+	 "metadatafacetsearch",
+	 "When we pass json encoded metadata to an injection, make sure the"
+     "metadata is faceted properly."}
 
 
 };

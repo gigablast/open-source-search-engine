@@ -68,8 +68,12 @@ bool sendReply ( State0 *st , char *reply ) {
 
 	int32_t savedErr = g_errno;
 
-	TcpSocket *s = st->m_socket;
-	if ( ! s ) { char *xx=NULL;*xx=0; }
+	TcpSocket *sock = st->m_socket;
+	if ( ! sock ) { 
+		log("results: not sending back results on an empty socket."
+		    "socket must have closed on us abruptly.");
+		//char *xx=NULL;*xx=0; }
+	}
 	SearchInput *si = &st->m_si;
 	char *ct = "text/html";
 	if ( si && si->m_format == FORMAT_XML ) ct = "text/xml"; 
@@ -143,7 +147,8 @@ bool sendReply ( State0 *st , char *reply ) {
 		//
 		// send back the actual search results
 		//
-		g_httpServer.sendDynamicPage(s,
+		if ( sock )
+		g_httpServer.sendDynamicPage(sock,
 					     reply,
 					     rlen,//gbstrlen(reply),
 					     // don't let the ajax re-gen
@@ -199,9 +204,9 @@ bool sendReply ( State0 *st , char *reply ) {
 	// if we had a broken pipe from the browser while sending
 	// them the search results, then we end up closing the socket fd
 	// in TcpServer::sendChunk() > sendMsg() > destroySocket()
-	if ( s->m_numDestroys ) {
+	if ( sock && sock->m_numDestroys ) {
 		log("results: not sending back error on destroyed socket "
-		    "sd=%"INT32"",s->m_sd);
+		    "sd=%"INT32"",sock->m_sd);
 		return true;
 	}
 
@@ -212,7 +217,8 @@ bool sendReply ( State0 *st , char *reply ) {
 	    savedErr == ENOCOLLREC) 
 		status = 400;
 
-	g_httpServer.sendQueryErrorReply(s,
+	if ( sock )
+	g_httpServer.sendQueryErrorReply(sock,
 					 status,
 					 mstrerror(savedErr),
 					 format,//xml,
@@ -541,6 +547,9 @@ bool sendPageResults ( TcpSocket *s , HttpRequest *hr ) {
 
 	// set this in case SearchInput::set fails!
 	st->m_socket = s;
+
+	// record timestamp so we know if we got our socket closed and swapped
+	st->m_socketStartTimeHack = s->m_startTime;
 
 	// save this count so we know if TcpServer.cpp calls destroySocket(s)
 	st->m_numDestroys = s->m_numDestroys;
@@ -1154,6 +1163,16 @@ bool gotResults ( void *state ) {
 
 	SearchInput *si = &st->m_si;
 
+	// if we lost the socket because we were streaming and it
+	// got closed from a broken pipe or something, then Msg40.cpp
+	// will set st->m_socket to NULL if the fd ends up ending closed
+	// because someone else might be using it and we do not want to
+	// mess with their TcpSocket settings.
+	if ( ! st->m_socket ) {
+		log("results: socket is NULL. sending failed.");
+		return sendReply(st,NULL);
+	}
+
 	// if in streaming mode and we never sent anything and we had
 	// an error, then send that back. we never really entered streaming
 	// mode in that case. this happens when someone deletes a coll
@@ -1163,6 +1182,23 @@ bool gotResults ( void *state ) {
 	     si->m_streamResults &&
 	     st->m_socket->m_totalSent == 0 )
 	       return sendReply(st,NULL);
+
+
+	// if we skipped a shard because it was dead, usually we provide
+	// the results anyway, but if this switch is true then return an
+	// error code instead. this is the 'all or nothing' switch.
+	if ( msg40->m_msg3a.m_skippedShards > 0 &&
+	     ! g_conf.m_returnResultsAnyway ) {
+	       char reply[256];
+	       sprintf ( reply , 
+			 "%"INT32" shard(s) out of %"INT32" did not "
+			 "respond to query."
+			 , msg40->m_msg3a.m_skippedShards
+			 , g_hostdb.m_numShards );
+	       g_errno = ESHARDDOWN;
+	       return sendReply(st,reply);
+	}
+
 
 	// if already printed from Msg40.cpp, bail out now
 	if ( si->m_streamResults ) {
@@ -3753,14 +3789,15 @@ bool printInlinkText ( SafeBuf *sb , Msg20Reply *mr , SearchInput *si ,
 		if ( firstTime ) {
 			sb->safePrintf("<font size=-1>");
 			sb->safePrintf("<table border=1>"
-				      "<tr><td colspan=3>"
+				      "<tr><td colspan=10>"
 				      "<center>"
 				      "<b>Inlinks with Query Terms</b>"
 				      "</center>"
 				      "</td></tr>"
 				      "<tr>"
 				      "<td>Inlink Text</td>"
-				      "<td>From</td>"
+				      "<td>From Site</td>"
+				      "<td>Site IP</td>"
 				      "<td>Site Rank</td>"
 				      "</tr>"
 				      );
@@ -3780,7 +3817,13 @@ bool printInlinkText ( SafeBuf *sb , Msg20Reply *mr , SearchInput *si ,
 		char *host = getHostFast(k->getUrl(),&hostLen,NULL);
 		sb->safePrintf("</td><td>");
 		if ( host ) sb->safeMemcpy(host,hostLen);
-		sb->safePrintf("</td><td>%"INT32"</td></tr>",(int32_t)k->m_siteRank);
+		sb->safePrintf("</td><td>");
+		sb->safePrintf("<a href=/search?c=%s&q=ip%%3A%s"
+			       "+gbsortbyint%%3Agbsitenuminlinks&n=100>"
+			       ,si->m_cr->m_coll,iptoa(k->m_ip));
+		sb->safePrintf("%s</a>",iptoa(k->m_ip));
+		sb->safePrintf("</td><td>%"INT32"</td></tr>"
+			       ,(int32_t)k->m_siteRank);
 		//sb->safePrintf("<br>");
 		printedInlinkText = true;
 		*numPrinted = *numPrinted + 1;
@@ -5667,6 +5710,8 @@ bool printResult ( State0 *st, int32_t ix , int32_t *numPrintedSoFar ) {
 
 
 	if ( mr->size_metadataBuf && si->m_format == FORMAT_HTML) {
+		sb->safePrintf("<br>");
+
 		Json md;
 		JsonItem *ji = md.parseJsonStringIntoJsonItems(mr->ptr_metadataBuf,
 													   0);
@@ -5675,6 +5720,7 @@ bool printResult ( State0 *st, int32_t ix , int32_t *numPrintedSoFar ) {
 		SafeBuf nameBuf(tmpBuf1, 1024);
 		for ( ; ji ; ji = ji->m_next ) {
 			if(ji->isInArray()) continue;
+			if(ji->m_type == JT_ARRAY) continue;
 			ji->getCompoundName ( nameBuf ) ;
 			if(nameBuf.length() == 0) {
 				continue;
@@ -5933,15 +5979,15 @@ bool printResult ( State0 *st, int32_t ix , int32_t *numPrintedSoFar ) {
 			       "</numGoodSiteInlinks>\n",
 			       (int32_t)mr->m_siteNumInlinks );
 
-		sb->safePrintf ("\t\t<numTotalSiteInlinks>%"INT32""
-			       "</numTotalSiteInlinks>\n",
-			       (int32_t)mr->m_siteNumInlinksTotal );
-		sb->safePrintf ("\t\t<numUniqueIpsLinkingToSite>%"INT32""
-			       "</numUniqueIpsLinkingToSite>\n",
-			       (int32_t)mr->m_siteNumUniqueIps );
-		sb->safePrintf ("\t\t<numUniqueCBlocksLinkingToSite>%"INT32""
-			       "</numUniqueCBlocksLinkingToSite>\n",
-			       (int32_t)mr->m_siteNumUniqueCBlocks );
+		// sb->safePrintf ("\t\t<numTotalSiteInlinks>%"INT32""
+		// 	       "</numTotalSiteInlinks>\n",
+		// 	       (int32_t)mr->m_siteNumInlinksTotal );
+		// sb->safePrintf ("\t\t<numUniqueIpsLinkingToSite>%"INT32""
+		// 	       "</numUniqueIpsLinkingToSite>\n",
+		// 	       (int32_t)mr->m_siteNumUniqueIps );
+		// sb->safePrintf("\t\t<numUniqueCBlocksLinkingToSite>%"INT32""
+		// 	       "</numUniqueCBlocksLinkingToSite>\n",
+		// 	       (int32_t)mr->m_siteNumUniqueCBlocks );
 
 
 		struct tm *timeStruct3;

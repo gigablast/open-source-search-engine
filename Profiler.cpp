@@ -1451,9 +1451,16 @@ Profiler::getStackFrame(int sig) {
 	// profile once every 5ms, not every 1ms
 	static int32_t s_count = 0;
 
+	// turn off after 60 seconds of profiling
+	if ( m_totalFrames++ >= 60000 ) {
+		stopRealTimeProfiler(false);
+		return;
+	}
+
 	if ( ++s_count != 5 ) return;
 
 	s_count = 0;
+
 
 	// prevent cores.
 	// TODO: hack this to a function somehow...
@@ -1462,6 +1469,9 @@ Profiler::getStackFrame(int sig) {
 	// those in the profiler unfortunately unless we put a hack in here
 	// somewhere. but for now just ignore.
 	if ( g_inMemcpy ) return;
+
+	// likewise, not if in system malloc since backtrace() mallocs
+	if ( g_inMemFunction ) return;
 
 	//void *trace[32];
 
@@ -1584,6 +1594,7 @@ Profiler::startRealTimeProfiler() {
 	// }
 	init();
 	m_realTimeProfilerRunning = true;
+	m_totalFrames = 0;
 	// now Loop.cpp will call g_profiler.getStackFrame()
 	return;
 

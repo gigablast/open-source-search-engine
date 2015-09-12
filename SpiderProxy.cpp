@@ -249,6 +249,10 @@ bool resetProxyStats ( ) {
 // save the stats
 bool saveSpiderProxyStats ( ) {
 
+	// do not save if coring in a malloc/free because we call malloc/free
+	// below to save stuff possibly
+	if ( g_inMemFunction ) return true;
+
 	// save hashtable
 	s_proxyBannedTable.save(g_hostdb.m_dir,"proxybantable.dat");
 
@@ -923,9 +927,12 @@ void handleRequest54 ( UdpSlot *udpSlot , int32_t niceness ) {
 	// and the loadbucket id
 	//*(int32_t *)p = bb.m_id; p += 4;
 
+	int32_t sanityCount = s_loadTable.getNumSlots();
+
 	// now remove old entries from the load table. entries that
 	// have completed and have a download end time more than 10 mins ago
 	for ( int32_t i = 0 ; i < s_loadTable.getNumSlots() ; i++ ) {
+		if ( sanityCount-- < 0 ) break;
 		// skip if empty
 		if ( ! s_loadTable.m_flags[i] ) continue;
 		// get the bucket

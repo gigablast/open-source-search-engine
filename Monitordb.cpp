@@ -9,7 +9,7 @@ void Monitordb::reset() {
 
 bool Monitordb::init ( ) {
 	// we use the same disk page size as indexdb (for rdbmap.cpp)
-	int32_t pageSize = GB_INDEXDB_PAGE_SIZE;
+	//int32_t pageSize = GB_INDEXDB_PAGE_SIZE;
 	// set this for debugging
 	//int64_t maxTreeMem = 1000000;
 	int64_t maxTreeMem = 10000000; // 10MB
@@ -18,18 +18,16 @@ bool Monitordb::init ( ) {
 	// . 32 bytes per record when in the tree
 	int32_t maxTreeNodes = maxTreeMem /(sizeof(key96_t)+16);
 	// disk page cache mem, 100MB on gk0 now
-	int32_t pcmem = 0; // g_conf.m_monitordbMaxDiskPageCacheMem;
+	//int32_t pcmem = 0; // g_conf.m_monitordbMaxDiskPageCacheMem;
 	// keep this low if we are the tmp cluster
 	//if ( g_hostdb.m_useTmpCluster ) pcmem = 0;
 	// TODO: would be nice to just do page caching on the satellite files;
 	//       look into "minimizeDiskSeeks" at some point...
-	if ( ! m_pc.init ( "monitordb" ,
-			   RDB_MONITORDB,
-			   pcmem    ,
-			   pageSize ,
-			   true     ,  // use shared mem?
-			   false    )) // minimizeDiskSeeks?
-		return log("db: Monitordb init failed.");
+	// if ( ! m_pc.init ( "monitordb" ,
+	// 		   RDB_MONITORDB,
+	// 		   pcmem    ,
+	// 		   pageSize ))
+	// 	return log("db: Monitordb init failed.");
 	// init the rdb
 	return m_rdb.init ( g_hostdb.m_dir ,
 			    "monitordb" ,
@@ -47,7 +45,7 @@ bool Monitordb::init ( ) {
 			    0        , // cache nodes
 			    false, // true     , // use half keys
 			    false    , // load cache from disk
-			    &m_pc    ,
+			    NULL,//&m_pc    ,
 			    false    , // false
 			    false    , // preload page cache
 			    sizeof(key96_t) ,

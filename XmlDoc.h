@@ -280,8 +280,10 @@ class XmlDoc {
 	// this is a hash of all adjacent tag pairs for templated identificatn
 	uint32_t  m_tagPairHash32;
 	int32_t      m_siteNumInlinks;
-	int32_t      m_siteNumInlinksUniqueIp; // m_siteNumInlinksFresh
-	int32_t      m_siteNumInlinksUniqueCBlock; // m_sitePop;
+	//int32_t      m_siteNumInlinksUniqueIp; // m_siteNumInlinksFresh
+	//int32_t      m_siteNumInlinksUniqueCBlock; // m_sitePop;
+	int32_t    m_reserved1;
+	int32_t    m_reserved2;
 	uint32_t   m_spideredTime; // time_t
 	// just don't throw away any relevant SpiderRequests and we have
 	// the data that m_minPubDate and m_maxPubDate provided
@@ -297,7 +299,8 @@ class XmlDoc {
 	uint16_t  m_countryId;
 	//uint16_t  m_reserved1;//titleWeight;
 	//uint16_t  m_reserved2;//headerWeight;
-	int32_t      m_siteNumInlinksTotal;
+	//int32_t      m_siteNumInlinksTotal;
+	int32_t      m_reserved3;
 	//uint16_t  m_reserved3;//urlPathWeight;
 	uint8_t   m_metaListCheckSum8; // bring it back!!
 	char      m_reserved3b;
@@ -702,7 +705,7 @@ class XmlDoc {
 	char **getExpandedUtf8Content ( ) ;
 	char **getUtf8Content ( ) ;
 	// we download large files to a file on disk, like warcs and arcs
-	File *getUtf8ContentInFile ( int64_t *fileSizeArg );
+	BigFile *getUtf8ContentInFile ( int64_t *fileSizeArg );
 	int32_t *getContentHash32 ( ) ;
 	int32_t *getContentHashJson32 ( ) ;
 	//int32_t *getTagHash32 ( ) ;
@@ -1006,6 +1009,10 @@ class XmlDoc {
 
 	// we we started spidering it, in milliseconds since the epoch
 	int64_t    m_startTime;
+	int64_t    m_injectStartTime;
+
+	class XmlDoc *m_prevInject;
+	class XmlDoc *m_nextInject;
 
 	// when set() was called by Msg20.cpp so we can time how long it took
 	// to generate the summary
@@ -1083,8 +1090,10 @@ class XmlDoc {
 	int32_t m_fileBufAllocSize;
 	char *m_fptr ;
 	char *m_fptrEnd ;
-	File m_file;
+	BigFile m_file;
 	int64_t m_fileSize;
+	FileState m_fileState;
+	bool m_readThreadOut;
 	bool m_hasMoreToRead;
 	int32_t m_numInjectionsOut;
 	bool m_calledWgetThread;
@@ -1431,9 +1440,9 @@ class XmlDoc {
 	//bool m_aboutUsLinkValid;
 	//bool m_contactLinksValid;
 	bool m_siteNumInlinksValid;
-	bool m_siteNumInlinksUniqueIpValid;//FreshValid;
-	bool m_siteNumInlinksUniqueCBlockValid;//sitePopValid
-	bool m_siteNumInlinksTotalValid;
+	//bool m_siteNumInlinksUniqueIpValid;//FreshValid;
+	//bool m_siteNumInlinksUniqueCBlockValid;//sitePopValid
+	//bool m_siteNumInlinksTotalValid;
 	bool m_siteNumInlinks8Valid;
 	bool m_siteLinkInfoValid;
 	bool m_isWWWDupValid;

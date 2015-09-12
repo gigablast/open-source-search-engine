@@ -17,7 +17,8 @@
 //#define TITLEREC_CURRENT_VERSION 118
 // add new link stats into LinkInfo
 //#define TITLEREC_CURRENT_VERSION 119
-#define TITLEREC_CURRENT_VERSION 120
+//#define TITLEREC_CURRENT_VERSION 120
+#define TITLEREC_CURRENT_VERSION 121
 
 #include "Rdb.h"
 #include "Url.h"
@@ -159,9 +160,9 @@ class Titledb {
 	// holds binary format title entries
 	Rdb m_rdb;
 
-	DiskPageCache *getDiskPageCache ( ) { return &m_pc; };
+	//DiskPageCache *getDiskPageCache ( ) { return &m_pc; };
 
-	DiskPageCache m_pc;
+	//DiskPageCache m_pc;
 };
 
 extern class Titledb g_titledb;

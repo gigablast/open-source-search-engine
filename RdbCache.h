@@ -28,8 +28,8 @@
 //   allocating if the record size is 256k or more. Copying 256k only
 //   takes .1 ms on the P4 2.60CGHz. This is on the TODO list.
 
-#ifndef _RDBCACHE_H_
-#define _RDBCACHE_H_
+#ifndef RDBCACHE_H
+#define RDBCACHE_H
 
 // . TODO:
 // . if size of added rec is ABOVE this, then don't use our memory buffer
@@ -120,6 +120,7 @@ class RdbCache {
 	// . returns true if found, false if not found in cache
 	// . sets *rec and *recSize iff found
 	// . sets *cachedTime to time the rec was cached
+	// . use maxAge of -1 to have no limit to the age of cached rec
 	bool getRecord ( collnum_t collnum   ,
 			 //key_t    cacheKey   ,
 			 char    *cacheKey   ,

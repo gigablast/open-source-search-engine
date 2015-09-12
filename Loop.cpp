@@ -1017,6 +1017,11 @@ void printStackTrace ( int signum , siginfo_t *info , void *ptr ) {
 	logf(LOG_DEBUG,"gb: seg fault. printing stack trace. use "
 	     "'addr2line -e gb' to decode the hex below.");
 
+	if ( g_inMemFunction ) {
+		logf(LOG_DEBUG,"gb: in mem function not doing backtrace");
+		return;
+	}
+
 	static void *s_bt[200];
 	int sz = backtrace(s_bt, 200);
 	//char **strings = backtrace_symbols(s_bt, sz);
@@ -2012,12 +2017,12 @@ void Loop::doPoll ( ) {
 			// if shutting down was it a sigterm ?
 			if ( m_shutdown ) goto again;
 			// handle returned threads for niceness 0
-			if ( g_threads.m_needsCleanup )
-				g_threads.timedCleanUp(-3,0); // 3 ms
+			//if ( g_threads.m_needsCleanup )
+			g_threads.timedCleanUp(-3,0); // 3 ms
 			if ( m_inQuickPoll ) goto again;
 			// high niceness threads
-			if ( g_threads.m_needsCleanup )
-				g_threads.timedCleanUp(-4,MAX_NICENESS); //3 ms
+			//if ( g_threads.m_needsCleanup )
+			g_threads.timedCleanUp(-4,MAX_NICENESS); //3 ms
 
 			goto again;
 		}

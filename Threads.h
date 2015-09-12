@@ -10,6 +10,11 @@
 
 #include <sys/types.h>  // pid_t
 
+// this also limit the maximum number of outstanding (live) threads
+#define MAX_STACKS 20
+// try going up to 40, we use about 2MB per stack... so this is 80MB
+//#define MAX_STACKS 40
+
 // if we are a thread this gets the threadid, otherwise, the main process id
 //pid_t getpidtid();
 // on 64-bit architectures pthread_t is 64 bits and pid_t is still 32 bits
@@ -59,6 +64,13 @@ class ThreadEntry {
 
 	bool      m_needsJoin;
 	pthread_t m_joinTid;
+
+	class ThreadEntry *m_nextLink;
+	class ThreadEntry *m_prevLink;
+
+	// the waiting linked list we came from
+	ThreadEntry **m_bestHeadPtr;
+	ThreadEntry **m_bestTailPtr;
 };
 
 //#define MAX_THREAD_ENTRIES 1024
@@ -85,6 +97,31 @@ class ThreadQueue {
 	int32_t         m_entriesSize;
 	int32_t         m_maxEntries;
 
+	// linked list head for launched thread entries
+	ThreadEntry *m_launchedHead;
+
+	// linked list head for empty thread entries
+	ThreadEntry *m_emptyHead;
+
+	// 8 heads/tails for linked lists of thread entries waiting to launch
+	ThreadEntry *m_waitHead0;
+	ThreadEntry *m_waitHead1;
+	ThreadEntry *m_waitHead2;
+	ThreadEntry *m_waitHead3;
+	ThreadEntry *m_waitHead4;
+	ThreadEntry *m_waitHead5;
+	ThreadEntry *m_waitHead6;
+
+	ThreadEntry *m_waitTail0;
+	ThreadEntry *m_waitTail1;
+	ThreadEntry *m_waitTail2;
+	ThreadEntry *m_waitTail3;
+	ThreadEntry *m_waitTail4;
+	ThreadEntry *m_waitTail5;
+	ThreadEntry *m_waitTail6;
+
+
+	/*
 	// counts the high/low priority (niceness <= 0) threads
 	int64_t   m_hiLaunched;
 	int64_t   m_hiReturned;
@@ -114,6 +151,7 @@ class ThreadQueue {
 	int64_t   m_mdReturnedSma;
 	int64_t   m_loLaunchedSma;
 	int64_t   m_loReturnedSma;
+	*/
 
 	// init
 	bool         init (char threadType, int32_t maxThreads, int32_t maxEntries);
@@ -141,7 +179,14 @@ class ThreadQueue {
 
 	// . launch a thread from our queue
 	// . returns false and sets errno on error
-	bool         launchThread2 ( ThreadEntry *te );
+	bool         launchThread2 ( );
+
+	bool launchThreadForReals ( ThreadEntry **headPtr ,
+				    ThreadEntry **tailPtr ) ;
+
+	void removeThreads2 ( ThreadEntry **headPtr ,
+			      ThreadEntry **tailPtr ,
+			      class BigFile *bf ) ;
 
 	void print ( ) ;
 
@@ -245,9 +290,11 @@ class Threads {
 	int32_t      getNumThreadQueues() { return m_numQueues; }
 
 	// used by UdpServer to see if it should call a low priority callback
-	int32_t getNumActiveHighPriorityCpuThreads() ;
+	//int32_t getNumActiveHighPriorityCpuThreads() ;
 	// all high priority threads...
 	int32_t getNumActiveHighPriorityThreads() ;
+
+	bool hasHighPriorityCpuThreads() ;
 
 	int32_t getNumThreadsOutOrQueued();
 

@@ -385,6 +385,13 @@ bool CommandAddColl ( char *rec , char customCrawl ) {
 		return true;
 	}
 
+	// if ( ! g_parms.m_inSyncWithHost0 ) {
+	// 	log("parms: can not add coll #%i %s until in sync with host 0",
+	// 	    (int)newCollnum,collName);
+	// 	g_errno = EBADENGINEER;
+	// 	return true;
+	// }
+
 	// this saves it to disk! returns false and sets g_errno on error.
 	if ( ! g_collectiondb.addNewColl ( collName,
 					   customCrawl ,
@@ -421,6 +428,14 @@ bool CommandResetProxyTable ( char *rec ) {
 // . returns false if would block
 bool CommandDeleteColl ( char *rec , WaitEntry *we ) {
 	collnum_t collnum = getCollnumFromParmRec ( rec );
+
+	// if ( ! g_parms.m_inSyncWithHost0 ) {
+	// 	log("parms: can not del collnum %i until in sync with host 0",
+	// 	    (int)collnum);
+	// 	g_errno = EBADENGINEER;
+	// 	return true;
+	// }
+
 	// the delete might block because the tree is saving and we can't
 	// remove our collnum recs from it while it is doing that
 	if ( ! g_collectiondb.deleteRec2 ( collnum ) )
@@ -436,6 +451,14 @@ bool CommandDeleteColl2 ( char *rec , WaitEntry *we ) {
 	char *data = rec + sizeof(key96_t) + 4;
 	char *coll = (char *)data;
 	collnum_t collnum = g_collectiondb.getCollnum ( coll );
+
+	// if ( ! g_parms.m_inSyncWithHost0 ) {
+	// 	log("parms: can not del collnum %i until in sync with host 0",
+	// 	    (int)collnum);
+	// 	g_errno = EBADENGINEER;
+	// 	return true;
+	// }
+
 	if ( collnum < 0 ) {
 		g_errno = ENOCOLLREC;
 		return true;;
@@ -671,44 +694,52 @@ bool CommandSpiderTestCont ( char *rec ) {
 
 // some of these can block a little. if threads are off, a lot!
 bool CommandMerge ( char *rec ) {
+	forceMergeAll ( RDB_POSDB ,1);
+	forceMergeAll ( RDB_TITLEDB ,1);
+	forceMergeAll ( RDB_TAGDB ,1);
+	forceMergeAll ( RDB_SPIDERDB ,1);
+	forceMergeAll ( RDB_LINKDB ,1);
 	// most of these are probably already in good shape
 	//g_checksumdb.getRdb()->attemptMerge (1,true);
-	g_clusterdb.getRdb()->attemptMerge  (1,true); // niceness, force?
-	g_tagdb.getRdb()->attemptMerge     (1,true);
-	g_catdb.getRdb()->attemptMerge      (1,true);
-	//g_tfndb.getRdb()->attemptMerge      (1,true);
-	g_spiderdb.getRdb()->attemptMerge   (1,true);
-	// these 2 will probably need the merge the most
-	g_indexdb.getRdb()->attemptMerge    (1,true);
-	g_datedb.getRdb()->attemptMerge     (1,true);
-	g_titledb.getRdb()->attemptMerge    (1,true);
-	//g_sectiondb.getRdb()->attemptMerge  (1,true);
-	g_statsdb.getRdb()->attemptMerge    (1,true);
-	g_linkdb .getRdb()->attemptMerge    (1,true);
+	// g_clusterdb.getRdb()->attemptMerge  (1,true); // niceness, force?
+	// g_tagdb.getRdb()->attemptMerge     (1,true);
+	// g_catdb.getRdb()->attemptMerge      (1,true);
+	// //g_tfndb.getRdb()->attemptMerge      (1,true);
+	// g_spiderdb.getRdb()->attemptMerge   (1,true);
+	// // these 2 will probably need the merge the most
+	// g_indexdb.getRdb()->attemptMerge    (1,true);
+	// g_datedb.getRdb()->attemptMerge     (1,true);
+	// g_titledb.getRdb()->attemptMerge    (1,true);
+	// //g_sectiondb.getRdb()->attemptMerge  (1,true);
+	// g_statsdb.getRdb()->attemptMerge    (1,true);
+	// g_linkdb .getRdb()->attemptMerge    (1,true);
 	return true;
 }
 
 
 bool CommandMergePosdb ( char *rec ) {
-	g_posdb.getRdb()->attemptMerge    (1,true);
+	forceMergeAll ( RDB_POSDB ,1);
+	// set this for each posdb base
 	return true;
 }
 
 
 bool CommandMergeSectiondb ( char *rec ) {
-	g_sectiondb.getRdb()->attemptMerge    (1,true); // nice , force
+	//g_sectiondb.getRdb()->attemptMerge    (1,true); // nice , force
 	return true;
 }
 
 
 bool CommandMergeTitledb ( char *rec ) {
-	g_titledb.getRdb()->attemptMerge    (1,true);
+	forceMergeAll ( RDB_TITLEDB ,1);
+	//g_titledb.getRdb()->attemptMerge    (1,true);
 	return true;
 }
 
 
 bool CommandMergeSpiderdb ( char *rec ) {
-	g_spiderdb.getRdb()->attemptMerge    (1,true);
+	forceMergeAll ( RDB_SPIDERDB ,1);
+	//g_spiderdb.getRdb()->attemptMerge    (1,true);
 	return true;
 }
 
@@ -942,6 +973,7 @@ private:
 Parms::Parms ( ) {
 	m_isDefaultLoaded = false;
 	m_inSyncWithHost0 = false;
+	m_triedToSync     = false;
 }
 
 void Parms::detachSafeBufs ( CollectionRec *cr ) {
@@ -3834,8 +3866,9 @@ bool Parms::saveToXml ( char *THIS , char *f , char objType ) {
 	if ( g_conf.m_readOnlyMode ) return true;
 	// print into buffer
 	// "seeds" can be pretty big so go with safebuf now
-	//char  buf[MAX_CONF_SIZE];
-	SafeBuf sb;
+	// fix so if we core in malloc/free we can still save conf
+	char  tmpbuf[200000];
+	SafeBuf sb(tmpbuf,200000);
 	//char *p    = buf;
 	//char *pend = buf + MAX_CONF_SIZE;
 	int32_t  len ;
@@ -5082,18 +5115,6 @@ void Parms::init ( ) {
 	m++;
 	*/
 
-	m->m_title = "max mem";
-	m->m_desc  = "Mem available to this process. May be exceeded due "
-		"to fragmentation.";
-	m->m_off   = (char *)&g_conf.m_maxMem - g;
-	m->m_def   = "8000000000";
-	m->m_cgi   = "maxmem";
-	m->m_obj   = OBJ_CONF;
-	m->m_page  = PAGE_NONE;
-	m->m_type  = TYPE_LONG_LONG;
-	m->m_flags = PF_NOAPI;
-	m++;
-
 	/*
 	m->m_title = "indexdb split";
 	m->m_desc  = "Number of times to split indexdb across groups. "
@@ -5186,15 +5207,15 @@ void Parms::init ( ) {
 	m->m_obj   = OBJ_CONF;
 	m++;
 
-	m->m_title = "tagdb max page cache mem";
-	m->m_desc  = "";
-	m->m_off   = (char *)&g_conf.m_tagdbMaxDiskPageCacheMem - g;
-	m->m_def   = "200000"; 
-	m->m_type  = TYPE_LONG;
-	m->m_flags = PF_NOSYNC|PF_NOAPI;
-	m->m_page  = PAGE_NONE;
-	m->m_obj   = OBJ_CONF;
-	m++;
+	// m->m_title = "tagdb max page cache mem";
+	// m->m_desc  = "";
+	// m->m_off   = (char *)&g_conf.m_tagdbMaxDiskPageCacheMem - g;
+	// m->m_def   = "200000"; 
+	// m->m_type  = TYPE_LONG;
+	// m->m_flags = PF_NOSYNC|PF_NOAPI;
+	// m->m_page  = PAGE_NONE;
+	// m->m_obj   = OBJ_CONF;
+	// m++;
 
 	//m->m_title = "tagdb max cache mem";
 	//m->m_desc  = "";
@@ -5223,15 +5244,15 @@ void Parms::init ( ) {
 	m->m_obj   = OBJ_CONF;
 	m++;
 
-	m->m_title = "catdb max page cache mem";
-	m->m_desc  = "";
-	m->m_off   = (char *)&g_conf.m_catdbMaxDiskPageCacheMem - g;
-	m->m_def   = "25000000";
-	m->m_type  = TYPE_LONG;
-	m->m_flags = PF_NOSYNC|PF_NOAPI;
-	m->m_page  = PAGE_NONE;
-	m->m_obj   = OBJ_CONF;
-	m++;
+	// m->m_title = "catdb max page cache mem";
+	// m->m_desc  = "";
+	// m->m_off   = (char *)&g_conf.m_catdbMaxDiskPageCacheMem - g;
+	// m->m_def   = "25000000";
+	// m->m_type  = TYPE_LONG;
+	// m->m_flags = PF_NOSYNC|PF_NOAPI;
+	// m->m_page  = PAGE_NONE;
+	// m->m_obj   = OBJ_CONF;
+	// m++;
 
 	m->m_title = "catdb max cache mem";
 	m->m_desc  = "";
@@ -5502,15 +5523,15 @@ void Parms::init ( ) {
 	m++;
 	*/
 
-	m->m_title = "linkdb max page cache mem";
-	m->m_desc  = "";
-	m->m_off   = (char *)&g_conf.m_linkdbMaxDiskPageCacheMem - g;
-	m->m_def   = "0";
-	m->m_type  = TYPE_LONG;
-	m->m_flags = PF_NOSYNC|PF_NOAPI;
-	m->m_page  = PAGE_NONE;
-	m->m_obj   = OBJ_CONF;
-	m++;
+	// m->m_title = "linkdb max page cache mem";
+	// m->m_desc  = "";
+	// m->m_off   = (char *)&g_conf.m_linkdbMaxDiskPageCacheMem - g;
+	// m->m_def   = "0";
+	// m->m_type  = TYPE_LONG;
+	// m->m_flags = PF_NOSYNC|PF_NOAPI;
+	// m->m_page  = PAGE_NONE;
+	// m->m_obj   = OBJ_CONF;
+	// m++;
 
 	/*
 	// this is overridden by collection
@@ -5636,15 +5657,15 @@ void Parms::init ( ) {
 	m->m_obj   = OBJ_CONF;
 	m++;
 
-	m->m_title = "statsdb max disk page cache mem";
-	m->m_desc  = "";
-	m->m_off   = (char *)&g_conf.m_statsdbMaxDiskPageCacheMem - g;
-	m->m_def   = "1000000";
-	m->m_type  = TYPE_LONG;
-	m->m_flags = PF_NOSYNC|PF_NOAPI;
-	m->m_page  = PAGE_NONE;
-	m->m_obj   = OBJ_CONF;
-	m++;
+	// m->m_title = "statsdb max disk page cache mem";
+	// m->m_desc  = "";
+	// m->m_off   = (char *)&g_conf.m_statsdbMaxDiskPageCacheMem - g;
+	// m->m_def   = "1000000";
+	// m->m_type  = TYPE_LONG;
+	// m->m_flags = PF_NOSYNC|PF_NOAPI;
+	// m->m_page  = PAGE_NONE;
+	// m->m_obj   = OBJ_CONF;
+	// m++;
 
 	//m->m_title = "statsdb min files to merge";
 	//m->m_desc  = "";
@@ -9918,6 +9939,33 @@ void Parms::init ( ) {
 	m->m_obj   = OBJ_CONF;
 	m++;
 
+	m->m_title = "return results even if a shard is down";
+	m->m_desc  = "If you turn this off then Gigablast will return "
+		"an error message if a shard was down and did not return "
+		"results for a query. The XML and JSON feed let's you know "
+		"when a shard is down and will give you the results back "
+		"any way, but if you would rather have just and error message "
+		"and no results, then set then set this to 'NO'.";
+	m->m_cgi   = "rra";
+	m->m_off   = (char *)&g_conf.m_returnResultsAnyway - g;
+	m->m_type  = TYPE_BOOL;
+	m->m_def   = "1";
+	m->m_page  = PAGE_MASTER;
+	m->m_obj   = OBJ_CONF;
+	m++;
+
+	m->m_title = "max mem";
+	m->m_desc  = "Mem available to this process. May be exceeded due "
+		"to fragmentation.";
+	m->m_cgi   = "maxmem";
+	m->m_off   = (char *)&g_conf.m_maxMem - g;
+	m->m_def   = "8000000000";
+	m->m_obj   = OBJ_CONF;
+	m->m_page  = PAGE_MASTER; // PAGE_NONE;
+	m->m_type  = TYPE_LONG_LONG;
+	//m->m_flags = PF_NOAPI;
+	m++;
+
 	
 	m->m_title = "max total spiders";
 	m->m_desc  = "What is the maximum number of web "
@@ -11424,122 +11472,80 @@ void Parms::init ( ) {
 	m++;
 	*/
 
-	m->m_title = "use disk page cache for posdb";
-	m->m_desc  = "Use disk page cache?";
-	m->m_cgi   = "udpci";
-	m->m_off   = (char *)&g_conf.m_useDiskPageCachePosdb - g;
-	m->m_type  = TYPE_BOOL;
-	m->m_def   = "1";
-	m->m_flags = PF_HIDDEN | PF_NOSAVE;
+	m->m_title = "posdb disk cache size";
+	m->m_desc  = "How much file cache size to use in bytes? Posdb is "
+		"the index.";
+	m->m_cgi   = "dpcsp";
+	m->m_off   = (char *)&g_conf.m_posdbFileCacheSize - g;
+	m->m_type  = TYPE_LONG_LONG;
+	m->m_def   = "30000000";
+	m->m_flags = 0;//PF_HIDDEN | PF_NOSAVE;
 	m->m_page  = PAGE_MASTER;
 	m->m_obj   = OBJ_CONF;
 	m++;
 
-	m->m_title = "use disk page cache for datedb";
-	m->m_desc  = "Use disk page cache?";
-	m->m_cgi   = "udpcd";
-	m->m_off   = (char *)&g_conf.m_useDiskPageCacheDatedb - g;
-	m->m_type  = TYPE_BOOL;
-	m->m_def   = "1";
-	m->m_flags = PF_HIDDEN | PF_NOSAVE;
+	m->m_title = "tagdb disk cache size";
+	m->m_desc  = "How much file cache size to use in bytes? Tagdb is "
+		"consulted at spider time and query time to determine "
+		"if a url or outlink is banned or what its siterank is, etc.";
+	m->m_cgi   = "dpcst";
+	m->m_off   = (char *)&g_conf.m_tagdbFileCacheSize - g;
+	m->m_type  = TYPE_LONG_LONG;
+	m->m_def   = "30000000";
+	m->m_flags = 0;//PF_HIDDEN | PF_NOSAVE;
 	m->m_page  = PAGE_MASTER;
 	m->m_obj   = OBJ_CONF;
-	m++;
-
-	m->m_title = "use disk page cache for titledb";
-	m->m_desc  = "Use disk page cache?";
-	m->m_cgi   = "udpct";
-	m->m_off   = (char *)&g_conf.m_useDiskPageCacheTitledb - g;
-	m->m_type  = TYPE_BOOL;
-	m->m_def   = "1";
-	m->m_group = 0;
-	m->m_flags = PF_HIDDEN | PF_NOSAVE;
-	m->m_page  = PAGE_MASTER;
-	m->m_obj   = OBJ_CONF;
-	m++;
-
-	m->m_title = "use disk page cache for spiderdb";
-	m->m_desc  = "Use disk page cache?";
-	m->m_cgi   = "udpcs";
-	m->m_off   = (char *)&g_conf.m_useDiskPageCacheSpiderdb - g;
-	m->m_type  = TYPE_BOOL;
-	m->m_def   = "1";
-	m->m_group = 0;
-	m->m_flags = PF_HIDDEN | PF_NOSAVE;
-	m->m_page  = PAGE_MASTER;
-	m->m_obj   = OBJ_CONF;
-	m++;
-
-	/*
-	m->m_title = "use disk page cache for urldb";
-	m->m_desc  = "Use disk page cache?";
-	m->m_cgi   = "udpcu";
-	m->m_off   = (char *)&g_conf.m_useDiskPageCacheTfndb - g;
-	m->m_type  = TYPE_BOOL;
-	m->m_def   = "1";
 	m->m_group = 0;
 	m++;
-	*/
 
-	m->m_title = "use disk page cache for tagdb";
-	m->m_desc  = "Use disk page cache?";
-	m->m_cgi   = "udpcg";
-	m->m_off   = (char *)&g_conf.m_useDiskPageCacheTagdb - g;
-	m->m_type  = TYPE_BOOL;
-	m->m_def   = "1";
-	m->m_group = 0;
-	m->m_flags = PF_HIDDEN | PF_NOSAVE;
+	m->m_title = "clusterdb disk cache size";
+	m->m_desc  = "How much file cache size to use in bytes? "
+	        "Gigablast does a "
+		"lookup in clusterdb for each search result at query time to "
+		"get its site information for site clustering. If you "
+		"disable site clustering in the search controls then "
+		"clusterdb will not be consulted.";
+	m->m_cgi   = "dpcsc";
+	m->m_off   = (char *)&g_conf.m_clusterdbFileCacheSize - g;
+	m->m_type  = TYPE_LONG_LONG;
+	m->m_def   = "30000000";
+	m->m_flags = 0;//PF_HIDDEN | PF_NOSAVE;
 	m->m_page  = PAGE_MASTER;
 	m->m_obj   = OBJ_CONF;
+	m->m_group = 0;
 	m++;
 
-	m->m_title = "use disk page cache for checksumdb";
-	m->m_desc  = "Use disk page cache?";
-	m->m_cgi   = "udpck";
-	m->m_off   = (char *)&g_conf.m_useDiskPageCacheChecksumdb - g;
-	m->m_type  = TYPE_BOOL;
-	m->m_def   = "1";
-	m->m_group = 0;
-	m->m_flags = PF_HIDDEN | PF_NOSAVE;
+	m->m_title = "titledb disk cache size";
+	m->m_desc  = "How much file cache size to use in bytes? Titledb "
+		"holds the cached web pages, compressed. Gigablast consults "
+		"it to generate a summary for a search result, or to see if "
+		"a url Gigablast is spidering is already in the index.";
+	m->m_cgi   = "dpcsx";
+	m->m_off   = (char *)&g_conf.m_titledbFileCacheSize - g;
+	m->m_type  = TYPE_LONG_LONG;
+	m->m_def   = "30000000";
+	m->m_flags = 0;//PF_HIDDEN | PF_NOSAVE;
 	m->m_page  = PAGE_MASTER;
 	m->m_obj   = OBJ_CONF;
+	m->m_group = 0;
 	m++;
 
-	m->m_title = "use disk page cache for clusterdb";
-	m->m_desc  = "Use disk page cache?";
-	m->m_cgi   = "udpcl";
-	m->m_off   = (char *)&g_conf.m_useDiskPageCacheClusterdb - g;
-	m->m_type  = TYPE_BOOL;
-	m->m_def   = "1";
-	m->m_group = 0;
-	m->m_flags = PF_HIDDEN | PF_NOSAVE;
+	m->m_title = "spiderdb disk cache size";
+	m->m_desc  = "How much file cache size to use in bytes? Titledb "
+		"holds the cached web pages, compressed. Gigablast consults "
+		"it to generate a summary for a search result, or to see if "
+		"a url Gigablast is spidering is already in the index.";
+	m->m_cgi   = "dpcsy";
+	m->m_off   = (char *)&g_conf.m_spiderdbFileCacheSize - g;
+	m->m_type  = TYPE_LONG_LONG;
+	m->m_def   = "30000000";
+	m->m_flags = 0;//PF_HIDDEN | PF_NOSAVE;
 	m->m_page  = PAGE_MASTER;
 	m->m_obj   = OBJ_CONF;
+	m->m_group = 0;
 	m++;
 
-	m->m_title = "use disk page cache for catdb";
-	m->m_desc  = "Use disk page cache?";
-	m->m_cgi   = "udpca";
-	m->m_off   = (char *)&g_conf.m_useDiskPageCacheCatdb - g;
-	m->m_type  = TYPE_BOOL;
-	m->m_def   = "1";
-	m->m_group = 0;
-	m->m_flags = PF_HIDDEN | PF_NOSAVE;
-	m->m_page  = PAGE_MASTER;
-	m->m_obj   = OBJ_CONF;
-	m++;
 
-	m->m_title = "use disk page cache for linkdb";
-	m->m_desc  = "Use disk page cache?";
-	m->m_cgi   = "udpcnk";
-	m->m_off   = (char *)&g_conf.m_useDiskPageCacheLinkdb - g;
-	m->m_type  = TYPE_BOOL;
-	m->m_def   = "1";
-	m->m_group = 0;
-	m->m_flags = PF_HIDDEN | PF_NOSAVE;
-	m->m_page  = PAGE_MASTER;
-	m->m_obj   = OBJ_CONF;
-	m++;
 
 	/*
 	m->m_title = "exclude link text";
@@ -11647,7 +11653,9 @@ void Parms::init ( ) {
 	m->m_obj   = OBJ_CONF;
         m++;
 
-	/*
+
+
+		/*
         m->m_title = "use data feed account server";
         m->m_desc  = "Enable/disable the use of a remote account verification "
                 "for Data Feed Customers. This should ONLY be used for the "
@@ -12399,20 +12407,19 @@ void Parms::init ( ) {
 	m->m_group = 0;
 	m++;
 
-	m->m_title = "do synchronous writes";
+	m->m_title = "flush disk writes";
 	m->m_desc  = "If enabled then all writes will be flushed to disk. "
-		"This is generally a good thing.";
+		"If not enabled, then gb uses the Linux disk write cache.";
 	m->m_cgi   = "fw";
 	m->m_off   = (char *)&g_conf.m_flushWrites - g;
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "0";
 	m->m_group = 0;
-	m->m_flags = PF_HIDDEN | PF_NOSAVE;
+	m->m_flags = 0;//PF_HIDDEN | PF_NOSAVE;
 	m->m_page  = PAGE_MASTER;
 	m->m_obj   = OBJ_CONF;
 	m->m_group = 0;
 	m++;
-
 
 
 
@@ -12425,7 +12432,7 @@ void Parms::init ( ) {
 	m->m_cgi   = "smdt";
 	m->m_off   = (char *)&g_conf.m_spiderMaxDiskThreads - g;
 	m->m_type  = TYPE_LONG;
-	m->m_def   = "30";
+	m->m_def   = "20";
 	m->m_units = "threads";
 	m->m_flags = 0;//PF_HIDDEN | PF_NOSAVE;
 	m->m_page  = PAGE_MASTER;
@@ -12433,13 +12440,16 @@ void Parms::init ( ) {
 	m->m_group = 0;
 	m++;
 
+	/*
 	m->m_title = "max spider big read threads";
 	m->m_desc  = "This particular number applies to all disk "
-		"reads above 1MB.";
+		"reads above 1MB. "
+		"The number of total threads is also "
+		"limited to MAX_STACKS which is currently 20.";
 	m->m_cgi   = "smbdt";
 	m->m_off   = (char *)&g_conf.m_spiderMaxBigDiskThreads - g;
 	m->m_type  = TYPE_LONG;
-	m->m_def   = "8"; // 1
+	m->m_def   = "2";
 	m->m_units = "threads";
 	m->m_group = 0;
 	m->m_flags = 0;//PF_HIDDEN | PF_NOSAVE;
@@ -12449,11 +12459,13 @@ void Parms::init ( ) {
 
 	m->m_title = "max spider medium read threads";
 	m->m_desc  = "This particular number applies to all disk "
-		"reads above 100K.";
+		"reads above 100K. "
+		"The number of total threads is also "
+		"limited to MAX_STACKS which is currently 20.";
 	m->m_cgi   = "smmdt";
 	m->m_off   = (char *)&g_conf.m_spiderMaxMedDiskThreads - g;
 	m->m_type  = TYPE_LONG;
-	m->m_def   = "19"; // 3
+	m->m_def   = "4";
 	m->m_units = "threads";
 	m->m_group = 0;
 	m->m_flags = 0;//PF_HIDDEN | PF_NOSAVE;
@@ -12463,18 +12475,37 @@ void Parms::init ( ) {
 
 	m->m_title = "max spider small read threads";
 	m->m_desc  = "This particular number applies to all disk "
-		"reads above 1MB.";
+		"reads above 1MB. "
+		"The number of total threads is also "
+		"limited to MAX_STACKS which is currently 20.";
 	m->m_cgi   = "smsdt";
 	m->m_off   = (char *)&g_conf.m_spiderMaxSmaDiskThreads - g;
 	m->m_type  = TYPE_LONG;
-	m->m_def   = "20";
+	m->m_def   = "15";
 	m->m_units = "threads";
 	m->m_group = 0;
 	m->m_flags = 0;//PF_HIDDEN | PF_NOSAVE;
 	m->m_page  = PAGE_MASTER;
 	m->m_obj   = OBJ_CONF;
 	m++;
+	*/
 
+	m->m_title = "separate disk reads";
+	m->m_desc  = "If enabled then we will not launch a low priority "
+		"disk read or write while a high priority is outstanding. "
+		"Help improve query response time at the expense of "
+		"spider performance.";
+	m->m_cgi   = "sdt";
+	m->m_off   = (char *)&g_conf.m_separateDiskReads - g;
+	m->m_type  = TYPE_BOOL;
+	m->m_def   = "1";
+	m->m_flags = 0;
+	m->m_page  = PAGE_MASTER;
+	m->m_obj   = OBJ_CONF;
+	m++;
+
+
+	/*
 	m->m_title = "max query read threads";
 	m->m_desc  = "Maximum number of threads to use per Gigablast process "
 		"for accessing the disk "
@@ -12492,13 +12523,17 @@ void Parms::init ( ) {
 	m->m_obj   = OBJ_CONF;
 	m->m_group = 0;
 	m++;
+	*/
 
+	/*
 	m->m_title = "max query big read threads";
-	m->m_desc  = "This particular number applies to all reads above 1MB.";
+	m->m_desc  = "This particular number applies to all reads above 1MB. "
+		"The number of total threads is also "
+		"limited to MAX_STACKS which is currently 20.";
 	m->m_cgi   = "qmbdt";
 	m->m_off   = (char *)&g_conf.m_queryMaxBigDiskThreads - g;
 	m->m_type  = TYPE_LONG;
-	m->m_def   = "60"; // 1
+	m->m_def   = "20"; // 1
 	m->m_units = "threads";
 	m->m_group = 0;
 	m->m_flags = 0;//PF_HIDDEN | PF_NOSAVE;
@@ -12508,11 +12543,13 @@ void Parms::init ( ) {
 
 	m->m_title = "max query medium read threads";
 	m->m_desc  = "This particular number applies to all disk "
-		"reads above 100K.";
+		"reads above 100K. "
+		"The number of total threads is also "
+		"limited to MAX_STACKS which is currently 20.";
 	m->m_cgi   = "qmmdt";
 	m->m_off   = (char *)&g_conf.m_queryMaxMedDiskThreads - g;
 	m->m_type  = TYPE_LONG;
-	m->m_def   = "80"; // 3
+	m->m_def   = "20"; // 3
 	m->m_units = "threads";
 	m->m_group = 0;
 	m->m_flags = 0;//PF_HIDDEN | PF_NOSAVE;
@@ -12522,17 +12559,20 @@ void Parms::init ( ) {
 
 	m->m_title = "max query small read threads";
 	m->m_desc  = "This particular number applies to all disk "
-		"reads above 1MB.";
+		"reads above 1MB. "
+		"The number of total threads is also "
+		"limited to MAX_STACKS which is currently 20.";
 	m->m_cgi   = "qmsdt";
 	m->m_off   = (char *)&g_conf.m_queryMaxSmaDiskThreads - g;
 	m->m_type  = TYPE_LONG;
-	m->m_def   = "80";
+	m->m_def   = "20";
 	m->m_units = "threads";
 	m->m_group = 0;
 	m->m_flags = 0;//PF_HIDDEN | PF_NOSAVE;
 	m->m_page  = PAGE_MASTER;
 	m->m_obj   = OBJ_CONF;
 	m++;
+	*/
 
 	m->m_title = "min popularity for speller";
 	m->m_desc  = "Word or phrase must be present in this percent "
@@ -15454,6 +15494,22 @@ void Parms::init ( ) {
 	m->m_obj   = OBJ_COLL;
 	m++;
 
+	m->m_title = "do tagdb lookups for queries";
+	m->m_desc  = "For each search result a tagdb lookup is made, "
+		"usually across the network on distributed clusters, to "
+		"see if the URL's site has been manually banned in tagdb. "
+		"If you don't manually ban sites then turn this off for "
+		"extra speed.";
+	m->m_cgi   = "stgdbl";
+	m->m_off   = (char *)&cr.m_doTagdbLookups - x;
+	m->m_type  = TYPE_BOOL;
+	m->m_def   = "1";
+	m->m_group = 1;
+	m->m_flags = PF_API | PF_CLONE;
+	m->m_page  = PAGE_SEARCH;
+	m->m_obj   = OBJ_COLL;
+	m++;
+
 	m->m_title = "percent similar dedup summary default value";
 	m->m_desc  = "If document summary (and title) are "
 		"this percent similar "
@@ -16092,6 +16148,7 @@ void Parms::init ( ) {
 
 	m->m_title = "home page";
 	static SafeBuf s_tmpBuf;
+	s_tmpBuf.setLabel("stmpb1");
 	s_tmpBuf.safePrintf (
 			  "Html to display for the home page. "
 			  "Leave empty for default home page. "
@@ -16168,6 +16225,7 @@ void Parms::init ( ) {
 
 	m->m_title = "html head";
         static SafeBuf s_tmpBuf2;
+	s_tmpBuf2.setLabel("stmpb2");
 	s_tmpBuf2.safePrintf("Html to display before the search results. ");
 	char *fff = "Leave empty for default. "
 		"Convenient "
@@ -16278,6 +16336,7 @@ void Parms::init ( ) {
 
 	m->m_title = "html tail";
         static SafeBuf s_tmpBuf3;
+	s_tmpBuf3.setLabel("stmpb3");
 	s_tmpBuf3.safePrintf("Html to display after the search results. ");
 	s_tmpBuf3.safeStrcpy(fff);
 	s_tmpBuf3.htmlEncode (
@@ -17272,6 +17331,30 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&cr.m_getLinkInfo - x;
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "1";
+	m->m_flags = PF_CLONE|PF_API;//PF_HIDDEN | PF_NOSAVE;
+	m->m_page  = PAGE_SPIDER;
+	m->m_obj   = OBJ_COLL;
+	m++;
+
+	m->m_title = "compute inlinks to sites";
+	m->m_desc  = "If this is true Gigablast will "
+		"compute the number of site inlinks for the sites it "
+		"indexes. This is a measure of the sites popularity and is "
+		"used for ranking and some times spidering prioritzation. "
+		"It will cache the site information in tagdb. "
+		"The greater the number of inlinks, the longer the cached "
+		"time, because the site is considered more stable. If this "
+		"is NOT true then Gigablast will use the included file, "
+		"sitelinks.txt, which stores the site inlinks of millions "
+		"of the most popular sites. This is the fastest way. If you "
+		"notice a lot of <i>getting link info</i> requests in the "
+		"<i>sockets table</i> you may want to disable this "
+		"parm.";
+	m->m_cgi   = "csni";
+	m->m_off   = (char *)&cr.m_computeSiteNumInlinks - x;
+	m->m_type  = TYPE_BOOL;
+	m->m_def   = "1";
+	m->m_group = 0;
 	m->m_flags = PF_CLONE|PF_API;//PF_HIDDEN | PF_NOSAVE;
 	m->m_page  = PAGE_SPIDER;
 	m->m_obj   = OBJ_COLL;
@@ -19356,6 +19439,16 @@ void Parms::init ( ) {
 	m->m_obj   = OBJ_CONF;
 	m++;
 
+	m->m_title = "log debug disk page cache";
+	m->m_cgi   = "ldpc";
+	m->m_off   = (char *)&g_conf.m_logDebugDiskPageCache - g;
+	m->m_type  = TYPE_BOOL;
+	m->m_def   = "0";
+	m->m_priv  = 1;
+	m->m_page  = PAGE_LOG;
+	m->m_obj   = OBJ_CONF;
+	m++;
+
 	m->m_title = "log debug dns messages";
 	m->m_cgi   = "lddns";
 	m->m_off   = (char *)&g_conf.m_logDebugDns - g;
@@ -20545,7 +20638,17 @@ bool Parms::addCurrentParmToList2 ( SafeBuf *parmList ,
 
 	//int32_t occNum = -1;
 	key96_t key = makeParmKey ( collnum , m ,  occNum );
-
+	/*
+	// debug it
+	log("parms: adding parm collnum=%i title=%s "
+	    "key=%s datasize=%i data=%s hash=%"UINT32
+	    ,(int)collnum
+	    ,m->m_title
+	    ,KEYSTR(&key,sizeof(key))
+	    ,(int)dataSize
+	    ,data
+	    ,(uint32_t)hash32(data,dataSize));
+	*/
 	// then key
 	if ( ! parmList->safeMemcpy ( &key , sizeof(key) ) )
 		return false;
@@ -21071,7 +21174,7 @@ Parm *Parms::getParmFast1 ( char *cgi , int32_t *occNum ) {
 
 ////////////
 //
-// functions for distrubting/syncing parms to/with all hosts
+// functions for distributing/syncing parms to/with all hosts
 //
 ////////////
 
@@ -21682,19 +21785,36 @@ void handleRequest3f ( UdpSlot *slot , int32_t niceness ) {
 //    have with ETRYAGAIN in Msg4.cpp
 
 
+void tryToSyncWrapper ( int fd , void *state ) {
+	g_parms.syncParmsWithHost0();
+}
+
 // host #0 just sends back an empty reply, but it will hit us with
 // 0x3f parmlist requests. that way it uses the same mechanism and can
 // guarantee ordering of the parm update requests
 void gotReplyFromHost0Wrapper ( void *state , UdpSlot *slot ) {
 	// ignore his reply unless error?
-	if ( g_errno )
-		log("parms: got error syncing with host 0: %s",
+	if ( g_errno ) {
+		log("parms: got error syncing with host 0: %s. Retrying.",
 		    mstrerror(g_errno));
+		// re-try it!
+		g_parms.m_triedToSync = false;
+	}
+	else {
+		log("parms: synced with host #0");
+		// do not re-call
+		g_loop.unregisterSleepCallback(NULL,tryToSyncWrapper);
+	}
+
 	g_errno = 0;
 }
-	
+
 // returns false and sets g_errno on error, true otherwise
 bool Parms::syncParmsWithHost0 ( ) {
+
+	if ( m_triedToSync ) return true;
+
+	m_triedToSync = true;
 
 	m_inSyncWithHost0 = false;
 
@@ -21727,6 +21847,8 @@ bool Parms::syncParmsWithHost0 ( ) {
 	sendBuf.detachBuf();
 
 	Host *h = g_hostdb.getHost(0);
+
+	log("parms: trying to sync with host #0");
 
 	// . send it off. use 3e i guess
 	// . host #0 will reply using msg4 really
@@ -21796,6 +21918,9 @@ void handleRequest3e ( UdpSlot *slot , int32_t niceness ) {
 		// get collnum
 		collnum_t c = *(collnum_t *)p;
 		p += sizeof(collnum_t);
+		// then coll NAME hash
+		uint32_t collNameHash32 = *(int32_t *)p;
+		p += 4;
 		// sanity check. -1 means g_conf. i guess.
 		if ( c < -1 ) { char *xx=NULL;*xx=0; }
 		// and parm hash
@@ -21805,6 +21930,14 @@ void handleRequest3e ( UdpSlot *slot , int32_t niceness ) {
 		// him to delete it!
 		CollectionRec *cr = NULL;
 		if ( c >= 0 ) cr = g_collectiondb.getRec ( c );
+
+		// if collection names are different delete it
+		if ( cr && collNameHash32 != hash32n ( cr->m_coll ) ) {
+			log("sync: host had collnum %i but wrong name, "
+			    "name not %s like it should be",(int)c,cr->m_coll);
+			cr = NULL;
+		}
+
 		if ( c >= 0 && ! cr ) {
 			// note in log
 			logf(LOG_INFO,"sync: telling host #%"INT32" to delete "
@@ -21852,7 +21985,8 @@ void handleRequest3e ( UdpSlot *slot , int32_t niceness ) {
 		if ( cr->m_isCustomCrawl == 2 ) cmdStr = "addBulk";
 		// note in log
 		logf(LOG_INFO,"sync: telling host #%"INT32" to add "
-		     "collnum %"INT32"", hostId,(int32_t)cr->m_collnum);
+		     "collnum %"INT32" coll=%s", hostId,(int32_t)cr->m_collnum,
+		     cr->m_coll);
 		// add the parm rec as a parm cmd
 		if ( ! g_parms.addNewParmToList1 ( &replyBuf,
 						   (collnum_t)i,
@@ -21903,17 +22037,25 @@ bool Parms::makeSyncHashList ( SafeBuf *hashList ) {
 
 	// first do g_conf, collnum -1!
 	for ( int32_t i = -1 ; i < g_collectiondb.m_numRecs ; i++ ) {
+		// shortcut
+		CollectionRec *cr = NULL;
+		if ( i >= 0 ) cr = g_collectiondb.m_recs[i];
 		// skip if empty
-		if ( i >=0 && ! g_collectiondb.m_recs[i] ) continue;
+		if ( i >=0 && ! cr ) continue;
 		// clear since last time
 		tmp.reset();
-		// g_conf?
+		// g_conf? if i is -1 do g_conf
 		if ( ! addAllParmsToList ( &tmp , i ) )
 			return false;
 		// store collnum first as 4 bytes
 		if ( ! hashList->safeMemcpy ( &i , sizeof(collnum_t) ) )
 			return false;
-		// hash that shit
+		// then store the collection name hash, 32 bit hash
+		uint32_t collNameHash32 = 0;
+		if ( cr ) collNameHash32 = hash32n ( cr->m_coll );
+		if ( ! hashList->safeMemcpy ( &collNameHash32, 4 ) )
+			return false;
+		// hash the parms
 		int64_t h64 = hash64 ( tmp.getBufStart(),tmp.length() );
 		// and store it
 		if ( ! hashList->pushLongLong ( h64 ) )

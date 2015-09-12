@@ -12,6 +12,8 @@ Conf g_conf;
 Conf::Conf ( ) {
 	m_save = true;
 	m_doingCommandLine = false;
+	// set max mem to 16GB at least until we load on disk
+	m_maxMem = 16000000000;
 }
 
 // . does this requester have ROOT admin privledges???
@@ -285,8 +287,11 @@ bool Conf::init ( char *dir ) { // , int32_t hostId ) {
 	//}
 
 	// make sure g_mem.maxMem is big enough temporarily
-	if ( g_mem.m_maxMem < 10000000 ) g_mem.m_maxMem = 10000000;
+	g_conf.m_maxMem = 8000000000; // 8gb temp
+
 	bool status = g_parms.setFromFile ( this , fname , NULL , OBJ_CONF );
+
+	if ( g_conf.m_maxMem < 10000000 ) g_conf.m_maxMem = 10000000;
 
 	// if not there, create it!
 	if ( ! status ) {
@@ -323,7 +328,7 @@ bool Conf::init ( char *dir ) { // , int32_t hostId ) {
 
 	// update g_mem
 	//g_mem.m_maxMem = g_conf.m_maxMem;
-	if ( ! g_mem.init ( g_conf.m_maxMem ) ) return false;
+	if ( ! g_mem.init ( ) ) return false;
 	// always turn this off
 	g_conf.m_testMem      = false;
 	// and this, in case you forgot to turn it off
@@ -364,7 +369,7 @@ bool Conf::init ( char *dir ) { // , int32_t hostId ) {
 	g_conf.m_forceIt = false;
 
 	// always turn on threads if live
-	if ( g_conf.m_isLive ) g_conf.m_useThreads = true;
+	//if ( g_conf.m_isLive ) g_conf.m_useThreads = true;
 	// disable this at startup always... no since might have crashed
 	// in the middle of a test. and we just turn on spiders again when
 	// already in test mode otherwise hostid #0 will erase all the files.
@@ -527,7 +532,9 @@ bool Conf::save ( ) {
 	g_conf.m_testMem = false;
 	//char fname[1024];
 	//sprintf ( fname , "%sgb.conf.saving", g_hostdb.m_dir );
-	SafeBuf fn;
+	// fix so if we core in malloc/free we can still save conf
+	char fnbuf[1024];
+	SafeBuf fn(fnbuf,1024);
 	fn.safePrintf("%sgb.conf",g_hostdb.m_dir);
 	bool status = g_parms.saveToXml ( (char *)this , 
 					  fn.getBufStart(),
