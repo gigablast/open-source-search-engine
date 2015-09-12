@@ -120,7 +120,8 @@ def injectItem(item, db, mode):
         postVars = {'url':'http://archive.org/download/%s/%s' %
                     (item,ff['name']),
                     'metadata':json.dumps(itemMetadata),
-                    'c':'ait'}
+                    'c':'ait',
+                    'spiderlinks':0}
         start = time.time()
         if mode == 'production':
             try:
