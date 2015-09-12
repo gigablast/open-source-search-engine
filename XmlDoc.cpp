@@ -109,6 +109,7 @@ char *getFirstJSONObject ( char *p ,
 char *getJSONObjectEnd ( char *p , int32_t niceness ) ;
 
 XmlDoc::XmlDoc() { 
+	m_readThreadOut = false;
 	for ( int32_t i = 0 ; i < MAXMSG7S ; i++ ) m_msg7s[i] = NULL;
 	m_esbuf.setLabel("exputfbuf");
 	for ( int32_t i = 0 ; i < MAX_XML_DOCS ; i++ ) m_xmlDocs[i] = NULL;
@@ -208,6 +209,10 @@ class XmlDoc *g_xd;
 
 void XmlDoc::reset ( ) {
 
+	if ( m_readThreadOut ) 
+		log("build: deleting xmldoc class that has a read thread out "
+		    "on a warc file");
+		
 	if ( m_fileValid ) {
 		m_file.close();
 		m_file.unlink();
@@ -3351,6 +3356,14 @@ void doneInjectingArchiveRec ( void *state ) {
 	xd->m_masterLoop ( xd );
 }
 
+void doneReadingArchiveFileWrapper ( void *state ) {
+	XmlDoc *THIS = (XmlDoc *)state;
+	// . go back to the main entry function
+	// . make sure g_errno is clear from a msg3a g_errno before calling
+	//   this lest it abandon the loop
+	THIS->m_masterLoop ( THIS->m_masterState );
+}
+
 
 #define MAXWARCRECSIZE 1000000
 
@@ -3368,7 +3381,7 @@ bool XmlDoc::indexWarcOrArc ( char ctype ) {
 	// so big we can fit it in memory. just do a wget then gunzip 
 	// then open it. use a system call in a thread.
 	int64_t fileSize = -1;
-	File *file = getUtf8ContentInFile( &fileSize );
+	BigFile *file = getUtf8ContentInFile( &fileSize );
 	// return true with g_errno set on error
 	if ( ! file ) {
 		if ( ! g_errno ) { char *xx=NULL;*xx=0; }
@@ -3444,7 +3457,37 @@ bool XmlDoc::indexWarcOrArc ( char ctype ) {
 			toRead = fileSize - m_fileOff;
 			m_hasMoreToRead = false;
 		}
-		int32_t bytesRead = file->read (m_fileBuf, toRead, m_fileOff);
+
+		bool status;
+
+		if ( m_readThreadOut ) {
+			m_readThreadOut = false;
+			status = false;
+			goto skipRead;
+		}
+
+		// make a thread to read now
+		status = file->read (m_fileBuf, 
+				     toRead, 
+				     m_fileOff,
+				     &m_fileState,
+				     this,
+				     doneReadingArchiveFileWrapper,
+				     MAX_NICENESS );
+
+		// if thread was queue or launched, wait for it to come back
+		if ( status ) {
+			// set a signal so we do not recall thread
+			// when callback brings us back here
+			m_readThreadOut = true;
+			// wait for callback
+			return false;
+		}
+
+	skipRead:
+
+		int64_t bytesRead = m_fileState.m_bytesDone;
+
 		if ( bytesRead != toRead ) {
 			log("build: read of %s failed at offset "
 			    "%"INT64"", file->getFilename(), m_fileOff);
@@ -19295,7 +19338,7 @@ void systemDoneWrapper ( void *state , ThreadEntry *t ) {
 }
 
 // we download large files to a file on disk, like warcs and arcs
-File *XmlDoc::getUtf8ContentInFile ( int64_t *fileSizeArg ) {
+BigFile *XmlDoc::getUtf8ContentInFile ( int64_t *fileSizeArg ) {
 
 	if ( m_fileValid ) {
 		*fileSizeArg = m_fileSize;
@@ -19309,15 +19352,15 @@ File *XmlDoc::getUtf8ContentInFile ( int64_t *fileSizeArg ) {
 		char filename[2048];
 		snprintf ( filename,
 			   2048,
-			   "%sgbarchivefile%"UINT32"",
-			   g_hostdb.m_dir,
+			   "gbarchivefile%"UINT32"",
 			   (int32_t)(int64_t)this);
 
-		m_file.set ( filename );
+		m_file.set ( g_hostdb.m_dir , filename );
 		m_fileSize = m_file.getFileSize();
 		m_fileValid = true;
 		*fileSizeArg = m_fileSize;
-		m_file.open(O_RDONLY);
+		// open2() has usepartfiles = false!!!
+		m_file.open2(O_RDONLY);
 		return &m_file;
 	}
 
@@ -19405,7 +19448,7 @@ File *XmlDoc::getUtf8ContentInFile ( int64_t *fileSizeArg ) {
 			      systemDoneWrapper    ,
 			      systemStartWrapper_r ) ) 
 		// would block, wait for thread
-		return (File *)-1;
+		return (BigFile *)-1;
 	// failed?
 	log("build: failed to launch wget thread");
 	// If we run it in this thread then if we are fetching 
