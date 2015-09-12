@@ -292,6 +292,7 @@ class Conf {
 	//bool  m_refreshFacebookUsersEnabled;
 	bool  m_injectionsEnabled     ;
 	bool  m_queryingEnabled ;
+	bool  m_returnResultsAnyway;
 	// qa testing loop going on? uses "test" subdir
 	bool  m_testParserEnabled     ;
 	bool  m_testSpiderEnabled     ;
@@ -574,6 +575,7 @@ class Conf {
 	int64_t m_tagdbFileCacheSize;
 	int64_t m_clusterdbFileCacheSize;
 	int64_t m_titledbFileCacheSize;
+	int64_t m_spiderdbFileCacheSize;
 
 	//bool   m_quickpollCoreOnError;
 	bool   m_useShotgun;

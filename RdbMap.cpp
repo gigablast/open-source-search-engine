@@ -1295,12 +1295,13 @@ void RdbMap::reduceMemFootPrint () {
 	for ( ; s && *s && ! is_digit(*s) ; s++ );
 	int id = 0;
 	if ( s ) id = atoi(s);
-	if ( id && (id % 2) == 0 ) return;
+	// id can be zero like for spiderdb0000.map
+	if ( (id % 2) == 0 ) return;
 
-	// log("map: reducing mem footprint for %s/%s",
-	//     m_file.getDir(),
-	//     m_file.getFilename());
-	
+	 // log("map: reducing mem footprint for %s/%s",
+	 //     m_file.getDir(),
+	 //     m_file.getFilename());
+
 	// seems kinda buggy now..
 	m_reducedMem = true;
 	//return;

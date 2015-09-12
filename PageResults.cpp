@@ -1183,6 +1183,23 @@ bool gotResults ( void *state ) {
 	     st->m_socket->m_totalSent == 0 )
 	       return sendReply(st,NULL);
 
+
+	// if we skipped a shard because it was dead, usually we provide
+	// the results anyway, but if this switch is true then return an
+	// error code instead. this is the 'all or nothing' switch.
+	if ( msg40->m_msg3a.m_skippedShards > 0 &&
+	     ! g_conf.m_returnResultsAnyway ) {
+	       char reply[256];
+	       sprintf ( reply , 
+			 "%"INT32" shard(s) out of %"INT32" did not "
+			 "respond to query."
+			 , msg40->m_msg3a.m_skippedShards
+			 , g_hostdb.m_numShards );
+	       g_errno = ESHARDDOWN;
+	       return sendReply(st,reply);
+	}
+
+
 	// if already printed from Msg40.cpp, bail out now
 	if ( si->m_streamResults ) {
 		// this will be our final send

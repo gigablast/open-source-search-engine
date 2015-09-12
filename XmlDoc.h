@@ -1011,6 +1011,9 @@ class XmlDoc {
 	int64_t    m_startTime;
 	int64_t    m_injectStartTime;
 
+	class XmlDoc *m_prevInject;
+	class XmlDoc *m_nextInject;
+
 	// when set() was called by Msg20.cpp so we can time how long it took
 	// to generate the summary
 	int64_t    m_setTime;
