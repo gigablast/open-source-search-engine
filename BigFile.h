@@ -47,14 +47,14 @@ public:
 	class BigFile  *m_this;
 	//struct aiocb   m_aiostate;
 	char           *m_buf;
-	int32_t            m_bytesToGo;
+	int64_t            m_bytesToGo;
 	int64_t       m_offset;
 	// . the original offset, because we set m_offset to m_currentOffset
 	//   if the original offset specified is -1
 	// . we also advance BigFile::m_currentOffset when done w/ read/write
 	//int64_t       m_origOffset;
 	bool            m_doWrite;
-	int32_t            m_bytesDone;
+	int64_t            m_bytesDone;
 	void           *m_state ;
 	void          (*m_callback) ( void *state ) ;
 	// goes from 0 to 1, the lower the niceness, the higher the priority
@@ -79,6 +79,7 @@ public:
 	// when we started for graphing purposes (in milliseconds)
 	int64_t       m_startTime;
 	int64_t       m_doneTime;
+	char m_usePartFiles;
 	// this is used for calling DiskPageCache::addPages() when done 
 	// with the read/write
 	//class DiskPageCache *m_pc;
@@ -102,10 +103,10 @@ public:
 	// threads each hogging up 32KB of memory waiting to read tfndb.
 	// m_allocBuf points to what we allocated.
 	char *m_allocBuf;
-	int32_t  m_allocSize;
+	int64_t  m_allocSize;
 	// m_allocOff is offset into m_allocBuf where we start reading into 
 	// from the file
-	int32_t  m_allocOff;
+	int64_t  m_allocOff;
 	// do not call pthread_create() for every read we do. use async io
 	// because it should be much much faster
 #ifdef ASYNCIO
@@ -142,7 +143,19 @@ class BigFile {
 		     void *pc = NULL ,
 		     int64_t maxFileSize = -1 ,
 		     int permissions    = 
-		     S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH );
+		     S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH ,
+		     bool usePartFiles = true );
+
+	// this will set usepartfiles to false! so use this to open large
+	// warc or arc files
+	bool open2  ( int flags , 
+		     //class DiskPageCache *pc = NULL ,
+		     void *pc = NULL ,
+		     int64_t maxFileSize = -1 ,
+		     int permissions    = 
+		      S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH );
+
+	
 
 	int getFlags() { return m_flags; };
 
@@ -354,6 +367,8 @@ class BigFile {
 
 	// prevent circular calls to BigFile::close() with this
 	char m_isClosing;
+
+	char m_usePartFiles;
 
 	int64_t m_fileSize;
 
