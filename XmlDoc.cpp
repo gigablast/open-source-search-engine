@@ -3476,7 +3476,7 @@ bool XmlDoc::indexWarcOrArc ( char ctype ) {
 				     MAX_NICENESS );
 
 		// if thread was queue or launched, wait for it to come back
-		if ( status ) {
+		if ( ! status ) {
 			// set a signal so we do not recall thread
 			// when callback brings us back here
 			m_readThreadOut = true;
