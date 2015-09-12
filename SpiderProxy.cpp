@@ -927,12 +927,12 @@ void handleRequest54 ( UdpSlot *udpSlot , int32_t niceness ) {
 	// and the loadbucket id
 	//*(int32_t *)p = bb.m_id; p += 4;
 
-	int32_t sanityCount = s_loadTable.getNumSlots();
+	int32_t sanityCount = 0;//s_loadTable.getNumSlots();
+ top:
 
 	// now remove old entries from the load table. entries that
 	// have completed and have a download end time more than 10 mins ago
 	for ( int32_t i = 0 ; i < s_loadTable.getNumSlots() ; i++ ) {
-		if ( sanityCount-- < 0 ) break;
 		// skip if empty
 		if ( ! s_loadTable.m_flags[i] ) continue;
 		// get the bucket
@@ -943,13 +943,18 @@ void handleRequest54 ( UdpSlot *udpSlot , int32_t niceness ) {
 		int64_t took = nowms - pp->m_downloadEndTimeMS;
 		// < 10 mins?
 		if ( took < LOADPOINT_EXPIRE_MS ) continue;
+
+		// 100 at a time
+		if ( sanityCount++ > 100 ) break;
+
 		// ok, its too old, nuke it to save memory
 		s_loadTable.removeSlot(i);
 		// the keys might have buried us but we really should not
 		// mis out on analyzing any keys if we just keep looping here
 		// should we? TODO: figure it out. if we miss a few it's not
 		// a big deal.
-		i--;
+		//i--;
+		goto top;
 	}
 
 	// send the proxy ip/port/LBid back to user
