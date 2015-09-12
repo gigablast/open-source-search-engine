@@ -931,7 +931,7 @@ void handleRequest54 ( UdpSlot *udpSlot , int32_t niceness ) {
 	//*(int32_t *)p = bb.m_id; p += 4;
 
 	//int32_t sanityCount = 0;//s_loadTable.getNumSlots();
- top:
+	// top:
 
 	// now remove old entries from the load table. entries that
 	// have completed and have a download end time more than 10 mins ago
@@ -956,8 +956,8 @@ void handleRequest54 ( UdpSlot *udpSlot , int32_t niceness ) {
 		// mis out on analyzing any keys if we just keep looping here
 		// should we? TODO: figure it out. if we miss a few it's not
 		// a big deal.
-		//i--;
-		goto top;
+		i--;
+		//goto top;
 	}
 
 	// send the proxy ip/port/LBid back to user
