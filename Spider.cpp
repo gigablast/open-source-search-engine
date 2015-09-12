@@ -7358,17 +7358,27 @@ bool SpiderLoop::gotDoledbList2 ( ) {
 	// . TODO: count locks in case twin is spidering... but it did not seem
 	//   to work right for some reason
 	int32_t ipOut = 0;
+	int32_t globalOut = 0;
 	for ( int32_t i = 0 ; i <= m_maxUsed ; i++ ) {
 		// get it
 		XmlDoc *xd = m_docs[i];
 		if ( ! xd ) continue;
 		if ( ! xd->m_sreqValid ) continue;
+		// also do a global count over all collections now
+		if ( xd->m_sreq.m_firstIp == sreq->m_firstIp ) globalOut++;
 		// only count for our same collection otherwise another
 		// collection can starve us out
 		if ( xd->m_collnum != cr->m_collnum ) continue;
 		if ( xd->m_sreq.m_firstIp == sreq->m_firstIp ) ipOut++;
 	}
 	if ( ipOut >= maxSpidersOutPerIp ) goto hitMax;
+
+	// but if the global is high, only allow one out per coll so at 
+	// least we dont starve and at least we don't make a huge wait in
+	// line of queued results just sitting there taking up mem and
+	// spider slots so the crawlbot hourly can't pass.
+	if ( globalOut >= maxSpidersOutPerIp && ipOut >= 1 ) goto hitMax;
+
 	if ( g_conf.m_logDebugSpider )
 		log("spider: %"INT32" spiders out for %s for %s",
 		    ipOut,iptoa(sreq->m_firstIp),
