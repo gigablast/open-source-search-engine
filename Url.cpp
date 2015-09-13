@@ -152,70 +152,75 @@ void Url::set ( char *t , int32_t tlen , bool addWWW , bool stripSessionId ,
 		     "Truncating to %i" , tlen , MAX_URL_LEN - 10 );
 		tlen = MAX_URL_LEN - 10;
 	}
-	// . skip over non-alnum chars (except - or /) in the beginning
-	// . if url begins with // then it's just missing the http: (slashdot)
-	// . watch out for hostname like: -dark-.deviantart.com(yes, it's real)
-	// . so all protocols are hostnames MUST start with alnum OR hyphen
-	while ( tlen > 0 && !is_alnum_a(*t) && *t!='-' && *t!='/'){t++;tlen--;}
-	// . stop t at first space or binary char
-	// . url should be in encoded form!
-	int32_t i = 0;
-    bool ascii = true;
-	for ( i = 0 ; i < tlen ; i++ )	{
-		if ( ! is_ascii(t[i]) ) {
-            ascii = false;
-            break; // no non-ascii chars allowed
-        }
-		if ( is_wspace_a(t[i])   ) break; // no spaces allowed
+
+
+
+ 	// . if url begins with // then it's just missing the http: (slashdot)
+ 	// . watch out for hostname like: -dark-.deviantart.com(yes, it's real)
+ 	// . so all protocols are hostnames MUST start with alnum OR hyphen
+	//while(tlen>0 && !is_alnum_a(*t) && *t!='-' && *t!='/'){t++;tlen--;}
+	char *tend = t + tlen;
+	char cs;
+	// is it some funcy punct? besides - or / ?
+	while ( tlen  >0 && !is_alnum_utf8(t) && *t!='-' && *t!='/'){
+		// then skip it
+		cs = getUtf8CharSize(t);
+		t += cs;
+		tlen -= cs;
+		// a crazy character throws us all off, so forget it
+		if ( tlen < 0 ) {
+			log("url: encountered crazy utf8 char in url1.");
+			return;
+		}
 	}
+	char *p      = t;
+	char *pend   = tend;
+	char *pstart = t;
+ 	// . stop t at first space or binary char
+ 	// . url should be in encoded form!
+	for (  ; p < pend ; p += cs )	{
+		// if ascii make sure not binary
+		if ( ! (p[0] & 0x80) ) {
+			// if a binary thing, then stop
+			if ( ! is_ascii(*p) ) break;
+			// break if space. no spaces allowed in url
+			if ( is_wspace_a(*p) ) break;
+			// otherwise, keep going
+			cs = 1;
+			continue;
+		}
+		// utf8 stuff can be in these now, but only utf8 now
+		cs = getUtf8CharSize(p);
+		// some crazy characters have this as 0, i've seen it
+		if ( cs == 0 ) break;
+		// ok, it's a utf8 char, it must have both hi bits set
+		if ( (p[0] & 0xc0) != 0xc0 ) break;
+		// if only one byte, we are done
+		if ( cs == 1 ) continue;
+		//if ( ! utf8IsSane ( p[0] ) ) return false;
+		// successive utf8 chars must have & 0xc0 be equal to 0x80
+		// but the first char it must equal 0xc0, both set
+		if ( (p[1] & 0xc0) != 0x80 ) break;
+		if ( cs == 2 ) continue;
+		if ( (p[2] & 0xc0) != 0x80 ) break;
+		if ( cs == 3 ) continue;
+		if ( (p[3] & 0xc0) != 0x80 ) break;
+	}
+	// crazy utf8 char?
+	if ( p > pend ) {
+		log("url: encountered crazy utf8 char in url.");
+		return;
+ 	}
+	// bad url if we failed somewhere, EBADURL
+	//if ( p != pend ) return;
+	t = pstart;
+ 	// truncate length to the first occurence of an unacceptable char
+	tlen = p - pstart;
+ 	// . decode characters that should not have been encoded
+ 	// . also NULL terminates
+ 	//char tmp[MAX_URL_LEN];
 
-    if(!ascii) {
-        // Try turning utf8 and latin1 encodings into punycode.
-		// Just do the domain minus the tld, so isolate that first.
-		// If it is a non ascii domain it needs to take the form 
-		// xn--<punycoded domain>.tld
-        uint32_t tmpBuf[MAX_URL_LEN];
-        char encoded [ MAX_URL_LEN ];
-        uint64_t encodedLen = MAX_URL_LEN;
-        char *p = t;
-        char *pend = t+tlen;
-		if(tlen > 7 && strncmp(p, "http://", 7) == 0) p += 7;
-		else if(tlen > 8 && strncmp(p, "https://", 8) == 0) p += 8;
-        char *pstart = p;
-		
-		int32_t tmpLen = 0;
-		
-		//first find the domain
-        while(p < pend && (is_alnum_a(*p) || *p == '.' || *p == '-' || *p == '_')) {
-			tmpBuf[tmpLen++] = *p++;
-        }
-		// Wrong,  need a pointer to after the scheme
-		m_tld = ::getTLD ( pstart, p - pstart );
-		m_tldLen = gbstrlen ( m_tld );
-		//tmpLen -= m_tldLen;
 
-
-		// For utf8 urls
-        //for(;j<tlen;j += utf8Size(tmpBuf[j])) tmpBuf[j] = utf8Decode((t+j));
-
-		// For latin1 urls
-		//for(;j<tlen;j++) tmpBuf[j] = t[j];
-
-        // punycode_status stat = punycode_encode(j, tmpBuf, NULL, &encodedLen, encoded);
-        // if ( stat != 0 ) return;
-        // encoded[encodedLen] = 0;
-        // for(int k = 0; k < j;k++) {
-        //     log("build:&& %x", (int)tmpBuf[k]);
-        // }
-
-		return this->set(encoded, encodedLen, addWWW, stripSessionId, 
-						 stripPound, stripCommonFile, titleRecVersion);
-    }
-	// truncate length to the first occurence of an unacceptable char
-	tlen = i;
-	// . decode characters that should not have been encoded
-	// . also NULL terminates
-	//char tmp[MAX_URL_LEN];
 	//int32_t tmpLen;
 	//tmpLen = safeDecode ( t , tlen , tmp );
 	// . jump over http:// if it starts with http://http://
@@ -457,6 +462,7 @@ void Url::set ( char *t , int32_t tlen , bool addWWW , bool stripSessionId ,
 	for ( j = 0 ; s[j] ; j++) if (s[j]=='\\') s[j]='/';
 	// . dig out the protocol/scheme for this s (check for ://)
 	// . protocol may only have alnums and hyphens in it
+	int32_t i;
 	for ( i = 0 ; s[i] && (is_alnum_a(s[i]) || s[i]=='-') ; i++ );
 	// if we have a legal protocol, then set "m_scheme", "slen" and "sch" 
 	// and advance i to the m_host
@@ -506,10 +512,28 @@ void Url::set ( char *t , int32_t tlen , bool addWWW , bool stripSessionId ,
 	// . chars allowed in hostname = period,alnum,hyphen,underscore
 	// . stops at '/' or ':' or any other disallowed character
 	j = i;
-	while (s[j] && (is_alnum_a(s[j]) || s[j]=='.' || s[j]=='-'||s[j]=='_'))
-		j++;
+	// while(s[j]&&(is_alnum_a(s[j]) || s[j]=='.' || s[j]=='-'||s[j]=='_'))
+	// 	j++;
+	for ( ; s[j] ; ) {
+		if ( s[j] == '.' ) { j++; continue; }
+		if ( s[j] == '-' ) { j++; continue; }
+		if ( s[j] == '_' ) { j++; continue; }
+		if ( ! (s[j] & 0x80) ) {
+			if ( is_alnum_a(s[j]) ) { j++; continue; }
+			break;
+		}
+		cs = getUtf8CharSize(&s[j]);
+		if ( j + cs > len ) break;
+		if ( is_alnum_utf8(&s[j]) ) { j += cs; continue; }
+		break;
+	}
 	// copy m_host into "s" (make it lower case, too)
-	to_lower3_a ( s + i, j - i, m_url + m_ulen );
+	//to_lower3_a ( s + i, j - i, m_url + m_ulen );
+	char *dst = m_url + m_ulen;
+	char *dstEnd = dst + (j - i);
+	char *src = s + i;
+	char *srcEnd = s + j;
+	to_lower_utf8 ( dst , dstEnd , src , srcEnd );
 	m_host    = m_url + m_ulen;
 	m_hlen    = j - i;
 	// common mistake: if hostname ends in a . then back up
