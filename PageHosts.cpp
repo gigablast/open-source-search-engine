@@ -632,10 +632,10 @@ skipReplaceHost:
 
 
 		if ( format == FORMAT_HTML && !h->m_spiderEnabled) {
-			fb.safePrintf("<span style=\"text-decoration:line-through;\">S</span>");
+			fb.safePrintf("<span title=\"Spider Disabled\" style=\"text-decoration:line-through;\">S</span>");
 		}
 		if ( format == FORMAT_HTML && !h->m_queryEnabled) {
-			fb.safePrintf("<span style=\"text-decoration:line-through;\">Q</span>");
+			fb.safePrintf("<span title=\"Query Disabled\" style=\"text-decoration:line-through;\">Q</span>");
 		}
 
 
