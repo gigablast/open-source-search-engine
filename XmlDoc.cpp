@@ -226,7 +226,7 @@ void XmlDoc::reset ( ) {
 		if ( ! msg7 ) continue;
         if(msg7->m_inUse) {
             log("build: archive: reseting xmldoc when msg7s are outstanding");
-            
+
         }
 		mdelete ( msg7 , sizeof(Msg7) , "xdmsg7" );
 		delete ( msg7 );
@@ -3353,6 +3353,10 @@ void doneInjectingArchiveRec ( void *state ) {
 	xd->m_numInjectionsOut--;
 	log("build: archive: injection thread returned. %"INT32" out now.",
 	    xd->m_numInjectionsOut);
+	// reset g_errno so it doesn't error out in ::indexDoc() when
+	// we are injecting a ton of these msg7s and then xmldoc ends up
+	// getting reset and when a msg7 reply comes back in, we core
+	g_errno = 0;
 	xd->m_masterLoop ( xd );
 }
 
