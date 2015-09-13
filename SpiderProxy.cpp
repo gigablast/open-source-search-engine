@@ -5,7 +5,10 @@
 #include "HttpServer.h"
 #include "SpiderProxy.h"
 
-#define LOADPOINT_EXPIRE_MS (10*60*1000)
+//#define LOADPOINT_EXPIRE_MS (10*60*1000)
+// make it 15 seconds not 10 minutes otherwise it gets too full with dup
+// keys and really clogs things up
+#define LOADPOINT_EXPIRE_MS (15*1000)
 
 //
 // BASIC DETAILS
@@ -927,6 +930,9 @@ void handleRequest54 ( UdpSlot *udpSlot , int32_t niceness ) {
 	// and the loadbucket id
 	//*(int32_t *)p = bb.m_id; p += 4;
 
+	//int32_t sanityCount = 0;//s_loadTable.getNumSlots();
+	// top:
+
 	// now remove old entries from the load table. entries that
 	// have completed and have a download end time more than 10 mins ago
 	for ( int32_t i = 0 ; i < s_loadTable.getNumSlots() ; i++ ) {
@@ -938,8 +944,12 @@ void handleRequest54 ( UdpSlot *udpSlot , int32_t niceness ) {
 		if ( pp->m_downloadEndTimeMS == 0LL ) continue;
 		// delta t
 		int64_t took = nowms - pp->m_downloadEndTimeMS;
-		// < 10 mins?
+		// < 10 mins? now it's < 15 seconds to prevent clogging.
 		if ( took < LOADPOINT_EXPIRE_MS ) continue;
+
+		// 100 at a time
+		//if ( sanityCount++ > 100 ) break;
+
 		// ok, its too old, nuke it to save memory
 		s_loadTable.removeSlot(i);
 		// the keys might have buried us but we really should not
@@ -947,6 +957,7 @@ void handleRequest54 ( UdpSlot *udpSlot , int32_t niceness ) {
 		// should we? TODO: figure it out. if we miss a few it's not
 		// a big deal.
 		i--;
+		//goto top;
 	}
 
 	// send the proxy ip/port/LBid back to user
@@ -1038,6 +1049,7 @@ bool initSpiderProxyStuff() {
 			       128,
 			       NULL,
 			       0,
+			       // this slows us down
 			       true, // allow dups?
 			       MAX_NICENESS,
 			       "lbtab",

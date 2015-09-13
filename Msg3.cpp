@@ -49,7 +49,7 @@ key192_t makeCacheKey ( int64_t vfd ,
 	return k;
 }
 
-RdbCache g_rdbCaches[4];
+RdbCache g_rdbCaches[5];
 
 class RdbCache *getDiskPageCache ( char rdbId ) {
 
@@ -85,6 +85,13 @@ class RdbCache *getDiskPageCache ( char rdbId ) {
 		maxMem = *maxSizePtr;
 		maxRecs = maxMem / 3000;
 		dbname = "titdbcache";
+	}
+	if ( rdbId == RDB_SPIDERDB ) {
+		rpc = &g_rdbCaches[4];
+		maxSizePtr = &g_conf.m_spiderdbFileCacheSize;
+		maxMem = *maxSizePtr;
+		maxRecs = maxMem / 3000;
+		dbname = "spdbcache";
 	}
 
 	if ( ! rpc )
@@ -683,6 +690,7 @@ bool Msg3::readList  ( char           rdbId         ,
 		////////
 		BigFile *ff = base->getFile(m_fileNums[i]);
 		RdbCache *rpc = getDiskPageCache ( m_rdbId );
+		if ( ! m_allowPageCache ) rpc = NULL;
 		// . vfd is unique 64 bit file id
 		// . if file is opened vfd is -1, only set in call to open()
 		int64_t vfd = ff->getVfd();
@@ -1057,6 +1065,7 @@ bool Msg3::doneScanning ( ) {
 
 		// compute cache info
 		RdbCache *rpc = getDiskPageCache ( m_rdbId );
+		if ( ! m_allowPageCache ) rpc = NULL;
 		int64_t vfd ;
 		if ( ff ) vfd = ff->getVfd();
 		key192_t ck ;

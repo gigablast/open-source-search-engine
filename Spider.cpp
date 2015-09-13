@@ -7358,17 +7358,27 @@ bool SpiderLoop::gotDoledbList2 ( ) {
 	// . TODO: count locks in case twin is spidering... but it did not seem
 	//   to work right for some reason
 	int32_t ipOut = 0;
+	int32_t globalOut = 0;
 	for ( int32_t i = 0 ; i <= m_maxUsed ; i++ ) {
 		// get it
 		XmlDoc *xd = m_docs[i];
 		if ( ! xd ) continue;
 		if ( ! xd->m_sreqValid ) continue;
+		// also do a global count over all collections now
+		if ( xd->m_sreq.m_firstIp == sreq->m_firstIp ) globalOut++;
 		// only count for our same collection otherwise another
 		// collection can starve us out
 		if ( xd->m_collnum != cr->m_collnum ) continue;
 		if ( xd->m_sreq.m_firstIp == sreq->m_firstIp ) ipOut++;
 	}
 	if ( ipOut >= maxSpidersOutPerIp ) goto hitMax;
+
+	// but if the global is high, only allow one out per coll so at 
+	// least we dont starve and at least we don't make a huge wait in
+	// line of queued results just sitting there taking up mem and
+	// spider slots so the crawlbot hourly can't pass.
+	if ( globalOut >= maxSpidersOutPerIp && ipOut >= 1 ) goto hitMax;
+
 	if ( g_conf.m_logDebugSpider )
 		log("spider: %"INT32" spiders out for %s for %s",
 		    ipOut,iptoa(sreq->m_firstIp),
@@ -9501,6 +9511,24 @@ bool sendPage ( State11 *st ) {
 		// inc count
 		j++;
 	}
+	// now print the injections as well!
+	XmlDoc *xd = getInjectHead ( ) ;
+	for ( ; xd ; xd = xd->m_nextInject ) {
+		// how does this happen?
+		if ( ! xd->m_sreqValid ) continue;
+		// grab it
+		SpiderRequest *oldsr = &xd->m_sreq;
+		// get status
+		SafeBuf xb;
+		xb.safePrintf("[<font color=red><b>injecting</b></font>] %s",
+			      xd->m_statusMsg);
+		char *status = xb.getBufStart();
+		// show that
+		if ( ! oldsr->printToTable ( &sb , status,xd,j) ) return false;
+		// inc count
+		j++;
+	}
+
 	// end the table
 	sb.safePrintf ( "</table>\n" );
 	sb.safePrintf ( "<br>\n" );
@@ -9971,7 +9999,7 @@ bool sendPage ( State11 *st ) {
 	// the the waiting tree
 	int32_t node = sc->m_waitingTree.getFirstNode();
 	int32_t count = 0;
-	uint64_t nowMS = gettimeofdayInMillisecondsGlobal();
+	//uint64_t nowMS = gettimeofdayInMillisecondsGlobal();
 	for ( ; node >= 0 ; node = sc->m_waitingTree.getNextNode(node) ) {
 		// breathe
 		QUICKPOLL(MAX_NICENESS);
@@ -9987,10 +10015,12 @@ bool sendPage ( State11 *st ) {
 		spiderTimeMS |= (key->n0 >> 32);
 		char *note = "";
 		// if a day more in the future -- complain
-		if ( spiderTimeMS > nowMS + 1000 * 86400 )
-			note = " (<b><font color=red>This should not be "
-				"this far into the future. Probably a corrupt "
-				"SpiderRequest?</font></b>)";
+		// no! we set the repeat crawl to 3000 days for crawl jobs that
+		// do not repeat...
+		// if ( spiderTimeMS > nowMS + 1000 * 86400 )
+		// 	note = " (<b><font color=red>This should not be "
+		// 		"this far into the future. Probably a corrupt "
+		// 		"SpiderRequest?</font></b>)";
 		// get the rest of the data
 		sb.safePrintf("<tr bgcolor=#%s>"
 			      "<td>%"INT64"%s</td>"
@@ -13568,10 +13598,10 @@ void gotCrawlInfoReply ( void *state , UdpSlot *slot ) {
 		// just copy into the stats buf
 		if ( ! cr->m_crawlInfoBuf.getBufStart() ) {
 			int32_t need = sizeof(CrawlInfo) * g_hostdb.m_numHosts;
+			cr->m_crawlInfoBuf.setLabel("cibuf");
 			cr->m_crawlInfoBuf.reserve(need);
 			// in case one was udp server timed out or something
 			cr->m_crawlInfoBuf.zeroOut();
-			cr->m_crawlInfoBuf.setLabel("cibuf");
 		}
 
 		CrawlInfo *cia = (CrawlInfo *)cr->m_crawlInfoBuf.getBufStart();

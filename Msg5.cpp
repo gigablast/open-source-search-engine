@@ -531,6 +531,10 @@ bool Msg5::readList ( ) {
 	int32_t niceness = m_niceness;
 	if ( niceness > 0  ) niceness = 2;
 	if ( m_isRealMerge ) niceness = 1;
+	bool allowPageCache = true;
+	// just in case cache is corrupted, do not use it for doing real
+	// merges, also it would kick out good lists we have in there already
+	if ( m_isRealMerge ) allowPageCache = false;
 	if ( compute ) {
 		m_msg3.readList  ( m_rdbId          ,
 				   m_collnum        , 
@@ -547,7 +551,7 @@ bool Msg5::readList ( ) {
 				   m_compensateForMerge ,
 				   -1,//m_syncPoint          ,
 				   true                 , // just get endKey?
-				   m_allowPageCache     );
+				   allowPageCache     );
 		if ( g_errno ) {
 			log("db: Msg5: getting endKey: %s",mstrerrno(g_errno));
 			return true;

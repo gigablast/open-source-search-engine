@@ -265,6 +265,15 @@ bool BigFile::doesPartExist ( int32_t n ) {
 
 static int64_t s_vfd = 0;
 
+// do not use part files for this open so we can open regular really >2GB
+// sized files with it
+bool BigFile::open2 ( int flags , 
+		      void *pc ,
+		      int64_t maxFileSize ,
+		      int permissions ) {
+	return open ( flags , pc , maxFileSize , permissions , false );
+}
+
 // . overide File::open so we can set m_numParts
 // . set maxFileSize when opening a new file for writing and using 
 //   DiskPageCache
@@ -273,12 +282,15 @@ bool BigFile::open ( int flags ,
 		     //class DiskPageCache *pc , 
 		     void *pc ,
 		     int64_t maxFileSize ,
-		     int permissions ) {
+		     int permissions ,
+		     bool usePartFiles ) {
 
         m_flags       = flags;
 	//m_pc          = pc;
 	m_permissions = permissions;
 	m_isClosing   = false;
+	// this is true except when parsing big warc files
+	m_usePartFiles = usePartFiles;
 	// . init the page cache for this vfd
 	// . this returns our "virtual fd", not the same as File::m_vfd
 	// . returns -1 and sets g_errno on failure
@@ -595,6 +607,7 @@ bool BigFile::readwrite ( void         *buf      ,
 	fstate->m_callback    = callback;
 	fstate->m_niceness    = niceness;
 	fstate->m_flags       = m_flags;
+	fstate->m_usePartFiles = m_usePartFiles;
 	// sanity
 	if ( fstate->m_bytesToGo > 150000000 )
 		log("file: huge read of %"INT64" bytes",(int64_t)size);
@@ -607,6 +620,13 @@ bool BigFile::readwrite ( void         *buf      ,
 	//   situation occurs and pass a g_errno back to the caller.
 	fstate->m_filenum1    =  offset          / MAX_PART_SIZE;
 	fstate->m_filenum2    = (offset + size ) / MAX_PART_SIZE;
+
+	// if not really a big file. we use this for parsing huge warc files
+	if ( ! m_usePartFiles ) {
+		fstate->m_filenum1 = 0;
+		fstate->m_filenum2 = 0;
+	}
+
 	// . save the open count for this fd
 	// . if it changes when we're done with the read we do a re-read
 	// . it gets incremented once every time File calls ::open and gets
@@ -769,7 +789,7 @@ bool BigFile::readwrite ( void         *buf      ,
 	// how many bytes to read from each file?
 	int64_t readSize1 = size;
 	int64_t readSize2 = 0;
-	if ( off1 + readSize1 > MAX_PART_SIZE ) {
+	if ( off1 + readSize1 > MAX_PART_SIZE && m_usePartFiles ) {
 		readSize1 = ((int64_t)MAX_PART_SIZE) - off1;
 		readSize2 = size - readSize1;
 	}
@@ -788,6 +808,10 @@ bool BigFile::readwrite ( void         *buf      ,
 	int32_t filenum     = offset / MAX_PART_SIZE;
 	int32_t localOffset = offset % MAX_PART_SIZE;
 
+	if ( ! m_usePartFiles ) {
+		filenum = 0;
+		localOffset = offset;
+	}
 
 	// read or write?
 	if ( doWrite ) a0->aio_lio_opcode = LIO_WRITE;
@@ -856,7 +880,7 @@ bool BigFile::readwrite ( void         *buf      ,
 	int32_t      rate  = 100000;
 	if ( took  > 500 ) rate = fstate->m_bytesDone / took ;
 	if ( rate < 8000 && fstate->m_niceness <= 0 ) {
-		log(LOG_INFO,"disk: Read %"INT32" bytes in %"INT64" "
+		log(LOG_INFO,"disk: Read %"INT64" bytes in %"INT64" "
 		    "ms (%"INT32"KB/s).",
 		    fstate->m_bytesDone,took,rate);
 		g_stats.m_slowDiskReads++;
@@ -957,7 +981,7 @@ void doneWrapper ( void *state , ThreadEntry *t ) {
 	if ( fstate->m_errno == EDISKSTUCK ) slow = true;
 	if ( slow && fstate->m_niceness <= 0 ) {
 		if ( fstate->m_errno != EDISKSTUCK )
-		  log(LOG_INFO, "disk: Read %"INT32" bytes in %"INT64" "
+		  log(LOG_INFO, "disk: Read %"INT64" bytes in %"INT64" "
 		      "ms (%"INT32"KB/s).",
 		    fstate->m_bytesDone,took,rate);
 		g_stats.m_slowDiskReads++;
@@ -1264,6 +1288,12 @@ bool readwrite_r ( FileState *fstate , ThreadEntry *t ) {
 	int32_t len   = bytesToGo - bytesDone;
 	// how many bytes can we write to it now
 	if ( len > avail ) len = avail;
+	// hack for reading warc files
+	if ( ! fstate->m_usePartFiles ) {
+		filenum = 0;
+		localOffset = offset;
+		len = bytesToGo - bytesDone;
+	}
 	// get the fd for this filenum
 	int fd = -1;
 	if      ( filenum == fstate->m_filenum1 ) fd = fstate->m_fd1;

@@ -705,7 +705,7 @@ class XmlDoc {
 	char **getExpandedUtf8Content ( ) ;
 	char **getUtf8Content ( ) ;
 	// we download large files to a file on disk, like warcs and arcs
-	File *getUtf8ContentInFile ( int64_t *fileSizeArg );
+	BigFile *getUtf8ContentInFile ( int64_t *fileSizeArg );
 	int32_t *getContentHash32 ( ) ;
 	int32_t *getContentHashJson32 ( ) ;
 	//int32_t *getTagHash32 ( ) ;
@@ -1011,6 +1011,9 @@ class XmlDoc {
 	int64_t    m_startTime;
 	int64_t    m_injectStartTime;
 
+	class XmlDoc *m_prevInject;
+	class XmlDoc *m_nextInject;
+
 	// when set() was called by Msg20.cpp so we can time how long it took
 	// to generate the summary
 	int64_t    m_setTime;
@@ -1087,8 +1090,10 @@ class XmlDoc {
 	int32_t m_fileBufAllocSize;
 	char *m_fptr ;
 	char *m_fptrEnd ;
-	File m_file;
+	BigFile m_file;
 	int64_t m_fileSize;
+	FileState m_fileState;
+	bool m_readThreadOut;
 	bool m_hasMoreToRead;
 	int32_t m_numInjectionsOut;
 	bool m_calledWgetThread;

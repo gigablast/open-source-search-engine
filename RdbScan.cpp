@@ -321,7 +321,7 @@ void RdbScan::gotList ( ) {
 	// . i think a read overflow might be causing a segv in malloc
 	// . NOTE: BigFile's call to DiskPageCache alters these values
 	if ( m_fstate.m_bytesDone != m_fstate.m_bytesToGo && m_hitDisk )
-		log(LOG_INFO,"disk: Read %"INT32" bytes but needed %"INT32".",
+		log(LOG_INFO,"disk: Read %"INT64" bytes but needed %"INT64".",
 		     m_fstate.m_bytesDone , m_fstate.m_bytesToGo );
 	// adjust the list size for biased page cache if necessary
 	//if ( m_file->m_pc && m_allowPageCache &&
