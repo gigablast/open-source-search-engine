@@ -1700,13 +1700,24 @@ collnum_t Collectiondb::reserveCollNum ( ) {
 		return next;
 	}
 
+	// collnum_t is signed right now because we use -1 to indicate a
+	// bad collnum.
+	int32_t scanned = 0;
 	// search for an empty slot
-	for ( int32_t i = m_wrapped ; i < m_numRecs ; i++ ) {
+	for ( int32_t i = m_wrapped ; ; i++ ) {
+		// because collnum_t is 2 bytes, signed, limit this here
+		if ( i > 0x7fff ) i = 0;
+		// how can this happen?
+		if ( i < 0      ) i = 0;
+		// if we scanned the max # of recs we could have, we are done
+		if ( ++scanned >= m_numRecs ) break;
+		// skip if this is in use
 		if ( m_recs[i] ) continue;
 		// start after this one next time
 		m_wrapped = i+1;
 		// note it
-		log("colldb: returning wrapped collnum of %"INT32"",(int32_t)i);
+		log("colldb: returning wrapped collnum "
+		    "of %"INT32"",(int32_t)i);
 		return (collnum_t)i;
 	}
 

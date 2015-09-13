@@ -1895,7 +1895,7 @@ Profiler::printRealTimeInfo(SafeBuf *sb,
 
 	if ( ! x ) {
 		sb->safePrintf("FAILED TO READ trash/output.txt: %s"
-			       mstrerror(errno));
+			       ,mstrerror(g_errno));
 		return false;
 	}
 
