@@ -5,6 +5,8 @@
 #include "Errno.h"
 #include "HashTable.h"
 #include "Speller.h"
+#include "Punycode.h"
+#include "Unicode.h"
 
 static void print_string ( char *s , int32_t len );
 
@@ -137,7 +139,7 @@ void Url::set (Url *baseUrl,char *s,int32_t len,bool addWWW,bool stripSessionId,
 // . i know sun.com has urls like "http://sun.com/;$sessionid=123ABC$"
 // . url should be ENCODED PROPERLY for this to work properly
 void Url::set ( char *t , int32_t tlen , bool addWWW , bool stripSessionId ,
-		bool stripPound , bool stripCommonFile , 
+                bool stripPound , bool stripCommonFile , 
 		int32_t titleRecVersion ) {
 	reset();
 	// debug
@@ -157,11 +159,58 @@ void Url::set ( char *t , int32_t tlen , bool addWWW , bool stripSessionId ,
 	while ( tlen > 0 && !is_alnum_a(*t) && *t!='-' && *t!='/'){t++;tlen--;}
 	// . stop t at first space or binary char
 	// . url should be in encoded form!
-	int32_t i ;
+	int32_t i = 0;
+    bool ascii = true;
 	for ( i = 0 ; i < tlen ; i++ )	{
-		if ( ! is_ascii(t[i]) ) break; // no non-ascii chars allowed
+		if ( ! is_ascii(t[i]) ) {
+            ascii = false;
+            break; // no non-ascii chars allowed
+        }
 		if ( is_wspace_a(t[i])   ) break; // no spaces allowed
 	}
+
+    if(!ascii) {
+        // Try turning utf8 and latin1 encodings into punycode.
+		// Just do the domain minus the tld, so isolate that first.
+		// If it is a non ascii domain it needs to take the form 
+		// xn--<punycoded domain>.tld
+        uint32_t tmpBuf[MAX_URL_LEN];
+        char encoded [ MAX_URL_LEN ];
+        uint64_t encodedLen = MAX_URL_LEN;
+        char *p = t;
+        char *pend = t+tlen;
+		if(tlen > 7 && strncmp(p, "http://", 7) == 0) p += 7;
+		else if(tlen > 8 && strncmp(p, "https://", 8) == 0) p += 8;
+        char *pstart = p;
+		
+		int32_t tmpLen = 0;
+		
+		//first find the domain
+        while(p < pend && (is_alnum_a(*p) || *p == '.' || *p == '-' || *p == '_')) {
+			tmpBuf[tmpLen++] = *p++;
+        }
+		// Wrong,  need a pointer to after the scheme
+		m_tld = ::getTLD ( pstart, p - pstart );
+		m_tldLen = gbstrlen ( m_tld );
+		//tmpLen -= m_tldLen;
+
+
+		// For utf8 urls
+        //for(;j<tlen;j += utf8Size(tmpBuf[j])) tmpBuf[j] = utf8Decode((t+j));
+
+		// For latin1 urls
+		//for(;j<tlen;j++) tmpBuf[j] = t[j];
+
+        // punycode_status stat = punycode_encode(j, tmpBuf, NULL, &encodedLen, encoded);
+        // if ( stat != 0 ) return;
+        // encoded[encodedLen] = 0;
+        // for(int k = 0; k < j;k++) {
+        //     log("build:&& %x", (int)tmpBuf[k]);
+        // }
+
+		return this->set(encoded, encodedLen, addWWW, stripSessionId, 
+						 stripPound, stripCommonFile, titleRecVersion);
+    }
 	// truncate length to the first occurence of an unacceptable char
 	tlen = i;
 	// . decode characters that should not have been encoded
@@ -954,6 +1003,10 @@ char *Url::getPathComponent ( int32_t num , int32_t *clen ) {
 //	// return the end of it
 //	return pc + pclen;
 //}
+
+
+
+
 
 bool Url::isHostWWW ( ) {
 	if ( m_hlen < 4 ) return false;

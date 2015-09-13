@@ -240,7 +240,7 @@ bool showLine ( SafeBuf *sb , char *s , int32_t len ) {
 
 	return sb->brify ( s , len , 
 			   0 , // niceness 
-			   80 , // cols
+			   8000 , // cols
 			   "<br>",
 			   false ); // isHtml?
 }

@@ -691,13 +691,28 @@ bool Hostdb::init ( int32_t hostIdArg , char *netName ,
 		
 		//skip:
 
+		h->m_queryEnabled = true;
+		h->m_spiderEnabled = true;
 		// check for something after the working dir
 		h->m_note[0] = '\0';
 		if ( *p != '\n' ) {
 			// save the note
 			char *n = p;
 			while ( *n && *n != '\n' && n < pend ) n++;
+
+			// trim of trailing spaces
+			while ( *n == ' ' && n > p ) n--;
+
 			int32_t noteSize = n - p;
+			if(noteSize >= 7 && strncmp(n-7, "noquery", 7) == 0) {
+				h->m_queryEnabled = false;
+				noteSize -= 7;
+			}
+			if(noteSize >= 8 && strncmp(n-8, "nospider", 8) == 0) {
+				h->m_spiderEnabled = false;
+				noteSize -= 8;
+			}
+
 			if ( noteSize > 127 ) noteSize = 127;
 			gbmemcpy(h->m_note, p, noteSize);
 			*p++ = '\0'; // NULL terminate for atoip
