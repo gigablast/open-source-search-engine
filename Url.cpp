@@ -172,13 +172,13 @@ void Url::set ( char *t , int32_t tlen , bool addWWW , bool stripSessionId ,
 	}
 
 	
-	if(false && !ascii) { 
+	if(!ascii) { 
         // Try turning utf8 and latin1 encodings into punycode.
 		// All labels(between dots) in the domain are encoded 
 		// separately.  We don't support encoded tlds, but they are 
 		// not widespread yet.
 		// If it is a non ascii domain it needs to take the form 
-		// xn--<punycoded domain>.tld
+		// xn--<punycoded label>.xn--<punycoded label>.../
 		log(LOG_DEBUG, "build: attempting to decode unicode url %s", t);
         char encoded [ MAX_URL_LEN ];
         uint64_t encodedLen = MAX_URL_LEN;
@@ -258,7 +258,7 @@ void Url::set ( char *t , int32_t tlen , bool addWWW , bool stripSessionId ,
 
 		while(p < pend) {
 			if(!isascii(*p)) break;
-			if(is_wspace_a(*p) break;
+			if(is_wspace_a(*p)) break;
 			if(newUrlLen >= MAX_URL_LEN) break;
 			encoded[newUrlLen++] = *p++;
 		}
@@ -2509,6 +2509,7 @@ bool Url::unitTests() {
 		"https://fakedomain.中文.org/asdf",
 		"https://gigablast.com/abc/文/efg",
 		"https://gigablast.com/?q=文",
+		"http://www.example.сайт",
 	};
 
 	uint32_t len = sizeof(urls) / sizeof(char*);
