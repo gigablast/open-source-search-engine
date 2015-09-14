@@ -160,26 +160,30 @@ void Url::set ( char *t , int32_t tlen , bool addWWW , bool stripSessionId ,
 	// . stop t at first space or binary char
 	// . url should be in encoded form!
 	int32_t i = 0;
-	bool ascii = true;
+	int32_t nonAsciiPos = -1;
 	for ( i = 0 ; i < tlen ; i++ )	{
+		if ( is_wspace_a(t[i])   ) break; // no spaces allowed
+
 		if ( ! is_ascii(t[i]) ) {
 			// Sometimes the length with the null is passed in, 
 			// so ignore that last char
-			if( i != tlen-1 ) ascii = false;
+			if( i != tlen-1 ) nonAsciiPos = i;
             break; // no non-ascii chars allowed
         }
-		if ( is_wspace_a(t[i])   ) break; // no spaces allowed
 	}
 
 	
-	if(!ascii) { 
+	if(nonAsciiPos != -1) { 
         // Try turning utf8 and latin1 encodings into punycode.
 		// All labels(between dots) in the domain are encoded 
 		// separately.  We don't support encoded tlds, but they are 
 		// not widespread yet.
 		// If it is a non ascii domain it needs to take the form 
 		// xn--<punycoded label>.xn--<punycoded label>.../
-		log(LOG_DEBUG, "build: attempting to decode unicode url %s", t);
+		char tmp = t[tlen];
+		if(t[tlen]) t[tlen] = 0;
+		log(LOG_DEBUG, "build: attempting to decode unicode url %s pos at %"INT32, t, nonAsciiPos);
+		if(tmp) t[tlen] = tmp;
         char encoded [ MAX_URL_LEN ];
         uint64_t encodedLen = MAX_URL_LEN;
         char *encodedDomStart = encoded;
@@ -2527,8 +2531,9 @@ uint32_t Url::unitTests() {
 		"https://gigablast.com/abc/文/efg",
 		"https://gigablast.com/?q=文",
 		"http://www.example.сайт",
+		"http://genocidearchiverwanda.org.rw/index.php/Category:Official_Communiqués",
 		// Lets check some bad urls too:
-		"https://pypi.python\n\n\t\t\t\t.org/packages/source/p/pyramid/pyramid-1.5.tar.gz#md5=8747658dcbab709a9c491e43d3b0d58b"	
+		"https://pypi.python\n\n\t\t\t\t.org/packages/source/p/pyramid/pyramid-1.5.tar.gz#md5=8747658dcbab709a9c491e43d3b0d58b"
 	};
 
 	uint32_t len = sizeof(urls) / sizeof(char*);
