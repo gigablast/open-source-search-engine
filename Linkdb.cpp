@@ -5,6 +5,7 @@
 #include "sort.h"
 #include "XmlDoc.h" // score32to8()
 #include "Rebalance.h"
+#include "Process.h"
 
 Linkdb g_linkdb;
 Linkdb g_linkdb2;
@@ -1128,6 +1129,12 @@ bool Msg25::doReadLoop ( ) {
 		log("msg25: reading linkdb list mode=%s site=%s url=%s "
 		    "docid=%"INT64" linkdbstartkey=%s",
 		    ms,m_site,m_url,m_docId,KEYSTR(&startKey,LDBKS));
+	}
+
+        if ( g_process.m_mode == EXIT_MODE ) {
+		log("linkdb: shutting down. exiting link text loop.");
+		g_errno = ESHUTTINGDOWN;
+		return false;
 	}
 
 	m_gettingList = true;

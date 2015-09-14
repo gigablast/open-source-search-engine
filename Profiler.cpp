@@ -1865,7 +1865,7 @@ Profiler::printRealTimeInfo(SafeBuf *sb,
 	int fd = open ( filename , O_RDWR | O_CREAT , S_IRWXU );
 	if ( fd < 0 ) {
 		sb->safePrintf("FAILED TO OPEN %s for writing: %s"
-			       ,ff.getBufStart(),strerror(errno));
+			       ,ff.getBufStart(),mstrerror(errno));
 		return false;
 	}
 	for ( ; ip < ipEnd ; ip += sizeof(uint64_t) ) {
@@ -1892,6 +1892,13 @@ Profiler::printRealTimeInfo(SafeBuf *sb,
 
 	// restrict to top 100 lines
 	char *x = out.getBufStart();
+
+	if ( ! x ) {
+		sb->safePrintf("FAILED TO READ trash/output.txt: %s"
+			       ,mstrerror(g_errno));
+		return false;
+	}
+
 	int lineCount = 0;
 	for ( ; *x ; x++ ) {
 		if ( *x != '\n' ) continue;

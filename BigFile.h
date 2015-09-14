@@ -143,17 +143,17 @@ class BigFile {
 		     void *pc = NULL ,
 		     int64_t maxFileSize = -1 ,
 		     int permissions    = 
-		     S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH ,
-		     bool usePartFiles = true );
+		     S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH );
+	//bool usePartFiles = true );
 
 	// this will set usepartfiles to false! so use this to open large
 	// warc or arc files
-	bool open2  ( int flags , 
-		     //class DiskPageCache *pc = NULL ,
-		     void *pc = NULL ,
-		     int64_t maxFileSize = -1 ,
-		     int permissions    = 
-		      S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH );
+	//bool open2  ( int flags , 
+	//	     //class DiskPageCache *pc = NULL ,
+	//	     void *pc = NULL ,
+	//	     int64_t maxFileSize = -1 ,
+	//	     int permissions    = 
+	//	      S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH );
 
 	
 
