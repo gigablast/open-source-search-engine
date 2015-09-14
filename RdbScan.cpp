@@ -148,6 +148,7 @@ bool RdbScan::setRead ( BigFile  *file         ,
 	// ensure we don't mess around
 	m_fstate.m_allocBuf = NULL;
 	m_fstate.m_buf      = NULL;
+	m_fstate.m_usePartFiles = true;
 	// debug msg
 	//log("diskOff=%"INT64" nb=%"INT32"",offset,bytesToRead);
 	//if ( offset == 16386 && bytesToRead == 16386 )
