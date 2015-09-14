@@ -27,6 +27,7 @@ bool sendPageSEO(TcpSocket *s, HttpRequest *hr) {return true;}
 //SafeBuf g_qbuf;
 
 bool g_recoveryMode;
+int32_t g_recoveryLevel;
 
 int g_inMemcpy;
 
