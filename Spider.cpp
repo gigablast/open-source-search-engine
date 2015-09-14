@@ -13598,10 +13598,10 @@ void gotCrawlInfoReply ( void *state , UdpSlot *slot ) {
 		// just copy into the stats buf
 		if ( ! cr->m_crawlInfoBuf.getBufStart() ) {
 			int32_t need = sizeof(CrawlInfo) * g_hostdb.m_numHosts;
+			cr->m_crawlInfoBuf.setLabel("cibuf");
 			cr->m_crawlInfoBuf.reserve(need);
 			// in case one was udp server timed out or something
 			cr->m_crawlInfoBuf.zeroOut();
-			cr->m_crawlInfoBuf.setLabel("cibuf");
 		}
 
 		CrawlInfo *cia = (CrawlInfo *)cr->m_crawlInfoBuf.getBufStart();
