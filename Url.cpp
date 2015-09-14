@@ -166,8 +166,8 @@ void Url::set ( char *t , int32_t tlen , bool addWWW , bool stripSessionId ,
 
 		if ( ! is_ascii(t[i]) ) {
 			// Sometimes the length with the null is passed in, 
-			// so ignore that last char
-			if( i != tlen-1 ) nonAsciiPos = i;
+			// so ignore nulls FIXME?
+			if( t[i] ) nonAsciiPos = i;
             break; // no non-ascii chars allowed
         }
 	}
@@ -2532,6 +2532,7 @@ uint32_t Url::unitTests() {
 		"https://gigablast.com/?q=文",
 		"http://www.example.сайт",
 		"http://genocidearchiverwanda.org.rw/index.php/Category:Official_Communiqués",
+		"http://腕時計通販.jp/",
 		// Lets check some bad urls too:
 		"https://pypi.python\n\n\t\t\t\t.org/packages/source/p/pyramid/pyramid-1.5.tar.gz#md5=8747658dcbab709a9c491e43d3b0d58b"
 	};
