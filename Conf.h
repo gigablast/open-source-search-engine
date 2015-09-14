@@ -682,6 +682,7 @@ class Conf {
 	bool  m_diffbotMsg13Hack ;
 	bool  m_logDebugUrlAttempts ;
 	bool  m_logDebugTcp     ;
+	bool  m_logDebugTcpBuf  ;
 	bool  m_logDebugThread  ;
 	bool  m_logDebugTimedb  ;
 	bool  m_logDebugTitle   ;
