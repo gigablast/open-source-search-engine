@@ -244,6 +244,9 @@ public:
 	//   is probably more accurate than this function.
 	bool isLinkLoop();
 
+	static bool unitTests();
+	static char* getDisplayUrl(char* url);
+
 	// private:
 
 	char    m_url[MAX_URL_LEN]; // the normalized url

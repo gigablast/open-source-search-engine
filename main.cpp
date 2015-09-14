@@ -2572,6 +2572,10 @@ int main2 ( int argc , char *argv[] ) {
 		false );// sendtoproxies
 	}
 
+	if ( strcmp ( cmd , "unittest" ) == 0 ) {
+		exit(Url::unitTests());
+	}
+
 	// gb startclassifier coll ruleset [hostId]
 	/*
 	if ( strcmp ( cmd , "startclassifier" ) == 0 ) {
