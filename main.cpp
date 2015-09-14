@@ -2573,7 +2573,10 @@ int main2 ( int argc , char *argv[] ) {
 	}
 
 	if ( strcmp ( cmd , "unittest" ) == 0 ) {
-		exit(Url::unitTests());
+		if ( cmdarg + 1 >= argc ) exit(1);
+		if(strcmp("url", argv[cmdarg+1]) == 0) {
+			exit(Url::unitTests());
+		}
 	}
 
 	// gb startclassifier coll ruleset [hostId]

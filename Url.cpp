@@ -245,8 +245,25 @@ void Url::set ( char *t , int32_t tlen , bool addWWW , bool stripSessionId ,
 				log("build: Bad Engineer, failed to punycode international url %s", t);
 				return;
 			}
-			encodedDomStart += encodedLen;
-			*encodedDomStart++ = *p++; // Copy in the . or the /
+			// We should check if what we encoded were valid url characters, no spaces, etc
+			// FIXME: should we exclude just the bad chars? I've seen plenty of urls with
+			// a newline in the middle.  Just discard the whole chunk for now
+			bool badUrlChars = false;
+			for(uint32_t i=0;i<encodedLen;i++) {
+				if(is_wspace_a(encodedDomStart[i])){
+					badUrlChars = true;
+					break;
+				}
+			}
+
+			if(encodedLen == 0 || badUrlChars) {
+				encodedDomStart -= 4; //don't need the xn--
+				p++;
+			} else {
+				encodedDomStart += encodedLen;
+				*encodedDomStart++ = *p++; // Copy in the . or the /
+
+			}
 		}
 		
 		// p now points to the end of the domain
@@ -2492,7 +2509,7 @@ bool Url::hasMediaExtension ( ) {
 	return false;
 }
 
-bool Url::unitTests() {
+uint32_t Url::unitTests() {
 	char* urls[] = {
 		"http://topbeskæring.dk/velkommen",
 		"www.Alliancefrançaise.nu",
@@ -2510,6 +2527,8 @@ bool Url::unitTests() {
 		"https://gigablast.com/abc/文/efg",
 		"https://gigablast.com/?q=文",
 		"http://www.example.сайт",
+		// Lets check some bad urls too:
+		"https://pypi.python\n\n\t\t\t\t.org/packages/source/p/pyramid/pyramid-1.5.tar.gz#md5=8747658dcbab709a9c491e43d3b0d58b"	
 	};
 
 	uint32_t len = sizeof(urls) / sizeof(char*);
@@ -2518,7 +2537,8 @@ bool Url::unitTests() {
 		u.set(urls[i], strlen(urls[i]));
 		log("build:%s normalized to %s", urls[i], u.getUrl());
 	}
-	return true;
+	//FIXME: need to return an error if there is a problem
+	return 0;
 }
 
 

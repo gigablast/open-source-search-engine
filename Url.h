@@ -244,7 +244,7 @@ public:
 	//   is probably more accurate than this function.
 	bool isLinkLoop();
 
-	static bool unitTests();
+	static uint32_t unitTests();
 	static char* getDisplayUrl(char* url);
 
 	// private:
