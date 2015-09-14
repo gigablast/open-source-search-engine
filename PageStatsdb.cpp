@@ -121,7 +121,6 @@ bool sendPageGraph ( TcpSocket *s, HttpRequest *r ) {
 		st->m_endDate = st->m_endDateR;
 	}
 
-	g_statsdb.addDocsIndexed();
 	//
 	// this is no longer a gif, but an html graph in g_statsdb.m_sb
 	//

@@ -14,6 +14,8 @@ import time
 import flask
 import signal, os
 import random
+from itertools import repeat
+
 
 app = flask.Flask(__name__)
 app.secret_key = 'oaisj84alwsdkjhf9238u'
@@ -315,21 +317,39 @@ def main():
 
     if len(sys.argv) == 3:
 
+        if sys.argv[1] == 'force':
+            itemName = sys.argv[2]
+            db = getDb()
+            injectItem(itemName, db, 'production')
+            sys.exit(0)
+
+        if sys.argv[1] == 'forcefile':
+            global staleTime
+            staleTime = datetime.timedelta(0,0,0)
+            from multiprocessing.pool import ThreadPool
+            fileName = sys.argv[2]
+            items = filter(lambda x: x, open(fileName, 'r').read().split('\n'))
+            pool = ThreadPool(processes=len(items))
+            #print zip(files, repeat(getDb(), len(files)), repeat('production', len(files)))
+            def injectItemTupleWrapper(itemName):
+                db = getDb()
+                ret = injectItem(itemName, db, 'production')
+                db.close()
+                return ret
+
+            answer = pool.map(injectItemTupleWrapper, items)
+            sys.exit(0)
+
+
         if sys.argv[1] == 'run':
             threads = int(sys.argv[2])
             runInjects(threads)
 
-    # else:
-    #     #getPage(3)
-    #     from multiprocessing.pool import ThreadPool
-    #     pool = ThreadPool(processes=150)
-    #     pool.map(getPage, xrange(1,1300))
         
 def runInjects(threads, mode='production'):
     from multiprocessing.pool import ThreadPool
     pool = ThreadPool(processes=threads)
     try:
-        from itertools import repeat
         maxPages = 1300
         answer = pool.map(getPage, zip(xrange(1,maxPages), repeat(mode, maxPages)))
     except (KeyboardInterrupt, SystemExit):

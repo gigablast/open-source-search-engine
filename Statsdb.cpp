@@ -65,21 +65,19 @@ static Label s_labels[] = {
 	// . 300MB/s is max read rate regardless to stop graph shrinkage
 	// . use 1KB as the min resolution per pixel
 	// . stored in Bps so use 1/1000 as scalar to get into KBps
-	{ GRAPH_QUANTITY,200,"disk_read",1,"%.0f MBps",1.0/(1000.0*1000.0),0x000000,
-	"disk read"},
+	{ GRAPH_QUANTITY,200,"disk_read",1,"%.0f MBps",1.0/(1000.0*1000.0),0x000000,"disk read"},
 
 	// . 300MB/s is max write rate regardless to stop graph shrinkage
 	// . use 1KB as the min resolution per pixel
 	// . stored in Bps so use 1/1000 as scalar to get into KBps
-	{GRAPH_QUANTITY,200,"disk_write",1,"%.0f Mbps",1.0/(1000.0*1000.0), 0xff0000,
-	"disk write"},
+	{GRAPH_QUANTITY,200,"disk_write",1,"%.0f Mbps",1.0/(1000.0*1000.0), 0xff0000,	"disk write"},
 
 	// . 20 is the max dps regardless to stop graph shrinkage
 	// . use .03 qps as the min resolution per pixel
 	{GRAPH_OPS,20,"parse_doc", .005,"%.1f dps" , 1.0 , 0x00fea915,"parsed doc" },
 
 
-	{GRAPH_QUANTITY_PER_OP,1000,"docs_per_second", .005,"%.1f docs" , .001 , 0x1F2F5C,"docs per second" },
+	{GRAPH_QUANTITY_PER_OP,-1,"docs_per_second", .1,"%.1f docs per second" , -1 , 0x1F2F5C,"docs per second" },
 
 	// . use .1 * 1000 docs as the min resolution per pixel
 	// . max = -1, means dynamic size the ymax!
@@ -88,7 +86,7 @@ static Label s_labels[] = {
 	// . make it 2M now not 50M. seems like it is per pixel and theres
 	//   like 1000 pixels vertically. but we need to autoscale it 
 	//   eventually
-	{GRAPH_QUANTITY,2000000.0,"docs_indexed", .1,"%.0fK docs" , .001 , 0x00cc0099,"docs indexed" }
+	{GRAPH_QUANTITY,-1,"docs_indexed", .1,"%.0f docs" , -1,  0x00cc0099,"docs indexed" }
 
 
 	//{ "termlist_intersect",0x0000ff00},
@@ -121,6 +119,7 @@ Label *Statsdb::getLabel ( int32_t labelHash ) {
 	if ( ! label ) return NULL;
 	return *label;
 }
+
 
 Statsdb::Statsdb ( ) {
 	m_init = false;
@@ -246,6 +245,8 @@ void flushStatsWrapper ( int fd , void *state ) {
 void Statsdb::addDocsIndexed ( ) {
 
 	if ( ! isClockInSync() ) return;
+	if ( g_hostdb.hasDeadHost() ) return;
+
 
 	// only host #0 needs this
 	if ( g_hostdb.m_hostId != 0 ) return;
@@ -270,18 +271,23 @@ void Statsdb::addDocsIndexed ( ) {
 	// divide by # of groups
 	total /= g_hostdb.getNumHostsPerShard();
 	// skip if no change
+
 	if ( total == s_lastTotal ) return;
 
     int32_t docsIndexedInInterval = total - s_lastTotal;
     float docsPerSecond = docsIndexedInInterval / (float)interval;
 
-	s_lastTotal = total;
 	log("build: total docs indexed: %f. docs per second %f %i %i", (float)total, docsPerSecond, docsIndexedInInterval, interval);
 
 	// add it if changed though
 	int64_t nowms = gettimeofdayInMillisecondsGlobal();
 	addStat ( MAX_NICENESS,"docs_indexed", nowms, nowms, (float)total );
-	addStat ( MAX_NICENESS,"docs_per_second", nowms, nowms, docsPerSecond );
+    // Prevent a datapoint which adds all of the docs indexed to date.
+    if( s_lastTotal != 0 ) {
+        addStat ( MAX_NICENESS,"docs_per_second", nowms, nowms, docsPerSecond );
+    }
+
+	s_lastTotal = total;
 }
 
 // . m_key bitmap in statsdb:
@@ -896,7 +902,7 @@ char *Statsdb::plotGraph ( char *pstart ,
 	bool needMax = true;
 	float ymin = 0.0;
 	float ymax = 0.0;
-
+	float yscalar = label->m_yscalar;
 	char *p = pstart;
 
 	for ( ; p < pend ; p += 12 ) {
@@ -909,7 +915,8 @@ char *Statsdb::plotGraph ( char *pstart ,
 		// stop if not us
 		if ( gh != graphHash ) continue;
 		// put into scaled space right away
-		y2 = y2 * label->m_yscalar;
+		if (label->m_yscalar >= 0)
+			y2 = y2 * label->m_yscalar;
 		// . limit y to absolute max
 		// . these units should be scaled as well!
 		if ( y2 > label->m_absYMax && label->m_absYMax > 0.0 )
@@ -922,13 +929,21 @@ char *Statsdb::plotGraph ( char *pstart ,
 	}
 
 	// force to zero for now
-	ymin = 0.0;
+	//ymin = 0.0;
 	// . and force to ymax for now as well
 	// . -1 indicates dynamic though!
 	if ( label->m_absYMax > 0.0 ) ymax = label->m_absYMax;
 	// add a 20% ceiling
-	else                          ymax *= 1.20;
+	//	else                          ymax *= 1.20;
 
+	
+	if( label->m_yscalar <= 0 ) {
+        if(ymax == ymin) {
+            yscalar = 0;
+        } else {
+            yscalar = (float)DY2 / (ymax - ymin);
+        }
+	}
 	// return that!
 	char *retp = p;
 
@@ -951,7 +966,7 @@ char *Statsdb::plotGraph ( char *pstart ,
 
 	// . pad y range if total range is small
 	// . only do this for certain types of stats, like qps and disk i/o
-	if ( ourDiff < minDiff ) {
+	if ( label->m_yscalar >=0 && ourDiff < minDiff ) {
 		float pad = (minDiff - ourDiff) / 2;
 		// pad it out
 		ymin -= pad ;
@@ -987,10 +1002,16 @@ char *Statsdb::plotGraph ( char *pstart ,
 		float y2 = *(float *)p; p += 4;
 
 		// scale it right away
-		y2 *= label->m_yscalar;
+		if(label->m_yscalar < 0) {
+			y2 = (y2 - ymin) * yscalar;
+		}
+		else {
+			y2 *= yscalar;
 
+		}
 		// adjust
 		if ( y2 > ymax ) y2 = ymax;
+		if ( y2 < 0 ) y2 = 0;
 
 		// then graphHash
 		int32_t  gh = *(int32_t *)p; p += 4;
@@ -1003,8 +1024,10 @@ char *Statsdb::plotGraph ( char *pstart ,
 		float y1 = lasty;
 
 		// normalize y into pixel space
-		y2 = ((float)DY2 * (y2 - ymin)) / (ymax-ymin);
-
+		if(label->m_yscalar >= 0 && ymax != ymin) {
+			y2 = ((float)DY2 * (y2 - ymin)) / (ymax-ymin);
+		}
+		
 		// set lasts for next iteration of this loop
 		lastx = x2;
 		lasty = y2;
@@ -1192,6 +1215,13 @@ bool Statsdb::processList ( ) {
 		// done if wrapped
 		if ( m_startKey.n0 == 0LL && m_startKey.n1 == 0 )
 			m_done = true;
+	}
+
+	// HACK: the user can request all of the events, it can
+	// become quite large. so limit to 100 mb right now.
+	if( m_sb3.length() > 100000000) {
+		log("statsdb: truncating statsdb results.");
+		m_done = true;
 	}
 
 
@@ -1599,3 +1629,5 @@ void Statsdb::drawLine3 ( SafeBuf &sb ,
 		      , color
 		      );
 }
+
+
