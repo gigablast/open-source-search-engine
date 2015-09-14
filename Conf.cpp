@@ -369,7 +369,7 @@ bool Conf::init ( char *dir ) { // , int32_t hostId ) {
 	g_conf.m_forceIt = false;
 
 	// always turn on threads if live
-	if ( g_conf.m_isLive ) g_conf.m_useThreads = true;
+	//if ( g_conf.m_isLive ) g_conf.m_useThreads = true;
 	// disable this at startup always... no since might have crashed
 	// in the middle of a test. and we just turn on spiders again when
 	// already in test mode otherwise hostid #0 will erase all the files.

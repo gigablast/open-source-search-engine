@@ -3133,6 +3133,8 @@ void ThreadQueue::removeThreads2 ( ThreadEntry **headPtr ,
 				   ThreadEntry **tailPtr ,
 				   BigFile *bf ) {
 
+	int32_t saved = g_errno;
+
 	ThreadEntry *t = *headPtr;
 	ThreadEntry *nextLink = NULL;
 	for ( ; t ; t = nextLink ) {
@@ -3194,7 +3196,11 @@ void ThreadQueue::removeThreads2 ( ThreadEntry **headPtr ,
 	// if ( m_top == maxi + 1 )
 	// 	while ( m_top>0 && !m_entries[m_top-1].m_isOccupied) m_top--;
 
-	g_errno = 0;
+	// this was causing us to lose a g_errno value when XmlDoc::~XmlDoc()
+	// called BigFile::~BigFile() called removeThreads() 
+	//called removeThreads2()
+	//g_errno = 0;
+	g_errno = saved;
 }
 
 
