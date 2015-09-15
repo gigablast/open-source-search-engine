@@ -77,7 +77,7 @@ static Label s_labels[] = {
 	{GRAPH_OPS,20,"parse_doc", .005,"%.1f dps" , 1.0 , 0x00fea915,"parsed doc" },
 
 
-	{GRAPH_QUANTITY_PER_OP,-1,"docs_per_second", .1,"%.1f docs per second" , -1 , 0x1F2F5C,"docs per second" },
+	{GRAPH_QUANTITY_PER_OP,-1,"docs_per_second", .1,"%.1f docs per second" , -1 , 0x1F2F5C,"*successfully* indexed docs per second" },
 
 	// . use .1 * 1000 docs as the min resolution per pixel
 	// . max = -1, means dynamic size the ymax!
