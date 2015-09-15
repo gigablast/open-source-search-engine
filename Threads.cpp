@@ -323,7 +323,7 @@ bool Threads::init ( ) {
 	if ( ! g_threads.registerType ( INTERSECT_THREAD,max,200) ) 
 		return log("thread: Failed to register thread type." );
 	// filter thread spawned to call popen() to filter an http reply
-	if ( ! g_threads.registerType ( FILTER_THREAD , 1/*maxThreads*/,300) ) 
+	if ( ! g_threads.registerType ( FILTER_THREAD, 10/*maxThreads*/,300) ) 
 		return log("thread: Failed to register thread type." );
 	// RdbTree uses this to save itself
 	if ( ! g_threads.registerType ( SAVETREE_THREAD,1/*maxThreads*/,100) ) 
