@@ -1258,6 +1258,12 @@ bool XmlDoc::set4 ( SpiderRequest *sreq      ,
 		utf8Content = m_mime.getContent();
 	}
 
+	// use this to avoid ip lookup if it is not zero
+	if ( forcedIp ) {
+		m_ip = forcedIp;
+		m_ipValid = true;
+	}
+
 	// sometimes they supply the content they want! like when zaks'
 	// injects pages from PageInject.cpp
 	if ( utf8Content ) {
@@ -1290,11 +1296,6 @@ bool XmlDoc::set4 ( SpiderRequest *sreq      ,
 		// use this ip as well for now to avoid ip lookup
 		//m_ip      = atoip("127.0.0.1");
 		//m_ipValid = true;
-		// use this to avoid ip lookup if it is not zero
-		if ( forcedIp ) {
-			m_ip = forcedIp;
-			m_ipValid = true;
-		}
 		// do not need robots.txt then
 		m_isAllowed      = true;
 		m_isAllowedValid = true;
