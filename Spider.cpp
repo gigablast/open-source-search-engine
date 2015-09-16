@@ -11482,6 +11482,16 @@ int32_t getUrlFilterNum2 ( SpiderRequest *sreq       ,
 			     // never repeated after that!
 			     errCode != EBADIP &&
 			     // assume diffbot is temporarily experiencing errs
+			     // but the crawl, if recurring, should retry these
+			     // at a later point
+			     errCode != EDIFFBOTUNABLETOAPPLYRULES &&
+			     errCode != EDIFFBOTCOULDNOTPARSE &&
+			     errCode != EDIFFBOTCOULDNOTDOWNLOAD &&
+			     errCode != EDIFFBOTINVALIDAPI &&
+			     errCode != EDIFFBOTVERSIONREQ &&
+			     errCode != EDIFFBOTURLPROCESSERROR &&
+			     errCode != EDIFFBOTTOKENEXPIRED &&
+			     errCode != EDIFFBOTUNKNOWNERROR &&
 			     errCode != EDIFFBOTINTERNALERROR &&
 			     // if diffbot received empty content when d'lding
 			     errCode != EDIFFBOTEMPTYCONTENT &&
