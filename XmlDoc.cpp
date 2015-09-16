@@ -17815,6 +17815,91 @@ Url **XmlDoc::getCanonicalRedirUrl ( ) {
 	return &m_canonicalRedirUrlPtr;
 }
 
+// returns false if none found
+bool setMetaRedirUrlFromTag ( char *p , Url *metaRedirUrl , char niceness ,
+			      Url *cu ) {
+	// limit scan
+	char *limit = p + 30;
+	// skip whitespace
+	for ( ; *p && p < limit && is_wspace_a(*p) ; p++ );
+	// must be a num
+	if ( ! is_digit(*p) ) return false;
+	// init delay
+	int32_t delay = atol ( p );
+	// ignore long delays
+	if ( delay >= 10 ) return false;
+	// now find the semicolon, if any
+	for ( ; *p && p < limit && *p != ';' ; p++ );
+	// must have semicolon
+	if ( *p != ';' ) return false;
+	// skip it
+	p++;
+	// skip whitespace some more
+	for ( ; *p && p < limit && is_wspace_a(*p) ; p++ );
+	// must have URL
+	if ( strncasecmp(p,"URL",3) ) return false;
+	// skip that
+	p += 3;
+	// skip white space
+	for ( ; *p && p < limit && is_wspace_a(*p) ; p++ );
+	// then an equal sign
+	if ( *p != '=' ) return false;
+	// skip equal sign
+	p++;
+	// them maybe more whitespace
+	for ( ; *p && p < limit && is_wspace_a(*p) ; p++ );
+	// an optional quote
+	if ( *p == '\"' ) p++;
+	// can also be a single quote!
+	if ( *p == '\'' ) p++;
+	// set the url start
+	char *url = p;
+	// now advance to next quote or space or >
+	for ( ; *p && !is_wspace_a(*p) && 
+		      *p !='\'' && 
+		      *p !='\"' && 
+		      *p !='>' ; 
+	      p++);
+	// that is the end
+	char *urlEnd = p;
+	// get size
+	int32_t usize = urlEnd - url;
+	// skip if too big
+	if ( usize > 1024 ) {
+		log("build: meta redirurl of %"INT32" bytes too big",usize);
+		return false;
+	}
+	// get our current utl
+	//Url *cu = getCurrentUrl();
+	// decode what we got
+	char decoded[MAX_URL_LEN];
+	// convert &amp; to "&"
+	int32_t decBytes = htmlDecode(decoded,url,usize,false,niceness);
+	decoded[decBytes]='\0';
+	// . then the url
+	// . set the url to the one in the redirect tag
+	// . but if the http-equiv meta redirect url starts with a '?'
+	//   then just replace our cgi with that one
+	if ( *url == '?' ) {
+		char foob[MAX_URL_LEN*2];
+		char *pf = foob;
+		int32_t cuBytes = cu->getPathEnd() - cu->getUrl();
+		gbmemcpy(foob,cu->getUrl(),cuBytes);
+		pf += cuBytes;
+		gbmemcpy ( pf , decoded , decBytes );
+		pf += decBytes;
+		*pf = '\0';
+		metaRedirUrl->set(foob);
+	}
+	// . otherwise, append it right on
+	// . use "url" as the base Url
+	// . it may be the original url or the one we redirected to
+	// . redirUrl is set to the original at the top
+	else
+		// addWWW = false, stripSessId=true
+		metaRedirUrl->set(cu,decoded,decBytes,false,true);
+	return true;
+}
 
 
 // scan document for <meta http-equiv="refresh" content="0;URL=xxx">
@@ -17840,6 +17925,14 @@ Url **XmlDoc::getMetaRedirUrl ( ) {
 	// if we are recycling or injecting, do not consider meta redirects
 	if ( cr->m_recycleContent || m_recycleContent ) 
 		return &m_metaRedirUrlPtr; 
+
+	// will this work in here?
+	//uint8_t *ct = getContentType();
+	//if ( ! ct ) return NULL;
+
+	Url *cu = getCurrentUrl();
+
+	bool gotOne = false;
 
 	// advance a bit, we are initially looking for the 'v' char
 	p += 10;
@@ -17880,91 +17973,64 @@ Url **XmlDoc::getMetaRedirUrl ( ) {
 		p += 8;
 		// skip possible quote
 		if ( *p == '\"' ) p++;
-		// limit scan
-		limit = p + 30;
-		// skip whitespace
-		for ( ; *p && p < limit && is_wspace_a(*p) ; p++ );
-		// must be a num
-		if ( ! is_digit(*p) ) continue;
-		// init delay
-		int32_t delay = atol ( p );
-		// ignore int32_t delays
-		if ( delay >= 10 ) continue;
-		// now find the semicolon, if any
-		for ( ; *p && p < limit && *p != ';' ; p++ );
-		// must have semicolon
-		if ( *p != ';' ) continue;
-		// skip it
-		p++;
-		// skip whitespace some more
-		for ( ; *p && p < limit && is_wspace_a(*p) ; p++ );
-		// must have URL
-		if ( strncasecmp(p,"URL",3) ) continue;
-		// skip that
-		p += 3;
-		// skip white space
-		for ( ; *p && p < limit && is_wspace_a(*p) ; p++ );
-		// then an equal sign
-		if ( *p != '=' ) continue;
-		// skip equal sign
-		p++;
-		// them maybe more whitespace
-		for ( ; *p && p < limit && is_wspace_a(*p) ; p++ );
-		// an optional quote
-		if ( *p == '\"' ) p++;
-		// can also be a single quote!
-		if ( *p == '\'' ) p++;
-		// set the url start
-		char *url = p;
-		// now advance to next quote or space or >
-		for ( ; *p && !is_wspace_a(*p) && 
-			      *p !='\'' && 
-			      *p !='\"' && 
-			      *p !='>' ; 
-		      p++);
-		// that is the end
-		char *urlEnd = p;
-		// get size
-		int32_t usize = urlEnd - url;
-		// skip if too big
-		if ( usize > 1024 ) {
-			log("build: meta redirurl of %"INT32" bytes too big",usize);
+		// PARSE OUT THE URL
+		Url dummy;
+		if ( ! setMetaRedirUrlFromTag ( p , &dummy , m_niceness ,cu)) 
 			continue;
-		}
-		// get our current utl
-		Url *cu = getCurrentUrl();
-		// decode what we got
-		char decoded[MAX_URL_LEN];
-		// convert &amp; to "&"
-		int32_t decBytes = htmlDecode(decoded,url,usize,false,m_niceness);
-		decoded[decBytes]='\0';
-		// . then the url
-		// . set the url to the one in the redirect tag
-		// . but if the http-equiv meta redirect url starts with a '?'
-		//   then just replace our cgi with that one
-		if ( *url == '?' ) {
-			char foob[MAX_URL_LEN*2];
-			char *pf = foob;
-			int32_t cuBytes = cu->getPathEnd() - cu->getUrl();
-			gbmemcpy(foob,cu->getUrl(),cuBytes);
-			pf += cuBytes;
-			gbmemcpy ( pf , decoded , decBytes );
-			pf += decBytes;
-			*pf = '\0';
-			m_metaRedirUrl.set(foob);
-		}
-		// . otherwise, append it right on
-		// . use "url" as the base Url
-		// . it may be the original url or the one we redirected to
-		// . redirUrl is set to the original at the top
-		else
-			// addWWW = false, stripSessId=true
-			m_metaRedirUrl.set(cu,decoded,decBytes,false,true);
+		gotOne = true;
+		break;
+	}
+
+	if ( ! gotOne )
+		return &m_metaRedirUrlPtr;
+
+	// to fix issue with scripts containing 
+	// document.write('<meta http-equiv="Refresh" content="0;URL=http://ww
+	// we have to get the Xml. we can't call getXml() because of
+	// recursion bugs so just do it directly here
+
+	Xml xml;
+	if ( ! xml.set ( m_httpReply ,
+			 m_httpReplySize - 1, // make it a length
+			 false      ,  // ownData?
+			 0          ,  // allocSize
+			 false      ,  // pure xml?
+			 m_version  ,
+			 false      ,  // setParentsArg? 
+			 m_niceness ,
+			 // assume html since getContentType() is recursive
+			 // on us.
+			 CT_HTML ) ) // *ct ) )
+		// return NULL on error with g_errno set
+		return NULL;
+
+	XmlNode *nodes = xml.getNodes();
+	int32_t     n  = xml.getNumNodes();
+	// find the first meta summary node
+	for ( int32_t i = 0 ; i < n ; i++ ) {
+		// continue if not a meta tag
+		if ( nodes[i].m_nodeId != 68 ) continue;
+		// only get content for <meta http-equiv=..>
+		int32_t tagLen;
+		char *tag ;
+		tag = xml.getString ( i , "http-equiv" , &tagLen );
+		// skip if empty
+		if ( ! tag || tagLen <= 0 ) continue;
+		// if not a refresh, skip it
+		if ( strncasecmp ( tag , "refresh", 7 ) ) continue;
+		// get the content
+		tag = xml.getString ( i ,"content", &tagLen );
+		// skip if empty
+		if ( ! tag || tagLen <= 0 ) continue;
+		// PARSE OUT THE URL
+		if (!setMetaRedirUrlFromTag(p,&m_metaRedirUrl,m_niceness,cu) ) 
+			continue;
 		// set it
 		m_metaRedirUrlPtr = &m_metaRedirUrl;
 		// return it
-		break;
+		return &m_metaRedirUrlPtr;
 	}
+
 	// nothing found
 	return &m_metaRedirUrlPtr;
 }
