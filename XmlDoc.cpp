@@ -39438,6 +39438,12 @@ char **XmlDoc::getRootTitleBuf ( ) {
 	// sanity check, must include the null ni the size
 	if ( m_rootTitleBufSize > 0 &&
 	     m_rootTitleBuf [ m_rootTitleBufSize - 1 ] ) {
+		log("build: bad root titlebuf size not end in null char for "
+		    "collnum=%i",(int)m_collnum);
+		ptr_rootTitleBuf = NULL;
+		size_rootTitleBuf = 0;
+		m_rootTitleBufValid = true;
+		return (char **)&m_rootTitleBuf;
 		char *xx=NULL;*xx=0;
 		//m_rootTitleBuf [ m_rootTitleBufSize - 1 ] = '\0';
 		//m_rootTitleBufSize++;
