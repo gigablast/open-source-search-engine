@@ -12078,11 +12078,25 @@ XmlDoc **XmlDoc::getRootXmlDoc ( int32_t maxCacheAge ) {
 	mnew ( m_rootDoc , sizeof(XmlDoc),"xmldoc3");
 	// if we had the title rec, set from that
 	if ( *rtr ) {
-		m_rootDoc->set2 ( m_rootTitleRec     ,
-				  m_rootTitleRecSize , // maxSize    , 
-				  cr->m_coll             ,
-				  NULL               , // pbuf
-				  m_niceness         );
+		if ( ! m_rootDoc->set2 ( m_rootTitleRec     ,
+					 m_rootTitleRecSize , // maxSize    , 
+					 cr->m_coll             ,
+					 NULL               , // pbuf
+					 m_niceness         ) ) {
+			// it was corrupted... delete this
+			// possibly printed 
+			// " uncompress uncompressed size=..." bad uncompress
+			log("build: rootdoc set2 failed");
+			mdelete ( m_rootDoc , sizeof(XmlDoc) , "xdnuke");
+			delete ( m_rootDoc );
+			// call it empty for now, we don't want to return
+			// NULL with g_errno set because it could stop
+			// the whole indexing pipeline
+			m_rootDoc = NULL;
+			m_rootDocValid = true;
+			return &m_rootDoc;
+			//return NULL;
+		}
 	}
 	// . otherwise, set the url and download it on demand
 	// . this junk copied from the contactDoc->* stuff below
