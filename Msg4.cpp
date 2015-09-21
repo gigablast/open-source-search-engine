@@ -1434,8 +1434,8 @@ bool saveAddsInProgress ( char *prefix ) {
 	sprintf ( filename , "%s%saddsinprogress.saving", 
 		  g_hostdb.m_dir , prefix );
 
-	int32_t fd = open ( filename, O_RDWR | O_CREAT | O_TRUNC , 
-			  getFileCreationFlags() );
+	int32_t fd = open ( filename, O_RDWR | O_CREAT | O_TRUNC );
+			  // getFileCreationFlags() );
 			 // S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP|S_IROTH );
 	if ( fd < 0 ) {
 		log ("build: Failed to open %s for writing: %s",

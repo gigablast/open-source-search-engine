@@ -248,8 +248,8 @@ void makeQADir ( ) {
 	char dir[1024];
 	snprintf(dir,1000,"%sqa",g_hostdb.m_dir);
 	log("mkdir mkdir %s",dir);
-	int32_t status = ::mkdir ( dir ,
-				   getFileCreationFlags() );
+	int32_t status = ::mkdir ( dir );
+				   // getFileCreationFlags() );
 				// S_IRUSR | S_IWUSR | S_IXUSR | 
 				// S_IRGRP | S_IWGRP | S_IXGRP | 
 				// S_IROTH | S_IXOTH );

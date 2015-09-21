@@ -1990,8 +1990,8 @@ bool Hostdb::saveHostsConf ( ) {
 	sprintf ( filename, "%shosts.conf", m_dir );
 	log ( LOG_INFO, "conf: Writing hosts.conf file to: %s",
 			filename );
-	int32_t fd = open ( filename, O_CREAT|O_WRONLY|O_TRUNC,
-			  getFileCreationFlags() );
+	int32_t fd = open ( filename, O_CREAT|O_WRONLY|O_TRUNC );
+			    //getFileCreationFlags() );
 			 // S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP|S_IROTH );
 	if ( !fd ) {
 		log ( "conf: Failed to open %s for writing.", filename );

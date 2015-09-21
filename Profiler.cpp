@@ -1862,8 +1862,8 @@ Profiler::printRealTimeInfo(SafeBuf *sb,
 	ff.safePrintf("%strash/profile.txt",g_hostdb.m_dir);
 	char *filename = ff.getBufStart();
 	unlink ( filename );
-	mode_t fileCreationMode = getFileCreationFlags();
-	int fd = open ( filename , O_RDWR | O_CREAT , fileCreationMode );
+	//mode_t fileCreationMode = getFileCreationFlags();
+	int fd = open ( filename , O_RDWR | O_CREAT );//, fileCreationMode );
 	if ( fd < 0 ) {
 		sb->safePrintf("FAILED TO OPEN %s for writing: %s"
 			       ,ff.getBufStart(),mstrerror(errno));

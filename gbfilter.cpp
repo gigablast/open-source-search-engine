@@ -236,8 +236,8 @@ int filterContent ( char *buf , int32_t n , int32_t mimeLen , char ctype , int32
 
 	//fprintf(stderr,"in=%s\n",in);
 
-	int fd = open ( in , O_CREAT | O_RDWR , 
-			getFileCreationFlags() );
+	int fd = open ( in , O_CREAT | O_RDWR );
+			//getFileCreationFlags() );
 			// S_IRWXU | S_IRWXG );
 	if ( fd < 0 ) {
 		fprintf(stderr,"gbfilter: open: %s\n",strerror(errno)); 

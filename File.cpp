@@ -241,7 +241,7 @@ bool File::open ( int flags , int permissions ) {
 	m_permissions = permissions;
 	// just override and use system settings so we can get the group 
 	// writable/readable/executable bits if set that way in g_conf
-	m_permissions = getFileCreationFlags();
+	//m_permissions = getFileCreationFlags();
 	m_calledOpen  = true;
 	// sanity check
 	//int32_t ss = 0;
@@ -671,7 +671,7 @@ int File::getfd () {
 	if ( fd == -1 ) {
 		t1 = gettimeofdayInMilliseconds();
  retry7:
-		fd = ::open ( getFilename() , m_flags , m_permissions );
+		fd = ::open ( getFilename() , m_flags );//, m_permissions );
 		// valgrind
 		if ( fd == -1 && errno == EINTR ) goto retry7;
 		// 0 means stdout, right? why am i seeing it get assigned???
@@ -679,7 +679,7 @@ int File::getfd () {
 			log("disk: Got fd of 0 when opening %s.",
 			    getFilename());
 		if ( fd == 0 )
-			fd = ::open ( getFilename(), m_flags , m_permissions );
+			fd = ::open ( getFilename(),m_flags);//m_permissions);
 		if ( fd == 0 ) 
 			log("disk: Got fd of 0 when opening2 %s.",
 			    getFilename());

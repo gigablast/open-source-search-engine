@@ -374,13 +374,13 @@ bool Rdb::updateToRebuildFiles ( Rdb *rdb2 , char *coll ) {
 	char dstDir[256];
 	// make the trash dir if not there
 	sprintf ( dstDir , "%s/trash/" , g_hostdb.m_dir );
-	int32_t status = ::mkdir ( dstDir , getFileCreationFlags() );
+	int32_t status = ::mkdir ( dstDir );//, getFileCreationFlags() );
 				// S_IRUSR | S_IWUSR | S_IXUSR | 
 				// S_IRGRP | S_IWGRP | S_IXGRP | 
 				// S_IROTH | S_IXOTH ) ;
 	// we have to create it
 	sprintf ( dstDir , "%s/trash/rebuilt%"UINT32"/" , g_hostdb.m_dir , t );
-	status = ::mkdir ( dstDir , getFileCreationFlags() );
+	status = ::mkdir ( dstDir );//, getFileCreationFlags() );
 				// S_IRUSR | S_IWUSR | S_IXUSR | 
 				// S_IRGRP | S_IWGRP | S_IXGRP | 
 				// S_IROTH | S_IXOTH ) ;
@@ -643,7 +643,7 @@ bool Rdb::deleteAllRecs ( collnum_t collnum ) {
 bool makeTrashDir() {
 	char trash[1024];
 	sprintf(trash, "%strash/",g_hostdb.m_dir);
-	if ( ::mkdir ( trash, getFileCreationFlags() ) ) {
+	if ( ::mkdir ( trash ) ) { // , getFileCreationFlags() ) ) {
 		       // S_IRUSR | S_IWUSR | S_IXUSR | 
 		       // S_IRGRP | S_IWGRP | S_IXGRP | 
 		       // S_IROTH | S_IXOTH ) == -1 ) {

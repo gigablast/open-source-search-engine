@@ -9,11 +9,11 @@
 
 Conf g_conf;
 
-mode_t getFileCreationFlags() {
-	//if ( g_conf.m_makeAllFilesGroupWritable )
-	return S_IRWXU | S_IRWXG;
-	//return S_IRWXU;
-}
+// mode_t getFileCreationFlags() {
+// 	//if ( g_conf.m_makeAllFilesGroupWritable )
+// 	return S_IRWXU | S_IRWXG;
+// 	//return S_IRWXU;
+// }
 
 Conf::Conf ( ) {
 	m_save = true;
