@@ -2537,38 +2537,66 @@ uint32_t Url::unitTests() {
 		"https://pypi.python\n\n\t\t\t\t.org/packages/source/p/pyramid/pyramid-1.5.tar.gz#md5=8747658dcbab709a9c491e43d3b0d58b"
 	};
 
+    StackBuf(sb);
 	uint32_t len = sizeof(urls) / sizeof(char*);
 	for(uint32_t i = 0; i < len; i++) {
 		Url u;
 		u.set(urls[i], strlen(urls[i]));
-		log("build:%s normalized to %s", urls[i], u.getUrl());
+		log("build:%s normalized to %s, printed to %s ", 
+            urls[i], u.getUrl(), Url::getDisplayUrl(u.getUrl(), &sb));
+        sb.reset();
 	}
 	//FIXME: need to return an error if there is a problem
 	return 0;
 }
 
 
-#if 0
 // FIXME: not used right now because it doesn't work
-void Url::getDisplayUrl(char* url, SafeBuf* sb) {
+char* Url::getDisplayUrl(char* url, SafeBuf* sb) {
 	char* found;
-	if((found = strstr(url, "xn--"))) {
-		char* p = found;
+    char* labelCursor = url;
+	if((found = strstr(labelCursor, "xn--"))) {
+		sb->safeMemcpy(url, found - url);
+
+		char* p = url;
 		char* pend = url + gbstrlen(url);
-		while(p < pend && *p != '.' && *p != '/') p++;
+		if(strncmp(p, "http://", 7) == 0) p += 7;
+		else if(strncmp(p, "https://", 8) == 0) p += 8;
 
-		char* encodedStart = found + 4;
+		while(p < pend && *p != '/') p++;
+		char* domEnd = p;
 
-        char decoded [ MAX_URL_LEN ];
-        uint64_t decodedLen = MAX_URL_LEN;
-		punycode_status status = punycode_decode(encodedStart - found, 
-												 encodedStart, 
-												 &decodedLen, 
-												 decoded);
-		return url;
-	} else {
-		sb.safePrintf("%s",url);
-		return url;
+		do {
+			if(found > domEnd) {
+				// Dont even look if it is past the domain
+				sb->safeMemcpy(labelCursor, pend - labelCursor);
+				return sb->getBuf();
+			}
+
+
+			char* encodedStart = found + 4;
+			uint32_t decoded [ MAX_URL_LEN];
+			uint64_t decodedLen = MAX_URL_LEN - 1 ;
+			char* labelEnd = encodedStart;
+			while( labelEnd < domEnd && *labelEnd != '/' &&  *labelEnd != '.' ) 
+				labelEnd++;
+
+			punycode_status status = punycode_decode(labelEnd - encodedStart,
+													 encodedStart, 
+													 &decodedLen, 
+													 decoded, NULL);
+			if(status != 0) {
+				log("build: Bad Engineer, failed to depunycode international url %s", url);
+				sb->safePrintf("%s", url);
+				return url;
+			}
+			sb->utf32Encode(decoded, decodedLen);
+			//sb->pushChar(*labelEnd);
+			labelCursor = labelEnd;
+		} while((found = strstr(labelCursor, "xn--")));
 	}
+    // Copy in the rest
+    sb->safePrintf("%s", labelCursor);
+    sb->nullTerm();
+    return sb->getBufStart();
 }
-#endif

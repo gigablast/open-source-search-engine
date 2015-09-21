@@ -862,6 +862,22 @@ bool  SafeBuf::utf8Encode2(char *s, int32_t len, bool encodeHTML,int32_t nicenes
 	return htmlEncode(m_length-tmp,niceness);
 }
 
+
+
+bool SafeBuf::utf32Encode(UChar32* codePoints, int32_t cpLen) {
+	if(m_encoding != csUTF8) return safePrintf("FIXME %s:%s", __FILE__, __LINE__);
+
+    int32_t need = 0;
+    for(int32_t i = 0; i < cpLen;i++) need += utf8Size(codePoints[i]);
+	if(!reserve(need)) return false;
+    
+    for(int32_t i = 0; i < cpLen;i++) {
+		m_length += ::utf8Encode(codePoints[i], m_buf + m_length);
+	}
+	
+    return true;
+}
+
 /*
 bool SafeBuf::utf32Encode(UChar32 c) {
 	if(!reserve2x(8)) return false;

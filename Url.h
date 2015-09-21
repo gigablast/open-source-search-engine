@@ -232,6 +232,7 @@ public:
 	// this is private
 	bool isSpam ( char *s , int32_t slen ) ;
 
+
 	// . detects crazy repetetive urls like this:
 	//   http://www.pittsburghlive.com:8000/x/tribune-review/opinion/
 	//   steigerwald/letters/send/archive/letters/send/archive/bish/
@@ -245,7 +246,7 @@ public:
 	bool isLinkLoop();
 
 	static uint32_t unitTests();
-	static char* getDisplayUrl(char* url);
+    static char* getDisplayUrl(char* url, SafeBuf* sb);
 
 	// private:
 
