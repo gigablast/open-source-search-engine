@@ -2532,6 +2532,8 @@ uint32_t Url::unitTests() {
 		"https://gigablast.com/?q=文",
 		"http://www.example.сайт",
 		"http://genocidearchiverwanda.org.rw/index.php/Category:Official_Communiqués",
+		"http://www.example.com/xn--fooled-you-into-trying-to-decode-this",
+		"http://www.example.сайт/xn--fooled-you-into-trying-to-decode-this",
 		"http://腕時計通販.jp/",
 		// Lets check some bad urls too:
 		"https://pypi.python\n\n\t\t\t\t.org/packages/source/p/pyramid/pyramid-1.5.tar.gz#md5=8747658dcbab709a9c491e43d3b0d58b"
@@ -2551,7 +2553,6 @@ uint32_t Url::unitTests() {
 }
 
 
-// FIXME: not used right now because it doesn't work
 char* Url::getDisplayUrl(char* url, SafeBuf* sb) {
 	char* found;
     char* labelCursor = url;
@@ -2569,10 +2570,8 @@ char* Url::getDisplayUrl(char* url, SafeBuf* sb) {
 		do {
 			if(found > domEnd) {
 				// Dont even look if it is past the domain
-				sb->safeMemcpy(labelCursor, pend - labelCursor);
-				return sb->getBuf();
+				break;
 			}
-
 
 			char* encodedStart = found + 4;
 			uint32_t decoded [ MAX_URL_LEN];

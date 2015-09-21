@@ -4995,26 +4995,31 @@ bool printResult ( State0 *st, int32_t ix , int32_t *numPrintedSoFar ) {
 	// print the URL
 	//
 	////////////
+
+	StackBuf(tmpBuf);
+	char* displayUrl = Url::getDisplayUrl(url, &tmpBuf);
+	uint32_t displayUrlLen = tmpBuf.length();
+
 	// hack off the http:// if any for displaying it on screen
-	if ( urlLen > 8 && strncmp ( url , "http://" , 7 )==0 ) {
-		url += 7; urlLen -= 7; }
+	if ( displayUrlLen > 8 && strncmp ( displayUrl , "http://" , 7 )==0 ) {
+		displayUrl += 7; displayUrlLen -= 7; }
 	// . remove trailing /
 	// . only remove from root urls in case user cuts and 
 	//   pastes it for link: search
-	if ( url [ urlLen - 1 ] == '/' ) {
+	if ( displayUrl [ displayUrlLen - 1 ] == '/' ) {
 		// see if any other slash before us
 		int32_t j;
-		for ( j = urlLen - 2 ; j >= 0 ; j-- )
-			if ( url[j] == '/' ) break;
+		for ( j = displayUrlLen - 2 ; j >= 0 ; j-- )
+			if ( displayUrl[j] == '/' ) break;
 		// if there wasn't, we must have been a root url
 		// so hack off the last slash
-		if ( j < 0 ) urlLen--;
+		if ( j < 0 ) displayUrlLen--;
 	}
 	if ( si->m_format == FORMAT_HTML ) {
 		sb->safePrintf ("<font color=gray>" );
 		//sb->htmlEncode ( url , gbstrlen(url) , false );
 		// 20 for the date after it
-		sb->safeTruncateEllipsis ( url , 50 ); // cols - 30 );
+		sb->safeTruncateEllipsis ( displayUrl , 50 ); // cols - 30 );
 		// turn off the color
 		sb->safePrintf ( "</font>\n" );
 	}
@@ -5045,12 +5050,12 @@ bool printResult ( State0 *st, int32_t ix , int32_t *numPrintedSoFar ) {
 
 	if ( si->m_format == FORMAT_XML ) {
 		sb->safePrintf("\t\t<url><![CDATA[");
-		sb->safeMemcpy ( url , urlLen );
+		sb->safeMemcpy ( displayUrl , displayUrlLen );
 		sb->safePrintf("]]></url>\n");
 	}
 	if ( si->m_format == FORMAT_JSON ) {
 		sb->safePrintf("\t\t\"url\":\"");
-		sb->jsonEncode ( url , urlLen );
+		sb->jsonEncode ( displayUrl , displayUrlLen );
 		sb->safePrintf("\",\n");
 	}
 

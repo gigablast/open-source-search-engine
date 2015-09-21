@@ -246,7 +246,7 @@ public:
 	bool isLinkLoop();
 
 	static uint32_t unitTests();
-    static char* getDisplayUrl(char* url, SafeBuf* sb);
+	static char* getDisplayUrl(char* url, SafeBuf* sb);
 
 	// private:
 
