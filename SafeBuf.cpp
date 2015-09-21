@@ -431,7 +431,7 @@ bool SafeBuf::reserve(int32_t i , char *label, bool clearIt ) {
 //buffer size.
 bool SafeBuf::reserve2x(int32_t i, char *label) {
 	//watch out for overflow!
-	if((m_capacity << 1) + i < 0) return false;
+	if((m_capacity << 1) + i < m_capacity) return false;
 	if(i + m_length >= m_capacity)
 		return reserve(m_capacity + i,label);
 	else return true;
