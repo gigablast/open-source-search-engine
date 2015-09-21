@@ -696,7 +696,7 @@ bool Msg40::federatedLoop ( ) {
 	// and mult based on index size
 	numDocIdSplits *= mult;
 	// prevent going OOM for type:article AND html
-	//if ( numDocIdSplits < 5 ) numDocIdSplits = 5;
+	if ( numDocIdSplits < 5 ) numDocIdSplits = 5;
 	//}
 
 	if ( cr ) mr.m_maxQueryTerms = cr->m_maxQueryTerms; 
