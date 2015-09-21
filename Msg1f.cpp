@@ -57,8 +57,8 @@ void handleRequest ( UdpSlot *slot , int32_t netnice ) {
 		return;
 	}
 
-	int32_t fd = open ( filename , O_RDONLY );
-			  // getFileCreationFlags() );
+	int32_t fd = open ( filename , O_RDONLY ,
+			    getFileCreationFlags() );
 			 // S_IRUSR |S_IWUSR |S_IRGRP |S_IWGRP| S_IROTH );
 	if ( ! fd ) {
 		log(LOG_DEBUG, "logviewer: Failed to open %s for reading: ",

@@ -18645,10 +18645,9 @@ void XmlDoc::filterStart_r ( bool amThread ) {
 	unlink ( out );
 	// ignore errno from those unlinks
 	errno = 0;
-	//mode_t fileCreationMode = getFileCreationFlags();
 	// open the input file
  retry11:
-	int fd = open ( in , O_WRONLY | O_CREAT );//, fileCreationMode );
+	int fd = open ( in , O_WRONLY | O_CREAT , getFileCreationFlags() );
 	if ( fd < 0 ) {
 		// valgrind
 		if ( errno == EINTR ) goto retry11;
@@ -34808,12 +34807,11 @@ int gbcompress7 ( unsigned char *dest      ,
 	else sprintf ( out , "%s/in.7z", g_hostdb.m_dir );
 	if ( ! compress )
 	unlink ( out );
-	//mode_t fileCreationMode = getFileCreationFlags();
 	// ignore errno from those unlinks
 	errno = 0;
 	// open the input file
  retry11:
-	int fd = open ( in , O_WRONLY | O_CREAT );//, fileCreationMode );
+	int fd = open ( in , O_WRONLY | O_CREAT , getFileCreationFlags() );
 	if ( fd < 0 ) {
 		// valgrind
 		if ( errno == EINTR ) goto retry11;

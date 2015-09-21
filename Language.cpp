@@ -4760,8 +4760,8 @@ bool Language::genDistributedPopFile ( char *infile, uint32_t myHash ){
 	unlink ( outfile );
 	// then open a new one for appending
 	fdw = open ( outfile , 
-		     O_CREAT | O_RDWR | O_APPEND );
-		     //getFileCreationFlags() );
+		     O_CREAT | O_RDWR | O_APPEND ,
+		     getFileCreationFlags() );
 		     // S_IRUSR |S_IWUSR |S_IRGRP |S_IWGRP| S_IROTH);
 	if ( fdw < 0 )
 		return log("lang: Could not open %s for writing: "
@@ -4848,8 +4848,8 @@ int32_t Language::spellcheckDict(){
 	unlink ( outfile );
 	// then open a new one for appending
 	fdw = open ( outfile , 
-		     O_CREAT | O_RDWR | O_APPEND );
-		     // getFileCreationFlags() );
+		     O_CREAT | O_RDWR | O_APPEND ,
+		     getFileCreationFlags() );
 		     // S_IRUSR |S_IWUSR |S_IRGRP |S_IWGRP| S_IROTH);
 	if ( fdw < 0 )
 		return log("lang: Could not open %s for writing: "

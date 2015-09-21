@@ -165,7 +165,7 @@ bool RdbBase::init ( char  *dir            ,
 		}
 		// make a special "cat" dir for it if we need to
 		sprintf ( tmp , "%s%s" , dir , dbname );
-		int32_t status = ::mkdir ( tmp );//, getFileCreationFlags() );
+		int32_t status = ::mkdir ( tmp , getDirCreationFlags() );
 			       // S_IRUSR | S_IWUSR | S_IXUSR | 
 			       // S_IRGRP | S_IWGRP | S_IXGRP | 
 			       // 		S_IROTH | S_IXOTH );

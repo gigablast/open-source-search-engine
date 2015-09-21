@@ -43,7 +43,8 @@
 
 #define MAX_GEOCODERS         4
 
-//mode_t getFileCreationFlags();
+mode_t getFileCreationFlags();
+mode_t getDirCreationFlags ();
 
 class Conf {
 

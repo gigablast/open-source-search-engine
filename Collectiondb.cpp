@@ -630,8 +630,8 @@ bool Collectiondb::addNewColl ( char *coll ,
 
 	// MDW: create the new directory
  retry22:
-	if ( ::mkdir ( dname ) ) {
-		       // getFileCreationFlags() ) ) {
+	if ( ::mkdir ( dname ,
+		       getDirCreationFlags() ) ) {
 		       // S_IRUSR | S_IWUSR | S_IXUSR | 
 		       // S_IRGRP | S_IWGRP | S_IXGRP | 
 		       // S_IROTH | S_IXOTH ) ) {
@@ -1399,8 +1399,8 @@ bool Collectiondb::resetColl2( collnum_t oldCollnum,
 		log("admin: Trying to create collection %s but "
 		    "directory %s already exists on disk.",cr->m_coll,dname);
 	}
-	if ( ::mkdir ( dname ) ) {
-		       // getFileCreationFlags() ) ) {
+	if ( ::mkdir ( dname ,
+		       getDirCreationFlags() ) ) {
 		       // S_IRUSR | S_IWUSR | S_IXUSR | 
 		       // S_IRGRP | S_IWGRP | S_IXGRP | 
 		       // S_IROTH | S_IXOTH ) ) {

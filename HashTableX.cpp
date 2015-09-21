@@ -623,8 +623,8 @@ bool HashTableX::save ( char *dir ,
 	char s[1024];
 	sprintf ( s , "%s/%s", dir , filename );
 	int fd = ::open ( s , 
-			  O_RDWR | O_CREAT | O_TRUNC );
-			  //getFileCreationFlags() );
+			  O_RDWR | O_CREAT | O_TRUNC ,
+			  getFileCreationFlags() );
 			  // S_IRUSR | S_IWUSR | 
 			  // S_IRGRP | S_IWGRP | S_IROTH);
 	if ( fd < 0 ) {

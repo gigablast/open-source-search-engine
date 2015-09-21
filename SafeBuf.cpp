@@ -449,9 +449,8 @@ int32_t SafeBuf::save ( char *fullFilename ) {
 
 int32_t SafeBuf::dumpToFile(char *filename ) {
  retry22:
-	//mode_t fileCreationMode = getFileCreationFlags();
-	int32_t fd = open ( filename , O_CREAT | O_WRONLY | O_TRUNC);
-			    // fileCreationMode );
+	int32_t fd = open ( filename , O_CREAT | O_WRONLY | O_TRUNC ,
+			    getFileCreationFlags() );
 			    //S_IRUSR |S_IWUSR |S_IRGRP |S_IWGRP| S_IROTH );
 	if ( fd < 0 ) {
 		// valgrind
@@ -486,8 +485,8 @@ int32_t SafeBuf::safeSave (char *filename ) {
 	fn.safePrintf( "%s.saving",filename );
 
 	int32_t fd = open ( fn.getBufStart() ,
-			    O_CREAT | O_WRONLY | O_TRUNC );
-			    // getFileCreationFlags() );
+			    O_CREAT | O_WRONLY | O_TRUNC ,
+			    getFileCreationFlags() );
 			 // S_IRUSR |S_IWUSR |S_IRGRP |S_IWGRP| S_IROTH );
 	if ( fd < 0 ) {
 		// valgrind
@@ -574,8 +573,7 @@ int32_t SafeBuf::fillFromFile(char *filename) {
 	reserve(results.st_size+1);
 	
  retry:
-	int32_t fd = open ( filename , O_RDONLY );
-			    // getFileCreationFlags() );
+	int32_t fd = open ( filename , O_RDONLY , getFileCreationFlags() );
 			 // S_IRUSR |S_IWUSR |S_IRGRP |S_IWGRP| S_IROTH );
 	if ( ! fd ) {
 		// valgrind

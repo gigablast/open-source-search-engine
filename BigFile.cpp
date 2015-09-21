@@ -363,7 +363,7 @@ int BigFile::getfd ( int32_t n , bool forReading ) { // , int64_t *vfd ) {
 	}
 	// open it if not opened
 	if ( ! f->calledOpen() ) {
-		if ( ! f->open ( m_flags )){//, getFileCreationFlags() ) ) {
+		if ( ! f->open ( m_flags , getFileCreationFlags() ) ) {
 			log("disk: Failed to open file part #%"INT32".",n);
 			return -1;
 		}

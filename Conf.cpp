@@ -9,11 +9,15 @@
 
 Conf g_conf;
 
-// mode_t getFileCreationFlags() {
+mode_t getFileCreationFlags() {
 // 	//if ( g_conf.m_makeAllFilesGroupWritable )
-// 	return S_IRWXU | S_IRWXG;
+ 	return S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH;
 // 	//return S_IRWXU;
-// }
+}
+
+mode_t getDirCreationFlags() {
+ 	return S_IRWXU | S_IRWXG;
+}
 
 Conf::Conf ( ) {
 	m_save = true;
