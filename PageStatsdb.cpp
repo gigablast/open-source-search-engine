@@ -49,9 +49,18 @@ class StateStatsdb {
 static time_t genDate( char *date, int32_t dateLen ) ;
 static void   sendReply ( void *st ) ;
 
+static bool s_graphInUse = false;
+
 // . returns false if blocked, otherwise true
 // . sets g_errno on error
 bool sendPageGraph ( TcpSocket *s, HttpRequest *r ) {
+
+	if ( s_graphInUse ) {
+		char *msg = "stats graph calculating for another user. "
+			"Try again later.";
+		g_httpServer.sendErrorReply(s,500,msg);
+		return true;
+	}
 	
 	char *cgi;
 	int32_t cgiLen;
@@ -121,7 +130,6 @@ bool sendPageGraph ( TcpSocket *s, HttpRequest *r ) {
 		st->m_endDate = st->m_endDateR;
 	}
 
-	g_statsdb.addDocsIndexed();
 	//
 	// this is no longer a gif, but an html graph in g_statsdb.m_sb
 	//
@@ -130,8 +138,10 @@ bool sendPageGraph ( TcpSocket *s, HttpRequest *r ) {
 				   st->m_samples ,
 				   &st->m_sb2 ,
 				   st               ,
-				   sendReply        ) )
+				   sendReply        ) ) {
+		s_graphInUse = true;
 		return false;
+	}
 
 	// if we didn't block call it ourselves directly
 	sendReply ( st );
@@ -185,6 +195,8 @@ void genStatsGraphTable(SafeBuf *buf, StateStatsdb *st) {
 
 
 void sendReply ( void *state ) {
+
+	s_graphInUse = false;
 
 	StateStatsdb *st = (StateStatsdb *)state;
 

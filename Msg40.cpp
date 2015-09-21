@@ -2437,6 +2437,9 @@ bool Msg40::gotSummary ( ) {
 	for ( int32_t i = 0 ; dedupPercent && i < m_numReplies ; i++ ) {
 		// skip if already invisible
 		if ( m_msg3a.m_clusterLevels[i] != CR_OK ) continue;
+		// Skip if invalid
+		if ( m_msg20[i]->m_errno ) continue;
+
 		// start with the first docid we have not yet checked!
 		//int32_t m = oldNumContiguous;
 		// get it
@@ -2455,6 +2458,8 @@ bool Msg40::gotSummary ( ) {
 			// skip if already invisible
 			if ( *level != CR_OK ) continue;
 			// get it
+			if ( m_msg20[m]->m_errno ) continue;
+
 			Msg20Reply *mrm = m_msg20[m]->m_r;
 			// do not dedup CT_STATUS results, those are
 			// spider reply "documents" that indicate the last
