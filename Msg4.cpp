@@ -1435,7 +1435,8 @@ bool saveAddsInProgress ( char *prefix ) {
 		  g_hostdb.m_dir , prefix );
 
 	int32_t fd = open ( filename, O_RDWR | O_CREAT | O_TRUNC , 
-			 S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP|S_IROTH );
+			  getFileCreationFlags() );
+			 // S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP|S_IROTH );
 	if ( fd < 0 ) {
 		log ("build: Failed to open %s for writing: %s",
 		     filename,strerror(errno));

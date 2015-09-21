@@ -249,9 +249,10 @@ void makeQADir ( ) {
 	snprintf(dir,1000,"%sqa",g_hostdb.m_dir);
 	log("mkdir mkdir %s",dir);
 	int32_t status = ::mkdir ( dir ,
-				S_IRUSR | S_IWUSR | S_IXUSR | 
-				S_IRGRP | S_IWGRP | S_IXGRP | 
-				S_IROTH | S_IXOTH );
+				   getFileCreationFlags() );
+				// S_IRUSR | S_IWUSR | S_IXUSR | 
+				// S_IRGRP | S_IWGRP | S_IXGRP | 
+				// S_IROTH | S_IXOTH );
 	if ( status == -1 && errno != EEXIST && errno )
 		log("qa: Failed to make directory %s: %s.",
 		    dir,mstrerror(errno));

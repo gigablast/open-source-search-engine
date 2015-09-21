@@ -43,6 +43,8 @@
 
 #define MAX_GEOCODERS         4
 
+mode_t getFileCreationFlags();
+
 class Conf {
 
   public:
@@ -180,7 +182,9 @@ class Conf {
 	//bool  m_tagdbUseSeals;
 	//int32_t  m_tagdbMinFilesToMerge;
 	//bool  m_tagdbSaveCache;
-	
+
+	//bool m_makeAllFilesGroupWritable;
+
 	// catdb parameters
 	int32_t  m_catdbMaxTreeMem;
 	//int32_t  m_catdbMaxDiskPageCacheMem;

@@ -12415,12 +12415,30 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "0";
 	m->m_group = 0;
-	m->m_flags = 0;//PF_HIDDEN | PF_NOSAVE;
+	m->m_flags = PF_API;//PF_HIDDEN | PF_NOSAVE;
 	m->m_page  = PAGE_MASTER;
 	m->m_obj   = OBJ_CONF;
 	m->m_group = 0;
 	m++;
 
+	/*
+	m->m_title = "files group writable";
+	m->m_desc  = "Make all created files group writable? If you have "
+		"multiple user accounts starting Gigablast processes you "
+		"will want the files to be group writable. You will "
+		"need to make sure you run gigablast under the "
+		"primary group you want to use for gigablast administration.";
+	m->m_cgi   = "afgw";
+	m->m_off   = (char *)&g_conf.m_makeAllFilesGroupWritable - g;
+	m->m_type  = TYPE_BOOL;
+	m->m_def   = "0";
+	m->m_group = 0;
+	m->m_flags = PF_API;//PF_HIDDEN | PF_NOSAVE;
+	m->m_page  = PAGE_MASTER;
+	m->m_obj   = OBJ_CONF;
+	m->m_group = 0;
+	m++;
+	*/
 
 
 	m->m_title = "max spider read threads";

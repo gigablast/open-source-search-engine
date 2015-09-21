@@ -1474,7 +1474,8 @@ bool RdbCache::save_r ( ) {
 	//f.set ( g_hostdb.m_dir , filename );
 	// open the file
 	//if ( ! f.open ( O_RDWR | O_CREAT ) ) 
-	int fd = open ( filename , O_RDWR | O_CREAT , S_IRWXU );
+	mode_t fileCreationMode = getFileCreationFlags();
+	int fd = open ( filename , O_RDWR | O_CREAT , fileCreationMode );
 	if ( fd < 0 )
 		return log("db: Had opening file to save cache to: %s.", 
 		    mstrerror(errno));

@@ -133,7 +133,8 @@ bool Log::init ( char *filename ) {
 	// create with -rw-rw-r-- permissions if it's not there.
 	m_fd = open ( m_filename , 
 		      O_APPEND | O_CREAT | O_RDWR , 
-		      S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH );
+		      getFileCreationFlags() );
+		      // S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH );
 	if ( m_fd >= 0 ) return true;
 	// bitch to stderr and return false on error
 	fprintf(stderr,"could not open log file %s for appending\n",
@@ -423,7 +424,8 @@ bool Log::makeNewLogFile ( ) {
 	// create with -rw-rw-r-- permissions if it's not there.
 	m_fd = open ( m_filename , 
 		      O_APPEND | O_CREAT | O_RDWR , 
-		      S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH );
+		      getFileCreationFlags() );
+		      // S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH );
 	if ( m_fd >= 0 ) return true;
 	// bitch to stderr and return false on error
 	fprintf(stderr,"could not open new log file %s for appending\n",

@@ -2488,8 +2488,10 @@ bool RdbTree::fastSave_r() {
 	char s[1024];
 	sprintf ( s , "%s/%s-saving.dat", m_dir , m_dbname );
 	int fd = ::open ( s , 
-			  O_RDWR | O_CREAT | O_TRUNC , S_IRUSR | S_IWUSR | 
-			  S_IRGRP | S_IWGRP | S_IROTH);
+			  O_RDWR | O_CREAT | O_TRUNC , 
+			  getFileCreationFlags() );
+			  // S_IRUSR | S_IWUSR | 
+			  // S_IRGRP | S_IWGRP | S_IROTH);
 	if ( fd < 0 ) {
 		m_saveErrno = errno;
 		return log("db: Could not open %s for writing: %s.",

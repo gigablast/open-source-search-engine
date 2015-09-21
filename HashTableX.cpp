@@ -623,8 +623,10 @@ bool HashTableX::save ( char *dir ,
 	char s[1024];
 	sprintf ( s , "%s/%s", dir , filename );
 	int fd = ::open ( s , 
-			  O_RDWR | O_CREAT | O_TRUNC , S_IRUSR | S_IWUSR | 
-			  S_IRGRP | S_IWGRP | S_IROTH);
+			  O_RDWR | O_CREAT | O_TRUNC , 
+			  getFileCreationFlags() );
+			  // S_IRUSR | S_IWUSR | 
+			  // S_IRGRP | S_IWGRP | S_IROTH);
 	if ( fd < 0 ) {
 		//m_saveErrno = errno;
 		return log("db: Could not open %s for writing: %s.",

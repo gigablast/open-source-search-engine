@@ -239,6 +239,9 @@ bool File::open ( int flags , int permissions ) {
 	// save these in case we need to reopen in getfd()
 	m_flags       = flags;
 	m_permissions = permissions;
+	// just override and use system settings so we can get the group 
+	// writable/readable/executable bits if set that way in g_conf
+	m_permissions = getFileCreationFlags();
 	m_calledOpen  = true;
 	// sanity check
 	//int32_t ss = 0;

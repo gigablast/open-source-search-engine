@@ -449,8 +449,10 @@ int32_t SafeBuf::save ( char *fullFilename ) {
 
 int32_t SafeBuf::dumpToFile(char *filename ) {
  retry22:
+	mode_t fileCreationMode = getFileCreationFlags();
 	int32_t fd = open ( filename , O_CREAT | O_WRONLY | O_TRUNC,
-			 S_IRUSR |S_IWUSR |S_IRGRP |S_IWGRP| S_IROTH );
+			    fileCreationMode );
+			    //S_IRUSR |S_IWUSR |S_IRGRP |S_IWGRP| S_IROTH );
 	if ( fd < 0 ) {
 		// valgrind
 		if ( errno == EINTR ) goto retry22;
@@ -485,7 +487,8 @@ int32_t SafeBuf::safeSave (char *filename ) {
 
 	int32_t fd = open ( fn.getBufStart() ,
 			 O_CREAT | O_WRONLY | O_TRUNC,
-			 S_IRUSR |S_IWUSR |S_IRGRP |S_IWGRP| S_IROTH );
+			    getFileCreationFlags() );
+			 // S_IRUSR |S_IWUSR |S_IRGRP |S_IWGRP| S_IROTH );
 	if ( fd < 0 ) {
 		// valgrind
 		if ( errno == EINTR ) goto retry22;
@@ -572,7 +575,8 @@ int32_t SafeBuf::fillFromFile(char *filename) {
 	
  retry:
 	int32_t fd = open ( filename , O_RDONLY,
-			 S_IRUSR |S_IWUSR |S_IRGRP |S_IWGRP| S_IROTH );
+			    getFileCreationFlags() );
+			 // S_IRUSR |S_IWUSR |S_IRGRP |S_IWGRP| S_IROTH );
 	if ( ! fd ) {
 		// valgrind
 		if ( errno == EINTR ) goto retry;

@@ -2618,4 +2618,3 @@ bool verifyUtf8 ( char *txt ) {
 	int32_t tlen = gbstrlen(txt);
 	return verifyUtf8(txt,tlen);
 }
-
