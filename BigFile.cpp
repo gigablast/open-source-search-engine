@@ -35,6 +35,7 @@ BigFile::~BigFile () {
 BigFile::BigFile () {
 	m_permissions = S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH ;
 	m_flags       = O_RDWR ; // | O_DIRECT;
+	m_usePartFiles = true;
 	// NULLify all ptrs to files
 	//for ( int32_t i = 0 ; i < MAX_PART_FILES ; i++ ) m_files[i] = NULL;
 	m_maxParts = 0;
@@ -73,6 +74,8 @@ bool BigFile::set ( char *dir , char *baseFilename , char *stripeDir ) {
 
 	m_dir         .setLabel("bfd");
 	m_baseFilename.setLabel("bfbf");
+
+	m_usePartFiles = true;
 
 	// use this 32 byte char buf to avoid a malloc if possible
 	m_baseFilename.setBuf (m_tmpBaseBuf,32,0,false);
@@ -267,12 +270,12 @@ static int64_t s_vfd = 0;
 
 // do not use part files for this open so we can open regular really >2GB
 // sized files with it
-bool BigFile::open2 ( int flags , 
-		      void *pc ,
-		      int64_t maxFileSize ,
-		      int permissions ) {
-	return open ( flags , pc , maxFileSize , permissions , false );
-}
+// bool BigFile::open2 ( int flags , 
+// 		      void *pc ,
+// 		      int64_t maxFileSize ,
+// 		      int permissions ) {
+// 	return open ( flags , pc , maxFileSize , permissions , false );
+// }
 
 // . overide File::open so we can set m_numParts
 // . set maxFileSize when opening a new file for writing and using 
@@ -282,15 +285,14 @@ bool BigFile::open ( int flags ,
 		     //class DiskPageCache *pc , 
 		     void *pc ,
 		     int64_t maxFileSize ,
-		     int permissions ,
-		     bool usePartFiles ) {
+		     int permissions ) {
 
         m_flags       = flags;
 	//m_pc          = pc;
 	m_permissions = permissions;
 	m_isClosing   = false;
 	// this is true except when parsing big warc files
-	m_usePartFiles = usePartFiles;
+	m_usePartFiles = true;//usePartFiles;
 	// . init the page cache for this vfd
 	// . this returns our "virtual fd", not the same as File::m_vfd
 	// . returns -1 and sets g_errno on failure
@@ -1378,10 +1380,17 @@ bool readwrite_r ( FileState *fstate , ThreadEntry *t ) {
 		log("disk: Read of %"INT32" bytes at offset %"INT64" "
 		    " failed because file is too short for that "
 		    "offset? Our fd was probably stolen from us by another "
-		    "thread. Will retry. error=%s.",
+		    "thread. fd1=%i fd2=%i len=%i filenum=%i "
+		    "localoffset=%i. usepart=%i error=%s.",
 		    (int32_t)len,fstate->m_offset,
 		    //fstate->m_this->getDir(),
 		    //fstate->m_this->getFilename(),
+		    fstate->m_fd1,
+		    fstate->m_fd2,
+		    len,
+		    filenum,
+		    localOffset,
+		    fstate->m_usePartFiles,
 		    mstrerror(errno));
 		errno = EBADENGINEER;
 		return false; // log("disk::read/write: offset too big");

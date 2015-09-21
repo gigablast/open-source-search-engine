@@ -19363,8 +19363,10 @@ BigFile *XmlDoc::getUtf8ContentInFile ( int64_t *fileSizeArg ) {
 		m_fileSize = m_file.getFileSize();
 		m_fileValid = true;
 		*fileSizeArg = m_fileSize;
-		// open2() has usepartfiles = false!!!
-		m_file.open2(O_RDONLY);
+		m_file.open(O_RDONLY);
+		// explicitly set it to false now to make it harder for
+		// it not to be true because that messes things up
+		m_file.m_usePartFiles = false;
 		return &m_file;
 	}
 

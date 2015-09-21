@@ -598,7 +598,7 @@ bool TcpServer::sendMsg ( int32_t   ip       ,
 	// we think that they are using an sd used by a streaming socket,
 	// who closed, but then proceed to use TcpSocket class as if he 
 	// had not closed it.
-	if ( 1==2 && g_hostdb.m_hostId == 0 ) {
+	if ( g_conf.m_logDebugTcpBuf ) {
 		SafeBuf sb;
 		sb.safePrintf("tcp: open newsd=%i sendbuf=",s->m_sd);
 		sb.safeTruncateEllipsis (sendBuf,sendBufSize,200);
@@ -2276,7 +2276,7 @@ void TcpServer::destroySocket ( TcpSocket *s ) {
 	// 0 is the FD for stdin so i don't know how that is happening.
 	if ( sd != 0 ) cret = ::close ( sd );
 
-	if ( 1==2 && g_hostdb.m_hostId == 0 ) {
+	if ( g_conf.m_logDebugTcpBuf ) {
 		SafeBuf sb;
 		sb.safePrintf("tcp: closing sd=%i bytessent=%i "
 			      "sendbufused=%i streaming=%i "
@@ -2619,7 +2619,7 @@ TcpSocket *TcpServer::acceptSocket ( ) {
 	// we think that they are using an sd used by a streaming socket,
 	// who closed, but then proceed to use TcpSocket class as if he 
 	// had not closed it.
-	if ( 1==2 && g_hostdb.m_hostId == 0 ) {
+	if ( g_conf.m_logDebugTcpBuf ) {
 		SafeBuf sb;
 		sb.safePrintf("tcp: accept newsd=%i incoming req",newsd);
 		//sb.safeTruncateEllipsis (sendBuf,sendBufSize,200);
