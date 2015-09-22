@@ -9,14 +9,22 @@
 
 Conf g_conf;
 
+static bool s_setUmask = false;;
+
 mode_t getFileCreationFlags() {
-// 	//if ( g_conf.m_makeAllFilesGroupWritable )
- 	return S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH;
-// 	//return S_IRWXU;
+	if ( ! s_setUmask ) {
+		s_setUmask = true;
+		umask  ( 0 );
+	}
+	return  S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH ;
 }
 
 mode_t getDirCreationFlags() {
- 	return S_IRWXU | S_IRWXG;
+	if ( ! s_setUmask ) {
+		s_setUmask = true;
+		umask  ( 0 );
+	}
+	return  S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH ;
 }
 
 Conf::Conf ( ) {
