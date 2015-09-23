@@ -2467,8 +2467,8 @@ void threadDoneWrapper ( void *state , ThreadEntry *t ) {
 		    THIS->m_dbname,mstrerror(g_errno));
 	else
 		// log it
-		log("db: Done saving %s/%s-saved.dat (%"INT64" bytes)",
-		    THIS->m_dir,THIS->m_dbname,THIS->m_bytesWritten);
+		log("db: Done saving %s/%s-saved.dat",
+		    THIS->m_dir,THIS->m_dbname);
 	// . call callback
 	if ( THIS->m_callback ) THIS->m_callback ( THIS->m_state );
 }
@@ -2723,11 +2723,7 @@ bool RdbTree::fastLoad ( BigFile *f , RdbMem *stack ) {
 						  start         , 
 						  minUnusedNode , 
 						  stack         ,
-
 						  offset        ) ;
-		// just ignore data if we get an error like this for now
-		if ( bytesRead == -2 )
-			break;
 		if ( bytesRead < 0 ) {
 			f->close();
 			if ( m_useProtection ) protect();
@@ -2890,11 +2886,9 @@ int32_t RdbTree::fastLoadBlock ( BigFile   *f          ,
 	char *buf = (char *) stack->allocData ( dummy , bufSize , 0 );
 	if ( ! buf ) {
 	        log("db: Failed to allocate %"INT32" bytes to read %s. "
-		    "Losing data in the tree.",
+		    "Increase tree size for it in gb.conf.",
 		    bufSize,f->getFilename());
-		// for now just let it pass. assume done
-		return -2;
-		//return -1;
+		return -1;
 	}
 	// debug
 	//log("reading %"INT32" bytes of raw rec data", bufSize );

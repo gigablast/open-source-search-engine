@@ -399,9 +399,7 @@ void handleRequest20 ( UdpSlot *slot , int32_t netnice ) {
 	// sanity check, the size include the \0
 	if ( req->m_collnum < 0 ) {
 		log("query: Got empty collection in msg20 handler. FIX!");
-	        g_udpServer.sendErrorReply ( slot , ENOTFOUND );
-		return; 
-		//char *xx =NULL; *xx = 0; 
+		char *xx =NULL; *xx = 0; 
 	}
 	// if it's not stored locally that's an error
 	if ( req->m_docId >= 0 && ! g_titledb.isLocal ( req->m_docId ) ) {
