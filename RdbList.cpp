@@ -387,6 +387,14 @@ bool RdbList::addRecord ( char *key , int32_t dataSize , char *data ,
 		m_listSize += 4;
 		m_listEnd  += 4;
 	}
+	// corruption in tree?
+	if ( ! data && dataSize ) {
+		log("db: corrupt list with datasize and no data. "
+		    "skipping key.");
+		m_listSize -= m_ks;
+		m_listEnd  -= m_ks;
+		return true;
+	}
 	// copy the data itself to the list
 	gbmemcpy ( &m_list[m_listSize] , data , dataSize );
 	m_listSize += dataSize;
