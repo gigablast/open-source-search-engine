@@ -1181,7 +1181,7 @@ void Statsdb::drawHR ( float z ,
 				  "font-size:14px;"
 				  "min-height:20px;"
 				  "min-width:3px;\""
-                  " class=\"color-%"XINT32"\";"
+                  " class=\"color-%"XINT32";\""
 				  ">%s</div>\n"
 		      , (int32_t)(m_bx)
 		      , (int32_t)z2 +m_by
@@ -1620,7 +1620,7 @@ void Statsdb::drawLine3 ( SafeBuf &sb ,
 				  "z-index:-5;"
 				  "min-height:%"INT32"px;"
 				  "min-width:%"INT32"px;\""
-				  "class=\"color-%"XINT32"\"></div>\n"
+				  " class=\"color-%"XINT32"\"></div>\n"
 		      , x1 + m_bx
 		      , (fy1 - width/2) + m_by
 		      , color
