@@ -908,6 +908,7 @@ char *Statsdb::plotGraph ( char *pstart ,
 	for ( ; p < pend ; p += 12 ) {
 		// breathe
 		QUICKPOLL ( m_niceness );
+		if ( m_gw.getLength() > 10000000 ) break;
 		// get the y
 		float y2 = *(float *)(p+4);
 		// get color of this point
@@ -996,6 +997,7 @@ char *Statsdb::plotGraph ( char *pstart ,
 	for ( ; p < pend ; ) {
 		// breathe
 		QUICKPOLL ( m_niceness );
+		if ( m_gw.getLength() > 10000000 ) break;
 		// first is x pixel pos
 		int32_t  x2 = *(int32_t *)p; p += 4;
 		// then y pos
@@ -1101,7 +1103,11 @@ char *Statsdb::plotGraph ( char *pstart ,
 		QUICKPOLL ( m_niceness );
 		// draw it
 		drawHR ( z , ymin , ymax , m_gw , label , zoff , color );
+		if ( m_gw.getLength() > 10000000 ) break;
 	}
+
+	if ( m_gw.getLength() > 10000000 )
+		log("statsdb: graph too big");
 
 	return retp;
 	//#endif
