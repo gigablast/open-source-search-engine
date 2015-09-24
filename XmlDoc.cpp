@@ -16963,9 +16963,8 @@ char **XmlDoc::getHttpReply2 ( ) {
 	bool isInjecting = getIsInjecting();
 	if ( ! isInjecting && m_sreqValid     && m_sreq.m_hopCount == 0 )
 		r->m_isRootSeedUrl = 1;
-	// only if it was a seed for now... so comment out
-	// if ( ! isInjecting && m_hopCountValid && m_hopCount        == 0 )
-	// 	r->m_isRootSeedUrl = 1;
+	if ( ! isInjecting && m_hopCountValid && m_hopCount        == 0 )
+		r->m_isRootSeedUrl = 1;
 
 	// sanity check
 	if ( ! m_firstIpValid ) { char *xx=NULL;*xx=0; }
