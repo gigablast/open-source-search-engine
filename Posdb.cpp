@@ -6645,6 +6645,8 @@ void PosdbTable::intersectLists10_r ( ) {
 			nwp[mink] = NULL;
 		// avoid breach of core below now
 		if ( mptr < mptrEnd ) goto mergeMore;
+		// wrap it up here since done merging
+		miniMergedEnd[j] = mptr;
 	}
 
 	// breach?
