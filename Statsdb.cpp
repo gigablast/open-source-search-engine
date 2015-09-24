@@ -1098,12 +1098,15 @@ char *Statsdb::plotGraph ( char *pstart ,
 	}
 
 
+	float lastZ = -1;
 	for ( float z = ymin ; z < ymax ; z += deltaz ) {
 		// breathe
 		QUICKPOLL ( m_niceness );
 		// draw it
 		drawHR ( z , ymin , ymax , m_gw , label , zoff , color );
-		if ( m_gw.getLength() > 10000000 ) break;
+		if(z == lastZ) break;
+		lastZ = z;
+		//if ( m_gw.getLength() > 10000000 ) break;
 	}
 
 	if ( m_gw.getLength() > 10000000 )
@@ -1187,7 +1190,7 @@ void Statsdb::drawHR ( float z ,
 				  "font-size:14px;"
 				  "min-height:20px;"
 				  "min-width:3px;\""
-                  " class=\"color-%"XINT32";\""
+                  " class=\"color-%"XINT32"\""
 				  ">%s</div>\n"
 		      , (int32_t)(m_bx)
 		      , (int32_t)z2 +m_by
