@@ -494,8 +494,8 @@ bool RdbDump::dumpList ( RdbList *list , int32_t niceness , bool recall ) {
 	if ( g_conf.m_verifyWrites && m_orderedDump ) {
 		m_list->checkList_r ( false /*removedNegRecs?*/ );
 		// print list stats
-		log("dump: sk=%s ",KEYSTR(m_list->m_startKey,m_ks));
-		log("dump: ek=%s ",KEYSTR(m_list->m_endKey,m_ks));
+		// log("dump: sk=%s ",KEYSTR(m_list->m_startKey,m_ks));
+		// log("dump: ek=%s ",KEYSTR(m_list->m_endKey,m_ks));
 	}
 	//#endif
 
