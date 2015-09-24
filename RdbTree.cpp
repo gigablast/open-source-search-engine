@@ -2495,6 +2495,20 @@ bool RdbTree::fastSave_r() {
 		return log("db: Could not open %s for writing: %s.",
 			   s,mstrerror(errno));
 	}
+
+ redo:
+	// verify the tree
+	if ( g_conf.m_verifyWrites ) {
+		log("db: verify writes is enabled, checking tree before "
+		    "saving.");
+		if ( ! checkTree( false , true ) ) {
+			log("db: fixing tree and re-checking");
+			fixTree ( );
+			goto redo;
+		}
+	}
+
+
 	// clear our own errno
 	errno = 0;
 	// . save the header

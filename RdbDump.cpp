@@ -405,12 +405,15 @@ bool RdbDump::dumpTree ( bool recall ) {
 		m_totalNegDumped += m_numNegRecs;
 		// . check the list we got from the tree for problems
 		// . ensures keys are ordered from lowest to highest as well
-#ifdef GBSANITYCHECK
-		log("dump: verifying list before dumping");
-		m_list->checkList_r ( false , // removeNegRecs?
-				      false , // sleep on problem?
-				      m_rdb->m_rdbId );
-#endif
+		//#ifdef GBSANITYCHECK
+		if ( g_conf.m_verifyWrites ) {
+			char *s = "none";
+			if ( m_rdb ) s = getDbnameFromId(m_rdb->m_rdbId);
+			log("dump: verifying list before dumping (rdb=%s)",s);
+			m_list->checkList_r ( false , // removeNegRecs?
+					      false , // sleep on problem?
+					      m_rdb->m_rdbId );
+		}
 		// if list is empty, we're done!
 		if ( status && m_list->isEmpty() ) {
 			// consider that a rollover?
@@ -486,15 +489,15 @@ bool RdbDump::dumpList ( RdbList *list , int32_t niceness , bool recall ) {
 	if ( m_list->isEmpty() ) return true;
 	// we're now in dump mode again 
 	m_isDumping = true;
-#ifdef GBSANITYCHECK
+	//#ifdef GBSANITYCHECK
 	// don't check list if we're dumping an unordered list from tree!
-	if ( m_orderedDump ) {
+	if ( g_conf.m_verifyWrites && m_orderedDump ) {
 		m_list->checkList_r ( false /*removedNegRecs?*/ );
 		// print list stats
 		log("dump: sk=%s ",KEYSTR(m_list->m_startKey,m_ks));
 		log("dump: ek=%s ",KEYSTR(m_list->m_endKey,m_ks));
 	}
-#endif
+	//#endif
 
 	// before calling RdbMap::addList(), always reset list ptr
 	// since we no longer call this in RdbMap::addList() so we don't
@@ -525,8 +528,10 @@ bool RdbDump::dumpList ( RdbList *list , int32_t niceness , bool recall ) {
 		}
 	}
 
-	if ( m_ks==18 ) {
-		m_list->checkList_r(false,false,RDB_POSDB);
+	if ( g_conf.m_verifyWrites ) {
+		char rdbId = 0;
+		if ( m_rdb ) rdbId = m_rdb->m_rdbId;
+		m_list->checkList_r(false,false,rdbId);//RDB_POSDB);
 		m_list->resetListPtr();
 	}
 

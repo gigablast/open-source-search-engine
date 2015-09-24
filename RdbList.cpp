@@ -693,9 +693,9 @@ bool RdbList::checkList_r ( bool removeNegRecs , bool sleepOnProblem ,
 		return false;
 	}
 
-	if ( m_useHalfKeys && m_ks == 12 ) // m_ks != 18 && m_ks != 24 ) 
-		return checkIndexList_r ( removeNegRecs  , 
-					  sleepOnProblem );
+	// if ( m_useHalfKeys && m_ks == 12 ) // m_ks != 18 && m_ks != 24 ) 
+	// 	return checkIndexList_r ( removeNegRecs  , 
+	// 				  sleepOnProblem );
 
 	//log("m_list=%"INT32"",(int32_t)m_list);
 	//key_t oldk;
@@ -721,6 +721,10 @@ bool RdbList::checkList_r ( bool removeNegRecs , bool sleepOnProblem ,
 	if ( KEYCMP(acceptable,KEYMIN(),m_ks)==0 )
 		KEYSET ( acceptable , m_endKey , m_ks );
 	char k[MAX_KEY_BYTES];
+
+	static int32_t th = 0;
+	if ( ! th ) th = hash64Lower_a ( "roottitles" , 10 );
+
 	while ( ! isExhausted() ) {
 		//key_t k = getCurrentKey();
 		getCurrentKey( k );
@@ -734,6 +738,43 @@ bool RdbList::checkList_r ( bool removeNegRecs , bool sleepOnProblem ,
 			      *(int32_t *)data > 100000000 ) ) {
 				char *xx = NULL; *xx = 0; }
 		}		
+		// tagrec?
+		if ( rdbId == RDB_TAGDB && ! KEYNEG(k) ) {
+			//TagRec *gr = (TagRec *)getCurrentRec();
+			//Tag *tag = gr->getFirstTag   ( );
+			//for ( ; tag ; tag = gr->getNextTag ( tag ) ) {
+			Tag *tag = (Tag *)getCurrentRec();
+			if ( tag->m_type == th ) {
+				char *tdata = tag->getTagData();
+				int32_t tsize = tag->getTagDataSize();
+				// core if tag val is not \0 terminated
+				if ( tsize > 0 && tdata[tsize-1]!='\0' ) {
+					log("db: bad root title tag");
+					char *xx=NULL;*xx=0; }
+			}
+		}
+		if ( rdbId == RDB_SPIDERDB && ! KEYNEG(k) &&
+		     getCurrentDataSize() > 0 ) {
+			//char *data = getCurrentData();
+			char *rec = getCurrentRec();
+			// bad url in spider request?
+			if ( g_spiderdb.isSpiderRequest ( (key128_t *)rec ) ){
+				SpiderRequest *sr = (SpiderRequest *)rec;
+				if ( strncmp(sr->m_url,"http",4) != 0 ) {
+					log("db: spider req url");
+					char *xx=NULL;*xx=0;
+				}
+			}
+		}
+		// title bad uncompress size?
+		if ( rdbId == RDB_TITLEDB && ! KEYNEG(k) ) {
+			char *rec = getCurrentRec();
+			int32_t usize = *(int32_t *)(rec+12+4);
+			if ( usize <= 0 ) {
+				log("db: bad titlerec uncompress size");
+				char *xx=NULL;*xx=0; 
+			}
+		}
 		// debug msg
 		// pause if it's google
 		//if ((((k.n0)  >> 1) & 0x0000003fffffffffLL)  == 70166155664) 
