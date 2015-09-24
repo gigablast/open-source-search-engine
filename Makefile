@@ -79,14 +79,13 @@ HOST=$(shell hostname)
 #print_vars:
 #	$(HOST)
 
-FFF = /etc/redhat-release
-
-ifneq ($(wildcard $(FFF)),)
-OS_RHEL := true
+ifeq ($(shell test -e /etc/redhat-release && echo exists),exists)
+STATIC :=
+XMLDOCOPT := -O2
+else ifeq ($(shell test -e /etc/SuSE-release && echo exists),exists)
 STATIC :=
 XMLDOCOPT := -O2
 else
-OS_DEB := true
 STATIC := -static
 # now debian jesse doesn't like -O3, it will core right away when spidering
 # so change this to -O2 from -O3 as well.
