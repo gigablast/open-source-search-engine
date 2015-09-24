@@ -2467,8 +2467,8 @@ void threadDoneWrapper ( void *state , ThreadEntry *t ) {
 		    THIS->m_dbname,mstrerror(g_errno));
 	else
 		// log it
-		log("db: Done saving %s/%s-saved.dat",
-		    THIS->m_dir,THIS->m_dbname);
+		log("db: Done saving %s/%s-saved.dat (wrote %"INT64" bytes)",
+		    THIS->m_dir,THIS->m_dbname,THIS->m_bytesWritten);
 	// . call callback
 	if ( THIS->m_callback ) THIS->m_callback ( THIS->m_state );
 }
