@@ -259,6 +259,7 @@ public:
 			 int32_t niceness=0);
 	bool  latin1Encode(char *s, int32_t len, bool htmlEncode=false,
 			   int32_t niceness=0);
+    bool utf32Encode(UChar32* codePoints, int32_t cpLen);
 	//bool  utf16Encode(UChar *s, int32_t len, bool htmlEncode=false);
 	//bool  utf16Encode(char *s, int32_t len, bool htmlEncode=false) {
 	//	return utf16Encode((UChar*)s, len>>1, htmlEncode); };
