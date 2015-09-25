@@ -9,6 +9,24 @@
 
 Conf g_conf;
 
+static bool s_setUmask = false;;
+
+mode_t getFileCreationFlags() {
+	if ( ! s_setUmask ) {
+		s_setUmask = true;
+		umask  ( 0 );
+	}
+	return  S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH ;
+}
+
+mode_t getDirCreationFlags() {
+	if ( ! s_setUmask ) {
+		s_setUmask = true;
+		umask  ( 0 );
+	}
+	return  S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH ;
+}
+
 Conf::Conf ( ) {
 	m_save = true;
 	m_doingCommandLine = false;

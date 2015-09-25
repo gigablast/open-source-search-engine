@@ -33,7 +33,7 @@ BigFile::~BigFile () {
 //#define O_DIRECT 040000
 
 BigFile::BigFile () {
-	m_permissions = S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH ;
+	//m_permissions = S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH ;
 	m_flags       = O_RDWR ; // | O_DIRECT;
 	m_usePartFiles = true;
 	// NULLify all ptrs to files
@@ -289,7 +289,7 @@ bool BigFile::open ( int flags ,
 
         m_flags       = flags;
 	//m_pc          = pc;
-	m_permissions = permissions;
+	//m_permissions = permissions;
 	m_isClosing   = false;
 	// this is true except when parsing big warc files
 	m_usePartFiles = true;//usePartFiles;
@@ -363,7 +363,7 @@ int BigFile::getfd ( int32_t n , bool forReading ) { // , int64_t *vfd ) {
 	}
 	// open it if not opened
 	if ( ! f->calledOpen() ) {
-		if ( ! f->open ( m_flags , m_permissions ) ) {
+		if ( ! f->open ( m_flags , getFileCreationFlags() ) ) {
 			log("disk: Failed to open file part #%"INT32".",n);
 			return -1;
 		}

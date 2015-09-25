@@ -11297,7 +11297,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "0";
 	m->m_group = 0;
-	m->m_flags = PF_HIDDEN | PF_NOSAVE;
+	m->m_flags = 0;//PF_HIDDEN | PF_NOSAVE;
 	m->m_page  = PAGE_MASTER;
 	m->m_obj   = OBJ_CONF;
 	m++;
@@ -12415,12 +12415,30 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "0";
 	m->m_group = 0;
-	m->m_flags = 0;//PF_HIDDEN | PF_NOSAVE;
+	m->m_flags = PF_API;//PF_HIDDEN | PF_NOSAVE;
 	m->m_page  = PAGE_MASTER;
 	m->m_obj   = OBJ_CONF;
 	m->m_group = 0;
 	m++;
 
+	/*
+	m->m_title = "files group writable";
+	m->m_desc  = "Make all created files group writable? If you have "
+		"multiple user accounts starting Gigablast processes you "
+		"will want the files to be group writable. You will "
+		"need to make sure you run gigablast under the "
+		"primary group you want to use for gigablast administration.";
+	m->m_cgi   = "afgw";
+	m->m_off   = (char *)&g_conf.m_makeAllFilesGroupWritable - g;
+	m->m_type  = TYPE_BOOL;
+	m->m_def   = "0";
+	m->m_group = 0;
+	m->m_flags = PF_API;//PF_HIDDEN | PF_NOSAVE;
+	m->m_page  = PAGE_MASTER;
+	m->m_obj   = OBJ_CONF;
+	m->m_group = 0;
+	m++;
+	*/
 
 
 	m->m_title = "max spider read threads";
@@ -15107,6 +15125,19 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&ir.m_hopCount - (char *)&ir;
 	m++;
 
+	m->m_title = "url IP";
+	m->m_desc  = "Use this IP when injecting the document. Do not use or "
+		"set to 0.0.0.0, if unknown. If provided, it will save an IP "
+		"lookup.";
+	m->m_cgi   = "urlip";
+	m->m_obj   = OBJ_IR;
+	m->m_type  = TYPE_IP;
+	m->m_def   = "0.0.0.0";
+	m->m_flags = PF_API;
+	m->m_page  = PAGE_INJECT;
+	m->m_off   = (char *)&ir.m_injectDocIp - (char *)&ir;
+	m++;
+
 	m->m_title = "last spider time";
 	m->m_desc  = "Override last time spidered";
 	m->m_cgi   = "lastspidered";
@@ -15213,7 +15244,10 @@ void Parms::init ( ) {
 		"Separate MIME from actual content with two returns. "
 		"At least put a single space in here if you want to "
 		"inject empty content, otherwise the content will "
-		"be downloaded from the url.";
+		"be downloaded from the url. This is because the "
+		"page injection form always submits the content text area "
+		"even if it is empty, which should signify that the "
+		"content should be downloaded.";
 	m->m_cgi   = "content";
 	m->m_obj   = OBJ_IR;
 	m->m_type  = TYPE_CHARPTR;
@@ -22490,6 +22524,7 @@ bool Parm::printVal ( SafeBuf *sb , collnum_t collnum , int32_t occNum ) {
 		return sb->safePrintf("CMD");
 
 	if ( m_type == TYPE_IP )
+		// may print 0.0.0.0
 		return sb->safePrintf("%s",iptoa(*(int32_t *)val) );
 
 	log("parms: missing parm type!!");

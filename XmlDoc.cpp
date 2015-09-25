@@ -1258,6 +1258,12 @@ bool XmlDoc::set4 ( SpiderRequest *sreq      ,
 		utf8Content = m_mime.getContent();
 	}
 
+	// use this to avoid ip lookup if it is not zero
+	if ( forcedIp ) {
+		m_ip = forcedIp;
+		m_ipValid = true;
+	}
+
 	// sometimes they supply the content they want! like when zaks'
 	// injects pages from PageInject.cpp
 	if ( utf8Content ) {
@@ -1290,11 +1296,6 @@ bool XmlDoc::set4 ( SpiderRequest *sreq      ,
 		// use this ip as well for now to avoid ip lookup
 		//m_ip      = atoip("127.0.0.1");
 		//m_ipValid = true;
-		// use this to avoid ip lookup if it is not zero
-		if ( forcedIp ) {
-			m_ip = forcedIp;
-			m_ipValid = true;
-		}
 		// do not need robots.txt then
 		m_isAllowed      = true;
 		m_isAllowedValid = true;
@@ -12077,11 +12078,25 @@ XmlDoc **XmlDoc::getRootXmlDoc ( int32_t maxCacheAge ) {
 	mnew ( m_rootDoc , sizeof(XmlDoc),"xmldoc3");
 	// if we had the title rec, set from that
 	if ( *rtr ) {
-		m_rootDoc->set2 ( m_rootTitleRec     ,
-				  m_rootTitleRecSize , // maxSize    , 
-				  cr->m_coll             ,
-				  NULL               , // pbuf
-				  m_niceness         );
+		if ( ! m_rootDoc->set2 ( m_rootTitleRec     ,
+					 m_rootTitleRecSize , // maxSize    , 
+					 cr->m_coll             ,
+					 NULL               , // pbuf
+					 m_niceness         ) ) {
+			// it was corrupted... delete this
+			// possibly printed 
+			// " uncompress uncompressed size=..." bad uncompress
+			log("build: rootdoc set2 failed");
+			mdelete ( m_rootDoc , sizeof(XmlDoc) , "xdnuke");
+			delete ( m_rootDoc );
+			// call it empty for now, we don't want to return
+			// NULL with g_errno set because it could stop
+			// the whole indexing pipeline
+			m_rootDoc = NULL;
+			m_rootDocValid = true;
+			return &m_rootDoc;
+			//return NULL;
+		}
 	}
 	// . otherwise, set the url and download it on demand
 	// . this junk copied from the contactDoc->* stuff below
@@ -16948,8 +16963,9 @@ char **XmlDoc::getHttpReply2 ( ) {
 	bool isInjecting = getIsInjecting();
 	if ( ! isInjecting && m_sreqValid     && m_sreq.m_hopCount == 0 )
 		r->m_isRootSeedUrl = 1;
-	if ( ! isInjecting && m_hopCountValid && m_hopCount        == 0 )
-		r->m_isRootSeedUrl = 1;
+	// only if it was a seed for now... so comment out
+	// if ( ! isInjecting && m_hopCountValid && m_hopCount        == 0 )
+	// 	r->m_isRootSeedUrl = 1;
 
 	// sanity check
 	if ( ! m_firstIpValid ) { char *xx=NULL;*xx=0; }
@@ -17814,6 +17830,91 @@ Url **XmlDoc::getCanonicalRedirUrl ( ) {
 	return &m_canonicalRedirUrlPtr;
 }
 
+// returns false if none found
+bool setMetaRedirUrlFromTag ( char *p , Url *metaRedirUrl , char niceness ,
+			      Url *cu ) {
+	// limit scan
+	char *limit = p + 30;
+	// skip whitespace
+	for ( ; *p && p < limit && is_wspace_a(*p) ; p++ );
+	// must be a num
+	if ( ! is_digit(*p) ) return false;
+	// init delay
+	int32_t delay = atol ( p );
+	// ignore long delays
+	if ( delay >= 10 ) return false;
+	// now find the semicolon, if any
+	for ( ; *p && p < limit && *p != ';' ; p++ );
+	// must have semicolon
+	if ( *p != ';' ) return false;
+	// skip it
+	p++;
+	// skip whitespace some more
+	for ( ; *p && p < limit && is_wspace_a(*p) ; p++ );
+	// must have URL
+	if ( strncasecmp(p,"URL",3) ) return false;
+	// skip that
+	p += 3;
+	// skip white space
+	for ( ; *p && p < limit && is_wspace_a(*p) ; p++ );
+	// then an equal sign
+	if ( *p != '=' ) return false;
+	// skip equal sign
+	p++;
+	// them maybe more whitespace
+	for ( ; *p && p < limit && is_wspace_a(*p) ; p++ );
+	// an optional quote
+	if ( *p == '\"' ) p++;
+	// can also be a single quote!
+	if ( *p == '\'' ) p++;
+	// set the url start
+	char *url = p;
+	// now advance to next quote or space or >
+	for ( ; *p && !is_wspace_a(*p) && 
+		      *p !='\'' && 
+		      *p !='\"' && 
+		      *p !='>' ; 
+	      p++);
+	// that is the end
+	char *urlEnd = p;
+	// get size
+	int32_t usize = urlEnd - url;
+	// skip if too big
+	if ( usize > 1024 ) {
+		log("build: meta redirurl of %"INT32" bytes too big",usize);
+		return false;
+	}
+	// get our current utl
+	//Url *cu = getCurrentUrl();
+	// decode what we got
+	char decoded[MAX_URL_LEN];
+	// convert &amp; to "&"
+	int32_t decBytes = htmlDecode(decoded,url,usize,false,niceness);
+	decoded[decBytes]='\0';
+	// . then the url
+	// . set the url to the one in the redirect tag
+	// . but if the http-equiv meta redirect url starts with a '?'
+	//   then just replace our cgi with that one
+	if ( *url == '?' ) {
+		char foob[MAX_URL_LEN*2];
+		char *pf = foob;
+		int32_t cuBytes = cu->getPathEnd() - cu->getUrl();
+		gbmemcpy(foob,cu->getUrl(),cuBytes);
+		pf += cuBytes;
+		gbmemcpy ( pf , decoded , decBytes );
+		pf += decBytes;
+		*pf = '\0';
+		metaRedirUrl->set(foob);
+	}
+	// . otherwise, append it right on
+	// . use "url" as the base Url
+	// . it may be the original url or the one we redirected to
+	// . redirUrl is set to the original at the top
+	else
+		// addWWW = false, stripSessId=true
+		metaRedirUrl->set(cu,decoded,decBytes,false,true);
+	return true;
+}
 
 
 // scan document for <meta http-equiv="refresh" content="0;URL=xxx">
@@ -17839,6 +17940,14 @@ Url **XmlDoc::getMetaRedirUrl ( ) {
 	// if we are recycling or injecting, do not consider meta redirects
 	if ( cr->m_recycleContent || m_recycleContent ) 
 		return &m_metaRedirUrlPtr; 
+
+	// will this work in here?
+	//uint8_t *ct = getContentType();
+	//if ( ! ct ) return NULL;
+
+	Url *cu = getCurrentUrl();
+
+	bool gotOne = false;
 
 	// advance a bit, we are initially looking for the 'v' char
 	p += 10;
@@ -17879,91 +17988,64 @@ Url **XmlDoc::getMetaRedirUrl ( ) {
 		p += 8;
 		// skip possible quote
 		if ( *p == '\"' ) p++;
-		// limit scan
-		limit = p + 30;
-		// skip whitespace
-		for ( ; *p && p < limit && is_wspace_a(*p) ; p++ );
-		// must be a num
-		if ( ! is_digit(*p) ) continue;
-		// init delay
-		int32_t delay = atol ( p );
-		// ignore int32_t delays
-		if ( delay >= 10 ) continue;
-		// now find the semicolon, if any
-		for ( ; *p && p < limit && *p != ';' ; p++ );
-		// must have semicolon
-		if ( *p != ';' ) continue;
-		// skip it
-		p++;
-		// skip whitespace some more
-		for ( ; *p && p < limit && is_wspace_a(*p) ; p++ );
-		// must have URL
-		if ( strncasecmp(p,"URL",3) ) continue;
-		// skip that
-		p += 3;
-		// skip white space
-		for ( ; *p && p < limit && is_wspace_a(*p) ; p++ );
-		// then an equal sign
-		if ( *p != '=' ) continue;
-		// skip equal sign
-		p++;
-		// them maybe more whitespace
-		for ( ; *p && p < limit && is_wspace_a(*p) ; p++ );
-		// an optional quote
-		if ( *p == '\"' ) p++;
-		// can also be a single quote!
-		if ( *p == '\'' ) p++;
-		// set the url start
-		char *url = p;
-		// now advance to next quote or space or >
-		for ( ; *p && !is_wspace_a(*p) && 
-			      *p !='\'' && 
-			      *p !='\"' && 
-			      *p !='>' ; 
-		      p++);
-		// that is the end
-		char *urlEnd = p;
-		// get size
-		int32_t usize = urlEnd - url;
-		// skip if too big
-		if ( usize > 1024 ) {
-			log("build: meta redirurl of %"INT32" bytes too big",usize);
+		// PARSE OUT THE URL
+		Url dummy;
+		if ( ! setMetaRedirUrlFromTag ( p , &dummy , m_niceness ,cu)) 
 			continue;
-		}
-		// get our current utl
-		Url *cu = getCurrentUrl();
-		// decode what we got
-		char decoded[MAX_URL_LEN];
-		// convert &amp; to "&"
-		int32_t decBytes = htmlDecode(decoded,url,usize,false,m_niceness);
-		decoded[decBytes]='\0';
-		// . then the url
-		// . set the url to the one in the redirect tag
-		// . but if the http-equiv meta redirect url starts with a '?'
-		//   then just replace our cgi with that one
-		if ( *url == '?' ) {
-			char foob[MAX_URL_LEN*2];
-			char *pf = foob;
-			int32_t cuBytes = cu->getPathEnd() - cu->getUrl();
-			gbmemcpy(foob,cu->getUrl(),cuBytes);
-			pf += cuBytes;
-			gbmemcpy ( pf , decoded , decBytes );
-			pf += decBytes;
-			*pf = '\0';
-			m_metaRedirUrl.set(foob);
-		}
-		// . otherwise, append it right on
-		// . use "url" as the base Url
-		// . it may be the original url or the one we redirected to
-		// . redirUrl is set to the original at the top
-		else
-			// addWWW = false, stripSessId=true
-			m_metaRedirUrl.set(cu,decoded,decBytes,false,true);
+		gotOne = true;
+		break;
+	}
+
+	if ( ! gotOne )
+		return &m_metaRedirUrlPtr;
+
+	// to fix issue with scripts containing 
+	// document.write('<meta http-equiv="Refresh" content="0;URL=http://ww
+	// we have to get the Xml. we can't call getXml() because of
+	// recursion bugs so just do it directly here
+
+	Xml xml;
+	if ( ! xml.set ( m_httpReply ,
+			 m_httpReplySize - 1, // make it a length
+			 false      ,  // ownData?
+			 0          ,  // allocSize
+			 false      ,  // pure xml?
+			 m_version  ,
+			 false      ,  // setParentsArg? 
+			 m_niceness ,
+			 // assume html since getContentType() is recursive
+			 // on us.
+			 CT_HTML ) ) // *ct ) )
+		// return NULL on error with g_errno set
+		return NULL;
+
+	XmlNode *nodes = xml.getNodes();
+	int32_t     n  = xml.getNumNodes();
+	// find the first meta summary node
+	for ( int32_t i = 0 ; i < n ; i++ ) {
+		// continue if not a meta tag
+		if ( nodes[i].m_nodeId != 68 ) continue;
+		// only get content for <meta http-equiv=..>
+		int32_t tagLen;
+		char *tag ;
+		tag = xml.getString ( i , "http-equiv" , &tagLen );
+		// skip if empty
+		if ( ! tag || tagLen <= 0 ) continue;
+		// if not a refresh, skip it
+		if ( strncasecmp ( tag , "refresh", 7 ) ) continue;
+		// get the content
+		tag = xml.getString ( i ,"content", &tagLen );
+		// skip if empty
+		if ( ! tag || tagLen <= 0 ) continue;
+		// PARSE OUT THE URL
+		if (!setMetaRedirUrlFromTag(p,&m_metaRedirUrl,m_niceness,cu) ) 
+			continue;
 		// set it
 		m_metaRedirUrlPtr = &m_metaRedirUrl;
 		// return it
-		break;
+		return &m_metaRedirUrlPtr;
 	}
+
 	// nothing found
 	return &m_metaRedirUrlPtr;
 }
@@ -18566,7 +18648,7 @@ void XmlDoc::filterStart_r ( bool amThread ) {
 	errno = 0;
 	// open the input file
  retry11:
-	int fd = open ( in , O_WRONLY | O_CREAT , S_IRWXU );
+	int fd = open ( in , O_WRONLY | O_CREAT , getFileCreationFlags() );
 	if ( fd < 0 ) {
 		// valgrind
 		if ( errno == EINTR ) goto retry11;
@@ -34730,7 +34812,7 @@ int gbcompress7 ( unsigned char *dest      ,
 	errno = 0;
 	// open the input file
  retry11:
-	int fd = open ( in , O_WRONLY | O_CREAT , S_IRWXU );
+	int fd = open ( in , O_WRONLY | O_CREAT , getFileCreationFlags() );
 	if ( fd < 0 ) {
 		// valgrind
 		if ( errno == EINTR ) goto retry11;
@@ -39371,6 +39453,12 @@ char **XmlDoc::getRootTitleBuf ( ) {
 	// sanity check, must include the null ni the size
 	if ( m_rootTitleBufSize > 0 &&
 	     m_rootTitleBuf [ m_rootTitleBufSize - 1 ] ) {
+		log("build: bad root titlebuf size not end in null char for "
+		    "collnum=%i",(int)m_collnum);
+		ptr_rootTitleBuf = NULL;
+		size_rootTitleBuf = 0;
+		m_rootTitleBufValid = true;
+		return (char **)&m_rootTitleBuf;
 		char *xx=NULL;*xx=0;
 		//m_rootTitleBuf [ m_rootTitleBufSize - 1 ] = '\0';
 		//m_rootTitleBufSize++;

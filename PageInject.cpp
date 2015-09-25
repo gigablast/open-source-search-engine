@@ -75,6 +75,13 @@ void setInjectionRequestFromParms ( TcpSocket *sock ,
 			int32_t def = atoll(m->m_def);
 			*ii = (char)hr->getLong(m->m_cgi,def);
 		}
+		else if ( m->m_type == TYPE_IP ) {
+			char *ii = (char *)((char *)ir + m->m_off);
+			char *is = hr->getString(m->m_cgi,NULL);
+			*(int32_t *)ii = 0; // default ip to 0
+			// otherwise, set the ip
+			if ( is ) *(int32_t *)ii = atoip(is);
+		}
 		// if unsupported let developer know
 		else { char *xx=NULL;*xx=0; }
 	}
@@ -124,6 +131,53 @@ Host *getHostToHandleInjection ( char *url ) {
 	Host *group = g_hostdb.getShard ( shardNum );
 	int32_t hostNum = docId % g_hostdb.m_numHostsPerShard;
 	Host *host = &group[hostNum];
+
+	bool isWarcInjection = false;
+	int32_t ulen = gbstrlen(url);
+	if ( ulen > 10 && strcmp(url+ulen-8,".warc.gz") == 0 )
+		isWarcInjection = true;
+	if ( ulen > 10 && strcmp(url+ulen-5,".warc") == 0 )
+		isWarcInjection = true;
+
+	if ( ! isWarcInjection ) return host;
+
+	// warc files end up calling XmlDoc::indexWarcOrArc() which spawns
+	// a msg7 injection request for each doc in the warc/arc file
+	// so let's do load balancing differently for them so one host
+	// doesn't end up doing a bunch of wget/gunzips on warc files 
+	// thereby bottlenecking the cluster. get the first hostid that
+	// we have not sent a msg7 injection request to that is still out
+	for ( int32_t i = 0 ; i < g_hostdb.m_numHosts ; i++ ) {
+		Host *h = g_hostdb.getHost(i);
+		h->m_tmpCount = 0;
+	}
+	for ( UdpSlot *slot = g_udpServer.m_head2 ; 
+	      slot ; 
+	      slot = slot->m_next2 ) {
+		// skip if not injection request
+		if ( slot->m_msgType != 0x07 ) continue;
+		//if ( ! slot->m_weInitiated ) continue;
+		// if we did not initiate the injection request, i.e. if
+		// it is to us, skip it
+		if ( ! slot->m_callback ) continue;
+		// who is it from?
+		int32_t hostId = slot->m_hostId;
+		if ( hostId < 0 ) continue;
+		Host *h = g_hostdb.getHost ( hostId );
+		if ( ! h ) continue;
+		h->m_tmpCount++;
+	}
+	int32_t min = 999999;
+	Host *minh = NULL;
+	for ( int32_t i = 0 ; i < g_hostdb.m_numHosts ; i++ ) {
+		Host *h = g_hostdb.getHost(i);
+		if ( h->m_tmpCount == 0 ) return h;
+		if ( h->m_tmpCount >= min ) continue;
+		min  = h->m_tmpCount;
+		minh = h;
+	}
+	if ( minh ) return minh;
+	// how can this happen?
 	return host;
 }
 
@@ -608,7 +662,7 @@ void sendUdpReply7 ( void *state ) {
 
     uint32_t statColor = 0xccffcc;
     if(xd->m_indexCode) {
-        statColor = 0x4e99e9;
+        statColor = 0xaaddaa;//0x4e99e9;
     }
 	g_stats.addStat_r ( xd->m_rawUtf8ContentSize,
 						xd->m_injectStartTime, 
@@ -644,7 +698,6 @@ void sendUdpReply7 ( void *state ) {
 	
 
 void handleRequest7 ( UdpSlot *slot , int32_t netnice ) {
-
 
 	InjectionRequest *ir = (InjectionRequest *)slot->m_readBuf;
 

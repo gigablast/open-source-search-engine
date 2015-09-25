@@ -353,7 +353,7 @@ class BigFile {
 	SafeBuf m_newBaseFilenameDir ;//[256];
 
 
-	int32_t m_permissions;
+	//int32_t m_permissions;
 	int32_t m_flags;
 
 	// determined in open() override

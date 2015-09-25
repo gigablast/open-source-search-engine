@@ -2356,7 +2356,7 @@ bool getTestSpideredDate ( Url *u , int32_t *origSpideredDate , char *testDir ) 
 bool addTestSpideredDate ( Url *u , int32_t spideredTime , char *testDir ) {
 
 	// ensure dir exists
-	::mkdir(testDir,S_IRWXU);
+	::mkdir(testDir,getDirCreationFlags());
 
 	// set this
 	int64_t uh64 = hash64(u->getUrl(),u->getUrlLen());

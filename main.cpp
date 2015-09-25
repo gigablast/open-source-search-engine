@@ -5022,7 +5022,7 @@ int install ( install_flag_konst_t installFlag , int32_t hostId , char *dir ,
 			if ( ! f.doesExist() ) target = "gb";
 
 			sprintf(tmp,
-				"scp  " // blowfish is faster
+				"scp " // blowfish is faster
 				"%s%s "
 				"%s:%s/gb.installed%s",
 				dir,
@@ -16849,7 +16849,7 @@ void dumpCachedRecs (char *coll,int32_t startFileNum,int32_t numFiles,bool inclu
 	int32_t filenum = 0;
 	char filename[64];
 	sprintf(filename, "%s-%"INT32".ddmp", coll, filenum);
-	int FD = open(filename, O_CREAT|O_WRONLY, S_IROTH);
+	//int FD = open(filename, O_CREAT|O_WRONLY, S_IROTH);
 	int32_t numDumped = 0;
 	uint32_t bytesDumped = 0;
  loop:
@@ -17016,7 +17016,7 @@ void dumpCachedRecs (char *coll,int32_t startFileNum,int32_t numFiles,bool inclu
 		filenum++;
 		sprintf(filename, "%s-%"INT32".ddmp", coll, filenum);
 		close(FD);
-		FD = open(filename, O_CREAT|O_WRONLY, S_IROTH);
+		//FD = open(filename, O_CREAT|O_WRONLY, S_IROTH);
 		bytesDumped = 0;
 		fprintf(stderr, "Started new file: %s. starts at docId: %"INT64".\n",filename, lastDocId);
 	}

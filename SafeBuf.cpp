@@ -431,7 +431,7 @@ bool SafeBuf::reserve(int32_t i , char *label, bool clearIt ) {
 //buffer size.
 bool SafeBuf::reserve2x(int32_t i, char *label) {
 	//watch out for overflow!
-	if((m_capacity << 1) + i < 0) return false;
+	if((m_capacity << 1) + i < m_capacity) return false;
 	if(i + m_length >= m_capacity)
 		return reserve(m_capacity + i,label);
 	else return true;
@@ -449,8 +449,9 @@ int32_t SafeBuf::save ( char *fullFilename ) {
 
 int32_t SafeBuf::dumpToFile(char *filename ) {
  retry22:
-	int32_t fd = open ( filename , O_CREAT | O_WRONLY | O_TRUNC,
-			 S_IRUSR |S_IWUSR |S_IRGRP |S_IWGRP| S_IROTH );
+	int32_t fd = open ( filename , O_CREAT | O_WRONLY | O_TRUNC ,
+			    getFileCreationFlags() );
+			    //S_IRUSR |S_IWUSR |S_IRGRP |S_IWGRP| S_IROTH );
 	if ( fd < 0 ) {
 		// valgrind
 		if ( errno == EINTR ) goto retry22;
@@ -484,8 +485,9 @@ int32_t SafeBuf::safeSave (char *filename ) {
 	fn.safePrintf( "%s.saving",filename );
 
 	int32_t fd = open ( fn.getBufStart() ,
-			 O_CREAT | O_WRONLY | O_TRUNC,
-			 S_IRUSR |S_IWUSR |S_IRGRP |S_IWGRP| S_IROTH );
+			    O_CREAT | O_WRONLY | O_TRUNC ,
+			    getFileCreationFlags() );
+			 // S_IRUSR |S_IWUSR |S_IRGRP |S_IWGRP| S_IROTH );
 	if ( fd < 0 ) {
 		// valgrind
 		if ( errno == EINTR ) goto retry22;
@@ -571,8 +573,8 @@ int32_t SafeBuf::fillFromFile(char *filename) {
 	reserve(results.st_size+1);
 	
  retry:
-	int32_t fd = open ( filename , O_RDONLY,
-			 S_IRUSR |S_IWUSR |S_IRGRP |S_IWGRP| S_IROTH );
+	int32_t fd = open ( filename , O_RDONLY , getFileCreationFlags() );
+			 // S_IRUSR |S_IWUSR |S_IRGRP |S_IWGRP| S_IROTH );
 	if ( ! fd ) {
 		// valgrind
 		if ( errno == EINTR ) goto retry;

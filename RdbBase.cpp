@@ -165,10 +165,10 @@ bool RdbBase::init ( char  *dir            ,
 		}
 		// make a special "cat" dir for it if we need to
 		sprintf ( tmp , "%s%s" , dir , dbname );
-		int32_t status = ::mkdir ( tmp ,
-			       S_IRUSR | S_IWUSR | S_IXUSR | 
-			       S_IRGRP | S_IWGRP | S_IXGRP | 
-					S_IROTH | S_IXOTH );
+		int32_t status = ::mkdir ( tmp , getDirCreationFlags() );
+			       // S_IRUSR | S_IWUSR | S_IXUSR | 
+			       // S_IRGRP | S_IWGRP | S_IXGRP | 
+			       // 		S_IROTH | S_IXOTH );
 	        if ( status == -1 && errno != EEXIST && errno )
 			return log("db: Failed to make directory %s: %s.",
 				   tmp,mstrerror(errno));
@@ -186,9 +186,9 @@ bool RdbBase::init ( char  *dir            ,
 		// make a special "cat" dir for it if we need to
 		sprintf ( tmp , "%scat" , dir );
 		if ( ::mkdir ( tmp ,
-			       S_IRUSR | S_IWUSR | S_IXUSR | 
-			       S_IRGRP | S_IWGRP | S_IXGRP | 
-			       S_IROTH | S_IXOTH ) == -1 && errno != EEXIST )
+			       // S_IRUSR | S_IWUSR | S_IXUSR | 
+			       // S_IRGRP | S_IWGRP | S_IXGRP | 
+			       // S_IROTH | S_IXOTH ) == -1 && errno != EEXIST )
 			return log("db: Failed to make directory %s: %s.",
 				   tmp,mstrerror(errno));
 	}
@@ -202,9 +202,9 @@ bool RdbBase::init ( char  *dir            ,
 		// make a special "stats" dir for it if necessary
 		sprintf ( tmp , "%sstats" , dir );
 		if ( ::mkdir ( tmp ,
-			       S_IRUSR | S_IWUSR | S_IXUSR | 
-			       S_IRGRP | S_IWGRP | S_IXGRP | 
-			       S_IROTH | S_IXOTH ) == -1 && errno != EEXIST )
+			       // S_IRUSR | S_IWUSR | S_IXUSR | 
+			       // S_IRGRP | S_IWGRP | S_IXGRP | 
+			       // S_IROTH | S_IXOTH ) == -1 && errno != EEXIST )
 			return log( "db: Failed to make directory %s: %s.",
 				    tmp, mstrerror( errno ) );
 	}
@@ -218,9 +218,9 @@ bool RdbBase::init ( char  *dir            ,
 		// make a special "stats" dir for it if necessary
 		sprintf ( tmp , "%saccess" , dir );
 		if ( ::mkdir ( tmp ,
-			       S_IRUSR | S_IWUSR | S_IXUSR | 
-			       S_IRGRP | S_IWGRP | S_IXGRP | 
-			       S_IROTH | S_IXOTH ) == -1 && errno != EEXIST )
+			       // S_IRUSR | S_IWUSR | S_IXUSR | 
+			       // S_IRGRP | S_IWGRP | S_IXGRP | 
+			       // S_IROTH | S_IXOTH ) == -1 && errno != EEXIST )
 			return log( "db: Failed to make directory %s: %s.",
 				    tmp, mstrerror( errno ) );
 	}
@@ -234,9 +234,9 @@ bool RdbBase::init ( char  *dir            ,
 		// make a special "stats" dir for it if necessary
 		sprintf ( tmp , "%ssyncdb" , dir );
 		if ( ::mkdir ( tmp ,
-			       S_IRUSR | S_IWUSR | S_IXUSR | 
-			       S_IRGRP | S_IWGRP | S_IXGRP | 
-			       S_IROTH | S_IXOTH ) == -1 && errno != EEXIST )
+			       // S_IRUSR | S_IWUSR | S_IXUSR | 
+			       // S_IRGRP | S_IWGRP | S_IXGRP | 
+			       // S_IROTH | S_IXOTH ) == -1 && errno != EEXIST )
 			return log( "db: Failed to make directory %s: %s.",
 				    tmp, mstrerror( errno ) );
 	}
