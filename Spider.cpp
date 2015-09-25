@@ -4782,7 +4782,8 @@ bool SpiderColl::scanListForWinners ( ) {
 		// firstip in the record!
 		if ( sreq->m_firstIp != firstIp ) {
 			log("spider: request %s firstip does not match "
-			    "firstip in key",sreq->m_url);
+			    "firstip in key collnum=%i",sreq->m_url,
+			    (int)m_collnum);
 			log("spider: ip1=%s",iptoa(sreq->m_firstIp));
 			log("spider: ip2=%s",iptoa(firstIp));
 			continue;
