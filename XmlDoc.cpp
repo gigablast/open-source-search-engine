@@ -19486,9 +19486,12 @@ BigFile *XmlDoc::getUtf8ContentInFile ( int64_t *fileSizeArg ) {
 		//int32_t loaded = tmp.load ( "/home/mwells/.config/internetarchive.yml");
 		int32_t loaded = tmp.load ( "auth/internetarchive.yml");
 		if(loaded <= 0) {
-			log("gb: failed to load auth/internetarchive.yml");
-			g_errno = EDOCTOOBIG;
-			return NULL;
+			if ( ! g_errno ) g_errno = EDOCTOOBIG;
+			log("gb: failed to load auth/internetarchive.yml: "
+			    "%s",mstrerror(g_errno));
+			// do not restart gb in a loop, so return 0 to shell
+			exit(0);
+			//return NULL;
 			// FIXME
 			char *xx=NULL;*xx=0;
 		}
