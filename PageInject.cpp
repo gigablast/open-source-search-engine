@@ -75,6 +75,13 @@ void setInjectionRequestFromParms ( TcpSocket *sock ,
 			int32_t def = atoll(m->m_def);
 			*ii = (char)hr->getLong(m->m_cgi,def);
 		}
+		else if ( m->m_type == TYPE_IP ) {
+			char *ii = (char *)((char *)ir + m->m_off);
+			char *is = hr->getString(m->m_cgi,NULL);
+			*(int32_t *)ii = 0; // default ip to 0
+			// otherwise, set the ip
+			if ( is ) *(int32_t *)ii = atoip(is);
+		}
 		// if unsupported let developer know
 		else { char *xx=NULL;*xx=0; }
 	}

@@ -2289,11 +2289,11 @@ void TcpServer::destroySocket ( TcpSocket *s ) {
 			sb.safeTruncateEllipsis(s->m_sendBuf,
 						s->m_sendBufSize,
 						200);
-		sb.safePrintf(" readbuf=");
+		sb.safePrintf(" bytesread=%i readbuf=",(int)s->m_readOffset);
 		if ( s->m_readBuf )
 			sb.safeTruncateEllipsis(s->m_readBuf,
-						s->m_readBufSize,
-						200);
+						s->m_readOffset,
+						2000);
 		log("%s",sb.getBufStart());
 	}
 
