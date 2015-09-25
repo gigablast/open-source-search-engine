@@ -6014,7 +6014,6 @@ void PosdbTable::intersectLists10_r ( ) {
 #define RINGBUFSIZE 4096
 //#define RINGBUFSIZE 1024
 	unsigned char ringBuf[RINGBUFSIZE+10];
-	unsigned char *ringBufEnd = ringBuf + RINGBUFSIZE;
 	// for overflow conditions in loops below
 	ringBuf[RINGBUFSIZE+0] = 0xff;
 	ringBuf[RINGBUFSIZE+1] = 0xff;
@@ -6358,18 +6357,7 @@ void PosdbTable::intersectLists10_r ( ) {
 	// for 'search engine'. it might save time!
 
 	// reset ring buf. make all slots 0xff. should be 1000 cycles or so.
-	for ( int32_t *rb = (int32_t *)ringBuf ; ; ) {
-		rb[0] = 0xffffffff;
-		rb[1] = 0xffffffff;
-		rb[2] = 0xffffffff;
-		rb[3] = 0xffffffff;
-		rb[4] = 0xffffffff;
-		rb[5] = 0xffffffff;
-		rb[6] = 0xffffffff;
-		rb[7] = 0xffffffff;
-		rb += 8;
-		if ( rb >= (int32_t *)ringBufEnd ) break;
-	}
+	memset ( ringBuf, 0xff, RINGBUFSIZE );
 
 	// now to speed up 'time enough for love' query which does not
 	// have many super high scoring guys on top we need a more restrictive
