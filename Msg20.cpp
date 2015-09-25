@@ -398,7 +398,8 @@ void handleRequest20 ( UdpSlot *slot , int32_t netnice ) {
 
 	// sanity check, the size include the \0
 	if ( req->m_collnum < 0 ) {
-		log("query: Got empty collection in msg20 handler. FIX!");
+		log("query: Got empty collection in msg20 handler. FIX! "
+		    "from ip=%s port=%i",iptoa(slot->m_ip),(int)slot->m_port);
 	        g_udpServer.sendErrorReply ( slot , ENOTFOUND );
 		return; 
 		//char *xx =NULL; *xx = 0; 
