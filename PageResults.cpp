@@ -5702,10 +5702,12 @@ bool printResult ( State0 *st, int32_t ix , int32_t *numPrintedSoFar ) {
 	*/
 		
 	if ( mr->size_metadataBuf && si->m_format == FORMAT_JSON) {
-		sb->safePrintf("\t\t\"metadata\":");
-		sb->safeMemcpy(mr->ptr_metadataBuf, mr->size_metadataBuf);
-		sb->pushChar(',');
-
+		sb->safePrintf("\t\t\"metadata\":[");
+		//sb->safeMemcpy(mr->ptr_metadataBuf, mr->size_metadataBuf);
+		sb->safeStrcpy(mr->ptr_metadataBuf);
+		// without this \n we seem to lose our ] i guess it gets
+		// backed up over
+		sb->safePrintf("],\n");
 	}
 
 

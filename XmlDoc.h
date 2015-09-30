@@ -521,6 +521,7 @@ class XmlDoc {
 	bool setTitleRecBuf ( SafeBuf *buf , int64_t docId, int64_t uh48 );
 	// sets m_titleRecBuf/m_titleRecBufValid/m_titleRecKey[Valid]
 	SafeBuf *getTitleRecBuf ( );
+	bool appendNewMetaInfo ( SafeBuf *metaList , bool forDelete ) ;
 	SafeBuf *getSpiderStatusDocMetaList ( class SpiderReply *reply ,
 					      bool forDelete ) ;
 	SafeBuf *getSpiderStatusDocMetaList2 ( class SpiderReply *reply ) ;
@@ -768,6 +769,8 @@ class XmlDoc {
 	uint64_t m_ipStartTime;
 	uint64_t m_ipEndTime;
 
+	bool m_updatedMetaData;
+
 	void copyFromOldDoc ( class XmlDoc *od ) ;
 
 	class SpiderReply *getFakeSpiderReply ( );
@@ -813,6 +816,7 @@ class XmlDoc {
 	int32_t getBoostFromSiteNumInlinks ( int32_t inlinks ) ;
 	bool hashSpiderReply (class SpiderReply *reply ,class HashTableX *tt) ;
 	bool hashMetaTags ( class HashTableX *table ) ;
+	bool hashMetaData ( class HashTableX *table ) ;
 	bool hashIsClean ( class HashTableX *table ) ;
 	bool hashZipCodes ( class HashTableX *table ) ;
 	bool hashMetaZip ( class HashTableX *table ) ;
