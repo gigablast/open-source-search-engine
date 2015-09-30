@@ -19218,6 +19218,9 @@ char **XmlDoc::getExpandedUtf8Content ( ) {
 		// <iframe src=""> which ends up embedding the root url.
 		if ( urlLen == 0 ) 
 			continue;
+		// skip if "about:blank"
+		if ( urlLen==11 && strncmp(url,"about:blank",11) == 0 )
+			continue;
 		// get our current url
 		//cu = getCurrentUrl();
 		// set our frame url
