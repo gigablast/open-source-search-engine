@@ -1256,9 +1256,17 @@ bool gotResults ( void *state ) {
 	// into it, and it must be the SAME ptr too!
 	CollectionRec *cr = si->m_cr;//g_collectiondb.getRec ( collnum );
 	if ( ! cr ) { // || cr != si->m_cr ) {
-	       g_errno = ENOCOLLREC;
-	       return sendReply(st,NULL);
+		g_errno = ENOCOLLREC;
+		return sendReply(st,NULL);
 	}
+
+	if ( ! msg40->m_msg20 && ! si->m_docIdsOnly ) {
+		log("msg40: failed to get results q=%s",si->m_q.m_orig);
+		g_errno = ENOMEM;
+		return sendReply(st,NULL);
+	}
+
+
 
 	//char *coll = cr->m_coll;
 
