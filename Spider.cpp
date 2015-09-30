@@ -9989,10 +9989,23 @@ bool sendPage ( State11 *st ) {
 	// print time format: 7/23/1971 10:45:32
 	int64_t timems = gettimeofdayInMillisecondsGlobal();
 	sb.safePrintf("</b> (current time = %"UINT64")(totalcount=%"INT32")"
-		      "(waittablecount=%"INT32")</td></tr>\n",
+		      "(waittablecount=%"INT32")",
 		      timems,
 		      sc->m_waitingTree.getNumUsedNodes(),
 		      sc->m_waitingTable.getNumUsedSlots());
+
+	double a = (double)g_spiderdb.getUrlHash48 ( &sc->m_firstKey );
+	double b = (double)g_spiderdb.getUrlHash48 ( &sc->m_endKey );
+	double c = (double)g_spiderdb.getUrlHash48 ( &sc->m_nextKey );
+	double percent = (100.0 * (c-a)) ;
+	if ( b-a > 0 ) percent /= (b-a);
+	if ( percent > 100.0 ) percent = 100.0;
+	if ( percent < 0.0 ) percent = 0.0;
+	sb.safePrintf("(spiderdb scan for ip %s is %.2f%% complete)",
+		      iptoa(sc->m_scanningIp),
+		      (float)percent );
+
+	sb.safePrintf("</td></tr>\n");
 	sb.safePrintf("<tr bgcolor=#%s>",DARK_BLUE);
 	sb.safePrintf("<td><b>spidertime (MS)</b></td>\n");
 	sb.safePrintf("<td><b>firstip</b></td>\n");
