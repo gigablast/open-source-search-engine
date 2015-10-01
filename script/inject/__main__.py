@@ -85,7 +85,7 @@ def injectItem(item, db, mode):
         except Exception, e:
             print 'error: metadata feed went down (%s) for: %s' % (e, item)
             time.sleep(10)
-            
+
 
     if itemId is None:
         reallyExecute(c, "insert INTO items VALUES (?,?)", (item, datetime.datetime.now()))
@@ -353,6 +353,7 @@ def runInjects(threads, mode='production'):
     try:
         maxPages = 1300
         answer = pool.map(getPage, zip(xrange(1,maxPages), repeat(mode, maxPages)))
+        print "finished item pass", answer
     except (KeyboardInterrupt, SystemExit):
         print 'ok, caught'
         raise
@@ -395,7 +396,7 @@ def serveForever():
 
 
 
-        return flask.make_response('hihih' + metadata)
+        return flask.make_response(metadata)
 
     @app.route('/progress',
                methods=['GET', 'POST'], endpoint='progress')

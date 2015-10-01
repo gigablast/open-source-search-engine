@@ -705,7 +705,7 @@ class XmlDoc {
 	char **getExpandedUtf8Content ( ) ;
 	char **getUtf8Content ( ) ;
 	// we download large files to a file on disk, like warcs and arcs
-	BigFile *getUtf8ContentInFile ( int64_t *fileSizeArg );
+	FILE *getUtf8ContentInFile ( );
 	int32_t *getContentHash32 ( ) ;
 	int32_t *getContentHashJson32 ( ) ;
 	//int32_t *getTagHash32 ( ) ;
@@ -1085,11 +1085,16 @@ class XmlDoc {
 	int32_t m_arcError ;
 	bool m_doneInjectingWarc ;
 	bool m_doneInjectingArc ;
-	int64_t m_fileOff ;
+
+	int64_t m_bytesStreamed;
 	char *m_fileBuf ;
 	int32_t m_fileBufAllocSize;
+	bool    m_registeredWgetSleepCallback;
 	char *m_fptr ;
 	char *m_fptrEnd ;
+
+	FILE* m_pipe;
+	
 	BigFile m_file;
 	int64_t m_fileSize;
 	FileState m_fileState;

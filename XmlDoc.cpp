@@ -108,6 +108,8 @@ char *getFirstJSONObject ( char *p ,
 			   bool *isImage ) ;
 char *getJSONObjectEnd ( char *p , int32_t niceness ) ;
 
+void doneReadingArchiveFileWrapper ( int fd, void *state );
+
 XmlDoc::XmlDoc() { 
 	m_readThreadOut = false;
 	for ( int32_t i = 0 ; i < MAXMSG7S ; i++ ) m_msg7s[i] = NULL;
@@ -123,7 +125,6 @@ XmlDoc::XmlDoc() {
 	m_arcError = 0;
 	m_doneInjectingWarc = false;
 	m_doneInjectingArc = false;
-	m_fileOff = 0;
 	m_numInjectionsOut = 0;
 	m_fptr = NULL;
 	m_fptrEnd = NULL;
@@ -193,6 +194,7 @@ XmlDoc::XmlDoc() {
 	//m_mcasts = NULL;
 	//for ( int32_t i = 0 ; i < g_hostdb.m_numHosts ; i++ ) 
 	//	m_currentBinPtrs[i] = NULL;
+	m_registeredWgetSleepCallback = false;
 	reset();
 };
 
@@ -243,6 +245,13 @@ void XmlDoc::reset ( ) {
 	m_anyContentPtr = NULL;
 	m_savedChar = '\0';
 	m_contentDelim = NULL;
+
+	if(m_registeredWgetSleepCallback) {
+		log("build:came back from sleep callback");
+		g_loop.unregisterReadCallback( fileno(m_pipe), this,doneReadingArchiveFileWrapper);
+		m_registeredWgetSleepCallback = false;
+	}
+
 
 	m_redirUrl.reset();
 
@@ -3361,7 +3370,7 @@ void doneInjectingArchiveRec ( void *state ) {
 	xd->m_masterLoop ( xd );
 }
 
-void doneReadingArchiveFileWrapper ( void *state ) {
+void doneReadingArchiveFileWrapper ( int fd, void *state ) {
 	XmlDoc *THIS = (XmlDoc *)state;
 	// . go back to the main entry function
 	// . make sure g_errno is clear from a msg3a g_errno before calling
@@ -3370,13 +3379,15 @@ void doneReadingArchiveFileWrapper ( void *state ) {
 }
 
 
-#define MAXWARCRECSIZE 1000000
+#define MAXWARCRECSIZE 50000000
 
 // . returns false if would block, true otherwise. 
 // . returns true and sets g_errno on err
 // . injectwarc
 // . ctype is CT_WARC or CT_ARC respectively
 bool XmlDoc::indexWarcOrArc ( char ctype ) {
+	log("build: if we got read ready then we cant just return out of here %"INT32, 
+		 (int32_t)m_registeredWgetSleepCallback);
 
 	int8_t *hc = getHopCount();
 	if ( ! hc ) return true; // error?
@@ -3385,16 +3396,17 @@ bool XmlDoc::indexWarcOrArc ( char ctype ) {
 	// first download the warc into a file on disk. because it can be
 	// so big we can fit it in memory. just do a wget then gunzip 
 	// then open it. use a system call in a thread.
-	int64_t fileSize = -1;
-	BigFile *file = getUtf8ContentInFile( &fileSize );
+	if(!m_calledWgetThread) {
+		m_pipe = getUtf8ContentInFile();
+	}
 	// return true with g_errno set on error
-	if ( ! file ) {
+	if ( ! m_pipe ) {
 		if ( ! g_errno ) { char *xx=NULL;*xx=0; }
-		return true;
+		//return true;
 	}
 	// would block? return false then
-	if ( file == (void *)-1 )
-		return false;
+	// if ( file == (void *)-1 )
+	// 	return false;
 
 	setStatus ("injecting archive records");
 
@@ -3403,24 +3415,33 @@ bool XmlDoc::indexWarcOrArc ( char ctype ) {
 	// 	return true;
 	// }
 
+
 	QUICKPOLL ( m_niceness );
 
-	// MDW BEGIN
-
-	bool needReadMore = false;
-	if ( ! m_fptr ) needReadMore = true;
+	bool needReadMore = true;
 
 	// did an inject return?
 	if ( m_doneInjectingWarc ) {
 	warcDone:
+		log("build: done parsing %"INT64" bytes of archive file %s. left over =%"INT32 " %"INT32, 
+			m_bytesStreamed, m_firstUrl.getUrl(),
+			(m_fptrEnd - m_fptrEnd),
+			(int32_t)m_doneInjectingWarc);
+
 		m_doneInjectingWarc = true;
-		log("build: done parsing %"INT64 " bytes of archive file %s.",
-		    fileSize,file->getFilename());
 		// return if all injects have returned.
 		if ( m_numInjectionsOut == 0 ) {
 			g_errno = m_warcError;
 			m_indexCode = m_warcError;
 			m_indexCodeValid = true;
+
+			if(m_registeredWgetSleepCallback) {
+				log("build:came back from sleep callback");
+				g_loop.unregisterReadCallback(fileno(m_pipe), this,doneReadingArchiveFileWrapper);
+				m_registeredWgetSleepCallback = false;
+			}
+
+			fclose(m_pipe);
 			return true;
 		}
 		log("build: waiting for injection threads to return.");
@@ -3430,90 +3451,107 @@ bool XmlDoc::indexWarcOrArc ( char ctype ) {
 
 
  readMore:
-
 	if ( needReadMore ) {
 
-		log("build: reading %"INT64" bytes more of archive file %s"
-		    ,(int64_t)MAXWARCRECSIZE,file->getFilename());
-
-		// are we done?
-		if ( m_fileOff >= fileSize ) {
-			log("build: hit end of archive file %s. done.",
-			    file->getFilename());
-			goto warcDone;
-		}
-
-		// read 1MB of data into this buf to get the first WARC record
-		// it must be < 1MB or we faulter.
 		if ( ! m_fileBuf ) {
 			m_fileBufAllocSize = MAXWARCRECSIZE + 1;
 			m_fileBuf=(char *)mmalloc(m_fileBufAllocSize ,"sibuf");
+			m_fptr = m_fileBuf;
+			m_fptrEnd = m_fileBuf;
+			m_bytesStreamed = 0;
 		}
 		if ( ! m_fileBuf ) {
-			log("build: failed to alloc buf to read archive file "
-			    "%s",file->getFilename());
+			log("build: failed to alloc buf to read archive file %s",m_firstUrl.getUrl());
 			return true;
 		}
+		int32_t leftOver = 0;
+		// How much is unprocessed
+		if(m_fptr != m_fptrEnd) {
+			leftOver = m_fptrEnd - m_fptr;
+		}
 
-		int32_t maxToRead = MAXWARCRECSIZE;
-		int32_t toRead = maxToRead;
+		if(leftOver == MAXWARCRECSIZE) {
+			// We are falling behind. We need to save to a file
+			// so the pipe buffers don't fill up and break;
+			
+			log("no room left to do read wait a bit  %"UINT32, m_fileBufAllocSize);
+
+			goto loop;
+			//return false;
+
+			uint64_t newSize = m_fileBufAllocSize * 2;
+			log("no room left to do read, resizing  %"UINT64, newSize);
+			char* tmpBuf = (char*)mrealloc(m_fileBuf, 0, newSize,"stalledpipe");
+			if(!tmpBuf) {
+				m_warcError = g_errno;
+				log("build: had to abandon parsing %s, reason %s", m_firstUrl.getUrl(), mstrerror(m_warcError));
+				return true;
+			}
+			m_fileBufAllocSize = newSize;
+			m_fptr    = tmpBuf + (m_fptr - m_fileBuf);
+			m_fptrEnd =  tmpBuf + (m_fptrEnd - m_fileBuf);
+			m_fileBuf = tmpBuf;
+		}
+
+		// Scoot up everything we haven't processed
+		if(m_fptr != m_fileBuf) {
+			memmove(m_fileBuf, m_fptr, leftOver);
+			m_fptr = m_fileBuf;
+			m_fptrEnd = m_fileBuf + leftOver;
+			m_bytesStreamed += leftOver;
+		}
+
+
 		m_hasMoreToRead = true;
-		if ( m_fileOff + toRead > fileSize ) {
-			toRead = fileSize - m_fileOff;
-			m_hasMoreToRead = false;
+		errno = 0;
+		g_loop.disableTimer();
+		int bytesRead = fread(m_fptrEnd, 1, MAXWARCRECSIZE - leftOver, m_pipe);
+		g_loop.enableTimer();
+
+		log("build: warc pipe read %"INT32" more bytes of the pipe. errno = %s, buf space = %"INT32 " processed = %"INT64, 
+			bytesRead, mstrerror(errno),MAXWARCRECSIZE - leftOver, m_bytesStreamed );
+		if(bytesRead <= 0) {
+			if(errno == EAGAIN){
+				if(needReadMore) {
+					log("build: needed more to read, but reading would have blocked so sleeping" );
+					return false;
+				}
+
+				log("build: can't read, lets process the buffer" );
+
+				goto loop;
+			} else if(MAXWARCRECSIZE - leftOver != bytesRead) {
+				log("build: warc problem, pipe terminated but we need");
+				goto warcDone;
+			}
 		}
+		// if(bytesRead == 0) {
+		// 	if ( !g_loop.registerSleepCallback ( 1000 , // 1000 ms
+		// 										 this ,
+		// 										 doneReadingArchiveFileWrapper,
+		// 										 m_niceness    )) {
+		// 	 	log("build: failed to register sleep callback." );
+		// 	 	return false;
+		// 	}
+		// 	// we are blocked
+		// 	m_registeredWgetSleepCallback = true;;
 
-		bool status;
+		// 	return false;
 
-		if ( m_readThreadOut ) {
-			m_readThreadOut = false;
-			status = false;
-			goto skipRead;
-		}
 
-		// make a thread to read now
-		status = file->read (m_fileBuf, 
-				     toRead, 
-				     m_fileOff,
-				     &m_fileState,
-				     this,
-				     doneReadingArchiveFileWrapper,
-				     MAX_NICENESS );
-
-		// if thread was queue or launched, wait for it to come back
-		if ( ! status ) {
-			// set a signal so we do not recall thread
-			// when callback brings us back here
-			m_readThreadOut = true;
-			// wait for callback
-			return false;
-		}
-
-	skipRead:
-
-		int64_t bytesRead = m_fileState.m_bytesDone;
-
-		if ( bytesRead != toRead ) {
-			log("build: read of %s failed at offset "
-			    "%"INT64"", file->getFilename(), m_fileOff);
-			if ( ! g_errno ) g_errno = EBADENGINEER;
-			m_warcError = g_errno;
-			goto warcDone;
-		}
-		// null term what we read
-		m_fileBuf[bytesRead] = '\0';
-
-		// if not enough to constitute a WARC record probably just 
-		// new lines
-		if ( toRead < 20 ) {
-			log("build: done processing archive file %s",
-			    file->getFilename());
-			goto warcDone;
-		}
-		// point to what we read
+		// 	// All done
+		// 	//m_hasMoreToRead = false;
+		// 	//			usleep(1000);
+		// 	//goto readMore;
+		// }
+		needReadMore = false;
 		m_fptr = m_fileBuf;
-		m_fptrEnd = m_fileBuf + bytesRead;
+		m_fptrEnd = m_fptrEnd + bytesRead;
+		//m_fptrEnd = m_fileBuf + bytesRead;
 	}
+
+
+
 
  loop:
 
@@ -3529,6 +3567,7 @@ bool XmlDoc::indexWarcOrArc ( char ctype ) {
 
 	// need at least say 100k for warc header
 	if ( m_fptr + 100000 > m_fptrEnd && m_hasMoreToRead )  {
+		log("build need more of the record to process so sleeping.");
 		needReadMore = true;
 		goto readMore;
 	}
@@ -3541,8 +3580,6 @@ bool XmlDoc::indexWarcOrArc ( char ctype ) {
 	// what we skip over
 	uint64_t recSize       = 0;
 	
-	uint64_t oldOff = m_fileOff;
-
 	//
 	// set recUrl, recIp, recTime, recContent, recContentLen and recSize
 	//
@@ -3552,7 +3589,7 @@ bool XmlDoc::indexWarcOrArc ( char ctype ) {
 		char *whp = m_fptr;
 		if( ! whp ) {
 			// FIXME: shouldn't get here with a NULL
-			log("build: No buffer for file=%s",  file->getFilename());
+			log("build: No buffer for file=%s",  m_firstUrl.getUrl());
 			goto warcDone;
 		}
 		// we do terminate last warc rec with \0 so be aware of that...
@@ -3561,7 +3598,7 @@ bool XmlDoc::indexWarcOrArc ( char ctype ) {
 		// none?
 		if ( ! *whp ) {
 			log("build: could not find WARC/1 header start for "
-			    "file=%s",  file->getFilename());
+			    "file=%s",  m_firstUrl.getUrl());
 			// we don't really need this and since we force the 
 			// http reply to end in \0 before calling inject2() on
 			// it it gets messed up
@@ -3575,7 +3612,7 @@ bool XmlDoc::indexWarcOrArc ( char ctype ) {
 		if ( ! warcHeaderEnd ) {
 			log("build: could not find end of WARC header for "
 			    "file=%s.",
-			    file->getFilename());
+			    m_firstUrl.getUrl());
 			goto warcDone;
 		}
 		// \0 term for strstrs below
@@ -3627,8 +3664,6 @@ bool XmlDoc::indexWarcOrArc ( char ctype ) {
 		m_fptr += recSize;
 
 		// advance the file offset to the next record as well
-		m_fileOff += recSize;
-
 
 		// get WARC-Type:
 		// revisit  (if url was already done before)
@@ -3689,7 +3724,7 @@ bool XmlDoc::indexWarcOrArc ( char ctype ) {
 		// none?
 		if ( ! *whp ) {
 			log("build: arc: could not find next \\nhttp:// in "
-			    "arc file %s",file->getFilename());
+			    "arc file %s",m_firstUrl.getUrl());
 			goto warcDone;
 		}
 		char *arcHeader = whp;
@@ -3742,7 +3777,6 @@ bool XmlDoc::indexWarcOrArc ( char ctype ) {
 		// point to the next arc record
 		m_fptr += recSize;
 		// advance the file offset to the next record as well
-		m_fileOff += recSize;
 		// arcConType needs to indexable
 		int32_t ct = getContentTypeFromStr ( arcConType );
 		if ( ct != CT_HTML &&
@@ -3814,7 +3848,6 @@ bool XmlDoc::indexWarcOrArc ( char ctype ) {
 
 	// don't read the next record, read THIS one again, we can fit it
 	if ( m_fptr > m_fptrEnd ) {
-		m_fileOff -= recSize; // backpedal to point to THIS rec
 		needReadMore = true;
 		goto readMore;
 	}
@@ -3825,8 +3858,8 @@ bool XmlDoc::indexWarcOrArc ( char ctype ) {
 	// should be a mime that starts with GET or POST
 	HttpMime m;
 	if ( ! m.set ( httpReply , httpReplySize , NULL ) ) {
-		log("build: archive: failed to set http mime at %"INT64" in "
-		    "file",oldOff);
+		log("build: archive: failed to set http mime at in "
+		    "file");
 		goto loop;
 	}
 
@@ -19372,6 +19405,10 @@ char **XmlDoc::getExpandedUtf8Content ( ) {
 
 static SafeBuf s_cookieBuf;
 
+
+
+
+
 void *systemStartWrapper_r ( void *state , ThreadEntry *t ) {
 
 	XmlDoc *THIS = (XmlDoc *)state;
@@ -19423,33 +19460,28 @@ void systemDoneWrapper ( void *state , ThreadEntry *t ) {
 }
 
 // we download large files to a file on disk, like warcs and arcs
-BigFile *XmlDoc::getUtf8ContentInFile ( int64_t *fileSizeArg ) {
-
-	if ( m_fileValid ) {
-		*fileSizeArg = m_fileSize;
-		return &m_file;
-	}
+FILE *XmlDoc::getUtf8ContentInFile () {
 
 	setStatus ("wgetting archive file");
 
-	if ( m_calledWgetThread ) {
+	// if ( m_calledWgetThread ) {
 
-		char filename[2048];
-		snprintf ( filename,
-			   2048,
-			   "gbarchivefile%"UINT32"",
-			   (int32_t)(int64_t)this);
+	// 	char filename[2048];
+	// 	snprintf ( filename,
+	// 		   2048,
+	// 		   "gbarchivefile%"UINT32"",
+	// 		   (int32_t)(int64_t)this);
 
-		m_file.set ( g_hostdb.m_dir , filename );
-		m_fileSize = m_file.getFileSize();
-		m_fileValid = true;
-		*fileSizeArg = m_fileSize;
-		m_file.open(O_RDONLY);
-		// explicitly set it to false now to make it harder for
-		// it not to be true because that messes things up
-		m_file.m_usePartFiles = false;
-		return &m_file;
-	}
+	// 	m_file.set ( g_hostdb.m_dir , filename );
+	// 	m_fileSize = m_file.getFileSize();
+	// 	m_fileValid = true;
+	// 	*fileSizeArg = m_fileSize;
+	// 	m_file.open(O_RDONLY);
+	// 	// explicitly set it to false now to make it harder for
+	// 	// it not to be true because that messes things up
+	// 	m_file.m_usePartFiles = false;
+	// 	return &m_file;
+	// }
 
 	// before calling the system wget thread we gotta set the cookiebuf
 	// HACK: for archive.org
@@ -19527,24 +19559,64 @@ BigFile *XmlDoc::getUtf8ContentInFile ( int64_t *fileSizeArg ) {
 
 	m_calledWgetThread = true;
 
-	// . call thread to call popen
+	char cmd[MAX_URL_LEN+256];
+	snprintf( cmd,
+		  MAX_URL_LEN+256,
+
+			  "set -o pipefail;"
+			  "wget -O- --limit-rate=100K --header=\"Cookie: %s\" \"%s\"|"
+			  "zcat|"
+			  "mbuffer -t -m 1M -P 80 -o-",
+			  s_cookieBuf.getBufStart() ,
+              m_firstUrl.getUrl());
+
+	log("build: wget: %s",cmd );
+
+	g_loop.disableTimer();
+	FILE* fh = popen(cmd, "r");
+	g_loop.enableTimer();
+	int	fd = fileno(fh);
+	int flags = fcntl(fd, F_GETFL, 0);
+	if(fcntl(fd, F_SETFL, flags | O_NONBLOCK)) {
+        log("build: could not set wget stream to nonblocking %s", 
+			m_firstUrl.getUrl());
+		//error
+	}
+
+	if(!g_loop.registerReadCallback ( fd,
+									  this ,
+									  doneReadingArchiveFileWrapper,
+									  m_niceness    )) {
+		log("build: failed to register warc read callback." );
+		return NULL;
+	}
+
+
+	log("build: called popen");
+
+	m_registeredWgetSleepCallback = true;
+	return fh;
+
+	//	return getUtf8ContentInFile ( fileSizeArg );
+
+
 	// . callThread returns true on success, in which case we block
-	if ( g_threads.call ( FILTER_THREAD        ,
-			      MAX_NICENESS         ,
-			      (void *)this                 , // this
-			      systemDoneWrapper    ,
-			      systemStartWrapper_r ) ) 
-		// would block, wait for thread
-		return (BigFile *)-1;
-	// failed?
-	log("build: failed to launch wget thread");
+	// if ( g_threads.call ( FILTER_THREAD        ,
+	// 		      MAX_NICENESS         ,
+	// 		      (void *)this                 , // this
+	// 		      systemDoneWrapper    ,
+	// 					  systemStartWrapper_r ) ) 
+	// 	// would block, wait for thread
+	// 	return (BigFile *)-1;
+	// // failed?
+	// log("build: failed to launch wget thread");
 	// If we run it in this thread then if we are fetching 
 	// a local url it will block forever.
 	// systemStartWrapper_r(this,NULL);
 	// return getUtf8ContentInFile ( fileSizeArg );
-	g_errno = ETHREADSDISABLED;
+	//g_errno = ETHREADSDISABLED;
 
-	return NULL;
+	//return NULL;
 }
 
 // . get the final utf8 content of the document
