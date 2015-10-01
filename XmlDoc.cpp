@@ -28742,6 +28742,10 @@ bool XmlDoc::appendNewMetaInfo ( SafeBuf *metaList , bool forDelete ) {
 	// wtf?
 	if ( ! od ) return true;
 
+	// dedup. if already in there, do not re-add it
+	if ( strstr ( od->ptr_metadata , ptr_metadata ) )
+		return true;
+
 	SafeBuf md;
 
 	// copy over and append
