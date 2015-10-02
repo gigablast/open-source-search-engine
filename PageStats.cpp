@@ -2162,6 +2162,34 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 	p.safePrintf("<td>%"UINT64"</td></tr>\n",total);
 
 
+	p.safePrintf("<tr class=poo><td><b>file cache adds</b></td>");
+	total = 0;
+	for ( int32_t i = 0 ; i < nr ; i++ ) {
+		Rdb *rdb = rdbs[i];
+		RdbCache *rpc = getDiskPageCache ( rdb->m_rdbId );
+		if ( ! rpc ) {
+			p.safePrintf("<td>--</td>");
+			continue;
+		}
+		p.safePrintf("<td>%"UINT64"</td>",rpc->m_adds);
+	}
+	p.safePrintf("<td>%"UINT64"</td></tr>\n",total);
+
+
+	p.safePrintf("<tr class=poo><td><b>file cache drops</b></td>");
+	total = 0;
+	for ( int32_t i = 0 ; i < nr ; i++ ) {
+		Rdb *rdb = rdbs[i];
+		RdbCache *rpc = getDiskPageCache ( rdb->m_rdbId );
+		if ( ! rpc ) {
+			p.safePrintf("<td>--</td>");
+			continue;
+		}
+		p.safePrintf("<td>%"UINT64"</td>",rpc->m_deletes);
+	}
+	p.safePrintf("<td>%"UINT64"</td></tr>\n",total);
+
+
 	p.safePrintf("<tr class=poo><td><b>file cache used</b></td>");
 	total = 0;
 	for ( int32_t i = 0 ; i < nr ; i++ ) {

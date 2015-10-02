@@ -3579,7 +3579,7 @@ bool SpiderColl::evalIpLoop ( ) {
 					  600, // maxAge, 600 seconds
 					  true ,// incCounts
 					  &cachedTimestamp , // rec timestamp
-					  false);//true );  // promote rec?
+					  true );  // promote rec?
 		//wc->verify();
 	}
 
@@ -5251,11 +5251,9 @@ bool SpiderColl::addWinnersIntoDoledb ( ) {
 
 
 	// i've seen this happen, wtf?
-	if ( m_winnerTree.isEmpty() ) { 
-		if ( g_conf.m_logDebugSpider )
-			log(LOG_DEBUG,"spider: empty winner tree for cn=%i "
-			    "scanningip=%s",(int)m_collnum,
-			    iptoa(m_scanningIp));
+	if ( m_winnerTree.isEmpty() && m_minFutureTimeMS ) { 
+		// this will update the waiting tree key with minFutureTimeMS
+		addDoleBufIntoDoledb ( NULL , false );
 		return true;
 	}
 

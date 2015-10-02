@@ -543,7 +543,7 @@ bool RdbCache::getRecord ( collnum_t collnum   ,
 	// of the delete head's space i guess.
 	// i do this for all caches now... what are the downsides? i forget.
 	//
-	bool check = false;
+	bool check = true;//false;
 	//if ( this == &g_genericCache[SITEQUALITY_CACHEID] ) check = true;
 	if ( this ==  g_dns.getCache      ()              ) check = true;
 	if ( this ==  g_dns.getCacheLocal ()              ) check = true;
@@ -558,11 +558,11 @@ bool RdbCache::getRecord ( collnum_t collnum   ,
 	//if ( this == &g_tagdb.m_listCache                ) check = true;
 	// the exact count cache...
 	//if ( this == &g_qtable                            ) check = true;
-	if ( m_totalBufSize < 20000                       ) check = false;
+	//if ( m_totalBufSize < 20000                       ) check = false;
 	if ( check ) promoteRecord = false;
 	// sanity check, do not allow the site quality cache or dns cache to 
 	// be > 128MB, that just does not make sense and it complicates things
-	if ( check && m_totalBufSize > BUFSIZE ) { char *xx = NULL; *xx = 0; }
+	//if(check && m_totalBufSize > BUFSIZE ) { char *xx = NULL; *xx = 0; }
 	// sanity check
 	if ( m_tail < 0 || m_tail > m_totalBufSize ) { 
 		char *xx = NULL; *xx = 0; }
