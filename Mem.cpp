@@ -21,7 +21,7 @@
 
 // uncomment this for EFENCE to do underflow checks instead of the
 // default overflow checks
-//#define _CHECKUNDERFLOW_
+//#define CHECKUNDERFLOW
 
 // only Mem.cpp can call ::malloc, everyone else must call mmalloc() so
 // we can keep tabs on memory usage. in Mem.h we #define this to be coreme()
@@ -2168,7 +2168,7 @@ void *getElecMem ( int32_t size ) {
 	// a page above OR a page below
 	// let's go below this time since that seems to be the problem
 
-#ifdef _CHECKUNDERFLOW_
+#ifdef CHECKUNDERFLOW
 	// how much to alloc
 	// . assume sysmalloc returs one byte above a page, so we need
 	//   MEMPAGESIZE-1 bytes to move p up to page boundary, another
@@ -2302,7 +2302,7 @@ void freeElecMem ( void *fakeMem ) {
 	char *label    = &s_labels[((uint32_t)h)*16];
 	int32_t  fakeSize =  s_sizes[h];
 
-#ifdef _CHECKUNDERFLOW_
+#ifdef CHECKUNDERFLOW
 	char *oldProtMem = cp - MEMPAGESIZE;
 #else
 	char *oldProtMem = cp + fakeSize;

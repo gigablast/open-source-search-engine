@@ -734,6 +734,18 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 		p.safePrintf("<td>%"INT64"</td>",a);
 	}
 
+	p.safePrintf ("</tr>\n<tr class=poo><td><b><nobr>dropped recs</td>" );
+	for ( int32_t i = 0 ; i < numCaches ; i++ ) {
+		int64_t a = caches[i]->m_deletes;
+		p.safePrintf("<td>%"INT64"</td>",a);
+	}
+
+	p.safePrintf ("</tr>\n<tr class=poo><td><b><nobr>added recs</td>" );
+	for ( int32_t i = 0 ; i < numCaches ; i++ ) {
+		int64_t a = caches[i]->m_adds;
+		p.safePrintf("<td>%"INT64"</td>",a);
+	}
+
 	//p.safePrintf ("</tr>\n<tr class=poo><td><b><nobr>max age</td>" );
 	//for ( int32_t i = 0 ; i < numCaches ; i++ ) {
 	//	int64_t a = caches[i]->getMaxMem();

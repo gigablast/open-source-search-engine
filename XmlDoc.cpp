@@ -21582,12 +21582,13 @@ bool XmlDoc::logIt ( SafeBuf *bb ) {
 	//
 	// print # of link texts from 2nd coll
 	//
-	if ( m_linkInfo2Valid ) {
-		LinkInfo *info = ptr_linkInfo2; 
-		int32_t nt = 0;
-		if ( info ) nt = info->getNumLinkTexts();
-		if ( nt ) sb->safePrintf("goodinlinks2=%"INT32" ",nt );
-	}
+	// this is not used for what it was used for.
+	// if ( m_linkInfo2Valid && size_linkInfo2 > 4 ) {
+	// 	LinkInfo *info = ptr_linkInfo2; 
+	// 	int32_t nt = 0;
+	// 	if ( info ) nt = info->getNumLinkTexts();
+	// 	if ( nt ) sb->safePrintf("goodinlinks2=%"INT32" ",nt );
+	// }
 
 	if (  m_docIdValid ) 
 		sb->safePrintf("docid=%"UINT64" ",m_docId);
