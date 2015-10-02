@@ -157,6 +157,12 @@ bool Msg20::getSummary ( Msg20Request *req ) {
 	// do not re-route to twins if accessing an external network
 	if ( hostdb != &g_hostdb ) req->m_expected = false;
 
+	if ( req->m_docId < 0 && ! req->ptr_ubuf ) {
+		log("msg20: docid<0 and no url for msg20::getsummary");
+		g_errno = EBADREQUEST;
+		return true;
+	}
+
 	// get groupId from docId, if positive
 	uint32_t shardNum;
 	if ( req->m_docId >= 0 ) 
