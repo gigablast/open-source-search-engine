@@ -620,6 +620,7 @@ char *serializeMsg2 ( void *thisPtr ,
 		      int32_t *retSize );
 
 // convert offsets back into ptrs
+// returns -1 on error
 int32_t deserializeMsg ( int32_t  baseSize ,
 		      int32_t *firstSizeParm ,
 		      int32_t *lastSizeParm ,

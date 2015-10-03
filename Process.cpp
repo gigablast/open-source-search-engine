@@ -1687,6 +1687,9 @@ bool Process::shutdown2 ( ) {
 	if ( g_process.m_threadOut ) 
 		log(LOG_INFO,"gb: still has hdtemp thread");
 
+
+	log("gb. EXITING.");
+
 	// exit abruptly
 	exit(0);
 

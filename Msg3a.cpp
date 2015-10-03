@@ -742,14 +742,6 @@ bool Msg3a::gotAllShardReplies ( ) {
 		// cast it and set it
 		m_reply       [i] = mr;
 		m_replyMaxSize[i] = replyMaxSize;
-		// deserialize it (just sets the ptr_ and size_ member vars)
-		//mr->deserialize ( );
-		deserializeMsg ( sizeof(Msg39Reply) ,
-				 &mr->size_docIds,
-				 &mr->size_clusterRecs,
-				 &mr->ptr_docIds,
-				 mr->m_buf );
-
 		// sanity check
 		if ( mr->m_nqt != m_q->getNumTerms() ) {
 			g_errno = EBADREPLY;
@@ -766,6 +758,20 @@ bool Msg3a::gotAllShardReplies ( ) {
 			log("query: msg3a: Shard had error: %s",
 			    mstrerror(g_errno));
 			return true;
+		}
+		// deserialize it (just sets the ptr_ and size_ member vars)
+		//mr->deserialize ( );
+		if ( ! deserializeMsg ( sizeof(Msg39Reply) ,
+					&mr->size_docIds,
+					&mr->size_clusterRecs,
+					&mr->ptr_docIds,
+					mr->m_buf ) ) {
+			g_errno = ECORRUPTDATA;
+			m_errno = ECORRUPTDATA;
+			log("query: msg3a: Shard had error: %s",
+			    mstrerror(g_errno));
+			return true;
+
 		}
 		// skip down here if reply was already set
 		//skip:

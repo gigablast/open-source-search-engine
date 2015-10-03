@@ -532,6 +532,10 @@ Timedb.o:
 HashTableX.o:
 	$(CC) $(DEFS) $(CPPFLAGS)  -O2 -c $*.cpp 
 
+# getUrlFilterNum2()
+Spider.o:
+	$(CC) $(DEFS) $(CPPFLAGS)  -O2 -c $*.cpp 
+
 SpiderCache.o:
 	$(CC) $(DEFS) $(CPPFLAGS)  -O2 -c $*.cpp 
 

@@ -16963,9 +16963,8 @@ char **XmlDoc::getHttpReply2 ( ) {
 	bool isInjecting = getIsInjecting();
 	if ( ! isInjecting && m_sreqValid     && m_sreq.m_hopCount == 0 )
 		r->m_isRootSeedUrl = 1;
-	// only if it was a seed for now... so comment out
-	// if ( ! isInjecting && m_hopCountValid && m_hopCount        == 0 )
-	// 	r->m_isRootSeedUrl = 1;
+	if ( ! isInjecting && m_hopCountValid && m_hopCount        == 0 )
+		r->m_isRootSeedUrl = 1;
 
 	// sanity check
 	if ( ! m_firstIpValid ) { char *xx=NULL;*xx=0; }
@@ -19218,6 +19217,9 @@ char **XmlDoc::getExpandedUtf8Content ( ) {
 		// "" is not acceptable either. techcrunch.com has
 		// <iframe src=""> which ends up embedding the root url.
 		if ( urlLen == 0 ) 
+			continue;
+		// skip if "about:blank"
+		if ( urlLen==11 && strncmp(url,"about:blank",11) == 0 )
 			continue;
 		// get our current url
 		//cu = getCurrentUrl();
@@ -21580,12 +21582,13 @@ bool XmlDoc::logIt ( SafeBuf *bb ) {
 	//
 	// print # of link texts from 2nd coll
 	//
-	if ( m_linkInfo2Valid ) {
-		LinkInfo *info = ptr_linkInfo2; 
-		int32_t nt = 0;
-		if ( info ) nt = info->getNumLinkTexts();
-		if ( nt ) sb->safePrintf("goodinlinks2=%"INT32" ",nt );
-	}
+	// this is not used for what it was used for.
+	// if ( m_linkInfo2Valid && size_linkInfo2 > 4 ) {
+	// 	LinkInfo *info = ptr_linkInfo2; 
+	// 	int32_t nt = 0;
+	// 	if ( info ) nt = info->getNumLinkTexts();
+	// 	if ( nt ) sb->safePrintf("goodinlinks2=%"INT32" ",nt );
+	// }
 
 	if (  m_docIdValid ) 
 		sb->safePrintf("docid=%"UINT64" ",m_docId);
