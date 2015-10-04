@@ -24,6 +24,7 @@ class JsonItem {
 	class JsonItem *m_next,*m_prev;
 	class JsonItem *m_parent;//child;
 
+
 	// the JT_* values above
 	int m_type;
 
@@ -42,7 +43,6 @@ class JsonItem {
 	int32_t m_valueLen;
 
 	char *m_valueArray;
-
 
 	// for JT_String
 	int32_t  getValueLen() { return m_valueLen; };
@@ -78,6 +78,8 @@ class Json {
 
 	JsonItem *parseJsonStringIntoJsonItems ( char *json , int32_t niceness );
 
+	bool printToString(SafeBuf& out);
+
 	JsonItem *getFirstItem ( ) ;
 
 	JsonItem *getItem ( char *name );
@@ -86,6 +88,9 @@ class Json {
 
 	Json() { m_stackPtr = 0; m_prev = NULL; };
 	
+	static bool prependKey(SafeBuf& jsonString, char* newKey);
+
+
 	SafeBuf m_sb;
 	JsonItem *m_stack[MAXJSONPARENTS];
 	int32_t m_stackPtr;

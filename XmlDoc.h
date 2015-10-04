@@ -2402,7 +2402,6 @@ class XmlDoc {
 	bool          m_setFromDocId;
 	bool          m_freeLinkInfo1;
 	bool          m_freeLinkInfo2;
-
 	bool          m_contentInjected;
 
 	bool          m_recycleContent;

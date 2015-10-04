@@ -327,6 +327,7 @@ public:
 		return true;
 	};
 
+	int32_t indexOf(char c);
 
 	bool  safeCdataMemcpy(char *s, int32_t len);
 	bool  pushChar (char i) {

@@ -189,6 +189,7 @@ XmlDoc::XmlDoc() {
 	m_numMsg4fRequests = 0;
 	m_numMsg4fReplies = 0;
 	m_sentMsg4fRequests = false;
+
 	//m_notifyBlocked = 0;
 	//m_mcasts = NULL;
 	//for ( int32_t i = 0 ; i < g_hostdb.m_numHosts ; i++ ) 
@@ -608,6 +609,7 @@ void XmlDoc::reset ( ) {
 	     ) {
 		mfree ( m_rawUtf8Content, m_rawUtf8ContentAllocSize,"Xml3");
 	}
+
 	// reset this
 	m_contentInjected = false;
 	m_rawUtf8ContentValid = false;
@@ -1459,8 +1461,10 @@ bool XmlDoc::set4 ( SpiderRequest *sreq      ,
 		m_recycleContent = m_sreq.m_recycleContent;
 
 	m_hasMetadata = (bool)metadata;
+
 	ptr_metadata = metadata;
 	size_metadata = metadataLen;
+
 	return true;
 }
 
@@ -2660,7 +2664,7 @@ bool XmlDoc::indexDoc ( ) {
 			return true;
 
 		//SafeBuf metaList;
-
+		
 		char rd = RDB_SPIDERDB;
 		if ( m_useSecondaryRdbs ) rd = RDB2_SPIDERDB2;
 		if ( ! m_metaList2.pushChar( rd ) )
@@ -3381,6 +3385,7 @@ void doneReadingArchiveFileWrapper ( void *state ) {
 bool XmlDoc::indexWarcOrArc ( char ctype ) {
 
 	int8_t *hc = getHopCount();
+	char *warcDate = NULL;
 	if ( ! hc ) return true; // error?
 	if ( hc == (void *)-1 ) return false;
 
@@ -3587,7 +3592,7 @@ bool XmlDoc::indexWarcOrArc ( char ctype ) {
 		char *warcLen  = strstr(warcHeader,"Content-Length:");
 		char *warcUrl  = strstr(warcHeader,"WARC-Target-URI:");
 		char *warcType = strstr(warcHeader,"WARC-Type:");
-		char *warcDate = strstr(warcHeader,"WARC-Date:");
+		warcDate = strstr(warcHeader,"WARC-Date:");
 		char *warcIp   = strstr(warcHeader,"WARC-IP-Address:");
 		char *warcCon  = strstr(warcHeader,"Content-Type:");
 
@@ -3895,17 +3900,28 @@ bool XmlDoc::indexWarcOrArc ( char ctype ) {
 	ir->ptr_queryToScrape = NULL;
 	ir->ptr_contentFile = NULL;
 	ir->ptr_diffbotReply = NULL;
-	ir->ptr_metadata = ptr_metadata;
-	ir->size_metadata = size_metadata;
 
-	//
+
+	// Stick the capture date in the metadata
+	StackBuf(newKey);
+	newKey.safePrintf("\"gbcapturedate\":%"INT64, recTime);
+	SafeBuf newMetadata(newKey.length() * 2 + size_metadata, "ModifiedMetadata");
+
+	newMetadata.safeMemcpy(ptr_metadata, size_metadata);
+	Json::prependKey(newMetadata, newKey.getBufStart());
+
+	ir->ptr_metadata = newMetadata.getBufStart();
+	ir->size_metadata = newMetadata.length();
+
+	newMetadata.nullTerm();
+	log("injected capture date into metadata %s ", ir->ptr_metadata);
 	// set 'timestamp' for injection
 	//
 	ir->m_firstIndexed = recTime;
 	ir->m_lastSpidered = recTime;
 
 
-
+	log("build: warc record time was %s %"INT64, warcDate, recTime);
 	// set 'ip' for injection
 
 	ir->m_injectDocIp = 0;
@@ -28741,6 +28757,7 @@ bool XmlDoc::appendNewMetaInfo ( SafeBuf *metaList , bool forDelete ) {
 
 	// wtf?
 	if ( ! od ) return true;
+
 
 	// dedup. if already in there, do not re-add it
 	if ( strstr ( od->ptr_metadata , ptr_metadata ) )

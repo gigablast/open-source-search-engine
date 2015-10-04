@@ -1501,7 +1501,7 @@ bool qaTimeAxis ( ) {
 	// since it had a EDOCUNCHANGED error the 2nd time around but
 	// different metadata.
 	if ( ! s_flags[EXAMINE_RESULTS1] ) {
-	 	s_flags[16] = true;
+	 	s_flags[EXAMINE_RESULTS1] = true;
 	 	if ( ! getUrl ( "/search?c=qatest123&qa=1&"
 				"format=json&"
 				"q=qatesttime:197",
