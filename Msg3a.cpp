@@ -1177,18 +1177,6 @@ bool Msg3a::mergeLists ( ) {
 				continue;
 			}
 
-			fe2->m_count += fe->m_count;
-
-			// also accumualte count of total docs, not just in
-			// the search results, that have this value for this
-			// facet
-			fe2->m_outsideSearchResultsCount += 
-				fe->m_outsideSearchResultsCount;
-
-			// prefer docid kinda randomly to balance 
-			// lookupFacets() load in Msg40.cpp
-			if ( rand() % 2 )
-				fe2->m_docId = fe->m_docId;
 
 
 			if ( isFloat ) {
@@ -1198,22 +1186,37 @@ bool Msg3a::mergeLists ( ) {
 				sum2 += sum1;
 				*((double *)&fe2->m_sum) = sum2;
 				// and min/max as floats
+
 				float min1 = *((float *)&fe ->m_min);
 				float min2 = *((float *)&fe2->m_min);
-				if ( min1 < min2 ) min2 = min1;
+				if ( fe2->m_count==0 || (fe->m_count!=0 && min1 < min2 )) min2 = min1;
 				*((float *)&fe2->m_min) = min2;
 				float max1 = *((float *)&fe ->m_max);
 				float max2 = *((float *)&fe2->m_max);
-				if ( max1 > max2 ) max2 = max1;
+				if ( fe2->m_count==0 || (fe->m_count!=0 && max1 > max2 )) max2 = max1;
 				*((float *)&fe2->m_max) = max2;
 			}
 			if ( isInt ) {
 				fe2->m_sum += fe->m_sum;
-				if ( fe->m_min < fe2->m_min )
+				if ( fe2->m_count==0 || (fe->m_count!=0 && fe->m_min < fe2->m_min ))
 					fe2->m_min = fe->m_min;
-				if ( fe->m_max > fe2->m_max )
+				if ( fe2->m_count==0 || (fe->m_count!=0 && fe->m_max > fe2->m_max ))
 					fe2->m_max = fe->m_max;
 			}
+
+			fe2->m_count += fe->m_count;
+
+			// also accumualte count of total docs, not just in
+			// the search results, that have this value for this
+			// facet
+			fe2->m_outsideSearchResultsCount +=
+				fe->m_outsideSearchResultsCount;
+
+			// prefer docid kinda randomly to balance
+			// lookupFacets() load in Msg40.cpp
+			if ( rand() % 2 )
+				fe2->m_docId = fe->m_docId;
+
 
 		}
 
