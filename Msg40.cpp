@@ -1243,11 +1243,12 @@ bool Msg40::reallocMsg20Buf ( ) {
 	m_buf2        = NULL;
 	m_bufMaxSize2 = need;
 
-	if ( need > 2000000000 ) {
-		log("msg40: need too much mem=%"INT64,need);
-		m_errno = g_errno; 
-		return false; 
-	}
+	// if ( need > 2000000000 ) {
+	// 	log("msg40: need too much mem=%"INT64,need);
+	// 	m_errno = ENOMEM;
+	// 	g_errno = ENOMEM;
+	// 	return false; 
+	// }
 
 	// do the alloc
 	if ( need ) m_buf2 = (char *)mmalloc ( need ,"Msg40msg20");
