@@ -1007,8 +1007,9 @@ bool PosdbTable::allocTopTree ( ) {
 			continue;
 		// how big?
 		int64_t total = m_msg2->m_lists[i].getListSize();
-		// skip if empty
-		if ( total == 0 ) {
+		// skip if empty. no we could be doing a split that is
+		// empty but other splits are full
+		if ( total == 0 && m_r->m_numDocIdSplits <= 1 ) {
 			log("query: empty facets for term #%i",i);
 			continue;
 		}
