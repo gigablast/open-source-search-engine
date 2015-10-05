@@ -1261,11 +1261,13 @@ bool gotResults ( void *state ) {
 	}
 
 	// this causes ooms everywhere, not a good fix
-	// if ( ! msg40->m_msg20 && ! si->m_docIdsOnly ) {
-	// 	log("msg40: failed to get results q=%s",si->m_q.m_orig);
-	// 	g_errno = ENOMEM;
-	// 	return sendReply(st,NULL);
-	// }
+	if ( ! msg40->m_msg20 && ! si->m_docIdsOnly && msg40->m_errno ) {
+	 	log("msg40: failed to get results q=%s",si->m_q.m_orig);
+	 	//g_errno = ENOMEM;
+		g_errno = msg40->m_errno;
+	 	return sendReply(st,NULL);
+	}
+
 
 
 
