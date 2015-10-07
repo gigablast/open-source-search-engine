@@ -1280,12 +1280,12 @@ bool ThreadQueue::timedCleanUp ( int32_t maxNiceness ) {
 				    "jointid=0x%"XINT64".",
 				    (PTRTYPE)t,(int64_t)t->m_joinTid);
 
-			g_threads.returnStack ( t->m_si );
-			t->m_stack = NULL;
 			// re-protect this stack
 			mprotect ( t->m_stack + GUARDSIZE , 
 				   STACK_SIZE - GUARDSIZE, 
 				   PROT_NONE );
+			g_threads.returnStack ( t->m_si );
+			t->m_stack = NULL;
 
 		}
 		
@@ -1320,11 +1320,11 @@ bool ThreadQueue::timedCleanUp ( int32_t maxNiceness ) {
 				    "for unknown reason." , pid );
 		}
 		//mfree ( t->m_stack , STACK_SIZE , "Threads" );
-		g_threads.returnStack ( t->m_si );
-		t->m_stack = NULL;
 		// re-protect this stack
 		mprotect ( t->m_stack + GUARDSIZE , STACK_SIZE - GUARDSIZE, 
 			   PROT_NONE );
+		g_threads.returnStack ( t->m_si );
+		t->m_stack = NULL;
 		// debug msg
 		if ( g_conf.m_logDebugThread )
 			log(LOG_DEBUG,"thread: joined with pid=%"INT32" pid=%"INT32".",
@@ -1645,12 +1645,12 @@ bool ThreadQueue::cleanUp ( ThreadEntry *tt , int32_t maxNiceness ) {
 				    "jointid=0x%"XINT64".",
 				    (PTRTYPE)t,(int64_t)t->m_joinTid);
 
-			g_threads.returnStack ( t->m_si );
-			t->m_stack = NULL;
 			// re-protect this stack
 			mprotect ( t->m_stack + GUARDSIZE , 
 				   STACK_SIZE - GUARDSIZE, 
 				   PROT_NONE );
+			g_threads.returnStack ( t->m_si );
+			t->m_stack = NULL;
 
 		}
 #else
@@ -1684,11 +1684,11 @@ bool ThreadQueue::cleanUp ( ThreadEntry *tt , int32_t maxNiceness ) {
 				    "for unknown reason." , pid );
 		}
 		//mfree ( t->m_stack , STACK_SIZE , "Threads" );
-		g_threads.returnStack ( t->m_si );
-		t->m_stack = NULL;
 		// re-protect this stack
 		mprotect ( t->m_stack + GUARDSIZE , STACK_SIZE - GUARDSIZE, 
 			   PROT_NONE );
+		g_threads.returnStack ( t->m_si );
+		t->m_stack = NULL;
 
 #endif
 
@@ -2741,6 +2741,13 @@ bool ThreadQueue::launchThreadForReals ( ThreadEntry **headPtr ,
 
 	// it didn't launch, did it? dec the count.
 	m_launched--;
+	// re-protect this stack
+	mprotect ( t->m_stack + GUARDSIZE , STACK_SIZE - GUARDSIZE, 
+		   PROT_NONE );
+	// RETURN THE STACK
+	g_threads.returnStack ( t->m_si );
+	t->m_stack = NULL;
+
 	/*
 	// priority-based LOCAL & GLOBAL launch counts
 	if      ( realNiceness <= 0 ) m_hiLaunched--;
