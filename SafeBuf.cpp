@@ -3684,3 +3684,12 @@ bool SafeBuf::hasDigits() {
 		if ( is_digit(m_buf[i]) ) return true;
 	return false;
 }
+
+
+int32_t SafeBuf::indexOf(char c) {
+	char* p = m_buf;
+	char* pend = m_buf + m_length;
+	while (p < pend && *p != c) p++;
+	if (p == pend) return -1;
+	return p - m_buf;
+}
