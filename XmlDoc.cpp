@@ -1561,6 +1561,7 @@ bool XmlDoc::set2 ( char    *titleRec ,
 	// . first thing is the key
 	// . key should have docId embedded in it
 	m_titleRecKey =  *(key_t *) p ;   
+	//m_titleRecKeyValid = true;
 	p += sizeof(key_t);
 	// bail on error
 	if ( (m_titleRecKey.n0 & 0x01) == 0x00 ) {
@@ -28797,12 +28798,22 @@ bool XmlDoc::appendNewMetaInfo ( SafeBuf *metaList , bool forDelete ) {
 	if ( m_usePosdb && ! addTable144 ( &tt1 , od->m_docId , &sb ) )
 		return false;
 
-	int64_t uh48 = m_firstUrl.getUrlHash48();
+	// this could use time axis so that is taken into account
+	int64_t uh48 = getFirstUrlHash48();
 
 	// and re-formulate (and compress) his new title rec
 	SafeBuf trec;
 	if ( ! od->setTitleRecBuf ( &trec , od->m_docId , uh48 ) )
 		return false;
+
+	// force the title rec key to be the same
+	// if ( od->m_titleRecKeyValid && trec.getLength() >= sizeof(key_t) ) {
+	// 	char *p = trec.getBufStart();
+	// 	*(key_t *)p = od->m_titleRecKey;
+	// }
+	// else {
+	// 	log("build: old titlerec invalid docid=%"INT64,od->m_docId);
+	// }
 
 	// store the posdb keys in the meta list
 	if ( m_usePosdb && ! metaList->safeMemcpy ( &sb ) )
