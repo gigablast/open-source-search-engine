@@ -1386,9 +1386,9 @@ bool Loop::runLoop ( ) {
 		if ( m_shutdown == 2 ) {
 			//log(0,"Thread is saving & shutting down urgently.");
 			//while ( 1 == 1 ) sleep (50000);
-			log("loop: Resuming despite thread crash.");
-			m_shutdown = 0;
-			goto BIGLOOP;
+			//log("loop: Resuming despite thread crash.");
+			//m_shutdown = 0;
+			//goto BIGLOOP;
 		}
 		// otherwise, thread did not save, so we must do it
 		log ( LOG_INIT ,"loop: Saving and shutting down urgently.");

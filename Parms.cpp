@@ -11297,7 +11297,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "0";
 	m->m_group = 0;
-	m->m_flags = PF_HIDDEN | PF_NOSAVE;
+	m->m_flags = 0;//PF_HIDDEN | PF_NOSAVE;
 	m->m_page  = PAGE_MASTER;
 	m->m_obj   = OBJ_CONF;
 	m++;

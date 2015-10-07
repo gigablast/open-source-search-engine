@@ -190,6 +190,7 @@ XmlDoc::XmlDoc() {
 	m_numMsg4fRequests = 0;
 	m_numMsg4fReplies = 0;
 	m_sentMsg4fRequests = false;
+
 	//m_notifyBlocked = 0;
 	//m_mcasts = NULL;
 	//for ( int32_t i = 0 ; i < g_hostdb.m_numHosts ; i++ ) 
@@ -254,6 +255,8 @@ void XmlDoc::reset ( ) {
 
 
 	m_redirUrl.reset();
+
+	m_updatedMetaData = false;
 
 	m_ipStartTime = 0;
 	m_ipEndTime   = 0;
@@ -615,6 +618,7 @@ void XmlDoc::reset ( ) {
 	     ) {
 		mfree ( m_rawUtf8Content, m_rawUtf8ContentAllocSize,"Xml3");
 	}
+
 	// reset this
 	m_contentInjected = false;
 	m_rawUtf8ContentValid = false;
@@ -1466,8 +1470,10 @@ bool XmlDoc::set4 ( SpiderRequest *sreq      ,
 		m_recycleContent = m_sreq.m_recycleContent;
 
 	m_hasMetadata = (bool)metadata;
+
 	ptr_metadata = metadata;
 	size_metadata = metadataLen;
+
 	return true;
 }
 
@@ -2667,7 +2673,7 @@ bool XmlDoc::indexDoc ( ) {
 			return true;
 
 		//SafeBuf metaList;
-
+		
 		char rd = RDB_SPIDERDB;
 		if ( m_useSecondaryRdbs ) rd = RDB2_SPIDERDB2;
 		if ( ! m_metaList2.pushChar( rd ) )
@@ -3390,6 +3396,7 @@ bool XmlDoc::indexWarcOrArc ( char ctype ) {
 		 (int32_t)m_registeredWgetSleepCallback);
 
 	int8_t *hc = getHopCount();
+	char *warcDate = NULL;
 	if ( ! hc ) return true; // error?
 	if ( hc == (void *)-1 ) return false;
 
@@ -3622,7 +3629,7 @@ bool XmlDoc::indexWarcOrArc ( char ctype ) {
 		char *warcLen  = strstr(warcHeader,"Content-Length:");
 		char *warcUrl  = strstr(warcHeader,"WARC-Target-URI:");
 		char *warcType = strstr(warcHeader,"WARC-Type:");
-		char *warcDate = strstr(warcHeader,"WARC-Date:");
+		warcDate = strstr(warcHeader,"WARC-Date:");
 		char *warcIp   = strstr(warcHeader,"WARC-IP-Address:");
 		char *warcCon  = strstr(warcHeader,"Content-Type:");
 
@@ -3926,17 +3933,28 @@ bool XmlDoc::indexWarcOrArc ( char ctype ) {
 	ir->ptr_queryToScrape = NULL;
 	ir->ptr_contentFile = NULL;
 	ir->ptr_diffbotReply = NULL;
-	ir->ptr_metadata = ptr_metadata;
-	ir->size_metadata = size_metadata;
 
-	//
+
+	// Stick the capture date in the metadata
+	StackBuf(newKey);
+	newKey.safePrintf("\"gbcapturedate\":%"INT64, recTime);
+	SafeBuf newMetadata(newKey.length() * 2 + size_metadata, "ModifiedMetadata");
+
+	newMetadata.safeMemcpy(ptr_metadata, size_metadata);
+	Json::prependKey(newMetadata, newKey.getBufStart());
+
+	ir->ptr_metadata = newMetadata.getBufStart();
+	ir->size_metadata = newMetadata.length();
+
+	newMetadata.nullTerm();
+	log("injected capture date into metadata %s ", ir->ptr_metadata);
 	// set 'timestamp' for injection
 	//
 	ir->m_firstIndexed = recTime;
 	ir->m_lastSpidered = recTime;
 
 
-
+	log("build: warc record time was %s %"INT64, warcDate, recTime);
 	// set 'ip' for injection
 
 	ir->m_injectDocIp = 0;
@@ -16996,8 +17014,9 @@ char **XmlDoc::getHttpReply2 ( ) {
 	bool isInjecting = getIsInjecting();
 	if ( ! isInjecting && m_sreqValid     && m_sreq.m_hopCount == 0 )
 		r->m_isRootSeedUrl = 1;
-	if ( ! isInjecting && m_hopCountValid && m_hopCount        == 0 )
-		r->m_isRootSeedUrl = 1;
+	// only if it was a seed for now... so comment out
+	// if ( ! isInjecting && m_hopCountValid && m_hopCount        == 0 )
+	// 	r->m_isRootSeedUrl = 1;
 
 	// sanity check
 	if ( ! m_firstIpValid ) { char *xx=NULL;*xx=0; }
@@ -19517,9 +19536,12 @@ FILE *XmlDoc::getUtf8ContentInFile () {
 		//int32_t loaded = tmp.load ( "/home/mwells/.config/internetarchive.yml");
 		int32_t loaded = tmp.load ( "auth/internetarchive.yml");
 		if(loaded <= 0) {
-			log("gb: failed to load auth/internetarchive.yml");
-			g_errno = EDOCTOOBIG;
-			return NULL;
+			if ( ! g_errno ) g_errno = EDOCTOOBIG;
+			log("gb: failed to load auth/internetarchive.yml: "
+			    "%s",mstrerror(g_errno));
+			// do not restart gb in a loop, so return 0 to shell
+			exit(0);
+			//return NULL;
 			// FIXME
 			char *xx=NULL;*xx=0;
 		}
@@ -21749,7 +21771,6 @@ bool XmlDoc::logIt ( SafeBuf *bb ) {
 	else
 		sb->safePrintf("addlistsize=%05"INT32" ",(int32_t)0);
 
-
 	if ( m_addedSpiderRequestSizeValid )
 		sb->safePrintf("addspiderreqsize=%05"INT32" ",
 			       m_addedSpiderRequestSize);
@@ -22037,6 +22058,9 @@ bool XmlDoc::logIt ( SafeBuf *bb ) {
 	if ( m_httpStatusValid && m_httpStatus != 200 )
 		sb->safePrintf("httpstatus=%"INT32" ",(int32_t)m_httpStatus);
 		
+	if ( m_updatedMetaData )
+		sb->safePrintf("updatedmetadata=1 ");
+
 	if ( m_isDupValid && m_isDup )
 		sb->safePrintf("dupofdocid=%"INT64" ",m_docIdWeAreADupOf);
 
@@ -23751,9 +23775,21 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 		size_linkInfo1 = 0;
 		m_linkInfo1Valid = false;
 
+		bool indexNewTimeStamp = false;
+		if ( getUseTimeAxis() &&
+		     od && 
+		     m_hasMetadata &&
+		     *indexCode == EDOCUNCHANGED 
+		     //m_spideredTimeValid &&
+		     //od->m_spideredTime != m_spideredTime 
+		     )
+			indexNewTimeStamp = true;
+		     
+
+
 		// . if not using spiderdb we are done at this point
 		// . this happens for diffbot json replies (m_dx)
-		if ( ! m_useSpiderdb ) {
+		if ( ! m_useSpiderdb && ! indexNewTimeStamp ) {
 			m_metaList = NULL;
 			m_metaListSize = 0;
 			return (char *)0x01;
@@ -23792,6 +23828,19 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 		// blocked?
 		if (spiderStatusDocMetaList==(void *)-1) 
 			return (char *)-1;
+
+		// . now append the new stuff.
+		// . we overwrite the old titlerec with the new one that has
+		//   some more json in the ptr_metaInfo buffer so we hash
+		//   its new timestamp. 'gbspiderdate' and any info from
+		//   the meta info given in the injection request if there.
+		//   this allows you to tag each document, even multiple
+		//   versions of the same url with the same content. so if
+		//   you spider the doc again and it is unchanged since last
+		//   time we still index some of this meta stuff.
+		if ( indexNewTimeStamp )
+			appendNewMetaInfo (spiderStatusDocMetaList,forDelete);
+
 		// need to alloc space for it too
 		int32_t len = spiderStatusDocMetaList->length();
 		needx += len;
@@ -28735,6 +28784,8 @@ char *XmlDoc::hashAll ( HashTableX *table ) {
 	// . this is in LinkInfo::hash
 	//if ( ! hashMinInlinks ( table , linkInfo ) ) return NULL;
 
+	if ( ! hashMetaData      ( table ) ) return NULL;
+
 	// return true if we don't need to print parser info
 	//if ( ! m_pbuf ) return true;
 	// print out the table into g_bufPtr now if we need to 
@@ -28761,6 +28812,83 @@ int32_t XmlDoc::getBoostFromSiteNumInlinks ( int32_t inlinks ) {
 	if ( inlinks >= 25600 ) boost1 = 650;
 	if ( inlinks >= 51200 ) boost1 = 700;
 	return boost1;
+}
+
+bool XmlDoc::appendNewMetaInfo ( SafeBuf *metaList , bool forDelete ) {
+
+	// set4() called from the inject sets these two things for meta data
+	// which is basically json that augments the doc, tags it with stuff
+	if ( ! m_hasMetadata ) return true;
+	if ( ! ptr_metadata  ) return true;
+
+	XmlDoc **pod = getOldXmlDoc ( );
+	if ( ! pod ) { char *xx=NULL;*xx=0; }
+	if ( pod == (XmlDoc **)-1 ) { char *xx=NULL;*xx=0; }
+	// this is non-NULL if it existed
+	XmlDoc *od = *pod;
+
+	// wtf?
+	if ( ! od ) return true;
+
+
+	// dedup. if already in there, do not re-add it
+	if ( strstr ( od->ptr_metadata , ptr_metadata ) )
+		return true;
+
+	SafeBuf md;
+
+	// copy over and append
+	if ( ! md.safeMemcpy ( od->ptr_metadata , od->size_metadata ) )
+		return false;
+	// remove trailing \0 if there
+	md.removeLastChar ( '\0' );
+	// separate from the new stuff
+	if ( ! md.safePrintf(",\n") )
+		return false;
+
+	if ( ! md.safeMemcpy ( ptr_metadata , size_metadata ) )
+		return false;
+
+	if ( ! md.nullTerm ( ) )
+		return false;
+	// update his meta data
+	od->ptr_metadata = md.getBufStart();
+	od->size_metadata = md.length();
+
+	int32_t nw = gbstrlen(ptr_metadata) * 4;
+
+	HashTableX tt1;
+	int32_t need4 = nw * 4 + 5000;
+	if ( ! tt1.set ( 18 , 4 , need4,NULL,0,false,m_niceness,"posdb-i2"))
+		return false;
+
+	od->hashMetaData ( &tt1 );
+
+	// store the posdb keys from tt1 into our safebuf, tmp
+	SafeBuf sb;
+	if ( m_usePosdb && ! addTable144 ( &tt1 , od->m_docId , &sb ) )
+		return false;
+
+	int64_t uh48 = m_firstUrl.getUrlHash48();
+
+	// and re-formulate (and compress) his new title rec
+	SafeBuf trec;
+	if ( ! od->setTitleRecBuf ( &trec , od->m_docId , uh48 ) )
+		return false;
+
+	// store the posdb keys in the meta list
+	if ( m_usePosdb && ! metaList->safeMemcpy ( &sb ) )
+		return false;
+
+	// store the updated titlerec into the meta list
+	if ( m_useTitledb && ! metaList->pushChar(RDB_TITLEDB) )
+		return false;
+	if ( m_useTitledb && ! metaList->safeMemcpy(&trec) )
+		return false;
+
+	m_updatedMetaData = true;
+
+	return true;
 }
 
 // . this is kinda hacky because it uses a short XmlDoc on the stack
@@ -29623,15 +29751,44 @@ bool XmlDoc::hashMetaTags ( HashTableX *tt ) {
 	}
 
 
-	if(ptr_metadata) {
-		Json jpMetadata;
+	return true;
+}
 
-		if (jpMetadata.parseJsonStringIntoJsonItems (ptr_metadata, m_niceness)){
-			hashJSONFields2 ( tt , &hi , &jpMetadata , false );
-		} else {
-			log("XmlDoc had error parsing json in metadata %s", ptr_metadata);
-		}
+
+bool XmlDoc::hashMetaData ( HashTableX *tt ) {
+
+	if ( ! ptr_metadata ) return true;
+
+	Json jp;
+
+	if ( ! jp.parseJsonStringIntoJsonItems (ptr_metadata, m_niceness)) {
+		log("XmlDoc had error parsing json in metadata %s", 
+		    ptr_metadata);
+		return false;
 	}
+
+	// set up the hashing parms
+	HashInfo hi;
+	hi.m_hashGroup = HASHGROUP_INMETATAG;
+	hi.m_tt        = tt;
+	hi.m_desc      = "meta data";
+	hi.m_useCountTable = false;
+
+	// always reset to word pos to 0 now when hashing a json field
+	// since it shouldn't matter because they are in a field so we
+	// have to search like myfield:whatever. this way we can
+	// augment ptr_metadata on an EDOCUNCHANGED error and
+	// not end up with undeleteable data in posdb. if we have
+	// duplicate fields in our doc and our doc is json, we could have
+	// some word position conflicts, which kinda sucks, but can be
+	// avoided becomes this is HASHGROUP_INMETATAG, but should really
+	// be HASHGROUP_INMETADATA just to be sure.
+	int32_t saved =  m_dist;
+	m_dist = 0;
+
+	hashJSONFields2 ( tt , &hi , &jp , false );
+
+	m_dist = saved;
 
 	return true;
 }
@@ -52172,6 +52329,7 @@ char *XmlDoc::hashJSONFields2 ( HashTableX *table ,
 			totalHash32 ^= vh32;
 		}
 		*/
+
 		// index like "title:whatever"
 		hi->m_prefix = name;
 		hashString ( val , vlen , hi );

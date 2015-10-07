@@ -24,7 +24,8 @@ mode_t getDirCreationFlags() {
 		s_setUmask = true;
 		umask  ( 0 );
 	}
-	return  S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH ;
+	return  S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH |
+		S_IXUSR | S_IXGRP;
 }
 
 Conf::Conf ( ) {

@@ -2467,8 +2467,8 @@ void threadDoneWrapper ( void *state , ThreadEntry *t ) {
 		    THIS->m_dbname,mstrerror(g_errno));
 	else
 		// log it
-		log("db: Done saving %s/%s-saved.dat",
-		    THIS->m_dir,THIS->m_dbname);
+		log("db: Done saving %s/%s-saved.dat (wrote %"INT64" bytes)",
+		    THIS->m_dir,THIS->m_dbname,THIS->m_bytesWritten);
 	// . call callback
 	if ( THIS->m_callback ) THIS->m_callback ( THIS->m_state );
 }
@@ -2497,6 +2497,20 @@ bool RdbTree::fastSave_r() {
 		return log("db: Could not open %s for writing: %s.",
 			   s,mstrerror(errno));
 	}
+
+ redo:
+	// verify the tree
+	if ( g_conf.m_verifyWrites ) {
+		log("db: verify writes is enabled, checking tree before "
+		    "saving.");
+		if ( ! checkTree( false , true ) ) {
+			log("db: fixing tree and re-checking");
+			fixTree ( );
+			goto redo;
+		}
+	}
+
+
 	// clear our own errno
 	errno = 0;
 	// . save the header
