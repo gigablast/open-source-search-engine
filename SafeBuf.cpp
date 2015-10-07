@@ -236,7 +236,7 @@ bool SafeBuf::pushFloat ( float i) {
 // hack off trailing 0's
 bool SafeBuf::printFloatPretty ( float f ) {
 
-	if ( m_length + 20 > m_capacity && ! reserve(20) )
+	if ( m_length + 40 > m_capacity && ! reserve(40) )
 		return false;
 
 	char *p = m_buf + m_length;
