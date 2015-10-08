@@ -702,7 +702,23 @@ void handleRequest7 ( UdpSlot *slot , int32_t netnice ) {
 	InjectionRequest *ir = (InjectionRequest *)slot->m_readBuf;
 
 	// now just supply the first guy's char ** and size ptr
-	deserializeMsg2 ( &ir->ptr_url, &ir->size_url );
+	if ( ! deserializeMsg2 ( &ir->ptr_url, &ir->size_url ) ) {
+		log("inject: error deserializing inject request from "
+		    "host ip %s port %i",iptoa(slot->m_ip),(int)slot->m_port);
+		g_errno = EBADREQUEST;
+		g_udpServer.sendErrorReply(slot,g_errno);
+		//g_corruptCount++;
+		return;
+	}
+		
+
+	if ( ! ir->ptr_url || strncmp(ir->ptr_url,"http",4) != 0 ) {
+		log("inject: trying to inject NULL or non http url.");
+		g_errno = EBADURL;
+		//g_corruptCount++;
+		g_udpServer.sendErrorReply(slot,g_errno);
+		return;
+	}
 
 	CollectionRec *cr = g_collectiondb.getRec ( ir->m_collnum );
 	if ( ! cr ) {
