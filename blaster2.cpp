@@ -19,7 +19,7 @@ static void sleepWrapper ( int fd , void *state ) ;
 bool sendPageSEO(TcpSocket *s, HttpRequest *hr) {return true;}
 bool g_recoveryMode;
 int g_inMemcpy;
-int3_t g_recoveryLevel;
+int32_t g_recoveryLevel;
 
 static int32_t  s_maxNumThreads = 1 ;
 static int32_t  s_launched   = 0;
@@ -451,7 +451,9 @@ bool getWords() {
 		s_words += '\0';
 	}
 	fclose ( fd );
-	log("blaster: read %"INT32" words, %"INT32" bytes in from dictionary.", 
-	    (int32_t)s_windices.length() / sizeof(int32_t), s_words.length());
+	log("blaster: read %"INT32" words, "
+	    "%"INT32" bytes in from dictionary.", 
+	    (int32_t)(s_windices.length() / sizeof(int32_t)), 
+	    (int32_t)s_words.length());
 	return true;
 }
