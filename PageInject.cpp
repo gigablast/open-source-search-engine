@@ -654,11 +654,11 @@ bool Msg7::inject ( void *state ,
 
 	if ( ! xd->injectDoc ( m_injectUrlBuf.getBufStart() ,
 			       cr ,
-			       start , // content ,
+			       NULL, //start , // content ,
 			       gr->m_diffbotReply,
-			       gr->m_hasMime, // content starts with http mime?
+			       false, //gr->m_hasMime, // content starts with http mime?
 			       gr->m_hopCount,
-			       gr->m_charset,
+			       csUnknown, //gr->m_charset,
 
 			       gr->m_deleteUrl,
 			       gr->m_contentTypeStr, // text/html text/xml
