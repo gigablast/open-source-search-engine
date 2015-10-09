@@ -918,6 +918,10 @@ bool PosdbTable::allocTopTree ( ) {
 		    , (int32_t)m_r->m_numDocIdSplits
 		    );
 
+	// keep it sane
+	if ( nn > m_r->m_docsToGet * 2 && nn > 60 )
+		nn = m_r->m_docsToGet * 2;
+
 	// this actually sets the # of nodes to MORE than nn!!!
 	if ( ! m_topTree->setNumNodes(nn,m_r->m_doSiteClustering)) {
 		log("toptree: toptree: error allocating nodes: %s",
@@ -7566,6 +7570,7 @@ void PosdbTable::intersectLists10_r ( ) {
 		dcs.m_docLang = docLang;
 		// ensure enough room we can't allocate in a thread!
 		if ( m_scoreInfoBuf.getAvail()<(int32_t)sizeof(DocIdScore)+1){
+			goto advance;
 			char *xx=NULL;*xx=0; }
 		// if same as last docid, overwrite it since we have a higher
 		// siterank or langid i guess
