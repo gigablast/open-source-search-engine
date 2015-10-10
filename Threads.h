@@ -160,6 +160,8 @@ class ThreadQueue {
 	void reset();
 
 	int32_t getNumThreadsOutOrQueued();
+	int32_t getNumWriteThreadsOut() ;
+
 
 	// . for adding an entry
 	// . returns false and sets errno on error
@@ -297,6 +299,7 @@ class Threads {
 	bool hasHighPriorityCpuThreads() ;
 
 	int32_t getNumThreadsOutOrQueued();
+	int32_t getNumWriteThreadsOut() ;
 
 	// counts the high/low priority (niceness <= 0) threads
 	//int64_t   m_hiLaunched;

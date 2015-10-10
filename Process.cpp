@@ -1515,15 +1515,16 @@ bool Process::shutdown2 ( ) {
 	static bool s_printed = false;
 
 	// wait for all threads to return
-	int32_t n = g_threads.getNumThreadsOutOrQueued() ;
+	//int32_t n = g_threads.getNumThreadsOutOrQueued() ;
+	int32_t n = g_threads.getNumWriteThreadsOut();
 	if ( n != 0 && ! m_urgent ) {
-		log(LOG_INFO,"gb: Has %"INT32" threads out. Waiting for "
+		log(LOG_INFO,"gb: Has %"INT32" write threads out. Waiting for "
 		    "them to finish.",n);
 		return false;
 	}
 	else if ( ! s_printed && ! m_urgent ) {
 		s_printed = true;
-		log(LOG_INFO,"gb: No threads out.");
+		log(LOG_INFO,"gb: No write threads out.");
 	}
 
 
@@ -1767,7 +1768,7 @@ bool Process::saveRdbTrees ( bool useThread , bool shuttingDown ) {
 	// no thread if shutting down
 	if ( shuttingDown ) useThread = false;
 	// debug note
-	log("gb: shuttingdown=%i",(int)shuttingDown);
+	if ( shuttingDown ) log("gb: trying to shutdown");
 	// turn off statsdb until everyone is done
 	//g_statsdb.m_disabled = true;
 	// loop over all Rdbs and save them
