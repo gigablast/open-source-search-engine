@@ -6644,6 +6644,10 @@ void PosdbTable::intersectLists10_r ( ) {
 		// synbits on it, below!!! or a half stop wiki bigram like
 		// the term "enough for" in the wiki phrase 
 		// "time enough for love" because we wanna reward that more!
+		// this halfstopwikibigram bit is set in the indivial keys
+		// so we'd have to at least do a key cleansing, so we can't
+		// do this shortcut right now... mdw oct 10 2015
+		/*
 		if ( nsub == 1 && 
 		     !(nwpFlags[0] & BF_SYNONYM) &&
 		     !(nwpFlags[0] & BF_HALFSTOPWIKIBIGRAM) ) {
@@ -6652,6 +6656,7 @@ void PosdbTable::intersectLists10_r ( ) {
 			bflags         [j] = nwpFlags[0];
 			continue;
 		}
+		*/
 		// . ok, merge the lists into a list in mbuf
 		// . get the min of each list
 	mergeMore:
