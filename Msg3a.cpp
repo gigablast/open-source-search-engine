@@ -736,14 +736,6 @@ bool Msg3a::gotAllShardReplies ( ) {
 		// cast it and set it
 		m_reply       [i] = mr;
 		m_replyMaxSize[i] = replyMaxSize;
-		// deserialize it (just sets the ptr_ and size_ member vars)
-		//mr->deserialize ( );
-		deserializeMsg ( sizeof(Msg39Reply) ,
-				 &mr->size_docIds,
-				 &mr->size_clusterRecs,
-				 &mr->ptr_docIds,
-				 mr->m_buf );
-
 		// sanity check
 		if ( mr->m_nqt != m_q->getNumTerms() ) {
 			g_errno = EBADREPLY;
@@ -760,6 +752,20 @@ bool Msg3a::gotAllShardReplies ( ) {
 			log("query: msg3a: Shard had error: %s",
 			    mstrerror(g_errno));
 			return true;
+		}
+		// deserialize it (just sets the ptr_ and size_ member vars)
+		//mr->deserialize ( );
+		if ( ! deserializeMsg ( sizeof(Msg39Reply) ,
+					&mr->size_docIds,
+					&mr->size_clusterRecs,
+					&mr->ptr_docIds,
+					mr->m_buf ) ) {
+			g_errno = ECORRUPTDATA;
+			m_errno = ECORRUPTDATA;
+			log("query: msg3a: Shard had error: %s",
+			    mstrerror(g_errno));
+			return true;
+
 		}
 		// skip down here if reply was already set
 		//skip:
@@ -1171,18 +1177,6 @@ bool Msg3a::mergeLists ( ) {
 				continue;
 			}
 
-			fe2->m_count += fe->m_count;
-
-			// also accumualte count of total docs, not just in
-			// the search results, that have this value for this
-			// facet
-			fe2->m_outsideSearchResultsCount += 
-				fe->m_outsideSearchResultsCount;
-
-			// prefer docid kinda randomly to balance 
-			// lookupFacets() load in Msg40.cpp
-			if ( rand() % 2 )
-				fe2->m_docId = fe->m_docId;
 
 
 			if ( isFloat ) {
@@ -1192,22 +1186,37 @@ bool Msg3a::mergeLists ( ) {
 				sum2 += sum1;
 				*((double *)&fe2->m_sum) = sum2;
 				// and min/max as floats
+
 				float min1 = *((float *)&fe ->m_min);
 				float min2 = *((float *)&fe2->m_min);
-				if ( min1 < min2 ) min2 = min1;
+				if ( fe2->m_count==0 || (fe->m_count!=0 && min1 < min2 )) min2 = min1;
 				*((float *)&fe2->m_min) = min2;
 				float max1 = *((float *)&fe ->m_max);
 				float max2 = *((float *)&fe2->m_max);
-				if ( max1 > max2 ) max2 = max1;
+				if ( fe2->m_count==0 || (fe->m_count!=0 && max1 > max2 )) max2 = max1;
 				*((float *)&fe2->m_max) = max2;
 			}
 			if ( isInt ) {
 				fe2->m_sum += fe->m_sum;
-				if ( fe->m_min < fe2->m_min )
+				if ( fe2->m_count==0 || (fe->m_count!=0 && fe->m_min < fe2->m_min ))
 					fe2->m_min = fe->m_min;
-				if ( fe->m_max > fe2->m_max )
+				if ( fe2->m_count==0 || (fe->m_count!=0 && fe->m_max > fe2->m_max ))
 					fe2->m_max = fe->m_max;
 			}
+
+			fe2->m_count += fe->m_count;
+
+			// also accumualte count of total docs, not just in
+			// the search results, that have this value for this
+			// facet
+			fe2->m_outsideSearchResultsCount +=
+				fe->m_outsideSearchResultsCount;
+
+			// prefer docid kinda randomly to balance
+			// lookupFacets() load in Msg40.cpp
+			if ( rand() % 2 )
+				fe2->m_docId = fe->m_docId;
+
 
 		}
 

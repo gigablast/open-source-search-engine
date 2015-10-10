@@ -431,6 +431,10 @@ int32_t Threads::getNumThreadsOutOrQueued() {
 	return n;
 }
 
+int32_t Threads::getNumWriteThreadsOut() {
+	return m_threadQueues[DISK_THREAD].getNumWriteThreadsOut();
+}
+
 // . returns false (and may set errno) if failed to launch a thread
 // . returns true if thread added to queue successfully
 // . may be launched instantly or later depending on # of threads in the queue
@@ -554,10 +558,18 @@ static void killStalledFiltersWrapper ( int fd , void *state ) {
 // . we put that signal there using sigqeueue() in Threads::exit()
 // . this way another thread can be launched right away
 int32_t Threads::launchThreads ( ) {
+
+	// stop launching threads if trying to exit.
+	// only launch save tree threads. so if in the middle of saving
+	// we allow it to complete?
+	if ( g_process.m_mode == EXIT_MODE )
+		return 0;
+
 	// try launching from each queue
 	int32_t numLaunched = 0;
 	// try to launch DISK threads last so cpu-based threads get precedence
 	for ( int32_t i = m_numQueues - 1 ; i >= 0 ; i-- ) {
+
 		// clear g_errno
 		g_errno = 0;
 		// launch as many threads as we can from queue #i
@@ -870,6 +882,25 @@ int32_t ThreadQueue::getNumThreadsOutOrQueued() {
 	*/
 }
 
+int32_t ThreadQueue::getNumWriteThreadsOut () {
+	// only consider disk threads
+	if ( m_threadType != DISK_THREAD ) return 0;
+	int32_t n = 0;
+	for ( int32_t i = 0 ; i < m_maxEntries ; i++ ) {
+		ThreadEntry *e = &m_entries[i];
+		if ( ! e->m_isOccupied ) continue;
+		if ( ! e->m_isLaunched ) continue;
+		if ( e->m_isDone ) continue;
+		FileState *fs = (FileState *)e->m_state;
+		if ( ! fs ) continue;
+		if ( ! fs->m_doWrite ) continue;
+		n++;
+	}
+	return n;
+}
+
+
+
 // return NULL and set g_errno on error
 ThreadEntry *ThreadQueue::addEntry ( int32_t   niceness                     , 
 				     void  *state                        , 
@@ -1071,6 +1102,10 @@ ThreadEntry *ThreadQueue::addEntry ( int32_t   niceness                     ,
 }
 
 int32_t Threads::timedCleanUp (int32_t maxTime, int32_t niceness) {
+
+	// skip it if exiting
+	if ( g_process.m_mode == EXIT_MODE )
+		return 0;
 
 	if ( ! m_needsCleanup ) return 0;
 	//if ( g_inSigHandler ) return 0;
@@ -1277,12 +1312,12 @@ bool ThreadQueue::timedCleanUp ( int32_t maxNiceness ) {
 				    "jointid=0x%"XINT64".",
 				    (PTRTYPE)t,(int64_t)t->m_joinTid);
 
-			g_threads.returnStack ( t->m_si );
-			t->m_stack = NULL;
 			// re-protect this stack
 			mprotect ( t->m_stack + GUARDSIZE , 
 				   STACK_SIZE - GUARDSIZE, 
 				   PROT_NONE );
+			g_threads.returnStack ( t->m_si );
+			t->m_stack = NULL;
 
 		}
 		
@@ -1317,11 +1352,11 @@ bool ThreadQueue::timedCleanUp ( int32_t maxNiceness ) {
 				    "for unknown reason." , pid );
 		}
 		//mfree ( t->m_stack , STACK_SIZE , "Threads" );
-		g_threads.returnStack ( t->m_si );
-		t->m_stack = NULL;
 		// re-protect this stack
 		mprotect ( t->m_stack + GUARDSIZE , STACK_SIZE - GUARDSIZE, 
 			   PROT_NONE );
+		g_threads.returnStack ( t->m_si );
+		t->m_stack = NULL;
 		// debug msg
 		if ( g_conf.m_logDebugThread )
 			log(LOG_DEBUG,"thread: joined with pid=%"INT32" pid=%"INT32".",
@@ -1642,12 +1677,12 @@ bool ThreadQueue::cleanUp ( ThreadEntry *tt , int32_t maxNiceness ) {
 				    "jointid=0x%"XINT64".",
 				    (PTRTYPE)t,(int64_t)t->m_joinTid);
 
-			g_threads.returnStack ( t->m_si );
-			t->m_stack = NULL;
 			// re-protect this stack
 			mprotect ( t->m_stack + GUARDSIZE , 
 				   STACK_SIZE - GUARDSIZE, 
 				   PROT_NONE );
+			g_threads.returnStack ( t->m_si );
+			t->m_stack = NULL;
 
 		}
 #else
@@ -1681,11 +1716,11 @@ bool ThreadQueue::cleanUp ( ThreadEntry *tt , int32_t maxNiceness ) {
 				    "for unknown reason." , pid );
 		}
 		//mfree ( t->m_stack , STACK_SIZE , "Threads" );
-		g_threads.returnStack ( t->m_si );
-		t->m_stack = NULL;
 		// re-protect this stack
 		mprotect ( t->m_stack + GUARDSIZE , STACK_SIZE - GUARDSIZE, 
 			   PROT_NONE );
+		g_threads.returnStack ( t->m_si );
+		t->m_stack = NULL;
 
 #endif
 
@@ -2738,6 +2773,13 @@ bool ThreadQueue::launchThreadForReals ( ThreadEntry **headPtr ,
 
 	// it didn't launch, did it? dec the count.
 	m_launched--;
+	// re-protect this stack
+	mprotect ( t->m_stack + GUARDSIZE , STACK_SIZE - GUARDSIZE, 
+		   PROT_NONE );
+	// RETURN THE STACK
+	g_threads.returnStack ( t->m_si );
+	t->m_stack = NULL;
+
 	/*
 	// priority-based LOCAL & GLOBAL launch counts
 	if      ( realNiceness <= 0 ) m_hiLaunched--;

@@ -76,7 +76,7 @@ class RdbCache *getDiskPageCache ( char rdbId ) {
 		rpc = &g_rdbCaches[2];
 		maxSizePtr = &g_conf.m_clusterdbFileCacheSize;
 		maxMem = *maxSizePtr;
-		maxRecs = maxMem / 16;
+		maxRecs = maxMem / 32;
 		dbname = "clustcache";
 	}
 	if ( rdbId == RDB_TITLEDB ) {

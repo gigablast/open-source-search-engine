@@ -1349,6 +1349,10 @@ bool qaSyntax ( ) {
 				"format=json&"
 				"q=");
 		tmp.urlEncode ( s_q[s_i] );
+		// get back 100 for debugging better
+		if ( strcmp(s_q[s_i],"gbssStatusCode:0") == 0 ) {
+			tmp.safePrintf("&n=100");
+		}
 		tmp.nullTerm();
 		// point to next query
 		s_i++;
