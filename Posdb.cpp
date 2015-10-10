@@ -6649,7 +6649,7 @@ void PosdbTable::intersectLists10_r ( ) {
 		// do this shortcut right now... mdw oct 10 2015
 		if ( nsub == 1 && 
 		     // need it for gbfacet termlists though it seems
-		      (nwpFlags[0] & BF_FACET) &&		     
+		     (nwpFlags[0] & (BF_FACET|BF_NUMBER)) &&		     
 		     !(nwpFlags[0] & BF_SYNONYM) &&
 		     !(nwpFlags[0] & BF_HALFSTOPWIKIBIGRAM) ) {
 			miniMergedList [j] = nwp     [0];
