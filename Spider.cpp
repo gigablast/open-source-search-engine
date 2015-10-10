@@ -3576,7 +3576,7 @@ bool SpiderColl::evalIpLoop ( ) {
 					  &doleBuf,
 					  &doleBufSize  ,
 					  false, // doCopy?
-					  300, // maxAge, 300 seconds
+					  600, // maxAge, 600 seconds
 					  true ,// incCounts
 					  &cachedTimestamp , // rec timestamp
 					  true );  // promote rec?
@@ -3584,25 +3584,47 @@ bool SpiderColl::evalIpLoop ( ) {
 	}
 
 
+	// if ( m_collnum == 18752 ) {
+	// 	int32_t coff = 0;
+	// 	if ( inCache && doleBufSize >= 4 ) coff = *(int32_t *)doleBuf;
+	// 	log("spider: usecache=%i incache=%i dbufsize=%i currentoff=%i "
+	// 	    "ctime=%i ip=%s"
+	// 	    ,(int)useCache
+	// 	    ,(int)inCache
+	// 	    ,(int)doleBufSize
+	// 	    ,(int)coff
+	// 	    ,(int)cachedTimestamp
+	// 	    ,iptoa(m_scanningIp));
+	// }
+
 	// doleBuf could be NULL i guess...
 	if ( inCache ) { // && doleBufSize > 0 ) {
-		if ( g_conf.m_logDebugSpider )
+		int32_t crc = hash32 ( doleBuf + 4 , doleBufSize - 4 );
+		if ( g_conf.m_logDebugSpider ) // || m_collnum == 18752 )
 			log("spider: GOT %"INT32" bytes of SpiderRequests "
-			    "from winnerlistcache for ip %s",doleBufSize,
-			    iptoa(m_scanningIp));
+			    "from winnerlistcache for ip %s ptr=0x%"PTRFMT
+			    " crc=%"UINT32
+			    ,doleBufSize,
+			    iptoa(m_scanningIp),
+			    (PTRTYPE)doleBuf,
+			    crc);
 		// set own to false so it doesn't get freed
 		// m_doleBuf.setBuf ( doleBuf , 
 		// 		   doleBufSize ,
 		// 		   doleBufSize , 
 		// 		   false , // ownData?
 		// 		   0 ); // encoding. doesn't matter.
-		m_doleBuf.reset();
+		//m_doleBuf.reset();
 		// gotta copy it because we end up re-adding part of it
 		// to rdbcache below
-		m_doleBuf.safeMemcpy ( doleBuf , doleBufSize );
+		//m_doleBuf.safeMemcpy ( doleBuf , doleBufSize );
+		// we no longer re-add to avoid churn. but do not free it
+		// so do not 'own' it.
+		SafeBuf sb;
+		sb.setBuf ( doleBuf, doleBufSize, doleBufSize, false );
 		// now add the first rec m_doleBuf into doledb's tree
 		// and re-add the rest back to the cache with the same key.
-		return addDoleBufIntoDoledb ( true , cachedTimestamp );
+		return addDoleBufIntoDoledb(&sb,true);//,cachedTimestamp)
 	}
 
  top:
@@ -4718,6 +4740,9 @@ bool SpiderColl::scanListForWinners ( ) {
 		int32_t maxWinners = (int32_t)MAX_WINNER_NODES; // 40
 		//if ( ! m_cr->m_isCustomCrawl ) maxWinners = 1;
 
+		// if less than 10MB of spiderdb requests limit to 400
+		if ( m_totalBytesScanned < 10000000 ) maxWinners = 400;
+
 		// only put one doledb record into winner tree if
 		// the list is pretty short. otherwise, we end up caching
 		// too much. granted, we only cache for about 2 mins.
@@ -5225,16 +5250,23 @@ bool SpiderColl::addWinnersIntoDoledb ( ) {
 	}
 
 
+	// i've seen this happen, wtf?
+	if ( m_winnerTree.isEmpty() && m_minFutureTimeMS ) { 
+		// this will update the waiting tree key with minFutureTimeMS
+		addDoleBufIntoDoledb ( NULL , false );
+		return true;
+	}
+
 	// i am seeing dup uh48's in the m_winnerTree
 	int32_t firstIp = m_waitingTreeKey.n0 & 0xffffffff;
-	char dbuf[3*MAX_WINNER_NODES*(8+1)];
+	char dbuf[147456];//3*MAX_WINNER_NODES*(8+1)];
 	HashTableX dedup;
 	int32_t ntn = m_winnerTree.getNumNodes();
 	dedup.set ( 8,
 		    0,
 		    (int32_t)2*ntn, // # slots to initialize to
 		    dbuf,
-		    (int32_t)(3*MAX_WINNER_NODES*(8+1)),
+		    147456,//(int32_t)(3*MAX_WINNER_NODES*(8+1)),
 		    false,
 		    MAX_NICENESS,
 		    "windt");
@@ -5244,7 +5276,14 @@ bool SpiderColl::addWinnersIntoDoledb ( ) {
 	// make winner tree into doledb list to add
 	//
 	///////////
-	m_doleBuf.reset();
+	//m_doleBuf.reset();
+	//m_doleBuf.setLabel("dolbuf");
+	// first 4 bytes is offset of next doledb record to add to doledb
+	// so we do not have to re-add the dolebuf to the cache and make it
+	// churn. it is really inefficient.
+	SafeBuf doleBuf;
+	doleBuf.pushLong(4);
+	int32_t added = 0;
 	for ( int32_t node = m_winnerTree.getFirstNode() ; 
 	      node >= 0 ; 
 	      node = m_winnerTree.getNextNode ( node ) ) {
@@ -5294,16 +5333,18 @@ bool SpiderColl::addWinnersIntoDoledb ( ) {
 			log("spider: got dup uh48=%"UINT64" dammit", winUh48);
 			continue;
 		}
+		// count it
+		added++;
 		// do not allow dups
 		dedup.addKey ( &winUh48 );
 		// store doledb key first
-		if ( ! m_doleBuf.safeMemcpy ( &doleKey, sizeof(key_t) ) ) 
+		if ( ! doleBuf.safeMemcpy ( &doleKey, sizeof(key_t) ) ) 
 			hadError = true;
 		// then size of spiderrequest
-		if ( ! m_doleBuf.pushLong ( sreq2->getRecSize() ) ) 
+		if ( ! doleBuf.pushLong ( sreq2->getRecSize() ) ) 
 			hadError = true;
 		// then the spiderrequest encapsulated
-		if ( ! m_doleBuf.safeMemcpy ( sreq2 , sreq2->getRecSize() )) 
+		if ( ! doleBuf.safeMemcpy ( sreq2 , sreq2->getRecSize() )) 
 			hadError=true;
 		// note and error
 		if ( hadError ) {
@@ -5313,11 +5354,52 @@ bool SpiderColl::addWinnersIntoDoledb ( ) {
 		}
 	}
 
-	return addDoleBufIntoDoledb ( false , 0 );
+	// log("spider: added %"INT32" doledb recs to cache for cn=%i "
+	//     "dolebufsize=%i",
+	//     added,
+	//     (int)m_collnum,
+	//     (int)doleBuf.length());
+
+	return addDoleBufIntoDoledb ( &doleBuf , false );//, 0 );
 }
 
-bool SpiderColl::addDoleBufIntoDoledb ( bool isFromCache ,
-					uint32_t cachedTimestamp ) {
+bool SpiderColl::validateDoleBuf ( SafeBuf *doleBuf ) {
+	char *doleBufEnd = doleBuf->getBuf();
+	// get offset
+	char *pstart = doleBuf->getBufStart();
+	char *p = pstart;
+	int32_t jump = *(int32_t *)p;
+	p += 4;
+	// sanity
+	if ( jump < 4 || jump > doleBuf->getLength() ) {
+		char *xx=NULL;*xx=0; }
+	bool gotIt = false;
+	for ( ; p < doleBuf->getBuf() ; ) {
+		if ( p == pstart + jump )
+			gotIt = true;
+		// first is doledbkey
+		p += sizeof(key_t);
+		// then size of spider request
+		int32_t recSize = *(int32_t *)p;
+		p += 4;
+		// the spider request encapsulated
+		SpiderRequest *sreq3;
+		sreq3 = (SpiderRequest *)p;
+		// point "p" to next spiderrequest
+		if ( recSize != sreq3->getRecSize() ) { char *xx=NULL;*xx=0;}
+		p += recSize;//sreq3->getRecSize();
+		// sanity
+		if ( p > doleBufEnd ) { char *xx=NULL;*xx=0; }
+		if ( p < pstart     ) { char *xx=NULL;*xx=0; }
+	}
+	if ( ! gotIt ) { char *xx=NULL;*xx=0; }
+	return true;
+}
+
+bool SpiderColl::addDoleBufIntoDoledb ( SafeBuf *doleBuf, bool isFromCache ) {
+					// uint32_t cachedTimestamp ) {
+
+	//validateDoleBuf ( doleBuf );
 
 	////////////////////
 	//
@@ -5386,6 +5468,10 @@ bool SpiderColl::addDoleBufIntoDoledb ( bool isFromCache ,
 	// the wait tree with that since we will not be doling this request
 	// right now.
 	if ( m_winnerTree.isEmpty() && m_minFutureTimeMS && ! isFromCache ) {
+
+		// save memory
+		m_winnerTree.reset();
+		m_winnerTable.reset();
 
 		// if in the process of being added to doledb or in doledb...
 		if ( m_doleIpTable.isInTable ( &firstIp ) ) {
@@ -5497,6 +5583,8 @@ bool SpiderColl::addDoleBufIntoDoledb ( bool isFromCache ,
 	// how did this happen?
 	//if ( ! m_msg1Avail ) { char *xx=NULL;*xx=0; }
 
+	char *doleBufEnd = doleBuf->getBuf();
+
 	// add it to doledb ip table now so that waiting tree does not
 	// immediately get another spider request from this same ip added
 	// to it while the msg4 is out. but if add failes we totally bail
@@ -5507,36 +5595,50 @@ bool SpiderColl::addDoleBufIntoDoledb ( bool isFromCache ,
 	//if ( ! addToDoleTable ( m_bestRequest ) ) return true;
 	// . MDW: now we have a list of doledb records in a SafeBuf:
 	// . scan the requests in safebuf
-	int32_t skipSize = 0;
-	for ( char *p = m_doleBuf.getBufStart() ; p < m_doleBuf.getBuf() ; ) {
-		// first is doledbkey
-		p += sizeof(key_t);
-		// then size of spider request
-		p += 4;
-		// the spider request encapsulated
-		SpiderRequest *sreq3;
-		sreq3 = (SpiderRequest *)p;
-		// point "p" to next spiderrequest
-		p += sreq3->getRecSize();
-		// for caching logic below, set this
-		skipSize = sizeof(key_t) + 4 + sreq3->getRecSize();
-		// process sreq3 my incrementing the firstip count in 
-		// m_doleIpTable
-		if ( ! addToDoleTable ( sreq3 ) ) return true;	
 
-		// only add the top key for now!
-		break;
+	// get offset
+	char *p = doleBuf->getBufStart();
+	int32_t jump = *(int32_t *)p;
+	// sanity
+	if ( jump < 4 || jump > doleBuf->getLength() ) {
+		char *xx=NULL;*xx=0; }
+	// the jump includes itself
+	p += jump;
+	//for ( ; p < m_doleBuf.getBuf() ; ) {
+	// save it
+	char *doledbRec = p;
+	// first is doledbkey
+	p += sizeof(key_t);
+	// then size of spider request
+	p += 4;
+	// the spider request encapsulated
+	SpiderRequest *sreq3;
+	sreq3 = (SpiderRequest *)p;
+	// point "p" to next spiderrequest
+	p += sreq3->getRecSize();
 
-		// this logic is now in addToDoleTable()
-		// . if it was empty it is no longer
-		// . we have this flag here to avoid scanning empty doledb 
-		//   priorities because it saves us a msg5 call to doledb in 
-		//   the scanning loop
-		//int32_t bp = sreq3->m_priority;//m_bestRequest->m_priority;
-		//if ( bp <  0                     ) { char *xx=NULL;*xx=0; }
-		//if ( bp >= MAX_SPIDER_PRIORITIES ) { char *xx=NULL;*xx=0; }
-		//m_isDoledbEmpty [ bp ] = 0;
-	}
+	// sanity
+	if ( p > doleBufEnd ) { char *xx=NULL;*xx=0; }
+
+	// for caching logic below, set this
+	int32_t doledbRecSize = sizeof(key_t) + 4 + sreq3->getRecSize();
+	// process sreq3 my incrementing the firstip count in 
+	// m_doleIpTable
+	if ( ! addToDoleTable ( sreq3 ) ) return true;	
+
+	// only add the top key for now!
+	//break;
+
+	// 	// this logic is now in addToDoleTable()
+	// 	// . if it was empty it is no longer
+	// 	// . we have this flag here to avoid scanning empty doledb 
+	// 	//   priorities because it saves us a msg5 call to doledb in 
+	// 	//   the scanning loop
+	// 	//int32_t bp = sreq3->m_priority;//m_bestRequest->m_priority;
+	// 	//if ( bp <  0                     ) { char *xx=NULL;*xx=0; }
+	// 	//if ( bp >= MAX_SPIDER_PRIORITIES ) { char *xx=NULL;*xx=0; }
+	// 	//m_isDoledbEmpty [ bp ] = 0;
+	// }
 
 	// now cache the REST of the spider requests to speed up scanning.
 	// better than adding 400 recs per firstip to doledb because
@@ -5545,20 +5647,25 @@ bool SpiderColl::addDoleBufIntoDoledb ( bool isFromCache ,
 	// top rec.
 	// allow this to add a 0 length record otherwise we keep the same
 	// old url in here and keep spidering it over and over again!
-	bool addToCache = false;
-	if ( skipSize && m_doleBuf.length() - skipSize > 0 ) addToCache =true;
+
+	//bool addToCache = false;
+	//if( skipSize && m_doleBuf.length() - skipSize > 0 ) addToCache =true;
 	// if winnertree was empty, then we might have scanned like 10M
 	// twitter.com urls and not wanted any of them, so we don't want to
 	// have to keep redoing that!
-	if ( m_doleBuf.length() == 0 && ! isFromCache ) addToCache = true;
+	//if ( m_doleBuf.length() == 0 && ! isFromCache ) addToCache = true;
 
 	RdbCache *wc = &g_spiderLoop.m_winnerListCache;
 
 	// remove from cache? if we added the last spider request in the
 	// cached dolebuf to doledb then remove it from cache so it's not
 	// a cached empty dolebuf and we recompute it not using the cache.
-	if ( isFromCache && skipSize && m_doleBuf.length() - skipSize == 0 ) {
-		if ( addToCache ) { char *xx=NULL;*xx=0; }
+	if ( isFromCache && p >= doleBufEnd ) {
+		//if ( addToCache ) { char *xx=NULL;*xx=0; }
+		// debug note
+		// if ( m_collnum == 18752 )
+		// 	log("spider: rdbcache: adding single byte. skipsize=%i"
+		// 	    ,doledbRecSize);
 		// let's get this working right...
 		//wc->removeKey ( collnum , k , start );
 		//wc->markDeletedRecord(start);
@@ -5579,21 +5686,67 @@ bool SpiderColl::addDoleBufIntoDoledb ( bool isFromCache ,
 		//wc->verify();
 	}
 
-	if ( addToCache ) {
+	// if it wasn't in the cache and it was only one record we
+	// obviously do not want to add it to the cache.
+	else if ( p < doleBufEnd ) { // if ( addToCache ) {
 		key_t cacheKey;
 		cacheKey.n0 = firstIp;
 		cacheKey.n1 = 0;
-		if ( g_conf.m_logDebugSpider )
-			log("spider: adding %"INT32" bytes of SpiderRequests "
-			    "to winnerlistcache for ip %s",
-			    m_doleBuf.length()-skipSize,iptoa(firstIp));
+		char *x = doleBuf->getBufStart();
+		// the new offset is the next record after the one we
+		// just added to doledb
+		int32_t newJump = (int32_t)(p - x);
+		int32_t oldJump = *(int32_t *)x;
+		// NO! we do a copy in rdbcache and copy the thing over
+		// since we promote it. so this won't work...
+		*(int32_t *)x = newJump;
+		if ( newJump >= doleBuf->getLength() ) { char *xx=NULL;*xx=0;}
+		if ( newJump < 4 ) { char *xx=NULL;*xx=0;}
+		if ( g_conf.m_logDebugSpider ) // || m_collnum == 18752 )
+			log("spider: rdbcache: updating "
+			    "%"INT32" bytes of SpiderRequests "
+			    "to winnerlistcache for ip %s oldjump=%"INT32
+			    " newJump=%"INT32" ptr=0x%"PTRFMT,
+			    doleBuf->length(),iptoa(firstIp),oldJump,
+			    newJump,
+			    (PTRTYPE)x);
+		//validateDoleBuf ( doleBuf );
 		//wc->verify();
 		// inherit timestamp. if 0, RdbCache will set to current time
-		wc->addRecord ( m_collnum,
-				(char *)&cacheKey,
-				m_doleBuf.getBufStart() + skipSize ,
-				m_doleBuf.length() - skipSize ,
-				cachedTimestamp );
+		// don't re-add just use the same modified buffer so we
+		// don't churn the cache.
+		// but do add it to cache if not already in there yet.
+		if ( ! isFromCache ) {
+			// if ( m_collnum == 18752 )
+			// 	log("spider: rdbcache: adding record a new "
+			// 	    "dbufsize=%i",(int)doleBuf->length());
+			wc->addRecord ( m_collnum,
+					(char *)&cacheKey,
+					doleBuf->getBufStart(),//+ skipSize ,
+					doleBuf->length() ,//- skipSize ,
+					0);//cachedTimestamp );
+		}
+		//validateDoleBuf( doleBuf );
+		/*
+		// test it
+		char *testPtr;
+		int32_t testLen;
+		bool inCache2 = wc->getRecord ( m_collnum     ,
+						(char *)&cacheKey ,
+						&testPtr,
+						&testLen,
+						false, // doCopy?
+						600, // maxAge,600 secs
+						true ,// incCounts
+						NULL , // rec timestamp
+						true );  // promote?
+		if ( ! inCache2 ) { char *xx=NULL;*xx=0; }
+		if ( testLen != m_doleBuf.length() ) {char *xx=NULL;*xx=0; }
+		if ( *(int32_t *)testPtr != newJump ){char *xx=NULL;*xx=0; }
+		SafeBuf tmp;
+		tmp.setBuf ( testPtr , testLen , testLen , false );
+		validateDoleBuf ( &tmp );
+		*/
 		//wc->verify();
 	}
 
@@ -5631,16 +5784,18 @@ bool SpiderColl::addDoleBufIntoDoledb ( bool isFromCache ,
 
 	// only add one doledb record at a time now since we
 	// have the winnerListCache
-	m_doleBuf.setLength ( skipSize );
+	//m_doleBuf.setLength ( skipSize );
 
-	tmpList.setFromSafeBuf ( &m_doleBuf , RDB_DOLEDB );
+	//tmpList.setFromSafeBuf ( &m_doleBuf , RDB_DOLEDB );
+	tmpList.setFromPtr ( doledbRec , doledbRecSize , RDB_DOLEDB );
 
 	// now that doledb is tree-only and never dumps to disk, just
 	// add it directly
 	g_doledb.m_rdb.addList ( m_collnum , &tmpList , MAX_NICENESS );
 
 	if ( g_conf.m_logDebugSpider )
-		log("spider: adding doledb tree node size=%"INT32"",skipSize);
+		log("spider: adding doledb tree node size=%"INT32"",
+		    doledbRecSize);
 
 
 	// and it happens right away. just add it locally.
@@ -5699,6 +5854,12 @@ bool SpiderColl::addDoleBufIntoDoledb ( bool isFromCache ,
 		log("spider: added best sreq for ip=%s to doletable AND "
 		    "removed from waiting table",
 		    iptoa(firstIp));
+
+	// save memory
+	m_winnerTree.reset();
+	m_winnerTable.reset();
+
+	//validateDoleBuf( doleBuf );
 
 	// add did not block
 	return status;
@@ -9989,10 +10150,23 @@ bool sendPage ( State11 *st ) {
 	// print time format: 7/23/1971 10:45:32
 	int64_t timems = gettimeofdayInMillisecondsGlobal();
 	sb.safePrintf("</b> (current time = %"UINT64")(totalcount=%"INT32")"
-		      "(waittablecount=%"INT32")</td></tr>\n",
+		      "(waittablecount=%"INT32")",
 		      timems,
 		      sc->m_waitingTree.getNumUsedNodes(),
 		      sc->m_waitingTable.getNumUsedSlots());
+
+	double a = (double)g_spiderdb.getUrlHash48 ( &sc->m_firstKey );
+	double b = (double)g_spiderdb.getUrlHash48 ( &sc->m_endKey );
+	double c = (double)g_spiderdb.getUrlHash48 ( &sc->m_nextKey );
+	double percent = (100.0 * (c-a)) ;
+	if ( b-a > 0 ) percent /= (b-a);
+	if ( percent > 100.0 ) percent = 100.0;
+	if ( percent < 0.0 ) percent = 0.0;
+	sb.safePrintf("(spiderdb scan for ip %s is %.2f%% complete)",
+		      iptoa(sc->m_scanningIp),
+		      (float)percent );
+
+	sb.safePrintf("</td></tr>\n");
 	sb.safePrintf("<tr bgcolor=#%s>",DARK_BLUE);
 	sb.safePrintf("<td><b>spidertime (MS)</b></td>\n");
 	sb.safePrintf("<td><b>firstip</b></td>\n");

@@ -3566,4 +3566,32 @@ void RdbList::setFromSafeBuf ( SafeBuf *sb , char rdbId ) {
 
 }
 
+void RdbList::setFromPtr ( char *p , int32_t psize , char rdbId ) {
+
+	// free and NULLify any old m_list we had to make room for our new list
+	freeList();
+
+	// set this first since others depend on it
+	m_ks = getKeySizeFromRdbId ( rdbId );
+
+	// set our list parms
+	m_list          = p;
+	m_listSize      = psize;
+	m_alloc         = p;
+	m_allocSize     = psize;
+	m_listEnd       = m_list + m_listSize;
+
+	KEYMIN(m_startKey,m_ks);
+	KEYMAX(m_endKey  ,m_ks);
+
+	m_fixedDataSize = getDataSizeFromRdbId ( rdbId );
+
+	m_ownData       = false;//ownData;
+	m_useHalfKeys   = false;//useHalfKeys;
+
+	// use this call now to set m_listPtr and m_listPtrHi based on m_list
+	resetListPtr();
+
+}
+
 

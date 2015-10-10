@@ -107,6 +107,7 @@ class RdbList {
 		  char  keySize       = sizeof(key_t) );
 
 	void setFromSafeBuf ( class SafeBuf *sb , char rdbId );
+	void setFromPtr ( char *p , int32_t psize , char rdbId ) ;
 
 	// just set the start and end keys
 	//void set ( key_t startKey , key_t endKey );

@@ -1071,7 +1071,7 @@ bool Msg40::reallocMsg20Buf ( ) {
 	// . allocate m_buf2 to hold all our Msg20 pointers and Msg20 classes
 	// . how much mem do we need?
 	// . need space for the msg20 ptrs
-	int32_t need = m_msg3a.m_numDocIds * sizeof(Msg20 *);
+	int64_t need = m_msg3a.m_numDocIds * sizeof(Msg20 *);
 	// need space for the classes themselves, only if "visible" though
 	for ( int32_t i = 0 ; i < m_msg3a.m_numDocIds ; i++ ) 
 		if ( m_msg3a.m_clusterLevels[i] == CR_OK ) 
@@ -1242,6 +1242,13 @@ bool Msg40::reallocMsg20Buf ( ) {
 
 	m_buf2        = NULL;
 	m_bufMaxSize2 = need;
+
+	// if ( need > 2000000000 ) {
+	// 	log("msg40: need too much mem=%"INT64,need);
+	// 	m_errno = ENOMEM;
+	// 	g_errno = ENOMEM;
+	// 	return false; 
+	// }
 
 	// do the alloc
 	if ( need ) m_buf2 = (char *)mmalloc ( need ,"Msg40msg20");

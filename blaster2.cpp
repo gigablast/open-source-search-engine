@@ -18,6 +18,8 @@ static void sleepWrapper ( int fd , void *state ) ;
 
 bool sendPageSEO(TcpSocket *s, HttpRequest *hr) {return true;}
 bool g_recoveryMode;
+int g_inMemcpy;
+int32_t g_recoveryLevel;
 
 static int32_t  s_maxNumThreads = 1 ;
 static int32_t  s_launched   = 0;
@@ -48,7 +50,7 @@ int main ( int argc , char *argv[] ) {
 	if ( setrlimit(RLIMIT_CORE,&lim) )
 		log("blaster::setrlimit: %s", mstrerror(errno) );
 
-	g_conf.m_maxMem = 500000000;
+	//g_conf.m_maxMem = 500000000;
 
 	// init our table for doing zobrist hashing
 	if ( ! hashinit() ) {
@@ -57,7 +59,7 @@ int main ( int argc , char *argv[] ) {
 	// init the memory class after conf since it gets maxMem from Conf
 	//if ( ! g_mem.init ( 20000000 ) ) {
 	//	log("blaster::Mem init failed" ); return 1; }
-	g_mem.m_maxMem = 200000000;
+	//g_mem.m_maxMem = 200000000;
 	// start up log file
 	if ( ! g_log.init( "/tmp/blasterLog" )        ) {
 		log("blaster::Log open /tmp/blasterLog failed" ); return 1; }
@@ -449,7 +451,9 @@ bool getWords() {
 		s_words += '\0';
 	}
 	fclose ( fd );
-	log("blaster: read %"INT32" words, %"INT32" bytes in from dictionary.", 
-	    s_windices.length() / sizeof(int32_t), s_words.length());
+	log("blaster: read %"INT32" words, "
+	    "%"INT32" bytes in from dictionary.", 
+	    (int32_t)(s_windices.length() / sizeof(int32_t)), 
+	    (int32_t)s_words.length());
 	return true;
 }

@@ -2504,7 +2504,7 @@ int32_t deserializeMsg ( int32_t  baseSize ,
 		// make it NULL if size is 0 though
 		if ( *sizePtr == 0 ) *strPtr = NULL;
 		// sanity check
-		if ( *sizePtr < 0 ) { char *xx = NULL; *xx =0; }
+		if ( *sizePtr < 0 ) { g_errno = ECORRUPTDATA; return -1;}
 		// advance our destination ptr
 		p += *sizePtr;
 		// advance both ptrs to next string

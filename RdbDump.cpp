@@ -779,7 +779,8 @@ bool RdbDump::doneReadingForVerify ( ) {
 
 
 	// see if what we wrote is the same as what we read back
-	if ( m_verifyBuf && memcmp(m_verifyBuf,m_buf,m_bytesToWrite) != 0 &&
+	if ( m_verifyBuf && g_conf.m_verifyWrites &&
+	     memcmp(m_verifyBuf,m_buf,m_bytesToWrite) != 0 &&
 	     ! g_errno ) {
 		log("disk: Write verification of %"INT32" bytes to file %s "
 		    "failed at offset=%"INT64". Retrying.",

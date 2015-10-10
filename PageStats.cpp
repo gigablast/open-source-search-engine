@@ -734,6 +734,18 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 		p.safePrintf("<td>%"INT64"</td>",a);
 	}
 
+	p.safePrintf ("</tr>\n<tr class=poo><td><b><nobr>dropped recs</td>" );
+	for ( int32_t i = 0 ; i < numCaches ; i++ ) {
+		int64_t a = caches[i]->m_deletes;
+		p.safePrintf("<td>%"INT64"</td>",a);
+	}
+
+	p.safePrintf ("</tr>\n<tr class=poo><td><b><nobr>added recs</td>" );
+	for ( int32_t i = 0 ; i < numCaches ; i++ ) {
+		int64_t a = caches[i]->m_adds;
+		p.safePrintf("<td>%"INT64"</td>",a);
+	}
+
 	//p.safePrintf ("</tr>\n<tr class=poo><td><b><nobr>max age</td>" );
 	//for ( int32_t i = 0 ; i < numCaches ; i++ ) {
 	//	int64_t a = caches[i]->getMaxMem();
@@ -2146,6 +2158,34 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 		int64_t val    = hits + misses;
 		total += val;
 		p.safePrintf("<td>%"UINT64"</td>",val);
+	}
+	p.safePrintf("<td>%"UINT64"</td></tr>\n",total);
+
+
+	p.safePrintf("<tr class=poo><td><b>file cache adds</b></td>");
+	total = 0;
+	for ( int32_t i = 0 ; i < nr ; i++ ) {
+		Rdb *rdb = rdbs[i];
+		RdbCache *rpc = getDiskPageCache ( rdb->m_rdbId );
+		if ( ! rpc ) {
+			p.safePrintf("<td>--</td>");
+			continue;
+		}
+		p.safePrintf("<td>%"UINT64"</td>",rpc->m_adds);
+	}
+	p.safePrintf("<td>%"UINT64"</td></tr>\n",total);
+
+
+	p.safePrintf("<tr class=poo><td><b>file cache drops</b></td>");
+	total = 0;
+	for ( int32_t i = 0 ; i < nr ; i++ ) {
+		Rdb *rdb = rdbs[i];
+		RdbCache *rpc = getDiskPageCache ( rdb->m_rdbId );
+		if ( ! rpc ) {
+			p.safePrintf("<td>--</td>");
+			continue;
+		}
+		p.safePrintf("<td>%"UINT64"</td>",rpc->m_deletes);
 	}
 	p.safePrintf("<td>%"UINT64"</td></tr>\n",total);
 
