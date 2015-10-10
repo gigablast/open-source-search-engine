@@ -6647,8 +6647,9 @@ void PosdbTable::intersectLists10_r ( ) {
 		// this halfstopwikibigram bit is set in the indivial keys
 		// so we'd have to at least do a key cleansing, so we can't
 		// do this shortcut right now... mdw oct 10 2015
-		/*
 		if ( nsub == 1 && 
+		     // need it for gbfacet termlists though it seems
+		      (nwpFlags[0] & BF_FACET) &&		     
 		     !(nwpFlags[0] & BF_SYNONYM) &&
 		     !(nwpFlags[0] & BF_HALFSTOPWIKIBIGRAM) ) {
 			miniMergedList [j] = nwp     [0];
@@ -6656,7 +6657,6 @@ void PosdbTable::intersectLists10_r ( ) {
 			bflags         [j] = nwpFlags[0];
 			continue;
 		}
-		*/
 		// . ok, merge the lists into a list in mbuf
 		// . get the min of each list
 	mergeMore:
