@@ -4936,7 +4936,7 @@ int install ( install_flag_konst_t installFlag , int32_t hostId , char *dir ,
 					  // ensure directory is there, if
 					  // not then make it
 					  "ssh %s 'mkdir %s' ; "
-					  "scp -r %s %s:%s"
+					  "scp -p -r %s %s:%s"
 					  , ipStr
 					  , h2->m_dir
 
@@ -5022,7 +5022,7 @@ int install ( install_flag_konst_t installFlag , int32_t hostId , char *dir ,
 			if ( ! f.doesExist() ) target = "gb";
 
 			sprintf(tmp,
-				"scp " // blowfish is faster
+				"scp -p " // blowfish is faster
 				"%s%s "
 				"%s:%s/gb.installed%s",
 				dir,
@@ -5058,7 +5058,7 @@ int install ( install_flag_konst_t installFlag , int32_t hostId , char *dir ,
 			// don't copy to ourselves
 			//if ( h2->m_hostId == h->m_hostId ) continue;
 			sprintf(tmp,
-				"scp "
+				"scp -p "
 				"%sgb.new "
 				"%s:%s/tmpgb.installed &",
 				dir,
@@ -5071,7 +5071,7 @@ int install ( install_flag_konst_t installFlag , int32_t hostId , char *dir ,
 			// don't copy to ourselves
 			//if ( h2->m_hostId == h->m_hostId ) continue;
 			sprintf(tmp,
-				"scp %sgb.conf %shosts.conf %s:%s %s",
+				"scp -p %sgb.conf %shosts.conf %s:%s %s",
 				dir ,
 				dir ,
 				//h->m_hostId ,
@@ -5453,7 +5453,7 @@ int install ( install_flag_konst_t installFlag , int32_t hostId , char *dir ,
 			}
 			*/
 			sprintf(tmp,
-				"scp "
+				"scp -p "
 				"%scatdb/content.rdf.u8 "
 				"%s:%scatdb/content.rdf.u8",
 				dir,
@@ -5462,7 +5462,7 @@ int install ( install_flag_konst_t installFlag , int32_t hostId , char *dir ,
 			log(LOG_INIT,"admin: %s", tmp);
 			system ( tmp );
 			sprintf(tmp,
-				"scp "
+				"scp -p "
 				"%scatdb/structure.rdf.u8 "
 				"%s:%scatdb/structure.rdf.u8",
 				dir,
@@ -5471,7 +5471,7 @@ int install ( install_flag_konst_t installFlag , int32_t hostId , char *dir ,
 			log(LOG_INIT,"admin: %s", tmp);
 			system ( tmp );
 			sprintf(tmp,
-				"scp "
+				"scp -p "
 				"%scatdb/gbdmoz.structure.dat "
 				"%s:%scatdb/gbdmoz.structure.dat",
 				dir,
@@ -5480,7 +5480,7 @@ int install ( install_flag_konst_t installFlag , int32_t hostId , char *dir ,
 			log(LOG_INIT,"admin: %s", tmp);
 			system ( tmp );
 			sprintf(tmp,
-				"scp "
+				"scp -p "
 				"%scatdb/gbdmoz.content.dat "
 				"%s:%scatdb/gbdmoz.content.dat",
 				dir,
@@ -5503,7 +5503,7 @@ int install ( install_flag_konst_t installFlag , int32_t hostId , char *dir ,
 			// don't copy to ourselves
 			if ( h2->m_hostId == 0 ) continue;
 			sprintf(tmp,
-				"scp "
+				"scp -p "
 				"%scatdb/content.rdf.u8.new "
 				"%s:%scatdb/content.rdf.u8.new",
 				dir,
@@ -5512,7 +5512,7 @@ int install ( install_flag_konst_t installFlag , int32_t hostId , char *dir ,
 			log(LOG_INIT,"admin: %s", tmp);
 			system ( tmp );
 			sprintf(tmp,
-				"scp "
+				"scp -p "
 				"%scatdb/structure.rdf.u8.new "
 				"%s:%scatdb/structure.rdf.u8.new",
 				dir,
@@ -5521,7 +5521,7 @@ int install ( install_flag_konst_t installFlag , int32_t hostId , char *dir ,
 			log(LOG_INIT,"admin: %s", tmp);
 			system ( tmp );
 			sprintf(tmp,
-				"scp "
+				"scp -p "
 				"%scatdb/gbdmoz.structure.dat.new "
 				"%s:%scatdb/gbdmoz.structure.dat.new",
 				dir,
@@ -5530,7 +5530,7 @@ int install ( install_flag_konst_t installFlag , int32_t hostId , char *dir ,
 			log(LOG_INIT,"admin: %s", tmp);
 			system ( tmp );
 			sprintf(tmp,
-				"scp "
+				"scp -p "
 				"%scatdb/gbdmoz.content.dat.new "
 				"%s:%scatdb/gbdmoz.content.dat.new",
 				dir,
@@ -5539,7 +5539,7 @@ int install ( install_flag_konst_t installFlag , int32_t hostId , char *dir ,
 			log(LOG_INIT,"admin: %s", tmp);
 			system ( tmp );
 			sprintf(tmp,
-				"scp "
+				"scp -p "
 				"%scatdb/gbdmoz.content.dat.new.diff "
 				"%s:%scatdb/gbdmoz.content.dat.new.diff",
 				dir,

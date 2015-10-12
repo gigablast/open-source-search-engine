@@ -1131,7 +1131,7 @@ class SpiderColl {
 
 	// doledbkey + dataSize + bestRequestRec
 	//char m_doleBuf[MAX_DOLEREC_SIZE];
-	SafeBuf m_doleBuf;
+	//SafeBuf m_doleBuf;
 
 	bool m_isLoading;
 
@@ -1192,7 +1192,9 @@ class SpiderColl {
 
 	bool  addToDoleTable   ( SpiderRequest *sreq ) ;
 
-	bool addDoleBufIntoDoledb (bool isFromCache,uint32_t cachedTimestamp);
+	bool validateDoleBuf ( SafeBuf *doleBuf ) ;
+	bool addDoleBufIntoDoledb ( SafeBuf *doleBuf , bool isFromCache);
+	//,uint32_t cachedTimestamp);
 
 	bool updateSiteNumInlinksTable ( int32_t siteHash32,int32_t sni,
 					 time_t tstamp); // time_t

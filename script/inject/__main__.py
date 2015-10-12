@@ -324,13 +324,15 @@ def main():
             injectItem(itemName, db, 'production')
             sys.exit(0)
 
+    if len(sys.argv) == 4:
         if sys.argv[1] == 'forcefile':
             global staleTime
             staleTime = datetime.timedelta(0,0,0)
             from multiprocessing.pool import ThreadPool
             fileName = sys.argv[2]
             items = filter(lambda x: x, open(fileName, 'r').read().split('\n'))
-            pool = ThreadPool(processes=len(items))
+            threads = int(sys.argv[3])
+            pool = ThreadPool(processes=threads)
             #print zip(files, repeat(getDb(), len(files)), repeat('production', len(files)))
             def injectItemTupleWrapper(itemName):
                 db = getDb()
@@ -340,6 +342,23 @@ def main():
 
             answer = pool.map(injectItemTupleWrapper, items)
             sys.exit(0)
+
+        if sys.argv[1] == 'injectitems':
+            from multiprocessing.pool import ThreadPool
+            fileName = sys.argv[2]
+            items = filter(lambda x: x, open(fileName, 'r').read().split('\n'))
+            threads = int(sys.argv[3])
+            pool = ThreadPool(processes=threads)
+            #print zip(files, repeat(getDb(), len(files)), repeat('production', len(files)))
+            def injectItemTupleWrapper(itemName):
+                db = getDb()
+                ret = injectItem(itemName, db, 'production')
+                db.close()
+                return ret
+
+            answer = pool.map(injectItemTupleWrapper, items)
+            sys.exit(0)
+
 
 
         if sys.argv[1] == 'run':

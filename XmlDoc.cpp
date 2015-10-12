@@ -1577,6 +1577,7 @@ bool XmlDoc::set2 ( char    *titleRec ,
 	// . first thing is the key
 	// . key should have docId embedded in it
 	m_titleRecKey =  *(key_t *) p ;   
+	//m_titleRecKeyValid = true;
 	p += sizeof(key_t);
 	// bail on error
 	if ( (m_titleRecKey.n0 & 0x01) == 0x00 ) {
@@ -3496,7 +3497,6 @@ bool XmlDoc::indexWarcOrArc ( ) {
     }
 
 	int8_t *hc = getHopCount();
-	char *warcDate = NULL;
 	if ( ! hc ) return true; // error?
 	if ( hc == (void *)-1 ) return false;
 
@@ -3629,7 +3629,7 @@ bool XmlDoc::indexWarcOrArc ( ) {
 		char *warcLen  = strstr(warcHeader,"Content-Length:");
 		char *warcUrl  = strstr(warcHeader,"WARC-Target-URI:");
 		char *warcType = strstr(warcHeader,"WARC-Type:");
-		warcDate = strstr(warcHeader,"WARC-Date:");
+		char *warcDate = strstr(warcHeader,"WARC-Date:");
 		char *warcIp   = strstr(warcHeader,"WARC-IP-Address:");
 		char *warcCon  = strstr(warcHeader,"Content-Type:");
 
@@ -3966,14 +3966,11 @@ bool XmlDoc::indexWarcOrArc ( ) {
 	ir->size_metadata = newMetadata.length();
 
 	newMetadata.nullTerm();
-	//log("injected capture date into metadata %s ", ir->ptr_metadata);
 	// set 'timestamp' for injection
-	//
 	ir->m_firstIndexed = recTime;
 	ir->m_lastSpidered = recTime;
 
 
-	//log("build: warc record time was %s %"INT64, warcDate, recTime);
 	// set 'ip' for injection
 
 	ir->m_injectDocIp = 0;
@@ -17034,9 +17031,8 @@ char **XmlDoc::getHttpReply2 ( ) {
 	bool isInjecting = getIsInjecting();
 	if ( ! isInjecting && m_sreqValid     && m_sreq.m_hopCount == 0 )
 		r->m_isRootSeedUrl = 1;
-	// only if it was a seed for now... so comment out
-	// if ( ! isInjecting && m_hopCountValid && m_hopCount        == 0 )
-	// 	r->m_isRootSeedUrl = 1;
+	if ( ! isInjecting && m_hopCountValid && m_hopCount        == 0 )
+		r->m_isRootSeedUrl = 1;
 
 	// sanity check
 	if ( ! m_firstIpValid ) { char *xx=NULL;*xx=0; }
@@ -19289,6 +19285,9 @@ char **XmlDoc::getExpandedUtf8Content ( ) {
 		// "" is not acceptable either. techcrunch.com has
 		// <iframe src=""> which ends up embedding the root url.
 		if ( urlLen == 0 ) 
+			continue;
+		// skip if "about:blank"
+		if ( urlLen==11 && strncmp(url,"about:blank",11) == 0 )
 			continue;
 		// get our current url
 		//cu = getCurrentUrl();
@@ -21693,12 +21692,13 @@ bool XmlDoc::logIt ( SafeBuf *bb ) {
 	//
 	// print # of link texts from 2nd coll
 	//
-	if ( m_linkInfo2Valid ) {
-		LinkInfo *info = ptr_linkInfo2; 
-		int32_t nt = 0;
-		if ( info ) nt = info->getNumLinkTexts();
-		if ( nt ) sb->safePrintf("goodinlinks2=%"INT32" ",nt );
-	}
+	// this is not used for what it was used for.
+	// if ( m_linkInfo2Valid && size_linkInfo2 > 4 ) {
+	// 	LinkInfo *info = ptr_linkInfo2; 
+	// 	int32_t nt = 0;
+	// 	if ( info ) nt = info->getNumLinkTexts();
+	// 	if ( nt ) sb->safePrintf("goodinlinks2=%"INT32" ",nt );
+	// }
 
 	if (  m_docIdValid ) 
 		sb->safePrintf("docid=%"UINT64" ",m_docId);
@@ -28889,12 +28889,22 @@ bool XmlDoc::appendNewMetaInfo ( SafeBuf *metaList , bool forDelete ) {
 	if ( m_usePosdb && ! addTable144 ( &tt1 , od->m_docId , &sb ) )
 		return false;
 
-	int64_t uh48 = m_firstUrl.getUrlHash48();
+	// this could use time axis so that is taken into account
+	int64_t uh48 = getFirstUrlHash48();
 
 	// and re-formulate (and compress) his new title rec
 	SafeBuf trec;
 	if ( ! od->setTitleRecBuf ( &trec , od->m_docId , uh48 ) )
 		return false;
+
+	// force the title rec key to be the same
+	// if ( od->m_titleRecKeyValid && trec.getLength() >= sizeof(key_t) ) {
+	// 	char *p = trec.getBufStart();
+	// 	*(key_t *)p = od->m_titleRecKey;
+	// }
+	// else {
+	// 	log("build: old titlerec invalid docid=%"INT64,od->m_docId);
+	// }
 
 	// store the posdb keys in the meta list
 	if ( m_usePosdb && ! metaList->safeMemcpy ( &sb ) )

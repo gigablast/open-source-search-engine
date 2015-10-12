@@ -918,6 +918,10 @@ bool PosdbTable::allocTopTree ( ) {
 		    , (int32_t)m_r->m_numDocIdSplits
 		    );
 
+	// keep it sane
+	if ( nn > m_r->m_docsToGet * 2 && nn > 60 )
+		nn = m_r->m_docsToGet * 2;
+
 	// this actually sets the # of nodes to MORE than nn!!!
 	if ( ! m_topTree->setNumNodes(nn,m_r->m_doSiteClustering)) {
 		log("toptree: toptree: error allocating nodes: %s",
@@ -1007,8 +1011,9 @@ bool PosdbTable::allocTopTree ( ) {
 			continue;
 		// how big?
 		int64_t total = m_msg2->m_lists[i].getListSize();
-		// skip if empty
-		if ( total == 0 ) {
+		// skip if empty. no we could be doing a split that is
+		// empty but other splits are full
+		if ( total == 0 && m_r->m_numDocIdSplits <= 1 ) {
 			log("query: empty facets for term #%i",i);
 			continue;
 		}
@@ -6639,7 +6644,12 @@ void PosdbTable::intersectLists10_r ( ) {
 		// synbits on it, below!!! or a half stop wiki bigram like
 		// the term "enough for" in the wiki phrase 
 		// "time enough for love" because we wanna reward that more!
+		// this halfstopwikibigram bit is set in the indivial keys
+		// so we'd have to at least do a key cleansing, so we can't
+		// do this shortcut right now... mdw oct 10 2015
 		if ( nsub == 1 && 
+		     // need it for gbfacet termlists though it seems
+		     (nwpFlags[0] & (BF_FACET|BF_NUMBER)) &&		     
 		     !(nwpFlags[0] & BF_SYNONYM) &&
 		     !(nwpFlags[0] & BF_HALFSTOPWIKIBIGRAM) ) {
 			miniMergedList [j] = nwp     [0];
@@ -7565,6 +7575,7 @@ void PosdbTable::intersectLists10_r ( ) {
 		dcs.m_docLang = docLang;
 		// ensure enough room we can't allocate in a thread!
 		if ( m_scoreInfoBuf.getAvail()<(int32_t)sizeof(DocIdScore)+1){
+			goto advance;
 			char *xx=NULL;*xx=0; }
 		// if same as last docid, overwrite it since we have a higher
 		// siterank or langid i guess

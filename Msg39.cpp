@@ -154,6 +154,7 @@ void Msg39::getDocIds ( UdpSlot *slot ) {
         int32_t requestSize = m_slot->m_readBufSize;
         // ensure it's size is ok
         if ( requestSize < 8 ) { 
+	BadReq:
 		g_errno = EBADREQUESTSIZE; 
 		log(LOG_LOGIC,"query: msg39: getDocIds: %s." , 
 		    mstrerror(g_errno) );
@@ -169,7 +170,11 @@ void Msg39::getDocIds ( UdpSlot *slot ) {
 					  m_r->m_buf );
 
 	// sanity check
-	if ( finalSize != requestSize ) {char *xx=NULL;*xx=0; }
+	if ( finalSize != requestSize ) {
+		log("msg39: sending bad request.");
+		goto BadReq;
+		//char *xx=NULL;*xx=0; }
+	}
 
 	getDocIds2 ( m_r );
 }
