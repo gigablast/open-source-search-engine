@@ -513,7 +513,9 @@ class XmlDoc {
 	bool indexDoc2 ( );
 	bool isContainerDoc ( );
 	bool indexContainerDoc ( );
-	bool indexWarcOrArc ( char ct ) ;
+
+	bool readMoreWarc();
+	bool indexWarcOrArc ( ) ;
 	key_t *getTitleRecKey() ;
 	//char *getSkipIndexing ( );
 	char *prepareToMakeTitleRec ( ) ;
@@ -1088,12 +1090,11 @@ class XmlDoc {
 	int32_t m_warcError ;
 	int32_t m_arcError ;
 	bool m_doneInjectingWarc ;
-	bool m_doneInjectingArc ;
 
 	int64_t m_bytesStreamed;
 	char *m_fileBuf ;
 	int32_t m_fileBufAllocSize;
-	bool    m_registeredWgetSleepCallback;
+	bool    m_registeredWgetReadCallback;
 	char *m_fptr ;
 	char *m_fptrEnd ;
 

@@ -198,6 +198,15 @@ bool SafeBuf::safeMemcpy ( Words *w , int32_t a , int32_t b ) {
 	return safeMemcpy ( p , pend - p );
 }
 
+char* SafeBuf::pushStr  (char* str, uint32_t len) {
+	int32_t initLen = m_length;
+	bool status = safeMemcpy ( str , len );
+	status &= nullTerm();
+	m_length++; //count the null so it isn't overwritten
+	if(!status) return NULL;
+	return m_buf + initLen;
+}
+
 bool SafeBuf::pushPtr ( void *ptr ) {
 	if ( m_length + (int32_t)sizeof(char *) > m_capacity ) 
 		if(!reserve(sizeof(char *)))//2*m_capacity + 1))
