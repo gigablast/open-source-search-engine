@@ -2515,7 +2515,7 @@ int32_t deserializeMsg ( int32_t  baseSize ,
 	return baseSize + (p - stringBuf);//getStringBuf());
 }
 
-void deserializeMsg2 ( char    **firstStrPtr , // ptr_url
+bool deserializeMsg2 ( char    **firstStrPtr , // ptr_url
 		       int32_t  *firstSizeParm ) { // size_url
 	int nptrs=((char *)firstSizeParm-(char *)firstStrPtr)/sizeof(char *);
 	// point to our string buffer
@@ -2531,7 +2531,7 @@ void deserializeMsg2 ( char    **firstStrPtr , // ptr_url
 		// make it NULL if size is 0 though
 		if ( *sizePtr == 0 ) *strPtr = NULL;
 		// sanity check
-		if ( *sizePtr < 0 ) { char *xx = NULL; *xx =0; }
+		if ( *sizePtr < 0 ) return false;//{ char *xx = NULL; *xx =0; }
 		// advance our destination ptr
 		p += *sizePtr;
 		// advance both ptrs to next string
@@ -2540,6 +2540,7 @@ void deserializeMsg2 ( char    **firstStrPtr , // ptr_url
 	}
 	// return how many bytes we processed
 	//return baseSize + (p - stringBuf);//getStringBuf());
+	return true;
 }
 
 // print it to stdout for debugging Dates.cpp

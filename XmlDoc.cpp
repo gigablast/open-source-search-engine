@@ -3386,7 +3386,6 @@ void doneReadingArchiveFileWrapper ( void *state ) {
 bool XmlDoc::indexWarcOrArc ( char ctype ) {
 
 	int8_t *hc = getHopCount();
-	char *warcDate = NULL;
 	if ( ! hc ) return true; // error?
 	if ( hc == (void *)-1 ) return false;
 
@@ -3593,7 +3592,7 @@ bool XmlDoc::indexWarcOrArc ( char ctype ) {
 		char *warcLen  = strstr(warcHeader,"Content-Length:");
 		char *warcUrl  = strstr(warcHeader,"WARC-Target-URI:");
 		char *warcType = strstr(warcHeader,"WARC-Type:");
-		warcDate = strstr(warcHeader,"WARC-Date:");
+		char *warcDate = strstr(warcHeader,"WARC-Date:");
 		char *warcIp   = strstr(warcHeader,"WARC-IP-Address:");
 		char *warcCon  = strstr(warcHeader,"Content-Type:");
 
@@ -3915,14 +3914,14 @@ bool XmlDoc::indexWarcOrArc ( char ctype ) {
 	ir->size_metadata = newMetadata.length();
 
 	newMetadata.nullTerm();
-	log("injected capture date into metadata %s ", ir->ptr_metadata);
+	//log("injected capture date into metadata %s ", ir->ptr_metadata);
+
 	// set 'timestamp' for injection
 	//
 	ir->m_firstIndexed = recTime;
 	ir->m_lastSpidered = recTime;
 
 
-	log("build: warc record time was %s %"INT64, warcDate, recTime);
 	// set 'ip' for injection
 
 	ir->m_injectDocIp = 0;

@@ -627,6 +627,6 @@ int32_t deserializeMsg ( int32_t  baseSize ,
 		      char **firstStrPtr ,
 		      char *stringBuf ) ;
 
-void deserializeMsg2 ( char **firstStrPtr , int32_t  *firstSizeParm );
+bool deserializeMsg2 ( char **firstStrPtr , int32_t  *firstSizeParm );
 
 #endif 
