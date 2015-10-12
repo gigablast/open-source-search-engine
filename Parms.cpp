@@ -11288,20 +11288,6 @@ void Parms::init ( ) {
 	m++;
 	*/
 
-	m->m_title = "verify disk writes";
-	m->m_desc  = "Read what was written in a verification step. Decreases "
-		"performance, but may help fight disk corruption mostly on "
-		"Maxtors and Western Digitals.";
-	m->m_cgi   = "vdw";
-	m->m_off   = (char *)&g_conf.m_verifyWrites - g;
-	m->m_type  = TYPE_BOOL;
-	m->m_def   = "0";
-	m->m_group = 0;
-	m->m_flags = 0;//PF_HIDDEN | PF_NOSAVE;
-	m->m_page  = PAGE_MASTER;
-	m->m_obj   = OBJ_CONF;
-	m++;
-
 	// this is ifdef'd out in Msg3.cpp for performance reasons,
 	// so do it here, too
 #ifdef GBSANITYCHECK
@@ -12440,6 +12426,20 @@ void Parms::init ( ) {
 	m++;
 	*/
 
+	m->m_title = "verify disk writes";
+	m->m_desc  = "Read what was written in a verification step. Decreases "
+		"performance, but may help fight disk corruption mostly on "
+		"Maxtors and Western Digitals.";
+	m->m_cgi   = "vdw";
+	m->m_off   = (char *)&g_conf.m_verifyWrites - g;
+	m->m_type  = TYPE_BOOL;
+	m->m_def   = "0";
+	m->m_group = 0;
+	m->m_flags = 0;//PF_HIDDEN | PF_NOSAVE;
+	m->m_page  = PAGE_MASTER;
+	m->m_obj   = OBJ_CONF;
+	m->m_group = 0;
+	m++;
 
 	m->m_title = "max spider read threads";
 	m->m_desc  = "Maximum number of threads to use per Gigablast process "

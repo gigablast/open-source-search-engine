@@ -3973,6 +3973,8 @@ bool printResult ( State0 *st, int32_t ix , int32_t *numPrintedSoFar ) {
 		     ix, (int32_t)msg40->getClusterLevel(ix));
 
 	int64_t d = msg40->getDocId(ix);
+	// this is normally a double, but cast to float
+	float docScore = (float)msg40->getScore(ix);
 
 	// do not print if it is a summary dup or had some error
 	// int32_t level = (int32_t)msg40->getClusterLevel(ix);
@@ -5099,6 +5101,7 @@ bool printResult ( State0 *st, int32_t ix , int32_t *numPrintedSoFar ) {
 		// . docId for possible cached link
 		// . might have merged a bunch together
 		sb->safePrintf("\t\t<docId>%"INT64"</docId>\n",mr->m_docId );
+		sb->safePrintf("\t\t<docScore>%f</docScore>\n",docScore);
 	}
 
 	if ( si->m_format == FORMAT_XML && mr->m_contentType != CT_STATUS ) {
@@ -5149,6 +5152,7 @@ bool printResult ( State0 *st, int32_t ix , int32_t *numPrintedSoFar ) {
 		// . docId for possible cached link
 		// . might have merged a bunch together
 		sb->safePrintf("\t\t\"docId\":%"INT64",\n",mr->m_docId );
+		sb->safePrintf("\t\t\"docScore\":%f,\n",docScore);
 	}
 
 	if ( si->m_format == FORMAT_JSON && mr->m_contentType != CT_STATUS ) {
