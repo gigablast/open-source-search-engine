@@ -229,6 +229,9 @@ bool Msg7::sendInjectionRequestToHost ( InjectionRequest *ir ,
 		return log("inject: url too big.");
 	}
 
+	// hack fix core
+	if ( ir->size_metadata == 0 ) ir->ptr_metadata = NULL;
+
 	int32_t sirSize = 0;
 	char *sir = serializeMsg2 ( ir ,
 				    sizeof(InjectionRequest),
