@@ -1424,10 +1424,12 @@ bool Rdb::gotTokenForDump ( ) {
 			RdbBucket *b = m_buckets.m_buckets[i];
 			collnum_t cn = b->getCollnum();
 			int32_t nk = b->getNumKeys();
-			for ( int32_t j = 0 ; j < nk; j++ ) {
-				cr = g_collectiondb.m_recs[cn];
-				if ( cr ) cr->m_treeCount++;
-			}
+			// for ( int32_t j = 0 ; j < nk; j++ ) {
+			// 	cr = g_collectiondb.m_recs[cn];
+			// 	if ( cr ) cr->m_treeCount++;
+			// }
+			cr = g_collectiondb.m_recs[cn];
+			if ( cr ) cr->m_treeCount += nk;
 		}
 	}
 
