@@ -5884,7 +5884,7 @@ uint64_t SpiderColl::getSpiderTimeMS ( SpiderRequest *sreq,
 	if ( ! srep && sreq->m_isPageReindex ) return spiderTimeMS;
 
 
-	log("spider: getting spider time %"INT64, spiderTimeMS);
+	//log("spider: getting spider time %"INT64, spiderTimeMS);
 	// to avoid hammering an ip, get last time we spidered it...
 	int64_t lastMS ;
 	lastMS = m_lastDownloadCache.getLongLong ( m_collnum       ,

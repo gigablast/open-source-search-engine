@@ -712,8 +712,11 @@ void handleRequest7 ( UdpSlot *slot , int32_t netnice ) {
 	}
 		
 
-	if ( ! ir->ptr_url || strncmp(ir->ptr_url,"http",4) != 0 ) {
-		log("inject: trying to inject NULL or non http url.");
+	// the url can be like xyz.com. so need to do another corruption
+	// test for ia
+	if ( ! ir->ptr_url ) { // || strncmp(ir->ptr_url,"http",4) != 0 ) {
+		//log("inject: trying to inject NULL or non http url.");
+		log("inject: trying to inject NULL url.");
 		g_errno = EBADURL;
 		//g_corruptCount++;
 		g_udpServer.sendErrorReply(slot,g_errno);
