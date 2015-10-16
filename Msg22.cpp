@@ -157,7 +157,10 @@ bool Msg22::getTitleRec ( Msg22Request  *r              ,
 	if ( hostNum >= numHosts ) { char *xx = NULL; *xx = 0; }
 	firstHostId = hosts [ hostNum ].m_hostId ;
 	*/
-
+	
+	int32_t firstHostId = g_hostdb.getLeastLoadedInShard ( shardNum )->m_hostId;
+		
+#if 0
 	// get our group
 	int32_t  allNumHosts = g_hostdb.getNumHostsPerShard();
 	Host *allHosts    = g_hostdb.getShard ( shardNum );//Group ( groupId );
@@ -197,6 +200,9 @@ bool Msg22::getTitleRec ( Msg22Request  *r              ,
 	// bypassed.
 	//if ( ! g_conf.m_useBiasedTfndb ) firstHostId = -1;
 	// flag it
+#endif
+	
+
 	m_outstanding = true;
 	r->m_inUse    = 1;
 

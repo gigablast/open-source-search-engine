@@ -1642,6 +1642,25 @@ Host *Hostdb::getLiveHostInShard ( int32_t shardNum ) {
 	return &shard[0];
 }
 
+Host *Hostdb::getLeastLoadedInShard ( uint32_t shardNum ) {
+	int32_t minOutstandingRequests = 0x7fffffff;
+	int32_t minOutstandingRequestsIndex = -1;
+	Host *shard = getShard ( shardNum );
+	for(int32_t i = 0; i < m_numHostsPerShard; i++) {
+		Host *hh = &shard[i];
+		if(isDead(hh)) continue;
+		if(hh->m_numOutstandingRequests > minOutstandingRequests) continue;
+
+		minOutstandingRequests = hh->m_numOutstandingRequests;
+		minOutstandingRequestsIndex = i;
+	}
+	if(minOutstandingRequestsIndex == -1) return shard;
+	return &shard[minOutstandingRequestsIndex];
+}
+
+
+
+
 // if all are dead just return host #0
 Host *Hostdb::getFirstAliveHost ( ) {
 	for ( int32_t i = 0 ; i < m_numHosts ; i++ )

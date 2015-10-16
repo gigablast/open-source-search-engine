@@ -3378,6 +3378,7 @@ void doneReadingArchiveFileWrapper ( int fd, void *state ) {
 	// . go back to the main entry function
 	// . make sure g_errno is clear from a msg3a g_errno before calling
 	//   this lest it abandon the loop
+	
 	THIS->m_masterLoop ( THIS->m_masterState );
 }
 
@@ -3404,8 +3405,8 @@ bool XmlDoc::readMoreWarc() {
 		return true;
 	}
 
-    int32_t leftOver = 0;
-    int32_t skipAhead = 0;
+    int64_t leftOver = 0;
+    int64_t skipAhead = 0;
 
     // How much is unprocessed
     if(m_fptr != m_fptrEnd) {
@@ -3418,24 +3419,32 @@ bool XmlDoc::readMoreWarc() {
 		m_fptr = m_fileBuf;
 		m_fptrEnd = m_fileBuf;
 	}
+	
+	// We don't want to be memmoving the buffer up for every single
+	// document we process so only do it when we need it.
+	if(leftOver > MAXWARCRECSIZE) return false;
 
-
+	int64_t bytesRemaining = m_fileBufAllocSize - (m_fptrEnd - m_fileBuf) - 1;
     // Scoot up everything we haven't processed
-    if(m_fptr != m_fileBuf) {
-        //log("scooting up by left over %"INT32, leftOver);
+    if(bytesRemaining < MAXWARCRECSIZE) {
+        log("scooting up by left over %"INT64, leftOver);
         // count everything we've processed
         m_bytesStreamed += m_fptr - m_fileBuf;
         memmove(m_fileBuf, m_fptr, leftOver);
         m_fptr = m_fileBuf;
         m_fptrEnd = m_fileBuf + leftOver;
         *m_fptrEnd = '\0';
+		bytesRemaining += leftOver;
     }
 
-	int32_t toRead = m_fileBufAllocSize - leftOver - 1;
+	int64_t toRead = m_fileBufAllocSize - leftOver - 1;
+	if(toRead > bytesRemaining) toRead = bytesRemaining;
+
 	if(toRead == 0) {
 		//log("build: not enough room to read, lets process the buffer" );
 		return false;
 	}
+
 
     g_loop.disableTimer();
     errno = 0;
@@ -3443,7 +3452,7 @@ bool XmlDoc::readMoreWarc() {
     g_loop.enableTimer();
 
     if(bytesRead > 0) {
-        log("build: warc pipe read %"INT32" more bytes of the pipe. errno = %s, buf space = %"INT32 " processed = %"INT64 " skipAhead=%"INT32, 
+        log("build: warc pipe read %"INT32" more bytes of the pipe. errno = %s, buf space = %"INT64 " processed = %"INT64 " skipAhead=%"INT64, 
             bytesRead, mstrerror(errno),toRead, m_bytesStreamed, skipAhead);
     }
 
@@ -3469,7 +3478,7 @@ bool XmlDoc::readMoreWarc() {
             return false;
         // }
     }
-    m_fptr = m_fileBuf;
+    //m_fptr = m_fileBuf;
     m_fptrEnd = m_fptrEnd + bytesRead;
     *m_fptrEnd = '\0';
 	m_fptr += skipAhead;
@@ -3502,7 +3511,7 @@ bool XmlDoc::indexWarcOrArc ( ) {
 
     if ( ! m_fileBuf ) {
         // Do this exacly once.
-        m_fileBufAllocSize = (MAXWARCRECSIZE) + 1;
+        m_fileBufAllocSize = (5 * MAXWARCRECSIZE) + 1;
         m_fileBuf=(char *)mmalloc(m_fileBufAllocSize ,"sibuf");
         m_fptr = m_fileBuf;
         m_fptrEnd = m_fileBuf;
@@ -3517,17 +3526,7 @@ bool XmlDoc::indexWarcOrArc ( ) {
 
     if(m_hasMoreToRead) readMoreWarc();
 
-	// would block? return false then
-	// if ( file == (void *)-1 )
-	// 	return false;
-
 	setStatus ("injecting archive records");
-
-	// if ( *wcp == NULL ) {
-	// 	log("build: warc content was empty. did not index.");
-	// 	return true;
-	// }
-
 
 	QUICKPOLL ( m_niceness );
 
@@ -3567,13 +3566,32 @@ bool XmlDoc::indexWarcOrArc ( ) {
 
 	if ( max > MAXMSG7S ) max = MAXMSG7S;
 	// wait for one to come back before launching another msg7
-	if ( m_numInjectionsOut >= max ) return false;
+	if ( m_numInjectionsOut >= max ) {
+		// Don't need to read anymore so don't call us
+		if(m_registeredWgetReadCallback && m_pipe) {
+			g_loop.unregisterReadCallback(fileno(m_pipe), this,doneReadingArchiveFileWrapper);
+			m_registeredWgetReadCallback = false;
+		}
+		return false;
+	}
 
 	char *realStart = m_fptr;
 
 	// need at least say 100k for warc header
 	if ( m_fptr + 100000 > m_fptrEnd && m_hasMoreToRead )  {
 		//log("build need more of the record to process so sleeping.");
+
+		if(!m_registeredWgetReadCallback) {
+			if(!g_loop.registerReadCallback ( fileno(m_pipe),
+											  this ,
+											  doneReadingArchiveFileWrapper,
+											  m_niceness    )) {
+				log("build: failed to register warc read callback." );
+				return true;
+			}
+			log("build: reregistered the read callback. need more");
+			m_registeredWgetReadCallback = true;
+		}
         return false;
 	}
 
@@ -3868,6 +3886,18 @@ bool XmlDoc::indexWarcOrArc ( ) {
 	if ( m_fptr > m_fptrEnd && recSize > MAXWARCRECSIZE ) {
 		log("build: skipping archive file of %"INT64" "
 		    "bytes which is too big",recSize);
+
+		if(!m_registeredWgetReadCallback) {
+			if(!g_loop.registerReadCallback ( fileno(m_pipe),
+											  this ,
+											  doneReadingArchiveFileWrapper,
+											  m_niceness    )) {
+				log("build: failed to register warc read callback." );
+				return true;
+			}
+			log("build: reregistered the read callback. skip bigrec");
+			m_registeredWgetReadCallback = true;
+		}
 		return false;
 	}
 
@@ -3875,6 +3905,20 @@ bool XmlDoc::indexWarcOrArc ( ) {
 	if ( m_fptr > m_fptrEnd ) {
         //log("build: record end is past the end of what we read by %"INT64 "  %"UINT64,  m_fptrEnd - m_fptr, recSize);
         m_fptr -= recSize; 
+
+		if(!m_registeredWgetReadCallback) {
+			if(!g_loop.registerReadCallback ( fileno(m_pipe),
+											  this ,
+											  doneReadingArchiveFileWrapper,
+											  m_niceness    )) {
+				log("build: failed to register warc read callback." );
+				return true;
+			}
+			log("build: reregistered the read callback. reread this record");
+			m_registeredWgetReadCallback = true;
+		}
+
+
         return false;
 	}
 
@@ -19628,12 +19672,12 @@ FILE *XmlDoc::getUtf8ContentInFile () {
 		log("build: failed to register warc read callback." );
 		return NULL;
 	}
+	m_registeredWgetReadCallback = true;
 
 
 	log("build: called popen");
 
 	m_calledWgetThread = true;
-	m_registeredWgetReadCallback = true;
     m_hasMoreToRead = true;
 
 	return fh;

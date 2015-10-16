@@ -15,11 +15,10 @@ import flask
 import signal, os
 import random
 from itertools import repeat
-
+staleTime = datetime.timedelta(7,0,0) # one week for now
 
 app = flask.Flask(__name__)
 app.secret_key = 'oaisj84alwsdkjhf9238u'
-staleTime = datetime.timedelta(7,0,0) # one week for now
 
 def getDb(makeDates=True):
     if makeDates:
@@ -111,7 +110,7 @@ def injectItem(item, db, mode):
         if not ff['name'].endswith('arc.gz'): continue
         itemMetadata = {'mtime':ff['mtime']}
         updateTime = datetime.datetime.fromtimestamp(float(ff['mtime']))
-        if ff['name'] in lastUpdate and updateTime <= lastUpdate[ff['name']]:
+        if mode != 'force' and ff['name'] in lastUpdate and updateTime <= lastUpdate[ff['name']]:
             print "skip {0} because it is up to date".format(ff['name'])
             skipped += 1
             continue
@@ -123,7 +122,10 @@ def injectItem(item, db, mode):
                     'c':'ait',
                     'spiderlinks':0}
         start = time.time()
-        if mode == 'production':
+        if mode == 'testing':
+            time.sleep(random.randint(1,4))
+            statusCode = 999
+        else:
             try:
                 rp = requests.post("http://localhost:8000/admin/inject", postVars)
                 statusCode = rp.status_code
@@ -132,9 +134,6 @@ def injectItem(item, db, mode):
                 print 'error: gb inject', postVars['url'], e
                 statusCode = -1
             #print postVars['url'], rp.status_code
-        else:
-            time.sleep(random.randint(1,4))
-            statusCode = 999
         took = time.time() - start
 
         print "sent", ff['name'],'to gb, took', took
@@ -212,7 +211,7 @@ def nuke(lastPid, fromOrbit=False):
         except:
             pass
 
-    killed = subprocess.Popen("""kill `ps auxx |grep warc-inject|awk -e '{print $2}'`""" % sys.argv[0],
+    killed = subprocess.Popen("""kill `ps auxx |grep warc-inject|grep -v grep|awk -e '{print $2}'`""",
                               shell=True,stdout=subprocess.PIPE).communicate()[0]
 
     if killed == 'Terminated':
@@ -222,12 +221,16 @@ def nuke(lastPid, fromOrbit=False):
 
 
 def main():
+    global staleTime
     try:
         lastPid = open('running.pid', 'r').read()
     except:
         lastPid = None
     print 'arguments were', sys.argv, 'pid is', os.getpid()
     open('running.pid', 'w').write(str(os.getpid()))
+
+    # p = multiprocessing.Process(target=serveForever)
+    # p.start()
     if len(sys.argv) == 2:
         if sys.argv[1] == 'init':
             init()
@@ -311,22 +314,24 @@ def main():
 
             signal.alarm(0)          # Disable the alarm
 
-
-
         if sys.argv[1] == 'serve':
             serveForever()
 
     if len(sys.argv) == 3:
-
         if sys.argv[1] == 'force':
             itemName = sys.argv[2]
             db = getDb()
             injectItem(itemName, db, 'production')
             sys.exit(0)
 
+        if sys.argv[1] == 'run':
+            threads = int(sys.argv[2])
+            runInjects(threads)
+            print "done running"
+
+
     if len(sys.argv) == 4:
-        if sys.argv[1] == 'forcefile':
-            global staleTime
+        if sys.argv[1] == 'injectfile':
             staleTime = datetime.timedelta(0,0,0)
             from multiprocessing.pool import ThreadPool
             fileName = sys.argv[2]
@@ -341,6 +346,24 @@ def main():
                 return ret
 
             answer = pool.map(injectItemTupleWrapper, items)
+            print 'finished: ', answer
+            sys.exit(0)
+        if sys.argv[1] == 'forcefile':
+            staleTime = datetime.timedelta(0,0,0)
+            from multiprocessing.pool import ThreadPool
+            fileName = sys.argv[2]
+            items = filter(lambda x: x, open(fileName, 'r').read().split('\n'))
+            threads = int(sys.argv[3])
+            pool = ThreadPool(processes=threads)
+            #print zip(files, repeat(getDb(), len(files)), repeat('production', len(files)))
+            def injectItemTupleWrapper(itemName):
+                db = getDb()
+                ret = injectItem(itemName, db, 'force')
+                db.close()
+                return ret
+
+            answer = pool.map(injectItemTupleWrapper, items)
+            print 'finished: ', answer
             sys.exit(0)
 
         if sys.argv[1] == 'injectitems':
@@ -361,9 +384,6 @@ def main():
 
 
 
-        if sys.argv[1] == 'run':
-            threads = int(sys.argv[2])
-            runInjects(threads)
 
         
 def runInjects(threads, mode='production'):
@@ -409,12 +429,6 @@ def serveForever():
                 pass
         db.close()
 
-
-
-
-
-
-
         return flask.make_response(metadata)
 
     @app.route('/progress',
@@ -456,9 +470,9 @@ def serveForever():
 
     app.run('0.0.0.0', 
             port=7999,
-            debug=True,
-            use_reloader=True,
-            use_debugger=True)
+            debug=False,
+            use_reloader=False,
+            use_debugger=False)
 
 
 if __name__ == '__main__':
