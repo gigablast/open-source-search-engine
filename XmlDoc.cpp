@@ -16559,7 +16559,13 @@ SafeBuf *XmlDoc::getDiffbotReply ( ) {
 	// go through gb. we should fix that by downloading the whole page
 	// ourselves and sending it back, and tell diffbot's phantomjs not
 	// to do the certificate check.
-	useProxies = false;
+	//
+	// for now, allow http and NOT https urls through though.
+	// TODO: if the url redirects to an https url will this mess us up?
+	if (  ! m_firstUrlValid )
+		useProxies = false;
+	if ( m_firstUrlValid && m_firstUrl.isHttps() )
+		useProxies = false;
 
 	// if we used a proxy to download the doc, then diffbot should too
 	// BUT tell diffbot to go through host #0 so we can send it to the
