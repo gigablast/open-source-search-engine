@@ -16543,7 +16543,7 @@ void Parms::init ( ) {
 
 	m->m_title = "use robots.txt";
 	m->m_desc  = "If this is true Gigablast will respect "
-		"the robots.txt convention.";
+		"the robots.txt convention and rel no follow meta tags.";
 	m->m_cgi   = "obeyRobots";
 	m->m_off   = (char *)&cr.m_useRobotsTxt - x;
 	m->m_type  = TYPE_BOOL;

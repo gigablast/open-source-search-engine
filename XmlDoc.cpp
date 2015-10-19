@@ -8810,10 +8810,15 @@ Links *XmlDoc::getLinks ( bool doQuickSet ) {
 		return &m_links;
 	}
 		
+	CollectionRec *cr = getCollRec();
+	if ( ! cr ) return NULL;
+	bool useRelNoFollow = true;
+	if ( ! cr->m_useRobotsTxt ) useRelNoFollow = false;
+
 	// . set it
 	// . if parent is a permalink we can avoid its suburl outlinks 
 	//   containing "comment" from being classified as permalinks
-	if ( ! m_links.set ( true        , // useRelNoFollow? 
+	if ( ! m_links.set ( useRelNoFollow ,
 			     xml         ,
 			     u           ,
 			     true        , // setLinkHashes?
