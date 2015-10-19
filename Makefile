@@ -788,7 +788,7 @@ install-pkgs-local:
 warcinjector: 
 	-rm -r /home/zak/.pex/build/inject-*
 	-rm -r /home/zak/.pex/install/inject-*
-	cd script && pex -v . requests pyopenssl ndg-httpsclient pyasn1 multiprocessing flask -e inject -o warc-inject --inherit-path --no-wheel
+	cd script && pex -v . gevent gevent-socketio requests pyopenssl ndg-httpsclient pyasn1 multiprocessing -e inject -o warc-inject --inherit-path --no-wheel
 
 
 

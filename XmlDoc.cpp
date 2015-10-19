@@ -3427,7 +3427,7 @@ bool XmlDoc::readMoreWarc() {
 	int64_t bytesRemaining = m_fileBufAllocSize - (m_fptrEnd - m_fileBuf) - 1;
     // Scoot up everything we haven't processed
     if(bytesRemaining < MAXWARCRECSIZE) {
-        log("scooting up by left over %"INT64, leftOver);
+        //log("scooting up by left over %"INT64, leftOver);
         // count everything we've processed
         m_bytesStreamed += m_fptr - m_fileBuf;
         memmove(m_fileBuf, m_fptr, leftOver);
@@ -3451,10 +3451,10 @@ bool XmlDoc::readMoreWarc() {
     int bytesRead = fread(m_fptrEnd, 1, toRead, m_pipe);
     g_loop.enableTimer();
 
-    if(bytesRead > 0) {
-        log("build: warc pipe read %"INT32" more bytes of the pipe. errno = %s, buf space = %"INT64 " processed = %"INT64 " skipAhead=%"INT64, 
-            bytesRead, mstrerror(errno),toRead, m_bytesStreamed, skipAhead);
-    }
+    // if(bytesRead > 0) {
+    //     log("build: warc pipe read %"INT32" more bytes of the pipe. errno = %s, buf space = %"INT64 " processed = %"INT64 " skipAhead=%"INT64, 
+    //         bytesRead, mstrerror(errno),toRead, m_bytesStreamed, skipAhead);
+    // }
 
     if(bytesRead <= 0 && errno != EAGAIN) {
         // if(errno == EAGAIN){
@@ -3462,18 +3462,20 @@ bool XmlDoc::readMoreWarc() {
         //     return false;
         // } else {
 			if(m_registeredWgetReadCallback) {
-				log("build:came back from read callback");
+				//log("build:came back from read callback");
 				g_loop.unregisterReadCallback(fileno(m_pipe), this,doneReadingArchiveFileWrapper);
 				m_registeredWgetReadCallback = false;
 			}
 
             if(m_pipe) {
                 int32_t retCode = fclose(m_pipe);
-                log("we closed the pipe with error %s", mstrerror(retCode));
+				if(retCode) {
+					log("we closed the pipe with error %s", mstrerror(retCode));
+				}
                 m_pipe = NULL;
             }
 
-            log("build: warc problem pipe terminated %s", mstrerror(errno));
+            //log("build: warc problem pipe terminated %s", mstrerror(errno));
             m_hasMoreToRead = false;
             return false;
         // }
@@ -3533,12 +3535,12 @@ bool XmlDoc::indexWarcOrArc ( ) {
 	// did an inject return?
 	if ( m_doneInjectingWarc ) {
 	warcDone:
-		log("build: done parsing %"INT64" bytes of archive file %s. left over =%"INT32 "done injecting %"INT32 " hasmoretoread %"INT32, 
-			m_bytesStreamed + m_fptrEnd - m_fileBuf, 
-            m_firstUrl.getUrl(),
-			(int32_t)(m_fptrEnd - m_fptr),
-			(int32_t)m_doneInjectingWarc,
-			(int32_t)m_hasMoreToRead);
+		// log("build: done parsing %"INT64" bytes of archive file %s. left over =%"INT32 "done injecting %"INT32 " hasmoretoread %"INT32, 
+		// 	m_bytesStreamed + m_fptrEnd - m_fileBuf, 
+		//     m_firstUrl.getUrl(),
+		// 	(int32_t)(m_fptrEnd - m_fptr),
+		// 	(int32_t)m_doneInjectingWarc,
+		// 	(int32_t)m_hasMoreToRead);
 
 		m_doneInjectingWarc = true;
 
