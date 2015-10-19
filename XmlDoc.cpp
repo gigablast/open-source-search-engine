@@ -8813,7 +8813,11 @@ Links *XmlDoc::getLinks ( bool doQuickSet ) {
 	CollectionRec *cr = getCollRec();
 	if ( ! cr ) return NULL;
 	bool useRelNoFollow = true;
-	if ( ! cr->m_useRobotsTxt ) useRelNoFollow = false;
+	if ( ! cr->m_obeyRelNoFollowLinks ) useRelNoFollow = false;
+	// to keep things simple, for diffbot custom crawls, if robots.txt
+	// is not used then do not use rel no follow
+	if ( ! cr->m_useRobotsTxt && cr->m_isCustomCrawl ) 
+		useRelNoFollow = false;
 
 	// . set it
 	// . if parent is a permalink we can avoid its suburl outlinks 
