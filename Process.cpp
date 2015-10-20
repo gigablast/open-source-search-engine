@@ -1515,15 +1515,16 @@ bool Process::shutdown2 ( ) {
 	static bool s_printed = false;
 
 	// wait for all threads to return
-	int32_t n = g_threads.getNumThreadsOutOrQueued() ;
+	//int32_t n = g_threads.getNumThreadsOutOrQueued() ;
+	int32_t n = g_threads.getNumWriteThreadsOut();
 	if ( n != 0 && ! m_urgent ) {
-		log(LOG_INFO,"gb: Has %"INT32" threads out. Waiting for "
+		log(LOG_INFO,"gb: Has %"INT32" write threads out. Waiting for "
 		    "them to finish.",n);
 		return false;
 	}
 	else if ( ! s_printed && ! m_urgent ) {
 		s_printed = true;
-		log(LOG_INFO,"gb: No threads out.");
+		log(LOG_INFO,"gb: No write threads out.");
 	}
 
 
@@ -1687,6 +1688,9 @@ bool Process::shutdown2 ( ) {
 	if ( g_process.m_threadOut ) 
 		log(LOG_INFO,"gb: still has hdtemp thread");
 
+
+	log("gb. EXITING.");
+
 	// exit abruptly
 	exit(0);
 
@@ -1764,7 +1768,7 @@ bool Process::saveRdbTrees ( bool useThread , bool shuttingDown ) {
 	// no thread if shutting down
 	if ( shuttingDown ) useThread = false;
 	// debug note
-	log("gb: shuttingdown=%i",(int)shuttingDown);
+	if ( shuttingDown ) log("gb: trying to shutdown");
 	// turn off statsdb until everyone is done
 	//g_statsdb.m_disabled = true;
 	// loop over all Rdbs and save them
@@ -2088,22 +2092,30 @@ void Process::resetAll ( ) {
 	resetTestIpTable();
 }
 
+#include "Msg3.h"
+
 void Process::resetPageCaches ( ) {
 	log("gb: Resetting page caches.");
-	g_posdb           .getDiskPageCache()->reset();
-	//g_datedb          .getDiskPageCache()->reset();
-	g_linkdb          .getDiskPageCache()->reset();
-	g_titledb         .getDiskPageCache()->reset();
-	g_sectiondb       .getDiskPageCache()->reset();
-	g_tagdb           .getDiskPageCache()->reset();
-	g_spiderdb        .getDiskPageCache()->reset();
-	//g_tfndb           .getDiskPageCache()->reset();
-	//g_checksumdb      .getDiskPageCache()->reset();
-	g_clusterdb       .getDiskPageCache()->reset();
-	g_catdb           .getDiskPageCache()->reset();
-	//g_placedb         .getDiskPageCache()->reset();
-	g_doledb          .getDiskPageCache()->reset();
-	//g_statsdb	  .getDiskPageCache()->reset();
+	for ( int32_t i = 0 ; i < RDB_END ; i++ ) {
+		RdbCache *rpc = getDiskPageCache ( i ); // rdbid = i
+		if ( ! rpc ) continue;
+		rpc->reset();
+	}
+		
+	// g_posdb           .getDiskPageCache()->reset();
+	// //g_datedb          .getDiskPageCache()->reset();
+	// g_linkdb          .getDiskPageCache()->reset();
+	// g_titledb         .getDiskPageCache()->reset();
+	// g_sectiondb       .getDiskPageCache()->reset();
+	// g_tagdb           .getDiskPageCache()->reset();
+	// g_spiderdb        .getDiskPageCache()->reset();
+	// //g_tfndb           .getDiskPageCache()->reset();
+	// //g_checksumdb      .getDiskPageCache()->reset();
+	// g_clusterdb       .getDiskPageCache()->reset();
+	// g_catdb           .getDiskPageCache()->reset();
+	// //g_placedb         .getDiskPageCache()->reset();
+	// g_doledb          .getDiskPageCache()->reset();
+	// //g_statsdb	  .getDiskPageCache()->reset();
 }
 
 // ============================================================================

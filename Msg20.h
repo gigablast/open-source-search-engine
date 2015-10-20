@@ -354,9 +354,9 @@ public:
 	int32_t       m_pageInlinksLastUpdated;
 	
 	int32_t       m_siteNumInlinks      ; // GOOD inlinks!
-	int32_t       m_siteNumInlinksTotal ; // TOTAL inlinks
-	int32_t       m_siteNumUniqueIps    ;
-	int32_t       m_siteNumUniqueCBlocks;
+	//int32_t       m_siteNumInlinksTotal ; // TOTAL inlinks
+	//int32_t       m_siteNumUniqueIps    ;
+	//int32_t       m_siteNumUniqueCBlocks;
 
 	int32_t       m_numOutlinks         ; // replaced m_linkCount
 	int32_t       m_tmp                 ; // used by Msg40.cpp for event merge
@@ -406,6 +406,7 @@ public:
 	int32_t       m_timeLinkSpam        ; // set for m_getLinkText
 	void         *m_parentOwner;
 	char          m_constructorId;
+
 	char       m_inlinkWeight        ; // set for m_getLinkText
 	char       m_isLinkSpam          ; // set for m_getLinkText
 	char       m_isAnomaly           ; // set for m_getLinkText

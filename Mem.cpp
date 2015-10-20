@@ -21,7 +21,7 @@
 
 // uncomment this for EFENCE to do underflow checks instead of the
 // default overflow checks
-//#define _CHECKUNDERFLOW_
+//#define CHECKUNDERFLOW
 
 // only Mem.cpp can call ::malloc, everyone else must call mmalloc() so
 // we can keep tabs on memory usage. in Mem.h we #define this to be coreme()
@@ -2168,7 +2168,7 @@ void *getElecMem ( int32_t size ) {
 	// a page above OR a page below
 	// let's go below this time since that seems to be the problem
 
-#ifdef _CHECKUNDERFLOW_
+#ifdef CHECKUNDERFLOW
 	// how much to alloc
 	// . assume sysmalloc returs one byte above a page, so we need
 	//   MEMPAGESIZE-1 bytes to move p up to page boundary, another
@@ -2189,7 +2189,7 @@ void *getElecMem ( int32_t size ) {
 	// parser
 	char *p = realMem;
 	// align p DOWN to nearest 8k boundary
-	int32_t remainder = (uint32_t)realMem % MEMPAGESIZE;
+	int32_t remainder = (uint64_t)realMem % MEMPAGESIZE;
 	// complement
 	remainder = MEMPAGESIZE - remainder;
 	// and add to ptr to be aligned on 8k boundary
@@ -2211,7 +2211,7 @@ void *getElecMem ( int32_t size ) {
 	p += size;
 	// now when we free this it should all be protected, so make sure
 	// we have enough room on top
-	int32_t leftover = MEMPAGESIZE  - ((uint32_t)p % MEMPAGESIZE);
+	int32_t leftover = MEMPAGESIZE  - ((uint64_t)p % MEMPAGESIZE);
 	// skip that
 	p += leftover;
 	// inefficient?
@@ -2302,7 +2302,7 @@ void freeElecMem ( void *fakeMem ) {
 	char *label    = &s_labels[((uint32_t)h)*16];
 	int32_t  fakeSize =  s_sizes[h];
 
-#ifdef _CHECKUNDERFLOW_
+#ifdef CHECKUNDERFLOW
 	char *oldProtMem = cp - MEMPAGESIZE;
 #else
 	char *oldProtMem = cp + fakeSize;

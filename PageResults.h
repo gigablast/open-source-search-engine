@@ -63,6 +63,7 @@ public:
 	bool    m_didRedownload;
 	XmlDoc *m_xd;
 	int32_t    m_oldContentHash32;
+	int64_t m_socketStartTimeHack;
 };
 
 

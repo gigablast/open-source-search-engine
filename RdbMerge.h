@@ -66,7 +66,8 @@ class RdbMerge {
 		     int32_t       startFileNum ,
 		     int32_t       numFiles     ,
 		     int32_t       niceness     ,
-		     class DiskPageCache *pc     ,
+		     //class DiskPageCache *pc     ,
+		     void *pc ,
 		     int64_t maxTargetFileSize ,
 		     char       keySize      );
 
@@ -150,7 +151,7 @@ class RdbMerge {
 	// count for indexdb
 	int64_t   m_dupsRemoved;
 
-	class DiskPageCache *m_pc;
+	//class DiskPageCache *m_pc;
 	int64_t m_maxTargetFileSize;
 
 	int32_t      m_id2;

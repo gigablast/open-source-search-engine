@@ -329,6 +329,12 @@ bool Collectiondb::addExistingColl ( char *coll, collnum_t collnum ) {
 	if ( cr->m_isCustomCrawl )
 		cr->m_indexSpiderReplies = true;
 
+	// and don't do link voting, will help speed up
+	if ( cr->m_isCustomCrawl ) {
+		cr->m_getLinkInfo = false;
+		cr->m_computeSiteNumInlinks = false;
+	}
+
 	// we need to compile the regular expressions or update the url
 	// filters with new logic that maps crawlbot parms to url filters
 	return cr->rebuildUrlFilters ( );
@@ -1694,13 +1700,24 @@ collnum_t Collectiondb::reserveCollNum ( ) {
 		return next;
 	}
 
+	// collnum_t is signed right now because we use -1 to indicate a
+	// bad collnum.
+	int32_t scanned = 0;
 	// search for an empty slot
-	for ( int32_t i = m_wrapped ; i < m_numRecs ; i++ ) {
+	for ( int32_t i = m_wrapped ; ; i++ ) {
+		// because collnum_t is 2 bytes, signed, limit this here
+		if ( i > 0x7fff ) i = 0;
+		// how can this happen?
+		if ( i < 0      ) i = 0;
+		// if we scanned the max # of recs we could have, we are done
+		if ( ++scanned >= m_numRecs ) break;
+		// skip if this is in use
 		if ( m_recs[i] ) continue;
 		// start after this one next time
 		m_wrapped = i+1;
 		// note it
-		log("colldb: returning wrapped collnum of %"INT32"",(int32_t)i);
+		log("colldb: returning wrapped collnum "
+		    "of %"INT32"",(int32_t)i);
 		return (collnum_t)i;
 	}
 
@@ -1840,6 +1857,8 @@ void CollectionRec::reset() {
 
 	m_hasucr = false;
 	m_hasupr = false;
+
+	m_sendingAlertInProgress = false;
 
 	// make sure we do not leave spiders "hanging" waiting for their
 	// callback to be called... and it never gets called
@@ -2311,6 +2330,17 @@ bool CollectionRec::rebuildUrlFilters2 ( ) {
 	m_spiderPriorities   [n] = 45;
 	if ( ! strcmp(s,"news") )
 		m_spiderFreqs [n] = .00347; // 5 mins
+	n++;
+
+	// a non temporary error, like a 404? retry once per 3 months i guess
+	m_regExs[n].set("errorcount>=1");
+	m_harvestLinks       [n] = 1;
+	m_spiderFreqs        [n] = 90; // 90 day retry
+	m_maxSpidersPerRule  [n] = 1; // max spiders
+	m_spiderIpMaxSpiders [n] = 1; // max spiders per ip
+	m_spiderIpWaits      [n] = 1000; // same ip wait
+	m_spiderPriorities   [n] = 2;
+	m_forceDelete        [n] = 1;
 	n++;
 
 	m_regExs[n].set("isaddurl");

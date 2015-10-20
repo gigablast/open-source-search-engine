@@ -5,6 +5,7 @@
 #include "sort.h"
 #include "XmlDoc.h" // score32to8()
 #include "Rebalance.h"
+#include "Process.h"
 
 Linkdb g_linkdb;
 Linkdb g_linkdb2;
@@ -101,7 +102,7 @@ bool Linkdb::init ( ) {
 	*/
 
 	// we use the same disk page size as indexdb (for rdbmap.cpp)
-	int32_t pageSize = GB_INDEXDB_PAGE_SIZE;
+	//int32_t pageSize = GB_INDEXDB_PAGE_SIZE;
 	// set this for debugging
 	//int64_t maxTreeMem = 1000000;
 	int64_t maxTreeMem = 40000000; // 40MB
@@ -110,18 +111,18 @@ bool Linkdb::init ( ) {
 	// . 32 bytes per record when in the tree
 	int32_t maxTreeNodes = maxTreeMem /(sizeof(key224_t)+16);
 	// disk page cache mem, 100MB on gk0 now
-	int32_t pcmem = 0; // g_conf.m_linkdbMaxDiskPageCacheMem;
+	//int32_t pcmem = 0; // g_conf.m_linkdbMaxDiskPageCacheMem;
 	// give it a little
-	pcmem = 10000000; // 10MB
+	//pcmem = 10000000; // 10MB
 	// keep this low if we are the tmp cluster
 	//if ( g_hostdb.m_useTmpCluster ) pcmem = 0;
 	// TODO: would be nice to just do page caching on the satellite files;
 	//       look into "minimizeDiskSeeks" at some point...
-	if ( ! m_pc.init ( "linkdb" ,
-			   RDB_LINKDB,
-			   pcmem    ,
-			   pageSize ))
-		return log("db: Linkdb init failed.");
+	// if ( ! m_pc.init ( "linkdb" ,
+	// 		   RDB_LINKDB,
+	// 		   pcmem    ,
+	// 		   pageSize ))
+	// 	return log("db: Linkdb init failed.");
 	// init the rdb
 	return m_rdb.init ( g_hostdb.m_dir ,
 			    "linkdb" ,
@@ -141,7 +142,7 @@ bool Linkdb::init ( ) {
 			    0        , // cache nodes
 			    false, // true     , // use half keys
 			    false    , // load cache from disk
-			    &m_pc    ,
+			    NULL,//&m_pc    ,
 			    false    , // false
 			    false    , // preload page cache
 			    sizeof(key224_t) ,
@@ -1128,6 +1129,12 @@ bool Msg25::doReadLoop ( ) {
 		log("msg25: reading linkdb list mode=%s site=%s url=%s "
 		    "docid=%"INT64" linkdbstartkey=%s",
 		    ms,m_site,m_url,m_docId,KEYSTR(&startKey,LDBKS));
+	}
+
+        if ( g_process.m_mode == EXIT_MODE ) {
+		log("linkdb: shutting down. exiting link text loop.");
+		g_errno = ESHUTTINGDOWN;
+		return false;
 	}
 
 	m_gettingList = true;

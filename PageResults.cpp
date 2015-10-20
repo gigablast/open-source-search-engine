@@ -68,8 +68,12 @@ bool sendReply ( State0 *st , char *reply ) {
 
 	int32_t savedErr = g_errno;
 
-	TcpSocket *s = st->m_socket;
-	if ( ! s ) { char *xx=NULL;*xx=0; }
+	TcpSocket *sock = st->m_socket;
+	if ( ! sock ) { 
+		log("results: not sending back results on an empty socket."
+		    "socket must have closed on us abruptly.");
+		//char *xx=NULL;*xx=0; }
+	}
 	SearchInput *si = &st->m_si;
 	char *ct = "text/html";
 	if ( si && si->m_format == FORMAT_XML ) ct = "text/xml"; 
@@ -143,7 +147,8 @@ bool sendReply ( State0 *st , char *reply ) {
 		//
 		// send back the actual search results
 		//
-		g_httpServer.sendDynamicPage(s,
+		if ( sock )
+		g_httpServer.sendDynamicPage(sock,
 					     reply,
 					     rlen,//gbstrlen(reply),
 					     // don't let the ajax re-gen
@@ -199,9 +204,9 @@ bool sendReply ( State0 *st , char *reply ) {
 	// if we had a broken pipe from the browser while sending
 	// them the search results, then we end up closing the socket fd
 	// in TcpServer::sendChunk() > sendMsg() > destroySocket()
-	if ( s->m_numDestroys ) {
+	if ( sock && sock->m_numDestroys ) {
 		log("results: not sending back error on destroyed socket "
-		    "sd=%"INT32"",s->m_sd);
+		    "sd=%"INT32"",sock->m_sd);
 		return true;
 	}
 
@@ -212,7 +217,8 @@ bool sendReply ( State0 *st , char *reply ) {
 	    savedErr == ENOCOLLREC) 
 		status = 400;
 
-	g_httpServer.sendQueryErrorReply(s,
+	if ( sock )
+	g_httpServer.sendQueryErrorReply(sock,
 					 status,
 					 mstrerror(savedErr),
 					 format,//xml,
@@ -541,6 +547,9 @@ bool sendPageResults ( TcpSocket *s , HttpRequest *hr ) {
 
 	// set this in case SearchInput::set fails!
 	st->m_socket = s;
+
+	// record timestamp so we know if we got our socket closed and swapped
+	st->m_socketStartTimeHack = s->m_startTime;
 
 	// save this count so we know if TcpServer.cpp calls destroySocket(s)
 	st->m_numDestroys = s->m_numDestroys;
@@ -1154,6 +1163,16 @@ bool gotResults ( void *state ) {
 
 	SearchInput *si = &st->m_si;
 
+	// if we lost the socket because we were streaming and it
+	// got closed from a broken pipe or something, then Msg40.cpp
+	// will set st->m_socket to NULL if the fd ends up ending closed
+	// because someone else might be using it and we do not want to
+	// mess with their TcpSocket settings.
+	if ( ! st->m_socket ) {
+		log("results: socket is NULL. sending failed.");
+		return sendReply(st,NULL);
+	}
+
 	// if in streaming mode and we never sent anything and we had
 	// an error, then send that back. we never really entered streaming
 	// mode in that case. this happens when someone deletes a coll
@@ -1163,6 +1182,23 @@ bool gotResults ( void *state ) {
 	     si->m_streamResults &&
 	     st->m_socket->m_totalSent == 0 )
 	       return sendReply(st,NULL);
+
+
+	// if we skipped a shard because it was dead, usually we provide
+	// the results anyway, but if this switch is true then return an
+	// error code instead. this is the 'all or nothing' switch.
+	if ( msg40->m_msg3a.m_skippedShards > 0 &&
+	     ! g_conf.m_returnResultsAnyway ) {
+	       char reply[256];
+	       sprintf ( reply , 
+			 "%"INT32" shard(s) out of %"INT32" did not "
+			 "respond to query."
+			 , msg40->m_msg3a.m_skippedShards
+			 , g_hostdb.m_numShards );
+	       g_errno = ESHARDDOWN;
+	       return sendReply(st,reply);
+	}
+
 
 	// if already printed from Msg40.cpp, bail out now
 	if ( si->m_streamResults ) {
@@ -1220,9 +1256,20 @@ bool gotResults ( void *state ) {
 	// into it, and it must be the SAME ptr too!
 	CollectionRec *cr = si->m_cr;//g_collectiondb.getRec ( collnum );
 	if ( ! cr ) { // || cr != si->m_cr ) {
-	       g_errno = ENOCOLLREC;
-	       return sendReply(st,NULL);
+		g_errno = ENOCOLLREC;
+		return sendReply(st,NULL);
 	}
+
+	// this causes ooms everywhere, not a good fix
+	if ( ! msg40->m_msg20 && ! si->m_docIdsOnly && msg40->m_errno ) {
+	 	log("msg40: failed to get results q=%s",si->m_q.m_orig);
+	 	//g_errno = ENOMEM;
+		g_errno = msg40->m_errno;
+	 	return sendReply(st,NULL);
+	}
+
+
+
 
 	//char *coll = cr->m_coll;
 
@@ -3926,6 +3973,8 @@ bool printResult ( State0 *st, int32_t ix , int32_t *numPrintedSoFar ) {
 		     ix, (int32_t)msg40->getClusterLevel(ix));
 
 	int64_t d = msg40->getDocId(ix);
+	// this is normally a double, but cast to float
+	float docScore = (float)msg40->getScore(ix);
 
 	// do not print if it is a summary dup or had some error
 	// int32_t level = (int32_t)msg40->getClusterLevel(ix);
@@ -5047,6 +5096,7 @@ bool printResult ( State0 *st, int32_t ix , int32_t *numPrintedSoFar ) {
 		// . docId for possible cached link
 		// . might have merged a bunch together
 		sb->safePrintf("\t\t<docId>%"INT64"</docId>\n",mr->m_docId );
+		sb->safePrintf("\t\t<docScore>%f</docScore>\n",docScore);
 	}
 
 	if ( si->m_format == FORMAT_XML && mr->m_contentType != CT_STATUS ) {
@@ -5097,6 +5147,7 @@ bool printResult ( State0 *st, int32_t ix , int32_t *numPrintedSoFar ) {
 		// . docId for possible cached link
 		// . might have merged a bunch together
 		sb->safePrintf("\t\t\"docId\":%"INT64",\n",mr->m_docId );
+		sb->safePrintf("\t\t\"docScore\":%f,\n",docScore);
 	}
 
 	if ( si->m_format == FORMAT_JSON && mr->m_contentType != CT_STATUS ) {
@@ -5943,15 +5994,15 @@ bool printResult ( State0 *st, int32_t ix , int32_t *numPrintedSoFar ) {
 			       "</numGoodSiteInlinks>\n",
 			       (int32_t)mr->m_siteNumInlinks );
 
-		sb->safePrintf ("\t\t<numTotalSiteInlinks>%"INT32""
-			       "</numTotalSiteInlinks>\n",
-			       (int32_t)mr->m_siteNumInlinksTotal );
-		sb->safePrintf ("\t\t<numUniqueIpsLinkingToSite>%"INT32""
-			       "</numUniqueIpsLinkingToSite>\n",
-			       (int32_t)mr->m_siteNumUniqueIps );
-		sb->safePrintf ("\t\t<numUniqueCBlocksLinkingToSite>%"INT32""
-			       "</numUniqueCBlocksLinkingToSite>\n",
-			       (int32_t)mr->m_siteNumUniqueCBlocks );
+		// sb->safePrintf ("\t\t<numTotalSiteInlinks>%"INT32""
+		// 	       "</numTotalSiteInlinks>\n",
+		// 	       (int32_t)mr->m_siteNumInlinksTotal );
+		// sb->safePrintf ("\t\t<numUniqueIpsLinkingToSite>%"INT32""
+		// 	       "</numUniqueIpsLinkingToSite>\n",
+		// 	       (int32_t)mr->m_siteNumUniqueIps );
+		// sb->safePrintf("\t\t<numUniqueCBlocksLinkingToSite>%"INT32""
+		// 	       "</numUniqueCBlocksLinkingToSite>\n",
+		// 	       (int32_t)mr->m_siteNumUniqueCBlocks );
 
 
 		struct tm *timeStruct3;

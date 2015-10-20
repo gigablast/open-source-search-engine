@@ -157,6 +157,12 @@ bool Msg20::getSummary ( Msg20Request *req ) {
 	// do not re-route to twins if accessing an external network
 	if ( hostdb != &g_hostdb ) req->m_expected = false;
 
+	if ( req->m_docId < 0 && ! req->ptr_ubuf ) {
+		log("msg20: docid<0 and no url for msg20::getsummary");
+		g_errno = EBADREQUEST;
+		return true;
+	}
+
 	// get groupId from docId, if positive
 	uint32_t shardNum;
 	if ( req->m_docId >= 0 ) 
@@ -398,8 +404,11 @@ void handleRequest20 ( UdpSlot *slot , int32_t netnice ) {
 
 	// sanity check, the size include the \0
 	if ( req->m_collnum < 0 ) {
-		log("query: Got empty collection in msg20 handler. FIX!");
-		char *xx =NULL; *xx = 0; 
+		log("query: Got empty collection in msg20 handler. FIX! "
+		    "from ip=%s port=%i",iptoa(slot->m_ip),(int)slot->m_port);
+	        g_udpServer.sendErrorReply ( slot , ENOTFOUND );
+		return; 
+		//char *xx =NULL; *xx = 0; 
 	}
 	// if it's not stored locally that's an error
 	if ( req->m_docId >= 0 && ! g_titledb.isLocal ( req->m_docId ) ) {

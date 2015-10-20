@@ -1386,9 +1386,9 @@ bool Loop::runLoop ( ) {
 		if ( m_shutdown == 2 ) {
 			//log(0,"Thread is saving & shutting down urgently.");
 			//while ( 1 == 1 ) sleep (50000);
-			log("loop: Resuming despite thread crash.");
-			m_shutdown = 0;
-			goto BIGLOOP;
+			//log("loop: Resuming despite thread crash.");
+			//m_shutdown = 0;
+			//goto BIGLOOP;
 		}
 		// otherwise, thread did not save, so we must do it
 		log ( LOG_INIT ,"loop: Saving and shutting down urgently.");
@@ -2017,12 +2017,12 @@ void Loop::doPoll ( ) {
 			// if shutting down was it a sigterm ?
 			if ( m_shutdown ) goto again;
 			// handle returned threads for niceness 0
-			if ( g_threads.m_needsCleanup )
-				g_threads.timedCleanUp(-3,0); // 3 ms
+			//if ( g_threads.m_needsCleanup )
+			g_threads.timedCleanUp(-3,0); // 3 ms
 			if ( m_inQuickPoll ) goto again;
 			// high niceness threads
-			if ( g_threads.m_needsCleanup )
-				g_threads.timedCleanUp(-4,MAX_NICENESS); //3 ms
+			//if ( g_threads.m_needsCleanup )
+			g_threads.timedCleanUp(-4,MAX_NICENESS); //3 ms
 
 			goto again;
 		}

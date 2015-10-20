@@ -1,6 +1,10 @@
 #ifndef GBINJECT_H
 #define GBINJECT_H    
 
+// for getting list of injections currently being processed on this host
+// for printing in the Spider Queue table in Spider.cpp
+class XmlDoc *getInjectHead ( ) ;
+
 void  handleRequest7Import ( class UdpSlot *slot , int32_t netnice ) ;
 
 void  handleRequest7 ( class UdpSlot *slot , int32_t netnice ) ;

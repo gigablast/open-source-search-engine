@@ -35,8 +35,8 @@ bool Placedb::init ( ) {
 	// . 25(treeoverhead) + 24(cacheoverhead) = 49
 	//int32_t maxCacheNodes = g_conf.m_placedbMaxCacheMem / 49;
 	// we now use a page cache
-	if ( ! m_pc.init ( "placedb",RDB_PLACEDB,pcmem,GB_INDEXDB_PAGE_SIZE ) )
-		return log("db: Placedb page cache init failed.");
+	// if (!m_pc.init("placedb",RDB_PLACEDB,pcmem,GB_INDEXDB_PAGE_SIZE ) )
+	// 	return log("db: Placedb page cache init failed.");
 	// initialize our own internal rdb
 	if ( ! m_rdb.init ( g_hostdb.m_dir,
 			    "placedb"       ,
@@ -50,7 +50,7 @@ bool Placedb::init ( ) {
 			    0             , // maxCacheNodes              
 			    false         , // half keys?
 			    false         , // g_conf.m_placedbSaveCache 
-			    &m_pc         ,
+			    NULL,//&m_pc         ,
 			    false         , // is titledb?
 			    false         , // preload page cache?
 			    16            , // keysize

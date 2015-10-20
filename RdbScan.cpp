@@ -148,6 +148,7 @@ bool RdbScan::setRead ( BigFile  *file         ,
 	// ensure we don't mess around
 	m_fstate.m_allocBuf = NULL;
 	m_fstate.m_buf      = NULL;
+	//m_fstate.m_usePartFiles = true;
 	// debug msg
 	//log("diskOff=%"INT64" nb=%"INT32"",offset,bytesToRead);
 	//if ( offset == 16386 && bytesToRead == 16386 )
@@ -253,6 +254,7 @@ void RdbScan::gotList ( ) {
 	// so i effectively disabled it by changing to _GBSANITYCHECK2_
 //#ifdef GBSANITYCHECK2
 	// this first test, tests to make sure the read from cache worked
+	/*
 	DiskPageCache *pc = m_file->getDiskPageCache();
 	if ( pc && 
 	     ! g_errno && 
@@ -307,7 +309,8 @@ void RdbScan::gotList ( ) {
 		// . go through each page in page cache and verify on disk
 		//pc->verifyData ( m_file );
 	}
- skip:
+	*/
+	// skip:
 //#endif
 	// assume we did not shift it
 	m_shifted = 0;//false;
@@ -319,7 +322,7 @@ void RdbScan::gotList ( ) {
 	// . i think a read overflow might be causing a segv in malloc
 	// . NOTE: BigFile's call to DiskPageCache alters these values
 	if ( m_fstate.m_bytesDone != m_fstate.m_bytesToGo && m_hitDisk )
-		log(LOG_INFO,"disk: Read %"INT32" bytes but needed %"INT32".",
+		log(LOG_INFO,"disk: Read %"INT64" bytes but needed %"INT64".",
 		     m_fstate.m_bytesDone , m_fstate.m_bytesToGo );
 	// adjust the list size for biased page cache if necessary
 	//if ( m_file->m_pc && m_allowPageCache &&

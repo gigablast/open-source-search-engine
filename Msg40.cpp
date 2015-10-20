@@ -696,7 +696,7 @@ bool Msg40::federatedLoop ( ) {
 	// and mult based on index size
 	numDocIdSplits *= mult;
 	// prevent going OOM for type:article AND html
-	//if ( numDocIdSplits < 5 ) numDocIdSplits = 5;
+	if ( numDocIdSplits < 5 ) numDocIdSplits = 5;
 	//}
 
 	if ( cr ) mr.m_maxQueryTerms = cr->m_maxQueryTerms; 
@@ -1071,7 +1071,7 @@ bool Msg40::reallocMsg20Buf ( ) {
 	// . allocate m_buf2 to hold all our Msg20 pointers and Msg20 classes
 	// . how much mem do we need?
 	// . need space for the msg20 ptrs
-	int32_t need = m_msg3a.m_numDocIds * sizeof(Msg20 *);
+	int64_t need = m_msg3a.m_numDocIds * sizeof(Msg20 *);
 	// need space for the classes themselves, only if "visible" though
 	for ( int32_t i = 0 ; i < m_msg3a.m_numDocIds ; i++ ) 
 		if ( m_msg3a.m_clusterLevels[i] == CR_OK ) 
@@ -1242,6 +1242,13 @@ bool Msg40::reallocMsg20Buf ( ) {
 
 	m_buf2        = NULL;
 	m_bufMaxSize2 = need;
+
+	// if ( need > 2000000000 ) {
+	// 	log("msg40: need too much mem=%"INT64,need);
+	// 	m_errno = ENOMEM;
+	// 	g_errno = ENOMEM;
+	// 	return false; 
+	// }
 
 	// do the alloc
 	if ( need ) m_buf2 = (char *)mmalloc ( need ,"Msg40msg20");
@@ -2030,7 +2037,7 @@ bool Msg40::gotSummary ( ) {
 	// . set it to true on all but the last thing we send!
 	// . after each chunk of data we send out, TcpServer::sendChunk
 	//   will call our callback, doneSendingWrapper9 
-	if ( m_si->m_streamResults )
+	if ( m_si->m_streamResults && st->m_socket )
 		st->m_socket->m_streamingMode = true;
 
 
@@ -2112,13 +2119,31 @@ bool Msg40::gotSummary ( ) {
 		if ( g_conf.m_logDebugTcp )
 			log("tcp: disabling streamingMode now");
 		// this will be our final send
-		st->m_socket->m_streamingMode = false;
+		if ( st->m_socket ) st->m_socket->m_streamingMode = false;
 	}
 
 
 	TcpServer *tcp = &g_httpServer.m_tcp;
 
 	//g_conf.m_logDebugTcp = 1;
+
+	// do we still own this socket? i am thinking it got closed somewhere
+	// and the socket descriptor was re-assigned to another socket
+	// getting a diffbot reply from XmLDoc::getDiffbotReply()
+	if ( st->m_socket && 
+	     st->m_socket->m_startTime != st->m_socketStartTimeHack ) {
+		log("msg40: lost control of socket. sd=%i. the socket "
+		    "descriptor closed on us and got re-used by someone else.",
+		    (int)st->m_socket->m_sd);
+		// if there wasn't already an error like 'broken pipe' then
+		// set it here so we stop getting summaries if streaming.
+		if ( ! m_socketHadError ) m_socketHadError = EBADENGINEER;
+		// make it NULL to avoid us from doing anything to it
+		// since sommeone else is using it now.
+		st->m_socket = NULL;
+		//g_errno = EBADENGINEER;
+	}
+
 
 	// . transmit the chunk in sb if non-zero length
 	// . steals the allocated buffer from sb and stores in the 
@@ -2133,6 +2158,7 @@ bool Msg40::gotSummary ( ) {
 	if ( sb->length() &&
 	     // did client browser close the socket on us midstream?
 	     ! m_socketHadError &&
+	     st->m_socket &&
 	     ! tcp->sendChunk ( st->m_socket , 
 				sb  ,
 				this ,
@@ -2145,8 +2171,11 @@ bool Msg40::gotSummary ( ) {
 
 	// writing on closed socket?
 	if ( g_errno ) {
-		m_socketHadError = g_errno;
+		if ( ! m_socketHadError ) m_socketHadError = g_errno;
 		log("msg40: got tcp error : %s",mstrerror(g_errno));
+		// disown it here so we do not damage in case it gets 
+		// reopened by someone else
+		st->m_socket = NULL;
 	}
 
 	// do we need to launch another batch of summary requests?
@@ -2200,8 +2229,9 @@ bool Msg40::gotSummary ( ) {
 		//mdelete(st, sizeof(State0), "msg40st0");
 		//delete st;
 		// otherwise, all done!
-		log("msg40: did not send stuff from last summary. BUG "
-		    "this=0x%"PTRFMT"",(PTRTYPE)this);
+		log("msg40: did not send last search result summary. "
+		    "this=0x%"PTRFMT" because had error: %s",(PTRTYPE)this,
+		    mstrerror(m_socketHadError));
 		return true;
 	}
 

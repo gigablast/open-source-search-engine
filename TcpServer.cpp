@@ -5,6 +5,7 @@
 #include "Profiler.h"
 #include "PingServer.h"
 //#include "AutoBan.h"
+#include "Hostdb.h"
 
 // . TODO: deleting nodes from under Loop::callCallbacks is dangerous!!
 
@@ -593,6 +594,17 @@ bool TcpServer::sendMsg ( int32_t   ip       ,
 	// return true if s is NULL and g_errno was set by getNewSocket()
 	// might set g_errno to EOUTOFSOCKETS
 	if ( ! s ) { mfree ( sendBuf , sendBufSize,"TcpServer"); return true; }
+	// debug to find why sockets getting diffbot replies get commandeered.
+	// we think that they are using an sd used by a streaming socket,
+	// who closed, but then proceed to use TcpSocket class as if he 
+	// had not closed it.
+	if ( g_conf.m_logDebugTcpBuf ) {
+		SafeBuf sb;
+		sb.safePrintf("tcp: open newsd=%i sendbuf=",s->m_sd);
+		sb.safeTruncateEllipsis (sendBuf,sendBufSize,200);
+		log("%s",sb.getBufStart());
+	}
+
 	// set up the new TcpSocket for connecting
 	s->m_state            = state;
 	s->m_callback         = callback;
@@ -846,6 +858,7 @@ TcpSocket *TcpServer::getNewSocket ( ) {
 	// . TODO: ensure this blocks even if sd was set nonblock by wrapSock()
 	if ( ! s ) { 
 		if ( sd == 0 ) log("tcp: closing1 sd of 0");
+		log("tcp: wrapsocket2 returned null for sd=%i",(int)sd);
 		if ( ::close(sd) == -1 )
 			log("tcp: close2(%"INT32") = %s",(int32_t)sd,mstrerror(errno));
 		else {
@@ -1732,6 +1745,8 @@ void writeSocketWrapper ( int sd , void *state ) {
 	bool wasStreaming = s->m_streamingMode;
 
 	// otherwise, call callback on done writing or error
+	// MDW: if we close the socket descriptor, then a getdiffbotreply
+	// gets it, we have to know.
 	THIS->makeCallback ( s );
 
 	// if callback changed socket status to ST_SEND_AGAIN 
@@ -1921,7 +1936,7 @@ int32_t TcpServer::writeSocket ( TcpSocket *s ) {
 		// another debug
 		//if ( g_conf.m_logDebugTcp )
 			log("tcp: only wrote %"INT32" of %"INT32" bytes "
-			    "tried.",n,toSend);
+			    "tried. sd=%i",n,toSend,s->m_sd);
 		// need to listen for writability now since our write
 		// failed to write everythin gout
 		if ( ! s->m_writeRegistered &&
@@ -2260,6 +2275,32 @@ void TcpServer::destroySocket ( TcpSocket *s ) {
 	// if sd is 0 do not really close it. seems to fix that bug.
 	// 0 is the FD for stdin so i don't know how that is happening.
 	if ( sd != 0 ) cret = ::close ( sd );
+
+	if ( g_conf.m_logDebugTcpBuf ) {
+		SafeBuf sb;
+		sb.safePrintf("tcp: closing sd=%i bytessent=%i "
+			      "sendbufused=%i streaming=%i "
+			      "sendbuf=",
+			      s->m_sd,
+			      s->m_sendOffset,
+			      s->m_sendBufUsed,
+			      (int)s->m_streamingMode);
+		if ( s->m_sendBuf )
+			sb.safeTruncateEllipsis(s->m_sendBuf,
+						s->m_sendBufSize,
+						200);
+		sb.safePrintf(" bytesread=%i readbuf=",(int)s->m_readOffset);
+		if ( s->m_readBuf )
+			sb.safeTruncateEllipsis(s->m_readBuf,
+						s->m_readOffset,
+						2000);
+		log("%s",sb.getBufStart());
+	}
+
+	// force it out of streaming mode since we closed it. then we
+	// should avoid the "not timing out streaming socket fd=123" msgs.
+	s->m_streamingMode = false;
+
 	if ( cret != 0 ) { // == -1 ) 
 		log("tcp: s=%"PTRFMT" close(%"INT32") = %"INT32" = %s",
 		    (PTRTYPE)s,(int32_t)sd,cret,mstrerror(errno));
@@ -2272,7 +2313,7 @@ void TcpServer::destroySocket ( TcpSocket *s ) {
 		// log("tcp: closing sock %i (open=%"INT32")",sd,
 		//     m_numOpen-m_numClosed);
 		// set it negative to try to fix the double close while
-		// streaming bug.
+		// streaming bug. -sd -m_sd m_sd = m_sd=
 		if ( s->m_sd > 0 ) s->m_sd *= -1;
 	}
 	// a 2nd close? it should return -1 with errno set!
@@ -2574,6 +2615,18 @@ TcpSocket *TcpServer::acceptSocket ( ) {
 	if ( g_conf.m_logDebugTcp ) 
 		logf(LOG_DEBUG,"tcp: ...... accepted sd=%"INT32"",(int32_t)newsd);
 
+	// debug to find why sockets getting diffbot replies get commandeered.
+	// we think that they are using an sd used by a streaming socket,
+	// who closed, but then proceed to use TcpSocket class as if he 
+	// had not closed it.
+	if ( g_conf.m_logDebugTcpBuf ) {
+		SafeBuf sb;
+		sb.safePrintf("tcp: accept newsd=%i incoming req",newsd);
+		//sb.safeTruncateEllipsis (sendBuf,sendBufSize,200);
+		log("%s",sb.getBufStart());
+	}
+
+
 	// ssl debug!
 	//log("tcp: accept returned fd=%i",newsd);
 
@@ -2621,6 +2674,7 @@ TcpSocket *TcpServer::acceptSocket ( ) {
 	if ( ! s ) { 
 		//log("tcp: wrapsocket returned null fd=%i",newsd);
 		if ( newsd == 0 ) log("tcp: closing sd of 0");
+		log("tcp: wrapsocket1 returned null for sd=%i",(int)newsd);
 		if ( ::close(newsd)== -1 )
 			log("tcp: close2(%"INT32") = %s",
 			    (int32_t)newsd,mstrerror(errno));
@@ -2726,7 +2780,8 @@ bool TcpServer::sslAccept ( TcpSocket *s ) {
 void TcpServer::makeCallback ( TcpSocket * s ) {
 	if ( ! s->m_callback ) {
 		// note it
-		log("tcp: null callback for s=0x%"PTRFMT"",(PTRTYPE)s);
+		if ( g_conf.m_logDebugTcp )
+			log("tcp: null callback for s=0x%"PTRFMT"",(PTRTYPE)s);
 		return;
 	}
 	// record times for profiler
@@ -2777,7 +2832,8 @@ bool TcpServer::sendChunk ( TcpSocket *s ,
 			    // sendChunk() again.
 			    void (* doneSendingWrapper)( void *,TcpSocket *)){
 
-	log("tcp: sending chunk of %"INT32" bytes", sb->length() );
+	log("tcp: sending chunk of %"INT32" bytes sd=%i", sb->length() ,
+	    s->m_sd );
 
 	// if socket had shit on there already, free that memory
 	// just like TcpServer::destroySocket would
@@ -2818,6 +2874,11 @@ bool TcpServer::sendChunk ( TcpSocket *s ,
 	log("tcp: chunkend=%s",sb->getBuf() - minus);
 	*/
 
+	// char *p = sb->getBufStart();
+	// char *pend = p + sb->length();
+	// for ( ; p < pend ; p++ ) {
+	// 	if ( *p == '\0' ) { char *xx=NULL;*xx=0; }
+	// }
 
 	// . start the send process
 	// . returns false if send did not complete

@@ -109,6 +109,7 @@ char *getFirstJSONObject ( char *p ,
 char *getJSONObjectEnd ( char *p , int32_t niceness ) ;
 
 XmlDoc::XmlDoc() { 
+	m_readThreadOut = false;
 	for ( int32_t i = 0 ; i < MAXMSG7S ; i++ ) m_msg7s[i] = NULL;
 	m_esbuf.setLabel("exputfbuf");
 	for ( int32_t i = 0 ; i < MAX_XML_DOCS ; i++ ) m_xmlDocs[i] = NULL;
@@ -208,6 +209,10 @@ class XmlDoc *g_xd;
 
 void XmlDoc::reset ( ) {
 
+	if ( m_readThreadOut ) 
+		log("build: deleting xmldoc class that has a read thread out "
+		    "on a warc file");
+		
 	if ( m_fileValid ) {
 		m_file.close();
 		m_file.unlink();
@@ -221,7 +226,7 @@ void XmlDoc::reset ( ) {
 		if ( ! msg7 ) continue;
         if(msg7->m_inUse) {
             log("build: archive: reseting xmldoc when msg7s are outstanding");
-            
+
         }
 		mdelete ( msg7 , sizeof(Msg7) , "xdmsg7" );
 		delete ( msg7 );
@@ -1253,6 +1258,12 @@ bool XmlDoc::set4 ( SpiderRequest *sreq      ,
 		utf8Content = m_mime.getContent();
 	}
 
+	// use this to avoid ip lookup if it is not zero
+	if ( forcedIp ) {
+		m_ip = forcedIp;
+		m_ipValid = true;
+	}
+
 	// sometimes they supply the content they want! like when zaks'
 	// injects pages from PageInject.cpp
 	if ( utf8Content ) {
@@ -1285,11 +1296,6 @@ bool XmlDoc::set4 ( SpiderRequest *sreq      ,
 		// use this ip as well for now to avoid ip lookup
 		//m_ip      = atoip("127.0.0.1");
 		//m_ipValid = true;
-		// use this to avoid ip lookup if it is not zero
-		if ( forcedIp ) {
-			m_ip = forcedIp;
-			m_ipValid = true;
-		}
 		// do not need robots.txt then
 		m_isAllowed      = true;
 		m_isAllowedValid = true;
@@ -1783,9 +1789,9 @@ bool XmlDoc::set2 ( char    *titleRec ,
 
 	// new stuff
 	m_siteNumInlinksValid         = true;
-	m_siteNumInlinksUniqueIpValid = true;
-	m_siteNumInlinksUniqueCBlockValid = true;
-	m_siteNumInlinksTotalValid        = true;
+	// m_siteNumInlinksUniqueIpValid = true;
+	// m_siteNumInlinksUniqueCBlockValid = true;
+	// m_siteNumInlinksTotalValid        = true;
 	//m_sitePopValid                = true;
 	m_rootLangIdValid             = true;
 	m_hasContactInfoValid         = true;
@@ -3348,7 +3354,19 @@ void doneInjectingArchiveRec ( void *state ) {
 	xd->m_numInjectionsOut--;
 	log("build: archive: injection thread returned. %"INT32" out now.",
 	    xd->m_numInjectionsOut);
+	// reset g_errno so it doesn't error out in ::indexDoc() when
+	// we are injecting a ton of these msg7s and then xmldoc ends up
+	// getting reset and when a msg7 reply comes back in, we core
+	g_errno = 0;
 	xd->m_masterLoop ( xd );
+}
+
+void doneReadingArchiveFileWrapper ( void *state ) {
+	XmlDoc *THIS = (XmlDoc *)state;
+	// . go back to the main entry function
+	// . make sure g_errno is clear from a msg3a g_errno before calling
+	//   this lest it abandon the loop
+	THIS->m_masterLoop ( THIS->m_masterState );
 }
 
 
@@ -3368,7 +3386,7 @@ bool XmlDoc::indexWarcOrArc ( char ctype ) {
 	// so big we can fit it in memory. just do a wget then gunzip 
 	// then open it. use a system call in a thread.
 	int64_t fileSize = -1;
-	File *file = getUtf8ContentInFile( &fileSize );
+	BigFile *file = getUtf8ContentInFile( &fileSize );
 	// return true with g_errno set on error
 	if ( ! file ) {
 		if ( ! g_errno ) { char *xx=NULL;*xx=0; }
@@ -3444,7 +3462,37 @@ bool XmlDoc::indexWarcOrArc ( char ctype ) {
 			toRead = fileSize - m_fileOff;
 			m_hasMoreToRead = false;
 		}
-		int32_t bytesRead = file->read (m_fileBuf, toRead, m_fileOff);
+
+		bool status;
+
+		if ( m_readThreadOut ) {
+			m_readThreadOut = false;
+			status = false;
+			goto skipRead;
+		}
+
+		// make a thread to read now
+		status = file->read (m_fileBuf, 
+				     toRead, 
+				     m_fileOff,
+				     &m_fileState,
+				     this,
+				     doneReadingArchiveFileWrapper,
+				     MAX_NICENESS );
+
+		// if thread was queue or launched, wait for it to come back
+		if ( ! status ) {
+			// set a signal so we do not recall thread
+			// when callback brings us back here
+			m_readThreadOut = true;
+			// wait for callback
+			return false;
+		}
+
+	skipRead:
+
+		int64_t bytesRead = m_fileState.m_bytesDone;
+
 		if ( bytesRead != toRead ) {
 			log("build: read of %s failed at offset "
 			    "%"INT64"", file->getFilename(), m_fileOff);
@@ -5215,9 +5263,9 @@ SafeBuf *XmlDoc::getTitleRecBuf ( ) {
 	*/
 
 	if ( ! m_siteNumInlinksValid         ) { char *xx=NULL;*xx=0; }
-	if ( ! m_siteNumInlinksUniqueIpValid     ) { char *xx=NULL;*xx=0; }
-	if ( ! m_siteNumInlinksUniqueCBlockValid ) { char *xx=NULL;*xx=0; }
-	if ( ! m_siteNumInlinksTotalValid )        { char *xx=NULL;*xx=0; }
+	// if ( ! m_siteNumInlinksUniqueIpValid     ) { char *xx=NULL;*xx=0; }
+	// if ( ! m_siteNumInlinksUniqueCBlockValid ) { char *xx=NULL;*xx=0; }
+	// if ( ! m_siteNumInlinksTotalValid )        { char *xx=NULL;*xx=0; }
 	//if ( ! m_sitePopValid                ) { char *xx=NULL;*xx=0; }
 	if ( ! m_rootLangIdValid             ) { char *xx=NULL;*xx=0; }
 
@@ -8762,10 +8810,19 @@ Links *XmlDoc::getLinks ( bool doQuickSet ) {
 		return &m_links;
 	}
 		
+	CollectionRec *cr = getCollRec();
+	if ( ! cr ) return NULL;
+	bool useRelNoFollow = true;
+	if ( ! cr->m_obeyRelNoFollowLinks ) useRelNoFollow = false;
+	// to keep things simple, for diffbot custom crawls, if robots.txt
+	// is not used then do not use rel no follow
+	if ( ! cr->m_useRobotsTxt && cr->m_isCustomCrawl ) 
+		useRelNoFollow = false;
+
 	// . set it
 	// . if parent is a permalink we can avoid its suburl outlinks 
 	//   containing "comment" from being classified as permalinks
-	if ( ! m_links.set ( true        , // useRelNoFollow? 
+	if ( ! m_links.set ( useRelNoFollow ,
 			     xml         ,
 			     u           ,
 			     true        , // setLinkHashes?
@@ -10055,6 +10112,10 @@ char *XmlDoc::getIsDup ( ) {
 
 	// sanity. must be posdb list.
 	if ( ! list->isEmpty() && list->m_ks != 18 ) { char *xx=NULL;*xx=0;}
+
+	// so getSiteRank() does not core
+	int32_t *sni = getSiteNumInlinks();
+	if ( ! sni || sni == (int32_t *)-1 ) return (char *)sni;
 
 	// . see if there are any pages that seem like they are dups of us
 	// . they must also have a HIGHER score than us, for us to be 
@@ -12026,11 +12087,25 @@ XmlDoc **XmlDoc::getRootXmlDoc ( int32_t maxCacheAge ) {
 	mnew ( m_rootDoc , sizeof(XmlDoc),"xmldoc3");
 	// if we had the title rec, set from that
 	if ( *rtr ) {
-		m_rootDoc->set2 ( m_rootTitleRec     ,
-				  m_rootTitleRecSize , // maxSize    , 
-				  cr->m_coll             ,
-				  NULL               , // pbuf
-				  m_niceness         );
+		if ( ! m_rootDoc->set2 ( m_rootTitleRec     ,
+					 m_rootTitleRecSize , // maxSize    , 
+					 cr->m_coll             ,
+					 NULL               , // pbuf
+					 m_niceness         ) ) {
+			// it was corrupted... delete this
+			// possibly printed 
+			// " uncompress uncompressed size=..." bad uncompress
+			log("build: rootdoc set2 failed");
+			mdelete ( m_rootDoc , sizeof(XmlDoc) , "xdnuke");
+			delete ( m_rootDoc );
+			// call it empty for now, we don't want to return
+			// NULL with g_errno set because it could stop
+			// the whole indexing pipeline
+			m_rootDoc = NULL;
+			m_rootDocValid = true;
+			return &m_rootDoc;
+			//return NULL;
+		}
 	}
 	// . otherwise, set the url and download it on demand
 	// . this junk copied from the contactDoc->* stuff below
@@ -13806,7 +13881,7 @@ int32_t *XmlDoc::getSiteNumInlinks ( ) {
 
 	// hacks of speed. computeSiteNumInlinks is true by default
 	// but if the user turns it off the just use sitelinks.txt
-	if ( ! cr->m_computeSiteNumInlinks ) {
+	if ( cr && ! cr->m_computeSiteNumInlinks ) {
 		int32_t hostHash32 = getHostHash32a();
 		int32_t min = g_tagdb.getMinSiteInlinks ( hostHash32 );
 		// try with www if not there
@@ -13815,12 +13890,12 @@ int32_t *XmlDoc::getSiteNumInlinks ( ) {
 			min = g_tagdb.getMinSiteInlinks ( wwwHash32 );
 		}
 		// fix core by setting these
-		m_siteNumInlinksUniqueIp          = 0;
-		m_siteNumInlinksUniqueCBlock      = 0;
-		m_siteNumInlinksTotal             = 0;
-		m_siteNumInlinksUniqueIpValid     = true;
-		m_siteNumInlinksUniqueCBlockValid = true;
-		m_siteNumInlinksTotalValid        = true;
+		// m_siteNumInlinksUniqueIp          = 0;
+		// m_siteNumInlinksUniqueCBlock      = 0;
+		// m_siteNumInlinksTotal             = 0;
+		// m_siteNumInlinksUniqueIpValid     = true;
+		// m_siteNumInlinksUniqueCBlockValid = true;
+		// m_siteNumInlinksTotalValid        = true;
 		//a nd this
 		m_siteNumInlinksValid = true;
 		m_siteNumInlinks      = 0;
@@ -13847,13 +13922,13 @@ int32_t *XmlDoc::getSiteNumInlinks ( ) {
 	// no site inlinks
 	if ( *ip == 0 ) {
 		m_siteNumInlinks             = 0;
-		m_siteNumInlinksUniqueIp     = 0;
-		m_siteNumInlinksUniqueCBlock = 0;
-		m_siteNumInlinksTotal        = 0;
+		// m_siteNumInlinksUniqueIp     = 0;
+		// m_siteNumInlinksUniqueCBlock = 0;
+		// m_siteNumInlinksTotal        = 0;
 		m_siteNumInlinksValid             = true;
-		m_siteNumInlinksUniqueIpValid     = true;
-		m_siteNumInlinksUniqueCBlockValid = true;
-		m_siteNumInlinksTotalValid        = true;
+		// m_siteNumInlinksUniqueIpValid     = true;
+		// m_siteNumInlinksUniqueCBlockValid = true;
+		// m_siteNumInlinksTotalValid        = true;
 		return &m_siteNumInlinks;
 	}
 
@@ -13940,13 +14015,13 @@ int32_t *XmlDoc::getSiteNumInlinks ( ) {
 		if ( age > maxAge ) valid = false;
 	}
 	// our companion tags, sitePop and fresh inlinks
-	Tag *tag2 = gr->getTag ( "sitenuminlinksuniqueip" );
-	Tag *tag3 = gr->getTag ( "sitenuminlinksuniquecblock");
-	Tag *tag4 = gr->getTag ( "sitenuminlinkstotal");
+	// Tag *tag2 = gr->getTag ( "sitenuminlinksuniqueip" );
+	// Tag *tag3 = gr->getTag ( "sitenuminlinksuniquecblock");
+	// Tag *tag4 = gr->getTag ( "sitenuminlinkstotal");
 	// if we are missing either of those, invalidate as well
-	if ( ! tag2 ) valid = false;
-	if ( ! tag3 ) valid = false;
-	if ( ! tag4 ) valid = false;
+	// if ( ! tag2 ) valid = false;
+	// if ( ! tag3 ) valid = false;
+	// if ( ! tag4 ) valid = false;
 	// if we have already been through this
 	if ( m_updatingSiteLinkInfoTags ) valid = false;
 	// if rebuilding linkdb assume we have no links to sample from!
@@ -13959,14 +14034,14 @@ int32_t *XmlDoc::getSiteNumInlinks ( ) {
 		    "age=%"INT32" ns=%"INT32" sni=%"INT32" "
 		    "maxage=%"INT32" "
 		    "tag=%"PTRFMT" "
-		    "tag2=%"PTRFMT" "
-		    "tag3=%"PTRFMT" "
+		    // "tag2=%"PTRFMT" "
+		    // "tag3=%"PTRFMT" "
 		    "url=%s",
 		    (int32_t)valid,age,ns,sni,
 		    maxAge,
 		    (PTRTYPE)tag,
-		    (PTRTYPE)tag2,
-		    (PTRTYPE)tag3,
+		    // (PTRTYPE)tag2,
+		    // (PTRTYPE)tag3,
 		    m_firstUrl.m_url);
 
 	LinkInfo *sinfo = NULL;
@@ -13979,18 +14054,18 @@ int32_t *XmlDoc::getSiteNumInlinks ( ) {
 		m_siteNumInlinksValid = true;
 
 		// companion tags
-		if ( tag2 ) {
-			m_siteNumInlinksUniqueIp = atol(tag2->getTagData());
-			m_siteNumInlinksUniqueIpValid = true;
-		}
-		if ( tag3 ) {
-			m_siteNumInlinksUniqueCBlock =atol(tag3->getTagData());
-			m_siteNumInlinksUniqueCBlockValid = true;
-		}
-		if ( tag4 ) {
-			m_siteNumInlinksTotal =atol(tag4->getTagData());
-			m_siteNumInlinksTotalValid = true;
-		}
+		// if ( tag2 ) {
+		// 	m_siteNumInlinksUniqueIp = atol(tag2->getTagData());
+		// 	m_siteNumInlinksUniqueIpValid = true;
+		// }
+		// if ( tag3 ) {
+		// 	m_siteNumInlinksUniqueCBlock =atol(tag3->getTagData());
+		// 	m_siteNumInlinksUniqueCBlockValid = true;
+		// }
+		// if ( tag4 ) {
+		// 	m_siteNumInlinksTotal =atol(tag4->getTagData());
+		// 	m_siteNumInlinksTotalValid = true;
+		// }
 
 		// . consult our sitelinks.txt file
 		// . returns -1 if not found
@@ -14049,14 +14124,14 @@ int32_t *XmlDoc::getSiteNumInlinks ( ) {
 	m_siteNumInlinks      = (int32_t)sinfo->m_numGoodInlinks;
 	//m_siteNumInlinksFresh = sinfo->m_numInlinksFresh;
 	//m_sitePop             = sinfo->m_pagePop;
-	m_siteNumInlinksUniqueIp     = sinfo->m_numUniqueIps;
-	m_siteNumInlinksUniqueCBlock = sinfo->m_numUniqueCBlocks;
-	m_siteNumInlinksTotal        = sinfo->m_totalInlinkingDocIds;
+	// m_siteNumInlinksUniqueIp     = sinfo->m_numUniqueIps;
+	// m_siteNumInlinksUniqueCBlock = sinfo->m_numUniqueCBlocks;
+	// m_siteNumInlinksTotal        = sinfo->m_totalInlinkingDocIds;
 
 	m_siteNumInlinksValid      = true;
-	m_siteNumInlinksUniqueIpValid = true;
-	m_siteNumInlinksUniqueCBlockValid = true;
-	m_siteNumInlinksTotalValid = true;
+	// m_siteNumInlinksUniqueIpValid = true;
+	// m_siteNumInlinksUniqueCBlockValid = true;
+	// m_siteNumInlinksTotalValid = true;
 
 
  updateToMin:
@@ -15563,10 +15638,11 @@ void gotDiffbotReplyWrapper ( void *state , TcpSocket *s ) {
 			THIS->m_diffbotReplyError = code;
 		}
 		// a hack for detecting if token is expired
-		if ( ! ttt && cr && strstr ( page , ":429}" ) ) {
+		if ( THIS->m_diffbotReplyError == EDIFFBOTTOKENEXPIRED ) {
 			// note it
 			log("xmldoc: pausing crawl %s (%"INT32") because "
-			    "token is expired",cr->m_coll,(int32_t)cr->m_collnum);
+			    "token is expired",cr->m_coll,
+			    (int32_t)cr->m_collnum);
 			// pause the crawl
 			SafeBuf parmList;
 			// spidering enabled is the "cse" cgi parm in Parms.cpp
@@ -16488,7 +16564,13 @@ SafeBuf *XmlDoc::getDiffbotReply ( ) {
 	// go through gb. we should fix that by downloading the whole page
 	// ourselves and sending it back, and tell diffbot's phantomjs not
 	// to do the certificate check.
-	useProxies = false;
+	//
+	// for now, allow http and NOT https urls through though.
+	// TODO: if the url redirects to an https url will this mess us up?
+	if (  ! m_firstUrlValid )
+		useProxies = false;
+	if ( m_firstUrlValid && m_firstUrl.isHttps() )
+		useProxies = false;
 
 	// if we used a proxy to download the doc, then diffbot should too
 	// BUT tell diffbot to go through host #0 so we can send it to the
@@ -17763,6 +17845,91 @@ Url **XmlDoc::getCanonicalRedirUrl ( ) {
 	return &m_canonicalRedirUrlPtr;
 }
 
+// returns false if none found
+bool setMetaRedirUrlFromTag ( char *p , Url *metaRedirUrl , char niceness ,
+			      Url *cu ) {
+	// limit scan
+	char *limit = p + 30;
+	// skip whitespace
+	for ( ; *p && p < limit && is_wspace_a(*p) ; p++ );
+	// must be a num
+	if ( ! is_digit(*p) ) return false;
+	// init delay
+	int32_t delay = atol ( p );
+	// ignore long delays
+	if ( delay >= 10 ) return false;
+	// now find the semicolon, if any
+	for ( ; *p && p < limit && *p != ';' ; p++ );
+	// must have semicolon
+	if ( *p != ';' ) return false;
+	// skip it
+	p++;
+	// skip whitespace some more
+	for ( ; *p && p < limit && is_wspace_a(*p) ; p++ );
+	// must have URL
+	if ( strncasecmp(p,"URL",3) ) return false;
+	// skip that
+	p += 3;
+	// skip white space
+	for ( ; *p && p < limit && is_wspace_a(*p) ; p++ );
+	// then an equal sign
+	if ( *p != '=' ) return false;
+	// skip equal sign
+	p++;
+	// them maybe more whitespace
+	for ( ; *p && p < limit && is_wspace_a(*p) ; p++ );
+	// an optional quote
+	if ( *p == '\"' ) p++;
+	// can also be a single quote!
+	if ( *p == '\'' ) p++;
+	// set the url start
+	char *url = p;
+	// now advance to next quote or space or >
+	for ( ; *p && !is_wspace_a(*p) && 
+		      *p !='\'' && 
+		      *p !='\"' && 
+		      *p !='>' ; 
+	      p++);
+	// that is the end
+	char *urlEnd = p;
+	// get size
+	int32_t usize = urlEnd - url;
+	// skip if too big
+	if ( usize > 1024 ) {
+		log("build: meta redirurl of %"INT32" bytes too big",usize);
+		return false;
+	}
+	// get our current utl
+	//Url *cu = getCurrentUrl();
+	// decode what we got
+	char decoded[MAX_URL_LEN];
+	// convert &amp; to "&"
+	int32_t decBytes = htmlDecode(decoded,url,usize,false,niceness);
+	decoded[decBytes]='\0';
+	// . then the url
+	// . set the url to the one in the redirect tag
+	// . but if the http-equiv meta redirect url starts with a '?'
+	//   then just replace our cgi with that one
+	if ( *url == '?' ) {
+		char foob[MAX_URL_LEN*2];
+		char *pf = foob;
+		int32_t cuBytes = cu->getPathEnd() - cu->getUrl();
+		gbmemcpy(foob,cu->getUrl(),cuBytes);
+		pf += cuBytes;
+		gbmemcpy ( pf , decoded , decBytes );
+		pf += decBytes;
+		*pf = '\0';
+		metaRedirUrl->set(foob);
+	}
+	// . otherwise, append it right on
+	// . use "url" as the base Url
+	// . it may be the original url or the one we redirected to
+	// . redirUrl is set to the original at the top
+	else
+		// addWWW = false, stripSessId=true
+		metaRedirUrl->set(cu,decoded,decBytes,false,true);
+	return true;
+}
 
 
 // scan document for <meta http-equiv="refresh" content="0;URL=xxx">
@@ -17788,6 +17955,14 @@ Url **XmlDoc::getMetaRedirUrl ( ) {
 	// if we are recycling or injecting, do not consider meta redirects
 	if ( cr->m_recycleContent || m_recycleContent ) 
 		return &m_metaRedirUrlPtr; 
+
+	// will this work in here?
+	//uint8_t *ct = getContentType();
+	//if ( ! ct ) return NULL;
+
+	Url *cu = getCurrentUrl();
+
+	bool gotOne = false;
 
 	// advance a bit, we are initially looking for the 'v' char
 	p += 10;
@@ -17828,91 +18003,64 @@ Url **XmlDoc::getMetaRedirUrl ( ) {
 		p += 8;
 		// skip possible quote
 		if ( *p == '\"' ) p++;
-		// limit scan
-		limit = p + 30;
-		// skip whitespace
-		for ( ; *p && p < limit && is_wspace_a(*p) ; p++ );
-		// must be a num
-		if ( ! is_digit(*p) ) continue;
-		// init delay
-		int32_t delay = atol ( p );
-		// ignore int32_t delays
-		if ( delay >= 10 ) continue;
-		// now find the semicolon, if any
-		for ( ; *p && p < limit && *p != ';' ; p++ );
-		// must have semicolon
-		if ( *p != ';' ) continue;
-		// skip it
-		p++;
-		// skip whitespace some more
-		for ( ; *p && p < limit && is_wspace_a(*p) ; p++ );
-		// must have URL
-		if ( strncasecmp(p,"URL",3) ) continue;
-		// skip that
-		p += 3;
-		// skip white space
-		for ( ; *p && p < limit && is_wspace_a(*p) ; p++ );
-		// then an equal sign
-		if ( *p != '=' ) continue;
-		// skip equal sign
-		p++;
-		// them maybe more whitespace
-		for ( ; *p && p < limit && is_wspace_a(*p) ; p++ );
-		// an optional quote
-		if ( *p == '\"' ) p++;
-		// can also be a single quote!
-		if ( *p == '\'' ) p++;
-		// set the url start
-		char *url = p;
-		// now advance to next quote or space or >
-		for ( ; *p && !is_wspace_a(*p) && 
-			      *p !='\'' && 
-			      *p !='\"' && 
-			      *p !='>' ; 
-		      p++);
-		// that is the end
-		char *urlEnd = p;
-		// get size
-		int32_t usize = urlEnd - url;
-		// skip if too big
-		if ( usize > 1024 ) {
-			log("build: meta redirurl of %"INT32" bytes too big",usize);
+		// PARSE OUT THE URL
+		Url dummy;
+		if ( ! setMetaRedirUrlFromTag ( p , &dummy , m_niceness ,cu)) 
 			continue;
-		}
-		// get our current utl
-		Url *cu = getCurrentUrl();
-		// decode what we got
-		char decoded[MAX_URL_LEN];
-		// convert &amp; to "&"
-		int32_t decBytes = htmlDecode(decoded,url,usize,false,m_niceness);
-		decoded[decBytes]='\0';
-		// . then the url
-		// . set the url to the one in the redirect tag
-		// . but if the http-equiv meta redirect url starts with a '?'
-		//   then just replace our cgi with that one
-		if ( *url == '?' ) {
-			char foob[MAX_URL_LEN*2];
-			char *pf = foob;
-			int32_t cuBytes = cu->getPathEnd() - cu->getUrl();
-			gbmemcpy(foob,cu->getUrl(),cuBytes);
-			pf += cuBytes;
-			gbmemcpy ( pf , decoded , decBytes );
-			pf += decBytes;
-			*pf = '\0';
-			m_metaRedirUrl.set(foob);
-		}
-		// . otherwise, append it right on
-		// . use "url" as the base Url
-		// . it may be the original url or the one we redirected to
-		// . redirUrl is set to the original at the top
-		else
-			// addWWW = false, stripSessId=true
-			m_metaRedirUrl.set(cu,decoded,decBytes,false,true);
+		gotOne = true;
+		break;
+	}
+
+	if ( ! gotOne )
+		return &m_metaRedirUrlPtr;
+
+	// to fix issue with scripts containing 
+	// document.write('<meta http-equiv="Refresh" content="0;URL=http://ww
+	// we have to get the Xml. we can't call getXml() because of
+	// recursion bugs so just do it directly here
+
+	Xml xml;
+	if ( ! xml.set ( m_httpReply ,
+			 m_httpReplySize - 1, // make it a length
+			 false      ,  // ownData?
+			 0          ,  // allocSize
+			 false      ,  // pure xml?
+			 m_version  ,
+			 false      ,  // setParentsArg? 
+			 m_niceness ,
+			 // assume html since getContentType() is recursive
+			 // on us.
+			 CT_HTML ) ) // *ct ) )
+		// return NULL on error with g_errno set
+		return NULL;
+
+	XmlNode *nodes = xml.getNodes();
+	int32_t     n  = xml.getNumNodes();
+	// find the first meta summary node
+	for ( int32_t i = 0 ; i < n ; i++ ) {
+		// continue if not a meta tag
+		if ( nodes[i].m_nodeId != 68 ) continue;
+		// only get content for <meta http-equiv=..>
+		int32_t tagLen;
+		char *tag ;
+		tag = xml.getString ( i , "http-equiv" , &tagLen );
+		// skip if empty
+		if ( ! tag || tagLen <= 0 ) continue;
+		// if not a refresh, skip it
+		if ( strncasecmp ( tag , "refresh", 7 ) ) continue;
+		// get the content
+		tag = xml.getString ( i ,"content", &tagLen );
+		// skip if empty
+		if ( ! tag || tagLen <= 0 ) continue;
+		// PARSE OUT THE URL
+		if (!setMetaRedirUrlFromTag(p,&m_metaRedirUrl,m_niceness,cu) ) 
+			continue;
 		// set it
 		m_metaRedirUrlPtr = &m_metaRedirUrl;
 		// return it
-		break;
+		return &m_metaRedirUrlPtr;
 	}
+
 	// nothing found
 	return &m_metaRedirUrlPtr;
 }
@@ -19086,6 +19234,9 @@ char **XmlDoc::getExpandedUtf8Content ( ) {
 		// <iframe src=""> which ends up embedding the root url.
 		if ( urlLen == 0 ) 
 			continue;
+		// skip if "about:blank"
+		if ( urlLen==11 && strncmp(url,"about:blank",11) == 0 )
+			continue;
 		// get our current url
 		//cu = getCurrentUrl();
 		// set our frame url
@@ -19291,7 +19442,7 @@ void systemDoneWrapper ( void *state , ThreadEntry *t ) {
 }
 
 // we download large files to a file on disk, like warcs and arcs
-File *XmlDoc::getUtf8ContentInFile ( int64_t *fileSizeArg ) {
+BigFile *XmlDoc::getUtf8ContentInFile ( int64_t *fileSizeArg ) {
 
 	if ( m_fileValid ) {
 		*fileSizeArg = m_fileSize;
@@ -19305,15 +19456,17 @@ File *XmlDoc::getUtf8ContentInFile ( int64_t *fileSizeArg ) {
 		char filename[2048];
 		snprintf ( filename,
 			   2048,
-			   "%sgbarchivefile%"UINT32"",
-			   g_hostdb.m_dir,
+			   "gbarchivefile%"UINT32"",
 			   (int32_t)(int64_t)this);
 
-		m_file.set ( filename );
+		m_file.set ( g_hostdb.m_dir , filename );
 		m_fileSize = m_file.getFileSize();
 		m_fileValid = true;
 		*fileSizeArg = m_fileSize;
 		m_file.open(O_RDONLY);
+		// explicitly set it to false now to make it harder for
+		// it not to be true because that messes things up
+		m_file.m_usePartFiles = false;
 		return &m_file;
 	}
 
@@ -19401,7 +19554,7 @@ File *XmlDoc::getUtf8ContentInFile ( int64_t *fileSizeArg ) {
 			      systemDoneWrapper    ,
 			      systemStartWrapper_r ) ) 
 		// would block, wait for thread
-		return (File *)-1;
+		return (BigFile *)-1;
 	// failed?
 	log("build: failed to launch wget thread");
 	// If we run it in this thread then if we are fetching 
@@ -21445,12 +21598,13 @@ bool XmlDoc::logIt ( SafeBuf *bb ) {
 	//
 	// print # of link texts from 2nd coll
 	//
-	if ( m_linkInfo2Valid ) {
-		LinkInfo *info = ptr_linkInfo2; 
-		int32_t nt = 0;
-		if ( info ) nt = info->getNumLinkTexts();
-		if ( nt ) sb->safePrintf("goodinlinks2=%"INT32" ",nt );
-	}
+	// this is not used for what it was used for.
+	// if ( m_linkInfo2Valid && size_linkInfo2 > 4 ) {
+	// 	LinkInfo *info = ptr_linkInfo2; 
+	// 	int32_t nt = 0;
+	// 	if ( info ) nt = info->getNumLinkTexts();
+	// 	if ( nt ) sb->safePrintf("goodinlinks2=%"INT32" ",nt );
+	// }
 
 	if (  m_docIdValid ) 
 		sb->safePrintf("docid=%"UINT64" ",m_docId);
@@ -25928,18 +26082,18 @@ void XmlDoc::copyFromOldDoc ( XmlDoc *od ) {
 		m_ip                  = od->m_ip;
 		m_ipValid             = true;
 		m_siteNumInlinks            = od->m_siteNumInlinks;
-		m_siteNumInlinksUniqueIp    = od->m_siteNumInlinksUniqueIp;
-		m_siteNumInlinksUniqueCBlock= od->m_siteNumInlinksUniqueCBlock;
-		m_siteNumInlinksTotal       = od->m_siteNumInlinksTotal;
+		// m_siteNumInlinksUniqueIp    = od->m_siteNumInlinksUniqueIp;
+		// m_siteNumInlinksUniqueCBlock= od->m_siteNumInlinksUniqueCBlo
+		// m_siteNumInlinksTotal       = od->m_siteNumInlinksTotal;
 
 		m_siteNumInlinksValid = 
 			od->m_siteNumInlinksValid;
-		m_siteNumInlinksUniqueIpValid = 
-			od->m_siteNumInlinksUniqueIpValid;
-		m_siteNumInlinksUniqueCBlockValid = 
-			od->m_siteNumInlinksUniqueCBlockValid;
-		m_siteNumInlinksTotal =
-			od->m_siteNumInlinksTotalValid;
+		// m_siteNumInlinksUniqueIpValid = 
+		// 	od->m_siteNumInlinksUniqueIpValid;
+		// m_siteNumInlinksUniqueCBlockValid = 
+		// 	od->m_siteNumInlinksUniqueCBlockValid;
+		// m_siteNumInlinksTotal =
+		// 	od->m_siteNumInlinksTotalValid;
 	}
 
 	m_indexCode      = 0;//od->m_indexCode;
@@ -32238,8 +32392,13 @@ Msg20Reply *XmlDoc::getMsg20Reply ( ) {
 	}
 		
 
-	TagRec *gr = getTagRec();
-	if ( ! gr || gr == (void *)-1 ) return (Msg20Reply *)gr;
+	// if we are showing sites that have been banned in tagdb, we dont
+	// have to do a tagdb lookup. that should speed things up.
+	TagRec *gr = NULL;
+	if ( cr && cr->m_doTagdbLookups ) {
+		gr = getTagRec();
+		if ( ! gr || gr == (void *)-1 ) return (Msg20Reply *)gr;
+	}
 
 	//reply-> ptr_tagRec = (char *)gr;
 	//reply->size_tagRec = gr->getSize();
@@ -32319,7 +32478,8 @@ Msg20Reply *XmlDoc::getMsg20Reply ( ) {
 		if ( cr->m_forceDelete[ufn] ) pr = -3;
 
 		// this is an automatic ban!
-		if ( gr->getLong("manualban",0))pr=-3;//SPIDER_PRIORITY_BANNED;
+		if ( gr && gr->getLong("manualban",0))
+			pr=-3;//SPIDER_PRIORITY_BANNED;
 
 		// is it banned
 		if ( pr == -3 ) { // SPIDER_PRIORITY_BANNED ) { // -2
@@ -32754,9 +32914,9 @@ Msg20Reply *XmlDoc::getMsg20Reply ( ) {
 	//if ( tag1 ) sni  = atol(tag1->m_data);
 	//if ( tag2 ) spop = atol(tag2->m_data);
 	reply->m_siteNumInlinks       = m_siteNumInlinks;
-	reply->m_siteNumInlinksTotal  = m_siteNumInlinksTotal;
-	reply->m_siteNumUniqueIps     = m_siteNumInlinksUniqueIp;
-	reply->m_siteNumUniqueCBlocks = m_siteNumInlinksUniqueCBlock;
+	//reply->m_siteNumInlinksTotal  = m_siteNumInlinksTotal;
+	//reply->m_siteNumUniqueIps     = m_siteNumInlinksUniqueIp;
+	//reply->m_siteNumUniqueCBlocks = m_siteNumInlinksUniqueCBlock;
 	//reply->m_sitePop        = m_sitePop;
 
 	// . get stuff from link info
@@ -38205,25 +38365,25 @@ bool XmlDoc::printGeneralInfo ( SafeBuf *sb , HttpRequest *hr ) {
 			"<tr><td><b>good inlinks to site</b>"
 			"</td><td>%"INT32"</td></tr>\n"
 
-			"<tr><td>unique IP inlinks to site"
-			"</td><td>%"INT32"</td></tr>\n"
+			// "<tr><td>unique IP inlinks to site"
+			// "</td><td>%"INT32"</td></tr>\n"
 
-			"<tr><td>unique CBlock inlinks to site"
-			"</td><td>%"INT32"</td></tr>\n"
+			// "<tr><td>unique CBlock inlinks to site"
+			// "</td><td>%"INT32"</td></tr>\n"
 
 			"<tr><td><b>site rank</b></td><td>%"INT32"</td></tr>\n"
 
 			"<tr><td>good inlinks to page"
 			"</td><td>%"INT32"</td></tr>\n"
 
-			"<tr><td>unique IP inlinks to page"
-			"</td><td>%"INT32"</td></tr>\n"
+			// "<tr><td>unique IP inlinks to page"
+			// "</td><td>%"INT32"</td></tr>\n"
 
-			"<tr><td>unique CBlock inlinks to page"
-			"</td><td>%"INT32"</td></tr>\n"
+			// "<tr><td>unique CBlock inlinks to page"
+			// "</td><td>%"INT32"</td></tr>\n"
 
-			"<tr><td>total inlinks to page"
-			"</td><td>%"INT32"</td></tr>\n"
+			// "<tr><td>total inlinks to page"
+			// "</td><td>%"INT32"</td></tr>\n"
 
 			"<tr><td><nobr>page inlinks last computed</nobr></td>"
 			"<td>%s</td></tr>\n"
@@ -38243,14 +38403,14 @@ bool XmlDoc::printGeneralInfo ( SafeBuf *sb , HttpRequest *hr ) {
 			strLanguage,
 			g_countryCode.getName(m_countryId) ,
 			sni,
-			m_siteNumInlinksUniqueIp,
-			m_siteNumInlinksUniqueCBlock,
+			//m_siteNumInlinksUniqueIp,
+			//m_siteNumInlinksUniqueCBlock,
 			::getSiteRank(sni),
 			//info1->getNumTotalInlinks(),
 			info1->getNumGoodInlinks(),
-			info1->m_numUniqueIps,
-			info1->m_numUniqueCBlocks,
-			info1->m_totalInlinkingDocIds,
+			// info1->m_numUniqueIps,
+			// info1->m_numUniqueCBlocks,
+			// info1->m_totalInlinkingDocIds,
 
 			tmp3
 			);
@@ -38262,26 +38422,26 @@ bool XmlDoc::printGeneralInfo ( SafeBuf *sb , HttpRequest *hr ) {
 			"\t<siteRank>%"INT32"</siteRank>\n"
 
 			"\t<numGoodSiteInlinks>%"INT32"</numGoodSiteInlinks>\n"
-			"\t<numTotalSiteInlinks>%"INT32"</numTotalSiteInlinks>\n"
-			"\t<numUniqueIpsLinkingToSite>%"INT32""
-			"</numUniqueIpsLinkingToSite>\n"
-			"\t<numUniqueCBlocksLinkingToSite>%"INT32""
-			"</numUniqueCBlocksLinkingToSite>\n"
+			//"\t<numTotalSiteInlinks>%"INT32"</numTotalSiteInlinks>\n"
+			// "\t<numUniqueIpsLinkingToSite>%"INT32""
+			// "</numUniqueIpsLinkingToSite>\n"
+			// "\t<numUniqueCBlocksLinkingToSite>%"INT32""
+			// "</numUniqueCBlocksLinkingToSite>\n"
 
 
 
 
 			// how many inlinks, external and internal, we have
 			// to this page not filtered in any way!!!
-			"\t<numTotalPageInlinks>%"INT32"</numTotalPageInlinks>\n"
+			//"\t<numTotalPageInlinks>%"INT32"</numTotalPageInlinks>\n"
 			// how many inlinking ips we got, including our own if
 			// we link to ourself
-			"\t<numUniqueIpsLinkingToPage>%"INT32""
-			"</numUniqueIpsLinkingToPage>\n"
+			// "\t<numUniqueIpsLinkingToPage>%"INT32""
+			// "</numUniqueIpsLinkingToPage>\n"
 			// how many inlinking cblocks we got, including our own
 			// if we link to ourself
-			"\t<numUniqueCBlocksLinkingToPage>%"INT32""
-			"</numUniqueCBlocksLinkingToPage>\n"
+			// "\t<numUniqueCBlocksLinkingToPage>%"INT32""
+			// "</numUniqueCBlocksLinkingToPage>\n"
 
 
 			"\t<numGoodPageInlinks>%"INT32"</numGoodPageInlinks>\n"
@@ -38293,13 +38453,13 @@ bool XmlDoc::printGeneralInfo ( SafeBuf *sb , HttpRequest *hr ) {
 			,(int32_t)m_isLinkSpam
 			,::getSiteRank(sni)
 			,sni
-			,m_siteNumInlinksTotal
-			,m_siteNumInlinksUniqueIp
-			,m_siteNumInlinksUniqueCBlock
+			// ,m_siteNumInlinksTotal
+			// ,m_siteNumInlinksUniqueIp
+			// ,m_siteNumInlinksUniqueCBlock
 
-			,info1->m_totalInlinkingDocIds
-			,info1->m_numUniqueIps
-			,info1->m_numUniqueCBlocks
+			//,info1->m_totalInlinkingDocIds
+			//,info1->m_numUniqueIps
+			//,info1->m_numUniqueCBlocks
 			
 			,info1->getNumGoodInlinks()
 			//,tmp3
@@ -39312,6 +39472,12 @@ char **XmlDoc::getRootTitleBuf ( ) {
 	// sanity check, must include the null ni the size
 	if ( m_rootTitleBufSize > 0 &&
 	     m_rootTitleBuf [ m_rootTitleBufSize - 1 ] ) {
+		log("build: bad root titlebuf size not end in null char for "
+		    "collnum=%i",(int)m_collnum);
+		ptr_rootTitleBuf = NULL;
+		size_rootTitleBuf = 0;
+		m_rootTitleBufValid = true;
+		return (char **)&m_rootTitleBuf;
 		char *xx=NULL;*xx=0;
 		//m_rootTitleBuf [ m_rootTitleBufSize - 1 ] = '\0';
 		//m_rootTitleBufSize++;
@@ -39931,7 +40097,7 @@ SafeBuf *XmlDoc::getNewTagBuf ( ) {
 			return NULL;
 	}
 
-	int32_t old2, old3, old4;
+	//int32_t old2, old3, old4;
 
 	// if running for diffbot crawlbot then isCustomCrawl is true
 	// so do not update the siteinlink info already in tagdb since i 
@@ -39944,31 +40110,31 @@ SafeBuf *XmlDoc::getNewTagBuf ( ) {
 	//if ( strcmp(cr->m_coll,"GLOBAL-INDEX") == 0 ) ) goto skipSiteInlinks;
 
 	// sitenuminlinksfresh
-	old2 = gr->getLong("sitenuminlinksuniqueip",-1,NULL,&timestamp);
-	if ( old2 == -1 || old2 != m_siteNumInlinksUniqueIp ||
-	     m_updatingSiteLinkInfoTags )
-		if ( ! tbuf->addTag2(mysite,"sitenuminlinksuniqueip",
-				     now,"xmldoc",
-				    *ip,m_siteNumInlinksUniqueIp,rdbId)) 
-			return NULL;
-	// sitepop
-	old3 = gr->getLong("sitenuminlinksuniquecblock",-1,NULL,
-				&timestamp);
-	if ( old3 == -1 || old3 != m_siteNumInlinksUniqueCBlock || 
-	     m_updatingSiteLinkInfoTags )
-		if ( ! tbuf->addTag2(mysite,"sitenuminlinksuniquecblock",
-				     now,"xmldoc",
-				    *ip,m_siteNumInlinksUniqueCBlock,rdbId)) 
-			return NULL;
-	// total site inlinks
-	old4 = gr->getLong("sitenuminlinkstotal",-1,NULL,
-				&timestamp);
-	if ( old4 == -1 || old4 != m_siteNumInlinksTotal || 
-	     m_updatingSiteLinkInfoTags )
-		if ( ! tbuf->addTag2(mysite,"sitenuminlinkstotal",
-				     now,"xmldoc",
-				    *ip,m_siteNumInlinksTotal,rdbId)) 
-			return NULL;
+	// old2 = gr->getLong("sitenuminlinksuniqueip",-1,NULL,&timestamp);
+	// if ( old2 == -1 || old2 != m_siteNumInlinksUniqueIp ||
+	//      m_updatingSiteLinkInfoTags )
+	// 	if ( ! tbuf->addTag2(mysite,"sitenuminlinksuniqueip",
+	// 			     now,"xmldoc",
+	// 			    *ip,m_siteNumInlinksUniqueIp,rdbId)) 
+	// 		return NULL;
+	// // sitepop
+	// old3 = gr->getLong("sitenuminlinksuniquecblock",-1,NULL,
+	// 			&timestamp);
+	// if ( old3 == -1 || old3 != m_siteNumInlinksUniqueCBlock || 
+	//      m_updatingSiteLinkInfoTags )
+	// 	if ( ! tbuf->addTag2(mysite,"sitenuminlinksuniquecblock",
+	// 			     now,"xmldoc",
+	// 			    *ip,m_siteNumInlinksUniqueCBlock,rdbId)) 
+	// 		return NULL;
+	// // total site inlinks
+	// old4 = gr->getLong("sitenuminlinkstotal",-1,NULL,
+	// 			&timestamp);
+	// if ( old4 == -1 || old4 != m_siteNumInlinksTotal || 
+	//      m_updatingSiteLinkInfoTags )
+	// 	if ( ! tbuf->addTag2(mysite,"sitenuminlinkstotal",
+	// 			     now,"xmldoc",
+	// 			    *ip,m_siteNumInlinksTotal,rdbId)) 
+	// 		return NULL;
 
 	// skipSiteInlinks:
 

@@ -125,19 +125,19 @@ bool Posdb::init ( ) {
 	int32_t nodeSize      = (sizeof(key144_t)+12+4) + sizeof(collnum_t);
 	int32_t maxTreeNodes = maxTreeMem  / nodeSize ;
 
-	int32_t pageSize = GB_INDEXDB_PAGE_SIZE;
+	//int32_t pageSize = GB_INDEXDB_PAGE_SIZE;
 	// we now use a disk page cache as opposed to the
 	// old rec cache. i am trying to do away with the Rdb::m_cache rec
 	// cache in favor of cleverly used disk page caches, because
 	// the rec caches are not real-time and get stale. 
-	int32_t pcmem    = 30000000; // 30MB
+	//int32_t pcmem    = 30000000; // 30MB
 	// make sure at least 30MB
 	//if ( pcmem < 30000000 ) pcmem = 30000000;
 	// keep this low if we are the tmp cluster, 30MB
-	if ( g_hostdb.m_useTmpCluster && pcmem > 30000000 ) pcmem = 30000000;
+	//if ( g_hostdb.m_useTmpCluster && pcmem > 30000000 ) pcmem = 30000000;
 	// do not use any page cache if doing tmp cluster in order to
 	// prevent swapping
-	if ( g_hostdb.m_useTmpCluster ) pcmem = 0;
+	//if ( g_hostdb.m_useTmpCluster ) pcmem = 0;
 	// save more mem!!! allow os to cache it i guess...
 	// let's go back to using it
 	//pcmem = 0;
@@ -145,11 +145,11 @@ bool Posdb::init ( ) {
 	//pcmem = 0;
 	// . init the page cache
 	// . MDW: "minimize disk seeks" not working otherwise i'd enable it!
-	if ( ! m_pc.init ( "posdb",
-			   RDB_POSDB,
-			   pcmem    ,
-			   pageSize ))
-		return log("db: Posdb init failed.");
+	// if ( ! m_pc.init ( "posdb",
+	// 		   RDB_POSDB,
+	// 		   pcmem    ,
+	// 		   pageSize ))
+	// 	return log("db: Posdb init failed.");
 
 	// . set our own internal rdb
 	// . max disk space for bin tree is same as maxTreeMem so that we
@@ -174,7 +174,7 @@ bool Posdb::init ( ) {
 			   // newer systems have tons of ram to use
 			   // for their disk page cache. it is slower than
 			   // ours but the new engine has much slower things
-			   &m_pc                       ,
+			   NULL,//&m_pc                       ,
 			   false , // istitledb?
 			   false , // preloaddiskpagecache?
 			   sizeof(key144_t)
@@ -918,6 +918,10 @@ bool PosdbTable::allocTopTree ( ) {
 		    , (int32_t)m_r->m_numDocIdSplits
 		    );
 
+	// keep it sane
+	if ( nn > m_r->m_docsToGet * 2 && nn > 60 )
+		nn = m_r->m_docsToGet * 2;
+
 	// this actually sets the # of nodes to MORE than nn!!!
 	if ( ! m_topTree->setNumNodes(nn,m_r->m_doSiteClustering)) {
 		log("toptree: toptree: error allocating nodes: %s",
@@ -1007,8 +1011,9 @@ bool PosdbTable::allocTopTree ( ) {
 			continue;
 		// how big?
 		int64_t total = m_msg2->m_lists[i].getListSize();
-		// skip if empty
-		if ( total == 0 ) {
+		// skip if empty. no we could be doing a split that is
+		// empty but other splits are full
+		if ( total == 0 && m_r->m_numDocIdSplits <= 1 ) {
 			log("query: empty facets for term #%i",i);
 			continue;
 		}
@@ -6639,7 +6644,12 @@ void PosdbTable::intersectLists10_r ( ) {
 		// synbits on it, below!!! or a half stop wiki bigram like
 		// the term "enough for" in the wiki phrase 
 		// "time enough for love" because we wanna reward that more!
+		// this halfstopwikibigram bit is set in the indivial keys
+		// so we'd have to at least do a key cleansing, so we can't
+		// do this shortcut right now... mdw oct 10 2015
 		if ( nsub == 1 && 
+		     // need it for gbfacet termlists though it seems
+		     (nwpFlags[0] & (BF_FACET|BF_NUMBER)) &&		     
 		     !(nwpFlags[0] & BF_SYNONYM) &&
 		     !(nwpFlags[0] & BF_HALFSTOPWIKIBIGRAM) ) {
 			miniMergedList [j] = nwp     [0];
@@ -6775,6 +6785,8 @@ void PosdbTable::intersectLists10_r ( ) {
 			nwp[mink] = NULL;
 		// avoid breach of core below now
 		if ( mptr < mptrEnd ) goto mergeMore;
+		// wrap it up here since done merging
+		miniMergedEnd[j] = mptr;		
 	}
 
 	// breach?
@@ -7563,6 +7575,7 @@ void PosdbTable::intersectLists10_r ( ) {
 		dcs.m_docLang = docLang;
 		// ensure enough room we can't allocate in a thread!
 		if ( m_scoreInfoBuf.getAvail()<(int32_t)sizeof(DocIdScore)+1){
+			goto advance;
 			char *xx=NULL;*xx=0; }
 		// if same as last docid, overwrite it since we have a higher
 		// siterank or langid i guess

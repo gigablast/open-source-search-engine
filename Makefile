@@ -41,7 +41,7 @@ OBJS =  UdpSlot.o Rebalance.o \
 	Highlight.o File.o Errno.o Entities.o \
 	Dns.o Dir.o Conf.o Bits.o \
 	Stats.o BigFile.o Msg17.o \
-	Speller.o DiskPageCache.o \
+	Speller.o \
 	PingServer.o StopWords.o TopTree.o \
 	Parms.o Pages.o \
 	Unicode.o iana_charset.o Iso8859.o \
@@ -530,6 +530,10 @@ Timedb.o:
 	$(CC) $(DEFS) $(CPPFLAGS)  -O2 -c $*.cpp 
 
 HashTableX.o:
+	$(CC) $(DEFS) $(CPPFLAGS)  -O2 -c $*.cpp 
+
+# getUrlFilterNum2()
+Spider.o:
 	$(CC) $(DEFS) $(CPPFLAGS)  -O2 -c $*.cpp 
 
 SpiderCache.o:

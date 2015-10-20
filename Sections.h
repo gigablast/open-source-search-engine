@@ -7,7 +7,7 @@
 #include "Dates.h" // datetype_t
 #include "Words.h"
 #include "Rdb.h"
-#include "DiskPageCache.h"
+//#include "DiskPageCache.h"
 
 
 // KEY:
@@ -287,9 +287,9 @@ class Sectiondb {
 	// holds binary format title entries
 	Rdb m_rdb;
 
-	DiskPageCache *getDiskPageCache ( ) { return &m_pc; };
+	//DiskPageCache *getDiskPageCache ( ) { return &m_pc; };
 
-	DiskPageCache m_pc;
+	//DiskPageCache m_pc;
 };
 
 extern class Sectiondb g_sectiondb;

@@ -9,7 +9,7 @@
 #include "Threads.h"
 #include "Stats.h"
 #include "Statsdb.h"
-#include "DiskPageCache.h"
+//#include "DiskPageCache.h"
 
 #ifdef ASYNCIO
 #include <aio.h>
@@ -35,11 +35,12 @@ BigFile::~BigFile () {
 BigFile::BigFile () {
 	m_permissions = S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH ;
 	m_flags       = O_RDWR ; // | O_DIRECT;
+	m_usePartFiles = true;
 	// NULLify all ptrs to files
 	//for ( int32_t i = 0 ; i < MAX_PART_FILES ; i++ ) m_files[i] = NULL;
 	m_maxParts = 0;
 	m_numParts = 0;
-	m_pc  = NULL;
+	//m_pc  = NULL;
 	m_vfd = -1;
 	//m_vfdAllowed = false;
 	m_fileSize = -1;
@@ -73,6 +74,8 @@ bool BigFile::set ( char *dir , char *baseFilename , char *stripeDir ) {
 
 	m_dir         .setLabel("bfd");
 	m_baseFilename.setLabel("bfbf");
+
+	m_usePartFiles = true;
 
 	// use this 32 byte char buf to avoid a malloc if possible
 	m_baseFilename.setBuf (m_tmpBaseBuf,32,0,false);
@@ -265,23 +268,36 @@ bool BigFile::doesPartExist ( int32_t n ) {
 
 static int64_t s_vfd = 0;
 
+// do not use part files for this open so we can open regular really >2GB
+// sized files with it
+// bool BigFile::open2 ( int flags , 
+// 		      void *pc ,
+// 		      int64_t maxFileSize ,
+// 		      int permissions ) {
+// 	return open ( flags , pc , maxFileSize , permissions , false );
+// }
+
 // . overide File::open so we can set m_numParts
 // . set maxFileSize when opening a new file for writing and using 
 //   DiskPageCache
 // . use maxFileSize of -1 for us to use getFileSize() to set it
-bool BigFile::open ( int flags , class DiskPageCache *pc , 
+bool BigFile::open ( int flags , 
+		     //class DiskPageCache *pc , 
+		     void *pc ,
 		     int64_t maxFileSize ,
 		     int permissions ) {
 
         m_flags       = flags;
-	m_pc          = pc;
+	//m_pc          = pc;
 	m_permissions = permissions;
 	m_isClosing   = false;
+	// this is true except when parsing big warc files
+	m_usePartFiles = true;//usePartFiles;
 	// . init the page cache for this vfd
 	// . this returns our "virtual fd", not the same as File::m_vfd
 	// . returns -1 and sets g_errno on failure
 	// . we pass m_vfd to getPages() and addPages()
-	if ( m_pc && m_vfd == -1 ) {
+	if ( m_vfd == -1 ) {
 		//if ( maxFileSize == -1 ) maxFileSize = getFileSize();
 		m_vfd = ++s_vfd;
 		//g_errno = 0;
@@ -527,6 +543,7 @@ bool BigFile::readwrite ( void         *buf      ,
 	fstate->m_inPageCache = false;
 	// . try to get as much as we can from page cache first
 	// . the vfd of the big file will be the vfd of its last File class
+	/*
 	if ( ! doWrite && m_pc && allowPageCache ) {
 		//int32_t oldOff  = offset;
 		// we have to set these so RdbScan doesn't freak out if we
@@ -559,6 +576,7 @@ bool BigFile::readwrite ( void         *buf      ,
 		//	return true;
 		//}
 	}
+	*/
 	// sanity check. if you set hitDisk to false, you must allow
 	// us to check the page cache! silly bean!
 	if ( ! allowPageCache && ! hitDisk ) { char*xx=NULL;*xx=0; }
@@ -591,6 +609,7 @@ bool BigFile::readwrite ( void         *buf      ,
 	fstate->m_callback    = callback;
 	fstate->m_niceness    = niceness;
 	fstate->m_flags       = m_flags;
+	fstate->m_usePartFiles = m_usePartFiles;
 	// sanity
 	if ( fstate->m_bytesToGo > 150000000 )
 		log("file: huge read of %"INT64" bytes",(int64_t)size);
@@ -603,6 +622,13 @@ bool BigFile::readwrite ( void         *buf      ,
 	//   situation occurs and pass a g_errno back to the caller.
 	fstate->m_filenum1    =  offset          / MAX_PART_SIZE;
 	fstate->m_filenum2    = (offset + size ) / MAX_PART_SIZE;
+
+	// if not really a big file. we use this for parsing huge warc files
+	if ( ! m_usePartFiles ) {
+		fstate->m_filenum1 = 0;
+		fstate->m_filenum2 = 0;
+	}
+
 	// . save the open count for this fd
 	// . if it changes when we're done with the read we do a re-read
 	// . it gets incremented once every time File calls ::open and gets
@@ -643,9 +669,9 @@ bool BigFile::readwrite ( void         *buf      ,
 	fstate->m_errno       = 0;
 	fstate->m_errno2      = 0;
 	fstate->m_startTime   = gettimeofdayInMilliseconds();
-	fstate->m_pc          = m_pc;
-	if ( ! allowPageCache )
-		fstate->m_pc = NULL;
+	//fstate->m_pc          = NULL;//m_pc;
+	// if ( ! allowPageCache )
+	// 	fstate->m_pc = NULL;
 	fstate->m_vfd         = m_vfd;
 	// if hitDisk was false we only check the page cache!
 	if ( ! hitDisk ) return true;
@@ -765,7 +791,7 @@ bool BigFile::readwrite ( void         *buf      ,
 	// how many bytes to read from each file?
 	int64_t readSize1 = size;
 	int64_t readSize2 = 0;
-	if ( off1 + readSize1 > MAX_PART_SIZE ) {
+	if ( off1 + readSize1 > MAX_PART_SIZE && m_usePartFiles ) {
 		readSize1 = ((int64_t)MAX_PART_SIZE) - off1;
 		readSize2 = size - readSize1;
 	}
@@ -784,6 +810,10 @@ bool BigFile::readwrite ( void         *buf      ,
 	int32_t filenum     = offset / MAX_PART_SIZE;
 	int32_t localOffset = offset % MAX_PART_SIZE;
 
+	if ( ! m_usePartFiles ) {
+		filenum = 0;
+		localOffset = offset;
+	}
 
 	// read or write?
 	if ( doWrite ) a0->aio_lio_opcode = LIO_WRITE;
@@ -852,7 +882,8 @@ bool BigFile::readwrite ( void         *buf      ,
 	int32_t      rate  = 100000;
 	if ( took  > 500 ) rate = fstate->m_bytesDone / took ;
 	if ( rate < 8000 && fstate->m_niceness <= 0 ) {
-		log(LOG_INFO,"disk: Read %"INT32" bytes in %"INT64" ms (%"INT32"MB/s).",
+		log(LOG_INFO,"disk: Read %"INT64" bytes in %"INT64" "
+		    "ms (%"INT32"KB/s).",
 		    fstate->m_bytesDone,took,rate);
 		g_stats.m_slowDiskReads++;
 	}
@@ -880,12 +911,12 @@ bool BigFile::readwrite ( void         *buf      ,
 	//		    fstate->m_bytesDone);
 
 	// store read/written pages into page cache
-	if ( ! g_errno && fstate->m_pc )
-		fstate->m_pc->addPages ( fstate->m_vfd       ,
-					 fstate->m_offset    ,
-					 fstate->m_bytesDone ,
-					 fstate->m_buf       ,
-					 fstate->m_niceness  );
+	// if ( ! g_errno && fstate->m_pc )
+	// 	fstate->m_pc->addPages ( fstate->m_vfd       ,
+	// 				 fstate->m_offset    ,
+	// 				 fstate->m_bytesDone ,
+	// 				 fstate->m_buf       ,
+	// 				 fstate->m_niceness  );
 	// now log our stuff here
 	if ( g_errno && g_errno != EBADENGINEER ) 
 		log("disk: readwrite: %s", mstrerror(g_errno));
@@ -952,7 +983,8 @@ void doneWrapper ( void *state , ThreadEntry *t ) {
 	if ( fstate->m_errno == EDISKSTUCK ) slow = true;
 	if ( slow && fstate->m_niceness <= 0 ) {
 		if ( fstate->m_errno != EDISKSTUCK )
-		  log(LOG_INFO, "disk: Read %"INT32" bytes in %"INT64" ms (%"INT32"MB/s).",
+		  log(LOG_INFO, "disk: Read %"INT64" bytes in %"INT64" "
+		      "ms (%"INT32"KB/s).",
 		    fstate->m_bytesDone,took,rate);
 		g_stats.m_slowDiskReads++;
 	}
@@ -964,12 +996,12 @@ void doneWrapper ( void *state , ThreadEntry *t ) {
 	if ( ! g_errno ) g_errno = fstate->m_errno2;
 	// fstate has his own m_pc in case BigFile got deleted, we cannot
 	// reference it...
-	if ( ! g_errno && fstate->m_pc )
-		fstate->m_pc->addPages ( fstate->m_vfd       ,
-					 fstate->m_offset    ,
-					 fstate->m_bytesDone ,
-					 fstate->m_buf       ,
-					 fstate->m_niceness  );
+	// if ( ! g_errno && fstate->m_pc )
+	// 	fstate->m_pc->addPages ( fstate->m_vfd       ,
+	// 				 fstate->m_offset    ,
+	// 				 fstate->m_bytesDone ,
+	// 				 fstate->m_buf       ,
+	// 				 fstate->m_niceness  );
 
 	// add the stat
 	if ( ! g_errno ) {
@@ -1015,12 +1047,14 @@ void doneWrapper ( void *state , ThreadEntry *t ) {
 	int32_t tt = LOG_WARN;
 	if ( g_errno == EFILECLOSED ) tt = LOG_INFO;
 	if ( g_errno && g_errno != EDISKSTUCK ) 
-		log (tt,"disk: %s. fd1=%"INT32" vfd=%"INT32" "
-			    "off=%"INT64" toread=%"INT32".", 
-			    mstrerror(g_errno),
-			    (int32_t)fstate->m_fd1,(int32_t)fstate->m_vfd,
-			    (int64_t)fstate->m_offset , 
-			    (int32_t)fstate->m_bytesToGo );
+		log (tt,"disk: %s. fd1=%"INT32" fd2=%"INT32" "
+		     "off=%"INT64" toread=%"INT32,
+		     mstrerror(g_errno),
+		     (int32_t)fstate->m_fd1,
+		     (int32_t)fstate->m_fd2,
+		     (int64_t)fstate->m_offset , 
+		     (int32_t)fstate->m_bytesToGo
+		     );
 	// someone is closing our fd without setting File::s_vfds[fd] to -1
 	if ( g_errno && g_errno != EDISKSTUCK ) {
 		//int fd1  = fstate->m_fd1;
@@ -1256,6 +1290,12 @@ bool readwrite_r ( FileState *fstate , ThreadEntry *t ) {
 	int32_t len   = bytesToGo - bytesDone;
 	// how many bytes can we write to it now
 	if ( len > avail ) len = avail;
+	// hack for reading warc files
+	if ( ! fstate->m_usePartFiles ) {
+		filenum = 0;
+		localOffset = offset;
+		len = bytesToGo - bytesDone;
+	}
 	// get the fd for this filenum
 	int fd = -1;
 	if      ( filenum == fstate->m_filenum1 ) fd = fstate->m_fd1;
@@ -1273,9 +1313,9 @@ bool readwrite_r ( FileState *fstate , ThreadEntry *t ) {
 	if ( t && t->m_callback == ohcrap ) return false;
 
 	// only set this now if we are the first one
-	if ( g_threads.m_threadQueues[DISK_THREAD].m_hiReturned ==
-	     g_threads.m_threadQueues[DISK_THREAD].m_hiLaunched ) 
-		g_lastDiskReadStarted = fstate->m_startTime;
+	// if ( g_threads.m_threadQueues[DISK_THREAD].m_hiReturned ==
+	//      g_threads.m_threadQueues[DISK_THREAD].m_hiLaunched ) 
+	// 	g_lastDiskReadStarted = fstate->m_startTime;
 
 	// fake it out
 	//static int32_t s_poo = 0;
@@ -1340,10 +1380,17 @@ bool readwrite_r ( FileState *fstate , ThreadEntry *t ) {
 		log("disk: Read of %"INT32" bytes at offset %"INT64" "
 		    " failed because file is too short for that "
 		    "offset? Our fd was probably stolen from us by another "
-		    "thread. Will retry. error=%s.",
+		    "thread. fd1=%i fd2=%i len=%i filenum=%i "
+		    "localoffset=%i. usepart=%i error=%s.",
 		    (int32_t)len,fstate->m_offset,
 		    //fstate->m_this->getDir(),
 		    //fstate->m_this->getFilename(),
+		    fstate->m_fd1,
+		    fstate->m_fd2,
+		    len,
+		    filenum,
+		    localOffset,
+		    fstate->m_usePartFiles,
 		    mstrerror(errno));
 		errno = EBADENGINEER;
 		return false; // log("disk::read/write: offset too big");

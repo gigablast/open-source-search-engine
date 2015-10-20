@@ -23,6 +23,7 @@ RdbCache::RdbCache () {
 	m_totalBufSize = 0;
 	m_numBufs      = 0;
 	m_ptrs         = NULL;
+	m_maxMem       = 0;
 	m_numPtrsMax   = 0;
 	reset();
 	m_needsSave    = false;
@@ -156,6 +157,7 @@ bool RdbCache::init ( int32_t  maxMem        ,
 	if( bufMem <= 0 ) {
 		log("rdbcache: cache for %s does not have enough mem. fix "
 		    "by increasing maxmem or number of recs, etc.",m_dbname);
+		return false;
 		char *xx=NULL;*xx=0;
 	}
 	if ( bufMem  && m_fixedDataSize > 0 &&
@@ -440,7 +442,8 @@ bool RdbCache::getRecord ( collnum_t collnum   ,
 	if ( m_numPtrsMax <= 0 ) return false;
 	// if init() called failed because of oom...
 	if ( ! m_ptrs )
-		return log("cache: getRecord: failed because oom");
+		//return log("cache: getRecord: failed because oom");
+		return false;
 	// time it -- debug
 	int64_t t = 0LL ;
 	if ( g_conf.m_logTimingDb ) t = gettimeofdayInMillisecondsLocal();
@@ -540,7 +543,7 @@ bool RdbCache::getRecord ( collnum_t collnum   ,
 	// of the delete head's space i guess.
 	// i do this for all caches now... what are the downsides? i forget.
 	//
-	bool check = false;
+	bool check = true;//false;
 	//if ( this == &g_genericCache[SITEQUALITY_CACHEID] ) check = true;
 	if ( this ==  g_dns.getCache      ()              ) check = true;
 	if ( this ==  g_dns.getCacheLocal ()              ) check = true;
@@ -555,11 +558,11 @@ bool RdbCache::getRecord ( collnum_t collnum   ,
 	//if ( this == &g_tagdb.m_listCache                ) check = true;
 	// the exact count cache...
 	//if ( this == &g_qtable                            ) check = true;
-	if ( m_totalBufSize < 20000                       ) check = false;
+	//if ( m_totalBufSize < 20000                       ) check = false;
 	if ( check ) promoteRecord = false;
 	// sanity check, do not allow the site quality cache or dns cache to 
 	// be > 128MB, that just does not make sense and it complicates things
-	if ( check && m_totalBufSize > BUFSIZE ) { char *xx = NULL; *xx = 0; }
+	//if(check && m_totalBufSize > BUFSIZE ) { char *xx = NULL; *xx = 0; }
 	// sanity check
 	if ( m_tail < 0 || m_tail > m_totalBufSize ) { 
 		char *xx = NULL; *xx = 0; }
@@ -777,14 +780,15 @@ bool RdbCache::addRecord ( collnum_t collnum ,
 			   int32_t   timestamp ,
 			   char **retRecPtr ) {
 
+	// bail if cache empty. maybe m_maxMem is 0.
+	if ( m_totalBufSize <= 0 ) return true;
+
 	//int64_t startTime = gettimeofdayInMillisecondsLocal();
 	if ( collnum < (collnum_t)0) {char *xx=NULL;*xx=0; }
 	if ( collnum >= m_maxColls ) {char *xx=NULL;*xx=0; }
 	// full key not allowed because we use that in markDeletedRecord()
 	if ( KEYCMP(cacheKey,KEYMAX(),m_cks) == 0 ) { char  *xx=NULL;*xx=0; }
 
-	// bail if cache empty
-	if ( m_totalBufSize <= 0 ) return true;
 	// debug msg
 	int64_t t = 0LL ;
 	if ( g_conf.m_logTimingDb ) t = gettimeofdayInMillisecondsLocal();
@@ -953,11 +957,13 @@ bool RdbCache::addRecord ( collnum_t collnum ,
 	m_memOccupied += ( p - start ); 
 
 	// debug msg (MDW)
-	//log("cache: adding rec @ %"UINT32" size=%"INT32" tail=%"UINT32"",
-	//    i1c,p-start,m_tail);
-	//log("cache: stored k.n1=%"UINT32" k.n0=%"UINT64" %"INT32" bytes @ %"UINT32" tail=%"UINT32"",
-	//    ((key_t *)cacheKey)->n1,
-	//    ((key_t *)cacheKey)->n0,p-start,i1c,m_tail);
+	// if ( this == &g_spiderLoop.m_winnerListCache ) {
+	// log("cache: adding rec @ %"UINT32" size=%i tail=%"INT32"",
+	//     i1c,(int)(p-start),m_tail);
+	// log("cache: stored k.n1=%"UINT32" k.n0=%"UINT64" %"INT32" bytes @ %"UINT32" tail=%"UINT32"",
+	//     ((key_t *)cacheKey)->n1,
+	//     ((key_t *)cacheKey)->n0,(int)(p-start),i1c,m_tail);
+	// }
 	//if ( m_cks == 4 )
 	//	log("stored k=%"XINT32" %"INT32" bytes @ %"UINT32"",
 	//	    *(int32_t *)cacheKey,p-start,i);//(uint32_t)start);
@@ -1109,8 +1115,10 @@ bool RdbCache::deleteRec ( ) {
 	//int32_t saved = m_tail;
 	
 	// debug msg (MDW)
-	//log("cache: deleting rec @ %"INT32" size=%"INT32"",m_tail,
-	//    dataSize+2+12+4+4);
+	// if ( this == &g_spiderLoop.m_winnerListCache ) {
+	// log("cache: deleting rec @ %"INT32" size=%"INT32"",m_tail,
+	//     dataSize+2+12+4+4);
+	// }
 
 	// skip over rest of rec
 	p += dataSize;
@@ -1124,6 +1132,10 @@ bool RdbCache::deleteRec ( ) {
 	     m_tail +(int32_t)sizeof(collnum_t)+m_cks+4>m_totalBufSize){
 		char *xx = NULL; *xx = 0;}
 	
+	// if ( this == &g_spiderLoop.m_winnerListCache )
+	// 	log("spider: rdbcache: removing tail rec collnum=%i",
+	// 	    (int)collnum);
+
 	// delete key from hash table, iff is for THIS record
 	// but if it has not already been voided.
 	// we set key to KEYMAX() in markDeletedRecord()
@@ -1163,8 +1175,10 @@ bool RdbCache::deleteRec ( ) {
 void RdbCache::markDeletedRecord(char *ptr){
 	int32_t dataSize = sizeof(collnum_t)+m_cks+sizeof(int32_t);
 	// debug it 
-	//logf(LOG_DEBUG,"cache: makeDeleteRecord ptr=0x%"XINT32" off=%"INT32"",
-	//     (int32_t)ptr,ptr-m_bufs[0]);
+	// if ( this == &g_spiderLoop.m_winnerListCache ) {
+	//logf(LOG_DEBUG,"cache: makeDeleteRec ptr=0x%"PTRFMT" off=%"INT32"",
+	//      (PTRTYPE)ptr,(int32_t)(ptr-m_bufs[0]));
+	// }
 	// get dataSize and data
 	if ( m_fixedDataSize == -1 || m_supportLists ) {
 		dataSize += 4 +                      // size
