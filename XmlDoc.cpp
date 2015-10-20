@@ -15638,10 +15638,11 @@ void gotDiffbotReplyWrapper ( void *state , TcpSocket *s ) {
 			THIS->m_diffbotReplyError = code;
 		}
 		// a hack for detecting if token is expired
-		if ( ! ttt && cr && strstr ( page , ":429}" ) ) {
+		if ( THIS->m_diffbotReplyError == EDIFFBOTTOKENEXPIRED ) {
 			// note it
 			log("xmldoc: pausing crawl %s (%"INT32") because "
-			    "token is expired",cr->m_coll,(int32_t)cr->m_collnum);
+			    "token is expired",cr->m_coll,
+			    (int32_t)cr->m_collnum);
 			// pause the crawl
 			SafeBuf parmList;
 			// spidering enabled is the "cse" cgi parm in Parms.cpp
