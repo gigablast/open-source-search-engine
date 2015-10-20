@@ -1762,7 +1762,7 @@ bool gotSummaryWrapper ( void *state ) {
 		    THIS->m_numReplies,
 		    THIS->m_msg3a.m_numDocIds);
 	// it returns false if we're still awaiting replies
-	if ( ! THIS->gotSummary ( ) ) return false;
+	if ( THIS->m_firstTime && ! THIS->gotSummary ( ) ) return false;
 	// lookup facets
 	if ( THIS->m_si &&
 	     ! THIS->m_si->m_streamResults &&
@@ -2220,7 +2220,6 @@ bool Msg40::gotSummary ( ) {
 	if ( m_numReplies < m_numRequests )
 		return false;
 
-
 	// if streaming results, we are done
 	if ( m_si && m_si->m_streamResults ) {
 		// unless waiting for last transmit to complete
@@ -2483,6 +2482,7 @@ bool Msg40::gotSummary ( ) {
 					      m_si->m_niceness);
 			// skip if not similar
 			if ( (int32_t)s < dedupPercent ) continue;
+			if(m_msg3a.m_docIds[m] == m_msg3a.m_docIds[i]) continue;
 			// otherwise mark it as a summary dup
 			if ( m_si->m_debug || g_conf.m_logDebugQuery )
 				logf( LOG_DEBUG, "query: result #%"INT32" "
@@ -3003,6 +3003,7 @@ bool Msg40::gotSummary ( ) {
 	//   where "s" is m_si->m_firstResultNum (which starts at 0) and "n" 
 	//   is the number of results requested, m_si->m_docsWanted
 	// . this is a bit of a hack (MDW)
+	
 	int32_t c = 0;
 	int32_t v = 0;
 	for ( int32_t i = 0 ; i < m_msg3a.m_numDocIds ; i++ ) {
@@ -3049,7 +3050,7 @@ bool Msg40::gotSummary ( ) {
 	// . store in cache now if we need to
 	bool uc = false;
 	if ( m_si->m_useCache   ) uc = true;
-	if ( m_si->m_wcache     ) uc = true;
+	if ( m_si->m_wcache     ) uc = true; 
 	// . do not store if there was an error
 	// . no, allow errors in cache since we often have lots of 
 	//   docid not founds and what not, due to index corruption and
@@ -6366,7 +6367,7 @@ void Msg40::lookupFacets2 ( ) {
 			// supply the query term so we know what to return.
 			// it's either an xpath facet, a json/xml field facet
 			// or a meta tag facet.
-			SafeBuf tmp;
+			StackBuf(tmp);
 			tmp.safeMemcpy ( qt->m_term , qt->m_termLen );
 			tmp.nullTerm();
 			req. ptr_qbuf = tmp.getBufStart();
@@ -6877,7 +6878,7 @@ int32_t Msg40::printFacetsForTable ( SafeBuf *sb , QueryTerm *qt ) {
 
 		// get the original url and add 
 		// &prepend=gbequalint:gbhopcount:1 type stuff to it
-		SafeBuf newUrl;
+		StackBuf(newUrl);
 		replaceParm ( newStuff.getBufStart(), &newUrl , hr );
 
 		numPrinted++;

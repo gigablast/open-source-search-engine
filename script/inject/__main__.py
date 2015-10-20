@@ -15,7 +15,7 @@ import time
 import signal, os
 import random
 from itertools import repeat
-staleTime = datetime.timedelta(7,0,0) # one week for now
+staleTime = datetime.timedelta(7,0,0) # one month for now
 
 # app = flask.Flask(__name__)
 # app.secret_key = 'oaisj84alwsdkjhf9238u'
@@ -47,7 +47,7 @@ def reallyExecute(c, query, qargs):
             return res
         except sqlite3.OperationalError, e:
             time.sleep(1)
-            print 'got locked database %s,%s, retrying (%s)' % (query,qargs,e)
+            #print 'got locked database %s,%s, retrying (%s)' % (query,qargs,e)
             continue
 
 def reallyExecuteMany(c, query, qargs):
@@ -58,7 +58,7 @@ def reallyExecuteMany(c, query, qargs):
             return res
         except sqlite3.OperationalError:
             time.sleep(1)
-            print 'got locked database %s, retrying' % query
+            #print 'got locked database %s, retrying' % query
             continue
 
     
@@ -163,30 +163,34 @@ def getPage(zippedArgs):
     page, mode, resultsPerPage, extraQuery = zippedArgs
     query = 'collection%3Aarchiveitdigitalcollection+' + extraQuery
     #r = requests.get('https://archive.org/advancedsearch.php?q=collection%3Aarchiveitdigitalcollection&fl%5B%5D=identifier&rows=1&page={0}&output=json&save=yes'.format(page))
-    r = requests.get('https://archive.org/advancedsearch.php?q={1}&fl%5B%5D=identifier&sort[]=date+asc&rows={2}&page={0}&output=json'.format(page, query, resultsPerPage))
-    if r.status_code != 200:
-        return 0
+    url = 'https://archive.org/advancedsearch.php?q={1}&fl%5B%5D=identifier&sort[]=date+asc&rows={2}&page={0}&output=json'.format(page, query, resultsPerPage)
+    try:
+        r = requests.get(url)
+        if r.status_code != 200:
+            return 0
 
-    contents = r.content
-    jsonContents = json.loads(contents)
-    items = [x['identifier'] for x in jsonContents['response']['docs']]
-    numFound = jsonContents['response']['numFound']
-                  
-    if len(items) == 0:
-        requests.post('http://localhost:10008/progress', json={'total':numFound, 'completed':'', 'query':extraQuery})
-        print 'got 0 items for search page', page
-        return 0
-    print 'loading %s items, %s - %s of %s' % (len(items), items[0], items[-1], numFound)
+        contents = r.content
+        jsonContents = json.loads(contents)
+        items = [x['identifier'] for x in jsonContents['response']['docs']]
+        numFound = jsonContents['response']['numFound']
 
-    db = getDb()
+        if len(items) == 0:
+            requests.post('http://localhost:10008/progress', json={'total':numFound, 'completed':'', 'query':extraQuery})
+            print 'got 0 items for search page', page
+            return 0
+        print 'loading %s items, %s - %s of %s' % (len(items), items[0], items[-1], numFound)
 
-    for item in items:
-        injectItem(item, db, mode)
-        requests.post('http://localhost:10008/progress', json={'total':numFound, 'completed':item, 'query':extraQuery})
-    db.close()
-    return len(items)
+        db = getDb()
 
-
+        for item in items:
+            injectItem(item, db, mode)
+            requests.post('http://localhost:10008/progress', json={'total':numFound, 'completed':item, 'query':extraQuery})
+        db.close()
+        return len(items)
+    except Exception, e:
+        print 'Caught', e, 'sleep and retry', url
+        time.sleep(60)
+        return getPage(zippedArgs)
 
 
 def dumpDb():
@@ -447,7 +451,7 @@ def runInjects(threads, mode='production', query=''):
     pool = ThreadPool(processes=threads)
     try:
         totalResults = getNumResults(query)
-        resultsPerPage = 10
+        resultsPerPage = 100
         maxPages = int(math.ceil(totalResults / float(resultsPerPage)))
         if maxPages < threads:
             maxPages = threads
