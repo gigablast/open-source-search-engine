@@ -16572,6 +16572,9 @@ SafeBuf *XmlDoc::getDiffbotReply ( ) {
 	if ( m_firstUrlValid && m_firstUrl.isHttps() )
 		useProxies = false;
 
+	// turn off for now always
+	useProxies = false;
+
 	// if we used a proxy to download the doc, then diffbot should too
 	// BUT tell diffbot to go through host #0 so we can send it to the
 	// correct proxy using our load balancing & backoff algos.
