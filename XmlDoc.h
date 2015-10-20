@@ -1491,6 +1491,7 @@ class XmlDoc {
 	bool m_imageUrl2Valid;
 	bool m_matchOffsetsValid;
 	bool m_queryValid;
+	bool m_diffbotProxyReplyValid;
 	bool m_matchesValid;
 	bool m_dbufValid;
 	bool m_titleValid;
@@ -1692,6 +1693,8 @@ class XmlDoc {
 	bool m_isChildDoc;
 	Msg13 m_msg13;
 	Msg13Request m_msg13Request;
+	Msg13Request m_diffbotProxyRequest;
+	ProxyReply *m_diffbotProxyReply;
 	bool m_isSpiderProxy;
 	// for limiting # of iframe tag expansions
 	int32_t m_numExpansions;

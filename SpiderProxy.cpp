@@ -880,9 +880,6 @@ void handleRequest54 ( UdpSlot *udpSlot , int32_t niceness ) {
 
 	int64_t nowms = gettimeofdayInMillisecondsLocal();
 
-	// winner count update
-	winnersp->m_timesUsed++;
-
 	// add a new load bucket then!
 	LoadBucket bb;
 	bb.m_urlIp = urlIp;
@@ -897,9 +894,13 @@ void handleRequest54 ( UdpSlot *udpSlot , int32_t niceness ) {
 	bb.m_proxyPort = winnersp->m_port;
 	// a new id. we use this to update the downloadEndTime when done
 	static int32_t s_lbid = 0;
-	bb.m_id = s_lbid++;
-	// add it now
-	s_loadTable.addKey ( &urlIp , &bb );
+	// add it now, iff not for passing to diffbot backend
+	if ( preq->m_opCode != OP_GETPROXYFORDIFFBOT ) {
+		s_loadTable.addKey ( &urlIp , &bb );
+		bb.m_id = s_lbid++;
+		// winner count update
+		winnersp->m_timesUsed++;
+	}
 
 	// sanity
 	if ( (int32_t)sizeof(ProxyReply) > TMPBUFSIZE ){char *xx=NULL;*xx=0;}

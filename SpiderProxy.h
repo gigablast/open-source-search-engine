@@ -71,6 +71,9 @@ class SpiderProxy *getSpiderProxyByIpPort ( int32_t ip , uint16_t port ) ;
 // value for m_opCode. tell host #0 we are done using a proxy:
 #define OP_RETPROXY 2
 
+// do not do load balancing for this request:
+#define OP_GETPROXYFORDIFFBOT 3
+
 // ask host #0 for a proxy to use:
 // we now just use Msg13Request for this...
 //class ProxyRequest {
