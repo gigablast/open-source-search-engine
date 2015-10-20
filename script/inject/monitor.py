@@ -28,8 +28,8 @@ class ItemsNamespace(BaseNamespace, BroadcastMixin):
     @staticmethod
     def sendItems():
         while True:
-            if len(ItemsNamespace.AllConnected) == 0:
-                return
+            # if len(ItemsNamespace.AllConnected) == 0:
+            #     return
             item = itemEvent.get()
             for x in ItemsNamespace.AllConnected:
                 x.emit('update', item)

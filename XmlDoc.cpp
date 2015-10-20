@@ -3724,7 +3724,8 @@ bool XmlDoc::indexWarcOrArc ( ) {
 
 		// if WARC-Type: is not response, skip it. so if it
 		// is a revisit then skip it i guess.
-		if ( strncmp ( warcType,"response", 8 ) != 0 ) {
+		if ( strncmp ( warcType,"response", 8 ) != 0 && 
+             strncmp ( warcType,"revisit", 7 ) != 0) {
 			//log("build: was not type response");
 
 			// read another warc record

@@ -108,7 +108,7 @@ def injectItem(item, db, mode):
     skipped = 0
     warcs = filter(lambda x: 'name' in x and x['name'].endswith and x['name'].endswith('arc.gz'), md['files'])
 
-    collectionName = metadata.get('archiveit-collection-name', '')
+    collectionName = md.get('archiveit-collection-name', '')
     for ii, ff in enumerate(warcs):
         #if not ff['name'].endswith('arc.gz'): continue
         itemMetadata = {'mtime':ff['mtime']}
