@@ -1542,7 +1542,7 @@ bool Process::shutdown2 ( ) {
 
 	// make sure they are in a saveable state. we need to make sure
 	// they have dumped out the latest merged list and updated the 
-	// appropriate RdbMap so we can save it below
+	// appropriate RdbMap so we can save it below.
 	bool wait = false;
 	if ( g_merge.m_isMerging  && ! g_merge.m_isReadyToSave  ) wait = true;
 	if ( g_merge2.m_isMerging && ! g_merge2.m_isReadyToSave ) wait = true;
@@ -1550,7 +1550,9 @@ bool Process::shutdown2 ( ) {
 	if ( isRdbDumping() ) wait = true;
 	// . wait for the merge or dump to complete
 	// . but NOT if urgent...
-	if ( wait && ! m_urgent ) return false;
+	// . this stuff holds everything up too long, take out, we already
+	//   wait for write threads to complete, that should be good enough
+	//if ( wait && ! m_urgent ) return false;
 
 	// . disable adds/deletes on all rdb trees
 	// . Msg1 requests will get ECLOSING error msgs
