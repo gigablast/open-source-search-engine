@@ -223,7 +223,7 @@ class Msg40 {
 	bool m_doneWithLookup;
 	HashTableX m_facetTextTable;
 	SafeBuf m_facetTextBuf;
-	bool m_firstTime;
+	bool m_calledFacets;
 	int32_t m_omitCount;
 
 	bool printFacetTables ( class SafeBuf *sb ) ;

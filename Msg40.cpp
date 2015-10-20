@@ -83,7 +83,7 @@ static bool gotSummaryWrapper            ( void *state );
 bool isSubDom(char *s , int32_t len);
 
 Msg40::Msg40() {
-	m_firstTime = true;
+	m_calledFacets = false;
 	m_doneWithLookup = false;
 	m_socketHadError = 0;
 	m_buf           = NULL;
@@ -1762,7 +1762,7 @@ bool gotSummaryWrapper ( void *state ) {
 		    THIS->m_numReplies,
 		    THIS->m_msg3a.m_numDocIds);
 	// it returns false if we're still awaiting replies
-	if ( ! THIS->gotSummary ( ) ) return false;
+	if ( ! THIS->m_calledFacets && ! THIS->gotSummary ( ) ) return false;
 	// lookup facets
 	if ( THIS->m_si &&
 	     ! THIS->m_si->m_streamResults &&
@@ -6285,8 +6285,8 @@ bool Msg40::lookupFacets ( ) {
 
 	if ( m_doneWithLookup ) return true;
 
-	if ( m_firstTime ) {
-		m_firstTime = false;
+	if ( !m_calledFacets ) {
+		m_calledFacets = true;
 		m_numMsg20sOut = 0;
 		m_numMsg20sIn  = 0;
 		m_j = 0;
