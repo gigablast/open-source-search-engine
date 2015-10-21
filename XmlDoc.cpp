@@ -16652,9 +16652,9 @@ SafeBuf *XmlDoc::getDiffbotReply ( ) {
 		// 			iptoa(h0->m_ip),
 		// 			(int32_t)h0->m_httpPort);
 		ProxyReply *prep = m_diffbotProxyReply;
-		m_diffbotUrl.safePrintf("&proxy=%s:%"INT32"",
+		m_diffbotUrl.safePrintf("&proxy=%s:%"UINT32"",
 					iptoa(prep->m_proxyIp),
-					(int32_t)prep->m_proxyPort);
+					(uint32_t)prep->m_proxyPort);
 		m_diffbotUrl.safePrintf("&proxyAuth=");
 		m_diffbotUrl.urlEncode(prep->m_usernamePwd);
 	}

@@ -94,7 +94,7 @@ public:
 	// id of the transaction
 	int32_t  m_lbId;
 	// proxy port to use
-	int16_t m_proxyPort;
+	int32_t m_proxyPort;
 	// if this proxy fails us are there more proxies to try?
 	bool  m_hasMoreProxiesToTry;
 	// how many proxies do we have that are banned by the urlip?
