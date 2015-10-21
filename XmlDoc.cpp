@@ -16584,10 +16584,10 @@ SafeBuf *XmlDoc::getDiffbotReply ( ) {
 	//
 	// for now, allow http and NOT https urls through though.
 	// TODO: if the url redirects to an https url will this mess us up?
-	if (  ! m_firstUrlValid )
-		useProxies = false;
-	if ( m_firstUrlValid && m_firstUrl.isHttps() )
-		useProxies = false;
+	// if (  ! m_firstUrlValid )
+	// 	useProxies = false;
+	// if ( m_firstUrlValid && m_firstUrl.isHttps() )
+	// 	useProxies = false;
 
 	// turn off for now always
 	//useProxies = false;
