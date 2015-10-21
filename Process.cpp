@@ -860,6 +860,18 @@ void doneCmdWrapper ( void *state ) {
 
 void hdtempWrapper ( int fd , void *state ) {
 
+	// current local time
+	int32_t now = getTime();
+
+	// from SpiderProxy.h
+	static int32_t s_lastTime = 0;
+	if ( ! s_lastTime ) s_lastTime = now;
+	// reset spider proxy stats every hour to alleviate false positives
+	if ( now - s_lastTime >= 3600 ) {
+		s_lastTime = now;
+		resetProxyStats();
+	}
+
 	// also download test urls from spider proxies to ensure they
 	// are up and running properly
 	downloadTestUrlFromProxies();
@@ -870,8 +882,6 @@ void hdtempWrapper ( int fd , void *state ) {
 	if ( g_process.m_threadOut ) return;
 	// skip if exiting
 	if ( g_process.m_mode == EXIT_MODE ) return;
-	// current local time
-	int32_t now = getTime();
 	// or if haven't waited int32_t enough
 	if ( now < s_nextTime ) return;
 
