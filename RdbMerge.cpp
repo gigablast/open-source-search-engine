@@ -635,6 +635,13 @@ void RdbMerge::doneMerging ( ) {
 	// then the rdbbase should be NULL i guess.
 	if ( saved == ENOCOLLREC ) return;
 
+	// if we are exiting then dont bother renaming the files around now.
+	// this prevents a core in RdbBase::incorporateMerge()
+	if ( g_process.m_mode == EXIT_MODE ) {
+		log("merge: exiting. not ending merge.");
+		return;
+	}
+
 	// get base, returns NULL and sets g_errno to ENOCOLLREC on error
 	RdbBase *base; if (!(base=getRdbBase(m_rdbId,m_collnum))) return;
 	// pass g_errno on to incorporate merge so merged file can be unlinked
