@@ -50,7 +50,7 @@
 
 extern int g_inMemcpy;
 
-#define MAXDOCLEN (1024*1024)
+#define MAXDOCLEN (1024*1024 * 5)
 
 HashTableX *g_ct = NULL;
 XmlDoc *g_doc = NULL;
@@ -1287,8 +1287,6 @@ bool XmlDoc::set4 ( SpiderRequest *sreq      ,
 	// sometimes they supply the content they want! like when zaks'
 	// injects pages from PageInject.cpp
 	if ( utf8Content ) {
-		int32_t slen = gbstrlen(utf8Content);
-
 		// . this is the most basic content from the http reply
 		// . only set this since sometimes it is facebook xml and
 		//   contains encoded html which needs to be decoded.
@@ -1296,7 +1294,11 @@ bool XmlDoc::set4 ( SpiderRequest *sreq      ,
 		//   sentence formation stops at the ';' in the "&amp;" and
 		//   we also index "amp" which is bad.
 		m_content             = utf8Content;
-		m_contentLen          = slen;
+		if ( m_mimeValid ) {
+			m_contentLen = m_mime.m_contentLen;
+		} else {
+			m_contentLen = gbstrlen(utf8Content);
+		}
 		m_contentValid        = true;
 
 		//m_rawUtf8Content      = utf8Content;
@@ -3383,7 +3385,7 @@ void doneReadingArchiveFileWrapper ( int fd, void *state ) {
 }
 
 
-#define MAXWARCRECSIZE 1000000
+#define MAXWARCRECSIZE 5000000
 
 bool XmlDoc::readMoreWarc() {
     // We read everything we can off the pipe in a sleep timer.
@@ -3451,10 +3453,10 @@ bool XmlDoc::readMoreWarc() {
     int bytesRead = fread(m_fptrEnd, 1, toRead, m_pipe);
     g_loop.enableTimer();
 
-    // if(bytesRead > 0) {
-    //     log("build: warc pipe read %"INT32" more bytes of the pipe. errno = %s, buf space = %"INT64 " processed = %"INT64 " skipAhead=%"INT64, 
-    //         bytesRead, mstrerror(errno),toRead, m_bytesStreamed, skipAhead);
-    // }
+	if(bytesRead > 0) {
+		log("build: warc pipe read %"INT32" more bytes of the pipe. errno = %s, buf space = %"INT64 " processed = %"INT64 " skipAhead=%"INT64, 
+			bytesRead, mstrerror(errno),toRead, m_bytesStreamed, skipAhead);
+	}
 
     if(bytesRead <= 0 && errno != EAGAIN) {
         // if(errno == EAGAIN){
@@ -3653,6 +3655,7 @@ bool XmlDoc::indexWarcOrArc ( ) {
 		char *warcIp   = strstr(warcHeader,"WARC-IP-Address:");
 		char *warcCon  = strstr(warcHeader,"Content-Type:");
 
+
 		// advance
 		if ( warcLen  ) warcLen  += 15;
 		if ( warcUrl  ) warcUrl  += 16;
@@ -3668,7 +3671,6 @@ bool XmlDoc::indexWarcOrArc ( ) {
 		for ( ; warcDate && is_wspace_a(*warcDate) ; warcDate++ );
 		for ( ; warcIp   && is_wspace_a(*warcIp  ) ; warcIp  ++ );
 		for ( ; warcCon  && is_wspace_a(*warcCon ) ; warcCon ++ );
-
 
 		// get Content-Length: of WARC header for its content
 		if ( ! warcLen ) {
@@ -3694,6 +3696,7 @@ bool XmlDoc::indexWarcOrArc ( ) {
 		m_fptr += recSize;
 		*warcHeaderEnd = tmp;
 
+		//log("skipping %"UINT64, recSize);
 		// advance the file offset to the next record as well
 
 		// get WARC-Type:
@@ -3706,7 +3709,7 @@ bool XmlDoc::indexWarcOrArc ( ) {
 			log("build: could not find WARC-Type:");
 			goto loop;
 		}
-
+		//http://www.mpaa.org/Resources/5bec4ac9-a95e-443b-987b-bff6fb5455a9.pdf
 		// get Content-Type: 
 		// application/warc-fields (fetch time, hops from seed)
 		// application/http; msgtype=request  (the GET request)
@@ -3724,9 +3727,8 @@ bool XmlDoc::indexWarcOrArc ( ) {
 
 		// if WARC-Type: is not response, skip it. so if it
 		// is a revisit then skip it i guess.
-		if ( strncmp ( warcType,"response", 8 ) != 0 && 
-             strncmp ( warcType,"revisit", 7 ) != 0) {
-			//log("build: was not type response");
+		if ( strncmp ( warcType,"response", 8 ) != 0) {
+			//log("build: was not type response %s *****%s*****", warcUrl, warcType);
 
 			// read another warc record
 			goto loop;
@@ -3734,9 +3736,10 @@ bool XmlDoc::indexWarcOrArc ( ) {
 
 		// warcConType needs to be 
 		// application/http; msgtype=response
-		if ( strncmp(warcCon,"application/http; msgtype=response",34)){
+		if ( !(strncmp(warcCon,"application/http; msgtype=response",34) == 0 ||
+			   strncmp(warcCon,"application/http;msgtype=response",33) == 0)) {
 			// read another warc record
-			//log("build: was not type response %s", warcCon);
+			//log("build: wrong content type %s ---%s---", warcUrl, warcCon);
 			goto loop;
 		}
 
@@ -3941,9 +3944,15 @@ bool XmlDoc::indexWarcOrArc ( ) {
 	if ( ct2 != CT_HTML &&
 	     ct2 != CT_TEXT &&
 	     ct2 != CT_XML &&
-	     ct2 != CT_JSON )
+	     ct2 != CT_PDF &&
+		 ct2 != CT_XLS &&
+		 ct2 != CT_PPT &&
+		 ct2 != CT_PS  &&
+	     ct2 != CT_DOC &&
+	     ct2 != CT_JSON ) {
+		log("build:got wrong type %"INT32, (int32_t)ct2);
 		goto loop;
-
+	}
 
 	// grab an available msg7
 	Msg7 *msg7 = NULL;
@@ -18752,11 +18761,11 @@ void XmlDoc::filterStart_r ( bool amThread ) {
 	// pass the input to the program through this file
 	// rather than a pipe, since popen() seems broken
 	char in[1024];
-	snprintf(in,1023,"%s/in.%"INT64"", g_hostdb.m_dir , (int64_t)id );
+	snprintf(in,1023,"%sin.%"INT64"", g_hostdb.m_dir , (int64_t)id );
 	unlink ( in );
 	// collect the output from the filter from this file
 	char out[1024];
-	snprintf ( out , 1023,"%s/out.%"INT64"", g_hostdb.m_dir, (int64_t)id );
+	snprintf ( out , 1023,"%sout.%"INT64"", g_hostdb.m_dir, (int64_t)id );
 	unlink ( out );
 	// ignore errno from those unlinks
 	errno = 0;
@@ -19649,7 +19658,7 @@ FILE *XmlDoc::getUtf8ContentInFile () {
 	snprintf( cmd,
 		  MAX_URL_LEN+256,
 			  "set -o pipefail|"
-			  "wget --limit-rate=1M -O- --header=\"Cookie: %s\" \"%s\"|" //
+			  "wget --limit-rate=10M -O- --header=\"Cookie: %s\" \"%s\"|" //
 			  "zcat|"
 			  "mbuffer -t -m 10M -o-", //this is useful but we need a new version of mbuffer -W 30
 			  s_cookieBuf.getBufStart() ,
