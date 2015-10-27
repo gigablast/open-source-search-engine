@@ -1294,7 +1294,7 @@ bool XmlDoc::set4 ( SpiderRequest *sreq      ,
 		//   sentence formation stops at the ';' in the "&amp;" and
 		//   we also index "amp" which is bad.
 		m_content             = utf8Content;
-		if ( m_mimeValid ) {
+		if ( m_mimeValid && m_mime.m_contentLen > 0) {
 			m_contentLen = m_mime.m_contentLen;
 		} else {
 			m_contentLen = gbstrlen(utf8Content);
@@ -3453,10 +3453,10 @@ bool XmlDoc::readMoreWarc() {
     int bytesRead = fread(m_fptrEnd, 1, toRead, m_pipe);
     g_loop.enableTimer();
 
-	if(bytesRead > 0) {
-		log("build: warc pipe read %"INT32" more bytes of the pipe. errno = %s, buf space = %"INT64 " processed = %"INT64 " skipAhead=%"INT64, 
-			bytesRead, mstrerror(errno),toRead, m_bytesStreamed, skipAhead);
-	}
+	// if(bytesRead > 0) {
+	// 	log("build: warc pipe read %"INT32" more bytes of the pipe. errno = %s, buf space = %"INT64 " processed = %"INT64 " skipAhead=%"INT64, 
+	// 		bytesRead, mstrerror(errno),toRead, m_bytesStreamed, skipAhead);
+	// }
 
     if(bytesRead <= 0 && errno != EAGAIN) {
         // if(errno == EAGAIN){
@@ -3831,6 +3831,11 @@ bool XmlDoc::indexWarcOrArc ( ) {
 		if ( ct != CT_HTML &&
 		     ct != CT_TEXT &&
 		     ct != CT_XML &&
+			 ct != CT_PDF &&
+			 ct != CT_XLS &&
+			 ct != CT_PPT &&
+			 ct != CT_PS  &&
+			 ct != CT_DOC &&
 		     ct != CT_JSON ) {
 			// read another arc record
 			log("build: was not indexable response %s", arcConType);
@@ -3950,7 +3955,7 @@ bool XmlDoc::indexWarcOrArc ( ) {
 		 ct2 != CT_PS  &&
 	     ct2 != CT_DOC &&
 	     ct2 != CT_JSON ) {
-		log("build:got wrong type %"INT32, (int32_t)ct2);
+		//log("build:got wrong type %"INT32, (int32_t)ct2);
 		goto loop;
 	}
 
@@ -4045,15 +4050,18 @@ bool XmlDoc::indexWarcOrArc ( ) {
 	// so do not destroy the content we are injecting from the original
 	// m_fileBuf. so we have to copy it.
 	msg7->m_contentBuf.reset();
-	msg7->m_contentBuf.reserve ( httpReplySize + 1 );
+	msg7->m_contentBuf.reserve ( httpReplySize + 5 );
 	msg7->m_contentBuf.safeMemcpy ( httpReply , httpReplySize );
-	msg7->m_contentBuf.nullTerm();
+	
+	// Content length one off? mega hack to get it going
+	msg7->m_contentBuf.safeMemcpy ( "\0\0\0\0\0" , 5 );
+	//msg7->m_contentBuf.nullTerm();
 
 	//
 	// set 'content' for injection
 	//
 	ir->ptr_content = msg7->m_contentBuf.getBufStart();
-	ir->size_content = msg7->m_contentBuf.getLength()+1;
+	ir->size_content = msg7->m_contentBuf.getLength();
 
 	// null term it and hope it doesn't hurt anything!!!!!
 	//httpReply [ httpReplySize ] = '\0';
@@ -18582,10 +18590,11 @@ char **XmlDoc::getFilteredContent ( ) {
 	if ( ! mime || mime == (void *)-1 ) return (char **)mime;
 
 	// make sure NULL terminated always
-	if ( m_content &&
-	     m_contentValid &&
-	     m_content[m_contentLen] ) {
-		char *xx=NULL;*xx=0; }
+	// Why? pdfs can have nulls embedded
+	// if ( m_content &&
+	//      m_contentValid &&
+	//      m_content[m_contentLen] ) {
+	// 	char *xx=NULL;*xx=0; }
 
 	int32_t max , max2;
 

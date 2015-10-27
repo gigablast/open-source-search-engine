@@ -270,7 +270,7 @@ def main():
         if len(sys.argv) == 4:
             query = sys.argv[3]
 
-            subprocess.Popen(['./warc-inject','monitor'])
+            #subprocess.Popen(['./warc-inject','monitor'])
         threads = int(sys.argv[2])
         runInjects(threads, 'production', query)
         print "done running"
