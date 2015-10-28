@@ -7,10 +7,10 @@ from gevent.queue import Queue
 from gevent.pool import Pool
 
 itemEvent = Queue()
+import datetime
 import requests
 import json
 import sys
-
 # print os.getcwd()
 # print open('ia-gb-inject/index.html').read()
 
@@ -19,6 +19,7 @@ from socketio.server import SocketIOServer
 from socketio.namespace import BaseNamespace
 from socketio.mixins import BroadcastMixin
 totalCompleted = 0
+tookAverage = 0
 lastTotalPacket = 0
 
 
@@ -57,11 +58,14 @@ class ItemsNamespace(BaseNamespace, BroadcastMixin):
 def progress(environ):
     global totalCompleted
     global lastTotalPacket
+    global tookAverage
     if environ['REQUEST_METHOD'] == 'POST':
-        #itemEvent.set((item, "hihihih"))
         parms = json.loads(''.join(environ['wsgi.input'].readlines()))
 
         if 'completed' in parms:
+            tookAverage = ((tookAverage * totalCompleted) + parms['took']) / (totalCompleted + 1)
+            eta = tookAverage * (parms['total'] - totalCompleted)
+            parms['eta'] = str(datetime.timedelta(0, eta, 0))
             totalCompleted = totalCompleted + 1
             parms['done'] = totalCompleted
             parms['bar'] = 'Total'
@@ -91,12 +95,15 @@ def rootPage(start_response):
   <head>
     <script type="text/javascript" src="socket.io.js"></script>
     <style>
+    body {
+      position:relative;
+    }
     .container {
-    width:90vw;
-    height:25px;
-    border:1px solid #ccc;
-    overflow:hidden; 
-    background: #010101; 
+        width:90vw;
+        height:25px;
+        border:1px solid #ccc;
+        overflow:hidden; 
+        background: #010101; 
 
     }
     .bar{
@@ -115,13 +122,16 @@ def rootPage(start_response):
     right:15px;
     color:#aaa;
     }
+    #eta-container {
+        width:100vw;
+    }
     a {text-decoration:none;}
     </style>
 
 
 
     <script type="text/javascript">
-function addBar(id) {
+function addBar(id, collectionName) {
     var container = document.createElement('div');
     container.id = id;
     container.className = 'container';
@@ -130,7 +140,11 @@ function addBar(id) {
                  location.host.replace(':10008', ':8000') + 
                  '/search?c=ait&q=' +encodeURI('identifier:"' + id + '"');
     label.className = 'label';
-    label.appendChild(document.createTextNode(id));
+    var displayText = id;
+    if(collectionName) {
+      displayText = collectionName +' - ' + id;
+    }
+    label.appendChild(document.createTextNode(displayText));
     container.appendChild(label);
 
     var addText = document.createElement('a');
@@ -150,11 +164,11 @@ function addBar(id) {
 
 }
 
-function updateBar(id, newVal, addText) {
+function updateBar(id, newVal, addText, collectionName) {
     //console.log('updating ', id, 'with', newVal);
     var elm = document.getElementById(id);
     if(!elm) {
-      elm = addBar(id);
+      elm = addBar(id, collectionName);
     }
     var bar = elm.getElementsByClassName('bar');
     if(bar.length == 0) return;
@@ -195,13 +209,18 @@ socket.on('update', function(update) {
        removeBar(update.completed);
     }
     if(update.bar) {
-      updateBar(update.bar, update.done/update.total * 100, update.done+'/'+update.total);
+      updateBar(update.bar, update.done/update.total * 100, update.done+'/'+update.total, update['collection-name']);
     }
+    if(update.eta) {
+       document.getElementById('eta').innerHTML = update.eta;
+    }
+
 });
     </script>
     
   </head>
 <body id="body">
+<div id="eta-container"><h4>eta</h4> <span id="eta"></span></div>
 <h4 id="query"></h4>
 <div id="bars"> </div>
 </body>

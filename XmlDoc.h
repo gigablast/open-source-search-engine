@@ -475,7 +475,7 @@ class XmlDoc {
 		    key_t           *doledbKey ,
 		    char            *coll      , 
 		    class SafeBuf   *pbuf      , 
-		    int32_t             niceness  ,
+		    int32_t          niceness  ,
 		    char            *utf8Content = NULL ,
 		    bool             deleteFromIndex = false ,
 		    int32_t             forcedIp = 0 ,
@@ -483,9 +483,11 @@ class XmlDoc {
 		    uint32_t           spideredTime = 0 , // time_t
 		    bool             contentHasMime = false ,
 		    // for container docs, what is the separator of subdocs?
-				char            *contentDelim = NULL,
-				char *metadata = NULL,
-				uint32_t metadataLen = 0) ;
+		    char            *contentDelim = NULL,
+			char *metadata = NULL,
+			uint32_t metadataLen = 0,
+			// for injected docs we have the recv, buffer size don't exceed that
+			int32_t payloadLen = -1) ;
 
 	// we now call this right away rather than at download time!
 	int32_t getSpideredTime();
@@ -2476,7 +2478,8 @@ class XmlDoc {
 			 // for container docs consisting of subdocs to inject
 			 char *contentDelim = NULL,
 			 char* metadata = NULL,
-			 uint32_t metadataLen = 0);
+             uint32_t metadataLen = 0,
+             int32_t  payloadLen = -1);
 
 
 	bool injectLinks  ( HashTableX *linkDedupTable ,

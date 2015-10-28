@@ -1211,16 +1211,18 @@ bool XmlDoc::set4 ( SpiderRequest *sreq      ,
 		    key_t         *doledbKey ,
 		    char          *coll      ,
 		    SafeBuf       *pbuf      ,
-		    int32_t           niceness  ,
+		    int32_t        niceness  ,
 		    char          *utf8ContentArg ,
 		    bool           deleteFromIndex ,
-		    int32_t           forcedIp ,
+		    int32_t        forcedIp ,
 		    uint8_t        contentType ,
-		    uint32_t         spideredTime ,
+		    uint32_t       spideredTime ,
 		    bool           contentHasMimeArg ,
 		    char          *contentDelim,
 		    char          *metadata ,
-		    uint32_t       metadataLen) {
+			uint32_t       metadataLen,
+			int32_t        payloadLen
+) {
 
 	// sanity check
 	if ( sreq->m_dataSize == 0 ) { char *xx=NULL;*xx=0; }
@@ -1276,6 +1278,10 @@ bool XmlDoc::set4 ( SpiderRequest *sreq      ,
 		m_mimeValid = true;
 		// advance
 		utf8Content = m_mime.getContent();
+
+		if(payloadLen != -1) {
+			payloadLen -= m_mime.getContent() - utf8ContentArg;
+		}
 	}
 
 	// use this to avoid ip lookup if it is not zero
@@ -1299,6 +1305,21 @@ bool XmlDoc::set4 ( SpiderRequest *sreq      ,
 		} else {
 			m_contentLen = gbstrlen(utf8Content);
 		}
+		
+		if(payloadLen != -1 && m_contentLen > payloadLen) {
+			// When injecting a doc from a warc sometimes the doc is truncated 
+			// and the content len http header is wrong, so we make sure that
+			// we don't have trailing garbage off the end of the doc by doing 
+			// m_contentLen = max(m_mime.contentLen, payloadLen)
+			m_contentLen = payloadLen;
+			if(m_contentLen > 0 && m_content[m_contentLen-1] == '\0') {
+				m_contentLen--;
+			}
+		}
+		log("build:payloadlen %"INT32 " contentLen %"INT32 " headerlen %"INT64, 
+			payloadLen, m_contentLen, m_mime.getContent() - utf8ContentArg);
+
+
 		m_contentValid        = true;
 
 		//m_rawUtf8Content      = utf8Content;
@@ -2134,7 +2155,8 @@ bool XmlDoc::injectDoc ( char *url ,
 			 int32_t injectDocIp ,
 			 char *contentDelim,
 			 char *metadata,
-			 uint32_t metadataLen
+             uint32_t metadataLen,
+			 int32_t  payloadLen
 			 ) {
 
 
@@ -2211,7 +2233,8 @@ bool XmlDoc::injectDoc ( char *url ,
 		      contentHasMimeArg ,
               contentDelim,
               metadata,
-              metadataLen
+			  metadataLen,
+			  payloadLen
                   )) {
 		// g_errno should be set if that returned false
 		if ( ! g_errno ) { char *xx=NULL;*xx=0; }
@@ -3572,7 +3595,7 @@ bool XmlDoc::indexWarcOrArc ( ) {
 	// wait for one to come back before launching another msg7
 	if ( m_numInjectionsOut >= max ) {
 		// Don't need to read anymore so don't call us
-		if(m_registeredWgetReadCallback && m_pipe) {
+		if(m_registeredWgetReadCallback && m_pipe && m_fptr < m_fptrEnd) {
 			g_loop.unregisterReadCallback(fileno(m_pipe), this,doneReadingArchiveFileWrapper);
 			m_registeredWgetReadCallback = false;
 		}
@@ -4052,21 +4075,12 @@ bool XmlDoc::indexWarcOrArc ( ) {
 	msg7->m_contentBuf.reset();
 	msg7->m_contentBuf.reserve ( httpReplySize + 5 );
 	msg7->m_contentBuf.safeMemcpy ( httpReply , httpReplySize );
+	msg7->m_contentBuf.nullTerm();
 	
-	// Content length one off? mega hack to get it going
-	msg7->m_contentBuf.safeMemcpy ( "\0\0\0\0\0" , 5 );
-	//msg7->m_contentBuf.nullTerm();
-
-	//
 	// set 'content' for injection
-	//
 	ir->ptr_content = msg7->m_contentBuf.getBufStart();
-	ir->size_content = msg7->m_contentBuf.getLength();
+	ir->size_content = msg7->m_contentBuf.getLength() + 1;
 
-	// null term it and hope it doesn't hurt anything!!!!!
-	//httpReply [ httpReplySize ] = '\0';
-	// skip over that '\0' with this too
-	//m_fptr++;
 
 
 	// set the rest of the injection parms

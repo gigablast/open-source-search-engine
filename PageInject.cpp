@@ -754,6 +754,10 @@ void handleRequest7 ( UdpSlot *slot , int32_t netnice ) {
 		s_injectHead = xd;
 		s_injectTail = xd;
 	}
+	if(ir->ptr_content && ir->ptr_content[ir->size_content - 1]) {
+		// XmlDoc expects this buffer to be null terminated.
+		char *xx=NULL;*xx=0;
+	}
 
 	if ( ! xd->injectDoc ( ir->ptr_url , // m_injectUrlBuf.getBufStart() ,
 			       cr ,
@@ -784,7 +788,8 @@ void handleRequest7 ( UdpSlot *slot , int32_t netnice ) {
 			       ir->m_injectDocIp ,
 				   ir->ptr_contentDelim,
 				   ir->ptr_metadata,
-			       ir->size_metadata
+				   ir->size_metadata,
+				   ir->size_content - 1 // there should be a null in that last byte
 			       ) )
 		// we blocked...
 		return;

@@ -15,7 +15,7 @@ import time
 import signal, os
 import random
 from itertools import repeat
-staleTime = datetime.timedelta(7,0,0) # one month for now
+staleTime = datetime.timedelta(30,0,0) # one month for now
 
 # app = flask.Flask(__name__)
 # app.secret_key = 'oaisj84alwsdkjhf9238u'
@@ -64,13 +64,16 @@ def reallyExecuteMany(c, query, qargs):
     
 
 def injectItem(item, db, mode):
+    itemStart = time.time()
+
     c = db.cursor()
     res = reallyExecute(c, 'select * from items where item = ?', (item,)).fetchone()
+    db.commit()
     itemId = None
     if res:
         if res[1] > (datetime.datetime.now() - staleTime):
             print 'skipping %s because we checked recently' % item
-            return 0     # We checked recently
+            return time.time() - itemStart     # We checked recently
         itemId = res[0]
 
 
@@ -92,11 +95,12 @@ def injectItem(item, db, mode):
         db.commit()
 
     if 'files' not in md:
-        return
+        time.time() - itemStart
 
     res = None
     res = reallyExecute(c, "select fileName, updated, status, took from files where itemId = ?", 
                         (itemId,)).fetchall()
+    db.commit()
 
     lastUpdate = {}
     for fileName, updated, status, took in res:
@@ -107,8 +111,7 @@ def injectItem(item, db, mode):
     dbUpdates = []
     skipped = 0
     warcs = filter(lambda x: 'name' in x and x['name'].endswith and x['name'].endswith('arc.gz'), md['files'])
-
-    collectionName = md.get('archiveit-collection-name', '')
+    collectionName = md['metadata'].get('archiveit-collection-name', '')
     for ii, ff in enumerate(warcs):
         #if not ff['name'].endswith('arc.gz'): continue
         itemMetadata = {'mtime':ff['mtime']}
@@ -157,6 +160,7 @@ def injectItem(item, db, mode):
                           dbUpdates)
         db.commit()
     print 'completed %s with %s items injected and %s skipped' % (item, len(dbUpdates), skipped)
+    return time.time() - itemStart
 
 
 def getPage(zippedArgs):
@@ -180,12 +184,14 @@ def getPage(zippedArgs):
             return 0
         print 'loading %s items, %s - %s of %s' % (len(items), items[0], items[-1], numFound)
 
-        db = getDb()
-
         for item in items:
-            injectItem(item, db, mode)
-            requests.post('http://localhost:10008/progress', json={'total':numFound, 'completed':item, 'query':extraQuery})
-        db.close()
+            db = getDb()
+            took = injectItem(item, db, mode)
+            db.close()
+            requests.post('http://localhost:10008/progress', json={'total':numFound, 
+                                                                   'completed':item, 
+                                                                   'query':extraQuery,
+                                                                   'took':took})
         return len(items)
     except Exception, e:
         print 'Caught', e, 'sleep and retry', url
@@ -260,7 +266,7 @@ def main():
         if len(sys.argv) == 3:
             query = sys.argv[2]
 
-        subprocess.Popen(['python','inject', 'monitor'])
+        #subprocess.Popen(['python','inject', 'monitor'])
         
         mode = 'testing'
         runInjects(10, 'testing', query)
