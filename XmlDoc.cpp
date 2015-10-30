@@ -26213,6 +26213,12 @@ SpiderReply *XmlDoc::getFakeSpiderReply ( ) {
 		m_firstIpValid = true;
 	}
 
+	// this was causing nsr to block and core below on a bad engineer 
+	// error loading the old title rec
+	if ( ! m_isPermalinkValid ) {
+		m_isPermalink = false;
+		m_isPermalinkValid = true;
+	}
 
 	//if ( ! m_sreqValid ) { 
 	// 	m_sreqValid = true;
