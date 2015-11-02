@@ -1884,8 +1884,10 @@ bool XmlDoc::set2 ( char    *titleRec ,
 
 	// sanity check. if m_siteValid is true, this must be there
 	if ( ! ptr_site ) { 
-		log("set4: ptr_site is null for docid %"INT64"",m_docId);
+		log("set2: ptr_site is null for docid %"INT64"",m_docId);
 		//char *xx=NULL;*xx=0; }
+		g_errno = ECORRUPTDATA;
+		return false;
 	}
 
 	// lookup the tagdb rec fresh if setting for a summary. that way we
