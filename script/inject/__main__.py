@@ -15,7 +15,7 @@ import time
 import signal, os
 import random
 from itertools import repeat
-staleTime = datetime.timedelta(30,0,0) # one month for now
+staleTime = datetime.timedelta(90,0,0) # three month for now
 
 # app = flask.Flask(__name__)
 # app.secret_key = 'oaisj84alwsdkjhf9238u'
@@ -34,6 +34,9 @@ def handler(signum, frame):
 #Generate environment with:
 #pex -r requests -r multiprocessing -e inject:main -o warc-inject -s '.' --no-wheel
 #pex -r requests -r multiprocessing -o warc-inject
+# see the Makefile
+
+# TODO: add argument parser
 # import argparse
 # parser = argparse.ArgumentParser()
 # parser.add_argument('--foo', help='foo help')
@@ -47,7 +50,7 @@ def reallyExecute(c, query, qargs):
             return res
         except sqlite3.OperationalError, e:
             time.sleep(1)
-            #print 'got locked database %s,%s, retrying (%s)' % (query,qargs,e)
+            print 'got locked database %s,%s, retrying (%s)' % (query,qargs,e)
             continue
 
 def reallyExecuteMany(c, query, qargs):
@@ -58,7 +61,7 @@ def reallyExecuteMany(c, query, qargs):
             return res
         except sqlite3.OperationalError:
             time.sleep(1)
-            #print 'got locked database %s, retrying' % query
+            print 'got locked database %s, retrying' % query
             continue
 
     
