@@ -1838,6 +1838,27 @@ void attemptMergeAll2 ( ) {
 	if ( base && base->attemptMerge(niceness,force,true) ) 
 		return;
 
+	// also try to merge on rdbs being rebuilt
+	base = cr->getBasePtr(RDB2_POSDB2);
+	if ( base && base->attemptMerge(niceness,force,true) ) 
+		return;
+	base = cr->getBasePtr(RDB2_TITLEDB2);
+	if ( base && base->attemptMerge(niceness,force,true) ) 
+		return;
+	base = cr->getBasePtr(RDB2_TAGDB2);
+	if ( base && base->attemptMerge(niceness,force,true) ) 
+		return;
+	base = cr->getBasePtr(RDB2_LINKDB2);
+	if ( base && base->attemptMerge(niceness,force,true) ) 
+		return;
+	base = cr->getBasePtr(RDB2_SPIDERDB2);
+	if ( base && base->attemptMerge(niceness,force,true) ) 
+		return;
+	base = cr->getBasePtr(RDB2_CLUSTERDB2);
+	if ( base && base->attemptMerge(niceness,force,true) ) 
+		return;
+
+
 	// try next collection
 	s_lastCollnum++;
 
