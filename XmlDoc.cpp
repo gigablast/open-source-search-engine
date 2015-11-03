@@ -1301,23 +1301,29 @@ bool XmlDoc::set4 ( SpiderRequest *sreq      ,
 		//   we also index "amp" which is bad.
 		m_content             = utf8Content;
 		if ( m_mimeValid && m_mime.m_contentLen > 0) {
-			m_contentLen = m_mime.m_contentLen;
+			// Hack to prevent core, FIXME... the content length in 
+			// the header is wrong???
+			if(payloadLen != -1) {
+				m_contentLen = payloadLen;
+			} else {
+				m_contentLen = m_mime.m_contentLen;
+			}
 		} else {
 			m_contentLen = gbstrlen(utf8Content);
 		}
 		
-		if(payloadLen != -1 && m_contentLen > payloadLen) {
-			// When injecting a doc from a warc sometimes the doc is truncated 
-			// and the content len http header is wrong, so we make sure that
-			// we don't have trailing garbage off the end of the doc by doing 
-			// m_contentLen = max(m_mime.contentLen, payloadLen)
-			m_contentLen = payloadLen;
-			if(m_contentLen > 0 && m_content[m_contentLen-1] == '\0') {
-				m_contentLen--;
-			}
-		}
-		log("build:payloadlen %"INT32 " contentLen %"INT32 " headerlen %"INT64, 
-			payloadLen, m_contentLen, m_mime.getContent() - utf8ContentArg);
+		// if(payloadLen != -1 && m_contentLen > payloadLen) {
+		// 	// When injecting a doc from a warc sometimes the doc is truncated 
+		// 	// and the content len http header is wrong, so we make sure that
+		// 	// we don't have trailing garbage off the end of the doc by doing 
+		// 	// m_contentLen = max(m_mime.contentLen, payloadLen)
+		// 	m_contentLen = payloadLen;
+		// 	if(m_contentLen > 0 && m_content[m_contentLen-1] == '\0') {
+		// 		m_contentLen--;
+		// 	}
+		// }
+		// log("build:payloadlen %"INT32 " contentLen %"INT32 " headerlen %"INT64, 
+		// 	payloadLen, m_contentLen, m_mime.getContent() - utf8ContentArg);
 
 
 		m_contentValid        = true;
@@ -1333,7 +1339,7 @@ bool XmlDoc::set4 ( SpiderRequest *sreq      ,
 		//m_utf8ContentValid         = true;
 
 		m_contentInjected     = true;
-		m_wasContentInjected         = true;
+		m_wasContentInjected  = true;
 		m_contentType         = contentType;
 		m_contentTypeValid    = true;
 		// use this ip as well for now to avoid ip lookup
@@ -19689,9 +19695,8 @@ FILE *XmlDoc::getUtf8ContentInFile () {
 
 	log("build: wget: %s",cmd );
 
-	g_loop.disableTimer();
-	FILE* fh = popen(cmd, "r");
-	g_loop.enableTimer();
+	FILE* fh = gbpopen(cmd);
+
 	int	fd = fileno(fh);
 	int flags = fcntl(fd, F_GETFL, 0);
 	if(fcntl(fd, F_SETFL, flags | O_NONBLOCK)) {
@@ -29866,7 +29871,7 @@ bool XmlDoc::hashMetaTags ( HashTableX *tt ) {
 
 bool XmlDoc::hashMetaData ( HashTableX *tt ) {
 
-	if ( ! ptr_metadata ) return true;
+	if ( ! ptr_metadata || !ptr_metadata[0] ) return true;
 
 	Json jp;
 

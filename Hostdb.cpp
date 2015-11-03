@@ -1649,9 +1649,11 @@ Host *Hostdb::getLeastLoadedInShard ( uint32_t shardNum ) {
 	for(int32_t i = 0; i < m_numHostsPerShard; i++) {
 		Host *hh = &shard[i];
 		if(isDead(hh)) continue;
-		if(hh->m_numOutstandingRequests > minOutstandingRequests) continue;
+		// log("host %"INT32 " numOutstanding is %"INT32, hh->m_hostId, 
+		// 	hh->m_pingInfo.m_udpSlotsInUseIncoming);
+		if(hh->m_pingInfo.m_udpSlotsInUseIncoming > minOutstandingRequests) continue;
 
-		minOutstandingRequests = hh->m_numOutstandingRequests;
+		minOutstandingRequests = hh->m_pingInfo.m_udpSlotsInUseIncoming;
 		minOutstandingRequestsIndex = i;
 	}
 	if(minOutstandingRequestsIndex == -1) return shard;

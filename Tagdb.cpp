@@ -2803,6 +2803,7 @@ bool Msg8a::launchGetRequests ( ) {
 	//uint32_t gid = g_hostdb.getGroupId ( m_rdbId , &startKey , true );
 	//Host *group = g_hostdb.getGroup ( gid );
 	int32_t shardNum = getShardNum ( m_rdbId , &startKey );//, true );
+	int32_t firstHostId = g_hostdb.getLeastLoadedInShard ( shardNum )->m_hostId;
 	Host *group = g_hostdb.getShard ( shardNum );
 
 	//int32_t numTwins = g_hostdb.getNumHostsPerShard();
@@ -2837,7 +2838,7 @@ bool Msg8a::launchGetRequests ( ) {
 				   true                , // error correction?
 				   true                , // include tree?
 				   true                , // doMerge?
-				   -1                  , // firstHostId
+				   firstHostId         , // firstHostId
 				   0                   , // startFileNum
 				   -1                  , // numFiles
 				   3600*24*365         );// timeout
