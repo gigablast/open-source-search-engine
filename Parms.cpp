@@ -10956,7 +10956,7 @@ void Parms::init ( ) {
 	m->m_cgi   = "errstrone";
 	m->m_off   = (char *)&g_conf.m_errstr1 - g;
 	m->m_type  = TYPE_STRING;
-	m->m_def   = "";
+	m->m_def   = "I/O error";
 	m->m_size  = MAX_URL_LEN;
 	m->m_priv  = 2;
 	m->m_page  = PAGE_MASTER;
