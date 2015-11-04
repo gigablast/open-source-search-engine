@@ -2204,10 +2204,10 @@ bool SpiderColl::addSpiderRequest ( SpiderRequest *sreq ,
 				    int64_t nowGlobalMS ) {
 	// don't add negative keys or data less thangs
 	if ( sreq->m_dataSize <= 0 ) {
-		if ( g_conf.m_logDebugSpider )
-			log("spider: add spider request is dataless for "
-			    "uh48=%"UINT64"",sreq->getUrlHash48());
-		char *xx=NULL;*xx=0;
+		//if ( g_conf.m_logDebugSpider )
+		log("spider: add spider request is dataless for "
+		    "uh48=%"UINT64"",sreq->getUrlHash48());
+		//char *xx=NULL;*xx=0;
 		return true;
 	}
 
