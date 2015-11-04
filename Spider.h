@@ -1615,8 +1615,11 @@ class SpiderLoop {
 	CollectionRec *m_bookmark;
 	bool m_activeListValid;
 	bool m_activeListModified;
+	int32_t m_activeListCount;
 	uint32_t m_recalcTime;
 	bool m_recalcTimeValid;
+
+	int64_t m_lastCallTime;
 
 	int64_t m_doleStart;
 
