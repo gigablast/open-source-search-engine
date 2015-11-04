@@ -2804,6 +2804,7 @@ bool Msg8a::launchGetRequests ( ) {
 	//Host *group = g_hostdb.getGroup ( gid );
 	int32_t shardNum = getShardNum ( m_rdbId , &startKey );//, true );
 	int32_t firstHostId = g_hostdb.getLeastLoadedInShard ( shardNum )->m_hostId;
+#if 0
 	Host *group = g_hostdb.getShard ( shardNum );
 
 	//int32_t numTwins = g_hostdb.getNumHostsPerShard();
@@ -2817,11 +2818,11 @@ bool Msg8a::launchGetRequests ( ) {
 	// support more than 2 stripes now...
 	int32_t hostNum = top % g_hostdb.getNumHostsPerShard();
 	int32_t hostId = group[hostNum].m_hostId;
-
+#endif
 
 	// . launch this request, even if to ourselves
 	// . TODO: just use msg0!!
-	bool status = m->getList ( hostId     , // hostId
+	bool status = m->getList ( firstHostId     , // hostId
 				   0          , // ip
 				   0          , // port
 				   0          , // maxCacheAge
