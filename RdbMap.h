@@ -136,6 +136,8 @@ class RdbMap {
 	// get the size of the file we are mapping
 	int64_t getFileSize () { return m_offset; };
 
+	int64_t findNextFullPosdbKeyOffset ( char *buf, int32_t bufSize ) ;
+
 	// . gets total size of all recs in this page range
 	// . if subtract is true we subtract the sizes of pages that begin
 	//   with a delete key (low bit is clear)

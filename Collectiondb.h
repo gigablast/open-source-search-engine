@@ -525,6 +525,7 @@ class CollectionRec {
 	char  m_enforceNewQuotas        ;
 	char  m_doIpLookups             ; // considered iff using proxy
 	char  m_useRobotsTxt            ;
+	char  m_obeyRelNoFollowLinks    ;
 	char  m_forceUseFloaters        ;
 	char  m_automaticallyUseProxies ;
 	char  m_automaticallyBackOff    ;

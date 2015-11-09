@@ -1433,10 +1433,14 @@ bool RdbMap::generateMap ( BigFile *f ) {
 	log("db: Generating map for %s/%s",f->getDir(),f->getFilename());
 
 	// we don't support headless datafiles right now
-	if ( ! f->doesPartExist(0) ) {
-		g_errno = EBADENGINEER;
-		return log("db: Cannot generate map for "
-			   "headless data files yet.");
+	bool allowHeadless = true;
+	if ( m_fixedDataSize != 0 ) allowHeadless = false;
+	if ( m_ks != 18 ) allowHeadless = false;
+	// allow posdb to go through
+	if ( ! f->doesPartExist(0) && ! allowHeadless ) {
+	 	g_errno = EBADENGINEER;
+	 	return log("db: Cannot generate map for "
+	 		   "this headless data file yet");
 	}
 	// scan through all the recs in f
 	int64_t offset = 0;
@@ -1445,6 +1449,19 @@ bool RdbMap::generateMap ( BigFile *f ) {
 	if ( fileSize == 0 ) return true;
 	// g_errno should be set on error
 	if ( fileSize < 0 ) return false;
+
+	// find first existing part file
+	bool firstRead = true;
+	int32_t fp = 0;
+	for ( ; ; fp++ )
+		// stop when the part file exists
+		if ( f->doesPartExist(fp) ) break;
+
+	if ( fp > 0 ) {
+		//m_fileStartOffset = MAX_PART_SIZE * fp;
+		offset            = MAX_PART_SIZE * fp;
+	}
+
 	// don't read in more than 10 megs at a time initially
 	int64_t  bufSize = fileSize;
 	if ( bufSize > 10*1024*1024 ) bufSize = 10*1024*1024;
@@ -1501,19 +1518,66 @@ bool RdbMap::generateMap ( BigFile *f ) {
 			   "offset=%"INT64". Map generation failed.",
 			   bufSize,f->getFilename(),offset);
 	}
-	// set the list
+
 	RdbList list;
-	list.set ( buf             ,
-		   readSize        ,
-		   buf             ,
-		   readSize        ,
-		   startKey        ,
-		   endKey          ,
-		   m_fixedDataSize ,
-		   false           , // own data?
-		   //m_useHalfKeys   );
-		   m_useHalfKeys   ,
-		   m_ks            );
+
+	// if we were headless then first key on that page could be cut
+	if ( fp > 0 && firstRead ) {
+		firstRead = false;
+		// scan the buffer to find the right key.
+		int32_t fullKeyOff = findNextFullPosdbKeyOffset (buf,readSize);
+		// if none found, bail
+		if ( fullKeyOff < 0 )
+			return log("rdbmap: could not get a full key in the "
+				   "first %"INT64" bytes read of headless "
+				   "file",readSize);
+		// for each page before add a -1 entry i guess
+		int32_t p = 0;
+		int32_t pageNum = 0;
+		for ( ; p + m_pageSize < fullKeyOff ; p += m_pageSize ) {
+			// add a dummy entry indicating a continuation of
+			// a previous thing. we never had the full posdb key
+			// so we don't know what the top 6 bytes were so
+			// just stick -1 in there
+			setOffset (pageNum, -1 );
+			setKey    (pageNum , key );
+			pageNum++;
+		}
+		// tell rdbmap where "list" occurs in the big file
+		m_offset = offset + fullKeyOff;
+		// now the offset on this page
+		//int32_t pageOffset = p - off;
+		// must be less than key size
+		//if ( pageOffset > m_ks ) { char *xx=NULL;*xx=0; }
+		// set the list special here
+		list.set ( buf      + fullKeyOff ,
+			   readSize - fullKeyOff ,
+			   buf             ,
+			   readSize        ,
+			   startKey        ,
+			   endKey          ,
+			   m_fixedDataSize ,
+			   false           , // own data?
+			   //m_useHalfKeys   );
+			   m_useHalfKeys   ,
+			   m_ks            );
+	}
+
+	else {
+		// set the list
+		list.set ( buf             ,
+			   readSize        ,
+			   buf             ,
+			   readSize        ,
+			   startKey        ,
+			   endKey          ,
+			   m_fixedDataSize ,
+			   false           , // own data?
+			   //m_useHalfKeys   );
+			   m_useHalfKeys   ,
+			   m_ks            );
+	}
+
 	// . HACK to fix useHalfKeys compression thing from one read to the nxt
 	// . "key" should still be set to the last record we read last read
 	//if ( offset > 0 ) list.m_listPtrHi = ((char *)&key)+6;
@@ -1731,4 +1795,151 @@ bool RdbMap::truncateFile ( BigFile *f ) {
 		return log("db: Failed to reset %s.",f->getFilename());
 	// success
 	return true;
+}
+
+int64_t RdbMap::findNextFullPosdbKeyOffset ( char *buf, int32_t bufSize ) {
+
+	char *p = buf;
+	char *lastKeyLo;
+	char *lastKeyMe;
+	char *lastKeyHi;
+	int32_t keyCount;
+	char *bufEnd = buf + bufSize;
+	int32_t numWinners = 0;
+	int64_t winnerOffset = -1;
+	// try an offset of 0
+	int64_t tryOffset = -2;
+	bool printed;
+	int64_t firstFullKeyOff;
+
+ offsetLoop:
+
+	printed = false;
+	firstFullKeyOff = -1;
+
+	tryOffset += 2;
+
+	// only need to try 18 of them
+	if ( tryOffset >= 18 )
+		goto done;
+
+	keyCount = 0;
+
+	lastKeyLo = NULL;
+	lastKeyMe = NULL;
+	lastKeyHi = NULL;
+
+ keyLoop:
+
+	// posdbkey
+	//key144_t *kp = (key144_t *)p;
+
+	if ( p + 18 >= bufEnd )
+		goto bufExhausted;
+
+	char lastKey[18];
+	if ( lastKeyHi ) {
+		memcpy ( lastKey      , lastKeyLo , 6 );
+		memcpy ( lastKey + 6  , lastKeyMe , 6 );
+		memcpy ( lastKey + 12 , lastKeyHi , 6 );
+	}
+
+	char thisKey[18];
+
+	// get lower compression bits
+	if ( (p[0] & 0x04) ) {
+		// make the full key to compare
+		if ( lastKeyHi ) {
+			memcpy ( thisKey      , p , 6 );
+			memcpy ( thisKey + 6  , lastKeyMe , 6 );
+			memcpy ( thisKey + 12 , lastKeyHi , 6 );
+			if ( KEYCMP ( lastKey , thisKey , m_ks ) >= 0 ) {
+				log("rdbmap: key out of order 1 tryoff of %i",
+				    (int)tryOffset);
+				goto offsetLoop;
+			}
+			keyCount++;
+			//log("rdbmap: good key6 tryoff %i",(int)tryOffset);
+		}
+		lastKeyLo = p;
+		p += 6;
+		goto keyLoop;
+	}
+	// a 12 byte key?
+	if ( (p[0] & 0x02) ) {
+		// make the full key to compare
+		if ( lastKeyHi ) {
+			memcpy ( thisKey      , p , 12 );
+			memcpy ( thisKey + 12 , lastKeyHi , 6 );
+			if ( KEYCMP ( lastKey , thisKey , m_ks ) >= 0 ) {
+				log("rdbmap: key out of order 2 @ %i "
+				    "tryoff of %i",
+				    (int)(p-buf),(int)tryOffset);
+				goto offsetLoop;
+			}
+			keyCount++;
+			//log("rdbmap: good key12 tryoff %i",(int)tryOffset);
+		}
+		lastKeyLo = p;
+		lastKeyMe = p + 6;
+		p += 12;
+		goto keyLoop;
+	}
+
+	// did we have a key before us?
+	if ( lastKeyHi && KEYCMP ( lastKey , p , 18 ) >= 0 ) {
+		log("rdbmap: tryoffset of %i is bogus",(int)tryOffset);
+		// keys out of order must not be a good 'tryOffset'
+		goto offsetLoop;
+	}
+
+	// ensure it is valid with alignment bits
+	
+
+	keyCount++;
+	if ( ! printed ) {
+		log("rdbmap: good key18 @ %i tryoff %i",
+		    (int)(p-buf),(int)tryOffset);
+		printed = true;
+		firstFullKeyOff = p-buf;
+	}
+
+	lastKeyLo = p;
+	lastKeyMe = p + 6;
+	lastKeyHi = p + 12;
+
+	p += 18;
+
+	// if ( keyCount >= 1000 ) {
+	// 	log("rdbmap: got good tryoffset of %i",(int)tryOffset);
+	// 	goodTry = tryOffset;
+	// 	goodOnes++;
+	// 	goto offsetLoop;
+	// }
+
+	goto keyLoop;
+
+ bufExhausted:
+
+	// only one key compared successfully, forget it then, not a winner
+	if ( keyCount > 1 ) {
+		// got a winner?
+		numWinners++;
+		winnerOffset = firstFullKeyOff;
+		log("rdbmap: got winner @ %i at tryoff %i (keycount=%i)",
+		    (int)winnerOffset,(int)tryOffset,(int)keyCount);
+	}
+
+	goto offsetLoop;
+
+ done:
+
+	if ( numWinners != 1 ) {
+		log("rdbmap: could not figure out offset of first full key "
+		    "in headless posdb file (numWinners=%i)",
+		    (int)numWinners);
+		return -1;
+	}
+
+	return winnerOffset;
 }

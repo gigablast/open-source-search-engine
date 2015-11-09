@@ -210,6 +210,11 @@ class XmlDoc *g_xd;
 
 void XmlDoc::reset ( ) {
 
+	if ( m_diffbotProxyReplyValid && m_diffbotProxyReply ) {
+		mfree ( m_diffbotProxyReply , sizeof(ProxyReply) , "dprox" );
+		m_diffbotProxyReply = NULL;
+	}
+
 	if ( m_readThreadOut ) 
 		log("build: deleting xmldoc class that has a read thread out "
 		    "on a warc file");
@@ -1886,8 +1891,10 @@ bool XmlDoc::set2 ( char    *titleRec ,
 
 	// sanity check. if m_siteValid is true, this must be there
 	if ( ! ptr_site ) { 
-		log("set4: ptr_site is null for docid %"INT64"",m_docId);
+		log("set2: ptr_site is null for docid %"INT64"",m_docId);
 		//char *xx=NULL;*xx=0; }
+		g_errno = ECORRUPTDATA;
+		return false;
 	}
 
 	// lookup the tagdb rec fresh if setting for a summary. that way we
@@ -8828,10 +8835,19 @@ Links *XmlDoc::getLinks ( bool doQuickSet ) {
 		return &m_links;
 	}
 		
+	CollectionRec *cr = getCollRec();
+	if ( ! cr ) return NULL;
+	bool useRelNoFollow = true;
+	if ( ! cr->m_obeyRelNoFollowLinks ) useRelNoFollow = false;
+	// to keep things simple, for diffbot custom crawls, if robots.txt
+	// is not used then do not use rel no follow
+	if ( ! cr->m_useRobotsTxt && cr->m_isCustomCrawl ) 
+		useRelNoFollow = false;
+
 	// . set it
 	// . if parent is a permalink we can avoid its suburl outlinks 
 	//   containing "comment" from being classified as permalinks
-	if ( ! m_links.set ( true        , // useRelNoFollow? 
+	if ( ! m_links.set ( useRelNoFollow ,
 			     xml         ,
 			     u           ,
 			     true        , // setLinkHashes?
@@ -15647,10 +15663,11 @@ void gotDiffbotReplyWrapper ( void *state , TcpSocket *s ) {
 			THIS->m_diffbotReplyError = code;
 		}
 		// a hack for detecting if token is expired
-		if ( ! ttt && cr && strstr ( page , ":429}" ) ) {
+		if ( THIS->m_diffbotReplyError == EDIFFBOTTOKENEXPIRED ) {
 			// note it
 			log("xmldoc: pausing crawl %s (%"INT32") because "
-			    "token is expired",cr->m_coll,(int32_t)cr->m_collnum);
+			    "token is expired",cr->m_coll,
+			    (int32_t)cr->m_collnum);
 			// pause the crawl
 			SafeBuf parmList;
 			// spidering enabled is the "cse" cgi parm in Parms.cpp
@@ -16195,6 +16212,18 @@ SafeBuf *XmlDoc::getTokenizedDiffbotReply ( ) {
 	return m_tokenizedDiffbotReplyPtr;
 }
 
+void gotDiffbotProxyReplyWrapper ( void *state , UdpSlot *slot ) {
+	XmlDoc *THIS = (XmlDoc *)state;
+	THIS->m_diffbotProxyReply = NULL;
+	// if a valid reply, then point to it
+	if ( slot->m_readBufSize == sizeof(ProxyReply) ) {
+		THIS->m_diffbotProxyReply = (ProxyReply *)slot->m_readBuf;
+		// steal it, we will free it in XmlDoc::reset()
+		slot->m_readBuf = NULL;
+	}
+	// resume. this checks g_errno for being set.
+	THIS->m_masterLoop ( THIS->m_masterState );
+}
 
 // . convert document into json representing multiple documents
 //   if it makes sense. sometimes a single url contains multiple
@@ -16572,7 +16601,53 @@ SafeBuf *XmlDoc::getDiffbotReply ( ) {
 	// go through gb. we should fix that by downloading the whole page
 	// ourselves and sending it back, and tell diffbot's phantomjs not
 	// to do the certificate check.
-	useProxies = false;
+	//
+	// for now, allow http and NOT https urls through though.
+	// TODO: if the url redirects to an https url will this mess us up?
+	// if (  ! m_firstUrlValid )
+	// 	useProxies = false;
+	// if ( m_firstUrlValid && m_firstUrl.isHttps() )
+	// 	useProxies = false;
+
+	// turn off for now always
+	//useProxies = false;
+
+	if ( useProxies && ! m_diffbotProxyReplyValid && m_ipValid ) {
+		// a special opcode used in SpiderProxy.cpp
+		Msg13Request *r = &m_diffbotProxyRequest;
+		r->m_opCode = OP_GETPROXYFORDIFFBOT;
+		r->m_banProxyIp = 0;
+		r->m_urlIp = m_ip;
+		m_diffbotProxyReplyValid = true;
+		// get first alive host, usually host #0 but if he is dead then
+		// host #1 must take over! if all are dead, it returns host #0.
+		// so we are guaranteed "h will be non-null
+		Host *h = g_hostdb.getFirstAliveHost();
+		// now ask that host for the best spider proxy to send to
+		if ( ! g_udpServer.sendRequest ( (char *)r,
+						 // just the top part of the
+						 // Msg13Request is sent to
+						 // handleRequest54() now
+						 r->getProxyRequestSize() ,
+						 0x54         , // msgType 0x54
+						 h->m_ip      ,
+						 h->m_port    ,
+						 -1 , // h->m_hostId  ,
+						 NULL         ,
+						 this         , // state data
+						 gotDiffbotProxyReplyWrapper,
+						 9999999  )){// 99999sectimeout
+			// sanity check
+			if ( ! g_errno ) { char *xx=NULL;*xx=0; }
+			// report it
+			log("spider: msg54 request3: %s %s",
+			    mstrerror(g_errno),r->ptr_url);
+			return NULL;
+		}
+		// wait for reply
+		return (SafeBuf *)-1;
+	}
+
 
 	// if we used a proxy to download the doc, then diffbot should too
 	// BUT tell diffbot to go through host #0 so we can send it to the
@@ -16586,29 +16661,35 @@ SafeBuf *XmlDoc::getDiffbotReply ( ) {
 		// round robin over the hosts just to be more evenly
 		// distributed. it will likely get several http requests
 		// from diffbot.
-		static int32_t s_lastHostId = -1;
-		if ( s_lastHostId == -1 )
-			s_lastHostId = g_hostdb.m_myHost->m_hostId;
-		int32_t r = s_lastHostId;//rand() % g_hostdb.m_numHosts;
-		if ( ++s_lastHostId >= g_hostdb.m_numHosts )
-			s_lastHostId = 0;
-		Host *h0 = g_hostdb.getHost(r);
-		m_diffbotUrl.safePrintf("&proxy=%s:%"INT32"",
-					iptoa(h0->m_ip),
-					(int32_t)h0->m_httpPort);
-	}
-	char *p = g_conf.m_proxyAuth.getBufStart();
-	if ( useProxies && p ) {
-		char *p1 = p;
-		for ( ; *p1 &&   is_wspace_a(*p1) ; p1++ );
-		char *p2 = p1;
-		for ( ; *p2 && ! is_wspace_a(*p2) ; p2++ );
-		char c = *p2;
-		*p2 = '\0';
+		// static int32_t s_lastHostId = -1;
+		// if ( s_lastHostId == -1 )
+		// 	s_lastHostId = g_hostdb.m_myHost->m_hostId;
+		// int32_t r = s_lastHostId;//rand() % g_hostdb.m_numHosts;
+		// if ( ++s_lastHostId >= g_hostdb.m_numHosts )
+		// 	s_lastHostId = 0;
+		// Host *h0 = g_hostdb.getHost(r);
+		// m_diffbotUrl.safePrintf("&proxy=%s:%"INT32"",
+		// 			iptoa(h0->m_ip),
+		// 			(int32_t)h0->m_httpPort);
+		ProxyReply *prep = m_diffbotProxyReply;
+		m_diffbotUrl.safePrintf("&proxy=%s:%"UINT32"",
+					iptoa(prep->m_proxyIp),
+					(uint32_t)prep->m_proxyPort);
 		m_diffbotUrl.safePrintf("&proxyAuth=");
-		m_diffbotUrl.urlEncode(p1);
-		*p2 = c;
+		m_diffbotUrl.urlEncode(prep->m_usernamePwd);
 	}
+	// char *p = g_conf.m_proxyAuth.getBufStart();
+	// if ( useProxies && p ) {
+	// 	char *p1 = p;
+	// 	for ( ; *p1 &&   is_wspace_a(*p1) ; p1++ );
+	// 	char *p2 = p1;
+	// 	for ( ; *p2 && ! is_wspace_a(*p2) ; p2++ );
+	// 	char c = *p2;
+	// 	*p2 = '\0';
+	// 	m_diffbotUrl.safePrintf("&proxyAuth=");
+	// 	m_diffbotUrl.urlEncode(p1);
+	// 	*p2 = c;
+	// }
 
 	// now so it works just give it a proxy directly, so it doesn't
 	// have to go through gb.
@@ -26182,6 +26263,12 @@ SpiderReply *XmlDoc::getFakeSpiderReply ( ) {
 		m_firstIpValid = true;
 	}
 
+	// this was causing nsr to block and core below on a bad engineer 
+	// error loading the old title rec
+	if ( ! m_isPermalinkValid ) {
+		m_isPermalink = false;
+		m_isPermalinkValid = true;
+	}
 
 	//if ( ! m_sreqValid ) { 
 	// 	m_sreqValid = true;

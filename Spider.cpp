@@ -53,7 +53,12 @@ void testWinnerTreeKey ( ) ;
 #define SPIDER_DONE_TIMER 20
 
 // seems like timecity.com as gigabytes of spiderdb data so up from 40 to 400
-#define MAX_WINNER_NODES 400
+//#define MAX_WINNER_NODES 400
+
+// up it to 2000 because shard #15 has slow disk reads and some collections
+// are taking forever to spider because the spiderdb scan is so slow.
+// we reduce this below if the spiderdb is smaller.
+#define MAX_WINNER_NODES 2000
 
 Doledb g_doledb;
 
@@ -2204,10 +2209,10 @@ bool SpiderColl::addSpiderRequest ( SpiderRequest *sreq ,
 				    int64_t nowGlobalMS ) {
 	// don't add negative keys or data less thangs
 	if ( sreq->m_dataSize <= 0 ) {
-		if ( g_conf.m_logDebugSpider )
-			log("spider: add spider request is dataless for "
-			    "uh48=%"UINT64"",sreq->getUrlHash48());
-		char *xx=NULL;*xx=0;
+		//if ( g_conf.m_logDebugSpider )
+		log("spider: add spider request is dataless for "
+		    "uh48=%"UINT64"",sreq->getUrlHash48());
+		//char *xx=NULL;*xx=0;
 		return true;
 	}
 
@@ -3579,7 +3584,11 @@ bool SpiderColl::evalIpLoop ( ) {
 					  &doleBuf,
 					  &doleBufSize  ,
 					  false, // doCopy?
-					  600, // maxAge, 600 seconds
+					  // we raised MAX_WINNER_NODES so
+					  // grow from 600 to 1200
+					  // (10 mins to 20 mins) to make
+					  // some crawls faster
+					  1200, // maxAge, 600 seconds
 					  true ,// incCounts
 					  &cachedTimestamp , // rec timestamp
 					  true );  // promote rec?
@@ -5262,14 +5271,14 @@ bool SpiderColl::addWinnersIntoDoledb ( ) {
 
 	// i am seeing dup uh48's in the m_winnerTree
 	int32_t firstIp = m_waitingTreeKey.n0 & 0xffffffff;
-	char dbuf[147456];//3*MAX_WINNER_NODES*(8+1)];
+	//char dbuf[147456];//3*MAX_WINNER_NODES*(8+1)];
 	HashTableX dedup;
 	int32_t ntn = m_winnerTree.getNumNodes();
 	dedup.set ( 8,
 		    0,
 		    (int32_t)2*ntn, // # slots to initialize to
-		    dbuf,
-		    147456,//(int32_t)(3*MAX_WINNER_NODES*(8+1)),
+		    NULL,//dbuf,
+		    0,//147456,//(int32_t)(3*MAX_WINNER_NODES*(8+1)),
 		    false,
 		    MAX_NICENESS,
 		    "windt");
@@ -6365,6 +6374,33 @@ void doneSleepingWrapperSL ( int fd , void *state ) {
 	// set initial priority to the highest to start spidering there
 	//g_spiderLoop.m_pri = MAX_SPIDER_PRIORITIES - 1;
 
+	// if recently called, do not call again from the sleep wrapper
+	int64_t nowms = gettimeofdayInMillisecondsLocal();
+	if ( nowms - g_spiderLoop.m_lastCallTime < 50 )
+		return;
+
+	// if we have a ton of collections, reduce cpu load from calling
+	// spiderDoledUrls()
+	static uint64_t s_skipCount = 0;
+	s_skipCount++;
+	// so instead of every 50ms make it every 200ms if we got
+	// 100+ collections in use.
+	//CollectionRec *tmp = g_spiderLoop.getActiveList(); 
+	g_spiderLoop.getActiveList(); 
+	int32_t activeListCount = g_spiderLoop.m_activeListCount;
+	if ( ! g_spiderLoop.m_activeListValid )
+		activeListCount = 0;
+	int32_t skip = 1;
+	if ( activeListCount >= 50 ) 
+		skip = 2;
+	if ( activeListCount >= 100 ) 
+		skip = 4;
+	if ( activeListCount >= 200 ) 
+		skip = 8;
+	if ( ( s_skipCount % skip ) != 0 ) 
+		return;
+
+
 	// spider some urls that were doled to us
 	g_spiderLoop.spiderDoledUrls( );
 }
@@ -6625,6 +6661,8 @@ void SpiderLoop::spiderDoledUrls ( ) {
 	//if ( g_conf.m_logDebugSpider )
 	//	log("spider: trying to get a doledb rec to spider. "
 	//	    "currentnumout=%"INT32"",m_numSpidersOut);
+
+	m_lastCallTime = gettimeofdayInMillisecondsLocal();
 
 	// when getting a lock we keep a ptr to the SpiderRequest in the
 	// doledb list, so do not try to read more just yet until we know
@@ -7548,6 +7586,10 @@ bool SpiderLoop::gotDoledbList2 ( ) {
 		XmlDoc *xd = m_docs[i];
 		if ( ! xd ) continue;
 		if ( ! xd->m_sreqValid ) continue;
+		// to prevent one collection from hogging all the urls for
+		// particular IP and starving other collections, let's make 
+		// this a per collection count.
+		// then allow msg13.cpp to handle the throttling on its end.
 		// also do a global count over all collections now
 		if ( xd->m_sreq.m_firstIp == sreq->m_firstIp ) globalOut++;
 		// only count for our same collection otherwise another
@@ -14786,6 +14828,8 @@ void SpiderLoop::buildActiveList ( ) {
 
 	m_activeListValid = true;
 
+	m_activeListCount = 0;
+
 	// reset the linked list of active collections
 	m_activeList = NULL;
 	bool found = false;
@@ -14831,6 +14875,8 @@ void SpiderLoop::buildActiveList ( ) {
 		if ( ! active ) continue;
 
 		cr->m_isActive = true;
+
+		m_activeListCount++;
 
 		if ( cr == m_crx ) found = true;
 

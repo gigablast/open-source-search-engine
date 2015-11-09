@@ -880,9 +880,6 @@ void handleRequest54 ( UdpSlot *udpSlot , int32_t niceness ) {
 
 	int64_t nowms = gettimeofdayInMillisecondsLocal();
 
-	// winner count update
-	winnersp->m_timesUsed++;
-
 	// add a new load bucket then!
 	LoadBucket bb;
 	bb.m_urlIp = urlIp;
@@ -897,9 +894,13 @@ void handleRequest54 ( UdpSlot *udpSlot , int32_t niceness ) {
 	bb.m_proxyPort = winnersp->m_port;
 	// a new id. we use this to update the downloadEndTime when done
 	static int32_t s_lbid = 0;
-	bb.m_id = s_lbid++;
-	// add it now
-	s_loadTable.addKey ( &urlIp , &bb );
+	// add it now, iff not for passing to diffbot backend
+	if ( preq->m_opCode != OP_GETPROXYFORDIFFBOT ) {
+		s_loadTable.addKey ( &urlIp , &bb );
+		bb.m_id = s_lbid++;
+		// winner count update
+		winnersp->m_timesUsed++;
+	}
 
 	// sanity
 	if ( (int32_t)sizeof(ProxyReply) > TMPBUFSIZE ){char *xx=NULL;*xx=0;}
@@ -934,8 +935,8 @@ void handleRequest54 ( UdpSlot *udpSlot , int32_t niceness ) {
 	// top:
 
 	// now remove old entries from the load table. entries that
-	// have completed and have a download end time more than 10 mins ago
-	for ( int32_t i = 0 ; i < s_loadTable.getNumSlots() ; i++ ) {
+	// have completed and have a download end time more than 10 mins ago.
+	for ( int32_t i = s_loadTable.getNumSlots() - 1 ; i >= 0 ; i-- ) {
 		// skip if empty
 		if ( ! s_loadTable.m_flags[i] ) continue;
 		// get the bucket
@@ -956,7 +957,7 @@ void handleRequest54 ( UdpSlot *udpSlot , int32_t niceness ) {
 		// mis out on analyzing any keys if we just keep looping here
 		// should we? TODO: figure it out. if we miss a few it's not
 		// a big deal.
-		i--;
+		//i--;
 		//goto top;
 	}
 

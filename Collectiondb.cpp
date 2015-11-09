@@ -581,6 +581,9 @@ bool Collectiondb::addNewColl ( char *coll ,
 		// reset the crawl stats
 		// always turn off gigabits so &s=1000 can do summary skipping
 		cr->m_docsToScanForTopics = 0;
+		// turn off link voting, etc. to speed up
+		cr->m_getLinkInfo = false;
+		cr->m_computeSiteNumInlinks = false;
 	}
 
 	// . this will core if a host was dead and then when it came
