@@ -348,6 +348,7 @@ public:
 	// hack off trailing 0's
 	bool printFloatPretty ( float f ) ;
 
+	char* pushStr  (char* str, uint32_t len);
 	bool  pushPtr  ( void *ptr );
 	bool  pushLong (int32_t i);
 	bool  pushLongLong (int64_t i);
