@@ -50,7 +50,8 @@
 
 extern int g_inMemcpy;
 
-#define MAXDOCLEN (1024*1024 * 5)
+//#define MAXDOCLEN (1024*1024 * 5)
+#define MAXDOCLEN (1024*1024)
 
 HashTableX *g_ct = NULL;
 XmlDoc *g_doc = NULL;
@@ -3514,6 +3515,14 @@ bool XmlDoc::readMoreWarc() {
 // . returns true and sets g_errno on err
 // . injectwarc
 bool XmlDoc::indexWarcOrArc ( ) {
+
+	CollectionRec *cr = getCollRec();
+	if ( ! cr ) return true;
+	if ( ! cr->m_indexWarcs ) {
+		g_errno = EDOCWARC;
+		return true;
+	}
+
 	// This can be a busy loop if we have max injections out but we
 	// are getting a read ready callback.  Should we unregister
 	// when max injections are out and then reregister when we have room?

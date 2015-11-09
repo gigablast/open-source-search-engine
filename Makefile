@@ -379,7 +379,7 @@ HtmlParser.o:
 
 # Url::set() seems to take too much time
 Url.o:
-	$(CC) $(DEFS) $(CPPFLAGS) -c $*.cpp 
+	$(CC) $(DEFS) $(CPPFLAGS) -O2 -c $*.cpp 
 
 # Sitedb has that slow matching code
 Sitedb.o:
