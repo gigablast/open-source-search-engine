@@ -288,10 +288,12 @@ void Url::set ( char *t , int32_t tlen , bool addWWW , bool stripSessionId ,
 
 		while(p < pend) {
 			if ( ! *p ) break; // null?
-			if(!isascii(*p)) {
+			if(!is_ascii(*p)) {
 				//break;
 				// url encode utf8 characters now
 				char cs = getUtf8CharSize(p);
+				// bad utf8 char?
+				if ( cs <= 1 ) break;
 				// too long?
 				if ( newUrlLen + 12 >= MAX_URL_LEN )
 					break;
@@ -2539,6 +2541,7 @@ bool Url::hasMediaExtension ( ) {
 
 uint32_t Url::unitTests() {
 	char* urls[] = {
+		"http://www.fas.org/blog/ssp/2009/08/securing-venezuela\032s-arsenals.php",
 		"http://topbeskæring.dk/velkommen",
 		"www.Alliancefrançaise.nu",
 		"française.Alliance.nu",
