@@ -1654,7 +1654,7 @@ bool Process::shutdown2 ( ) {
 		log("gb: Dumping core after saving.");
 		// at least destroy the page caches that have shared memory
 		// because they seem to not clean it up
-		resetPageCaches();
+		//resetPageCaches();
 
 		// let's ensure our core file can dump
 		struct rlimit lim;
