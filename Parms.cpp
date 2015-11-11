@@ -12401,11 +12401,30 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "0";
 	m->m_group = 0;
-	m->m_flags = 0;//PF_HIDDEN | PF_NOSAVE;
+	m->m_flags = PF_API;//PF_HIDDEN | PF_NOSAVE;
 	m->m_page  = PAGE_MASTER;
 	m->m_obj   = OBJ_CONF;
 	m->m_group = 0;
 	m++;
+
+	/*
+	m->m_title = "files group writable";
+	m->m_desc  = "Make all created files group writable? If you have "
+		"multiple user accounts starting Gigablast processes you "
+		"will want the files to be group writable. You will "
+		"need to make sure you run gigablast under the "
+		"primary group you want to use for gigablast administration.";
+	m->m_cgi   = "afgw";
+	m->m_off   = (char *)&g_conf.m_makeAllFilesGroupWritable - g;
+	m->m_type  = TYPE_BOOL;
+	m->m_def   = "0";
+	m->m_group = 0;
+	m->m_flags = PF_API;//PF_HIDDEN | PF_NOSAVE;
+	m->m_page  = PAGE_MASTER;
+	m->m_obj   = OBJ_CONF;
+	m->m_group = 0;
+	m++;
+	*/
 
 	m->m_title = "verify disk writes";
 	m->m_desc  = "Read what was written in a verification step. Decreases "
@@ -16648,6 +16667,21 @@ void Parms::init ( ) {
 		"Useful for archive web pages as they change over time.";
 	m->m_cgi   = "usetimeaxis";
 	m->m_off   = (char *)&cr.m_useTimeAxis - x;
+	m->m_type  = TYPE_BOOL;
+	m->m_def   = "0";
+	m->m_page  = PAGE_SPIDER;
+	m->m_obj   = OBJ_COLL;
+	m->m_flags = PF_CLONE;
+	m++;
+
+	m->m_title = "index warc or arc files";
+	m->m_desc  = "If this is true Gigablast will index .warc and .arc "
+		"files by injecting the pages contained in them as if they "
+		"were spidered with the content in the .warc or .arc file. "
+		"The spidered time will be taken from the archive file "
+		"as well.";
+	m->m_cgi   = "indexwarcs";
+	m->m_off   = (char *)&cr.m_indexWarcs - x;
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "0";
 	m->m_page  = PAGE_SPIDER;

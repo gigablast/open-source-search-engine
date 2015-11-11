@@ -1805,7 +1805,8 @@ bool Speller::createUnifiedDict (){
 	// then open a new one for appending
 	int fdw = open ( ff , 
 			 O_CREAT | O_RDWR | O_APPEND ,
-			 S_IRUSR |S_IWUSR |S_IRGRP |S_IWGRP| S_IROTH);
+			 getFileCreationFlags());
+			 // S_IRUSR |S_IWUSR |S_IRGRP |S_IWGRP| S_IROTH);
 	if ( fdw < 0 ){
 		return log("lang: Could not open for %s "
 			   "writing: %s.",ff, strerror(errno));

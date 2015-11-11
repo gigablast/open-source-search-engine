@@ -961,7 +961,7 @@ static bool s_isLangTag(char *str) {
 
 static uint8_t s_getCountryFromSpec(char *str) {
 	char code[6];
-	memset(code, 6, 0);
+	memset(code, 0,6);
 	gbmemcpy(code, str, s_wordLen(str));
 	for(int x = 0; x < 6; x++)
 		if(code[x] > 'A' && code[x] < 'Z') code[x] -= ('A' - 'a');

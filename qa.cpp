@@ -248,10 +248,10 @@ void makeQADir ( ) {
 	char dir[1024];
 	snprintf(dir,1000,"%sqa",g_hostdb.m_dir);
 	log("mkdir mkdir %s",dir);
-	int32_t status = ::mkdir ( dir ,
-				S_IRUSR | S_IWUSR | S_IXUSR | 
-				S_IRGRP | S_IWGRP | S_IXGRP | 
-				S_IROTH | S_IXOTH );
+	int32_t status = ::mkdir ( dir ,getDirCreationFlags() );
+				// S_IRUSR | S_IWUSR | S_IXUSR | 
+				// S_IRGRP | S_IWGRP | S_IXGRP | 
+				// S_IROTH | S_IXOTH );
 	if ( status == -1 && errno != EEXIST && errno )
 		log("qa: Failed to make directory %s: %s.",
 		    dir,mstrerror(errno));
@@ -1459,6 +1459,13 @@ bool qaTimeAxis ( ) {
                           "format=xml&u=");
             sb.urlEncode ( s_urlPtrs[s_flags[URL_COUNTER]]);
             sb.safePrintf("&hasmime=1");
+	    // add some meta data now, the current time stamp so we can
+	    // make sure the meta data is updated even if its EDOCUNCHANGED
+	    sb.safePrintf("&metadata=");
+	    static int32_t s_count9 = 0;
+	    SafeBuf tmp;
+	    tmp.safePrintf("{\"qatesttime\":%"INT32"}\n",s_count9++);
+	    sb.urlEncode ( tmp.getBufStart(), tmp.getLength() );
             sb.safePrintf("&content=");
             sb.urlEncode(s_contentPtrs[contentIndex]);
 
@@ -1494,13 +1501,17 @@ bool qaTimeAxis ( ) {
 		return false;
 	}
 
-	// if ( ! s_flags[EXAMINE_RESULTS] ) {
-	// 	s_flags[16] = true;
-	// 	if ( ! getUrl ( "/search?c=qatest123&qa=1&q=%2Bthe"
-	// 			"&dsrt=500",
-	// 			702467314 ) )
-	// 		return false;
-	// }
+	// this doc should have qatesttime:197 and qatesttime:198
+	// since it had a EDOCUNCHANGED error the 2nd time around but
+	// different metadata.
+	if ( ! s_flags[EXAMINE_RESULTS1] ) {
+	 	s_flags[EXAMINE_RESULTS1] = true;
+	 	if ( ! getUrl ( "/search?c=qatest123&qa=1&"
+				"format=json&"
+				"q=qatesttime:197",
+	 			702467314 ) )
+	 		return false;
+	}
 
     return true;
 }
@@ -1534,6 +1545,8 @@ bool qaWarcFiles ( ) {
 				"&obeyRobots=0"
 				// This is what we are testing
 				"&usetimeaxis=1"
+				// we are indexing warc files
+				"&indexwarcs=1"
 				,
 				// checksum of reply expected
 				0 ) )
@@ -1638,7 +1651,7 @@ bool qaInjectMetadata ( ) {
 
 		char* metadata = "{\"testtest\":42,\"a-hyphenated-name\":5, "
 			"\"a-string-value\":\"can we search for this\", "
-			"an array:['a','b', 'c', 1,2,3], "
+			"\"an array\":[\"a\",\"b\", \"c\", 1,2,3], "
 			"\"a field with spaces\":6, \"compound\":{\"field\":7}}";
 		
 		s_flags[ADD_INITIAL_URLS]++;
@@ -3401,9 +3414,9 @@ static QATest s_qatests[] = {
 	 "when content has changed, even if the url is the same. "},
 
 
-	{qaWarcFiles,
-	 "indexWarcFiles",
-	 "Ensure the spider handles arc.gz and warc.gz file formats."},
+	// {qaWarcFiles,
+	//  "indexWarcFiles",
+	//  "Ensure the spider handles arc.gz and warc.gz file formats."},
 
 	{qaInjectMetadata,
 	 "injectMetadata",

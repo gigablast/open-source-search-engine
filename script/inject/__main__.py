@@ -11,13 +11,14 @@ import sqlite3
 import datetime
 import sys
 import time
-import flask
+# import flask
 import signal, os
 import random
+from itertools import repeat
+staleTime = datetime.timedelta(90,0,0) # three month for now
 
-app = flask.Flask(__name__)
-app.secret_key = 'oaisj84alwsdkjhf9238u'
-staleTime = datetime.timedelta(7,0,0) # one week for now
+# app = flask.Flask(__name__)
+# app.secret_key = 'oaisj84alwsdkjhf9238u'
 
 def getDb(makeDates=True):
     if makeDates:
@@ -33,6 +34,9 @@ def handler(signum, frame):
 #Generate environment with:
 #pex -r requests -r multiprocessing -e inject:main -o warc-inject -s '.' --no-wheel
 #pex -r requests -r multiprocessing -o warc-inject
+# see the Makefile
+
+# TODO: add argument parser
 # import argparse
 # parser = argparse.ArgumentParser()
 # parser.add_argument('--foo', help='foo help')
@@ -63,13 +67,16 @@ def reallyExecuteMany(c, query, qargs):
     
 
 def injectItem(item, db, mode):
+    itemStart = time.time()
+
     c = db.cursor()
     res = reallyExecute(c, 'select * from items where item = ?', (item,)).fetchone()
+    db.commit()
     itemId = None
     if res:
         if res[1] > (datetime.datetime.now() - staleTime):
             print 'skipping %s because we checked recently' % item
-            return 0     # We checked recently
+            return time.time() - itemStart     # We checked recently
         itemId = res[0]
 
 
@@ -83,7 +90,7 @@ def injectItem(item, db, mode):
         except Exception, e:
             print 'error: metadata feed went down (%s) for: %s' % (e, item)
             time.sleep(10)
-            
+
 
     if itemId is None:
         reallyExecute(c, "insert INTO items VALUES (?,?)", (item, datetime.datetime.now()))
@@ -91,11 +98,12 @@ def injectItem(item, db, mode):
         db.commit()
 
     if 'files' not in md:
-        return
+        time.time() - itemStart
 
     res = None
     res = reallyExecute(c, "select fileName, updated, status, took from files where itemId = ?", 
                         (itemId,)).fetchall()
+    db.commit()
 
     lastUpdate = {}
     for fileName, updated, status, took in res:
@@ -105,22 +113,31 @@ def injectItem(item, db, mode):
 
     dbUpdates = []
     skipped = 0
-    for ff in md['files']:
-        if not ff['name'].endswith('arc.gz'): continue
+    warcs = filter(lambda x: 'name' in x and x['name'].endswith and x['name'].endswith('arc.gz'), md['files'])
+    collectionName = md['metadata'].get('archiveit-collection-name', '')
+    for ii, ff in enumerate(warcs):
+        #if not ff['name'].endswith('arc.gz'): continue
         itemMetadata = {'mtime':ff['mtime']}
         updateTime = datetime.datetime.fromtimestamp(float(ff['mtime']))
-        if ff['name'] in lastUpdate and updateTime <= lastUpdate[ff['name']]:
+        if mode != 'force' and ff['name'] in lastUpdate and updateTime <= lastUpdate[ff['name']]:
             print "skip {0} because it is up to date".format(ff['name'])
             skipped += 1
+            requests.post('http://localhost:10008/progress', 
+                          json={'item':item, 'total':len(warcs), 'done':ii+1, 
+                                'collection-name':collectionName})
             continue
         
         itemMetadata.update(md['metadata'])
         postVars = {'url':'http://archive.org/download/%s/%s' %
                     (item,ff['name']),
                     'metadata':json.dumps(itemMetadata),
-                    'c':'ait'}
+                    'c':'ait',
+                    'spiderlinks':0}
         start = time.time()
-        if mode == 'production':
+        if mode == 'testing':
+            time.sleep(random.randint(1,4))
+            statusCode = 999
+        else:
             try:
                 rp = requests.post("http://localhost:8000/admin/inject", postVars)
                 statusCode = rp.status_code
@@ -129,49 +146,60 @@ def injectItem(item, db, mode):
                 print 'error: gb inject', postVars['url'], e
                 statusCode = -1
             #print postVars['url'], rp.status_code
-        else:
-            time.sleep(random.randint(1,4))
-            statusCode = 999
         took = time.time() - start
 
         print "sent", ff['name'],'to gb, took', took
         sys.stdout.flush()
             
         dbUpdates.append((itemId, ff['name'], updateTime, statusCode, took))
+        requests.post('http://localhost:10008/progress', 
+                      json={'item':item, 'total':len(warcs), 'done':ii+1, 
+                            'collection-name':collectionName})
 
-    reallyExecuteMany(c, "DELETE FROM files where fileName = ? ", zip(lastUpdate.iterkeys()))
-    reallyExecuteMany(c, "INSERT INTO files VALUES (?,?,?,?,?)",
-                      dbUpdates)
-    db.commit()
 
+    if len(dbUpdates):
+        reallyExecuteMany(c, "DELETE FROM files where fileName = ? ", zip(lastUpdate.iterkeys()))
+        reallyExecuteMany(c, "INSERT INTO files VALUES (?,?,?,?,?)",
+                          dbUpdates)
+        db.commit()
     print 'completed %s with %s items injected and %s skipped' % (item, len(dbUpdates), skipped)
+    return time.time() - itemStart
+
 
 def getPage(zippedArgs):
-    page, mode = zippedArgs
+    page, mode, resultsPerPage, extraQuery = zippedArgs
+    query = 'collection%3Aarchiveitdigitalcollection+' + extraQuery
     #r = requests.get('https://archive.org/advancedsearch.php?q=collection%3Aarchiveitdigitalcollection&fl%5B%5D=identifier&rows=1&page={0}&output=json&save=yes'.format(page))
-    r = requests.get('https://archive.org/advancedsearch.php?q=collection%3Aarchiveitdigitalcollection&fl%5B%5D=identifier&sort[]=date+desc&rows=100&page={0}&output=json&save=yes'.format(page))
-    if r.status_code != 200:
-        return 0
+    url = 'https://archive.org/advancedsearch.php?q={1}&fl%5B%5D=identifier&sort[]=date+asc&rows={2}&page={0}&output=json'.format(page, query, resultsPerPage)
+    try:
+        r = requests.get(url)
+        if r.status_code != 200:
+            return 0
 
-    contents = r.content
-    jsonContents = json.loads(contents)
-    items = [x['identifier'] for x in jsonContents['response']['docs']]
-    numFound = jsonContents['response']['numFound']
-                  
-    if len(items) == 0:
-        print 'got 0 items for search page', page
-        return 0
-    print 'loading %s items, %s - %s of %s' % (len(items), items[0], items[-1], numFound)
+        contents = r.content
+        jsonContents = json.loads(contents)
+        items = [x['identifier'] for x in jsonContents['response']['docs']]
+        numFound = jsonContents['response']['numFound']
 
-    db = getDb()
+        if len(items) == 0:
+            requests.post('http://localhost:10008/progress', json={'total':numFound, 'completed':'', 'query':extraQuery})
+            print 'got 0 items for search page', page
+            return 0
+        print 'loading %s items, %s - %s of %s' % (len(items), items[0], items[-1], numFound)
 
-    for item in items:
-        injectItem(item, db, mode)
-
-    db.close()
-    return len(items)
-
-
+        for item in items:
+            db = getDb()
+            took = injectItem(item, db, mode)
+            db.close()
+            requests.post('http://localhost:10008/progress', json={'total':numFound, 
+                                                                   'completed':item, 
+                                                                   'query':extraQuery,
+                                                                   'took':took})
+        return len(items)
+    except Exception, e:
+        print 'Caught', e, 'sleep and retry', url
+        time.sleep(60)
+        return getPage(zippedArgs)
 
 
 def dumpDb():
@@ -197,6 +225,10 @@ def showItems():
 
 
 def nuke(lastPid, fromOrbit=False):
+    try:
+        requests.post('http://localhost:10008/shutdown', {})
+    except:
+        pass
     sig = signal.SIGTERM
     if fromOrbit:
         sig = signal.SIGKILL
@@ -209,7 +241,7 @@ def nuke(lastPid, fromOrbit=False):
         except:
             pass
 
-    killed = subprocess.Popen("""kill `ps auxx |grep warc-inject|awk -e '{print $2}'`""" % sys.argv[0],
+    killed = subprocess.Popen("""kill `ps auxx |grep warc-inject|grep -v grep|awk -e '{print $2}'`""",
                               shell=True,stdout=subprocess.PIPE).communicate()[0]
 
     if killed == 'Terminated':
@@ -219,13 +251,47 @@ def nuke(lastPid, fromOrbit=False):
 
 
 def main():
-    try:
-        lastPid = open('running.pid', 'r').read()
-    except:
-        lastPid = None
+    global staleTime
     print 'arguments were', sys.argv, 'pid is', os.getpid()
-    open('running.pid', 'w').write(str(os.getpid()))
+
+    if sys.argv[1] != 'monitor':
+        try:
+            lastPid = open('running.pid', 'r').read()
+        except:
+            lastPid = None
+        open('running.pid', 'w').write(str(os.getpid()))
+
+    # p = multiprocessing.Process(target=serveForever)
+    # p.start()
+    
+    if sys.argv[1] == 'test':
+        query = ''
+        if len(sys.argv) == 3:
+            query = sys.argv[2]
+
+        #subprocess.Popen(['python','inject', 'monitor'])
+        
+        mode = 'testing'
+        runInjects(10, 'testing', query)
+
+    if sys.argv[1] == 'run':
+        query = ''
+        if len(sys.argv) == 4:
+            query = sys.argv[3]
+
+            #subprocess.Popen(['./warc-inject','monitor'])
+        threads = int(sys.argv[2])
+        runInjects(threads, 'production', query)
+        print "done running"
+
+
+
+
     if len(sys.argv) == 2:
+        if sys.argv[1] == 'monitor':
+            import monitor
+            monitor.main()
+
         if sys.argv[1] == 'init':
             init()
             print 'initialized'
@@ -247,6 +313,8 @@ def main():
             nuke(lastPid, fromOrbit=True)
 
         if sys.argv[1] == 'test':
+            subprocess.Popen(['./warc-inject','monitor'])
+
             mode = 'testing'
             runInjects(10, 'testing')
 
@@ -308,33 +376,106 @@ def main():
 
             signal.alarm(0)          # Disable the alarm
 
-
-
-        if sys.argv[1] == 'serve':
-            serveForever()
+        # if sys.argv[1] == 'serve':
+        #     serveForever()
 
     if len(sys.argv) == 3:
+        if sys.argv[1] == 'force':
+            itemName = sys.argv[2]
+            db = getDb()
+            injectItem(itemName, db, 'production')
+            sys.exit(0)
 
-        if sys.argv[1] == 'run':
-            threads = int(sys.argv[2])
-            runInjects(threads)
 
-    # else:
-    #     #getPage(3)
-    #     from multiprocessing.pool import ThreadPool
-    #     pool = ThreadPool(processes=150)
-    #     pool.map(getPage, xrange(1,1300))
+
+    if len(sys.argv) == 4:
+        if sys.argv[1] == 'injectfile':
+            staleTime = datetime.timedelta(0,0,0)
+            from multiprocessing.pool import ThreadPool
+            fileName = sys.argv[2]
+            items = filter(lambda x: x, open(fileName, 'r').read().split('\n'))
+            threads = int(sys.argv[3])
+            pool = ThreadPool(processes=threads)
+            #print zip(files, repeat(getDb(), len(files)), repeat('production', len(files)))
+            def injectItemTupleWrapper(itemName):
+                db = getDb()
+                ret = injectItem(itemName, db, 'production')
+                db.close()
+                return ret
+
+            answer = pool.map(injectItemTupleWrapper, items)
+            print 'finished: ', answer
+            sys.exit(0)
+        if sys.argv[1] == 'forcefile':
+            staleTime = datetime.timedelta(0,0,0)
+            from multiprocessing.pool import ThreadPool
+            fileName = sys.argv[2]
+            items = filter(lambda x: x, open(fileName, 'r').read().split('\n'))
+            threads = int(sys.argv[3])
+            pool = ThreadPool(processes=threads)
+            #print zip(files, repeat(getDb(), len(files)), repeat('production', len(files)))
+            def injectItemTupleWrapper(itemName):
+                db = getDb()
+                ret = injectItem(itemName, db, 'force')
+                db.close()
+                return ret
+
+            answer = pool.map(injectItemTupleWrapper, items)
+            print 'finished: ', answer
+            sys.exit(0)
+
+        if sys.argv[1] == 'injectitems':
+            from multiprocessing.pool import ThreadPool
+            fileName = sys.argv[2]
+            items = filter(lambda x: x, open(fileName, 'r').read().split('\n'))
+            threads = int(sys.argv[3])
+            pool = ThreadPool(processes=threads)
+            #print zip(files, repeat(getDb(), len(files)), repeat('production', len(files)))
+            def injectItemTupleWrapper(itemName):
+                db = getDb()
+                ret = injectItem(itemName, db, 'production')
+                db.close()
+                return ret
+
+            answer = pool.map(injectItemTupleWrapper, items)
+            sys.exit(0)
+
+
+def getNumResults(query):
+    query = 'collection%3Aarchiveitdigitalcollection+' + query
+    r = requests.get('https://archive.org/advancedsearch.php?q={0}&fl%5B%5D=identifier&sort[]=date+asc&rows=1&page=0&output=json'.format(query))
+    if r.status_code != 200:
+        return 0
+    contents = r.content
+    jsonContents = json.loads(contents)
+    numFound = jsonContents['response']['numFound']
+    return numFound
+    
+
+
         
-def runInjects(threads, mode='production'):
+def runInjects(threads, mode='production', query=''):
     from multiprocessing.pool import ThreadPool
+    import math
     pool = ThreadPool(processes=threads)
     try:
-        from itertools import repeat
-        maxPages = 1300
-        answer = pool.map(getPage, zip(xrange(1,maxPages), repeat(mode, maxPages)))
+        totalResults = getNumResults(query)
+        resultsPerPage = 100
+        maxPages = int(math.ceil(totalResults / float(resultsPerPage)))
+        if maxPages < threads:
+            maxPages = threads
+            resultsPerPage = int(math.ceil(totalResults / float(maxPages)))
+        print threads, ' threads,', totalResults, 'total,', maxPages, 'pages', resultsPerPage, 'results per page'
+        answer = pool.map(getPage, zip(xrange(1,maxPages), 
+                                       repeat(mode, maxPages),
+                                       repeat(resultsPerPage, maxPages),
+                                       repeat(query, maxPages)))
+        print "finished item pass", answer
     except (KeyboardInterrupt, SystemExit):
         print 'ok, caught'
-        raise
+        requests.post('http://localhost:10008/shutdown', {})
+        sys.exit(0)
+        #raise
 
 
 def init():
@@ -351,73 +492,67 @@ def init():
     db.close()
 
 
-def serveForever():
-    @app.route('/',
-               methods=['GET', 'POST'], endpoint='home')
-    def home():
-        db = getDb(makeDates=False)
-        res = db.execute('select * from items limit 10')
-        for item, checked in res.fetchall():
-            print item
-            try:
-                metadata = subprocess.Popen(['./ia','metadata', item],
-                                            stdout=subprocess.PIPE).communicate()[0]
+# def serveForever():
+#     @app.route('/',
+#                methods=['GET', 'POST'], endpoint='home')
+#     def home():
+#         db = getDb(makeDates=False)
+#         res = db.execute('select * from items limit 10')
+#         for item, checked in res.fetchall():
+#             print item
+#             try:
+#                 metadata = subprocess.Popen(['./ia','metadata', item],
+#                                             stdout=subprocess.PIPE).communicate()[0]
 
-                break
-            except Exception, e:
-                pass
-        db.close()
+#                 break
+#             except Exception, e:
+#                 pass
+#         db.close()
 
+#         return flask.make_response(metadata)
 
+#     @app.route('/progress',
+#                methods=['GET', 'POST'], endpoint='progress')
+#     def progress():
+#         r = requests.get('https://archive.org/advancedsearch.php?q=collection%3Aarchiveitdigitalcollection&fl%5B%5D=identifier&sort[]=date+desc&rows=1&page=1&output=json')
+#         if r.status_code != 200:
+#             return flask.make_response(json.dumps({error:'ia search feed is down'}), 
+#                                        'application/json')
 
-
-
-
-
-        return flask.make_response('hihih' + metadata)
-
-    @app.route('/progress',
-               methods=['GET', 'POST'], endpoint='progress')
-    def progress():
-        r = requests.get('https://archive.org/advancedsearch.php?q=collection%3Aarchiveitdigitalcollection&fl%5B%5D=identifier&sort[]=date+desc&rows=1&page=1&output=json')
-        if r.status_code != 200:
-            return flask.make_response(json.dumps({error:'ia search feed is down'}), 
-                                       'application/json')
-
-        contents = r.content
-        jsonContents = json.loads(contents)
-        numFound = jsonContents['response']['numFound']
+#         contents = r.content
+#         jsonContents = json.loads(contents)
+#         numFound = jsonContents['response']['numFound']
 
 
-        db = getDb()
-        examinedItems = db.execute('select count(*) from items').fetchone()
-        itemsWithWarc = db.execute('select count(*) from items where ROWID in (select itemId from files where files.status = 200)').fetchone()
-        return flask.make_response(json.dumps({'totalItems':numFound, 
-                                               'examinedItems':examinedItems,
-                                               'itemsWithWarc':itemsWithWarc
-                                           }, indent=4), 'application/json')
+#         db = getDb()
+#         examinedItems = db.execute('select count(*) from items').fetchone()
+#         itemsWithWarc = db.execute('select count(*) from items where ROWID in (select itemId from files where files.status = 200)').fetchone()
+#         return flask.make_response(json.dumps({'totalItems':numFound, 
+#                                                'examinedItems':examinedItems,
+#                                                'itemsWithWarc':itemsWithWarc
+#                                            }, indent=4), 'application/json')
 
 
-    @app.route('/items',
-               methods=['GET', 'POST'], endpoint='items')
-    def items():
-        db = getDb(makeDates=False)
+#     @app.route('/items',
+#                methods=['GET', 'POST'], endpoint='items')
+#     def items():
+#         db = getDb(makeDates=False)
 
-        c = db.cursor()
-        res = c.execute("select item, checked from items")    
+#         c = db.cursor()
+#         res = c.execute("select item, checked from items")    
 
-        out = []
-        for item, checked in res.fetchall():
-            out.append({'item':item, 'checked':checked})
-        db.close()
+#         out = []
+#         for item, checked in res.fetchall():
+#             out.append({'item':item, 'checked':checked})
+#         db.close()
 
-        return flask.make_response(json.dumps(out), 'application/json')
+#         return flask.make_response(json.dumps(out), 'application/json')
 
-    app.run('0.0.0.0', 
-            port=7999,
-            debug=True,
-            use_reloader=True,
-            use_debugger=True)
+#     app.run('0.0.0.0', 
+#             port=7999,
+#             debug=False,
+#             use_reloader=False,
+#             use_debugger=False)
 
 
 if __name__ == '__main__':

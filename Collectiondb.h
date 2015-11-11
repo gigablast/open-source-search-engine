@@ -494,6 +494,7 @@ class CollectionRec {
 	char  m_useSimplifiedRedirects  ;
 	char  m_useIfModifiedSince      ;
 	char  m_useTimeAxis             ;
+	char  m_indexWarcs;
 	char  m_buildVecFromCont        ;
 	int32_t  m_maxPercentSimilarPublishDate;
 	char  m_useSimilarityPublishDate;

@@ -193,7 +193,7 @@ class File {
 
 	// save the permission and flag sets in case of re-opening
 	int m_flags;
-	int m_permissions;
+	//int m_permissions;
 	
 	char m_calledOpen;
 	char m_calledSet;

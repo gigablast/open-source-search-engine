@@ -2803,24 +2803,10 @@ bool Msg8a::launchGetRequests ( ) {
 	//uint32_t gid = g_hostdb.getGroupId ( m_rdbId , &startKey , true );
 	//Host *group = g_hostdb.getGroup ( gid );
 	int32_t shardNum = getShardNum ( m_rdbId , &startKey );//, true );
-	Host *group = g_hostdb.getShard ( shardNum );
-
-	//int32_t numTwins = g_hostdb.getNumHostsPerShard();
-	// use top byte!
-	uint8_t *sks = (uint8_t *)&startKey;
-	uint8_t top = sks[sizeof(TAGDB_KEY)-1];
-	//int32_t hostNum = 0;
-	//if ( numTwins == 2 && (top & 0x80) ) hostNum = 1;
-	// TODO: fix this!
-	//if ( numTwins >= 3 ) { char *xx=NULL;*xx=0; }
-	// support more than 2 stripes now...
-	int32_t hostNum = top % g_hostdb.getNumHostsPerShard();
-	int32_t hostId = group[hostNum].m_hostId;
-
-
+	int32_t firstHostId = g_hostdb.getLeastLoadedInShard ( shardNum )->m_hostId;
 	// . launch this request, even if to ourselves
 	// . TODO: just use msg0!!
-	bool status = m->getList ( hostId     , // hostId
+	bool status = m->getList ( firstHostId     , // hostId
 				   0          , // ip
 				   0          , // port
 				   0          , // maxCacheAge
@@ -2837,7 +2823,7 @@ bool Msg8a::launchGetRequests ( ) {
 				   true                , // error correction?
 				   true                , // include tree?
 				   true                , // doMerge?
-				   -1                  , // firstHostId
+				   firstHostId         , // firstHostId
 				   0                   , // startFileNum
 				   -1                  , // numFiles
 				   3600*24*365         );// timeout

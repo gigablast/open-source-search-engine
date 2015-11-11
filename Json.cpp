@@ -512,3 +512,66 @@ bool endsInCurly ( char *s , int32_t slen ) {
 	if ( e >= m && *e == '}' ) return true;
 	return false;
 }
+
+
+// Accepts a json string which has a top level object and a "key":val pair
+// return false unless jsonStr has the new key:val
+bool Json::prependKey(SafeBuf& jsonStr, char* keyVal) {
+	int32_t ndx = jsonStr.indexOf('{');
+	// no object? try array? fail for now
+	if( ndx == -1  || ndx == jsonStr.length() - 1 ) return false;
+	ndx++; //the insert pos
+	if(ndx == jsonStr.length()) return false;
+
+	// find if the object had any other keys
+	int32_t jsonStrLen = jsonStr.length();
+	int32_t i = ndx;
+	while(i < jsonStrLen && isspace(jsonStr[i])) i++;
+	if( i == jsonStrLen ) return false;
+
+
+	
+	if (jsonStr[i] != '}') {
+		jsonStr.insert(",\n", i);
+	} //else we are the only item, no comma
+
+	return jsonStr.insert(keyVal, ndx);
+
+
+}
+
+
+// bool Json::printToString(SafeBuf& out, JsonItem* ji = NULL) {
+// 	if(!ji) ji = getFirstItem();
+
+// 	for ( ; ji ; ji = ji->m_next ) {
+// 		switch (ji->m_type) {
+// 		case JT_NULL:
+// 			out.safeMemcpy("null", 4);
+// 		break;
+// 		case JT_NUMBER:
+// 			int32_t vl;
+// 			char* v = ji->getValueAsString(&vl);
+// 			out.safeMemcpy(v, vl);
+// 			break;
+// 		case JT_STRING:
+// 			int32_t vl;
+// 			char* v = ji->getValueAsString(&vl);
+// 			out.pushChar('"');
+// 			out.safeMemcpy(v, vl);
+// 			out.pushChar('"');
+// 		break;
+// 		case JT_ARRAY:
+// 			// wha? really? I would've thought this would contain 
+// 			// jsonitems and not a string
+// 			safeMemcpy(ji->m_valueArray, ji->m_valueArray);
+// 		break;
+// 		case JT_OBJECT:
+// 			out.pushChar('{');
+// 			out.safeMemcpy(v, vl);
+// 			out.pushChar("\"");
+// 		break;
+// 		}
+// 	}
+// 	out->
+// }

@@ -2708,6 +2708,32 @@ void Loop::enableTimer() {
 }
 
 
+FILE* gbpopen(char* cmd) {
+    // Block everything from interrupting this system call because
+    // if there is an alarm or a child thread crashes (pdftohtml)
+    // then this will hang forever.
+    // We should actually write our own popen so that we do
+    // fork, close all fds in the child, then exec.  
+    // These child processes can hold open the http server and
+    // prevent a new gb from running even after it has died.
+	g_loop.disableTimer();
+
+	sigset_t oldSigs;
+	sigset_t sigs;
+	sigfillset ( &sigs );	
+
+	if ( sigprocmask ( SIG_BLOCK  , &sigs, &oldSigs ) < 0 ) {
+        log("build: had error blocking signals for popen");
+    }
+	FILE* fh = popen(cmd, "r");            
+    
+	if ( sigprocmask ( SIG_SETMASK  , &oldSigs, NULL ) < 0 ) {
+        log("build: had error unblocking signals for popen");
+    }
+
+	g_loop.enableTimer();
+    return fh;
+}
 
 
 //calling with a 0 niceness will turn off the timer interrupt

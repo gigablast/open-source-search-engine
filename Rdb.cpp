@@ -374,16 +374,16 @@ bool Rdb::updateToRebuildFiles ( Rdb *rdb2 , char *coll ) {
 	char dstDir[256];
 	// make the trash dir if not there
 	sprintf ( dstDir , "%s/trash/" , g_hostdb.m_dir );
-	int32_t status = ::mkdir ( dstDir ,
-				S_IRUSR | S_IWUSR | S_IXUSR | 
-				S_IRGRP | S_IWGRP | S_IXGRP | 
-				S_IROTH | S_IXOTH ) ;
+	int32_t status = ::mkdir ( dstDir , getDirCreationFlags() );
+				// S_IRUSR | S_IWUSR | S_IXUSR | 
+				// S_IRGRP | S_IWGRP | S_IXGRP | 
+				// S_IROTH | S_IXOTH ) ;
 	// we have to create it
 	sprintf ( dstDir , "%s/trash/rebuilt%"UINT32"/" , g_hostdb.m_dir , t );
-	status = ::mkdir ( dstDir ,
-				S_IRUSR | S_IWUSR | S_IXUSR | 
-				S_IRGRP | S_IWGRP | S_IXGRP | 
-				S_IROTH | S_IXOTH ) ;
+	status = ::mkdir ( dstDir , getDirCreationFlags() );
+				// S_IRUSR | S_IWUSR | S_IXUSR | 
+				// S_IRGRP | S_IWGRP | S_IXGRP | 
+				// S_IROTH | S_IXOTH ) ;
 	if ( status && errno != EEXIST ) {
 		g_errno = errno;
 		return log("repair: Could not mkdir(%s): %s",dstDir,
@@ -643,10 +643,10 @@ bool Rdb::deleteAllRecs ( collnum_t collnum ) {
 bool makeTrashDir() {
 	char trash[1024];
 	sprintf(trash, "%strash/",g_hostdb.m_dir);
-	if ( ::mkdir ( trash, 
-		       S_IRUSR | S_IWUSR | S_IXUSR | 
-		       S_IRGRP | S_IWGRP | S_IXGRP | 
-		       S_IROTH | S_IXOTH ) == -1 ) {
+	if ( ::mkdir ( trash , getDirCreationFlags() ) ) {
+		       // S_IRUSR | S_IWUSR | S_IXUSR | 
+		       // S_IRGRP | S_IWGRP | S_IXGRP | 
+		       // S_IROTH | S_IXOTH ) == -1 ) {
 		if ( errno != EEXIST ) {
 			log("dir: mkdir %s had error: %s",
 			    trash,mstrerror(errno));
@@ -1424,10 +1424,12 @@ bool Rdb::gotTokenForDump ( ) {
 			RdbBucket *b = m_buckets.m_buckets[i];
 			collnum_t cn = b->getCollnum();
 			int32_t nk = b->getNumKeys();
-			for ( int32_t j = 0 ; j < nk; j++ ) {
-				cr = g_collectiondb.m_recs[cn];
-				if ( cr ) cr->m_treeCount++;
-			}
+			// for ( int32_t j = 0 ; j < nk; j++ ) {
+			// 	cr = g_collectiondb.m_recs[cn];
+			// 	if ( cr ) cr->m_treeCount++;
+			// }
+			cr = g_collectiondb.m_recs[cn];
+			if ( cr ) cr->m_treeCount += nk;
 		}
 	}
 
@@ -1833,6 +1835,26 @@ void attemptMergeAll2 ( ) {
 	if ( base && base->attemptMerge(niceness,force,true) ) 
 		return;
 	base = cr->getBasePtr(RDB_CLUSTERDB);
+	if ( base && base->attemptMerge(niceness,force,true) ) 
+		return;
+
+	// also try to merge on rdbs being rebuilt
+	base = cr->getBasePtr(RDB2_POSDB2);
+	if ( base && base->attemptMerge(niceness,force,true) ) 
+		return;
+	base = cr->getBasePtr(RDB2_TITLEDB2);
+	if ( base && base->attemptMerge(niceness,force,true) ) 
+		return;
+	base = cr->getBasePtr(RDB2_TAGDB2);
+	if ( base && base->attemptMerge(niceness,force,true) ) 
+		return;
+	base = cr->getBasePtr(RDB2_LINKDB2);
+	if ( base && base->attemptMerge(niceness,force,true) ) 
+		return;
+	base = cr->getBasePtr(RDB2_SPIDERDB2);
+	if ( base && base->attemptMerge(niceness,force,true) ) 
+		return;
+	base = cr->getBasePtr(RDB2_CLUSTERDB2);
 	if ( base && base->attemptMerge(niceness,force,true) ) 
 		return;
 

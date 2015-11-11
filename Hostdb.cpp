@@ -691,16 +691,26 @@ bool Hostdb::init ( int32_t hostIdArg , char *netName ,
 		
 		//skip:
 
+		h->m_queryEnabled = true;
+		h->m_spiderEnabled = true;
 		// check for something after the working dir
 		h->m_note[0] = '\0';
 		if ( *p != '\n' ) {
 			// save the note
 			char *n = p;
 			while ( *n && *n != '\n' && n < pend ) n++;
+
 			int32_t noteSize = n - p;
 			if ( noteSize > 127 ) noteSize = 127;
 			gbmemcpy(h->m_note, p, noteSize);
 			*p++ = '\0'; // NULL terminate for atoip
+
+			if(strstr(h->m_note, "noquery")) {
+				h->m_queryEnabled = false;
+			}
+			if(strstr(h->m_note, "nospider")) {
+				h->m_spiderEnabled = false;
+			}
 		}
 		else
 			*p   = '\0';
@@ -1642,6 +1652,27 @@ Host *Hostdb::getLiveHostInShard ( int32_t shardNum ) {
 	return &shard[0];
 }
 
+Host *Hostdb::getLeastLoadedInShard ( uint32_t shardNum ) {
+	int32_t minOutstandingRequests = 0x7fffffff;
+	int32_t minOutstandingRequestsIndex = -1;
+	Host *shard = getShard ( shardNum );
+	for(int32_t i = 0; i < m_numHostsPerShard; i++) {
+		Host *hh = &shard[i];
+		if(isDead(hh)) continue;
+		// log("host %"INT32 " numOutstanding is %"INT32, hh->m_hostId, 
+		// 	hh->m_pingInfo.m_udpSlotsInUseIncoming);
+		if(hh->m_pingInfo.m_udpSlotsInUseIncoming > minOutstandingRequests) continue;
+
+		minOutstandingRequests = hh->m_pingInfo.m_udpSlotsInUseIncoming;
+		minOutstandingRequestsIndex = i;
+	}
+	if(minOutstandingRequestsIndex == -1) return shard;
+	return &shard[minOutstandingRequestsIndex];
+}
+
+
+
+
 // if all are dead just return host #0
 Host *Hostdb::getFirstAliveHost ( ) {
 	for ( int32_t i = 0 ; i < m_numHosts ; i++ )
@@ -1990,8 +2021,9 @@ bool Hostdb::saveHostsConf ( ) {
 	sprintf ( filename, "%shosts.conf", m_dir );
 	log ( LOG_INFO, "conf: Writing hosts.conf file to: %s",
 			filename );
-	int32_t fd = open ( filename, O_CREAT|O_WRONLY|O_TRUNC,
-			 S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP|S_IROTH );
+	int32_t fd = open ( filename, O_CREAT|O_WRONLY|O_TRUNC ,
+			    getFileCreationFlags() );
+			 // S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP|S_IROTH );
 	if ( !fd ) {
 		log ( "conf: Failed to open %s for writing.", filename );
 		return false;

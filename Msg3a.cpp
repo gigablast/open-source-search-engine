@@ -470,6 +470,12 @@ bool Msg3a::gotCacheReply ( ) {
 	for ( int32_t i = 0; i < m_numHosts ; i++ ) { // m_indexdbSplit; i++ ) {
 		// get that host
 		Host *h = g_hostdb.getHost(i);
+
+		if(!h->m_queryEnabled) {
+			m_numReplies++;
+			continue;
+		}
+
 		// if not a full split, just round robin the group, i am not
 		// going to sweat over performance on non-fully split indexes
 		// because they suck really bad anyway compared to full

@@ -2572,6 +2572,13 @@ int main2 ( int argc , char *argv[] ) {
 		false );// sendtoproxies
 	}
 
+	if ( strcmp ( cmd , "unittest" ) == 0 ) {
+		if ( cmdarg + 1 >= argc ) exit(1);
+		if(strcmp("url", argv[cmdarg+1]) == 0) {
+			exit(Url::unitTests());
+		}
+	}
+
 	// gb startclassifier coll ruleset [hostId]
 	/*
 	if ( strcmp ( cmd , "startclassifier" ) == 0 ) {
@@ -4936,7 +4943,7 @@ int install ( install_flag_konst_t installFlag , int32_t hostId , char *dir ,
 					  // ensure directory is there, if
 					  // not then make it
 					  "ssh %s 'mkdir %s' ; "
-					  "scp -r %s %s:%s"
+					  "scp -p -r %s %s:%s"
 					  , ipStr
 					  , h2->m_dir
 
@@ -5022,7 +5029,7 @@ int install ( install_flag_konst_t installFlag , int32_t hostId , char *dir ,
 			if ( ! f.doesExist() ) target = "gb";
 
 			sprintf(tmp,
-				"scp -c arcfour " // blowfish is faster
+				"scp -p " // blowfish is faster
 				"%s%s "
 				"%s:%s/gb.installed%s",
 				dir,
@@ -5058,7 +5065,7 @@ int install ( install_flag_konst_t installFlag , int32_t hostId , char *dir ,
 			// don't copy to ourselves
 			//if ( h2->m_hostId == h->m_hostId ) continue;
 			sprintf(tmp,
-				"scp "
+				"scp -p "
 				"%sgb.new "
 				"%s:%s/tmpgb.installed &",
 				dir,
@@ -5071,7 +5078,7 @@ int install ( install_flag_konst_t installFlag , int32_t hostId , char *dir ,
 			// don't copy to ourselves
 			//if ( h2->m_hostId == h->m_hostId ) continue;
 			sprintf(tmp,
-				"scp %sgb.conf %shosts.conf %s:%s %s",
+				"scp -p %sgb.conf %shosts.conf %s:%s %s",
 				dir ,
 				dir ,
 				//h->m_hostId ,
@@ -5453,7 +5460,7 @@ int install ( install_flag_konst_t installFlag , int32_t hostId , char *dir ,
 			}
 			*/
 			sprintf(tmp,
-				"scp "
+				"scp -p "
 				"%scatdb/content.rdf.u8 "
 				"%s:%scatdb/content.rdf.u8",
 				dir,
@@ -5462,7 +5469,7 @@ int install ( install_flag_konst_t installFlag , int32_t hostId , char *dir ,
 			log(LOG_INIT,"admin: %s", tmp);
 			system ( tmp );
 			sprintf(tmp,
-				"scp "
+				"scp -p "
 				"%scatdb/structure.rdf.u8 "
 				"%s:%scatdb/structure.rdf.u8",
 				dir,
@@ -5471,7 +5478,7 @@ int install ( install_flag_konst_t installFlag , int32_t hostId , char *dir ,
 			log(LOG_INIT,"admin: %s", tmp);
 			system ( tmp );
 			sprintf(tmp,
-				"scp "
+				"scp -p "
 				"%scatdb/gbdmoz.structure.dat "
 				"%s:%scatdb/gbdmoz.structure.dat",
 				dir,
@@ -5480,7 +5487,7 @@ int install ( install_flag_konst_t installFlag , int32_t hostId , char *dir ,
 			log(LOG_INIT,"admin: %s", tmp);
 			system ( tmp );
 			sprintf(tmp,
-				"scp "
+				"scp -p "
 				"%scatdb/gbdmoz.content.dat "
 				"%s:%scatdb/gbdmoz.content.dat",
 				dir,
@@ -5503,7 +5510,7 @@ int install ( install_flag_konst_t installFlag , int32_t hostId , char *dir ,
 			// don't copy to ourselves
 			if ( h2->m_hostId == 0 ) continue;
 			sprintf(tmp,
-				"scp "
+				"scp -p "
 				"%scatdb/content.rdf.u8.new "
 				"%s:%scatdb/content.rdf.u8.new",
 				dir,
@@ -5512,7 +5519,7 @@ int install ( install_flag_konst_t installFlag , int32_t hostId , char *dir ,
 			log(LOG_INIT,"admin: %s", tmp);
 			system ( tmp );
 			sprintf(tmp,
-				"scp "
+				"scp -p "
 				"%scatdb/structure.rdf.u8.new "
 				"%s:%scatdb/structure.rdf.u8.new",
 				dir,
@@ -5521,7 +5528,7 @@ int install ( install_flag_konst_t installFlag , int32_t hostId , char *dir ,
 			log(LOG_INIT,"admin: %s", tmp);
 			system ( tmp );
 			sprintf(tmp,
-				"scp "
+				"scp -p "
 				"%scatdb/gbdmoz.structure.dat.new "
 				"%s:%scatdb/gbdmoz.structure.dat.new",
 				dir,
@@ -5530,7 +5537,7 @@ int install ( install_flag_konst_t installFlag , int32_t hostId , char *dir ,
 			log(LOG_INIT,"admin: %s", tmp);
 			system ( tmp );
 			sprintf(tmp,
-				"scp "
+				"scp -p "
 				"%scatdb/gbdmoz.content.dat.new "
 				"%s:%scatdb/gbdmoz.content.dat.new",
 				dir,
@@ -5539,7 +5546,7 @@ int install ( install_flag_konst_t installFlag , int32_t hostId , char *dir ,
 			log(LOG_INIT,"admin: %s", tmp);
 			system ( tmp );
 			sprintf(tmp,
-				"scp "
+				"scp -p "
 				"%scatdb/gbdmoz.content.dat.new.diff "
 				"%s:%scatdb/gbdmoz.content.dat.new.diff",
 				dir,
@@ -16849,7 +16856,7 @@ void dumpCachedRecs (char *coll,int32_t startFileNum,int32_t numFiles,bool inclu
 	int32_t filenum = 0;
 	char filename[64];
 	sprintf(filename, "%s-%"INT32".ddmp", coll, filenum);
-	int FD = open(filename, O_CREAT|O_WRONLY, S_IROTH);
+	//int FD = open(filename, O_CREAT|O_WRONLY, S_IROTH);
 	int32_t numDumped = 0;
 	uint32_t bytesDumped = 0;
  loop:
@@ -17016,7 +17023,7 @@ void dumpCachedRecs (char *coll,int32_t startFileNum,int32_t numFiles,bool inclu
 		filenum++;
 		sprintf(filename, "%s-%"INT32".ddmp", coll, filenum);
 		close(FD);
-		FD = open(filename, O_CREAT|O_WRONLY, S_IROTH);
+		//FD = open(filename, O_CREAT|O_WRONLY, S_IROTH);
 		bytesDumped = 0;
 		fprintf(stderr, "Started new file: %s. starts at docId: %"INT64".\n",filename, lastDocId);
 	}

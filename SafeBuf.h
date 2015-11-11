@@ -259,6 +259,7 @@ public:
 			 int32_t niceness=0);
 	bool  latin1Encode(char *s, int32_t len, bool htmlEncode=false,
 			   int32_t niceness=0);
+    bool utf32Encode(UChar32* codePoints, int32_t cpLen);
 	//bool  utf16Encode(UChar *s, int32_t len, bool htmlEncode=false);
 	//bool  utf16Encode(char *s, int32_t len, bool htmlEncode=false) {
 	//	return utf16Encode((UChar*)s, len>>1, htmlEncode); };
@@ -327,6 +328,7 @@ public:
 		return true;
 	};
 
+	int32_t indexOf(char c);
 
 	bool  safeCdataMemcpy(char *s, int32_t len);
 	bool  pushChar (char i) {
@@ -346,6 +348,7 @@ public:
 	// hack off trailing 0's
 	bool printFloatPretty ( float f ) ;
 
+	char* pushStr  (char* str, uint32_t len);
 	bool  pushPtr  ( void *ptr );
 	bool  pushLong (int32_t i);
 	bool  pushLongLong (int64_t i);

@@ -88,7 +88,7 @@ bool MsgC::getIp(char  *hostname    , int32_t   hostnameLen ,
 	if ( g_dns.isInCache ( key , ip ) ) {
 		if ( *ip == 3 ) { char *xx=NULL;*xx=0; }
 		// debug msg
-		//log("dns::getIp: %s (key=%"UINT64") has ip=%s in cache!!!",
+		//log(LOG_DEBUG, "dns::getIp: %s (key=%"UINT64") has ip=%s in cache!!!",
 		//     tmp,key.n0,iptoa(*ip));
 		return true;
 	}

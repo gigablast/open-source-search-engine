@@ -1108,6 +1108,7 @@ int32_t Threads::timedCleanUp (int32_t maxTime, int32_t niceness) {
 		return 0;
 
 	if ( ! m_needsCleanup ) return 0;
+
 	//if ( g_inSigHandler ) return 0;
 	int64_t startTime = gettimeofdayInMillisecondsLocal();
 	int64_t took = 0;

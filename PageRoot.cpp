@@ -2523,6 +2523,7 @@ bool sendPageAddUrl ( TcpSocket *sock , HttpRequest *hr ) {
 
 	ir->ptr_url = hr->getString("u",NULL);
 	if ( ! ir->ptr_url ) ir->ptr_url = hr->getString("url",NULL);
+	if ( ! ir->ptr_url ) ir->ptr_url = hr->getString("urls",NULL);
 	
 	// get back a short reply so we can show the status code easily
 	ir->m_shortReply = 1;

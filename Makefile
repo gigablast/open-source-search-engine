@@ -67,7 +67,7 @@ OBJS =  UdpSlot.o Rebalance.o \
 	Dates.o Sections.o SiteGetter.o Syncdb.o qa.o \
 	Placedb.o Address.o Test.o GeoIP.o GeoIPCity.o Synonyms.o \
 	Cachedb.o Monitordb.o dlstubs.o PageCrawlBot.o Json.o PageBasic.o \
-	Version.o
+	Punycode.o Version.o
 
 CHECKFORMATSTRING = -D_CHECK_FORMAT_STRING_
 
@@ -788,14 +788,5 @@ install-pkgs-local:
 warcinjector: 
 	-rm -r /home/zak/.pex/build/inject-*
 	-rm -r /home/zak/.pex/install/inject-*
-	cd script && pex -v . requests pyopenssl ndg-httpsclient pyasn1 multiprocessing flask -e inject -o warc-inject --inherit-path --no-wheel
+	cd script && pex -v . gevent gevent-socketio requests pyopenssl ndg-httpsclient pyasn1 multiprocessing -e inject -o warc-inject --inherit-path --no-wheel
 
-
-
-#pex -v inject requests pyopenssl ndg-httpsclient pyasn1 multiprocessing flask -e inject:main -o script/warc-inject -f '/home/zak/repos/open-source-search-engine/script' --inherit-path --no-wheel
-
-
-#pex -v inject requests pyopenssl ndg-httpsclient pyasn1 multiprocessing flask -e inject:main -o script/warc-inject -f '/home/zak/repos/open-source-search-engine/script' --inherit-path --no-wheel
-
-
-#	pex -r requests -r pyopenssl -r ndg-httpsclient -r pyasn1 -r multiprocessing -e inject.inject:main -o script/warc-inject -f '/home/zak/repos/open-source-search-engine/script/' --inherit-path --no-wheel
