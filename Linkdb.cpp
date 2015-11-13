@@ -603,6 +603,10 @@ bool getLinkInfo ( SafeBuf   *reqBuf              ,
 	Host *hosts = g_hostdb.getShard ( shardNum); // Group ( groupId );
 	if ( hostNum >= numHosts ) { char *xx = NULL; *xx = 0; }
 	int32_t hostId = hosts [ hostNum ].m_hostId ;
+	if( !hosts [ hostNum ].m_spiderEnabled) {
+		hostId = g_hostdb.getHostIdWithSpideringEnabled ( shardNum );
+	}
+
 
 	// . serialize the string buffers
 	// . use Msg25Request::m_buf[MAX_NEEDED]

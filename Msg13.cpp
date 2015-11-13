@@ -295,8 +295,9 @@ bool Msg13::forwardRequest ( ) {
 		// get that host
 		//h = g_hostdb.getProxy ( hostId );;
 		h = g_hostdb.getHost ( hostId );
-		// stop if he is alive
-		if ( ! g_hostdb.isDead ( h ) ) break;
+
+		// stop if he is alive and able to spider
+		if ( h->m_spiderEnabled && ! g_hostdb.isDead ( h ) ) break;
 		// get the next otherwise
 		if ( ++hostId >= nh ) hostId = 0;
 	}
