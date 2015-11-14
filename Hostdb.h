@@ -450,6 +450,9 @@ class Hostdb {
 
 	//Host *getLiveHostInGroup ( int32_t groupId );
 	Host *getLiveHostInShard ( int32_t shardNum );
+	Host *getLeastLoadedInShard ( uint32_t shardNum );
+	int32_t getHostIdWithSpideringEnabled ( uint32_t shardNum );
+
 
 	// in the entire cluster. return host #0 if its alive, otherwise
 	// host #1, etc.
@@ -468,6 +471,7 @@ class Hostdb {
 		if ( numHosts ) *numHosts = m_numHostsPerShard;
 		return &m_hosts[shardNum * m_numHostsPerShard]; 
 	};
+
 
 	//Host *getGroupFromGroupId ( uint32_t gid ) {
 	//	return getGroup ( gid ); 

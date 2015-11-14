@@ -1652,6 +1652,45 @@ Host *Hostdb::getLiveHostInShard ( int32_t shardNum ) {
 	return &shard[0];
 }
 
+int32_t Hostdb::getHostIdWithSpideringEnabled ( uint32_t shardNum ) {
+	Host *hosts = g_hostdb.getShard ( shardNum);
+	int32_t numHosts = g_hostdb.getNumHostsPerShard();
+
+	int32_t hostNum = 0;
+	int32_t numTried = 0;
+	while( !hosts [ hostNum ].m_spiderEnabled && numTried < numHosts ) {
+		hostNum = (hostNum+1) % numHosts;
+		numTried++;
+	}
+	if( !hosts [ hostNum ].m_spiderEnabled) {
+		log("build: cannot spider when entire shard has nospider enabled");
+		char *xx = NULL; *xx = 0;
+	}
+	return hosts [ hostNum ].m_hostId ;
+}
+
+
+Host *Hostdb::getLeastLoadedInShard ( uint32_t shardNum ) {
+	int32_t minOutstandingRequests = 0x7fffffff;
+	int32_t minOutstandingRequestsIndex = -1;
+	Host *shard = getShard ( shardNum );
+	for(int32_t i = 0; i < m_numHostsPerShard; i++) {
+		Host *hh = &shard[i];
+		if(isDead(hh)) continue;
+		// log("host %"INT32 " numOutstanding is %"INT32, hh->m_hostId, 
+		// 	hh->m_pingInfo.m_udpSlotsInUseIncoming);
+		if(hh->m_pingInfo.m_udpSlotsInUseIncoming > minOutstandingRequests) continue;
+
+		minOutstandingRequests = hh->m_pingInfo.m_udpSlotsInUseIncoming;
+		minOutstandingRequestsIndex = i;
+	}
+	if(minOutstandingRequestsIndex == -1) return shard;
+	return &shard[minOutstandingRequestsIndex];
+}
+
+
+
+
 // if all are dead just return host #0
 Host *Hostdb::getFirstAliveHost ( ) {
 	for ( int32_t i = 0 ; i < m_numHosts ; i++ )

@@ -10956,7 +10956,7 @@ void Parms::init ( ) {
 	m->m_cgi   = "errstrone";
 	m->m_off   = (char *)&g_conf.m_errstr1 - g;
 	m->m_type  = TYPE_STRING;
-	m->m_def   = "";
+	m->m_def   = "I/O error";
 	m->m_size  = MAX_URL_LEN;
 	m->m_priv  = 2;
 	m->m_page  = PAGE_MASTER;
@@ -16560,11 +16560,24 @@ void Parms::init ( ) {
 	m->m_flags = PF_CLONE;
 	m++; 
 
-	m->m_title = "use robots.txt";
+	m->m_title = "obey robots.txt";
+	m->m_xml   = "useRobotstxt";
 	m->m_desc  = "If this is true Gigablast will respect "
-		"the robots.txt convention.";
+		"the robots.txt convention and rel no follow meta tags.";
 	m->m_cgi   = "obeyRobots";
 	m->m_off   = (char *)&cr.m_useRobotsTxt - x;
+	m->m_type  = TYPE_BOOL;
+	m->m_def   = "1";
+	m->m_page  = PAGE_SPIDER;
+	m->m_obj   = OBJ_COLL;
+	m->m_flags = PF_CLONE;
+	m++;
+
+	m->m_title = "obey rel no follow links";
+	m->m_desc  = "If this is true Gigablast will respect "
+		"the rel no follow link attribute.";
+	m->m_cgi   = "obeyRelNoFollow";
+	m->m_off   = (char *)&cr.m_obeyRelNoFollowLinks - x;
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "1";
 	m->m_page  = PAGE_SPIDER;

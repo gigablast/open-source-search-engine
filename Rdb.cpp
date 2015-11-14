@@ -1858,7 +1858,6 @@ void attemptMergeAll2 ( ) {
 	if ( base && base->attemptMerge(niceness,force,true) ) 
 		return;
 
-
 	// try next collection
 	s_lastCollnum++;
 

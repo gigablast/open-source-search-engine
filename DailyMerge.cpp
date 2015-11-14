@@ -131,8 +131,12 @@ void DailyMerge::dailyMergeLoop ( ) {
 		// get our dow
 		int32_t todayDOW = tt->tm_wday + 1;
 		// make sure 1 to 7
-		if ( todayDOW < 0 ) { char *xx=NULL;*xx=0; }
-		if ( todayDOW > 6 ) { char *xx=NULL;*xx=0; }
+		if ( todayDOW < 0 || todayDOW > 6 ) { 
+			log("merge: bad today dow of %i for coll %s",
+			    (int)todayDOW,cr->m_coll);
+			return;
+		}
+		//if ( todayDOW > 6 ) { char *xx=NULL;*xx=0; }
 		// skip if not a dayofweek to merge on
 		if ( dowCounts [ todayDOW ] == 0 ) continue;
 

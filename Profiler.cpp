@@ -1821,12 +1821,16 @@ Profiler::printRealTimeInfo(SafeBuf *sb,
 		       //,coll,
 		       // rtall, showMessage);
 		       );
-	sb->safePrintf("<a href=\"/admin/profiler?c=%s&rtstop=1\">"
-		       "(Stop)</a> [Click refresh to get latest profile "
-		       "stats][Don't forget to click STOP when done so you "
-		       "don't leave the profiler running which can slow "
-		       "things down.]</b></td></tr>\n",
-		       coll);
+	sb->safePrintf(
+		       // "<a href=\"/admin/profiler?c=%s&rtstop=1\">"
+		       // "(Stop)</a> [Click refresh to get latest profile "
+		       // "stats][Don't forget to click STOP when done so you "
+		       // "don't leave the profiler running which can slow "
+		       //"things down.]"
+		       "</b>"
+		       "</td></tr>\n"
+		       //,coll
+		       );
 	/*
 	rtall = !rtall;
 
@@ -2138,8 +2142,10 @@ Profiler::printRealTimeInfo(SafeBuf *sb,
 	*/
 
 
-
-	g_profiler.startRealTimeProfiler();	
+	// just leave it off if we printed something. but if we just
+	// turn the profiler on then m_ipBuf will be empty so start it
+	if ( m_ipBuf.length() == 0 )
+		g_profiler.startRealTimeProfiler();	
 
 	return true;
 		/*

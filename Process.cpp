@@ -860,6 +860,18 @@ void doneCmdWrapper ( void *state ) {
 
 void hdtempWrapper ( int fd , void *state ) {
 
+	// current local time
+	int32_t now = getTime();
+
+	// from SpiderProxy.h
+	static int32_t s_lastTime = 0;
+	if ( ! s_lastTime ) s_lastTime = now;
+	// reset spider proxy stats every hour to alleviate false positives
+	if ( now - s_lastTime >= 3600 ) {
+		s_lastTime = now;
+		resetProxyStats();
+	}
+
 	// also download test urls from spider proxies to ensure they
 	// are up and running properly
 	downloadTestUrlFromProxies();
@@ -870,8 +882,6 @@ void hdtempWrapper ( int fd , void *state ) {
 	if ( g_process.m_threadOut ) return;
 	// skip if exiting
 	if ( g_process.m_mode == EXIT_MODE ) return;
-	// current local time
-	int32_t now = getTime();
 	// or if haven't waited int32_t enough
 	if ( now < s_nextTime ) return;
 
@@ -1542,7 +1552,7 @@ bool Process::shutdown2 ( ) {
 
 	// make sure they are in a saveable state. we need to make sure
 	// they have dumped out the latest merged list and updated the 
-	// appropriate RdbMap so we can save it below
+	// appropriate RdbMap so we can save it below.
 	bool wait = false;
 	if ( g_merge.m_isMerging  && ! g_merge.m_isReadyToSave  ) wait = true;
 	if ( g_merge2.m_isMerging && ! g_merge2.m_isReadyToSave ) wait = true;
@@ -1550,7 +1560,9 @@ bool Process::shutdown2 ( ) {
 	if ( isRdbDumping() ) wait = true;
 	// . wait for the merge or dump to complete
 	// . but NOT if urgent...
-	if ( wait && ! m_urgent ) return false;
+	// . this stuff holds everything up too long, take out, we already
+	//   wait for write threads to complete, that should be good enough
+	//if ( wait && ! m_urgent ) return false;
 
 	// . disable adds/deletes on all rdb trees
 	// . Msg1 requests will get ECLOSING error msgs
@@ -1642,7 +1654,7 @@ bool Process::shutdown2 ( ) {
 		log("gb: Dumping core after saving.");
 		// at least destroy the page caches that have shared memory
 		// because they seem to not clean it up
-		resetPageCaches();
+		//resetPageCaches();
 
 		// let's ensure our core file can dump
 		struct rlimit lim;

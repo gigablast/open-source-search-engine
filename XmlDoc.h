@@ -475,7 +475,7 @@ class XmlDoc {
 		    key_t           *doledbKey ,
 		    char            *coll      , 
 		    class SafeBuf   *pbuf      , 
-		    int32_t             niceness  ,
+		    int32_t          niceness  ,
 		    char            *utf8Content = NULL ,
 		    bool             deleteFromIndex = false ,
 		    int32_t             forcedIp = 0 ,
@@ -483,9 +483,11 @@ class XmlDoc {
 		    uint32_t           spideredTime = 0 , // time_t
 		    bool             contentHasMime = false ,
 		    // for container docs, what is the separator of subdocs?
-				char            *contentDelim = NULL,
-				char *metadata = NULL,
-				uint32_t metadataLen = 0) ;
+		    char            *contentDelim = NULL,
+			char *metadata = NULL,
+			uint32_t metadataLen = 0,
+			// for injected docs we have the recv, buffer size don't exceed that
+			int32_t payloadLen = -1) ;
 
 	// we now call this right away rather than at download time!
 	int32_t getSpideredTime();
@@ -513,7 +515,9 @@ class XmlDoc {
 	bool indexDoc2 ( );
 	bool isContainerDoc ( );
 	bool indexContainerDoc ( );
-	bool indexWarcOrArc ( char ct ) ;
+
+	bool readMoreWarc();
+	bool indexWarcOrArc ( ) ;
 	key_t *getTitleRecKey() ;
 	//char *getSkipIndexing ( );
 	char *prepareToMakeTitleRec ( ) ;
@@ -706,7 +710,7 @@ class XmlDoc {
 	char **getExpandedUtf8Content ( ) ;
 	char **getUtf8Content ( ) ;
 	// we download large files to a file on disk, like warcs and arcs
-	BigFile *getUtf8ContentInFile ( int64_t *fileSizeArg );
+	FILE *getUtf8ContentInFile ( );
 	int32_t *getContentHash32 ( ) ;
 	int32_t *getContentHashJson32 ( ) ;
 	//int32_t *getTagHash32 ( ) ;
@@ -1088,12 +1092,16 @@ class XmlDoc {
 	int32_t m_warcError ;
 	int32_t m_arcError ;
 	bool m_doneInjectingWarc ;
-	bool m_doneInjectingArc ;
-	int64_t m_fileOff ;
+
+	int64_t m_bytesStreamed;
 	char *m_fileBuf ;
 	int32_t m_fileBufAllocSize;
+	bool    m_registeredWgetReadCallback;
 	char *m_fptr ;
 	char *m_fptrEnd ;
+
+	FILE* m_pipe;
+	
 	BigFile m_file;
 	int64_t m_fileSize;
 	FileState m_fileState;
@@ -1495,6 +1503,7 @@ class XmlDoc {
 	bool m_imageUrl2Valid;
 	bool m_matchOffsetsValid;
 	bool m_queryValid;
+	bool m_diffbotProxyReplyValid;
 	bool m_matchesValid;
 	bool m_dbufValid;
 	bool m_titleValid;
@@ -1696,6 +1705,8 @@ class XmlDoc {
 	bool m_isChildDoc;
 	Msg13 m_msg13;
 	Msg13Request m_msg13Request;
+	Msg13Request m_diffbotProxyRequest;
+	ProxyReply *m_diffbotProxyReply;
 	bool m_isSpiderProxy;
 	// for limiting # of iframe tag expansions
 	int32_t m_numExpansions;
@@ -2470,7 +2481,8 @@ class XmlDoc {
 			 // for container docs consisting of subdocs to inject
 			 char *contentDelim = NULL,
 			 char* metadata = NULL,
-			 uint32_t metadataLen = 0);
+             uint32_t metadataLen = 0,
+             int32_t  payloadLen = -1);
 
 
 	bool injectLinks  ( HashTableX *linkDedupTable ,

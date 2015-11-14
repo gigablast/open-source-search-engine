@@ -607,6 +607,11 @@ loop:
 		// debug msg
 		//log("Multicast:: no hosts left to send to");
 		g_errno = ENOHOSTS; return false; }
+
+	// log("build: msg %x sent to host %"INT32 " first hostId is %"INT32 
+	// 	" oustanding msgs %"INT32, 
+	// 	m_msgType, i, firstHostId, m_hostPtrs[i]->m_numOutstandingRequests);
+
 	// . send to this guy, if we haven't yet
 	// . returns false and sets g_errno on error
 	// . if it returns true, we sent ok, so we should return true
