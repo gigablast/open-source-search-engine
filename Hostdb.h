@@ -450,7 +450,7 @@ class Hostdb {
 
 	//Host *getLiveHostInGroup ( int32_t groupId );
 	Host *getLiveHostInShard ( int32_t shardNum );
-	Host *getLeastLoadedInShard ( uint32_t shardNum );
+	Host *getLeastLoadedInShard ( uint32_t shardNum , char niceness );
 	int32_t getHostIdWithSpideringEnabled ( uint32_t shardNum );
 
 
