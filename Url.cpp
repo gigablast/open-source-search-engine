@@ -168,13 +168,13 @@ void Url::set ( char *t , int32_t tlen , bool addWWW , bool stripSessionId ,
 			// Sometimes the length with the null is passed in, 
 			// so ignore nulls FIXME?
 			if( t[i] ) nonAsciiPos = i;
-            break; // no non-ascii chars allowed
-        }
+			break; // no non-ascii chars allowed
+		}
 	}
 
 	
 	if(nonAsciiPos != -1) { 
-        // Try turning utf8 and latin1 encodings into punycode.
+		// Try turning utf8 and latin1 encodings into punycode.
 		// All labels(between dots) in the domain are encoded 
 		// separately.  We don't support encoded tlds, but they are 
 		// not widespread yet.
@@ -184,11 +184,11 @@ void Url::set ( char *t , int32_t tlen , bool addWWW , bool stripSessionId ,
 		if(t[tlen]) t[tlen] = 0;
 		log(LOG_DEBUG, "build: attempting to decode unicode url %s pos at %"INT32, t, nonAsciiPos);
 		if(tmp) t[tlen] = tmp;
-        char encoded [ MAX_URL_LEN ];
-        uint64_t encodedLen = MAX_URL_LEN;
-        char *encodedDomStart = encoded;
-        char *p = t;
-        char *pend = t+tlen;
+		char encoded [ MAX_URL_LEN ];
+		uint64_t encodedLen = MAX_URL_LEN;
+		char *encodedDomStart = encoded;
+		char *p = t;
+		char *pend = t+tlen;
 		
 		// Find the start of the domain
 		if(tlen > 7 && strncmp(p, "http://", 7) == 0) p += 7;
@@ -197,7 +197,7 @@ void Url::set ( char *t , int32_t tlen , bool addWWW , bool stripSessionId ,
 		gbmemcpy(encodedDomStart, t, p-t);
 		encodedDomStart += p-t;
 
-        while(p < pend && *p != '/') {
+		while(p < pend && *p != '/') {
 			char *labelStart = p;
 			uint32_t tmpBuf[MAX_URL_LEN];
 			int32_t tmpLen = 0;
@@ -210,7 +210,8 @@ void Url::set ( char *t , int32_t tlen , bool addWWW , bool stripSessionId ,
 			p = labelStart;
 			bool labelIsAscii = true;
 
-			// Convert the domain to code points and copy it to tmpbuf to be punycoded
+			// Convert the domain to code points and copy it to 
+			// tmpbuf to be punycoded
 			for(;p-labelStart<labelLen;
 				p += utf8Size(tmpBuf[tmpLen]), tmpLen++) {
 
@@ -242,16 +243,24 @@ void Url::set ( char *t , int32_t tlen , bool addWWW , bool stripSessionId ,
 			gbmemcpy(encodedDomStart, "xn--", 4);
 			encodedDomStart += 4;
 
-			punycode_status status = punycode_encode(tmpLen, tmpBuf, NULL, 
-												   &encodedLen, encodedDomStart);
+			punycode_status status ;
+			status = punycode_encode(tmpLen, 
+						 tmpBuf,
+						 NULL, 
+						 &encodedLen,
+						 encodedDomStart);
 			if ( status != 0 ) {
 				// Give up? try again?
-				log("build: Bad Engineer, failed to punycode international url %s", t);
+				log("build: Bad Engineer, failed to "
+				    "punycode international url %s", t);
 				return;
 			}
-			// We should check if what we encoded were valid url characters, no spaces, etc
-			// FIXME: should we exclude just the bad chars? I've seen plenty of urls with
-			// a newline in the middle.  Just discard the whole chunk for now
+			// We should check if what we encoded were valid url 
+			// characters, no spaces, etc
+			// FIXME: should we exclude just the bad chars? I've 
+			// seen plenty of urls with
+			// a newline in the middle.  Just discard the whole 
+			// chunk for now
 			bool badUrlChars = false;
 			for(uint32_t i=0;i<encodedLen;i++) {
 				if(is_wspace_a(encodedDomStart[i])){
@@ -278,7 +287,24 @@ void Url::set ( char *t , int32_t tlen , bool addWWW , bool stripSessionId ,
 		uint32_t newUrlLen = encodedDomStart - encoded;
 
 		while(p < pend) {
-			if(!isascii(*p)) break;
+			if ( ! *p ) break; // null?
+			if(!is_ascii(*p)) {
+				//break;
+				// url encode utf8 characters now
+				char cs = getUtf8CharSize(p);
+				// bad utf8 char?
+				if ( cs <= 1 ) break;
+				// too long?
+				if ( newUrlLen + 12 >= MAX_URL_LEN )
+					break;
+				char stored = urlEncode ( &encoded[newUrlLen], 
+							  12 ,
+							  p ,
+							  cs );
+				p += cs;
+				newUrlLen += stored;
+				continue;
+			}
 			if(is_wspace_a(*p)) break;
 			if(newUrlLen >= MAX_URL_LEN) break;
 			encoded[newUrlLen++] = *p++;
@@ -2515,6 +2541,7 @@ bool Url::hasMediaExtension ( ) {
 
 uint32_t Url::unitTests() {
 	char* urls[] = {
+		"http://www.fas.org/blog/ssp/2009/08/securing-venezuela\032s-arsenals.php",
 		"http://topbeskæring.dk/velkommen",
 		"www.Alliancefrançaise.nu",
 		"française.Alliance.nu",
