@@ -21156,6 +21156,10 @@ char *XmlDoc::getIsSiteRoot ( ) {
 	if ( ! site || site == (char *)-1 ) return (char *)site;
 	// get our url without the http:// or https://
 	char *u = getFirstUrl()->getHost();
+	if ( ! u ) {
+		g_errno = EBADURL;
+		return NULL;
+	}
 	// assume valid now
 	m_isSiteRootValid = true;
 	// get it
