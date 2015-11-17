@@ -16674,6 +16674,21 @@ void Parms::init ( ) {
 	m->m_flags = PF_CLONE;
 	m++;
 
+	m->m_title = "index warc or arc files";
+	m->m_desc  = "If this is true Gigablast will index .warc and .arc "
+		"files by injecting the pages contained in them as if they "
+		"were spidered with the content in the .warc or .arc file. "
+		"The spidered time will be taken from the archive file "
+		"as well.";
+	m->m_cgi   = "indexwarcs";
+	m->m_off   = (char *)&cr.m_indexWarcs - x;
+	m->m_type  = TYPE_BOOL;
+	m->m_def   = "0";
+	m->m_page  = PAGE_SPIDER;
+	m->m_obj   = OBJ_COLL;
+	m->m_flags = PF_CLONE;
+	m++;
+
 	/*
 	m->m_title = "add url enabled";
 	m->m_desc  = "If this is enabled others can add "

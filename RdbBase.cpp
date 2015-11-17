@@ -1892,7 +1892,7 @@ void RdbBase::gotTokenForMerge ( ) {
 		// sanity check
 		if ( n <= 1 ) {
 			log(LOG_LOGIC,"merge: attemptMerge: Resuming. bad "
-			    "engineer");
+			    "engineer for %s coll=%s",m_dbname,m_coll);
 			//g_msg35.releaseToken();
 			return false;
 		}

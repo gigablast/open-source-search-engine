@@ -1545,6 +1545,8 @@ bool qaWarcFiles ( ) {
 				"&obeyRobots=0"
 				// This is what we are testing
 				"&usetimeaxis=1"
+				// we are indexing warc files
+				"&indexwarcs=1"
 				,
 				// checksum of reply expected
 				0 ) )
@@ -3412,9 +3414,9 @@ static QATest s_qatests[] = {
 	 "when content has changed, even if the url is the same. "},
 
 
-	{qaWarcFiles,
-	 "indexWarcFiles",
-	 "Ensure the spider handles arc.gz and warc.gz file formats."},
+	// {qaWarcFiles,
+	//  "indexWarcFiles",
+	//  "Ensure the spider handles arc.gz and warc.gz file formats."},
 
 	{qaInjectMetadata,
 	 "injectMetadata",
