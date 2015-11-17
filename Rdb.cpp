@@ -1544,6 +1544,20 @@ bool Rdb::dumpCollLoop ( ) {
 				   "available secondary id for titledb: %s." , 
 				   mstrerror(g_errno) );
 	}
+
+	// if we add to many files then we can not merge, because merge op
+	// needs to add a file and it calls addNewFile() too
+	static int32_t s_flag = 0;
+	if ( base->m_numFiles + 1 >= MAX_RDB_FILES ) {
+		if ( s_flag < 10 )
+			log("db: could not dump tree to disk for cn="
+			    "%i %s because it has %"INT32" files on disk. "
+			    "Need to wait for merge operation.",
+			    (int)m_dumpCollnum,m_dbname,base->m_numFiles);
+		s_flag++;
+		goto loop;
+	}
+
 	// this file must not exist already, we are dumping the tree into it
 	m_fn = base->addNewFile ( id2 ) ;
 	if ( m_fn < 0 ) return log(LOG_LOGIC,"db: rdb: Failed to add new file "

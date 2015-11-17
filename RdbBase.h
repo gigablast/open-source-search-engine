@@ -338,10 +338,10 @@ class RdbBase {
 	// . older files are listed first (lower fileIds)
 	// . filenames should include the directory (full filenames)
 	// . TODO: RdbMgr should control what rdb gets merged?
-	BigFile  *m_files     [ MAX_RDB_FILES ];
-	int32_t      m_fileIds   [ MAX_RDB_FILES ];
-	int32_t      m_fileIds2  [ MAX_RDB_FILES ]; // for titledb/tfndb linking
-	RdbMap   *m_maps      [ MAX_RDB_FILES ];
+	BigFile  *m_files     [ MAX_RDB_FILES+1 ];
+	int32_t      m_fileIds   [ MAX_RDB_FILES+1 ];
+	int32_t      m_fileIds2  [ MAX_RDB_FILES+1 ]; // for titledb/tfndb linking
+	RdbMap   *m_maps      [ MAX_RDB_FILES+1 ];
 	int32_t      m_numFiles;
 
 	// this class contains a ptr to us
