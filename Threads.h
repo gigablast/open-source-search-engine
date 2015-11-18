@@ -196,6 +196,8 @@ class ThreadQueue {
 	void suspendLowPriorityThreads();
 	void resumeLowPriorityThreads();
 
+	void killAllThreads();
+
 	// this is true if low priority threads are temporarily suspended
 	bool m_isLowPrioritySuspended ;
 
@@ -245,6 +247,8 @@ class Threads {
 	void enableThreads  () { m_disabled = false; };
 	bool areThreadsDisabled() { return m_disabled; };
 	bool areThreadsEnabled () { return ! m_disabled; };
+
+	void killAllThreads();
 
 	// . returns false and sets errno if thread launch failed
 	// . returns true on success
