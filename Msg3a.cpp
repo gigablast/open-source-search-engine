@@ -707,10 +707,12 @@ bool Msg3a::gotAllShardReplies ( ) {
 		// bad reply?
 		if ( ! mr || replySize < 29 ) {
 			m_skippedShards++;
-			log(LOG_LOGIC,"query: msg3a: Bad reply (size=%i) from "
-			    "host #%"INT32". Dead? Timeout? OOM?"
-			    ,(int)replySize
-			    ,i);
+			if(g_hostdb.getHost(i)->m_queryEnabled) {
+				log(LOG_LOGIC,"query: msg3a: Bad reply (size=%i) from "
+					"host #%"INT32". Dead? Timeout? OOM?"
+					,(int)replySize
+					,i);
+            }
 			m_reply       [i] = NULL;
 			m_replyMaxSize[i] = 0;
 			// it might have been timd out, just ignore it!!

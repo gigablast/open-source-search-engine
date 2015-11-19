@@ -148,6 +148,7 @@ class Matches {
 	//int32_t getTermsFound ( bool *hadPhrases , bool *hadWords );
 	uint32_t getTermsFound2(bool *hadPhrases, bool *hadWords);
 	//bool negTermsFound ( );
+	bool docHasQueryTerms();
 
 	// used internally and by PageGet.cpp
 	bool isMatchableTerm ( class QueryTerm *qt );//, int32_t i );

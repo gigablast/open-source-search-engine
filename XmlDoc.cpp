@@ -32980,11 +32980,13 @@ Msg20Reply *XmlDoc::getMsg20Reply ( ) {
 	// . Matches.cpp checks the link text, dmoz, etc. for all query terms
 	// . it must get into the results form indexdb corruption?
 	// . this filtering method is/was known as the "BIG HACK"
+	// . We also make sure that matches aren't based on
+	// . "anomalous" link text, where a doc has so many link texts
+	// . that most common dictionary terms appear in or around
+	// . a link to the site.
 	if ( m_req->size_qbuf > 1 ) {
-		reply->m_hasAllQueryTerms = true;
-	//	Matches *mm = getMatches();
-	//	if ( ! mm || mm == (Matches *)-1 ) return (Msg20Reply *)mm;
-	//	reply->m_hasAllQueryTerms = mm->m_matchesQuery;
+		Matches *mm = getMatches();
+		reply->m_hasAllQueryTerms = mm->docHasQueryTerms();
 	}
 
 	// breathe
@@ -33373,7 +33375,7 @@ Msg20Reply *XmlDoc::getMsg20Reply ( ) {
 	//    (int32_t)reply->m_linkTextScoreWeight, m_siteNumInlinks);
 
 	// breathe
-	QUICKPOLL( m_niceness );
+	//QUICKPOLL( m_niceness );
 
 	// . we need the mid doma hash in addition to the ip domain because
 	//   chat.yahoo.com has different ip domain than www.yahoo.com , ...
@@ -34309,13 +34311,10 @@ char *XmlDoc::getHighlightedSummary ( ) {
 
 	if ( ! m_langIdValid ) { char *xx=NULL;*xx=0; }
 
-	//char tt[5000];
 	Highlight hi;
 	StackBuf(hb);
 	// highlight the query in it
 	int32_t hlen = hi.set ( &hb,
-			     //tt , 
-			     //4999 ,
 			     sum, 
 			     sumLen,
 			     m_langId,

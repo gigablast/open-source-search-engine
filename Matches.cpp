@@ -1736,6 +1736,87 @@ bool Matches::negTermsFound ( ) {
 }
 */
 
+bool Matches::docHasQueryTerms() {
+	// Loop through all matches keeping a count of query term matches 
+	// from link text.
+	// If a match is not from a link text max it out.
+	// Tally up the matched terms vs number of matches
+	// if only one or two link text matches out of > 10 then
+	// return false indicating that the doc does not
+	// have the term
+
+    if(m_numMatches == 0) {
+        // if there is no query and no matches then short circuit
+        return true;
+    }
+
+    int32_t qterms = 1024;
+    int32_t tmpBuf[qterms];
+    int32_t *numMatches = tmpBuf;
+    int32_t numMatchedLinkTexts = 0;
+    
+    if(qterms < m_q->m_numTerms) {
+        qterms = m_q->m_numTerms;
+        numMatches = (int32_t *)mmalloc(qterms * sizeof(int32_t), 
+                                        "matchesAnomaly");
+    }
+    memset(numMatches, 0, qterms * sizeof(int32_t));
+	
+    for ( int32_t i = 0 ; i < m_numMatches ; i++ ) {
+        // get the match
+        Match *m = &m_matches[i];
+        if(m->m_flags & MF_LINK) {
+			numMatchedLinkTexts++;
+			numMatches[m->m_qwordNum]++;
+            continue;
+        }
+		numMatches[m->m_qwordNum] = m_numMatches;
+        //log("match flag %x wordnum %"INT32, m->m_flags, m->m_wordNum);
+    }
+	
+    // Don't bother with the rest if we don't have any link text matches.
+    if(numMatchedLinkTexts == 0) {
+        if (numMatches != tmpBuf) {
+            mfree(numMatches, qterms * sizeof(int32_t), "matchesAnomaly");
+        }
+        return true;
+    }
+
+	// Assume the best, since we're really only after anomalous link text
+	// at this point.
+	bool hasTerms = true;
+	int32_t nqt = m_q->m_numTerms;
+	for ( int32_t i = 0 ; i < nqt ; i++ ) {
+		// get query word #i
+		//QueryWord *qw = &m_q->m_qwords[i];
+		QueryTerm *qt = &m_q->m_qterms[i];
+		// skip if ignored *in certain ways only*
+		if ( ! isMatchableTerm ( qt ) ) {
+			continue;
+		}
+		// get the word it is from
+		QueryWord *qw = qt->m_qword;
+
+		// It is a match if it matched something other than link text
+		// or it matched at least 1 link text and there arent many link texts to match
+		// or it matched more than 2 link texts and there are many link texts
+		hasTerms &= ((numMatches[qw->m_wordNum] >= m_numMatches) ||  
+                     (numMatches[qw->m_wordNum] > 0 && numMatchedLinkTexts < 10) ||
+                     (numMatches[qw->m_wordNum] > 2 && numMatchedLinkTexts > 10));
+        // log("build: matches for word: %s %"INT32 " numMatchedLinkTexts: %"INT32 " has term: %"INT32, 
+        //     qw->m_word, numMatches[qw->m_wordNum], numMatchedLinkTexts, (int32_t)hasTerms);
+	}
+
+	if (numMatches != tmpBuf) {
+		mfree(numMatches, qterms * sizeof(int32_t), "matchesAnomaly");
+	}
+	return hasTerms;
+}
+
+
+
+
+
 MatchOffsets::MatchOffsets() {
 	reset();
 }
@@ -1803,6 +1884,7 @@ bool MatchOffsets::set(Xml * xml, Words *words, Matches *matches,
 	}
 	return true;
 }
+
 
 int32_t MatchOffsets::getStoredSize() {
 	return m_numMatches * 5 
