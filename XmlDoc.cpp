@@ -50,7 +50,8 @@
 
 extern int g_inMemcpy;
 
-#define MAXDOCLEN (1024*1024 * 5)
+//#define MAXDOCLEN (1024*1024 * 5)
+#define MAXDOCLEN (1024*1024)
 
 HashTableX *g_ct = NULL;
 XmlDoc *g_doc = NULL;
@@ -3514,6 +3515,14 @@ bool XmlDoc::readMoreWarc() {
 // . returns true and sets g_errno on err
 // . injectwarc
 bool XmlDoc::indexWarcOrArc ( ) {
+
+	CollectionRec *cr = getCollRec();
+	if ( ! cr ) return true;
+	if ( ! cr->m_indexWarcs ) {
+		g_errno = EDOCWARC;
+		return true;
+	}
+
 	// This can be a busy loop if we have max injections out but we
 	// are getting a read ready callback.  Should we unregister
 	// when max injections are out and then reregister when we have room?
@@ -21156,6 +21165,10 @@ char *XmlDoc::getIsSiteRoot ( ) {
 	if ( ! site || site == (char *)-1 ) return (char *)site;
 	// get our url without the http:// or https://
 	char *u = getFirstUrl()->getHost();
+	if ( ! u ) {
+		g_errno = EBADURL;
+		return NULL;
+	}
 	// assume valid now
 	m_isSiteRootValid = true;
 	// get it
@@ -22066,7 +22079,12 @@ bool XmlDoc::logIt ( SafeBuf *bb ) {
 	// like how we index it, do not include the filename. so we can
 	// have a bunch of pathdepth 0 urls with filenames like xyz.com/abc.htm
 	if ( m_firstUrlValid ) {
-		int32_t pd = m_firstUrl.getPathDepth(false);
+		int32_t pd = -1;
+		// fix core
+		if ( m_firstUrl.m_url &&
+		     m_firstUrl.m_ulen > 0 &&
+		     m_firstUrl.m_path )
+			pd = m_firstUrl.getPathDepth(false);
 		sb->safePrintf("pathdepth=%"INT32" ",pd);
 	}
 	else {
