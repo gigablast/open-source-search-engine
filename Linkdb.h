@@ -76,6 +76,15 @@ public:
 	int32_t       m_ourHostHash32 ;
 	int32_t       m_ourDomHash32 ;
 
+	uint8_t m_waitingInLine:1;
+	uint8_t m_reserved1:1;
+	uint8_t m_reserved2:1;
+	uint8_t m_reserved3:1;
+	uint8_t m_reserved4:1;
+	uint8_t m_reserved5:1;
+	uint8_t m_reserved6:1;
+	uint8_t m_reserved7:1;
+
 	// new stuff
 	int32_t       m_siteHash32;
 	int64_t  m_siteHash64;
