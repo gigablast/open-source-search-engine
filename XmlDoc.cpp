@@ -33004,7 +33004,8 @@ Msg20Reply *XmlDoc::getMsg20Reply ( ) {
 	// . a link to the site.
 	if ( m_req->size_qbuf > 1 ) {
 		Matches *mm = getMatches();
-		reply->m_hasAllQueryTerms = mm->docHasQueryTerms();
+		int32_t numInlinks = getLinkInfo1()->getNumLinkTexts( );
+		reply->m_hasAllQueryTerms = mm->docHasQueryTerms(numInlinks);
 	}
 
 	// breathe
