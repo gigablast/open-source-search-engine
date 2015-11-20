@@ -3316,3 +3316,21 @@ void Threads::printState() {
 		}
 	}
 }
+
+void ThreadQueue::killAllThreads ( ) {
+	for ( int32_t i = 0 ; i < m_maxEntries ; i++ ) {
+		ThreadEntry *e = &m_entries[i];
+		if ( ! e->m_isOccupied ) continue;
+		if ( ! e->m_isLaunched ) continue;
+		log("threads: killling thread id %i",(int)e->m_joinTid);
+		pthread_kill ( e->m_joinTid , SIGKILL );
+	}
+}
+
+void Threads::killAllThreads ( ) {
+	log("threads: killing all threads");
+	for ( int32_t j = 0 ; j < m_numQueues ; j++ ) {
+		ThreadQueue *tq = &m_threadQueues[j];
+		tq->killAllThreads();
+	}		
+}

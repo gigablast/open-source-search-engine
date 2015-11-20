@@ -7,6 +7,7 @@
 #include "Dns.h"
 #include "SafeBuf.h"
 #include "Msg13.h"
+#include "Linkdb.h" // Msg25Request
 
 static void printTcpTable  (SafeBuf *p,char *title,TcpServer *server);
 static void printUdpTable  (SafeBuf *p,char *title,UdpServer *server,
@@ -554,6 +555,62 @@ void printUdpTable ( SafeBuf *p, char *title, UdpServer *server ,
 		if ( msgType == 0x50 ) desc = "get root quality";
 		if ( msgType == 0x25 ) desc = "get link info";
 		if ( msgType == 0xfd ) desc = "proxy forward";
+
+		char *req = NULL;
+		int32_t reqSize = 0;
+		if ( s->m_callback ) {
+			req = s->m_sendBuf;
+			reqSize = s->m_sendBufSize;
+		}
+		// are we receiving the request?
+		else {
+			req = s->m_readBuf;
+			reqSize = s->m_readBufSize;
+			// if not completely read in yet...
+			if ( s->hasDgramsToRead ())
+				req = NULL;
+		}
+
+		SafeBuf tmp;
+		char *altText = "";
+
+		// MSG25
+		if ( req && msgType == 0x25 ) {
+			Msg25Request *mr = (Msg25Request *)req;
+			// it doesn't hurt if we call Msg25Request::deserialize
+			// again if it has already been called
+			mr->deserialize();
+			if ( mr->m_mode == 2 ) { // MODE_SITELINKINFO ) {
+				tmp.safePrintf(" title=\""
+					       "getting site link info for "
+					       "%s "
+					       "in collnum %i.\n"
+					       "sitehash64=%"UINT64" "
+					       "waitinginline=%i"
+					       "\""
+					       ,mr->ptr_site
+					       ,(int)mr->m_collnum
+					       ,mr->m_siteHash64
+					       ,(int)mr->m_waitingInLine
+					       );
+				desc = "getting site link info";
+			}
+			else {
+				tmp.safePrintf(" title=\""
+					       "getting page link info for "
+					       "%s "
+					       "in collnum %i."
+					       "\""
+					       ,mr->ptr_url
+					       ,(int)mr->m_collnum
+					       );
+				desc = "getting page link info";
+			}
+		}
+
+		if ( tmp.getLength() )
+			altText = tmp.getBufStart();
+
 		
 		p->safePrintf ( "<tr bgcolor=#%s>"
 				"<td>%s</td>"  // age
@@ -609,12 +666,14 @@ void printUdpTable ( SafeBuf *p, char *title, UdpServer *server ,
 			if ( ! s->m_callback ) toFrom = "from";
 			//"<td><a href=http://%s:%hu/cgi/15.cgi>%"INT32"</a></td>"
 			p->safePrintf (	"<td>0x%hhx</td>"  // msgtype
-					"<td><nobr>%s</nobr></td>"  // desc
+					"<td%s><nobr>"
+					"%s</nobr></td>"  // desc
 					"<td><nobr>%s <a href=http://%s:%hu/"
 					"admin/sockets?"
 					"c=%s>%s</a></nobr></td>"
 					"<td>%s%"INT32"%s</td>" , // niceness
 					s->m_msgType ,
+					altText,
 					desc,
 					//iptoa(s->m_ip) ,
 					//s->m_port ,

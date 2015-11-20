@@ -1650,11 +1650,18 @@ bool Process::shutdown2 ( ) {
 
 	// urgent means we need to dump core, SEGV or something
 	if ( m_urgent ) {
-		// log it
-		log("gb: Dumping core after saving.");
-		// at least destroy the page caches that have shared memory
-		// because they seem to not clean it up
-		//resetPageCaches();
+
+		if ( g_threads.amThread() ) {
+			uint64_t tid = (uint64_t)getpidtid();
+			log("gb: calling abort from thread with tid of "
+			    "%"UINT64" (thread)",tid);
+		}
+		else {
+			pid_t pid = getpid();
+			log("gb: calling abort from main process "
+			    "with pid of %"UINT64" (main process)",
+			    (uint64_t)pid);
+		}
 
 		// let's ensure our core file can dump
 		struct rlimit lim;
@@ -1662,9 +1669,33 @@ bool Process::shutdown2 ( ) {
 		if ( setrlimit(RLIMIT_CORE,&lim) )
 			log("gb: setrlimit: %s.", mstrerror(errno) );
 
+		// log it
+		log("gb: Dumping core after saving.");
+		// at least destroy the page caches that have shared memory
+		// because they seem to not clean it up
+		//resetPageCaches();
+
+		// see if this makes it so we always dump core again
+		//g_threads.killAllThreads();
+
+		// this is the trick: it will trigger the core dump
+		// int signum = SIGSEGV;
+		// signal(signum, SIG_DFL);
+		// kill(getpid(), signum);
+
+		// try resetting the SEGV sig handle to default. when
+		// we return it should call the default handler.
+		// struct sigaction sa;
+		// sigemptyset (&sa.sa_mask);
+		// sa.sa_flags = SA_RESETHAND;
+		// sa.sa_sigaction = NULL;
+		// sigaction ( SIGSEGV, &sa, 0 ) ;
+		// return true;
+
 		// . force an abnormal termination which will cause a core dump
 		// . do not dump core on SIGHUP signals any more though
 		abort();
+
 		// keep compiler happy
 		return true;
 	}
