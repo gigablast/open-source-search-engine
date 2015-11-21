@@ -935,13 +935,16 @@ void handleRequest54 ( UdpSlot *udpSlot , int32_t niceness ) {
 	//*(int32_t *)p = bb.m_id; p += 4;
 
 	// with dup keys we end up with long chains of crap and this
-	// takes forever. so just flush the whole thing every 2 minutes or
-	// when 100000 entries are in there
+	// takes forever. so just flush the whole thing every 2 minutes AND
+	// when 20000+ entries are in there
 	static time_t s_lastTime = 0;
 	time_t now = nowms / 1000;
-	if ( now - s_lastTime > 120 || s_loadTable.getNumSlots() > 100000 ) {
-		log("sproxy: flushing %i entries from proxy loadtable",
-		    (int)s_loadTable.m_numSlotsUsed);
+	if ( s_lastTime == 0 ) s_lastTime = now;
+	time_t elapsed = now - s_lastTime;
+	if ( elapsed > 120 && s_loadTable.getNumSlots() > 20000 ) {
+		log("sproxy: flushing %i entries from proxy loadtable that "
+		    "have accumulated since %i seconds ago",
+		    (int)s_loadTable.m_numSlotsUsed,(int)elapsed);
 		s_loadTable.clear();
 		// only do this one per minute
 		s_lastTime = now;
