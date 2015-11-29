@@ -46422,11 +46422,11 @@ SafeBuf *XmlDoc::getRelatedDocIdsScored ( ) {
 	//   getRelatedQueryLinks() which make a new xmldoc. then it can
 	//   call newxd->getTermListBuf() instead of us passing it in.
 	// . so each host has a bin, a host bin
-#ifdef __APPLE__
+	//#ifdef __APPLE__
 	SafeBuf hostBin[MAX_HOSTS];
-#else
-	SafeBuf hostBin[g_hostdb.m_numHosts];
-#endif
+	//#else
+	//SafeBuf hostBin[g_hostdb.m_numHosts];
+	//#endif
 
 	// scan the related docids and send the requests if we have not already
 	for ( int32_t i = 0 ; ! m_sentMsg4fRequests && i < numRelated ; i++ ) {
