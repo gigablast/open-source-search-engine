@@ -8300,7 +8300,13 @@ bool SpiderLoop::spiderUrl2 ( ) {
 	// count it as a hit
 	//g_stats.m_spiderUrlsHit++;
 	// sanity check
-	if (m_sreq->m_priority <= -1 ) { char *xx=NULL;*xx=0; }
+	if (m_sreq->m_priority <= -1 ) { 
+		log("spider: fixing bogus spider req priority of %i for "
+		    "url %s",
+		    (int)m_sreq->m_priority,m_sreq->m_url);
+		m_sreq->m_priority = 0;
+		//char *xx=NULL;*xx=0; 
+	}
 	//if(m_sreq->m_priority >= MAX_SPIDER_PRIORITIES){char *xx=NULL;*xx=0;}
 	// update this
 	m_sc->m_outstandingSpiders[(unsigned char)m_sreq->m_priority]++;
