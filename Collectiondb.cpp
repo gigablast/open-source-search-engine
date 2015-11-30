@@ -333,6 +333,9 @@ bool Collectiondb::addExistingColl ( char *coll, collnum_t collnum ) {
 	if ( cr->m_isCustomCrawl ) {
 		cr->m_getLinkInfo = false;
 		cr->m_computeSiteNumInlinks = false;
+		// limit each shard to 5 spiders per collection to prevent
+		// ppl from spidering the web and hogging up resources
+		cr->m_maxNumSpiders = 5;
 	}
 
 	// we need to compile the regular expressions or update the url
