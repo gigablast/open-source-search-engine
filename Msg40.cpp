@@ -109,6 +109,8 @@ Msg40::Msg40() {
 	m_printCount = 0;
 	//m_numGigabitInfos = 0;
 	m_numCollsToSearch = 0;
+	m_numMsg20sIn = 0;
+	m_numMsg20sOut = 0;
 }
 
 #define MAX2 50
@@ -1500,14 +1502,27 @@ bool Msg40::launchMsg20s ( bool recalled ) {
 		int64_t docId = m_msg3a.m_docIds[i];
 		uint32_t shardNum = g_hostdb.getShardNumFromDocId ( docId );
 		if ( g_hostdb.isShardDead ( shardNum ) ) {
-			log("msg40: skipping summary lookup #%"INT32" of "
-			    "docid %"INT64" for dead shard #%"INT32""
-			    , i
-			    , docId
-			    , shardNum );
-			m_numRequests++;
-			m_numReplies++;
-			continue;
+			CollectionRec *cr ;
+			cr = g_collectiondb.getRec(m_firstCollnum);
+			if ( cr &&
+			     // diffbot urls.csv downloads often encounter dead
+			     // hosts that are not really dead, so wait for it
+			     ! cr->m_isCustomCrawl &&
+			     // this is causing us to truncate streamed results
+			     // too early when we have false positives that a 
+			     // host is dead because the server is locking up 
+			     // periodically
+			     ! m_si->m_streamResults ) {
+				log("msg40: skipping summary "
+				    "lookup #%"INT32" of "
+				    "docid %"INT64" for dead shard #%"INT32""
+				    , i
+				    , docId
+				    , shardNum );
+				m_numRequests++;
+				m_numReplies++;
+				continue;
+			}
 		}
 
 
@@ -2215,11 +2230,10 @@ bool Msg40::gotSummary ( ) {
 
  complete:
 
-	// . ok, now i wait for everybody.
+	// . ok, now i wait for all msg20s (getsummary) to come back in.
 	// . TODO: evaluate if this hurts us
 	if ( m_numReplies < m_numRequests )
 		return false;
-
 
 	// if streaming results, we are done
 	if ( m_si && m_si->m_streamResults ) {
