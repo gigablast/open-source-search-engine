@@ -11715,7 +11715,7 @@ void seektest ( char *testdir, int32_t numThreads, int32_t maxReadSize ,
 	    "exist. Use ./gb thrutest ... to create speedtest* files.");
 	return;
 skip:
-	s_f.open ( O_RDONLY );
+	s_f.open ( O_RDWR );
 	s_filesize = s_f.getFileSize();
 	log ( LOG_INIT, "admin: file size = %"INT64".",s_filesize);
 	// always block
@@ -11744,6 +11744,30 @@ skip:
 	//}
 	//s_lock = 1;
 	//pthread_t tid1 ; //, tid2;
+
+	//g_conf.m_logDebugThread = 1;
+
+	// garbage collection on ssds seems to be triggered by writes so
+	// that they do not hurt read times, do this:
+	g_conf.m_flushWrites = 1;
+
+	// disable linux file cache
+  	// system("echo 1 > /proc/sys/vm/drop_caches");
+
+	// -o sync TOTAL WORKS!!!!!!!
+	// mount with -o sync to disable write page caching on linux
+
+	// disable on-disk write cache
+	// system("sudo hdparm -W 0 /dev/sda2");
+	// system("sudo hdparm -W 0 /dev/sdb1");
+	// system("sudo hdparm -W 0 /dev/sdc1");
+	// system("sudo hdparm -W 0 /dev/sdd1");
+
+	// disable read-ahead
+	// system("sudo hdparm -A 0 /dev/sda2");
+	// system("sudo hdparm -A 0 /dev/sdb1");
+	// system("sudo hdparm -A 0 /dev/sdc1");
+	// system("sudo hdparm -A 0 /dev/sdd1");
 
 	// set time
 	s_startTime = gettimeofdayInMilliseconds_force();
@@ -11797,6 +11821,7 @@ void *startUp ( void *state , ThreadEntry *t ) {
 	//	fprintf(stderr,"Threads::startUp: setpriority: failed\n");
 	//	exit(-1);
 	//}
+
 	// read buf
 	//char buf [ MAX_READ_SIZE ];
 #undef malloc
@@ -11813,7 +11838,14 @@ void *startUp ( void *state , ThreadEntry *t ) {
 	if ( id == 0 && s_doSeqWriteThread )
 		s = "writes";
 	// msg
-	fprintf(stderr,"id=%"INT32" launched. Performing 100000 %s.\n",id,s);
+	fprintf(stderr,"threadid=%"INT32" launched. "
+		"Performing 100000 %s.\n",id,s);
+
+// #undef sleep
+// 	if (  id == 0 ) sleep(1000);
+// #define sleep(a) { char *xx=NULL;*xx=0; }
+
+
 	// wait for lock to be unleashed
 	//while ( s_launched != s_numThreads ) usleep(10);
 	// now do a stupid loop
@@ -11833,7 +11865,7 @@ void *startUp ( void *state , ThreadEntry *t ) {
 		int64_t start = gettimeofdayInMilliseconds_force();
 		//fprintf(stderr,"%"INT32") i=%"INT32" start\n",id,i );
 		//pread ( s_fd1 , buf , size , off );
-		if ( s_doSeqWriteThread )
+		if ( id == 0 && s_doSeqWriteThread )
 			s_f.write ( buf , size , seqOff );
 		else
 			s_f.read ( buf , size , off );
@@ -11850,15 +11882,17 @@ void *startUp ( void *state , ThreadEntry *t ) {
 			(float)(now - s_startTime);
 		int64_t poff = off;
 		char *str = "seeks";
-		if ( s_doSeqWriteThread ) {
+		if ( id == 0 && s_doSeqWriteThread ) {
 			poff = seqOff;
 			str = "writes";
 		}
-		fprintf(stderr,"count=%"INT32" "
+		fprintf(stderr,"threadid=%i "
+			"count=%"INT32" "
 			"off=%012"INT64" "
 			"size=%"INT32" "
 			"time=%"INT32"ms "
 			"(%.2f %s/sec)\n",
+			(int)id,
 			(int32_t)s_count,
 			(int64_t)poff,
 			(int32_t)size,

@@ -320,7 +320,7 @@ bool Threads::init ( ) {
 	// i raised since global specs new servers have 2 (hyperthreaded?) cpus
 	int32_t max = g_conf.m_maxCpuThreads;
 	if ( max < 1 ) max = 1;
-	if ( ! g_threads.registerType ( INTERSECT_THREAD,max,200) ) 
+	if ( ! g_threads.registerType ( INTERSECT_THREAD,max,10) ) 
 		return log("thread: Failed to register thread type." );
 	// filter thread spawned to call popen() to filter an http reply
 	if ( ! g_threads.registerType ( FILTER_THREAD, 2/*maxThreads*/,300) ) 
@@ -334,10 +334,10 @@ bool Threads::init ( ) {
 	//   it was taking forever to go one at a time through the unlink
 	//   thread queue. seemed like a 1 second space between unlinks.
 	//   1/23/1014
-	if ( ! g_threads.registerType ( UNLINK_THREAD,30/*maxThreads*/,3000) ) 
+	if ( ! g_threads.registerType ( UNLINK_THREAD,5/*maxThreads*/,3000) ) 
 		return log("thread: Failed to register thread type." );
 	// generic multipurpose
-	if ( ! g_threads.registerType (GENERIC_THREAD,100/*maxThreads*/,100) ) 
+	if ( ! g_threads.registerType (GENERIC_THREAD,20/*maxThreads*/,100) ) 
 		return log("thread: Failed to register thread type." );
 	// for call SSL_accept() which blocks for 10ms even when socket
 	// is non-blocking...
@@ -2089,7 +2089,8 @@ bool ThreadQueue::launchThread2 ( ) {
 
 	if ( m_threadType != DISK_THREAD ) {
 		// if one thread of this type is already out, forget it
-		if ( m_launchedHead ) return false;
+		// then we can't have 100 GENERIC THREADS!!! with this...
+		//if ( m_launchedHead ) return false;
 		// first try niceness 0 queue
 		ThreadEntry **bestHeadPtr = &m_waitHead0;
 		ThreadEntry **bestTailPtr = &m_waitTail0;
