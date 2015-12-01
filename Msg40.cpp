@@ -1434,7 +1434,7 @@ bool Msg40::launchMsg20s ( bool recalled ) {
 		     // must have at least one outstanding summary guy
 		     // otherwise we can return true below and cause
 		     // the stream to truncate results in gotSummary()
-		     m_numReplies < m_numRequests &&
+		     //m_numReplies < m_numRequests &&
 		     i >= m_printi + MAX_OUTSTANDING_MSG20S - 1 )
 			break;
 
@@ -1754,7 +1754,7 @@ Msg20 *Msg40::getAvailMsg20 ( ) {
 		if ( m_msg20[i]->m_launched ) continue;
 		return m_msg20[i];
 	}
-	// how can this happen???
+	// how can this happen???  THIS HAPPEND
 	char *xx=NULL;*xx=0; 
 	return NULL;
 }
