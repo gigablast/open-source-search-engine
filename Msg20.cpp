@@ -177,6 +177,12 @@ bool Msg20::getSummary ( Msg20Request *req ) {
 	int32_t timeout = 9999999; // 10 million seconds, basically inf.
 	if ( req->m_niceness == 0 ) timeout = 20;
 
+	// for diffbot make timeout super long so we aren't tripped up
+	// by dead hosts that aren't really dead.
+	// CollectionRec *cr = g_collectiondb.getRec ( req->m_collnum );
+	// if ( cr && cr->m_isCustomCrawl && req->m_niceness == 0 ) 
+	// 	timeout = 300;
+
 	// get our group
 	int32_t  allNumHosts = hostdb->getNumHostsPerShard();
 	Host *allHosts    = hostdb->getShard ( shardNum );//getGroup(groupId );

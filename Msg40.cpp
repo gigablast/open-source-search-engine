@@ -1429,8 +1429,12 @@ bool Msg40::launchMsg20s ( bool recalled ) {
 		// hard limit
 		if ( m_numRequests-m_numReplies >= maxOut ) break;
 		// do not launch another until m_printi comes back because
-		// all summaries are bottlenecked on printing him out now
+		// all summaries are bottlenecked on printing him out now.
 		if ( m_si->m_streamResults &&
+		     // must have at least one outstanding summary guy
+		     // otherwise we can return true below and cause
+		     // the stream to truncate results in gotSummary()
+		     m_numReplies < m_numRequests &&
 		     i >= m_printi + MAX_OUTSTANDING_MSG20S - 1 )
 			break;
 
@@ -1501,28 +1505,28 @@ bool Msg40::launchMsg20s ( bool recalled ) {
 		// if to a dead host, skip it
 		int64_t docId = m_msg3a.m_docIds[i];
 		uint32_t shardNum = g_hostdb.getShardNumFromDocId ( docId );
-		if ( g_hostdb.isShardDead ( shardNum ) ) {
-			CollectionRec *cr ;
-			cr = g_collectiondb.getRec(m_firstCollnum);
-			if ( cr &&
-			     // diffbot urls.csv downloads often encounter dead
-			     // hosts that are not really dead, so wait for it
-			     ! cr->m_isCustomCrawl &&
-			     // this is causing us to truncate streamed results
-			     // too early when we have false positives that a 
-			     // host is dead because the server is locking up 
-			     // periodically
-			     ! m_si->m_streamResults ) {
-				log("msg40: skipping summary "
-				    "lookup #%"INT32" of "
-				    "docid %"INT64" for dead shard #%"INT32""
-				    , i
-				    , docId
-				    , shardNum );
-				m_numRequests++;
-				m_numReplies++;
-				continue;
-			}
+		// get the collection rec
+		CollectionRec *cr = g_collectiondb.getRec(m_firstCollnum);
+		// if shard is dead then do not send to it if not crawlbot
+		if ( g_hostdb.isShardDead ( shardNum ) &&
+		     cr &&
+		     // diffbot urls.csv downloads often encounter dead
+		     // hosts that are not really dead, so wait for it
+		     ! cr->m_isCustomCrawl &&
+		     // this is causing us to truncate streamed results
+		     // too early when we have false positives that a 
+		     // host is dead because the server is locking up 
+		     // periodically
+		     ! m_si->m_streamResults ) {
+			log("msg40: skipping summary "
+			    "lookup #%"INT32" of "
+			    "docid %"INT64" for dead shard #%"INT32""
+			    , i
+			    , docId
+			    , shardNum );
+			m_numRequests++;
+			m_numReplies++;
+			continue;
 		}
 
 
@@ -1562,8 +1566,6 @@ bool Msg40::launchMsg20s ( bool recalled ) {
 		// keep for-loops int16_ter with this
 		//if ( i > m_maxiLaunched ) m_maxiLaunched = i;
 		
-		// get the collection rec
-		CollectionRec *cr =g_collectiondb.getRec(m_firstCollnum);
 		//getRec(m_si->m_coll2,m_si->m_collLen2);
 		if ( ! cr ) {
 			log("msg40: missing coll");
