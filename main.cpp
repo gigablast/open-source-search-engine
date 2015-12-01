@@ -289,7 +289,7 @@ bool summaryTest1   ( char *rec, int32_t listSize, char *coll , int64_t docId ,
 // time a big write, read and then seeks
 bool thrutest ( char *testdir , int64_t fileSize ) ;
 void seektest ( char *testdir , int32_t numThreads , int32_t maxReadSize ,
-		char *filename );
+		char *filename , bool doSeqWriteThread );
 
 bool pingTest ( int32_t hid , uint16_t clientPort );
 bool memTest();
@@ -810,17 +810,21 @@ int main2 ( int argc , char *argv[] ) {
 			"parser speed tests\n\n"
 			*/
 
-			/*
-			"thrutest [dir] [fileSize]\n\tdisk write/read speed "
-			"test\n\n"
+			"thrutest [dir] [fileSize]\n\tdisk sequential "
+			"write then read speed tests.\n\n"
 
 			"seektest [dir] [numThreads] [maxReadSize] "
 			"[filename]\n"
-			"\tdisk seek speed test\n\n"
+			"\tdisk access speed test. (IOps)\n\n"
+
+			"rwtest [dir] [numThreads] [maxReadSize] "
+			"[filename]\n"
+			"\tdisk read access speed test while sequentially "
+			"writing. Simulates Gigablast while spidering and "
+			"querying nicely.\n\n"
 			
 			"memtest\n"
 			"\t Test how much memory we can use\n\n"
-			*/
 
 			/*
 			// Quality Tests
@@ -1390,7 +1394,20 @@ int main2 ( int argc , char *argv[] ) {
 		if ( cmdarg+2 < argc ) numThreads  = atol(argv[cmdarg+2]);
 		if ( cmdarg+3 < argc ) maxReadSize = atoll1(argv[cmdarg+3]);
 		if ( cmdarg+4 < argc ) filename    = argv[cmdarg+4];
-		seektest ( testdir , numThreads , maxReadSize , filename );
+		seektest ( testdir , numThreads , maxReadSize ,filename,false);
+		return 0;
+	}
+	// gb rwtest <testdir> <numThreads> <maxReadSize>
+	if ( strcmp ( cmd , "rwtest" ) == 0 ) {
+		char     *testdir         = "/tmp/";
+		int32_t      numThreads      = 20; //30;
+		int64_t maxReadSize     = 20000;
+		char     *filename        = NULL;
+		if ( cmdarg+1 < argc ) testdir     = argv[cmdarg+1];
+		if ( cmdarg+2 < argc ) numThreads  = atol(argv[cmdarg+2]);
+		if ( cmdarg+3 < argc ) maxReadSize = atoll1(argv[cmdarg+3]);
+		if ( cmdarg+4 < argc ) filename    = argv[cmdarg+4];
+		seektest ( testdir , numThreads , maxReadSize,filename,true);
 		return 0;
 	}
 
@@ -11649,17 +11666,19 @@ static BigFile s_f;
 static int32_t s_numThreads = 0;
 static int64_t s_maxReadSize = 1;
 static int64_t s_startTime = 0;
+static bool s_doSeqWriteThread;
 //#define MAX_READ_SIZE (2000000)
 #include <sys/types.h>
 #include <sys/wait.h>
 
 void seektest ( char *testdir, int32_t numThreads, int32_t maxReadSize , 
-		char *filename ) {
+		char *filename , bool doSeqWriteThread ) {
 
 	g_loop.init();
 	g_threads.init();
 	s_numThreads = numThreads;
 	s_maxReadSize = maxReadSize;
+	s_doSeqWriteThread = doSeqWriteThread;
 	if ( s_maxReadSize <= 0 ) s_maxReadSize = 1;
 	//if ( s_maxReadSize > MAX_READ_SIZE ) s_maxReadSize = MAX_READ_SIZE;
 
@@ -11789,13 +11808,18 @@ void *startUp ( void *state , ThreadEntry *t ) {
 	}
 	// we got ourselves
 	s_launched++;
+
+	char *s = "reads";
+	if ( id == 0 && s_doSeqWriteThread )
+		s = "writes";
 	// msg
-	fprintf(stderr,"id=%"INT32" launched. Performing 100000 reads.\n",id);
+	fprintf(stderr,"id=%"INT32" launched. Performing 100000 %s.\n",id,s);
 	// wait for lock to be unleashed
 	//while ( s_launched != s_numThreads ) usleep(10);
 	// now do a stupid loop
 	//int32_t j, off , size;
 	int64_t off , size;
+	int64_t seqOff = 0;
 	for ( int32_t i = 0 ; i < 100000 ; i++ ) {
 		uint64_t r = rand();
 		r <<= 32 ;
@@ -11809,7 +11833,13 @@ void *startUp ( void *state , ThreadEntry *t ) {
 		int64_t start = gettimeofdayInMilliseconds_force();
 		//fprintf(stderr,"%"INT32") i=%"INT32" start\n",id,i );
 		//pread ( s_fd1 , buf , size , off );
-		s_f.read ( buf , size , off );
+		if ( s_doSeqWriteThread )
+			s_f.write ( buf , size , seqOff );
+		else
+			s_f.read ( buf , size , off );
+		seqOff += size;
+		if ( seqOff + size > s_filesize )
+			seqOff = 0;
 		//fprintf(stderr,"%"INT32") i=%"INT32" done\n",id,i );
 		int64_t now = gettimeofdayInMilliseconds_force();
 #undef usleep
@@ -11818,13 +11848,23 @@ void *startUp ( void *state , ThreadEntry *t ) {
 		s_count++;
 		float sps = (float)((float)s_count * 1000.0) / 
 			(float)(now - s_startTime);
-		fprintf(stderr,"count=%"INT32" off=%012"INT64" size=%"INT32" time=%"INT32"ms "
-			"(%.2f seeks/sec)\n",
+		int64_t poff = off;
+		char *str = "seeks";
+		if ( s_doSeqWriteThread ) {
+			poff = seqOff;
+			str = "writes";
+		}
+		fprintf(stderr,"count=%"INT32" "
+			"off=%012"INT64" "
+			"size=%"INT32" "
+			"time=%"INT32"ms "
+			"(%.2f %s/sec)\n",
 			(int32_t)s_count,
-			(int64_t)off,
+			(int64_t)poff,
 			(int32_t)size,
 			(int32_t)(now - start) , 
-			sps );
+			sps ,
+			str );
 	}
 		
 
