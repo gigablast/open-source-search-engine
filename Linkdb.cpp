@@ -5075,7 +5075,7 @@ bool Links::set ( bool useRelNoFollow ,
 				 niceness , 
 				 false , // isRSS?
 				 TAG_LINK , // node id -> LF_LINKTAG flag
-				 LF_DIFFBOT )) // flags
+				 0 )) // flags
 			return false;
 		// now advance to next link if any.
 		for ( ; *p == '\"' || *p == ',' || is_wspace_a(*p) ; p++ );

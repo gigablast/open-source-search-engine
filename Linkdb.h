@@ -1143,7 +1143,6 @@ typedef int32_t linkflags_t;
 #define LF_GOVTLD        0x8000
 
 #define LF_NOFOLLOW     0x10000
-#define LF_DIFFBOT      0x20000 // from diffbot reply in json "links": field
 
 bool isPermalink ( //char        *coll        ,
 		   class Links *links       ,
