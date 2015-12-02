@@ -20469,13 +20469,10 @@ int32_t *XmlDoc::getContentHash32 ( ) {
 	if ( ! cr ) return NULL;
 	int32_t linksHash = 0;
 	char *linksParm = NULL;
-	SafeBuf *au = NULL;
 	if ( cr->m_isCustomCrawl ) {
 		// collection must have &links in the diffbot api url, too
-		au = getDiffbotApiUrl();
+		SafeBuf *au = getDiffbotApiUrl();
 		if ( ! au || au == (void *)-1 ) return (int32_t *)au;
-	}
-	if ( au && au->length() > 0 && au->getBufStart() ) {
 		linksParm = strstr ( au->getBufStart()  , "&links" );
 		// maybe it was &linksfoobar instead of &links ?
 		if ( linksParm && linksParm[6] && linksParm[6] != '&' ) 
