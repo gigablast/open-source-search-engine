@@ -16426,6 +16426,15 @@ SafeBuf *XmlDoc::getDiffbotReply ( ) {
 	CollectionRec *cr = getCollRec();
 	if ( ! cr ) return NULL;
 
+	// if user puts &links in the apiurl then we have to send
+	// every url we crawl to diffbot to get the links because we have
+	// to render the page using javascript to get the outlinks for
+	// crawling.
+	char *linksParm = strstr ( au->getBufStart()  , "&links" );
+	// maybe it was &linksfoobar instead of &links ?	
+	if ( linksParm && linksParm[6] && linksParm[6] != '&' ) 
+		linksParm = NULL;
+
 	// get list of substring patterns
 	char *ucp = cr->m_diffbotUrlCrawlPattern.getBufStart();
 	char *upp = cr->m_diffbotUrlProcessPattern.getBufStart();
@@ -16443,12 +16452,12 @@ SafeBuf *XmlDoc::getDiffbotReply ( ) {
 	// . "upp" is a ||-separated list of substrings
 	// . "upr" is a regex
 	// . regexec returns 0 for a match
-	if ( upr && regexec(upr,url,0,NULL,0) ) {
+	if ( ! linksParm && upr && regexec(upr,url,0,NULL,0) ) {
 		// return empty reply
 		m_diffbotReplyValid = true;
 		return &m_diffbotReply;
 	}
-	if ( upp && !upr &&!doesStringContainPattern(url,upp)) {
+	if ( ! linksParm && upp && !upr &&!doesStringContainPattern(url,upp)) {
 		// return empty reply
 		m_diffbotReplyValid = true;
 		return &m_diffbotReply;
@@ -16480,12 +16489,14 @@ SafeBuf *XmlDoc::getDiffbotReply ( ) {
 	// "none" means none too! Parms.cpp doesn't like &dapi1=& because
 	// it does not call setParm() on such things even though it probably 
 	// should, it doesn't like no values, so i put "none" in there.
-	if ( strncasecmp(au->getBufStart(),"none",4) == 0 ) {
+	if ( strncasecmp(au->getBufStart(),"none",4) == 0 && 
+	     ! linksParm ) {
 		m_diffbotReplyValid = true;
 		return &m_diffbotReply;
 	}
 
-	if ( strncasecmp(au->getBufStart(),"donotprocess",12) == 0 ) {
+	if ( strncasecmp(au->getBufStart(),"donotprocess",12) == 0 &&
+	     ! linksParm ) {
 		m_diffbotReplyValid = true;
 		return &m_diffbotReply;
 	}
@@ -16539,7 +16550,7 @@ SafeBuf *XmlDoc::getDiffbotReply ( ) {
 
 
 	// or if original page content matches the page regex dont hit diffbot
-	if ( ! doesPageContentMatchDiffbotProcessPattern() ) {
+	if ( ! linksParm && ! doesPageContentMatchDiffbotProcessPattern() ) {
 		m_diffbotReplyValid = true;
 		return &m_diffbotReply;
 	}
@@ -20400,6 +20411,7 @@ int32_t getContentHash32Fast ( unsigned char *p ,
 		continue;
 		*/
 	}
+
 	return h;
 }
 
@@ -20448,6 +20460,48 @@ int32_t *XmlDoc::getContentHash32 ( ) {
 		return &m_contentHash32;
 	}
 
+	// if we have a diffbot reply that has "links": field in it that
+	// means there was a &links cgi parm in the diffbot request that
+	// we use to render the page if it used javascript. in these cases
+	// incorporate the links into the checksum hash lest all the pages
+	// appear to be dups of one another.
+	CollectionRec *cr = getCollRec();
+	if ( ! cr ) return NULL;
+	int32_t linksHash = 0;
+	char *linksParm = NULL;
+	if ( cr->m_isCustomCrawl ) {
+		// collection must have &links in the diffbot api url, too
+		SafeBuf *au = getDiffbotApiUrl();
+		if ( ! au || au == (void *)-1 ) return (int32_t *)au;
+		linksParm = strstr ( au->getBufStart()  , "&links" );
+		// maybe it was &linksfoobar instead of &links ?
+		if ( linksParm && linksParm[6] && linksParm[6] != '&' ) 
+			linksParm = NULL;
+	}
+	if ( linksParm ) { 
+		// get the outlinks. this will call getDiffbotReply() to
+		// get the "links": json field in the diffbot reply and add
+		// those links to the array as well. since we have &links
+		// in the diffbot api url we will call diffbot on EVERY page
+		// even if it doesn't match the process pattern. this logic
+		// is in getDiffbotReply()
+		Links *links = getLinks();
+		if ( ! links || links == (Links *)-1 ) return (int32_t *)links;
+		// loop through them and hash each one. they should
+		// all be normalized since we used the Links class.
+		int32_t n = links->getNumLinks();
+		for ( int32_t i = 0 ; i < n ; i++ ) {
+			// breathe
+			QUICKPOLL ( m_niceness );
+			// skip if not a link from the diffbot reply. that
+			// means it was just on the page.
+			if ( ! ( links->m_linkFlags[i] & LF_DIFFBOT ) ) 
+				continue;
+			char *url = links->getLinkPtr(i);
+			linksHash ^= hash32n ( url );
+		}
+	}
+
 	// we set m_contentHash32 in ::hashJSON() below because it is special 
 	// for diffbot since it ignores certain json fields like url: and the 
 	// fields are independent, and numbers matter, like prices
@@ -20455,6 +20509,10 @@ int32_t *XmlDoc::getContentHash32 ( ) {
 
 	// *pend should be \0
 	m_contentHash32 = getContentHash32Fast ( p , plen , m_niceness );
+
+	if ( linksHash )
+		m_contentHash32 ^= linksHash;
+
 	// validate
 	m_contentHash32Valid = true;
 	return &m_contentHash32;
