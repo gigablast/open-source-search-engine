@@ -407,7 +407,7 @@ Linkdb.o:
 
 # final gigabit generation in here:
 Msg40.o:
-	$(CC) $(DEFS) $(CPPFLAGS) -O3 -c $*.cpp 
+	$(CC) $(DEFS) $(CPPFLAGS) -O2 -c $*.cpp 
 
 seo.o:
 	$(CC) $(DEFS) $(CPPFLAGS) -O3 -c $*.cpp 
