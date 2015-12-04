@@ -1813,6 +1813,8 @@ void attemptMergeAll2 ( ) {
 
  tryLoop:
 
+	QUICKPOLL(niceness);
+
 	// if a collection got deleted, reset this to 0
 	if ( s_lastCollnum >= g_collectiondb.m_numRecs ) {
 		s_lastCollnum = 0;
