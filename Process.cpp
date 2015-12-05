@@ -1175,8 +1175,12 @@ void heartbeatWrapper ( int fd , void *state ) {
 		// check the "cat /proc/<pid>/status | grep SigQ" output
 		// to see if its overflowed. hopefully i will fix this by
 		// queue the signals myself in Loop.cpp.
-		log("db: missed heartbeat by %"INT64" ms. Num elapsed alarms = "
-		    "%"INT32"", elapsed-100,(int32_t)(g_numAlarms - s_lastNumAlarms));
+		log("db: missed calling niceness 0 heartbeatWrapper "
+		    "function by %"INT64" ms. Either you need a quickpoll "
+		    "somewhere or a niceness 0 function is taking too long. "
+		    "Num elapsed alarms = "
+		    "%"INT32"", elapsed-100,(int32_t)(g_numAlarms - 
+						      s_lastNumAlarms));
 	s_last = now;
 	s_lastNumAlarms = g_numAlarms;
 

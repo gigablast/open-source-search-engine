@@ -1115,6 +1115,8 @@ bool Msg3::doneScanning ( ) {
 					 m_lists[i].getListSize() ,
 					 0 ); // timestamp. 0 = now
 
+		QUICKPOLL(m_niceness);
+
 		// if from our 'page' cache, no need to constrain
 		if ( ! m_lists[i].constrain ( m_startKey       ,
 					      m_constrainKey   , // m_endKey

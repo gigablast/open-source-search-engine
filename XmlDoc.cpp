@@ -4577,6 +4577,22 @@ int32_t *XmlDoc::getIndexCode2 ( ) {
 	if ( m_recycleContent )
 		check = false;
 
+	// if &links was given in the diffbot api url then do not do 
+	// spider time deduping because the pages are likely rendered using
+	// javascript, so they'd all seem to be dups of one another.
+	if ( cr->m_isCustomCrawl && check ) {
+		SafeBuf *au = getDiffbotApiUrl();
+		if ( ! au || au == (void *)-1 ) return (int32_t *)au;
+		char *linksParm = NULL;
+		if ( au->length() > 0 )
+			linksParm = strstr ( au->getBufStart() , "&links");
+		if ( linksParm && linksParm[6] && linksParm[6] != '&' )
+			linksParm = NULL;
+		if ( linksParm )
+			check = false;
+	}
+
+
 	if ( check ) {
 		// check inlinks now too!
 		LinkInfo  *info1 = getLinkInfo1 ();

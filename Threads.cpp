@@ -1300,7 +1300,15 @@ bool ThreadQueue::timedCleanUp ( int32_t maxNiceness ) {
 			// . join up with that thread
 			// . damn, sometimes he can block forever on his
 			//   call to sigqueue(), 
+			int64_t startTime = gettimeofdayInMillisecondsLocal();
+			int64_t took;
 			int32_t status =  pthread_join ( t->m_joinTid , NULL );
+			took = startTime - gettimeofdayInMillisecondsLocal();
+			if ( took > 50 ) {
+				log("threads: pthread_join took %i ms",
+				    (int)took);
+			}
+
 			if ( status != 0 ) {
 				log("threads: pthread_join %"INT64" = %s (%"INT32")",
 				    (int64_t)t->m_joinTid,mstrerror(status),
