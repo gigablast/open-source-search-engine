@@ -1682,10 +1682,11 @@ bool Process::shutdown2 ( ) {
 		// see if this makes it so we always dump core again
 		//g_threads.killAllThreads();
 
-		// this is the trick: it will trigger the core dump
-		// int signum = SIGSEGV;
-		// signal(signum, SIG_DFL);
-		// kill(getpid(), signum);
+		// this is the trick: it will trigger the core dump by
+		// calling the original SIGSEGV handler.
+		int signum = SIGSEGV;
+		signal(signum, SIG_DFL);
+		kill(getpid(), signum);
 
 		// try resetting the SEGV sig handle to default. when
 		// we return it should call the default handler.
@@ -1698,9 +1699,10 @@ bool Process::shutdown2 ( ) {
 
 		// . force an abnormal termination which will cause a core dump
 		// . do not dump core on SIGHUP signals any more though
-		abort();
+		//abort()
 
-		// keep compiler happy
+		// return from this signal handler so we can execute
+		// original SIGSEGV handler right afterwards
 		return true;
 	}
 
