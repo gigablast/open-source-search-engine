@@ -1481,6 +1481,15 @@ bool BigFile::chopHead ( int32_t part ,
 	return unlinkRename ( NULL, part, true, callback, state );
 }
 
+class UnlinkRenameState {
+public:
+	char m_oldFilename [ 1024 ];
+	char m_newFilename [ 1024 ];
+	int  m_fd;
+	File *m_file;
+	collnum_t m_collnum;
+};
+
 static void *renameWrapper_r   ( void *state , ThreadEntry *t ) ;
 static void *unlinkWrapper_r   ( void *state , ThreadEntry *t ) ;
 static void  doneRenameWrapper ( void *state , ThreadEntry *t ) ;
@@ -1604,6 +1613,38 @@ bool BigFile::unlinkRename ( // non-NULL for renames, NULL for unlinks
 		// save callback for when all parts are unlinked or renamed
 		m_callback = callback;
 		m_state    = state;
+
+#ifdef FIXBUG
+		// now use a special state in case RdbBase gets nuked
+		// because the collection gets deleted in the middle of this
+		UnlinkRenameState stackUr;
+		char *st =(char *)mmalloc( sizeof(UnlinkRenameState),"ulrnst");
+		UnlinkRenameState *urs = (UnlinkRenameState *)st;
+		if ( ! ur ) {
+			log("disk: failed to alloc unlinkrename state. "
+			    "skipping thread.");
+			ur = stackUr;
+		}
+		urs->m_fd = m_fd;
+		urs->m_collnum = collnum; // can we supply this now?
+		urs->m_file = this;
+		urs->m_closedIt = false;
+		makeFilename_r ( m_baseFilename.getBufStart()   ,
+				 NULL                       ,
+				 i                          , 
+				 urs->m_oldFilename            ,
+				 1024 );
+		// rename also takes the new name
+		if ( ! m_isUnlink )
+			makeFilename_r ( m_newBaseFilename.getBufStart()  ,
+					 m_newBaseFilenameDir.getBufStart(), 
+					 i        , 
+					 urs->m_newFilename ,
+					 1024 );
+		if ( ur == stackUr )
+			goto skipThread;
+#endif
+
 		// . we spawn the thread here now
 		// . returns true on successful spawning
 		// . we can't make a disk thread cuz Threads.cpp checks its
@@ -1668,6 +1709,30 @@ bool BigFile::unlinkRename ( // non-NULL for renames, NULL for unlinks
 }
 
 void *renameWrapper_r ( void *state , ThreadEntry *t ) {
+
+#ifdef FIXBUG
+	UnlinkRenameState *urs = (UnlinkRenameState *)state;
+	if ( ::rename ( urs->m_oldFilename , urs->m_newFilename ) ) {
+		// reset errno and return true if file does not exist
+		if ( errno == ENOENT ) {
+			log("disk: file %s does not exist.",oldFilename);
+			errno = 0; 
+		}
+		// otherwise, it's a more serious error i guess
+		else log("disk: rename %s to %s: %s", 
+			   oldFilename,newFilename,mstrerror(errno));
+		return NULL;
+	}
+	// we must close the file descriptor in the thread otherwise the
+	// file will not actually be renamed in this thread
+	//f->close1_r();
+	// we can't call f->close1_r() because f might have been deleted
+	// because the collection was deleted.
+	if ( close1ByFd_r( urs->m_fd) )
+		urs->m_closedIt = true;
+	return;
+#endif
+
 	// extract our class
 	File *f = (File *)state;
 	// . by getting the inode in the cache space the call to f->close()
@@ -1721,6 +1786,16 @@ void *renameWrapper_r ( void *state , ThreadEntry *t ) {
 }
 
 void *unlinkWrapper_r ( void *state , ThreadEntry *t ) {
+#ifdef FIXBUG
+	UnlinkRenameState *urs = (UnlinkRenameState *)state;
+	::unlink ( urs->m_oldFilename );
+	// we can't call f->close1_r() because f might have been deleted
+	// because the collection was deleted.
+	if ( close1ByFd_r( urs->m_fd) )
+		urs->m_closedIt = true;
+	return;
+#endif
+
 	// get ourselves
 	File *f = (File *)state;
 	// . by getting the inode in the cache space the call to delete(f) 
@@ -1742,6 +1817,25 @@ void *unlinkWrapper_r ( void *state , ThreadEntry *t ) {
 }
 
 void doneRenameWrapper ( void *state , ThreadEntry *t ) {
+
+#ifdef FIXBUG
+	// if collection got nuked, then file will be invalid
+	// so when we nuke a collection we scan all threads for unlink/rename
+	// operations that reference files from the collection being nuked and
+	// set their m_collectionGotNuked flag to true
+	UnlinkRenameState *urs = (UnlinkRenameState *)state;
+	File *f = urs->m_file;
+	collnum_t cn = urs->m_collnum;
+	RdbBase *base = getRdbBase ( cn );
+	mfree ( urs , sizeof(UrlRenameState), "urnst" );
+	if ( ! base ) { // urs->m_collectionGotNuked ) {
+		log("bigfile: captured rename on nuked collection %i",(int)cn);
+		g_unlinkRenameThreads--;
+		return;
+	}
+
+#endif
+
 	// extract our class
 	File *f = (File *)state;
 	// . finish the close
@@ -1795,6 +1889,24 @@ void doneRenameWrapper ( void *state , ThreadEntry *t ) {
 }
 
 void doneUnlinkWrapper ( void *state , ThreadEntry *t ) {
+
+#ifdef FIXBUG
+	// if collection got nuked, then file will be invalid
+	// so when we nuke a collection we scan all threads for unlink/rename
+	// operations that reference files from the collection being nuked and
+	// set their m_collectionGotNuked flag to true
+	UnlinkRenameState *urs = (UnlinkRenameState *)state;
+	File *f = urs->m_file;
+	collnum_t cn = urs->m_collnum;
+	RdbBase *base = getRdbBase ( cn );
+	mfree ( urs , sizeof(UrlRenameState), "urnst" );
+	if ( ! base ) { // urs->m_collectionGotNuked ) {
+		log("bigfile: captured unlink on nuked collection %i",(int)cn);
+		g_unlinkRenameThreads--;
+		return;
+	}
+#endif
+
 	// extract our class
 	File *f = (File *)state;
 	// finish the close
