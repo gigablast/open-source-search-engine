@@ -1666,9 +1666,16 @@ bool Process::shutdown2 ( ) {
 		if ( setrlimit(RLIMIT_CORE,&lim) )
 			log("gb: setrlimit: %s.", mstrerror(errno) );
 
+		// this is the trick: it will trigger the core dump by
+		// calling the original SIGSEGV handler.
+		int signum = SIGSEGV;
+		signal(signum, SIG_DFL);
+		kill(getpid(), signum);
+		// default handler should be called after we return now
+
 		// . force an abnormal termination which will cause a core dump
 		// . do not dump core on SIGHUP signals any more though
-		abort();
+		//abort();
 		// keep compiler happy
 		return true;
 	}

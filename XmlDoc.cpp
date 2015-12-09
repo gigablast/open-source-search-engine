@@ -15160,6 +15160,16 @@ char *XmlDoc::getIsWWWDup ( ) {
 		return &m_isWWWDup;
 	}
 
+	// watch out for idiot urls like www.gov.uk and www.gov.za
+	// treat them as though the TLD is uk/za and the domain
+	// is gov.uk and gov.za
+	if ( u->getDomain() &&
+	     strncmp ( u->getDomain() , "www." , 4 ) == 0 ) {
+		m_isWWWDup      = false;
+		m_isWWWDupValid = true;
+		return &m_isWWWDup;
+	}
+
 	// make it without the www
 	char withoutWWW[MAX_URL_LEN+1];
 	char *proto = "http";
