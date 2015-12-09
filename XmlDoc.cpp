@@ -14967,13 +14967,15 @@ bool *XmlDoc::getIsAllowed ( ) {
 	int32_t *pfip = getFirstIp();
 	if ( ! pfip || pfip == (void *)-1 ) return (bool *)pfip;
 
-	// set m_extraUrl to the robots.txt url
-	char buf[MAX_URL_LEN+1];
-	char *p = buf;
-	p += sprintf ( p , "http://" );
 	// get the current url after redirects
 	Url *cu = getCurrentUrl();
 	if ( ! cu || cu == (void *)-1 ) return (bool *)cu;
+
+	// set m_extraUrl to the robots.txt url
+	char buf[MAX_URL_LEN+2];
+	char *p = buf;
+	if ( cu->isHttps() ) p += sprintf ( p , "https://" );
+	else                 p += sprintf ( p , "http://" );
 	// sanity
 	if ( ! cu->getHost() ) { char *xx=NULL;*xx=0; }
 	gbmemcpy ( p , cu->getHost() , cu->getHostLen() );
