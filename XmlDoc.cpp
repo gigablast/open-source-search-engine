@@ -14987,13 +14987,15 @@ bool *XmlDoc::getIsAllowed ( ) {
 	int32_t *pfip = getFirstIp();
 	if ( ! pfip || pfip == (void *)-1 ) return (bool *)pfip;
 
-	// set m_extraUrl to the robots.txt url
-	char buf[MAX_URL_LEN+1];
-	char *p = buf;
-	p += sprintf ( p , "http://" );
 	// get the current url after redirects
 	Url *cu = getCurrentUrl();
 	if ( ! cu || cu == (void *)-1 ) return (bool *)cu;
+
+	// set m_extraUrl to the robots.txt url
+	char buf[MAX_URL_LEN+2];
+	char *p = buf;
+	if ( cu->isHttps() ) p += sprintf ( p , "https://" );
+	else                 p += sprintf ( p , "http://" );
 	// sanity
 	if ( ! cu->getHost() ) { char *xx=NULL;*xx=0; }
 	gbmemcpy ( p , cu->getHost() , cu->getHostLen() );
@@ -21195,6 +21197,10 @@ char *XmlDoc::getIsSiteRoot ( ) {
 	if ( ! site || site == (char *)-1 ) return (char *)site;
 	// get our url without the http:// or https://
 	char *u = getFirstUrl()->getHost();
+	if ( ! u ) {
+		g_errno = EBADURL;
+		return NULL;
+	}
 	// assume valid now
 	m_isSiteRootValid = true;
 	// get it
@@ -22105,7 +22111,12 @@ bool XmlDoc::logIt ( SafeBuf *bb ) {
 	// like how we index it, do not include the filename. so we can
 	// have a bunch of pathdepth 0 urls with filenames like xyz.com/abc.htm
 	if ( m_firstUrlValid ) {
-		int32_t pd = m_firstUrl.getPathDepth(false);
+		int32_t pd = -1;
+		// fix core
+		if ( m_firstUrl.m_url &&
+		     m_firstUrl.m_ulen > 0 &&
+		     m_firstUrl.m_path )
+			pd = m_firstUrl.getPathDepth(false);
 		sb->safePrintf("pathdepth=%"INT32" ",pd);
 	}
 	else {
@@ -33019,11 +33030,14 @@ Msg20Reply *XmlDoc::getMsg20Reply ( ) {
 	// . Matches.cpp checks the link text, dmoz, etc. for all query terms
 	// . it must get into the results form indexdb corruption?
 	// . this filtering method is/was known as the "BIG HACK"
+	// . We also make sure that matches aren't based on
+	// . "anomalous" link text, where a doc has so many link texts
+	// . that most common dictionary terms appear in or around
+	// . a link to the site.
 	if ( m_req->size_qbuf > 1 ) {
-		reply->m_hasAllQueryTerms = true;
-	//	Matches *mm = getMatches();
-	//	if ( ! mm || mm == (Matches *)-1 ) return (Msg20Reply *)mm;
-	//	reply->m_hasAllQueryTerms = mm->m_matchesQuery;
+		Matches *mm = getMatches();
+		int32_t numInlinks = getLinkInfo1()->getNumLinkTexts( );
+		reply->m_hasAllQueryTerms = mm->docHasQueryTerms(numInlinks);
 	}
 
 	// breathe
@@ -33412,7 +33426,7 @@ Msg20Reply *XmlDoc::getMsg20Reply ( ) {
 	//    (int32_t)reply->m_linkTextScoreWeight, m_siteNumInlinks);
 
 	// breathe
-	QUICKPOLL( m_niceness );
+	//QUICKPOLL( m_niceness );
 
 	// . we need the mid doma hash in addition to the ip domain because
 	//   chat.yahoo.com has different ip domain than www.yahoo.com , ...
@@ -34348,13 +34362,10 @@ char *XmlDoc::getHighlightedSummary ( ) {
 
 	if ( ! m_langIdValid ) { char *xx=NULL;*xx=0; }
 
-	//char tt[5000];
 	Highlight hi;
 	StackBuf(hb);
 	// highlight the query in it
 	int32_t hlen = hi.set ( &hb,
-			     //tt , 
-			     //4999 ,
 			     sum, 
 			     sumLen,
 			     m_langId,
@@ -46443,11 +46454,11 @@ SafeBuf *XmlDoc::getRelatedDocIdsScored ( ) {
 	//   getRelatedQueryLinks() which make a new xmldoc. then it can
 	//   call newxd->getTermListBuf() instead of us passing it in.
 	// . so each host has a bin, a host bin
-#ifdef __APPLE__
+	//#ifdef __APPLE__
 	SafeBuf hostBin[MAX_HOSTS];
-#else
-	SafeBuf hostBin[g_hostdb.m_numHosts];
-#endif
+	//#else
+	//SafeBuf hostBin[g_hostdb.m_numHosts];
+	//#endif
 
 	// scan the related docids and send the requests if we have not already
 	for ( int32_t i = 0 ; ! m_sentMsg4fRequests && i < numRelated ; i++ ) {

@@ -603,6 +603,10 @@ bool getLinkInfo ( SafeBuf   *reqBuf              ,
 	Host *hosts = g_hostdb.getShard ( shardNum); // Group ( groupId );
 	if ( hostNum >= numHosts ) { char *xx = NULL; *xx = 0; }
 	int32_t hostId = hosts [ hostNum ].m_hostId ;
+	if( !hosts [ hostNum ].m_spiderEnabled) {
+		hostId = g_hostdb.getHostIdWithSpideringEnabled ( shardNum );
+	}
+
 
 	// . serialize the string buffers
 	// . use Msg25Request::m_buf[MAX_NEEDED]
@@ -665,7 +669,16 @@ static void sendReplyWrapper ( void *state ) {
 	// sanity
 	if ( req->m_udpSlot != slot2 ) { char *xx=NULL;*xx=0;}
 	// if in table, nuke it
-	g_lineTable.removeKey ( &req->m_siteHash64 );
+	// but only if it was in SITE mode, not PAGE. we've lost our
+	// table entry like this before.
+	// TODO: if this still doesn't work then ensure the stored 'req'
+	// is the same!
+	if ( req->m_mode == MODE_SITELINKINFO ) {
+		g_lineTable.removeKey ( &req->m_siteHash64 );
+		if ( g_conf.m_logDebugLinkInfo )
+			log("linkdb: removing sitehash64=%"INT64"",
+			    req->m_siteHash64);
+	}
 
  nextLink:
 
@@ -746,6 +759,7 @@ void  handleRequest25 ( UdpSlot *slot , int32_t netnice ) {
 		if ( head->m_next ) 
 			req->m_next = head->m_next;
 		head->m_next = req;
+		req->m_waitingInLine = 1;
 		// note it for debugging
 		log("build: msg25 request waiting in line for %s "
 		    "udpslot=0x%"PTRFMT"",
@@ -754,6 +768,8 @@ void  handleRequest25 ( UdpSlot *slot , int32_t netnice ) {
 		// getting the reply for the head msg25request
 		return;
 	}
+
+	req->m_waitingInLine = 0;
 
 	// make a new Msg25
 	Msg25 *m25;

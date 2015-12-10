@@ -2803,7 +2803,12 @@ bool Msg8a::launchGetRequests ( ) {
 	//uint32_t gid = g_hostdb.getGroupId ( m_rdbId , &startKey , true );
 	//Host *group = g_hostdb.getGroup ( gid );
 	int32_t shardNum = getShardNum ( m_rdbId , &startKey );//, true );
-	int32_t firstHostId = g_hostdb.getLeastLoadedInShard ( shardNum )->m_hostId;
+	Host *firstHost ;
+	// if niceness 0 can't pick noquery host.
+	// if niceness 1 can't pick nospider host.
+	firstHost = g_hostdb.getLeastLoadedInShard ( shardNum , m_niceness );
+	int32_t firstHostId = firstHost->m_hostId;
+
 	// . launch this request, even if to ourselves
 	// . TODO: just use msg0!!
 	bool status = m->getList ( firstHostId     , // hostId

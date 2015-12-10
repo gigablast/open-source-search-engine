@@ -158,7 +158,11 @@ bool Msg22::getTitleRec ( Msg22Request  *r              ,
 	firstHostId = hosts [ hostNum ].m_hostId ;
 	*/
 	
-	int32_t firstHostId = g_hostdb.getLeastLoadedInShard ( shardNum )->m_hostId;
+	Host *firstHost ;
+	// if niceness 0 can't pick noquery host.
+	// if niceness 1 can't pick nospider host.
+	firstHost = g_hostdb.getLeastLoadedInShard ( shardNum, r->m_niceness );
+	int32_t firstHostId = firstHost->m_hostId;
 
 	m_outstanding = true;
 	r->m_inUse    = 1;
