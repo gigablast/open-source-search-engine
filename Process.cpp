@@ -1704,7 +1704,6 @@ bool Process::shutdown2 ( ) {
 		// return from this signal handler so we can execute
 		// original SIGSEGV handler right afterwards
 		// default handler should be called after we return now
-
 		// keep compiler happy
 		return true;
 	}
