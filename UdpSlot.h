@@ -10,6 +10,12 @@
 #include "UdpProtocol.h"
 #include "Hostdb.h"
 
+// i'm seeing some networks not liking big dgrams, so
+// lets go super small. we won't be able to send back
+// huge msgs unfortunately, so we'll have to fix that
+// a different way later.
+#define SMALLDGRAMS
+
 // . we want to avoid the overhead of IP level fragmentation
 // . so for an MTU of 1500 we got 28 bytes overhead (IP and UDP headers)
 // . later we can try large DGRAM_SIZE values to see if faster
@@ -19,9 +25,11 @@
 //#define DGRAM_SIZE 7500
 //#define DGRAM_SIZE ((1500-28)*5)
 // this was the most stable size, but now, 4/8/04, i'm trying bigger...
-#ifdef _SMALLDGRAMS_
+#ifdef SMALLDGRAMS
 // newspaperarchive machines need this smaller size
-#define DGRAM_SIZE (1500-28)
+//#define DGRAM_SIZE (1500-28)
+#define DGRAM_SIZE 1000
+#define DGRAM_SIZE_INTERNET 1000
 #else
 // . here's the new size, 4/8/04, about 20x bigger
 // . only use this for our machines
