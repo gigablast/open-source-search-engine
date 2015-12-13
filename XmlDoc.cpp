@@ -15600,6 +15600,12 @@ char *XmlDoc::getSite ( ) {
 	if ( ! cr ) return NULL;
 	// get url
 	Url *f = getFirstUrl();
+	// bogus first url? prevent core in getIsSiteRoot().
+	if ( ! f->getUrlLen() <= 1 ) {
+		log("xmldoc: getSite: got bogus first url.");
+		g_errno = EBADURL;
+		return NULL;
+	}
 	// this must be valid
 	//if ( ! m_spideredTimeValid ) { char *xx=NULL;*xx=0; }
 	int32_t timestamp = getSpideredTime();//m_spideredTime;
@@ -22104,7 +22110,7 @@ bool XmlDoc::logIt ( SafeBuf *bb ) {
 
 	// like how we index it, do not include the filename. so we can
 	// have a bunch of pathdepth 0 urls with filenames like xyz.com/abc.htm
-	if ( m_firstUrlValid ) {
+	if ( m_firstUrlValid && m_firstUrl.m_url && m_firstUrl.m_ulen >= 3 ) {
 		int32_t pd = m_firstUrl.getPathDepth(false);
 		sb->safePrintf("pathdepth=%"INT32" ",pd);
 	}
