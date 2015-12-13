@@ -195,9 +195,10 @@ bool Msg20::getSummary ( Msg20Request *req ) {
 		Host *hh = &allHosts[i];
 		// skip if dead
 		if ( g_hostdb.isDead(hh) ) continue;
-		// NEVER add a noquery host to the candidate list, even
-		// if the query host is dead
-		if ( ! hh->m_queryEnabled ) continue;
+
+		// Respect no-spider, no-query directives from hosts.conf 
+		if ( !req->m_getLinkInfo && ! hh->m_queryEnabled ) continue;
+		if ( req->m_getLinkInfo && ! hh->m_spiderEnabled ) continue;
 		// add it if alive
 		cand[nc++] = hh;
 	}

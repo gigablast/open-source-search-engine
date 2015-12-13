@@ -2524,7 +2524,16 @@ bool sendPageAddUrl ( TcpSocket *sock , HttpRequest *hr ) {
 	ir->ptr_url = hr->getString("u",NULL);
 	if ( ! ir->ptr_url ) ir->ptr_url = hr->getString("url",NULL);
 	if ( ! ir->ptr_url ) ir->ptr_url = hr->getString("urls",NULL);
-	
+
+	if ( ! ir->ptr_url ) {
+		g_errno = EBADURL;
+		doneInjectingWrapper3  ( st1 );
+		return true;
+	}
+
+	// include \0 in size
+	ir->size_url = gbstrlen(ir->ptr_url)+1;
+
 	// get back a short reply so we can show the status code easily
 	ir->m_shortReply = 1;
 

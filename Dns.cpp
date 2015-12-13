@@ -2470,7 +2470,8 @@ Host *Dns::getResponsibleHost ( key_t key ) {
 	// get the hostNum that should handle this
 	int32_t hostId = key.n1 % hostdb->getNumHosts();
 	// return it if it is alive
-	if ( ! hostdb->isDead ( hostId ) ) return hostdb->getHost ( hostId );
+	Host* h = hostdb->getHost ( hostId );
+	if ( h->m_spiderEnabled && ! hostdb->isDead ( hostId ) ) return h;
 	// how many are up?
 	int32_t numAlive = hostdb->getNumHostsAlive();
 	// NULL if none
@@ -2482,6 +2483,7 @@ Host *Dns::getResponsibleHost ( key_t key ) {
 	for ( int32_t i = 0 ; i < hostdb->m_numHosts ; i++ ) {
 		// get the ith host
 		Host *host = &hostdb->m_hosts[i];
+		if ( !host->m_spiderEnabled )  continue;
 		// skip him if he is dead
 		if ( hostdb->isDead ( host ) ) continue;
 		// count it if alive, continue if not our number
