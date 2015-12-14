@@ -6232,7 +6232,9 @@ void SpiderLoop::startLoop ( ) {
 	// in case host when dead.
 	// now that we only send the info on startup and if changed,
 	// let's move back down to 1 second
-	if ( !g_loop.registerSleepCallback(3000,
+	// . make it 20 seconds because handlerequestc1 is always on
+	//   profiler when we have thousands of collections
+	if ( !g_loop.registerSleepCallback(20000,
 					   this,
 					   updateAllCrawlInfosSleepWrapper))
 		log("build: failed to register updatecrawlinfowrapper");
