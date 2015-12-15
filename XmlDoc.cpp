@@ -15603,7 +15603,7 @@ char *XmlDoc::getSite ( ) {
 	// get url
 	Url *f = getFirstUrl();
 	// bogus first url? prevent core in getIsSiteRoot().
-	if ( ! f->getUrlLen() <= 1 ) {
+	if ( f->getUrlLen() <= 1 ) {
 		log("xmldoc: getSite: got bogus first url.");
 		g_errno = EBADURL;
 		return NULL;
