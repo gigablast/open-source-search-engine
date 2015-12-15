@@ -3794,10 +3794,11 @@ bool CollectionRec::rebuildUrlFiltersDiffbot() {
 
 
 
-	m_regExs[i].set("errorcount>=1 && !hastmperror");
+	m_regExs[i].set("errorcount>=1 && !hastmperror && errcount<=4");
 	m_spiderPriorities   [i] = 15;
-	m_spiderFreqs        [i] = 0.0;
-	m_maxSpidersPerRule  [i] = 0; // turn off spiders if not tmp error
+	m_spiderFreqs        [i] = 0.1;
+	m_maxSpidersPerRule  [i] = 1; // turn off spiders if not tmp error
+	// no, try to fix bug of EBADURL when it wasn't really...
 	i++;
 
 	// and for docs that have errors respider once every 5 hours
