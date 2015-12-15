@@ -14825,10 +14825,19 @@ bool SpiderRequest::isCorrupt ( ) {
 	}
 
 	// sanity check. check for http(s)://
-	if ( m_url[0] != 'h' &&
-	     // might be a docid from a pagereindex.cpp
-	     ! is_digit(m_url[0]) ) { 
+	if ( m_url[0] == 'h' ) 
+		return false;
+	// might be a docid from a pagereindex.cpp
+	if ( ! is_digit(m_url[0]) ) { 
 		log("spider: got corrupt 1 spiderRequest");
+		return true;
+	}
+	// if it is a digit\0 it is ok, not corrupt
+	if ( ! m_url[1] )
+		return false;
+	// if it is not a digit after the first digit, that is bad
+	if ( ! is_digit(m_url[1]) ) { 
+		log("spider: got corrupt 2 spiderRequest");
 		return true;
 	}
 
