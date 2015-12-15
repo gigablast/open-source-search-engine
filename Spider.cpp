@@ -12949,6 +12949,37 @@ int32_t getUrlFilterNum2 ( SpiderRequest *sreq       ,
 			if ( sign == SIGN_LT && a >= b ) continue;
 			if ( sign == SIGN_GE && a <  b ) continue;
 			if ( sign == SIGN_LE && a >  b ) continue;
+			// skip fast
+			p += 10;
+			p = strstr(s, "&&");
+			//if nothing, else then it is a match
+			if ( ! p ) return i;
+			//skip the '&&' and go to next rule
+			p += 2;
+			goto checkNextRule;
+		}
+
+		// EBADURL malformed url is ... 32880
+		if ( *p=='e' && strncmp(p,"errorcode",9) == 0 ) {
+			// if we do not have enough info for outlink, all done
+			if ( isOutlink ) return -1;
+			// skip for msg20
+			if ( isForMsg20 ) continue;
+			// reply based
+			if ( ! srep ) continue;
+			// int16_tcut
+			int32_t a = srep->m_errCode;
+			// make it point to the retry count
+			int32_t b = atoi(s);
+			// compare
+			if ( sign == SIGN_EQ && a != b ) continue;
+			if ( sign == SIGN_NE && a == b ) continue;
+			if ( sign == SIGN_GT && a <= b ) continue;
+			if ( sign == SIGN_LT && a >= b ) continue;
+			if ( sign == SIGN_GE && a <  b ) continue;
+			if ( sign == SIGN_LE && a >  b ) continue;
+			// skip fast
+			p += 9;
 			p = strstr(s, "&&");
 			//if nothing, else then it is a match
 			if ( ! p ) return i;
