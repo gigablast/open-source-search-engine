@@ -3570,6 +3570,10 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 
 			      " <a href=/v3/crawl/download/%s_urls.csv>"
 			      "new csv format</a>"
+
+			      " <a href=/search?q=gbsortby"
+			      "int%%3AgbssSpiderTime&n=50&c=%s>"
+			      "last 50 download attempts</a>"
 			      
 			      "</td>"
 			      "</tr>"
@@ -3643,6 +3647,10 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			      , cr->m_coll
 
 			      // urls.csv new format v3
+			      , cr->m_coll
+
+
+			      // last 50 downloaded urls
 			      , cr->m_coll
 
 			      // latest objects in html
