@@ -7576,7 +7576,7 @@ bool SpiderLoop::gotDoledbList2 ( ) {
 		// note it
 		if ( (g_corruptCount % 1000) == 0 )
 			log("spider: got corrupt doledb record. ignoring. "
-			    "pls fix!!!");
+			    "pls fix!!! cn=%i",(int)m_collnum);
 		g_corruptCount++;
 		// skip for now....!! what is causing this???
 		m_list.skipCurrentRecord();

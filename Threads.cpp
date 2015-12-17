@@ -3353,6 +3353,8 @@ void ThreadQueue::killAllThreads ( ) {
 		if ( ! e->m_isLaunched ) continue;
 		log("threads: killling thread id %i",(int)e->m_joinTid);
 		pthread_kill ( e->m_joinTid , SIGKILL );
+		log("threads: joining with thread id %i",(int)e->m_joinTid);
+		pthread_join ( e->m_joinTid , NULL );
 	}
 }
 
