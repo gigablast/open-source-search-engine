@@ -2759,6 +2759,7 @@ int32_t SpiderColl::getNextIpFromWaitingTree ( ) {
 		// remove all his keys just because we restarted and think he
 		// is alive even though we have gotten no ping from him.
 		//if ( hp->m_numPingRequests > 0 )
+	removeFromTree:
 		// these operations should fail if writes have been disabled
 		// and becase the trees/tables for spidercache are saving
 		// in Process.cpp's g_spiderCache::save() call
@@ -2793,7 +2794,15 @@ int32_t SpiderColl::getNextIpFromWaitingTree ( ) {
 	m_waitingTreeKeyValid = true;
 	m_scanningIp = firstIp;
 	// sanity
-	if ( firstIp == 0 || firstIp == -1 ) { char *xx=NULL;*xx=0; }
+	if ( firstIp == 0 || firstIp == -1 ) { 
+		//char *xx=NULL;*xx=0; }
+		log("spider: removing corrupt spiderreq firstip of %"INT32
+		    " from waiting tree collnum=%i",
+		    firstIp,(int)m_collnum);
+		goto removeFromTree;
+	}
+	// avoid corruption
+	
 	// we set this to true when done
 	//m_isReadDone = false;
 	// compute the best request from spiderdb list, not valid yet
