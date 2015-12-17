@@ -2759,6 +2759,7 @@ int32_t SpiderColl::getNextIpFromWaitingTree ( ) {
 		// remove all his keys just because we restarted and think he
 		// is alive even though we have gotten no ping from him.
 		//if ( hp->m_numPingRequests > 0 )
+	removeFromTree:
 		// these operations should fail if writes have been disabled
 		// and becase the trees/tables for spidercache are saving
 		// in Process.cpp's g_spiderCache::save() call
@@ -2793,7 +2794,15 @@ int32_t SpiderColl::getNextIpFromWaitingTree ( ) {
 	m_waitingTreeKeyValid = true;
 	m_scanningIp = firstIp;
 	// sanity
-	if ( firstIp == 0 || firstIp == -1 ) { char *xx=NULL;*xx=0; }
+	if ( firstIp == 0 || firstIp == -1 ) { 
+		//char *xx=NULL;*xx=0; }
+		log("spider: removing corrupt spiderreq firstip of %"INT32
+		    " from waiting tree collnum=%i",
+		    firstIp,(int)m_collnum);
+		goto removeFromTree;
+	}
+	// avoid corruption
+	
 	// we set this to true when done
 	//m_isReadDone = false;
 	// compute the best request from spiderdb list, not valid yet
@@ -6232,7 +6241,9 @@ void SpiderLoop::startLoop ( ) {
 	// in case host when dead.
 	// now that we only send the info on startup and if changed,
 	// let's move back down to 1 second
-	if ( !g_loop.registerSleepCallback(3000,
+	// . make it 20 seconds because handlerequestc1 is always on
+	//   profiler when we have thousands of collections
+	if ( !g_loop.registerSleepCallback(20000,
 					   this,
 					   updateAllCrawlInfosSleepWrapper))
 		log("build: failed to register updatecrawlinfowrapper");
@@ -12947,6 +12958,37 @@ int32_t getUrlFilterNum2 ( SpiderRequest *sreq       ,
 			if ( sign == SIGN_LT && a >= b ) continue;
 			if ( sign == SIGN_GE && a <  b ) continue;
 			if ( sign == SIGN_LE && a >  b ) continue;
+			// skip fast
+			p += 10;
+			p = strstr(s, "&&");
+			//if nothing, else then it is a match
+			if ( ! p ) return i;
+			//skip the '&&' and go to next rule
+			p += 2;
+			goto checkNextRule;
+		}
+
+		// EBADURL malformed url is ... 32880
+		if ( *p=='e' && strncmp(p,"errorcode",9) == 0 ) {
+			// if we do not have enough info for outlink, all done
+			if ( isOutlink ) return -1;
+			// skip for msg20
+			if ( isForMsg20 ) continue;
+			// reply based
+			if ( ! srep ) continue;
+			// int16_tcut
+			int32_t a = srep->m_errCode;
+			// make it point to the retry count
+			int32_t b = atoi(s);
+			// compare
+			if ( sign == SIGN_EQ && a != b ) continue;
+			if ( sign == SIGN_NE && a == b ) continue;
+			if ( sign == SIGN_GT && a <= b ) continue;
+			if ( sign == SIGN_LT && a >= b ) continue;
+			if ( sign == SIGN_GE && a <  b ) continue;
+			if ( sign == SIGN_LE && a >  b ) continue;
+			// skip fast
+			p += 9;
 			p = strstr(s, "&&");
 			//if nothing, else then it is a match
 			if ( ! p ) return i;
@@ -14792,10 +14834,19 @@ bool SpiderRequest::isCorrupt ( ) {
 	}
 
 	// sanity check. check for http(s)://
-	if ( m_url[0] != 'h' &&
-	     // might be a docid from a pagereindex.cpp
-	     ! is_digit(m_url[0]) ) { 
+	if ( m_url[0] == 'h' ) 
+		return false;
+	// might be a docid from a pagereindex.cpp
+	if ( ! is_digit(m_url[0]) ) { 
 		log("spider: got corrupt 1 spiderRequest");
+		return true;
+	}
+	// if it is a digit\0 it is ok, not corrupt
+	if ( ! m_url[1] )
+		return false;
+	// if it is not a digit after the first digit, that is bad
+	if ( ! is_digit(m_url[1]) ) { 
+		log("spider: got corrupt 2 spiderRequest");
 		return true;
 	}
 

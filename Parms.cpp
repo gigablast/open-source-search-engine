@@ -22980,6 +22980,14 @@ bool printUrlExpressionExamples ( SafeBuf *sb ) {
 			  "\"temporary\" errors like DNS timeouts."
 			  "</td></tr>"
 
+			  "<tr class=poo><td>errorcode==32880</td>"
+			  "<td>"
+			  "If the last time it was spidered it had this "
+			  "numeric error code. See the error codes in "
+			  "Errno.cpp. In this particular example 32880 is "
+			  "for EBADURL."
+			  "</td></tr>"
+
 			  "<tr class=poo><td>hastmperror</td>"
 			  "<td>"
 			  "This is true if the last spider attempt resulted "

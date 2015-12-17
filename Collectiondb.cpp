@@ -3792,10 +3792,17 @@ bool CollectionRec::rebuildUrlFiltersDiffbot() {
 		i++;
 	}
 
-
+	// try to fix bug of EBADURL when it wasn't really
+	// EBADURL is 32880
+	// this is a HACK!
+	m_regExs[i].set("errorcount==1 && errorcode==32880");
+	m_spiderPriorities   [i] = 15;
+	m_spiderFreqs        [i] = 0.1;
+	m_maxSpidersPerRule  [i] = 1; 
+	i++;
 
 	m_regExs[i].set("errorcount>=1 && !hastmperror");
-	m_spiderPriorities   [i] = 15;
+	m_spiderPriorities   [i] = 14;
 	m_spiderFreqs        [i] = 0.0;
 	m_maxSpidersPerRule  [i] = 0; // turn off spiders if not tmp error
 	i++;

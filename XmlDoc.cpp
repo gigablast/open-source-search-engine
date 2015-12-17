@@ -15602,6 +15602,12 @@ char *XmlDoc::getSite ( ) {
 	if ( ! cr ) return NULL;
 	// get url
 	Url *f = getFirstUrl();
+	// bogus first url? prevent core in getIsSiteRoot().
+	if ( f->getUrlLen() <= 1 ) {
+		log("xmldoc: getSite: got bogus first url.");
+		g_errno = EBADURL;
+		return NULL;
+	}
 	// this must be valid
 	//if ( ! m_spideredTimeValid ) { char *xx=NULL;*xx=0; }
 	int32_t timestamp = getSpideredTime();//m_spideredTime;

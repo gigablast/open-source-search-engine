@@ -27,9 +27,7 @@
 // this was the most stable size, but now, 4/8/04, i'm trying bigger...
 #ifdef SMALLDGRAMS
 // newspaperarchive machines need this smaller size
-//#define DGRAM_SIZE (1500-28)
-#define DGRAM_SIZE 1000
-#define DGRAM_SIZE_INTERNET 1000
+#define DGRAM_SIZE (1500-28-10)
 #else
 // . here's the new size, 4/8/04, about 20x bigger
 // . only use this for our machines
@@ -38,10 +36,11 @@
 // . let's see if smaller dgrams fix the ping spike problem on gk0c
 // . this is in addition to lower the ack windows from 12 to 4
 #define DGRAM_SIZE 16400
+#endif
+
 // . the 45k dgram doesn't travel well over the internet, and javier needs
 //   to do that for the "interface client" code
-#define DGRAM_SIZE_INTERNET (1500-28)
-#endif
+#define DGRAM_SIZE_INTERNET (1500-28-10)
 
 // i'd like to have less dgram to decrease interrupts and
 // to decrease the MAX_DGRAMS define which decrease UdpSlot size
@@ -84,10 +83,11 @@
 // raised from 50MB to 80MB so Msg13 compression proxy can send back big replies > 5MB
 // raised from 80MB to 180MB since we could be sending back a Msg95Reply
 // which is a list of QueryChanges. 3/29/13.
-#define MAX_DGRAMS (((180*1024*1024) / DGRAM_SIZE_LB) + 1)
+//#define MAX_DGRAMS (((180*1024*1024) / DGRAM_SIZE_LB) + 1)
+#define MAX_DGRAMS (((80*1024*1024) / DGRAM_SIZE) + 1)
 //#endif
 
-#define MAX_ABSDOCLEN ((MAX_DGRAMS * DGRAM_SIZE_LB)-50000)
+#define MAX_ABSDOCLEN ((MAX_DGRAMS * DGRAM_SIZE)-50000)
 
 // . the max size of an incoming request for a hot udp server
 // . we cannot call malloc so it must fit in here
