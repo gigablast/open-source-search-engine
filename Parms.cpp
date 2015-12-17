@@ -21375,6 +21375,12 @@ void tryToCallCallbacks ( ) {
 		// 8 seconds is enough to wait for all replies to come in
 		if ( now - pn->m_startTime > 8 ) callIt = true;
 		if ( pn->m_numReplies >= pn->m_numRequests ) callIt = true;
+		// sometimes we don't launch any requests to update parms
+		// because we are jammed up. same logic as we use for
+		// freeing the pn below.
+		if ( pn->m_numGoodReplies < pn->m_numHostsTotal )
+			callIt = false;
+
 		if ( ! callIt ) continue;
 		// callback is NULL for updating parms like spiderRoundNum
 		// in Spider.cpp
@@ -21585,8 +21591,8 @@ bool Parms::doParmSendingLoop ( ) {
 		}
 
 		// debug log
-		log(LOG_INFO,"parms: sending parm request "
-		    "to hostid %"INT32"",h->m_hostId);
+		log(LOG_INFO,"parms: sending parm request id %i "
+		    "to hostid %"INT32"",(int)pn->m_parmId,h->m_hostId);
 
 		// count it
 		pn->m_numRequests++;
