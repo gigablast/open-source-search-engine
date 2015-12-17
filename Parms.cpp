@@ -21372,14 +21372,22 @@ void tryToCallCallbacks ( ) {
 		if ( pn->m_calledCallback ) continue;
 		// should we call the callback?
 		bool callIt = false;
-		// 8 seconds is enough to wait for all replies to come in
-		if ( now - pn->m_startTime > 8 ) callIt = true;
 		if ( pn->m_numReplies >= pn->m_numRequests ) callIt = true;
 		// sometimes we don't launch any requests to update parms
 		// because we are jammed up. same logic as we use for
 		// freeing the pn below.
 		if ( pn->m_numGoodReplies < pn->m_numHostsTotal )
 			callIt = false;
+
+		// 8 seconds is enough to wait for all replies to come in.
+		// a host might be dead, so we need this here lest the
+		// underlying page handler (i.e. sendPageCrawlbot()) never
+		// get called if a host is dead. if you are updating some
+		// parms you want the page to return.
+		if ( now - pn->m_startTime > 8 && 
+		     ! callIt &&
+		     g_hostdb.hasDeadHost() ) 
+			callIt = true;
 
 		if ( ! callIt ) continue;
 		// callback is NULL for updating parms like spiderRoundNum
