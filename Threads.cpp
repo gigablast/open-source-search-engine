@@ -435,6 +435,13 @@ int32_t Threads::getNumWriteThreadsOut() {
 	return m_threadQueues[DISK_THREAD].getNumWriteThreadsOut();
 }
 
+int32_t Threads::getNumActiveWriteUnlinkRenameThreadsOut() {
+	// these do not countthreads that are done, and just awaiting join
+	int32_t n = m_threadQueues[DISK_THREAD].getNumWriteThreadsOut();
+	n += m_threadQueues[UNLINK_THREAD].getNumActiveThreadsOut();
+	return n;
+}
+
 // . returns false (and may set errno) if failed to launch a thread
 // . returns true if thread added to queue successfully
 // . may be launched instantly or later depending on # of threads in the queue
@@ -851,6 +858,19 @@ bool ThreadQueue::init ( char threadType, int32_t maxThreads, int32_t maxEntries
 	g_conf.m_logDebugThread = debug;
 
 	return true;
+}
+
+int32_t ThreadQueue::getNumActiveThreadsOut() {
+	int32_t n = 0;
+	for ( int32_t i = 0 ; i < m_maxEntries ; i++ ) {
+		ThreadEntry *e = &m_entries[i];
+		if ( ! e->m_isOccupied ) continue;
+		if ( ! e->m_isLaunched ) continue;
+		// if it is done and just waiting for a join, do not count
+		if ( e->m_isDone ) continue;
+		n++;
+	}
+	return n;
 }
 
 int32_t ThreadQueue::getNumThreadsOutOrQueued() {

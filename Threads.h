@@ -161,6 +161,7 @@ class ThreadQueue {
 
 	int32_t getNumThreadsOutOrQueued();
 	int32_t getNumWriteThreadsOut() ;
+	int32_t getNumActiveThreadsOut() ;
 
 
 	// . for adding an entry
@@ -304,6 +305,8 @@ class Threads {
 
 	int32_t getNumThreadsOutOrQueued();
 	int32_t getNumWriteThreadsOut() ;
+
+	int32_t getNumActiveWriteUnlinkRenameThreadsOut() ;
 
 	// counts the high/low priority (niceness <= 0) threads
 	//int64_t   m_hiLaunched;

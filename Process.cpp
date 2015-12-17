@@ -1537,24 +1537,30 @@ bool Process::shutdown2 ( ) {
 
 	static bool s_printed = false;
 
-	// wait for all threads to return
-	//int32_t n = g_threads.getNumThreadsOutOrQueued() ;
-	int32_t n = g_threads.getNumWriteThreadsOut();
+ waitLoop:
+
+	// wait for all 'write' threads to be done. they can be done
+	// and just waiting for a join, in which case we won't coun them.
+	int32_t n = g_threads.getNumActiveWriteUnlinkRenameThreadsOut();
 	// we can't wait for the write thread if we had a seg fault, but
 	// do print a msg in the log
-	if ( n != 0 && m_urgent )
-		log(LOG_INFO,"gb: Has %"INT32" write threads out and coring. "
-		    "May introduce disk corruption.",n);
+	if ( n != 0 && m_urgent ) {
+		log(LOG_INFO,"gb: Has %"INT32" write/unlink/rename "
+		    "threads active. Waiting.",n);
+		sleep(1);
+		goto waitLoop;
+	}
+
 	if ( n != 0 && ! m_urgent ) {
-		log(LOG_INFO,"gb: Has %"INT32" write threads out. Waiting for "
+		log(LOG_INFO,"gb: Has %"INT32" write/unlink/rename "
+		    "threads out. Waiting for "
 		    "them to finish.",n);
 		return false;
 	}
 	else if ( ! s_printed && ! m_urgent ) {
 		s_printed = true;
-		log(LOG_INFO,"gb: No write threads out.");
+		log(LOG_INFO,"gb: No write/unlink/rename threads active.");
 	}
-
 
 
 	// disable all spidering
@@ -1738,7 +1744,8 @@ bool Process::shutdown2 ( ) {
 	// cleanup threads, this also launches them too
 	g_threads.timedCleanUp(0x7fffffff,MAX_NICENESS);
 
-	// there's no write threads out, so just kill them all and join
+	// there's no write/unlink/rename threads active, 
+	// so just kill the remaining threads and join
 	// with them so we can try to get a proper exit status code
 	log("gb: Joining with all threads");
 	g_threads.killAllThreads();
