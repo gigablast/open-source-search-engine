@@ -1976,6 +1976,29 @@ bool CollectionRec::load ( char *coll , int32_t i ) {
 		// it is binary now
 		gbmemcpy ( &m_localCrawlInfo , sb.getBufStart(),sb.length() );
 
+	// if it had corrupted data from saving corrupted mem zero it out
+	CrawlInfo *stats = &m_localCrawlInfo;
+	// point to the stats for that host
+	int64_t *ss = (int64_t *)stats;
+	// are stats crazy?
+	bool crazy = false;
+	for ( int32_t j = 0 ; j < NUMCRAWLSTATS ; j++ ) {
+		// crazy stat?
+		if ( *ss > 1000000000LL ||
+		     *ss < -1000000000LL ) {
+			crazy = true;
+			break;
+		}
+		ss++;
+	}
+	if ( m_localCrawlInfo.m_collnum != m_collnum )
+		crazy = true;
+	if ( crazy ) {
+		log("coll: had crazy spider stats for coll %s. zeroing out.",
+		    m_coll);
+		m_localCrawlInfo.reset();
+	}
+
 
 	if ( ! g_conf.m_doingCommandLine && ! g_collectiondb.m_initializing )
 		log("coll: Loaded %s (%"INT32") local hasurlsready=%"INT32"",

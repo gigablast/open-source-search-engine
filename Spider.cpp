@@ -13981,15 +13981,29 @@ void gotCrawlInfoReply ( void *state , UdpSlot *slot ) {
 			// point to the stats for that host
 			int64_t *ss = (int64_t *)stats;
 			int64_t *gs = (int64_t *)gi;
-			// add each hosts counts into the global accumulators
+			// are stats crazy?
+			bool crazy = false;
 			for ( int32_t j = 0 ; j < NUMCRAWLSTATS ; j++ ) {
-				*gs = *gs + *ss;
 				// crazy stat?
 				if ( *ss > 1000000000LL ||
-				     *ss < -1000000000LL ) 
+				     *ss < -1000000000LL ) {
 					log("spider: crazy stats %"INT64" "
-					    "from host #%"INT32" coll=%s",
+					    "from host #%"INT32" coll=%s. "
+					    "ignoring.",
 					    *ss,k,cr->m_coll);
+					crazy = true;
+					break;
+				}
+				ss++;
+			}
+			// reset ptr to accumulate
+			ss = (int64_t *)stats;
+			for ( int32_t j = 0 ; j < NUMCRAWLSTATS ; j++ ) {
+				// do not accumulate if corrupted.
+				// probably mem got corrupted and it saved
+				// to disk.
+				if ( crazy ) break;
+				*gs = *gs + *ss;
 				gs++;
 				ss++;
 			}
