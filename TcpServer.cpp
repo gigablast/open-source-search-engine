@@ -2918,6 +2918,67 @@ int TcpServer::sslHandshake ( TcpSocket *s ) {
 		SSL_set_connect_state(s->m_ssl);
 	}
 
+	// . set hostname for SNI (Server Name Identification)
+	// . can test with page parser on the test page: https://sni.velox.ch/
+	// . we can parse the mime reliably here because we are the ones
+	//   that created the request, so we know it should be standardish.
+	if ( s->m_sendBuf && ! s->m_readBuf ) {
+		// grab hostname from the mime
+		// skip first line
+		char *p = s->m_sendBuf;
+		char *pend = p + s->m_sendBufSize;
+		if ( p+10 >= pend )
+			goto skipSNI;
+		bool gotIt = false;
+		if ( p[0] == 'G' && p[1] == 'E' && p[2] == 'T' && p[3]==' ' )
+			gotIt = true;
+		if ( p[0] == 'P' && p[1] == 'O' && p[2] == 'S' && p[3]=='T' &&
+		     p[4] == ' ' )
+			gotIt = true;
+		// need to start with "GET " or "POST "
+		if ( ! gotIt ) 
+			goto skipSNI;
+	scanMimeSomeMore:
+		// skip to the first \r, indicating end of line
+		for ( ; p < pend && *p != '\r' ; p++ );
+		// if we couldn't find it, then there's no Host: directive
+		if ( p == pend ) 
+			goto skipSNI;
+		// skip \r\n
+		if ( *p == '\r' ) 
+			p++;
+		if ( p == pend )
+			goto skipSNI;
+		if ( *p == '\n' ) 
+			p++;
+		if ( p == pend ) 
+			goto skipSNI;
+		// end of mime (\r\n\r\n)
+		if ( p+2<pend && p[0] == '\r' && p[1] == '\n' ) 
+			goto skipSNI;
+		// is it host:?
+		if ( p+6 >= pend )
+			goto skipSNI;
+		if ( strncasecmp(p,"Host:",5) ) 
+			goto scanMimeSomeMore;
+		p += 5;
+		if ( p<pend && *p == ' ' ) p++;
+		if ( p<pend && *p == ' ' ) p++;
+		char *hostname = p;
+		// find end of line
+		for ( ; p<pend && *p != '\r' ; p++ );
+		if ( p == pend )
+			goto skipSNI;
+		// temp null
+		char c = *p;
+		*p = '\0';
+		/// @todo what if we can't set TLS servername extension?
+		SSL_set_tlsext_host_name(s->m_ssl, hostname );
+		// replace the \0 with original char
+		*p = c;
+	}
+ skipSNI:
+
 	// SSL_connect() calls malloc()
 	g_inMemFunction = true;
 	int r = SSL_connect(s->m_ssl);
