@@ -6408,6 +6408,7 @@ void dumpTitledb (char *coll,int32_t startFileNum,int32_t numFiles,bool includeT
 		  bool justPrintSentences, 
 		  bool justPrintWords ) {
 
+	g_isDumpingRdbFromMain = 1;
 	if (!ucInit(g_hostdb.m_dir, true)) {
 		log("Unicode initialization failed!");
 		return;

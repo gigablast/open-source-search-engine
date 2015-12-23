@@ -600,6 +600,14 @@ bool sendPageResults ( TcpSocket *s , HttpRequest *hr ) {
 	//      ! cr->m_isCustomCrawl )
 	// 	si->m_docsWanted = maxpp;
 
+	// BUT if it is a custom diffbot crawl with no &stream=1 option,
+	// then to prevent a results page of 1.6GB, limit it here
+	if ( si->m_docsWanted > 1000 && ! si->m_streamResults ) {
+	 	si->m_docsWanted = 1000;
+		log("query: limiting query %s without &stream=1 option to "
+		    "%"INT32" results.",st->m_si.m_displayQuery,maxpp);
+	}
+
         st->m_numDocIds = si->m_docsWanted;
 
 	// watch out for cowboys

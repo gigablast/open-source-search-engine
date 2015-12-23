@@ -6800,7 +6800,7 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&cr.m_maxSearchResultsPerQuery - x;
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "100";
-	m->m_flags = PF_HIDDEN | PF_NOSAVE;
+	m->m_flags = 0;
 	m->m_page  = PAGE_SEARCH;
 	m->m_obj   = OBJ_COLL;
 	m++;
@@ -21522,6 +21522,8 @@ static bool s_inLoop = false;
 bool Parms::doParmSendingLoop ( ) {
 
 	if ( ! s_headNode ) return true;
+
+	if ( g_isDumpingRdbFromMain ) return true;
 
 	if ( s_inLoop ) return true;
 

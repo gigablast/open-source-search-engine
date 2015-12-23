@@ -4118,6 +4118,20 @@ bool SpiderColl::scanListForWinners ( ) {
 				//srep = NULL;
 				continue;
 			}
+			// ignore these to fix diffbot's malformed url bug
+			if ( tmp->m_errCode == 32880 &&
+			     // and is before about dec 18th 2015
+			     tmp->m_spideredTime < 1450488447 )
+				continue;
+			// ignore these to fix diffbot's ebadtitlerec error
+			// 'bad cached document'.
+			// ignore them so we can respider the urls and
+			// the new logic in xmldoc.cpp can ignore them.
+			// i fixed xmldoc.cpp to index these status docs.
+			if ( tmp->m_errCode == 32792 &&
+			     // and is before about dec 22nd 2015
+			     tmp->m_spideredTime < 1450897197 )
+				continue;
 			// bad langid?
 			if ( ! getLanguageAbbr (tmp->m_langId) ) {
 				log("spider: got corrupt 4 spiderReply in "
@@ -4280,7 +4294,18 @@ bool SpiderColl::scanListForWinners ( ) {
 		m_lastCBlockIp = cblock;
 
 		// only add firstip if manually added and not fake
-		
+ 		// if ( uh48 == 272628060426254 )
+ 		// 	log("spider: got special seed");
+
+// #undef sleep
+// 		if ( uh48 == 272628060426254 ) {
+// 			log("spider: got special seed");
+// 			bool flag = true;
+// 		sleepLoop:
+// 			sleep(1);
+// 			if ( flag ) goto sleepLoop;
+// 		}
+// #define sleep(a) { char *xx=NULL;*xx=0; }
 
 		//
 		// just calculating page counts? if the url filters are based
@@ -6243,7 +6268,9 @@ void SpiderLoop::startLoop ( ) {
 	// let's move back down to 1 second
 	// . make it 20 seconds because handlerequestc1 is always on
 	//   profiler when we have thousands of collections
-	if ( !g_loop.registerSleepCallback(20000,
+	// . let's try 10 seconds so as not to think a job is done when
+	//   it is not
+	if ( !g_loop.registerSleepCallback(10000,
 					   this,
 					   updateAllCrawlInfosSleepWrapper))
 		log("build: failed to register updatecrawlinfowrapper");
