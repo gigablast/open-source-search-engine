@@ -592,9 +592,10 @@ bool sendPageResults ( TcpSocket *s , HttpRequest *hr ) {
 	// later on maybe it will default to on.
 	st->m_header = hr->getLong("header",defHdr);
 
-	// take this out here as well!
-	// limit here
-	// int32_t maxpp = cr->m_maxSearchResultsPerQuery ;
+	// Whoops! taking out limit won't let it compile... -MikeLevy
+	// ?? take this out here as well!
+	// ?? limit here
+	 int32_t maxpp = cr->m_maxSearchResultsPerQuery ;
 	// if ( si->m_docsWanted > maxpp &&
 	//      // disable serp max per page for custom crawls
 	//      ! cr->m_isCustomCrawl )
