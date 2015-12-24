@@ -1075,6 +1075,7 @@ class XmlDoc {
 	int32_t m_addedSpiderRequestSize;
 	int32_t m_addedSpiderReplySize;
 	int32_t m_addedStatusDocSize;
+	int64_t m_addedStatusDocId;
 
 	SafeBuf  m_metaList2;
 	SafeBuf  m_zbuf;

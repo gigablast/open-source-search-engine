@@ -3815,14 +3815,22 @@ bool CollectionRec::rebuildUrlFiltersDiffbot() {
 		i++;
 	}
 
-	// try to fix bug of EBADURL when it wasn't really
-	// EBADURL is 32880
-	// this is a HACK!
-	m_regExs[i].set("errorcount==1 && errorcode==32880");
-	m_spiderPriorities   [i] = 15;
-	m_spiderFreqs        [i] = 0.1;
-	m_maxSpidersPerRule  [i] = 1; 
-	i++;
+	// don't bother re-spidering old pages if hopcount == maxhopcount
+	// and only process new urls is true. because we don't need to 
+	// harvest outlinks from them.
+	if ( m_diffbotOnlyProcessIfNewUrl && m_diffbotMaxHops > 0 &&
+	     // only crawls, not bulk jobs
+	     m_isCustomCrawl == 1 ) {
+		m_regExs[i].purge();
+		m_regExs[i].safePrintf("isindexed && hopcount==%"INT32,
+				       m_diffbotMaxHops );
+		m_spiderPriorities   [i] = 14;
+		m_spiderFreqs        [i] = 0.0;
+		m_maxSpidersPerRule  [i] = 0; // turn off spiders
+		m_harvestLinks       [i] = false;
+		i++;
+	}
+
 
 	m_regExs[i].set("errorcount>=1 && !hastmperror");
 	m_spiderPriorities   [i] = 14;

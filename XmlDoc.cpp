@@ -213,6 +213,8 @@ class XmlDoc *g_xd;
 
 void XmlDoc::reset ( ) {
 
+	m_addedStatusDocId = 0;
+
 	if ( m_diffbotProxyReplyValid && m_diffbotProxyReply ) {
 		mfree ( m_diffbotProxyReply , sizeof(ProxyReply) , "dprox" );
 		m_diffbotProxyReply = NULL;
@@ -2690,7 +2692,7 @@ bool XmlDoc::indexDoc ( ) {
 	SpiderReply *nsr = NULL;
 
 	// if only rebuilding posdb do not rebuild spiderdb
-	if ( m_useSpiderdb ) {
+	if ( m_useSpiderdb && ! m_addedSpiderReplySizeValid ) {
 
 		////
 		//
@@ -2716,6 +2718,37 @@ bool XmlDoc::indexDoc ( ) {
 		m_addedSpiderReplySizeValid = true;
 	}
 
+	// for other errors like EBADTITLEREC we are not adding spider
+	// status docs, so add them here
+	/*
+	if ( ! m_addedStatusDocSizeValid ) {
+		SafeBuf *ssDocMetaList = NULL;
+		// if calling getSpiderStatusDocMetaList blocks then
+		// call addErrorStuffWrapper() to call msg4
+		//m_masterLoop = addErrorStuffWrapper();
+		//m_state = this;
+		// this uses m_indexCode to set it
+		// if this blocks it ends up calling m_masterLoop and
+		// re-entering this function with g_errno clear possibly
+		// so do we make it back here????? MDW
+		ssDocMetaList = getSpiderStatusDocMetaList(NULL ,false);
+		// error?
+		if ( ! ssDocMetaList ) return true;
+		// blocked?
+		if ( ssDocMetaList == (void *)-1 ) return false;
+		// need to alloc space for it too
+		char *list = ssDocMetaList->getBufStart();
+		int32_t len = ssDocMetaList->length();
+		// this too
+		m_addedStatusDocSize = len;
+		m_addedStatusDocSizeValid = true;
+		// also count it as a crawl attempt
+		cr->m_localCrawlInfo.m_pageDownloadAttempts++;
+		cr->m_globalCrawlInfo.m_pageDownloadAttempts++;
+		if ( ! m_metaList2.safeMemcpy ( list , len ) )
+			return true;
+	}
+	*/
 
 	m_msg4Launched = true;
 
@@ -12023,7 +12056,17 @@ XmlDoc **XmlDoc::getOldXmlDoc ( ) {
 		//log("xmldoc: nuke xmldoc1=%"PTRFMT"",(PTRTYPE)m_oldDoc);
 		m_oldDoc = NULL;
 		g_errno = saved;
-		return NULL;
+		return NULL; //mdwmdwmdw
+		// if it is data corruption, just assume empty so
+		// we don't stop spidering a url because of this. so we'll
+		// think this is the first time indexing it. otherwise
+		// we get "Bad cached document" in the logs and the
+		// SpiderReply and it never gets re-spidered because it is
+		// not a 'temporary' error according to the url filters.
+		g_errno = 0;
+		m_oldDoc = NULL;
+		m_oldDocValid = true;
+		return &m_oldDoc;
 	}
 	m_oldDocValid = true;
 	// share our masterloop and state!
@@ -12398,6 +12441,10 @@ SafeBuf *XmlDoc::getTimeAxisUrl ( ) {
 char **XmlDoc::getOldTitleRec ( ) {
 	// clear if we blocked
 	//if ( g_errno == ENOTFOUND ) g_errno = 0;
+
+	// g_errno = EBADTITLEREC;
+	// return NULL;
+
 	// if valid return that
 	if ( m_oldTitleRecValid ) return &m_oldTitleRec;
 	// update status msg
@@ -22004,11 +22051,16 @@ bool XmlDoc::logIt ( SafeBuf *bb ) {
 		sb->safePrintf("addspiderrepsize=%05"INT32" ",0);
 
 
-	if ( m_addedStatusDocSizeValid )
+	if ( m_addedStatusDocSizeValid ) {
 		sb->safePrintf("addstatusdocsize=%05"INT32" ",
 			       m_addedStatusDocSize);
-	else
+		sb->safePrintf("addstatusdocid=%"UINT64" ",
+			       m_addedStatusDocId);
+	}
+	else {
 		sb->safePrintf("addstatusdocsize=%05"INT32" ",0);
+		sb->safePrintf("addstatusdocid=0 ");
+	}
 
 
 	if ( m_useSecondaryRdbs ) {
@@ -29245,6 +29297,8 @@ SafeBuf *XmlDoc::getSpiderStatusDocMetaList2 ( SpiderReply *reply1 ) {
 	// try to get an available docid, preferring "d" if available
 	int64_t *uqd = getAvailDocIdOnly ( d );
 	if ( ! uqd || uqd == (void *)-1 ) return  (SafeBuf *)uqd;
+
+	m_addedStatusDocId = *uqd;
 
 	// unsigned char *hc = (unsigned char *)getHopCount();
 	// if ( ! hc || hc == (void *)-1 ) return (SafeBuf *)hc;

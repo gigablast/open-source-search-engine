@@ -143,7 +143,10 @@ bool buildProxyTable ( ) {
 			*s = '\0';
 			log("buf: %s for %s",msg,p);
 			*s = c;
-			return false;
+			//return false;
+			// advance p
+			p = s;
+			continue;
 		}
 
 		// convert it
