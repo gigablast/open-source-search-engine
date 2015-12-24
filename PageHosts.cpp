@@ -200,7 +200,7 @@ skipReplaceHost:
 
 			       //"<td><b>resends sent</td>"
 			       //"<td><b>errors recvd</td>"
-			       "<td><b>try agains recvd</b></td>"
+			       "<td><b>try agains sent</b></td>"
 
 			       "<td><a href=\"/admin/hosts?c=%s&sort=3\">"
 			       "<b>dgrams resent</b></a></td>"
@@ -1337,12 +1337,14 @@ skipReplaceHost:
 		  */
 
 		  "<tr class=poo>"
-		  "<td>try agains recvd</td>"
+		  "<td>try agains sent</td>"
 		  "<td>How many ETRYAGAIN errors "
-		  "were received in response to a "
+		  "has this host sent out? they are sent out some times "
+		  "in response to a "
 		  "request to add data. Usually because the host's memory "
 		  "is full and it is dumping its data to disk. This number "
-		  "can be high if the host if failing to dump the data "
+		  "can be relatively high if the host if failing to dump "
+		  "the data "
 		  "to disk because of some malfunction, and it can therefore "
 		  "bottleneck the entire cluster."
 		  "</td>"
