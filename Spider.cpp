@@ -14490,10 +14490,26 @@ bool getSpiderStatusMsg ( CollectionRec *cx , SafeBuf *msg , int32_t *status ) {
 
 	uint32_t now = (uint32_t)getTimeGlobal();
 
+
+	// hit crawl round max? this could be SP_ROUNDDONE and it doesn't
+	// get converted to SP_MAXROUNDS until we call spiderDoledUrls()
+	// so fix the crawlbot nightly smoke test by setting this here
+	// to SP_MAXROUNDS.
+	// smoketest msg = FAIL: testCrawlRounds (__main__.TestRepeatCrawl)
+	// self.assertEqual(j['jobs'][0]['jobStatus']['status'],1,msg=self.name
+	// AssertionError: 4 != 1 : 1227151934RepeatCrawlself.
+	// assertEqual(j['jobs'][0]['jobStatus']['status'],1,msg=self.name)
+	int32_t spiderStatus = cx->m_spiderStatus;
+	if ( cx->m_maxCrawlRounds > 0 &&
+	     cx->m_isCustomCrawl &&
+	     cx->m_spiderRoundNum >= cx->m_maxCrawlRounds )
+		spiderStatus = SP_MAXROUNDS;
+
+
 	// try to fix crawlbot nightly test complaining about job status
 	// for TestRepeatCrawlWithMaxToCrawl
-	if ( (cx->m_spiderStatus == SP_MAXTOCRAWL ||
-	      cx->m_spiderStatus == SP_MAXTOPROCESS ) &&
+	if ( (spiderStatus == SP_MAXTOCRAWL ||
+	      spiderStatus == SP_MAXTOPROCESS ) &&
 	     cx->m_collectiveRespiderFrequency > 0.0 &&
 	     now < cx->m_spiderRoundStartTime &&
 	     cx->m_spiderRoundNum >= cx->m_maxCrawlRounds ) {
@@ -14504,7 +14520,7 @@ bool getSpiderStatusMsg ( CollectionRec *cx , SafeBuf *msg , int32_t *status ) {
 
 	// . 0 means not to RE-crawl
 	// . indicate if we are WAITING for next round...
-	if ( cx->m_spiderStatus == SP_MAXTOCRAWL &&
+	if ( spiderStatus == SP_MAXTOCRAWL &&
 	     cx->m_collectiveRespiderFrequency > 0.0 &&
 	     now < cx->m_spiderRoundStartTime ) {
 		*status = SP_ROUNDDONE;
@@ -14515,7 +14531,7 @@ bool getSpiderStatusMsg ( CollectionRec *cx , SafeBuf *msg , int32_t *status ) {
 						 now));
 	}
 
-	if ( cx->m_spiderStatus == SP_MAXTOPROCESS &&
+	if ( spiderStatus == SP_MAXTOPROCESS &&
 	     cx->m_collectiveRespiderFrequency > 0.0 &&
 	     now < cx->m_spiderRoundStartTime ) {
 		*status = SP_ROUNDDONE;
@@ -14527,19 +14543,19 @@ bool getSpiderStatusMsg ( CollectionRec *cx , SafeBuf *msg , int32_t *status ) {
 	}
 
 
-	if ( cx->m_spiderStatus == SP_MAXTOCRAWL ) {
+	if ( spiderStatus == SP_MAXTOCRAWL ) {
 		*status = SP_MAXTOCRAWL;
 		return msg->safePrintf ( "Job has reached maxToCrawl "
 					 "limit." );
 	}
 
-	if ( cx->m_spiderStatus == SP_MAXTOPROCESS ) {
+	if ( spiderStatus == SP_MAXTOPROCESS ) {
 		*status = SP_MAXTOPROCESS;
 		return msg->safePrintf ( "Job has reached maxToProcess "
 					 "limit." );
 	}
 
-	if ( cx->m_spiderStatus == SP_MAXROUNDS ) {
+	if ( spiderStatus == SP_MAXROUNDS ) {
 		*status = SP_MAXROUNDS;
 		return msg->safePrintf ( "Job has reached maxRounds "
 					 "limit." );
@@ -14573,7 +14589,7 @@ bool getSpiderStatusMsg ( CollectionRec *cx , SafeBuf *msg , int32_t *status ) {
 	//	return msg->safePrintf("Crawl is waiting for urls.");
 	//}
 
-	if ( cx->m_spiderStatus == SP_INITIALIZING ) {
+	if ( spiderStatus == SP_INITIALIZING ) {
 		*status = SP_INITIALIZING;
 		return msg->safePrintf("Job is initializing.");
 	}
@@ -14599,7 +14615,7 @@ bool getSpiderStatusMsg ( CollectionRec *cx , SafeBuf *msg , int32_t *status ) {
 			"repeat is scheduled.");
 	}
 
-	if ( cx->m_spiderStatus == SP_ROUNDDONE && ! cx->m_isCustomCrawl ) {
+	if ( spiderStatus == SP_ROUNDDONE && ! cx->m_isCustomCrawl ) {
 		*status = SP_ROUNDDONE;
 		return msg->safePrintf ( "Nothing currently "
 					 "available to spider. "
@@ -14622,7 +14638,7 @@ bool getSpiderStatusMsg ( CollectionRec *cx , SafeBuf *msg , int32_t *status ) {
 	}
 		
 
-	if ( cx->m_spiderStatus == SP_ROUNDDONE ) {
+	if ( spiderStatus == SP_ROUNDDONE ) {
 		*status = SP_ROUNDDONE;
 		return msg->safePrintf ( "Job round completed.");
 	}
