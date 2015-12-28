@@ -1480,6 +1480,8 @@ bool saveAddsInProgress ( char *prefix ) {
 		if ( ! slot->m_callback ) continue;
 		// skip if got reply
 		if ( slot->m_readBuf ) continue;
+		// if not sending something, skip
+		if ( ! slot->m_sendBuf ) continue;
 		// test it
 		int32_t used = *(int32_t *)slot->m_sendBuf;
 		if ( used <= 4 || used > 300000000 ) {  // > 300MB????
