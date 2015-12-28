@@ -14500,7 +14500,8 @@ bool getSpiderStatusMsg ( CollectionRec *cx , SafeBuf *msg , int32_t *status ) {
 	// AssertionError: 4 != 1 : 1227151934RepeatCrawlself.
 	// assertEqual(j['jobs'][0]['jobStatus']['status'],1,msg=self.name)
 	int32_t spiderStatus = cx->m_spiderStatus;
-	if ( cx->m_maxCrawlRounds > 0 &&
+	if ( spiderStatus == SP_ROUNDDONE &&
+	     cx->m_maxCrawlRounds > 0 &&
 	     cx->m_isCustomCrawl &&
 	     cx->m_spiderRoundNum >= cx->m_maxCrawlRounds )
 		spiderStatus = SP_MAXROUNDS;
