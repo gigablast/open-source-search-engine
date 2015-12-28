@@ -1416,6 +1416,10 @@ bool XmlDoc::set4 ( SpiderRequest *sreq      ,
 	//     ! g_hostdb.m_myHost->m_isProxy ) {
 	//	char *xx=NULL; *xx=0; }
 
+	if ( sreq->isCorrupt() ) 
+		return log("XmlDoc: set4() spider request is corrupt in coll "
+			   "%s",coll);
+
 	m_sreqValid    = true;
 
 	// store the whole rec, key+dataSize+data, in case it disappears.
