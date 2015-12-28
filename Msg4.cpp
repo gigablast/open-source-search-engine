@@ -1481,7 +1481,7 @@ bool saveAddsInProgress ( char *prefix ) {
 		// skip if got reply
 		if ( slot->m_readBuf ) continue;
 		// test it
-		int32_t used = *(int32_t *)slot->m_readBuf;
+		int32_t used = *(int32_t *)slot->m_sendBuf;
 		if ( used <= 4 || used > 300000000 ) {  // > 300MB????
 			log("msg4: saving addsinprogress. bad slot "
 			    "used size of %"INT32,used);
