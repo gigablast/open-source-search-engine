@@ -605,7 +605,7 @@ bool sendPageResults ( TcpSocket *s , HttpRequest *hr ) {
 	if ( si->m_docsWanted > 1000 && ! si->m_streamResults ) {
 	 	si->m_docsWanted = 1000;
 		log("query: limiting query %s without &stream=1 option to "
-		    "%"INT32" results.",st->m_si.m_displayQuery,maxpp);
+		    "%"INT32" results.",st->m_si.m_displayQuery,1000);
 	}
 
         st->m_numDocIds = si->m_docsWanted;
