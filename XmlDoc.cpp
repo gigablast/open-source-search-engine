@@ -1418,7 +1418,7 @@ bool XmlDoc::set4 ( SpiderRequest *sreq      ,
 
 	if ( sreq->isCorrupt() ) 
 		return log("XmlDoc: set4() spider request is corrupt in coll "
-			   "%s",coll);
+			   "%s u=%s",coll,sreq->m_url);
 
 	m_sreqValid    = true;
 
@@ -12258,6 +12258,8 @@ XmlDoc **XmlDoc::getRootXmlDoc ( int32_t maxCacheAge ) {
 	// otherwise, we gotta get it!
 	char **rtr = getRootTitleRec ( );
 	if ( ! rtr || rtr == (char **)-1 ) return (XmlDoc **)rtr;
+	Url *cu = getCurrentUrl();
+	if ( ! cu || cu == (void *)-1 ) return (XmlDoc **)cu;
 	// if no title rec, return ptr to a null
 	//m_rootDoc = NULL;
 	//if ( ! *rtr ) { 
@@ -12333,7 +12335,10 @@ XmlDoc **XmlDoc::getRootXmlDoc ( int32_t maxCacheAge ) {
 		// clear it
 		sreq.reset();
 		// spider the url "u"
-		strcpy ( sreq.m_url , mysite );
+		char *p = sreq.m_url;
+		if ( cu->isHttps() ) p += sprintf ( p , "https://" );
+		else                 p += sprintf ( p , "http://" );
+		strcpy ( p , mysite );
 		// set this
 		if ( m_sreqValid ) {
 			// this will avoid it adding to tagdb!
