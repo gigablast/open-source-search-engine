@@ -11494,7 +11494,7 @@ int32_t getUrlFilterNum2 ( SpiderRequest *sreq       ,
 	if ( langId >= 0 ) { // if ( srep ) {
 		// this is NULL on corruption
 		lang = getLanguageAbbr ( langId );//srep->m_langId );	
-		langLen = gbstrlen(lang);
+		if (lang) langLen = gbstrlen(lang);
 	}
 
 	// . get parent language in the request
