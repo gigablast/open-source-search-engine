@@ -3831,11 +3831,14 @@ bool CollectionRec::rebuildUrlFiltersDiffbot() {
 		i++;
 	}
 
+	// diffbot needs to retry even on 500 or 404 errors since sometimes
+	// a seed url gets a 500 error mistakenly and it haults the crawl.
+	// so take out "!hastmperror".
 
 	m_regExs[i].set("errorcount>=1 && !hastmperror");
 	m_spiderPriorities   [i] = 14;
-	m_spiderFreqs        [i] = 0.0;
-	m_maxSpidersPerRule  [i] = 0; // turn off spiders if not tmp error
+	m_spiderFreqs        [i] = 0.0416; // every hour
+	//m_maxSpidersPerRule  [i] = 0; // turn off spiders if not tmp error
 	i++;
 
 	// and for docs that have errors respider once every 5 hours
