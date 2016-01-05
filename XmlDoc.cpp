@@ -27321,6 +27321,8 @@ char *XmlDoc::addOutlinkSpiderRecsToMetaList ( ) {
 	if ( ! m_hopCountValid       ) { char *xx=NULL;*xx=0; }
 	//if ( ! m_spideredTimeValid   ) { char *xx=NULL;*xx=0; }
 
+	int64_t myUh48 = m_firstUrl.getUrlHash48();
+
 	// . pre-allocate a buffer to hold the spider recs
 	// . taken from SpiderRequest::store()
 	int32_t size = 0;
@@ -27781,8 +27783,14 @@ char *XmlDoc::addOutlinkSpiderRecsToMetaList ( ) {
 		strcpy(ksr.m_url,s);
 		// this must be valid
 		if ( ! m_docIdValid ) { char *xx=NULL;*xx=0; }
+
 		// set the key, ksr.m_key. isDel = false
 		ksr.setKey ( firstIp, *d , false );
+
+		// we were hopcount 0, so if we link to ourselves we override
+		// our original hopcount of 0 with this guy that has a
+		// hopcount of 1. that sux... so don't do it.
+		if ( ksr.getUrlHash48() == myUh48 ) continue;
 
 		// if we've recently added this url to spiderdb in Spider.cpp, skip it
 		//if ( sc && sc->isInDupCache ( &ksr , false ) )
