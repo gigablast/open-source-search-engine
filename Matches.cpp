@@ -1769,8 +1769,6 @@ bool Matches::docHasQueryTerms(int32_t totalInlinks) {
             continue;
         }
         numMatches[m->m_qwordNum] = m_numMatches;
-        // log("match flag %x wordnum %"INT32 " totalinlinks:%"INT32, 
-		// 	m->m_flags, m->m_wordNum, totalInlinks);
     }
 
 
@@ -1780,10 +1778,11 @@ bool Matches::docHasQueryTerms(int32_t totalInlinks) {
     int32_t nqt = m_q->m_numTerms;
     for ( int32_t i = 0 ; i < nqt ; i++ ) {
         QueryTerm *qt = &m_q->m_qterms[i];
-        // skip if ignored *in certain ways only*
-        if ( ! isMatchableTerm ( qt ) ) {
+        // For purposes of matching, we ignore all stop words
+        if ( ! isMatchableTerm ( qt ) || qt->m_ignored) {
             continue;
         }
+
         // get the word it is from
         QueryWord *qw = qt->m_qword;
 
@@ -1793,6 +1792,7 @@ bool Matches::docHasQueryTerms(int32_t totalInlinks) {
         hasTerms &= ((numMatches[qw->m_wordNum] >= m_numMatches) ||  
                      (numMatches[qw->m_wordNum] > 0 && totalInlinks < 10) ||
                      (numMatches[qw->m_wordNum] > 2 && totalInlinks > 10));
+
     }
 
     if (numMatches != tmpBuf) {
