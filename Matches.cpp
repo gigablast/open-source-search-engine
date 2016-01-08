@@ -1779,7 +1779,8 @@ bool Matches::docHasQueryTerms(int32_t totalInlinks) {
     for ( int32_t i = 0 ; i < nqt ; i++ ) {
         QueryTerm *qt = &m_q->m_qterms[i];
         // For purposes of matching, we ignore all stop words
-        if ( ! isMatchableTerm ( qt ) || qt->m_ignored) {
+        if ( ! isMatchableTerm ( qt ) || qt->m_ignored || 
+             (qt->m_isPhrase && !qt->m_isRequired)) {
             continue;
         }
 
