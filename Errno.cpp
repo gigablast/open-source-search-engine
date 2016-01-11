@@ -196,6 +196,7 @@ case	EDNSERROR        : return "DNS lookup error";
 case ETHREADSDISABLED:return "Threads Disabled";
 case EMALFORMEDQUERY: return "Malformed query";
 case ESHARDDOWN: return "One or more shards are down";
+case EDOCWARC: return "Doc is WARC or ARC and support is disabled";
 case EDIFFBOTREQUESTTIMEDOUTTHIRDPARTY: return "Diffbot request of third-party content timed out";
 	}
 	// if the remote error bit is clear it must be a regulare errno

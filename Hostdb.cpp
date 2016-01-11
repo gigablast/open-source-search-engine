@@ -691,16 +691,26 @@ bool Hostdb::init ( int32_t hostIdArg , char *netName ,
 		
 		//skip:
 
+		h->m_queryEnabled = true;
+		h->m_spiderEnabled = true;
 		// check for something after the working dir
 		h->m_note[0] = '\0';
 		if ( *p != '\n' ) {
 			// save the note
 			char *n = p;
 			while ( *n && *n != '\n' && n < pend ) n++;
+
 			int32_t noteSize = n - p;
 			if ( noteSize > 127 ) noteSize = 127;
 			gbmemcpy(h->m_note, p, noteSize);
 			*p++ = '\0'; // NULL terminate for atoip
+
+			if(strstr(h->m_note, "noquery")) {
+				h->m_queryEnabled = false;
+			}
+			if(strstr(h->m_note, "nospider")) {
+				h->m_spiderEnabled = false;
+			}
 		}
 		else
 			*p   = '\0';
@@ -1642,6 +1652,56 @@ Host *Hostdb::getLiveHostInShard ( int32_t shardNum ) {
 	return &shard[0];
 }
 
+int32_t Hostdb::getHostIdWithSpideringEnabled ( uint32_t shardNum ) {
+	Host *hosts = g_hostdb.getShard ( shardNum);
+	int32_t numHosts = g_hostdb.getNumHostsPerShard();
+
+	int32_t hostNum = 0;
+	int32_t numTried = 0;
+	while( !hosts [ hostNum ].m_spiderEnabled && numTried < numHosts ) {
+		hostNum = (hostNum+1) % numHosts;
+		numTried++;
+	}
+	if( !hosts [ hostNum ].m_spiderEnabled) {
+		log("build: cannot spider when entire shard has nospider enabled");
+		char *xx = NULL; *xx = 0;
+	}
+	return hosts [ hostNum ].m_hostId ;
+}
+
+// if niceness 0 can't pick noquery host.
+// if niceness 1 can't pick nospider host.
+Host *Hostdb::getLeastLoadedInShard ( uint32_t shardNum , char niceness ) {
+	int32_t minOutstandingRequests = 0x7fffffff;
+	int32_t minOutstandingRequestsIndex = -1;
+	Host *shard = getShard ( shardNum );
+	Host *bestDead = NULL;
+	for(int32_t i = 0; i < m_numHostsPerShard; i++) {
+		Host *hh = &shard[i];
+		// don't pick a 'no spider' host if niceness is 1
+		if ( niceness >  0 && ! hh->m_spiderEnabled ) continue;
+		// don't pick a 'no query' host if niceness is 0
+		if ( niceness == 0 && ! hh->m_queryEnabled  ) continue;
+		if ( ! bestDead ) bestDead = hh;
+		if(isDead(hh)) continue;
+		// log("host %"INT32 " numOutstanding is %"INT32, hh->m_hostId, 
+		// 	hh->m_pingInfo.m_udpSlotsInUseIncoming);
+		if ( hh->m_pingInfo.m_udpSlotsInUseIncoming > 
+		     minOutstandingRequests )
+			continue;
+
+		minOutstandingRequests =hh->m_pingInfo.m_udpSlotsInUseIncoming;
+		minOutstandingRequestsIndex = i;
+	}
+	// we should never return a nospider/noquery host depending on
+	// the niceness, so return bestDead
+	if(minOutstandingRequestsIndex == -1) return bestDead;//shard;
+	return &shard[minOutstandingRequestsIndex];
+}
+
+
+
+
 // if all are dead just return host #0
 Host *Hostdb::getFirstAliveHost ( ) {
 	for ( int32_t i = 0 ; i < m_numHosts ; i++ )
@@ -1990,8 +2050,9 @@ bool Hostdb::saveHostsConf ( ) {
 	sprintf ( filename, "%shosts.conf", m_dir );
 	log ( LOG_INFO, "conf: Writing hosts.conf file to: %s",
 			filename );
-	int32_t fd = open ( filename, O_CREAT|O_WRONLY|O_TRUNC,
-			 S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP|S_IROTH );
+	int32_t fd = open ( filename, O_CREAT|O_WRONLY|O_TRUNC ,
+			    getFileCreationFlags() );
+			 // S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP|S_IROTH );
 	if ( !fd ) {
 		log ( "conf: Failed to open %s for writing.", filename );
 		return false;

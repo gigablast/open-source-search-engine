@@ -1280,6 +1280,8 @@ bool UdpSlot::readDatagramOrAck ( int        sock    ,
 	}
 	// handle acks
 	if ( m_proto->isAck ( peek , peekSize ) ) {
+		// if ack for msg4 core to test its save stuff
+		//if ( m_msgType == 0x04 ) { char *xx=NULL;*xx=0; }
 		readAck ( sock, dgramNum , now ); 
 		// keep stats
 		if ( m_host ) m_host->m_dgramsFrom++;

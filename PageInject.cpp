@@ -131,6 +131,53 @@ Host *getHostToHandleInjection ( char *url ) {
 	Host *group = g_hostdb.getShard ( shardNum );
 	int32_t hostNum = docId % g_hostdb.m_numHostsPerShard;
 	Host *host = &group[hostNum];
+
+	bool isWarcInjection = false;
+	int32_t ulen = gbstrlen(url);
+	if ( ulen > 10 && strcmp(url+ulen-8,".warc.gz") == 0 )
+		isWarcInjection = true;
+	if ( ulen > 10 && strcmp(url+ulen-5,".warc") == 0 )
+		isWarcInjection = true;
+
+	if ( ! isWarcInjection ) return host;
+
+	// warc files end up calling XmlDoc::indexWarcOrArc() which spawns
+	// a msg7 injection request for each doc in the warc/arc file
+	// so let's do load balancing differently for them so one host
+	// doesn't end up doing a bunch of wget/gunzips on warc files 
+	// thereby bottlenecking the cluster. get the first hostid that
+	// we have not sent a msg7 injection request to that is still out
+	for ( int32_t i = 0 ; i < g_hostdb.m_numHosts ; i++ ) {
+		Host *h = g_hostdb.getHost(i);
+		h->m_tmpCount = 0;
+	}
+	for ( UdpSlot *slot = g_udpServer.m_head2 ; 
+	      slot ; 
+	      slot = slot->m_next2 ) {
+		// skip if not injection request
+		if ( slot->m_msgType != 0x07 ) continue;
+		//if ( ! slot->m_weInitiated ) continue;
+		// if we did not initiate the injection request, i.e. if
+		// it is to us, skip it
+		if ( ! slot->m_callback ) continue;
+		// who is it from?
+		int32_t hostId = slot->m_hostId;
+		if ( hostId < 0 ) continue;
+		Host *h = g_hostdb.getHost ( hostId );
+		if ( ! h ) continue;
+		h->m_tmpCount++;
+	}
+	int32_t min = 999999;
+	Host *minh = NULL;
+	for ( int32_t i = 0 ; i < g_hostdb.m_numHosts ; i++ ) {
+		Host *h = g_hostdb.getHost(i);
+		if ( h->m_tmpCount == 0 ) return h;
+		if ( h->m_tmpCount >= min ) continue;
+		min  = h->m_tmpCount;
+		minh = h;
+	}
+	if ( minh ) return minh;
+	// how can this happen?
 	return host;
 }
 
@@ -181,6 +228,9 @@ bool Msg7::sendInjectionRequestToHost ( InjectionRequest *ir ,
 		g_errno = EURLTOOBIG;
 		return log("inject: url too big.");
 	}
+
+	// hack fix core
+	if ( ir->size_metadata == 0 ) ir->ptr_metadata = NULL;
 
 	int32_t sirSize = 0;
 	char *sir = serializeMsg2 ( ir ,
@@ -615,7 +665,7 @@ void sendUdpReply7 ( void *state ) {
 
     uint32_t statColor = 0xccffcc;
     if(xd->m_indexCode) {
-        statColor = 0x4e99e9;
+        statColor = 0xaaddaa;//0x4e99e9;
     }
 	g_stats.addStat_r ( xd->m_rawUtf8ContentSize,
 						xd->m_injectStartTime, 
@@ -652,11 +702,29 @@ void sendUdpReply7 ( void *state ) {
 
 void handleRequest7 ( UdpSlot *slot , int32_t netnice ) {
 
-
 	InjectionRequest *ir = (InjectionRequest *)slot->m_readBuf;
 
 	// now just supply the first guy's char ** and size ptr
-	deserializeMsg2 ( &ir->ptr_url, &ir->size_url );
+	if ( ! deserializeMsg2 ( &ir->ptr_url, &ir->size_url ) ) {
+		log("inject: error deserializing inject request from "
+		    "host ip %s port %i",iptoa(slot->m_ip),(int)slot->m_port);
+		g_errno = EBADREQUEST;
+		g_udpServer.sendErrorReply(slot,g_errno);
+		//g_corruptCount++;
+		return;
+	}
+		
+
+	// the url can be like xyz.com. so need to do another corruption
+	// test for ia
+	if ( ! ir->ptr_url ) { // || strncmp(ir->ptr_url,"http",4) != 0 ) {
+		//log("inject: trying to inject NULL or non http url.");
+		log("inject: trying to inject NULL url.");
+		g_errno = EBADURL;
+		//g_corruptCount++;
+		g_udpServer.sendErrorReply(slot,g_errno);
+		return;
+	}
 
 	CollectionRec *cr = g_collectiondb.getRec ( ir->m_collnum );
 	if ( ! cr ) {
@@ -692,6 +760,10 @@ void handleRequest7 ( UdpSlot *slot , int32_t netnice ) {
 		s_injectHead = xd;
 		s_injectTail = xd;
 	}
+	if(ir->ptr_content && ir->ptr_content[ir->size_content - 1]) {
+		// XmlDoc expects this buffer to be null terminated.
+		char *xx=NULL;*xx=0;
+	}
 
 	if ( ! xd->injectDoc ( ir->ptr_url , // m_injectUrlBuf.getBufStart() ,
 			       cr ,
@@ -722,7 +794,8 @@ void handleRequest7 ( UdpSlot *slot , int32_t netnice ) {
 			       ir->m_injectDocIp ,
 				   ir->ptr_contentDelim,
 				   ir->ptr_metadata,
-			       ir->size_metadata
+				   ir->size_metadata,
+				   ir->size_content - 1 // there should be a null in that last byte
 			       ) )
 		// we blocked...
 		return;

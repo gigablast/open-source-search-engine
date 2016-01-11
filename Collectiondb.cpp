@@ -333,6 +333,9 @@ bool Collectiondb::addExistingColl ( char *coll, collnum_t collnum ) {
 	if ( cr->m_isCustomCrawl ) {
 		cr->m_getLinkInfo = false;
 		cr->m_computeSiteNumInlinks = false;
+		// limit each shard to 5 spiders per collection to prevent
+		// ppl from spidering the web and hogging up resources
+		cr->m_maxNumSpiders = 5;
 	}
 
 	// we need to compile the regular expressions or update the url
@@ -633,10 +636,11 @@ bool Collectiondb::addNewColl ( char *coll ,
 
 	// MDW: create the new directory
  retry22:
-	if ( ::mkdir ( dname , 
-		       S_IRUSR | S_IWUSR | S_IXUSR | 
-		       S_IRGRP | S_IWGRP | S_IXGRP | 
-		       S_IROTH | S_IXOTH ) ) {
+	if ( ::mkdir ( dname ,
+		       getDirCreationFlags() ) ) {
+		       // S_IRUSR | S_IWUSR | S_IXUSR | 
+		       // S_IRGRP | S_IWGRP | S_IXGRP | 
+		       // S_IROTH | S_IXOTH ) ) {
 		// valgrind?
 		if ( errno == EINTR ) goto retry22;
 		g_errno = errno;
@@ -1401,10 +1405,11 @@ bool Collectiondb::resetColl2( collnum_t oldCollnum,
 		log("admin: Trying to create collection %s but "
 		    "directory %s already exists on disk.",cr->m_coll,dname);
 	}
-	if ( ::mkdir ( dname , 
-		       S_IRUSR | S_IWUSR | S_IXUSR | 
-		       S_IRGRP | S_IWGRP | S_IXGRP | 
-		       S_IROTH | S_IXOTH ) ) {
+	if ( ::mkdir ( dname ,
+		       getDirCreationFlags() ) ) {
+		       // S_IRUSR | S_IWUSR | S_IXUSR | 
+		       // S_IRGRP | S_IWGRP | S_IXGRP | 
+		       // S_IROTH | S_IXOTH ) ) {
 		// valgrind?
 		//if ( errno == EINTR ) goto retry22;
 		//g_errno = errno;
@@ -1970,6 +1975,29 @@ bool CollectionRec::load ( char *coll , int32_t i ) {
 		//m_localCrawlInfo.setFromSafeBuf(&sb);
 		// it is binary now
 		gbmemcpy ( &m_localCrawlInfo , sb.getBufStart(),sb.length() );
+
+	// if it had corrupted data from saving corrupted mem zero it out
+	CrawlInfo *stats = &m_localCrawlInfo;
+	// point to the stats for that host
+	int64_t *ss = (int64_t *)stats;
+	// are stats crazy?
+	bool crazy = false;
+	for ( int32_t j = 0 ; j < NUMCRAWLSTATS ; j++ ) {
+		// crazy stat?
+		if ( *ss > 1000000000LL ||
+		     *ss < -1000000000LL ) {
+			crazy = true;
+			break;
+		}
+		ss++;
+	}
+	if ( m_localCrawlInfo.m_collnum != m_collnum )
+		crazy = true;
+	if ( crazy ) {
+		log("coll: had crazy spider stats for coll %s. zeroing out.",
+		    m_coll);
+		m_localCrawlInfo.reset();
+	}
 
 
 	if ( ! g_conf.m_doingCommandLine && ! g_collectiondb.m_initializing )
@@ -3787,12 +3815,30 @@ bool CollectionRec::rebuildUrlFiltersDiffbot() {
 		i++;
 	}
 
+	// don't bother re-spidering old pages if hopcount == maxhopcount
+	// and only process new urls is true. because we don't need to 
+	// harvest outlinks from them.
+	if ( m_diffbotOnlyProcessIfNewUrl && m_diffbotMaxHops > 0 &&
+	     // only crawls, not bulk jobs
+	     m_isCustomCrawl == 1 ) {
+		m_regExs[i].purge();
+		m_regExs[i].safePrintf("isindexed && hopcount==%"INT32,
+				       m_diffbotMaxHops );
+		m_spiderPriorities   [i] = 14;
+		m_spiderFreqs        [i] = 0.0;
+		m_maxSpidersPerRule  [i] = 0; // turn off spiders
+		m_harvestLinks       [i] = false;
+		i++;
+	}
 
+	// diffbot needs to retry even on 500 or 404 errors since sometimes
+	// a seed url gets a 500 error mistakenly and it haults the crawl.
+	// so take out "!hastmperror".
 
 	m_regExs[i].set("errorcount>=1 && !hastmperror");
-	m_spiderPriorities   [i] = 15;
-	m_spiderFreqs        [i] = 0.0;
-	m_maxSpidersPerRule  [i] = 0; // turn off spiders if not tmp error
+	m_spiderPriorities   [i] = 14;
+	m_spiderFreqs        [i] = 0.0416; // every hour
+	//m_maxSpidersPerRule  [i] = 0; // turn off spiders if not tmp error
 	i++;
 
 	// and for docs that have errors respider once every 5 hours

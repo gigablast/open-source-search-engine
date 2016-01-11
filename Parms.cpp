@@ -6800,7 +6800,7 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&cr.m_maxSearchResultsPerQuery - x;
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "100";
-	m->m_flags = PF_HIDDEN | PF_NOSAVE;
+	m->m_flags = 0;
 	m->m_page  = PAGE_SEARCH;
 	m->m_obj   = OBJ_COLL;
 	m++;
@@ -10548,7 +10548,7 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&g_conf.m_maxHeartbeatDelay - g;
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "0";
-	m->m_flags = PF_HIDDEN | PF_NOSAVE;
+	m->m_flags = PF_CLONE; // PF_HIDDEN | PF_NOSAVE;
 	m->m_page  = PAGE_MASTER;
 	m->m_obj   = OBJ_CONF;
 	m++;
@@ -12401,11 +12401,30 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "0";
 	m->m_group = 0;
-	m->m_flags = 0;//PF_HIDDEN | PF_NOSAVE;
+	m->m_flags = PF_API;//PF_HIDDEN | PF_NOSAVE;
 	m->m_page  = PAGE_MASTER;
 	m->m_obj   = OBJ_CONF;
 	m->m_group = 0;
 	m++;
+
+	/*
+	m->m_title = "files group writable";
+	m->m_desc  = "Make all created files group writable? If you have "
+		"multiple user accounts starting Gigablast processes you "
+		"will want the files to be group writable. You will "
+		"need to make sure you run gigablast under the "
+		"primary group you want to use for gigablast administration.";
+	m->m_cgi   = "afgw";
+	m->m_off   = (char *)&g_conf.m_makeAllFilesGroupWritable - g;
+	m->m_type  = TYPE_BOOL;
+	m->m_def   = "0";
+	m->m_group = 0;
+	m->m_flags = PF_API;//PF_HIDDEN | PF_NOSAVE;
+	m->m_page  = PAGE_MASTER;
+	m->m_obj   = OBJ_CONF;
+	m->m_group = 0;
+	m++;
+	*/
 
 	m->m_title = "verify disk writes";
 	m->m_desc  = "Read what was written in a verification step. Decreases "
@@ -16648,6 +16667,21 @@ void Parms::init ( ) {
 		"Useful for archive web pages as they change over time.";
 	m->m_cgi   = "usetimeaxis";
 	m->m_off   = (char *)&cr.m_useTimeAxis - x;
+	m->m_type  = TYPE_BOOL;
+	m->m_def   = "0";
+	m->m_page  = PAGE_SPIDER;
+	m->m_obj   = OBJ_COLL;
+	m->m_flags = PF_CLONE;
+	m++;
+
+	m->m_title = "index warc or arc files";
+	m->m_desc  = "If this is true Gigablast will index .warc and .arc "
+		"files by injecting the pages contained in them as if they "
+		"were spidered with the content in the .warc or .arc file. "
+		"The spidered time will be taken from the archive file "
+		"as well.";
+	m->m_cgi   = "indexwarcs";
+	m->m_off   = (char *)&cr.m_indexWarcs - x;
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "0";
 	m->m_page  = PAGE_SPIDER;
@@ -21338,9 +21372,23 @@ void tryToCallCallbacks ( ) {
 		if ( pn->m_calledCallback ) continue;
 		// should we call the callback?
 		bool callIt = false;
-		// 8 seconds is enough to wait for all replies to come in
-		if ( now - pn->m_startTime > 8 ) callIt = true;
 		if ( pn->m_numReplies >= pn->m_numRequests ) callIt = true;
+		// sometimes we don't launch any requests to update parms
+		// because we are jammed up. same logic as we use for
+		// freeing the pn below.
+		if ( pn->m_numGoodReplies < pn->m_numHostsTotal )
+			callIt = false;
+
+		// 8 seconds is enough to wait for all replies to come in.
+		// a host might be dead, so we need this here lest the
+		// underlying page handler (i.e. sendPageCrawlbot()) never
+		// get called if a host is dead. if you are updating some
+		// parms you want the page to return.
+		if ( now - pn->m_startTime > 8 && 
+		     ! callIt &&
+		     g_hostdb.hasDeadHost() ) 
+			callIt = true;
+
 		if ( ! callIt ) continue;
 		// callback is NULL for updating parms like spiderRoundNum
 		// in Spider.cpp
@@ -21475,6 +21523,8 @@ bool Parms::doParmSendingLoop ( ) {
 
 	if ( ! s_headNode ) return true;
 
+	if ( g_isDumpingRdbFromMain ) return true;
+
 	if ( s_inLoop ) return true;
 
 	s_inLoop = true;
@@ -21551,8 +21601,8 @@ bool Parms::doParmSendingLoop ( ) {
 		}
 
 		// debug log
-		log(LOG_INFO,"parms: sending parm request "
-		    "to hostid %"INT32"",h->m_hostId);
+		log(LOG_INFO,"parms: sending parm request id %i "
+		    "to hostid %"INT32"",(int)pn->m_parmId,h->m_hostId);
 
 		// count it
 		pn->m_numRequests++;
@@ -22944,6 +22994,14 @@ bool printUrlExpressionExamples ( SafeBuf *sb ) {
 			  "or any HTTP status error, like 404 or "
 			  "505 is included in this count, in addition to "
 			  "\"temporary\" errors like DNS timeouts."
+			  "</td></tr>"
+
+			  "<tr class=poo><td>errorcode==32880</td>"
+			  "<td>"
+			  "If the last time it was spidered it had this "
+			  "numeric error code. See the error codes in "
+			  "Errno.cpp. In this particular example 32880 is "
+			  "for EBADURL."
 			  "</td></tr>"
 
 			  "<tr class=poo><td>hastmperror</td>"

@@ -885,6 +885,9 @@ void hdtempWrapper ( int fd , void *state ) {
 	// or if haven't waited int32_t enough
 	if ( now < s_nextTime ) return;
 
+	// see if this fixes the missed heartbeats
+	//return;
+
 	// set it
 	g_process.m_threadOut = true;
 	// . call thread to call popen
@@ -968,7 +971,11 @@ float getDiskUsage ( int64_t *diskAvail ) {
 	char cmd[10048];
 	char out[1024];
 	sprintf(out,"%sdiskusage",g_hostdb.m_dir);
-	snprintf(cmd,10000,"df -ka %s | tail -1 | "
+	snprintf(cmd,10000,
+		 // "ulimit -v 25000  ; "
+		 // "ulimit -t 30 ; "
+		 // "ulimit -a; "
+		 "df -ka %s | tail -1 | "
 		 "awk '{print $4\" \"$5}' > %s",
 		 g_hostdb.m_dir,
 		 out);
@@ -982,7 +989,9 @@ float getDiskUsage ( int64_t *diskAvail ) {
 		return -1.0; // unknown
 	}
 	// this will happen if you don't upgrade glibc to 2.2.4-32 or above
-	if ( err != 0 ) {
+	// for some reason it returns no mem but the file is ok.
+	// something to do with being in a thread?
+	if ( err != 0 && errno != ENOMEM ) {
 		log("build: Call to system(\"%s\") had error: %s",
 		    cmd,mstrerror(errno));
 		return -1.0; // unknown
@@ -1175,8 +1184,12 @@ void heartbeatWrapper ( int fd , void *state ) {
 		// check the "cat /proc/<pid>/status | grep SigQ" output
 		// to see if its overflowed. hopefully i will fix this by
 		// queue the signals myself in Loop.cpp.
-		log("db: missed heartbeat by %"INT64" ms. Num elapsed alarms = "
-		    "%"INT32"", elapsed-100,(int32_t)(g_numAlarms - s_lastNumAlarms));
+		log("db: missed calling niceness 0 heartbeatWrapper "
+		    "function by %"INT64" ms. Either you need a quickpoll "
+		    "somewhere or a niceness 0 function is taking too long. "
+		    "Num elapsed alarms = "
+		    "%"INT32"", elapsed-100,(int32_t)(g_numAlarms - 
+						      s_lastNumAlarms));
 	s_last = now;
 	s_lastNumAlarms = g_numAlarms;
 
@@ -1524,19 +1537,30 @@ bool Process::shutdown2 ( ) {
 
 	static bool s_printed = false;
 
-	// wait for all threads to return
-	//int32_t n = g_threads.getNumThreadsOutOrQueued() ;
-	int32_t n = g_threads.getNumWriteThreadsOut();
+ waitLoop:
+
+	// wait for all 'write' threads to be done. they can be done
+	// and just waiting for a join, in which case we won't coun them.
+	int32_t n = g_threads.getNumActiveWriteUnlinkRenameThreadsOut();
+	// we can't wait for the write thread if we had a seg fault, but
+	// do print a msg in the log
+	if ( n != 0 && m_urgent ) {
+		log(LOG_INFO,"gb: Has %"INT32" write/unlink/rename "
+		    "threads active. Waiting.",n);
+		sleep(1);
+		goto waitLoop;
+	}
+
 	if ( n != 0 && ! m_urgent ) {
-		log(LOG_INFO,"gb: Has %"INT32" write threads out. Waiting for "
+		log(LOG_INFO,"gb: Has %"INT32" write/unlink/rename "
+		    "threads out. Waiting for "
 		    "them to finish.",n);
 		return false;
 	}
 	else if ( ! s_printed && ! m_urgent ) {
 		s_printed = true;
-		log(LOG_INFO,"gb: No write threads out.");
+		log(LOG_INFO,"gb: No write/unlink/rename threads active.");
 	}
-
 
 
 	// disable all spidering
@@ -1650,11 +1674,18 @@ bool Process::shutdown2 ( ) {
 
 	// urgent means we need to dump core, SEGV or something
 	if ( m_urgent ) {
-		// log it
-		log("gb: Dumping core after saving.");
-		// at least destroy the page caches that have shared memory
-		// because they seem to not clean it up
-		resetPageCaches();
+
+		if ( g_threads.amThread() ) {
+			uint64_t tid = (uint64_t)getpidtid();
+			log("gb: calling abort from thread with tid of "
+			    "%"UINT64" (thread)",tid);
+		}
+		else {
+			pid_t pid = getpid();
+			log("gb: calling abort from main process "
+			    "with pid of %"UINT64" (main process)",
+			    (uint64_t)pid);
+		}
 
 		// let's ensure our core file can dump
 		struct rlimit lim;
@@ -1662,9 +1693,48 @@ bool Process::shutdown2 ( ) {
 		if ( setrlimit(RLIMIT_CORE,&lim) )
 			log("gb: setrlimit: %s.", mstrerror(errno) );
 
+		// if we are in this code then we are the main process
+		// and not a thread.
+		// see if this makes it so we always dump core again.
+		// joins with all threads, too.
+		log("gb: Joining with all threads");
+		g_threads.killAllThreads();
+
+		// log it
+		log("gb: Dumping core after saving.");
+		// at least destroy the page caches that have shared memory
+		// because they seem to not clean it up
+		//resetPageCaches();
+
+		// use the default segmentation fault handler which should
+		// dump core rather than call abort() which doesn't always
+		// work because perhaps of threads doing something
+		int signum = SIGSEGV;
+		signal(signum, SIG_DFL);
+		kill(getpid(), signum);
+
+		// this is the trick: it will trigger the core dump by
+		// calling the original SIGSEGV handler.
+		//int signum = SIGSEGV;
+		//signal(signum, SIG_DFL);
+		//kill(getpid(), signum);
+
+		// try resetting the SEGV sig handle to default. when
+		// we return it should call the default handler.
+		// struct sigaction sa;
+		// sigemptyset (&sa.sa_mask);
+		// sa.sa_flags = SA_RESETHAND;
+		// sa.sa_sigaction = NULL;
+		// sigaction ( SIGSEGV, &sa, 0 ) ;
+		// return true;
+
 		// . force an abnormal termination which will cause a core dump
 		// . do not dump core on SIGHUP signals any more though
-		abort();
+		//abort();
+
+		// return from this signal handler so we can execute
+		// original SIGSEGV handler right afterwards
+		// default handler should be called after we return now
 		// keep compiler happy
 		return true;
 	}
@@ -1673,6 +1743,12 @@ bool Process::shutdown2 ( ) {
 
 	// cleanup threads, this also launches them too
 	g_threads.timedCleanUp(0x7fffffff,MAX_NICENESS);
+
+	// there's no write/unlink/rename threads active, 
+	// so just kill the remaining threads and join
+	// with them so we can try to get a proper exit status code
+	log("gb: Joining with all threads");
+	g_threads.killAllThreads();
 
 	// wait for all threads to complete...
 	//int32_t n = g_threads.getNumThreadsOutOrQueued() ;

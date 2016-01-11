@@ -165,10 +165,10 @@ bool RdbBase::init ( char  *dir            ,
 		}
 		// make a special "cat" dir for it if we need to
 		sprintf ( tmp , "%s%s" , dir , dbname );
-		int32_t status = ::mkdir ( tmp ,
-			       S_IRUSR | S_IWUSR | S_IXUSR | 
-			       S_IRGRP | S_IWGRP | S_IXGRP | 
-					S_IROTH | S_IXOTH );
+		int32_t status = ::mkdir ( tmp , getDirCreationFlags() );
+			       // S_IRUSR | S_IWUSR | S_IXUSR | 
+			       // S_IRGRP | S_IWGRP | S_IXGRP | 
+			       // 		S_IROTH | S_IXOTH );
 	        if ( status == -1 && errno != EEXIST && errno )
 			return log("db: Failed to make directory %s: %s.",
 				   tmp,mstrerror(errno));
@@ -186,9 +186,9 @@ bool RdbBase::init ( char  *dir            ,
 		// make a special "cat" dir for it if we need to
 		sprintf ( tmp , "%scat" , dir );
 		if ( ::mkdir ( tmp ,
-			       S_IRUSR | S_IWUSR | S_IXUSR | 
-			       S_IRGRP | S_IWGRP | S_IXGRP | 
-			       S_IROTH | S_IXOTH ) == -1 && errno != EEXIST )
+			       // S_IRUSR | S_IWUSR | S_IXUSR | 
+			       // S_IRGRP | S_IWGRP | S_IXGRP | 
+			       // S_IROTH | S_IXOTH ) == -1 && errno != EEXIST )
 			return log("db: Failed to make directory %s: %s.",
 				   tmp,mstrerror(errno));
 	}
@@ -202,9 +202,9 @@ bool RdbBase::init ( char  *dir            ,
 		// make a special "stats" dir for it if necessary
 		sprintf ( tmp , "%sstats" , dir );
 		if ( ::mkdir ( tmp ,
-			       S_IRUSR | S_IWUSR | S_IXUSR | 
-			       S_IRGRP | S_IWGRP | S_IXGRP | 
-			       S_IROTH | S_IXOTH ) == -1 && errno != EEXIST )
+			       // S_IRUSR | S_IWUSR | S_IXUSR | 
+			       // S_IRGRP | S_IWGRP | S_IXGRP | 
+			       // S_IROTH | S_IXOTH ) == -1 && errno != EEXIST )
 			return log( "db: Failed to make directory %s: %s.",
 				    tmp, mstrerror( errno ) );
 	}
@@ -218,9 +218,9 @@ bool RdbBase::init ( char  *dir            ,
 		// make a special "stats" dir for it if necessary
 		sprintf ( tmp , "%saccess" , dir );
 		if ( ::mkdir ( tmp ,
-			       S_IRUSR | S_IWUSR | S_IXUSR | 
-			       S_IRGRP | S_IWGRP | S_IXGRP | 
-			       S_IROTH | S_IXOTH ) == -1 && errno != EEXIST )
+			       // S_IRUSR | S_IWUSR | S_IXUSR | 
+			       // S_IRGRP | S_IWGRP | S_IXGRP | 
+			       // S_IROTH | S_IXOTH ) == -1 && errno != EEXIST )
 			return log( "db: Failed to make directory %s: %s.",
 				    tmp, mstrerror( errno ) );
 	}
@@ -234,9 +234,9 @@ bool RdbBase::init ( char  *dir            ,
 		// make a special "stats" dir for it if necessary
 		sprintf ( tmp , "%ssyncdb" , dir );
 		if ( ::mkdir ( tmp ,
-			       S_IRUSR | S_IWUSR | S_IXUSR | 
-			       S_IRGRP | S_IWGRP | S_IXGRP | 
-			       S_IROTH | S_IXOTH ) == -1 && errno != EEXIST )
+			       // S_IRUSR | S_IWUSR | S_IXUSR | 
+			       // S_IRGRP | S_IWGRP | S_IXGRP | 
+			       // S_IROTH | S_IXOTH ) == -1 && errno != EEXIST )
 			return log( "db: Failed to make directory %s: %s.",
 				    tmp, mstrerror( errno ) );
 	}
@@ -1607,8 +1607,8 @@ bool RdbBase::attemptMerge ( int32_t niceness, bool forceMergeAll, bool doLog ,
 	if ( ! m_mergeUrgent && numFiles - 14 >= m_minToMerge ) {
 		m_mergeUrgent = true;
 		if ( doLog ) 
-		log(LOG_INFO,"merge: Entering urgent merge mode for %s.",
-		    m_dbname);
+		log(LOG_INFO,"merge: Entering urgent merge mode for %s "
+		    "coll=%s.", m_dbname,m_coll);
 		g_numUrgentMerges++;
 	}
 
@@ -1811,7 +1811,8 @@ void RdbBase::gotTokenForMerge ( ) {
 		m_mergeUrgent = true;
 		if ( m_doLog )
 		log(LOG_INFO,
-		    "merge: Entering urgent merge mode for %s.", m_dbname);
+		    "merge: Entering urgent merge mode (2) for %s coll=%s.", 
+		    m_dbname,m_coll);
 		g_numUrgentMerges++;
 	}
 	// tfndb has his own merge class since titledb merges write tfndb recs
@@ -1892,8 +1893,13 @@ void RdbBase::gotTokenForMerge ( ) {
 		// sanity check
 		if ( n <= 1 ) {
 			log(LOG_LOGIC,"merge: attemptMerge: Resuming. bad "
-			    "engineer");
+			    "engineer for %s coll=%s",m_dbname,m_coll);
 			//g_msg35.releaseToken();
+			if ( m_mergeUrgent ) {
+				log("merge: leaving urgent merge mode");
+				g_numUrgentMerges--;
+				m_mergeUrgent = false;
+			}
 			return false;
 		}
 		// make a log note

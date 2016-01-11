@@ -1014,7 +1014,7 @@ void printStackTrace ( int signum , siginfo_t *info , void *ptr ) {
 	// right now only works for 32 bit
 	//if ( arch != 32 ) return;
 
-	logf(LOG_DEBUG,"gb: seg fault. printing stack trace. use "
+	logf(LOG_DEBUG,"gb: Printing stack trace. use "
 	     "'addr2line -e gb' to decode the hex below.");
 
 	if ( g_inMemFunction ) {
@@ -1035,6 +1035,16 @@ void printStackTrace ( int signum , siginfo_t *info , void *ptr ) {
 		     //,ba
 		     //,g_profiler.getFnName(ba,0));
 		     );
+#ifdef INLINEDECODE
+		char cmd[256];
+		sprintf(cmd,"addr2line -e gb 0x%"XINT64" > ./tmpout"
+			,(uint64_t)s_bt[i]);
+		gbsystem ( cmd );
+		char obuf[1024];
+		SafeBuf fb (obuf,1024);
+		fb.load("./tmpout");
+		log("stack: %s",fb.getBufStart());
+#endif
 	}
 }
 
@@ -1171,7 +1181,8 @@ void sigvtalrmHandler ( int x , siginfo_t *info , void *y ) {
 		//g_inSigHandler = true;
 		// NOT SAFE for pthreads cuz we're in sig handler
 #ifndef PTHREADS
-		log("loop: missed quickpoll");
+		log("loop: missed quickpoll. Dumping stack.");
+		printStackTrace( x , info , y );
 #endif
 		//g_inSigHandler = false;
 		// seems to core a lot in gbcompress() we need to
@@ -1183,15 +1194,19 @@ void sigvtalrmHandler ( int x , siginfo_t *info , void *y ) {
 	}
 
 	// if it has been a while since heartbeat (> 10000ms) dump core so
-	// we can see where the process was... that is a missed quick poll?
+	// we can see where the process was... we are in a long niceness 0
+	// function or a niceness 1 function without a quickpoll, so that
+	// heartbeatWrapper() function never gets called.
 	if ( g_process.m_lastHeartbeatApprox == 0 ) return;
 	if ( g_conf.m_maxHeartbeatDelay <= 0 ) return;
 	if ( g_nowApprox - g_process.m_lastHeartbeatApprox > 
 	     g_conf.m_maxHeartbeatDelay ) {
 #ifndef PTHREADS
-		logf(LOG_DEBUG,"gb: CPU seems blocked. Forcing core.");
+		logf(LOG_DEBUG,"gb: CPU seems blocked. Dumping stack.");
+		printStackTrace( x , info , y );
 #endif
 		//char *xx=NULL; *xx=0; 
+
 	}
 
 	//logf(LOG_DEBUG, "xxx now: %"INT64"! approx: %"INT64"", g_now, g_nowApprox);
@@ -2708,6 +2723,32 @@ void Loop::enableTimer() {
 }
 
 
+FILE* gbpopen(char* cmd) {
+    // Block everything from interrupting this system call because
+    // if there is an alarm or a child thread crashes (pdftohtml)
+    // then this will hang forever.
+    // We should actually write our own popen so that we do
+    // fork, close all fds in the child, then exec.  
+    // These child processes can hold open the http server and
+    // prevent a new gb from running even after it has died.
+	g_loop.disableTimer();
+
+	sigset_t oldSigs;
+	sigset_t sigs;
+	sigfillset ( &sigs );	
+
+	if ( sigprocmask ( SIG_BLOCK  , &sigs, &oldSigs ) < 0 ) {
+        log("build: had error blocking signals for popen");
+    }
+	FILE* fh = popen(cmd, "r");            
+    
+	if ( sigprocmask ( SIG_SETMASK  , &oldSigs, NULL ) < 0 ) {
+        log("build: had error unblocking signals for popen");
+    }
+
+	g_loop.enableTimer();
+    return fh;
+}
 
 
 //calling with a 0 niceness will turn off the timer interrupt

@@ -320,7 +320,7 @@ bool Threads::init ( ) {
 	// i raised since global specs new servers have 2 (hyperthreaded?) cpus
 	int32_t max = g_conf.m_maxCpuThreads;
 	if ( max < 1 ) max = 1;
-	if ( ! g_threads.registerType ( INTERSECT_THREAD,max,200) ) 
+	if ( ! g_threads.registerType ( INTERSECT_THREAD,max,10) ) 
 		return log("thread: Failed to register thread type." );
 	// filter thread spawned to call popen() to filter an http reply
 	if ( ! g_threads.registerType ( FILTER_THREAD, 2/*maxThreads*/,300) ) 
@@ -334,10 +334,10 @@ bool Threads::init ( ) {
 	//   it was taking forever to go one at a time through the unlink
 	//   thread queue. seemed like a 1 second space between unlinks.
 	//   1/23/1014
-	if ( ! g_threads.registerType ( UNLINK_THREAD,30/*maxThreads*/,3000) ) 
+	if ( ! g_threads.registerType ( UNLINK_THREAD,5/*maxThreads*/,3000) ) 
 		return log("thread: Failed to register thread type." );
 	// generic multipurpose
-	if ( ! g_threads.registerType (GENERIC_THREAD,100/*maxThreads*/,100) ) 
+	if ( ! g_threads.registerType (GENERIC_THREAD,20/*maxThreads*/,100) ) 
 		return log("thread: Failed to register thread type." );
 	// for call SSL_accept() which blocks for 10ms even when socket
 	// is non-blocking...
@@ -433,6 +433,13 @@ int32_t Threads::getNumThreadsOutOrQueued() {
 
 int32_t Threads::getNumWriteThreadsOut() {
 	return m_threadQueues[DISK_THREAD].getNumWriteThreadsOut();
+}
+
+int32_t Threads::getNumActiveWriteUnlinkRenameThreadsOut() {
+	// these do not countthreads that are done, and just awaiting join
+	int32_t n = m_threadQueues[DISK_THREAD].getNumWriteThreadsOut();
+	n += m_threadQueues[UNLINK_THREAD].getNumActiveThreadsOut();
+	return n;
 }
 
 // . returns false (and may set errno) if failed to launch a thread
@@ -853,6 +860,19 @@ bool ThreadQueue::init ( char threadType, int32_t maxThreads, int32_t maxEntries
 	return true;
 }
 
+int32_t ThreadQueue::getNumActiveThreadsOut() {
+	int32_t n = 0;
+	for ( int32_t i = 0 ; i < m_maxEntries ; i++ ) {
+		ThreadEntry *e = &m_entries[i];
+		if ( ! e->m_isOccupied ) continue;
+		if ( ! e->m_isLaunched ) continue;
+		// if it is done and just waiting for a join, do not count
+		if ( e->m_isDone ) continue;
+		n++;
+	}
+	return n;
+}
+
 int32_t ThreadQueue::getNumThreadsOutOrQueued() {
 	// MDW: we also need to count threads that are returned but need their
 	// callback called so, in the case of RdbDump, the rdblist that was written
@@ -1108,6 +1128,7 @@ int32_t Threads::timedCleanUp (int32_t maxTime, int32_t niceness) {
 		return 0;
 
 	if ( ! m_needsCleanup ) return 0;
+
 	//if ( g_inSigHandler ) return 0;
 	int64_t startTime = gettimeofdayInMillisecondsLocal();
 	int64_t took = 0;
@@ -1299,7 +1320,15 @@ bool ThreadQueue::timedCleanUp ( int32_t maxNiceness ) {
 			// . join up with that thread
 			// . damn, sometimes he can block forever on his
 			//   call to sigqueue(), 
+			int64_t startTime = gettimeofdayInMillisecondsLocal();
+			int64_t took;
 			int32_t status =  pthread_join ( t->m_joinTid , NULL );
+			took = startTime - gettimeofdayInMillisecondsLocal();
+			if ( took > 50 ) {
+				log("threads: pthread_join took %i ms",
+				    (int)took);
+			}
+
 			if ( status != 0 ) {
 				log("threads: pthread_join %"INT64" = %s (%"INT32")",
 				    (int64_t)t->m_joinTid,mstrerror(status),
@@ -2088,7 +2117,8 @@ bool ThreadQueue::launchThread2 ( ) {
 
 	if ( m_threadType != DISK_THREAD ) {
 		// if one thread of this type is already out, forget it
-		if ( m_launchedHead ) return false;
+		// then we can't have 100 GENERIC THREADS!!! with this...
+		//if ( m_launchedHead ) return false;
 		// first try niceness 0 queue
 		ThreadEntry **bestHeadPtr = &m_waitHead0;
 		ThreadEntry **bestTailPtr = &m_waitTail0;
@@ -3314,4 +3344,24 @@ void Threads::printState() {
 			
 		}
 	}
+}
+
+void ThreadQueue::killAllThreads ( ) {
+	for ( int32_t i = 0 ; i < m_maxEntries ; i++ ) {
+		ThreadEntry *e = &m_entries[i];
+		if ( ! e->m_isOccupied ) continue;
+		if ( ! e->m_isLaunched ) continue;
+		log("threads: killling thread id %i",(int)e->m_joinTid);
+		pthread_kill ( e->m_joinTid , SIGKILL );
+		log("threads: joining with thread id %i",(int)e->m_joinTid);
+		pthread_join ( e->m_joinTid , NULL );
+	}
+}
+
+void Threads::killAllThreads ( ) {
+	log("threads: killing all threads");
+	for ( int32_t j = 0 ; j < m_numQueues ; j++ ) {
+		ThreadQueue *tq = &m_threadQueues[j];
+		tq->killAllThreads();
+	}		
 }

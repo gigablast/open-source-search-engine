@@ -5,6 +5,8 @@
 #include "Errno.h"
 #include "HashTable.h"
 #include "Speller.h"
+#include "Punycode.h"
+#include "Unicode.h"
 
 static void print_string ( char *s , int32_t len );
 
@@ -137,7 +139,7 @@ void Url::set (Url *baseUrl,char *s,int32_t len,bool addWWW,bool stripSessionId,
 // . i know sun.com has urls like "http://sun.com/;$sessionid=123ABC$"
 // . url should be ENCODED PROPERLY for this to work properly
 void Url::set ( char *t , int32_t tlen , bool addWWW , bool stripSessionId ,
-		bool stripPound , bool stripCommonFile , 
+                bool stripPound , bool stripCommonFile , 
 		int32_t titleRecVersion ) {
 	reset();
 	// debug
@@ -157,11 +159,163 @@ void Url::set ( char *t , int32_t tlen , bool addWWW , bool stripSessionId ,
 	while ( tlen > 0 && !is_alnum_a(*t) && *t!='-' && *t!='/'){t++;tlen--;}
 	// . stop t at first space or binary char
 	// . url should be in encoded form!
-	int32_t i ;
+	int32_t i = 0;
+	int32_t nonAsciiPos = -1;
 	for ( i = 0 ; i < tlen ; i++ )	{
-		if ( ! is_ascii(t[i]) ) break; // no non-ascii chars allowed
 		if ( is_wspace_a(t[i])   ) break; // no spaces allowed
+
+		if ( ! is_ascii(t[i]) ) {
+			// Sometimes the length with the null is passed in, 
+			// so ignore nulls FIXME?
+			if( t[i] ) nonAsciiPos = i;
+			break; // no non-ascii chars allowed
+		}
 	}
+
+	
+	if(nonAsciiPos != -1) { 
+		// Try turning utf8 and latin1 encodings into punycode.
+		// All labels(between dots) in the domain are encoded 
+		// separately.  We don't support encoded tlds, but they are 
+		// not widespread yet.
+		// If it is a non ascii domain it needs to take the form 
+		// xn--<punycoded label>.xn--<punycoded label>.../
+		char tmp = t[tlen];
+		if(t[tlen]) t[tlen] = 0;
+		log(LOG_DEBUG, "build: attempting to decode unicode url %s pos at %"INT32, t, nonAsciiPos);
+		if(tmp) t[tlen] = tmp;
+		char encoded [ MAX_URL_LEN ];
+		size_t encodedLen = MAX_URL_LEN;
+		char *encodedDomStart = encoded;
+		char *p = t;
+		char *pend = t+tlen;
+		
+		// Find the start of the domain
+		if(tlen > 7 && strncmp(p, "http://", 7) == 0) p += 7;
+		else if(tlen > 8 && strncmp(p, "https://", 8) == 0) p += 8;
+
+		gbmemcpy(encodedDomStart, t, p-t);
+		encodedDomStart += p-t;
+
+		while(p < pend && *p != '/') {
+			char *labelStart = p;
+			uint32_t tmpBuf[MAX_URL_LEN];
+			int32_t tmpLen = 0;
+		
+			while(p < pend && *p != '.' && *p != '/') p++;
+			int32_t	labelLen = p - labelStart;
+
+			bool tryLatin1 = false;
+			// For utf8 urls
+			p = labelStart;
+			bool labelIsAscii = true;
+
+			// Convert the domain to code points and copy it to 
+			// tmpbuf to be punycoded
+			for(;p-labelStart<labelLen;
+				p += utf8Size(tmpBuf[tmpLen]), tmpLen++) {
+
+				labelIsAscii &= is_ascii(*p);
+				tmpBuf[tmpLen] = utf8Decode(p);
+				if(!tmpBuf[tmpLen]) { // invalid char?
+					tryLatin1 = true;
+					break;
+				}
+			}
+			if(labelIsAscii) {
+				if(labelStart[labelLen] == '.') {
+					labelLen++;
+					p++;
+				}
+				gbmemcpy(encodedDomStart, labelStart, labelLen);
+				encodedDomStart += labelLen;
+				continue;
+			}
+
+			if( tryLatin1 ) {
+				// For latin1 urls
+				tmpLen = 0;
+				for(;tmpLen<labelLen;tmpLen++) {
+					tmpBuf[tmpLen] = labelStart[tmpLen];
+				}
+			}
+
+			gbmemcpy(encodedDomStart, "xn--", 4);
+			encodedDomStart += 4;
+
+			punycode_status status ;
+			status = punycode_encode(tmpLen, 
+						 tmpBuf,
+						 NULL, 
+						 &encodedLen,
+						 encodedDomStart);
+			if ( status != 0 ) {
+				// Give up? try again?
+				log("build: Bad Engineer, failed to "
+				    "punycode international url %s", t);
+				return;
+			}
+			// We should check if what we encoded were valid url 
+			// characters, no spaces, etc
+			// FIXME: should we exclude just the bad chars? I've 
+			// seen plenty of urls with
+			// a newline in the middle.  Just discard the whole 
+			// chunk for now
+			bool badUrlChars = false;
+			for(uint32_t i=0;i<encodedLen;i++) {
+				if(is_wspace_a(encodedDomStart[i])){
+					badUrlChars = true;
+					break;
+				}
+			}
+
+			if(encodedLen == 0 || badUrlChars) {
+				encodedDomStart -= 4; //don't need the xn--
+				p++;
+			} else {
+				encodedDomStart += encodedLen;
+				*encodedDomStart++ = *p++; // Copy in the . or the /
+
+			}
+		}
+		
+		// p now points to the end of the domain
+		// encodedDomStart now points to the first free space in encoded string
+
+		// Now copy the rest of the url in.  Watch out for non-ascii chars 
+		// truncate the url, and keep it under max url length
+		uint32_t newUrlLen = encodedDomStart - encoded;
+
+		while(p < pend) {
+			if ( ! *p ) break; // null?
+			if(!is_ascii(*p)) {
+				//break;
+				// url encode utf8 characters now
+				char cs = getUtf8CharSize(p);
+				// bad utf8 char?
+				if ( cs <= 1 ) break;
+				// too long?
+				if ( newUrlLen + 12 >= MAX_URL_LEN )
+					break;
+				char stored = urlEncode ( &encoded[newUrlLen], 
+							  12 ,
+							  p ,
+							  cs );
+				p += cs;
+				newUrlLen += stored;
+				continue;
+			}
+			if(is_wspace_a(*p)) break;
+			if(newUrlLen >= MAX_URL_LEN) break;
+			encoded[newUrlLen++] = *p++;
+		}
+
+
+		//gbmemcpy(encodedDomStart, p, restOfUrlLen);
+		encoded[newUrlLen] = '\0';
+		return this->set(encoded, newUrlLen, addWWW, stripSessionId, 
+						 stripPound, stripCommonFile, titleRecVersion);
+    }
 	// truncate length to the first occurence of an unacceptable char
 	tlen = i;
 	// . decode characters that should not have been encoded
@@ -954,6 +1108,10 @@ char *Url::getPathComponent ( int32_t num , int32_t *clen ) {
 //	// return the end of it
 //	return pc + pclen;
 //}
+
+
+
+
 
 bool Url::isHostWWW ( ) {
 	if ( m_hlen < 4 ) return false;
@@ -2379,4 +2537,92 @@ bool Url::hasMediaExtension ( ) {
 		return true;
 
 	return false;
+}
+
+uint32_t Url::unitTests() {
+	char* urls[] = {
+		"http://www.fas.org/blog/ssp/2009/08/securing-venezuela\032s-arsenals.php",
+		"http://topbeskæring.dk/velkommen",
+		"www.Alliancefrançaise.nu",
+		"française.Alliance.nu",
+		"française.Alliance.nu/asdf",
+		"http://française.Alliance.nu/asdf",
+		"http://française.Alliance.nu/",
+		"幸运.龍.com",
+		"幸运.龍.com/asdf/运/abc",
+		"幸运.龍.com/asdf",
+		"http://幸运.龍.com/asdf",
+		"http://Беларуская.org/Акадэмічная",
+		"https://hi.Български.com",
+		"https://fakedomain.中文.org/asdf",
+		"https://gigablast.com/abc/文/efg",
+		"https://gigablast.com/?q=文",
+		"http://www.example.сайт",
+		"http://genocidearchiverwanda.org.rw/index.php/Category:Official_Communiqués",
+		"http://www.example.com/xn--fooled-you-into-trying-to-decode-this",
+		"http://www.example.сайт/xn--fooled-you-into-trying-to-decode-this",
+		"http://腕時計通販.jp/",
+		// Lets check some bad urls too:
+		"https://pypi.python\n\n\t\t\t\t.org/packages/source/p/pyramid/pyramid-1.5.tar.gz#md5=8747658dcbab709a9c491e43d3b0d58b"
+	};
+
+    StackBuf(sb);
+	uint32_t len = sizeof(urls) / sizeof(char*);
+	for(uint32_t i = 0; i < len; i++) {
+		Url u;
+		u.set(urls[i], strlen(urls[i]));
+		log("build:%s normalized to %s, printed to %s ", 
+            urls[i], u.getUrl(), Url::getDisplayUrl(u.getUrl(), &sb));
+        sb.reset();
+	}
+	//FIXME: need to return an error if there is a problem
+	return 0;
+}
+
+
+char* Url::getDisplayUrl(char* url, SafeBuf* sb) {
+	char* found;
+    char* labelCursor = url;
+	if((found = strstr(labelCursor, "xn--"))) {
+		sb->safeMemcpy(url, found - url);
+
+		char* p = url;
+		char* pend = url + gbstrlen(url);
+		if(strncmp(p, "http://", 7) == 0) p += 7;
+		else if(strncmp(p, "https://", 8) == 0) p += 8;
+
+		while(p < pend && *p != '/') p++;
+		char* domEnd = p;
+
+		do {
+			if(found > domEnd) {
+				// Dont even look if it is past the domain
+				break;
+			}
+
+			char* encodedStart = found + 4;
+			uint32_t decoded [ MAX_URL_LEN];
+			size_t decodedLen = MAX_URL_LEN - 1 ;
+			char* labelEnd = encodedStart;
+			while( labelEnd < domEnd && *labelEnd != '/' &&  *labelEnd != '.' ) 
+				labelEnd++;
+
+			punycode_status status = punycode_decode(labelEnd - encodedStart,
+													 encodedStart, 
+													 &decodedLen, 
+													 decoded, NULL);
+			if(status != 0) {
+				log("build: Bad Engineer, failed to depunycode international url %s", url);
+				sb->safePrintf("%s", url);
+				return url;
+			}
+			sb->utf32Encode(decoded, decodedLen);
+			//sb->pushChar(*labelEnd);
+			labelCursor = labelEnd;
+		} while((found = strstr(labelCursor, "xn--")));
+	}
+    // Copy in the rest
+    sb->safePrintf("%s", labelCursor);
+    sb->nullTerm();
+    return sb->getBufStart();
 }

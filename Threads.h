@@ -161,6 +161,7 @@ class ThreadQueue {
 
 	int32_t getNumThreadsOutOrQueued();
 	int32_t getNumWriteThreadsOut() ;
+	int32_t getNumActiveThreadsOut() ;
 
 
 	// . for adding an entry
@@ -195,6 +196,8 @@ class ThreadQueue {
 	// these are called by g_udpServer2, the high priority udp server
 	void suspendLowPriorityThreads();
 	void resumeLowPriorityThreads();
+
+	void killAllThreads();
 
 	// this is true if low priority threads are temporarily suspended
 	bool m_isLowPrioritySuspended ;
@@ -245,6 +248,8 @@ class Threads {
 	void enableThreads  () { m_disabled = false; };
 	bool areThreadsDisabled() { return m_disabled; };
 	bool areThreadsEnabled () { return ! m_disabled; };
+
+	void killAllThreads();
 
 	// . returns false and sets errno if thread launch failed
 	// . returns true on success
@@ -300,6 +305,8 @@ class Threads {
 
 	int32_t getNumThreadsOutOrQueued();
 	int32_t getNumWriteThreadsOut() ;
+
+	int32_t getNumActiveWriteUnlinkRenameThreadsOut() ;
 
 	// counts the high/low priority (niceness <= 0) threads
 	//int64_t   m_hiLaunched;

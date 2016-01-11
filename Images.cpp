@@ -1007,7 +1007,10 @@ void Images::thumbStart_r ( bool amThread ) {
 
         // Open/Create temporary file to store image to
         int   fhndl;
-        if( (fhndl = open( in, O_RDWR+O_CREAT, S_IWUSR+S_IRUSR )) < 0 ) {
+        if( (fhndl = open( in, O_RDWR+O_CREAT ,
+			   getFileCreationFlags()
+			   // //			   S_IWUSR+S_IRUSR 
+			   )) < 0 ) {
                log( "image: Could not open file, %s, for writing: %s - %d.",
        		    in, mstrerror( m_errno ), fhndl );
 	       m_imgDataSize = 0;

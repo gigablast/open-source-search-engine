@@ -475,7 +475,7 @@ class XmlDoc {
 		    key_t           *doledbKey ,
 		    char            *coll      , 
 		    class SafeBuf   *pbuf      , 
-		    int32_t             niceness  ,
+		    int32_t          niceness  ,
 		    char            *utf8Content = NULL ,
 		    bool             deleteFromIndex = false ,
 		    int32_t             forcedIp = 0 ,
@@ -483,9 +483,11 @@ class XmlDoc {
 		    uint32_t           spideredTime = 0 , // time_t
 		    bool             contentHasMime = false ,
 		    // for container docs, what is the separator of subdocs?
-				char            *contentDelim = NULL,
-				char *metadata = NULL,
-				uint32_t metadataLen = 0) ;
+		    char            *contentDelim = NULL,
+			char *metadata = NULL,
+			uint32_t metadataLen = 0,
+			// for injected docs we have the recv, buffer size don't exceed that
+			int32_t payloadLen = -1) ;
 
 	// we now call this right away rather than at download time!
 	int32_t getSpideredTime();
@@ -513,7 +515,9 @@ class XmlDoc {
 	bool indexDoc2 ( );
 	bool isContainerDoc ( );
 	bool indexContainerDoc ( );
-	bool indexWarcOrArc ( char ct ) ;
+
+	bool readMoreWarc();
+	bool indexWarcOrArc ( ) ;
 	key_t *getTitleRecKey() ;
 	//char *getSkipIndexing ( );
 	char *prepareToMakeTitleRec ( ) ;
@@ -521,6 +525,7 @@ class XmlDoc {
 	bool setTitleRecBuf ( SafeBuf *buf , int64_t docId, int64_t uh48 );
 	// sets m_titleRecBuf/m_titleRecBufValid/m_titleRecKey[Valid]
 	SafeBuf *getTitleRecBuf ( );
+	bool appendNewMetaInfo ( SafeBuf *metaList , bool forDelete ) ;
 	SafeBuf *getSpiderStatusDocMetaList ( class SpiderReply *reply ,
 					      bool forDelete ) ;
 	SafeBuf *getSpiderStatusDocMetaList2 ( class SpiderReply *reply ) ;
@@ -705,7 +710,7 @@ class XmlDoc {
 	char **getExpandedUtf8Content ( ) ;
 	char **getUtf8Content ( ) ;
 	// we download large files to a file on disk, like warcs and arcs
-	BigFile *getUtf8ContentInFile ( int64_t *fileSizeArg );
+	FILE *getUtf8ContentInFile ( );
 	int32_t *getContentHash32 ( ) ;
 	int32_t *getContentHashJson32 ( ) ;
 	//int32_t *getTagHash32 ( ) ;
@@ -768,6 +773,8 @@ class XmlDoc {
 	uint64_t m_ipStartTime;
 	uint64_t m_ipEndTime;
 
+	bool m_updatedMetaData;
+
 	void copyFromOldDoc ( class XmlDoc *od ) ;
 
 	class SpiderReply *getFakeSpiderReply ( );
@@ -813,6 +820,7 @@ class XmlDoc {
 	int32_t getBoostFromSiteNumInlinks ( int32_t inlinks ) ;
 	bool hashSpiderReply (class SpiderReply *reply ,class HashTableX *tt) ;
 	bool hashMetaTags ( class HashTableX *table ) ;
+	bool hashMetaData ( class HashTableX *table ) ;
 	bool hashIsClean ( class HashTableX *table ) ;
 	bool hashZipCodes ( class HashTableX *table ) ;
 	bool hashMetaZip ( class HashTableX *table ) ;
@@ -1067,6 +1075,7 @@ class XmlDoc {
 	int32_t m_addedSpiderRequestSize;
 	int32_t m_addedSpiderReplySize;
 	int32_t m_addedStatusDocSize;
+	int64_t m_addedStatusDocId;
 
 	SafeBuf  m_metaList2;
 	SafeBuf  m_zbuf;
@@ -1084,12 +1093,16 @@ class XmlDoc {
 	int32_t m_warcError ;
 	int32_t m_arcError ;
 	bool m_doneInjectingWarc ;
-	bool m_doneInjectingArc ;
-	int64_t m_fileOff ;
+
+	int64_t m_bytesStreamed;
 	char *m_fileBuf ;
 	int32_t m_fileBufAllocSize;
+	bool    m_registeredWgetReadCallback;
 	char *m_fptr ;
 	char *m_fptrEnd ;
+
+	FILE* m_pipe;
+	
 	BigFile m_file;
 	int64_t m_fileSize;
 	FileState m_fileState;
@@ -2401,7 +2414,6 @@ class XmlDoc {
 	bool          m_setFromDocId;
 	bool          m_freeLinkInfo1;
 	bool          m_freeLinkInfo2;
-
 	bool          m_contentInjected;
 
 	bool          m_recycleContent;
@@ -2470,7 +2482,8 @@ class XmlDoc {
 			 // for container docs consisting of subdocs to inject
 			 char *contentDelim = NULL,
 			 char* metadata = NULL,
-			 uint32_t metadataLen = 0);
+             uint32_t metadataLen = 0,
+             int32_t  payloadLen = -1);
 
 
 	bool injectLinks  ( HashTableX *linkDedupTable ,

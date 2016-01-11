@@ -282,6 +282,12 @@ bool Msg13::forwardRequest ( ) {
 	int32_t nh     = g_hostdb.m_numHosts;
 	int32_t hostId = hash32h(((uint32_t)r->m_firstIp >> 8), 0) % nh;
 
+	if((uint32_t)r->m_firstIp >> 8 == 0) {
+		// If the first IP is not set for the request then we don't
+		// want to hammer the first host with spidering enabled.
+		hostId = hash32n ( r->ptr_url ) % nh;
+	}
+
 	// avoid host #0 for diffbot hack which is dropping some requests
 	// because of the streaming bug methinks
 	if ( hostId == 0 && nh >= 2 && g_conf.m_diffbotMsg13Hack ) 
@@ -295,11 +301,21 @@ bool Msg13::forwardRequest ( ) {
 		// get that host
 		//h = g_hostdb.getProxy ( hostId );;
 		h = g_hostdb.getHost ( hostId );
-		// stop if he is alive
-		if ( ! g_hostdb.isDead ( h ) ) break;
+
+		// Get the other one in shard instead of getting the first
+		// one we find sequentially because that makes the load
+		// imbalanced to the lowest host with spidering enabled.
+		if(!h->m_spiderEnabled) {
+			h = g_hostdb.getHost(g_hostdb.getHostIdWithSpideringEnabled(
+			  h->m_hostId));
+		}
+
+		// stop if he is alive and able to spider
+		if ( h->m_spiderEnabled && ! g_hostdb.isDead ( h ) ) break;
 		// get the next otherwise
 		if ( ++hostId >= nh ) hostId = 0;
 	}
+
 
 	hostId = 0; // HACK!!
 
@@ -2364,7 +2380,7 @@ bool getTestSpideredDate ( Url *u , int32_t *origSpideredDate , char *testDir ) 
 bool addTestSpideredDate ( Url *u , int32_t spideredTime , char *testDir ) {
 
 	// ensure dir exists
-	::mkdir(testDir,S_IRWXU);
+	::mkdir(testDir,getDirCreationFlags());
 
 	// set this
 	int64_t uh64 = hash64(u->getUrl(),u->getUrlLen());

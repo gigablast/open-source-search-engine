@@ -83,7 +83,7 @@ static bool gotSummaryWrapper            ( void *state );
 bool isSubDom(char *s , int32_t len);
 
 Msg40::Msg40() {
-	m_firstTime = true;
+	m_calledFacets = false;
 	m_doneWithLookup = false;
 	m_socketHadError = 0;
 	m_buf           = NULL;
@@ -109,6 +109,8 @@ Msg40::Msg40() {
 	m_printCount = 0;
 	//m_numGigabitInfos = 0;
 	m_numCollsToSearch = 0;
+	m_numMsg20sIn = 0;
+	m_numMsg20sOut = 0;
 }
 
 #define MAX2 50
@@ -1427,8 +1429,12 @@ bool Msg40::launchMsg20s ( bool recalled ) {
 		// hard limit
 		if ( m_numRequests-m_numReplies >= maxOut ) break;
 		// do not launch another until m_printi comes back because
-		// all summaries are bottlenecked on printing him out now
+		// all summaries are bottlenecked on printing him out now.
 		if ( m_si->m_streamResults &&
+		     // must have at least one outstanding summary guy
+		     // otherwise we can return true below and cause
+		     // the stream to truncate results in gotSummary()
+		     //m_numReplies < m_numRequests &&
 		     i >= m_printi + MAX_OUTSTANDING_MSG20S - 1 )
 			break;
 
@@ -1499,8 +1505,21 @@ bool Msg40::launchMsg20s ( bool recalled ) {
 		// if to a dead host, skip it
 		int64_t docId = m_msg3a.m_docIds[i];
 		uint32_t shardNum = g_hostdb.getShardNumFromDocId ( docId );
-		if ( g_hostdb.isShardDead ( shardNum ) ) {
-			log("msg40: skipping summary lookup #%"INT32" of "
+		// get the collection rec
+		CollectionRec *cr = g_collectiondb.getRec(m_firstCollnum);
+		// if shard is dead then do not send to it if not crawlbot
+		if ( g_hostdb.isShardDead ( shardNum ) &&
+		     cr &&
+		     // diffbot urls.csv downloads often encounter dead
+		     // hosts that are not really dead, so wait for it
+		     ! cr->m_isCustomCrawl &&
+		     // this is causing us to truncate streamed results
+		     // too early when we have false positives that a 
+		     // host is dead because the server is locking up 
+		     // periodically
+		     ! m_si->m_streamResults ) {
+			log("msg40: skipping summary "
+			    "lookup #%"INT32" of "
 			    "docid %"INT64" for dead shard #%"INT32""
 			    , i
 			    , docId
@@ -1547,8 +1566,6 @@ bool Msg40::launchMsg20s ( bool recalled ) {
 		// keep for-loops int16_ter with this
 		//if ( i > m_maxiLaunched ) m_maxiLaunched = i;
 		
-		// get the collection rec
-		CollectionRec *cr =g_collectiondb.getRec(m_firstCollnum);
 		//getRec(m_si->m_coll2,m_si->m_collLen2);
 		if ( ! cr ) {
 			log("msg40: missing coll");
@@ -1737,7 +1754,7 @@ Msg20 *Msg40::getAvailMsg20 ( ) {
 		if ( m_msg20[i]->m_launched ) continue;
 		return m_msg20[i];
 	}
-	// how can this happen???
+	// how can this happen???  THIS HAPPEND
 	char *xx=NULL;*xx=0; 
 	return NULL;
 }
@@ -1762,7 +1779,7 @@ bool gotSummaryWrapper ( void *state ) {
 		    THIS->m_numReplies,
 		    THIS->m_msg3a.m_numDocIds);
 	// it returns false if we're still awaiting replies
-	if ( ! THIS->gotSummary ( ) ) return false;
+	if ( ! THIS->m_calledFacets && ! THIS->gotSummary ( ) ) return false;
 	// lookup facets
 	if ( THIS->m_si &&
 	     ! THIS->m_si->m_streamResults &&
@@ -2215,11 +2232,10 @@ bool Msg40::gotSummary ( ) {
 
  complete:
 
-	// . ok, now i wait for everybody.
+	// . ok, now i wait for all msg20s (getsummary) to come back in.
 	// . TODO: evaluate if this hurts us
 	if ( m_numReplies < m_numRequests )
 		return false;
-
 
 	// if streaming results, we are done
 	if ( m_si && m_si->m_streamResults ) {
@@ -2444,6 +2460,9 @@ bool Msg40::gotSummary ( ) {
 	for ( int32_t i = 0 ; dedupPercent && i < m_numReplies ; i++ ) {
 		// skip if already invisible
 		if ( m_msg3a.m_clusterLevels[i] != CR_OK ) continue;
+		// Skip if invalid
+		if ( m_msg20[i]->m_errno ) continue;
+
 		// start with the first docid we have not yet checked!
 		//int32_t m = oldNumContiguous;
 		// get it
@@ -2462,6 +2481,8 @@ bool Msg40::gotSummary ( ) {
 			// skip if already invisible
 			if ( *level != CR_OK ) continue;
 			// get it
+			if ( m_msg20[m]->m_errno ) continue;
+
 			Msg20Reply *mrm = m_msg20[m]->m_r;
 			// do not dedup CT_STATUS results, those are
 			// spider reply "documents" that indicate the last
@@ -6280,8 +6301,8 @@ bool Msg40::lookupFacets ( ) {
 
 	if ( m_doneWithLookup ) return true;
 
-	if ( m_firstTime ) {
-		m_firstTime = false;
+	if ( !m_calledFacets ) {
+		m_calledFacets = true;
 		m_numMsg20sOut = 0;
 		m_numMsg20sIn  = 0;
 		m_j = 0;

@@ -211,6 +211,7 @@ class Host {
 	int64_t      m_lastPing;
 
 	char m_tmpBuf[4];
+	int16_t m_tmpCount;
 
 	// . first time we sent an unanswered ping request to this host
 	// . used so we can determine when to send an email alert
@@ -337,6 +338,10 @@ class Host {
 	int32_t m_lastTryError;
 	int32_t m_lastTryTime;
 
+	bool m_spiderEnabled;
+	bool m_queryEnabled;
+	
+
 	//char  m_requestBuf[MAX_PING_SIZE];
 	PingInfo m_pingInfo;//RequestBuf;
 };
@@ -445,6 +450,8 @@ class Hostdb {
 
 	//Host *getLiveHostInGroup ( int32_t groupId );
 	Host *getLiveHostInShard ( int32_t shardNum );
+	Host *getLeastLoadedInShard ( uint32_t shardNum , char niceness );
+	int32_t getHostIdWithSpideringEnabled ( uint32_t shardNum );
 
 	// in the entire cluster. return host #0 if its alive, otherwise
 	// host #1, etc.
@@ -463,6 +470,7 @@ class Hostdb {
 		if ( numHosts ) *numHosts = m_numHostsPerShard;
 		return &m_hosts[shardNum * m_numHostsPerShard]; 
 	};
+
 
 	//Host *getGroupFromGroupId ( uint32_t gid ) {
 	//	return getGroup ( gid ); 

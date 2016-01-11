@@ -3212,7 +3212,7 @@ bool Query::setQWords ( char boolFlag ,
 		// no punct, alnum only
 		if ( words.isPunct(i) ) continue;
 		// skip if not a stop word
-		if ( ! bits.m_bits[i] & D_IS_STOPWORD ) continue;
+		if ( ! (bits.m_bits[i] & D_IS_STOPWORD) ) continue;
 		// continue if you can still pair across prev punct word
 		if ( bits.m_bits[i-1] & D_CAN_PAIR_ACROSS ) continue;
 		// otherwise, we can now start a phrase

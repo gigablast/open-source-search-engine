@@ -200,7 +200,7 @@ skipReplaceHost:
 
 			       //"<td><b>resends sent</td>"
 			       //"<td><b>errors recvd</td>"
-			       "<td><b>try agains recvd</b></td>"
+			       "<td><b>try agains sent</b></td>"
 
 			       "<td><a href=\"/admin/hosts?c=%s&sort=3\">"
 			       "<b>dgrams resent</b></a></td>"
@@ -630,6 +630,15 @@ skipReplaceHost:
 		if (  !(flags & PFLAG_MERGEMODE0) )
 			fb.safePrintf ( "y");
 
+
+		if ( format == FORMAT_HTML && !h->m_spiderEnabled) {
+			fb.safePrintf("<span title=\"Spider Disabled\" style=\"text-decoration:line-through;\">S</span>");
+		}
+		if ( format == FORMAT_HTML && !h->m_queryEnabled) {
+			fb.safePrintf("<span title=\"Query Disabled\" style=\"text-decoration:line-through;\">Q</span>");
+		}
+
+
 		// clear it if it is us, this is invalid
 		if ( ! h->m_gotPingReply ) {
 			fb.reset();
@@ -758,6 +767,13 @@ skipReplaceHost:
 			sb.safePrintf("\t\t<note>%s</note>\n",
 				      h->m_note );
 
+			sb.safePrintf("\t\t<spider>%"INT32"</spider>\n",
+						  (int32_t)h->m_spiderEnabled );
+
+
+			sb.safePrintf("\t\t<query>%"INT32"</query>\n",
+						  (int32_t)h->m_queryEnabled );
+
 			sb.safePrintf("\t</host>\n");
 
 			continue;
@@ -859,6 +875,14 @@ skipReplaceHost:
 			sb.safePrintf("\t\t\"note\":\"%s\"\n",
 				      h->m_note );
 
+			sb.safePrintf("\t\t\"spider\":\"%"INT32"\"\n",
+						  (int32_t)h->m_spiderEnabled );
+
+			sb.safePrintf("\t\t\"query\":\"%"INT32"\"\n",
+						  (int32_t)h->m_queryEnabled );
+
+
+            
 			sb.safePrintf("\t},\n");
 
 			continue;
@@ -1313,12 +1337,14 @@ skipReplaceHost:
 		  */
 
 		  "<tr class=poo>"
-		  "<td>try agains recvd</td>"
+		  "<td>try agains sent</td>"
 		  "<td>How many ETRYAGAIN errors "
-		  "were received in response to a "
+		  "has this host sent out? they are sent out some times "
+		  "in response to a "
 		  "request to add data. Usually because the host's memory "
 		  "is full and it is dumping its data to disk. This number "
-		  "can be high if the host if failing to dump the data "
+		  "can be relatively high if the host if failing to dump "
+		  "the data "
 		  "to disk because of some malfunction, and it can therefore "
 		  "bottleneck the entire cluster."
 		  "</td>"

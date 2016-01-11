@@ -177,6 +177,12 @@ bool Msg20::getSummary ( Msg20Request *req ) {
 	int32_t timeout = 9999999; // 10 million seconds, basically inf.
 	if ( req->m_niceness == 0 ) timeout = 20;
 
+	// for diffbot make timeout super long so we aren't tripped up
+	// by dead hosts that aren't really dead.
+	// CollectionRec *cr = g_collectiondb.getRec ( req->m_collnum );
+	// if ( cr && cr->m_isCustomCrawl && req->m_niceness == 0 ) 
+	// 	timeout = 300;
+
 	// get our group
 	int32_t  allNumHosts = hostdb->getNumHostsPerShard();
 	Host *allHosts    = hostdb->getShard ( shardNum );//getGroup(groupId );
@@ -189,13 +195,29 @@ bool Msg20::getSummary ( Msg20Request *req ) {
 		Host *hh = &allHosts[i];
 		// skip if dead
 		if ( g_hostdb.isDead(hh) ) continue;
+
+		// Respect no-spider, no-query directives from hosts.conf 
+		if ( !req->m_getLinkInfo && ! hh->m_queryEnabled ) continue;
+		if ( req->m_getLinkInfo && ! hh->m_spiderEnabled ) continue;
 		// add it if alive
 		cand[nc++] = hh;
 	}
 	// if none alive, make them all candidates then
 	bool allDead = (nc == 0);
-	for ( int32_t i = 0 ; allDead && i < allNumHosts ; i++ ) 
+	for ( int32_t i = 0 ; allDead && i < allNumHosts ; i++ ) {
+		// NEVER add a noquery host to the candidate list, even
+		// if the query host is dead
+		if ( ! allHosts[i].m_queryEnabled ) continue;
 		cand[nc++] = &allHosts[i];
+	}
+
+	if ( nc == 0 ) {
+		log("msg20: error sending mcast: no queryable hosts "
+		    "availble to handle summary generation");
+		g_errno = EBADENGINEER;
+		m_gotReply = true;
+		return true;
+	}
 
 	// route based on docid region, not parity, because we want to hit
 	// the urldb page cache as much as possible

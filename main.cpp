@@ -289,7 +289,7 @@ bool summaryTest1   ( char *rec, int32_t listSize, char *coll , int64_t docId ,
 // time a big write, read and then seeks
 bool thrutest ( char *testdir , int64_t fileSize ) ;
 void seektest ( char *testdir , int32_t numThreads , int32_t maxReadSize ,
-		char *filename );
+		char *filename , bool doSeqWriteThread );
 
 bool pingTest ( int32_t hid , uint16_t clientPort );
 bool memTest();
@@ -810,17 +810,21 @@ int main2 ( int argc , char *argv[] ) {
 			"parser speed tests\n\n"
 			*/
 
-			/*
-			"thrutest [dir] [fileSize]\n\tdisk write/read speed "
-			"test\n\n"
+			"thrutest [dir] [fileSize]\n\tdisk sequential "
+			"write then read speed tests.\n\n"
 
 			"seektest [dir] [numThreads] [maxReadSize] "
 			"[filename]\n"
-			"\tdisk seek speed test\n\n"
+			"\tdisk access speed test. (IOps)\n\n"
+
+			"rwtest [dir] [numThreads] [maxReadSize] "
+			"[filename]\n"
+			"\tdisk read access speed test while sequentially "
+			"writing. Simulates Gigablast while spidering and "
+			"querying nicely.\n\n"
 			
 			"memtest\n"
 			"\t Test how much memory we can use\n\n"
-			*/
 
 			/*
 			// Quality Tests
@@ -1390,7 +1394,20 @@ int main2 ( int argc , char *argv[] ) {
 		if ( cmdarg+2 < argc ) numThreads  = atol(argv[cmdarg+2]);
 		if ( cmdarg+3 < argc ) maxReadSize = atoll1(argv[cmdarg+3]);
 		if ( cmdarg+4 < argc ) filename    = argv[cmdarg+4];
-		seektest ( testdir , numThreads , maxReadSize , filename );
+		seektest ( testdir , numThreads , maxReadSize ,filename,false);
+		return 0;
+	}
+	// gb rwtest <testdir> <numThreads> <maxReadSize>
+	if ( strcmp ( cmd , "rwtest" ) == 0 ) {
+		char     *testdir         = "/tmp/";
+		int32_t      numThreads      = 20; //30;
+		int64_t maxReadSize     = 20000;
+		char     *filename        = NULL;
+		if ( cmdarg+1 < argc ) testdir     = argv[cmdarg+1];
+		if ( cmdarg+2 < argc ) numThreads  = atol(argv[cmdarg+2]);
+		if ( cmdarg+3 < argc ) maxReadSize = atoll1(argv[cmdarg+3]);
+		if ( cmdarg+4 < argc ) filename    = argv[cmdarg+4];
+		seektest ( testdir , numThreads , maxReadSize,filename,true);
 		return 0;
 	}
 
@@ -2570,6 +2587,13 @@ int main2 ( int argc , char *argv[] ) {
 		return doCmd ( syncCmd, g_hostdb.m_hostId, "admin/hosts" ,
 		true, //sendToHosts
 		false );// sendtoproxies
+	}
+
+	if ( strcmp ( cmd , "unittest" ) == 0 ) {
+		if ( cmdarg + 1 >= argc ) exit(1);
+		if(strcmp("url", argv[cmdarg+1]) == 0) {
+			exit(Url::unitTests());
+		}
 	}
 
 	// gb startclassifier coll ruleset [hostId]
@@ -4936,7 +4960,7 @@ int install ( install_flag_konst_t installFlag , int32_t hostId , char *dir ,
 					  // ensure directory is there, if
 					  // not then make it
 					  "ssh %s 'mkdir %s' ; "
-					  "scp -r %s %s:%s"
+					  "scp -p -r %s %s:%s"
 					  , ipStr
 					  , h2->m_dir
 
@@ -5022,7 +5046,7 @@ int install ( install_flag_konst_t installFlag , int32_t hostId , char *dir ,
 			if ( ! f.doesExist() ) target = "gb";
 
 			sprintf(tmp,
-				"scp -c arcfour " // blowfish is faster
+				"scp -p " // blowfish is faster
 				"%s%s "
 				"%s:%s/gb.installed%s",
 				dir,
@@ -5058,7 +5082,7 @@ int install ( install_flag_konst_t installFlag , int32_t hostId , char *dir ,
 			// don't copy to ourselves
 			//if ( h2->m_hostId == h->m_hostId ) continue;
 			sprintf(tmp,
-				"scp "
+				"scp -p "
 				"%sgb.new "
 				"%s:%s/tmpgb.installed &",
 				dir,
@@ -5071,7 +5095,7 @@ int install ( install_flag_konst_t installFlag , int32_t hostId , char *dir ,
 			// don't copy to ourselves
 			//if ( h2->m_hostId == h->m_hostId ) continue;
 			sprintf(tmp,
-				"scp %sgb.conf %shosts.conf %s:%s %s",
+				"scp -p %sgb.conf %shosts.conf %s:%s %s",
 				dir ,
 				dir ,
 				//h->m_hostId ,
@@ -5453,7 +5477,7 @@ int install ( install_flag_konst_t installFlag , int32_t hostId , char *dir ,
 			}
 			*/
 			sprintf(tmp,
-				"scp "
+				"scp -p "
 				"%scatdb/content.rdf.u8 "
 				"%s:%scatdb/content.rdf.u8",
 				dir,
@@ -5462,7 +5486,7 @@ int install ( install_flag_konst_t installFlag , int32_t hostId , char *dir ,
 			log(LOG_INIT,"admin: %s", tmp);
 			system ( tmp );
 			sprintf(tmp,
-				"scp "
+				"scp -p "
 				"%scatdb/structure.rdf.u8 "
 				"%s:%scatdb/structure.rdf.u8",
 				dir,
@@ -5471,7 +5495,7 @@ int install ( install_flag_konst_t installFlag , int32_t hostId , char *dir ,
 			log(LOG_INIT,"admin: %s", tmp);
 			system ( tmp );
 			sprintf(tmp,
-				"scp "
+				"scp -p "
 				"%scatdb/gbdmoz.structure.dat "
 				"%s:%scatdb/gbdmoz.structure.dat",
 				dir,
@@ -5480,7 +5504,7 @@ int install ( install_flag_konst_t installFlag , int32_t hostId , char *dir ,
 			log(LOG_INIT,"admin: %s", tmp);
 			system ( tmp );
 			sprintf(tmp,
-				"scp "
+				"scp -p "
 				"%scatdb/gbdmoz.content.dat "
 				"%s:%scatdb/gbdmoz.content.dat",
 				dir,
@@ -5503,7 +5527,7 @@ int install ( install_flag_konst_t installFlag , int32_t hostId , char *dir ,
 			// don't copy to ourselves
 			if ( h2->m_hostId == 0 ) continue;
 			sprintf(tmp,
-				"scp "
+				"scp -p "
 				"%scatdb/content.rdf.u8.new "
 				"%s:%scatdb/content.rdf.u8.new",
 				dir,
@@ -5512,7 +5536,7 @@ int install ( install_flag_konst_t installFlag , int32_t hostId , char *dir ,
 			log(LOG_INIT,"admin: %s", tmp);
 			system ( tmp );
 			sprintf(tmp,
-				"scp "
+				"scp -p "
 				"%scatdb/structure.rdf.u8.new "
 				"%s:%scatdb/structure.rdf.u8.new",
 				dir,
@@ -5521,7 +5545,7 @@ int install ( install_flag_konst_t installFlag , int32_t hostId , char *dir ,
 			log(LOG_INIT,"admin: %s", tmp);
 			system ( tmp );
 			sprintf(tmp,
-				"scp "
+				"scp -p "
 				"%scatdb/gbdmoz.structure.dat.new "
 				"%s:%scatdb/gbdmoz.structure.dat.new",
 				dir,
@@ -5530,7 +5554,7 @@ int install ( install_flag_konst_t installFlag , int32_t hostId , char *dir ,
 			log(LOG_INIT,"admin: %s", tmp);
 			system ( tmp );
 			sprintf(tmp,
-				"scp "
+				"scp -p "
 				"%scatdb/gbdmoz.content.dat.new "
 				"%s:%scatdb/gbdmoz.content.dat.new",
 				dir,
@@ -5539,7 +5563,7 @@ int install ( install_flag_konst_t installFlag , int32_t hostId , char *dir ,
 			log(LOG_INIT,"admin: %s", tmp);
 			system ( tmp );
 			sprintf(tmp,
-				"scp "
+				"scp -p "
 				"%scatdb/gbdmoz.content.dat.new.diff "
 				"%s:%scatdb/gbdmoz.content.dat.new.diff",
 				dir,
@@ -6384,6 +6408,7 @@ void dumpTitledb (char *coll,int32_t startFileNum,int32_t numFiles,bool includeT
 		  bool justPrintSentences, 
 		  bool justPrintWords ) {
 
+	g_isDumpingRdbFromMain = 1;
 	if (!ucInit(g_hostdb.m_dir, true)) {
 		log("Unicode initialization failed!");
 		return;
@@ -6903,6 +6928,8 @@ void dumpDoledb (char *coll,int32_t startFileNum,int32_t numFiles,bool includeTr
 		printf("\n");
 		// must be a request -- for now, for stats
 		if ( ! g_spiderdb.isSpiderRequest((key128_t *)srec) ) {
+			// error!
+			continue;
 			char *xx=NULL;*xx=0; }
 		// cast it
 		SpiderRequest *sreq = (SpiderRequest *)srec;
@@ -11642,17 +11669,19 @@ static BigFile s_f;
 static int32_t s_numThreads = 0;
 static int64_t s_maxReadSize = 1;
 static int64_t s_startTime = 0;
+static bool s_doSeqWriteThread;
 //#define MAX_READ_SIZE (2000000)
 #include <sys/types.h>
 #include <sys/wait.h>
 
 void seektest ( char *testdir, int32_t numThreads, int32_t maxReadSize , 
-		char *filename ) {
+		char *filename , bool doSeqWriteThread ) {
 
 	g_loop.init();
 	g_threads.init();
 	s_numThreads = numThreads;
 	s_maxReadSize = maxReadSize;
+	s_doSeqWriteThread = doSeqWriteThread;
 	if ( s_maxReadSize <= 0 ) s_maxReadSize = 1;
 	//if ( s_maxReadSize > MAX_READ_SIZE ) s_maxReadSize = MAX_READ_SIZE;
 
@@ -11689,7 +11718,7 @@ void seektest ( char *testdir, int32_t numThreads, int32_t maxReadSize ,
 	    "exist. Use ./gb thrutest ... to create speedtest* files.");
 	return;
 skip:
-	s_f.open ( O_RDONLY );
+	s_f.open ( O_RDWR );
 	s_filesize = s_f.getFileSize();
 	log ( LOG_INIT, "admin: file size = %"INT64".",s_filesize);
 	// always block
@@ -11718,6 +11747,30 @@ skip:
 	//}
 	//s_lock = 1;
 	//pthread_t tid1 ; //, tid2;
+
+	//g_conf.m_logDebugThread = 1;
+
+	// garbage collection on ssds seems to be triggered by writes so
+	// that they do not hurt read times, do this:
+	g_conf.m_flushWrites = 1;
+
+	// disable linux file cache
+  	// system("echo 1 > /proc/sys/vm/drop_caches");
+
+	// -o sync TOTAL WORKS!!!!!!!
+	// mount with -o sync to disable write page caching on linux
+
+	// disable on-disk write cache
+	// system("sudo hdparm -W 0 /dev/sda2");
+	// system("sudo hdparm -W 0 /dev/sdb1");
+	// system("sudo hdparm -W 0 /dev/sdc1");
+	// system("sudo hdparm -W 0 /dev/sdd1");
+
+	// disable read-ahead
+	// system("sudo hdparm -A 0 /dev/sda2");
+	// system("sudo hdparm -A 0 /dev/sdb1");
+	// system("sudo hdparm -A 0 /dev/sdc1");
+	// system("sudo hdparm -A 0 /dev/sdd1");
 
 	// set time
 	s_startTime = gettimeofdayInMilliseconds_force();
@@ -11771,6 +11824,7 @@ void *startUp ( void *state , ThreadEntry *t ) {
 	//	fprintf(stderr,"Threads::startUp: setpriority: failed\n");
 	//	exit(-1);
 	//}
+
 	// read buf
 	//char buf [ MAX_READ_SIZE ];
 #undef malloc
@@ -11782,13 +11836,25 @@ void *startUp ( void *state , ThreadEntry *t ) {
 	}
 	// we got ourselves
 	s_launched++;
+
+	char *s = "reads";
+	if ( id == 0 && s_doSeqWriteThread )
+		s = "writes";
 	// msg
-	fprintf(stderr,"id=%"INT32" launched. Performing 100000 reads.\n",id);
+	fprintf(stderr,"threadid=%"INT32" launched. "
+		"Performing 100000 %s.\n",id,s);
+
+// #undef sleep
+// 	if (  id == 0 ) sleep(1000);
+// #define sleep(a) { char *xx=NULL;*xx=0; }
+
+
 	// wait for lock to be unleashed
 	//while ( s_launched != s_numThreads ) usleep(10);
 	// now do a stupid loop
 	//int32_t j, off , size;
 	int64_t off , size;
+	int64_t seqOff = 0;
 	for ( int32_t i = 0 ; i < 100000 ; i++ ) {
 		uint64_t r = rand();
 		r <<= 32 ;
@@ -11802,7 +11868,13 @@ void *startUp ( void *state , ThreadEntry *t ) {
 		int64_t start = gettimeofdayInMilliseconds_force();
 		//fprintf(stderr,"%"INT32") i=%"INT32" start\n",id,i );
 		//pread ( s_fd1 , buf , size , off );
-		s_f.read ( buf , size , off );
+		if ( id == 0 && s_doSeqWriteThread )
+			s_f.write ( buf , size , seqOff );
+		else
+			s_f.read ( buf , size , off );
+		seqOff += size;
+		if ( seqOff + size > s_filesize )
+			seqOff = 0;
 		//fprintf(stderr,"%"INT32") i=%"INT32" done\n",id,i );
 		int64_t now = gettimeofdayInMilliseconds_force();
 #undef usleep
@@ -11811,13 +11883,25 @@ void *startUp ( void *state , ThreadEntry *t ) {
 		s_count++;
 		float sps = (float)((float)s_count * 1000.0) / 
 			(float)(now - s_startTime);
-		fprintf(stderr,"count=%"INT32" off=%012"INT64" size=%"INT32" time=%"INT32"ms "
-			"(%.2f seeks/sec)\n",
+		int64_t poff = off;
+		char *str = "seeks";
+		if ( id == 0 && s_doSeqWriteThread ) {
+			poff = seqOff;
+			str = "writes";
+		}
+		fprintf(stderr,"threadid=%i "
+			"count=%"INT32" "
+			"off=%012"INT64" "
+			"size=%"INT32" "
+			"time=%"INT32"ms "
+			"(%.2f %s/sec)\n",
+			(int)id,
 			(int32_t)s_count,
-			(int64_t)off,
+			(int64_t)poff,
 			(int32_t)size,
 			(int32_t)(now - start) , 
-			sps );
+			sps ,
+			str );
 	}
 		
 
@@ -16849,7 +16933,7 @@ void dumpCachedRecs (char *coll,int32_t startFileNum,int32_t numFiles,bool inclu
 	int32_t filenum = 0;
 	char filename[64];
 	sprintf(filename, "%s-%"INT32".ddmp", coll, filenum);
-	int FD = open(filename, O_CREAT|O_WRONLY, S_IROTH);
+	//int FD = open(filename, O_CREAT|O_WRONLY, S_IROTH);
 	int32_t numDumped = 0;
 	uint32_t bytesDumped = 0;
  loop:
@@ -17016,7 +17100,7 @@ void dumpCachedRecs (char *coll,int32_t startFileNum,int32_t numFiles,bool inclu
 		filenum++;
 		sprintf(filename, "%s-%"INT32".ddmp", coll, filenum);
 		close(FD);
-		FD = open(filename, O_CREAT|O_WRONLY, S_IROTH);
+		//FD = open(filename, O_CREAT|O_WRONLY, S_IROTH);
 		bytesDumped = 0;
 		fprintf(stderr, "Started new file: %s. starts at docId: %"INT64".\n",filename, lastDocId);
 	}

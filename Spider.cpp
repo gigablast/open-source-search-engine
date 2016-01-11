@@ -2759,6 +2759,7 @@ int32_t SpiderColl::getNextIpFromWaitingTree ( ) {
 		// remove all his keys just because we restarted and think he
 		// is alive even though we have gotten no ping from him.
 		//if ( hp->m_numPingRequests > 0 )
+	removeFromTree:
 		// these operations should fail if writes have been disabled
 		// and becase the trees/tables for spidercache are saving
 		// in Process.cpp's g_spiderCache::save() call
@@ -2793,7 +2794,15 @@ int32_t SpiderColl::getNextIpFromWaitingTree ( ) {
 	m_waitingTreeKeyValid = true;
 	m_scanningIp = firstIp;
 	// sanity
-	if ( firstIp == 0 || firstIp == -1 ) { char *xx=NULL;*xx=0; }
+	if ( firstIp == 0 || firstIp == -1 ) { 
+		//char *xx=NULL;*xx=0; }
+		log("spider: removing corrupt spiderreq firstip of %"INT32
+		    " from waiting tree collnum=%i",
+		    firstIp,(int)m_collnum);
+		goto removeFromTree;
+	}
+	// avoid corruption
+	
 	// we set this to true when done
 	//m_isReadDone = false;
 	// compute the best request from spiderdb list, not valid yet
@@ -2877,6 +2886,7 @@ void SpiderColl::populateWaitingTreeFromSpiderdb ( bool reentry ) {
 	if ( m_deleteMyself ) { char *xx=NULL;*xx=0; }
 	// skip if spiders off
 	if ( ! m_cr->m_spideringEnabled ) return;
+	if ( ! g_hostdb.getMyHost( )->m_spiderEnabled ) return;
 	// skip if udp table is full
 	if ( g_udpServer.getNumUsedSlotsIncoming() >= MAXUDPSLOTS ) return;
 	// if entering for the first time, we need to read list from spiderdb
@@ -3160,6 +3170,8 @@ void SpiderColl::populateDoledbFromWaitingTree ( ) { // bool reentry ) {
 	// since addSpiderRequest() calls addToWaitingTree() which then calls
 	// this. 
 	if ( ! g_conf.m_spideringEnabled ) return;
+	if ( ! g_hostdb.getMyHost( )->m_spiderEnabled ) return;
+
 
 	// skip if udp table is full
 	if ( g_udpServer.getNumUsedSlotsIncoming() >= MAXUDPSLOTS ) return;
@@ -4106,6 +4118,20 @@ bool SpiderColl::scanListForWinners ( ) {
 				//srep = NULL;
 				continue;
 			}
+			// ignore these to fix diffbot's malformed url bug
+			if ( tmp->m_errCode == 32880 &&
+			     // and is before about dec 18th 2015
+			     tmp->m_spideredTime < 1450488447 )
+				continue;
+			// ignore these to fix diffbot's ebadtitlerec error
+			// 'bad cached document'.
+			// ignore them so we can respider the urls and
+			// the new logic in xmldoc.cpp can ignore them.
+			// i fixed xmldoc.cpp to index these status docs.
+			if ( tmp->m_errCode == 32792 &&
+			     // and is before about dec 22nd 2015
+			     tmp->m_spideredTime < 1450897197 )
+				continue;
 			// bad langid?
 			if ( ! getLanguageAbbr (tmp->m_langId) ) {
 				log("spider: got corrupt 4 spiderReply in "
@@ -4268,7 +4294,18 @@ bool SpiderColl::scanListForWinners ( ) {
 		m_lastCBlockIp = cblock;
 
 		// only add firstip if manually added and not fake
-		
+ 		// if ( uh48 == 272628060426254 )
+ 		// 	log("spider: got special seed");
+
+// #undef sleep
+// 		if ( uh48 == 272628060426254 ) {
+// 			log("spider: got special seed");
+// 			bool flag = true;
+// 		sleepLoop:
+// 			sleep(1);
+// 			if ( flag ) goto sleepLoop;
+// 		}
+// #define sleep(a) { char *xx=NULL;*xx=0; }
 
 		//
 		// just calculating page counts? if the url filters are based
@@ -5889,6 +5926,8 @@ uint64_t SpiderColl::getSpiderTimeMS ( SpiderRequest *sreq,
 	if ( ! srep && sreq->m_isInjecting ) return spiderTimeMS;
 	if ( ! srep && sreq->m_isPageReindex ) return spiderTimeMS;
 
+
+	//log("spider: getting spider time %"INT64, spiderTimeMS);
 	// to avoid hammering an ip, get last time we spidered it...
 	int64_t lastMS ;
 	lastMS = m_lastDownloadCache.getLongLong ( m_collnum       ,
@@ -6073,6 +6112,8 @@ bool isAssignedToUs ( int32_t firstIp ) {
 	// . ignore lower 8 bits of ip since one guy often owns a whole block!
 	//int32_t hostId=(((uint32_t)firstIp) >> 8) % g_hostdb.getNumHosts();
 
+	if( !g_hostdb.getMyHost()->m_spiderEnabled ) return false;
+	
 	// get our group
 	//Host *group = g_hostdb.getMyGroup();
 	Host *shard = g_hostdb.getMyShard();
@@ -6097,22 +6138,30 @@ bool isAssignedToUs ( int32_t firstIp ) {
 	int32_t i = ((uint32_t)h64) % hpg;
 	Host *h = &shard[i];
 	// return that if alive
-	if ( ! g_hostdb.isDead(h) ) return (h->m_hostId == g_hostdb.m_hostId);
+	if ( ! g_hostdb.isDead(h) && h->m_spiderEnabled) {
+		return (h->m_hostId == g_hostdb.m_hostId);
+	}
 	// . select another otherwise
 	// . put all alive in an array now
 	Host *alive[64];
 	int32_t upc = 0;
+
 	for ( int32_t j = 0 ; j < hpg ; j++ ) {
-		Host *h = &shard[i];
+		Host *h = &shard[j];
 		if ( g_hostdb.isDead(h) ) continue;
+		if( ! h->m_spiderEnabled ) continue;
 		alive[upc++] = h;
 	}
 	// if none, that is bad! return the first one that we wanted to
-	if ( upc == 0 ) return (h->m_hostId == g_hostdb.m_hostId);
+	if ( upc == 0 ) {
+		log("spider: no hosts can handle spider request for ip=%s", iptoa(firstIp));
+		return false;
+		//return (h->m_hostId == g_hostdb.m_hostId);
+	}
 	// select from the good ones now
-	i  = ((uint32_t)firstIp) % hpg;
+	i  = ((uint32_t)firstIp) % upc;
 	// get that
-	h = &shard[i];
+	h = alive[i]; //&shard[i];
 	// guaranteed to be alive... kinda
 	return (h->m_hostId == g_hostdb.m_hostId);
 }
@@ -6217,7 +6266,11 @@ void SpiderLoop::startLoop ( ) {
 	// in case host when dead.
 	// now that we only send the info on startup and if changed,
 	// let's move back down to 1 second
-	if ( !g_loop.registerSleepCallback(3000,
+	// . make it 20 seconds because handlerequestc1 is always on
+	//   profiler when we have thousands of collections
+	// . let's try 10 seconds so as not to think a job is done when
+	//   it is not
+	if ( !g_loop.registerSleepCallback(10000,
 					   this,
 					   updateAllCrawlInfosSleepWrapper))
 		log("build: failed to register updatecrawlinfowrapper");
@@ -6232,6 +6285,8 @@ void doneSleepingWrapperSL ( int fd , void *state ) {
 
 	// if spidering disabled then do not do this crap
 	if ( ! g_conf.m_spideringEnabled )  return;
+	if ( ! g_hostdb.getMyHost( )->m_spiderEnabled ) return;
+	
 	//if ( ! g_conf.m_webSpideringEnabled )  return;
 	// or if trying to exit
 	if ( g_process.m_mode == EXIT_MODE ) return;	
@@ -6249,6 +6304,8 @@ void doneSleepingWrapperSL ( int fd , void *state ) {
 		}
 		return;
 	}
+
+	//if ( g_hostdb.hasDeadHost() ) return;
 
 	static int32_t s_count = -1;
 	// count these calls
@@ -6299,6 +6356,7 @@ void doneSleepingWrapperSL ( int fd , void *state ) {
 		// if ( ! cr ) continue;
 		// skip if not enabled
 		if ( ! crp->m_spideringEnabled ) continue;
+
 		// get it
 		//SpiderColl *sc = cr->m_spiderColl;
 		SpiderColl *sc = g_spiderCache.getSpiderColl(crp->m_collnum);
@@ -6694,6 +6752,8 @@ void SpiderLoop::spiderDoledUrls ( ) {
 
 	// must be spidering to dole out
 	if ( ! g_conf.m_spideringEnabled ) return;
+	if ( ! g_hostdb.getMyHost( )->m_spiderEnabled ) return;
+
 	// or if trying to exit
 	if ( g_process.m_mode == EXIT_MODE ) return;	
 	// if we don't have all the url counts from all hosts, then wait.
@@ -7543,7 +7603,7 @@ bool SpiderLoop::gotDoledbList2 ( ) {
 		// note it
 		if ( (g_corruptCount % 1000) == 0 )
 			log("spider: got corrupt doledb record. ignoring. "
-			    "pls fix!!!");
+			    "pls fix!!! cn=%i",(int)m_collnum);
 		g_corruptCount++;
 		// skip for now....!! what is causing this???
 		m_list.skipCurrentRecord();
@@ -8278,7 +8338,13 @@ bool SpiderLoop::spiderUrl2 ( ) {
 	// count it as a hit
 	//g_stats.m_spiderUrlsHit++;
 	// sanity check
-	if (m_sreq->m_priority <= -1 ) { char *xx=NULL;*xx=0; }
+	if (m_sreq->m_priority <= -1 ) { 
+		log("spider: fixing bogus spider req priority of %i for "
+		    "url %s",
+		    (int)m_sreq->m_priority,m_sreq->m_url);
+		m_sreq->m_priority = 0;
+		//char *xx=NULL;*xx=0; 
+	}
 	//if(m_sreq->m_priority >= MAX_SPIDER_PRIORITIES){char *xx=NULL;*xx=0;}
 	// update this
 	m_sc->m_outstandingSpiders[(unsigned char)m_sreq->m_priority]++;
@@ -9588,7 +9654,10 @@ bool printList ( State11 *st ) {
 		if ( list->getCurrentRecSize() <= 16 ) { char *xx=NULL;*xx=0;}
 		// sanity check. requests ONLY in doledb
 		if ( ! g_spiderdb.isSpiderRequest ( (key128_t *)rec )) {
-			char*xx=NULL;*xx=0;}
+			log("spider: not printing spiderreply");
+			continue;
+			//char*xx=NULL;*xx=0;
+		}
 		// get the spider rec, encapsed in the data of the doledb rec
 		SpiderRequest *sreq = (SpiderRequest *)rec;
 		// print it into sbTable
@@ -11428,7 +11497,7 @@ int32_t getUrlFilterNum2 ( SpiderRequest *sreq       ,
 	if ( langId >= 0 ) { // if ( srep ) {
 		// this is NULL on corruption
 		lang = getLanguageAbbr ( langId );//srep->m_langId );	
-		langLen = gbstrlen(lang);
+		if (lang) langLen = gbstrlen(lang);
 	}
 
 	// . get parent language in the request
@@ -12919,6 +12988,37 @@ int32_t getUrlFilterNum2 ( SpiderRequest *sreq       ,
 			if ( sign == SIGN_LT && a >= b ) continue;
 			if ( sign == SIGN_GE && a <  b ) continue;
 			if ( sign == SIGN_LE && a >  b ) continue;
+			// skip fast
+			p += 10;
+			p = strstr(s, "&&");
+			//if nothing, else then it is a match
+			if ( ! p ) return i;
+			//skip the '&&' and go to next rule
+			p += 2;
+			goto checkNextRule;
+		}
+
+		// EBADURL malformed url is ... 32880
+		if ( *p=='e' && strncmp(p,"errorcode",9) == 0 ) {
+			// if we do not have enough info for outlink, all done
+			if ( isOutlink ) return -1;
+			// skip for msg20
+			if ( isForMsg20 ) continue;
+			// reply based
+			if ( ! srep ) continue;
+			// int16_tcut
+			int32_t a = srep->m_errCode;
+			// make it point to the retry count
+			int32_t b = atoi(s);
+			// compare
+			if ( sign == SIGN_EQ && a != b ) continue;
+			if ( sign == SIGN_NE && a == b ) continue;
+			if ( sign == SIGN_GT && a <= b ) continue;
+			if ( sign == SIGN_LT && a >= b ) continue;
+			if ( sign == SIGN_GE && a <  b ) continue;
+			if ( sign == SIGN_LE && a >  b ) continue;
+			// skip fast
+			p += 9;
 			p = strstr(s, "&&");
 			//if nothing, else then it is a match
 			if ( ! p ) return i;
@@ -13810,6 +13910,8 @@ void gotCrawlInfoReply ( void *state , UdpSlot *slot ) {
 	// . TODO: do not update on error???
 	for ( ; ptr < end ; ptr++ ) {
 
+		QUICKPOLL ( slot->m_niceness );
+
 		// get collnum
 		collnum_t collnum = (collnum_t)(ptr->m_collnum);
 
@@ -13875,6 +13977,12 @@ void gotCrawlInfoReply ( void *state , UdpSlot *slot ) {
 	// loop over 
 	for ( int32_t x = 0 ; x < g_collectiondb.m_numRecs ; x++ ) {
 
+		QUICKPOLL ( slot->m_niceness );
+
+		// a niceness 0 routine could have nuked it?
+		if ( x >= g_collectiondb.m_numRecs )
+			break;
+
 		CollectionRec *cr = g_collectiondb.m_recs[x];
 		if ( ! cr ) continue;
 
@@ -13897,20 +14005,35 @@ void gotCrawlInfoReply ( void *state , UdpSlot *slot ) {
 		if ( ! cia ) continue;
 
 		for ( int32_t k = 0 ; k < g_hostdb.m_numHosts; k++ ) {
+			QUICKPOLL ( slot->m_niceness );
 			// get the CrawlInfo for the ith host
 			CrawlInfo *stats = &cia[k];
 			// point to the stats for that host
 			int64_t *ss = (int64_t *)stats;
 			int64_t *gs = (int64_t *)gi;
-			// add each hosts counts into the global accumulators
+			// are stats crazy?
+			bool crazy = false;
 			for ( int32_t j = 0 ; j < NUMCRAWLSTATS ; j++ ) {
-				*gs = *gs + *ss;
 				// crazy stat?
 				if ( *ss > 1000000000LL ||
-				     *ss < -1000000000LL ) 
+				     *ss < -1000000000LL ) {
 					log("spider: crazy stats %"INT64" "
-					    "from host #%"INT32" coll=%s",
+					    "from host #%"INT32" coll=%s. "
+					    "ignoring.",
 					    *ss,k,cr->m_coll);
+					crazy = true;
+					break;
+				}
+				ss++;
+			}
+			// reset ptr to accumulate
+			ss = (int64_t *)stats;
+			for ( int32_t j = 0 ; j < NUMCRAWLSTATS ; j++ ) {
+				// do not accumulate if corrupted.
+				// probably mem got corrupted and it saved
+				// to disk.
+				if ( crazy ) break;
+				*gs = *gs + *ss;
 				gs++;
 				ss++;
 			}
@@ -14177,7 +14300,7 @@ void handleRequestc1 ( UdpSlot *slot , int32_t niceness ) {
 
 	for ( int32_t i = 0 ; i < g_collectiondb.m_numRecs ; i++ ) {
 
-	  QUICKPOLL(MAX_NICENESS);
+		QUICKPOLL(slot->m_niceness);
 
 		CollectionRec *cr = g_collectiondb.m_recs[i];
 		if ( ! cr ) continue;
@@ -14370,10 +14493,27 @@ bool getSpiderStatusMsg ( CollectionRec *cx , SafeBuf *msg , int32_t *status ) {
 
 	uint32_t now = (uint32_t)getTimeGlobal();
 
+
+	// hit crawl round max? this could be SP_ROUNDDONE and it doesn't
+	// get converted to SP_MAXROUNDS until we call spiderDoledUrls()
+	// so fix the crawlbot nightly smoke test by setting this here
+	// to SP_MAXROUNDS.
+	// smoketest msg = FAIL: testCrawlRounds (__main__.TestRepeatCrawl)
+	// self.assertEqual(j['jobs'][0]['jobStatus']['status'],1,msg=self.name
+	// AssertionError: 4 != 1 : 1227151934RepeatCrawlself.
+	// assertEqual(j['jobs'][0]['jobStatus']['status'],1,msg=self.name)
+	int32_t spiderStatus = cx->m_spiderStatus;
+	if ( spiderStatus == SP_ROUNDDONE &&
+	     cx->m_maxCrawlRounds > 0 &&
+	     cx->m_isCustomCrawl &&
+	     cx->m_spiderRoundNum >= cx->m_maxCrawlRounds )
+		spiderStatus = SP_MAXROUNDS;
+
+
 	// try to fix crawlbot nightly test complaining about job status
 	// for TestRepeatCrawlWithMaxToCrawl
-	if ( (cx->m_spiderStatus == SP_MAXTOCRAWL ||
-	      cx->m_spiderStatus == SP_MAXTOPROCESS ) &&
+	if ( (spiderStatus == SP_MAXTOCRAWL ||
+	      spiderStatus == SP_MAXTOPROCESS ) &&
 	     cx->m_collectiveRespiderFrequency > 0.0 &&
 	     now < cx->m_spiderRoundStartTime &&
 	     cx->m_spiderRoundNum >= cx->m_maxCrawlRounds ) {
@@ -14384,7 +14524,7 @@ bool getSpiderStatusMsg ( CollectionRec *cx , SafeBuf *msg , int32_t *status ) {
 
 	// . 0 means not to RE-crawl
 	// . indicate if we are WAITING for next round...
-	if ( cx->m_spiderStatus == SP_MAXTOCRAWL &&
+	if ( spiderStatus == SP_MAXTOCRAWL &&
 	     cx->m_collectiveRespiderFrequency > 0.0 &&
 	     now < cx->m_spiderRoundStartTime ) {
 		*status = SP_ROUNDDONE;
@@ -14395,7 +14535,7 @@ bool getSpiderStatusMsg ( CollectionRec *cx , SafeBuf *msg , int32_t *status ) {
 						 now));
 	}
 
-	if ( cx->m_spiderStatus == SP_MAXTOPROCESS &&
+	if ( spiderStatus == SP_MAXTOPROCESS &&
 	     cx->m_collectiveRespiderFrequency > 0.0 &&
 	     now < cx->m_spiderRoundStartTime ) {
 		*status = SP_ROUNDDONE;
@@ -14407,19 +14547,19 @@ bool getSpiderStatusMsg ( CollectionRec *cx , SafeBuf *msg , int32_t *status ) {
 	}
 
 
-	if ( cx->m_spiderStatus == SP_MAXTOCRAWL ) {
+	if ( spiderStatus == SP_MAXTOCRAWL ) {
 		*status = SP_MAXTOCRAWL;
 		return msg->safePrintf ( "Job has reached maxToCrawl "
 					 "limit." );
 	}
 
-	if ( cx->m_spiderStatus == SP_MAXTOPROCESS ) {
+	if ( spiderStatus == SP_MAXTOPROCESS ) {
 		*status = SP_MAXTOPROCESS;
 		return msg->safePrintf ( "Job has reached maxToProcess "
 					 "limit." );
 	}
 
-	if ( cx->m_spiderStatus == SP_MAXROUNDS ) {
+	if ( spiderStatus == SP_MAXROUNDS ) {
 		*status = SP_MAXROUNDS;
 		return msg->safePrintf ( "Job has reached maxRounds "
 					 "limit." );
@@ -14453,7 +14593,7 @@ bool getSpiderStatusMsg ( CollectionRec *cx , SafeBuf *msg , int32_t *status ) {
 	//	return msg->safePrintf("Crawl is waiting for urls.");
 	//}
 
-	if ( cx->m_spiderStatus == SP_INITIALIZING ) {
+	if ( spiderStatus == SP_INITIALIZING ) {
 		*status = SP_INITIALIZING;
 		return msg->safePrintf("Job is initializing.");
 	}
@@ -14479,7 +14619,7 @@ bool getSpiderStatusMsg ( CollectionRec *cx , SafeBuf *msg , int32_t *status ) {
 			"repeat is scheduled.");
 	}
 
-	if ( cx->m_spiderStatus == SP_ROUNDDONE && ! cx->m_isCustomCrawl ) {
+	if ( spiderStatus == SP_ROUNDDONE && ! cx->m_isCustomCrawl ) {
 		*status = SP_ROUNDDONE;
 		return msg->safePrintf ( "Nothing currently "
 					 "available to spider. "
@@ -14502,7 +14642,7 @@ bool getSpiderStatusMsg ( CollectionRec *cx , SafeBuf *msg , int32_t *status ) {
 	}
 		
 
-	if ( cx->m_spiderStatus == SP_ROUNDDONE ) {
+	if ( spiderStatus == SP_ROUNDDONE ) {
 		*status = SP_ROUNDDONE;
 		return msg->safePrintf ( "Job round completed.");
 	}
@@ -14755,10 +14895,19 @@ bool SpiderRequest::isCorrupt ( ) {
 	}
 
 	// sanity check. check for http(s)://
-	if ( m_url[0] != 'h' &&
-	     // might be a docid from a pagereindex.cpp
-	     ! is_digit(m_url[0]) ) { 
+	if ( m_url[0] == 'h' ) 
+		return false;
+	// might be a docid from a pagereindex.cpp
+	if ( ! is_digit(m_url[0]) ) { 
 		log("spider: got corrupt 1 spiderRequest");
+		return true;
+	}
+	// if it is a digit\0 it is ok, not corrupt
+	if ( ! m_url[1] )
+		return false;
+	// if it is not a digit after the first digit, that is bad
+	if ( ! is_digit(m_url[1]) ) { 
+		log("spider: got corrupt 2 spiderRequest");
 		return true;
 	}
 

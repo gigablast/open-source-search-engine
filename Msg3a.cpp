@@ -470,6 +470,12 @@ bool Msg3a::gotCacheReply ( ) {
 	for ( int32_t i = 0; i < m_numHosts ; i++ ) { // m_indexdbSplit; i++ ) {
 		// get that host
 		Host *h = g_hostdb.getHost(i);
+
+		if(!h->m_queryEnabled) {
+			m_numReplies++;
+			continue;
+		}
+
 		// if not a full split, just round robin the group, i am not
 		// going to sweat over performance on non-fully split indexes
 		// because they suck really bad anyway compared to full
@@ -701,10 +707,12 @@ bool Msg3a::gotAllShardReplies ( ) {
 		// bad reply?
 		if ( ! mr || replySize < 29 ) {
 			m_skippedShards++;
-			log(LOG_LOGIC,"query: msg3a: Bad reply (size=%i) from "
-			    "host #%"INT32". Dead? Timeout? OOM?"
-			    ,(int)replySize
-			    ,i);
+			if(g_hostdb.getHost(i)->m_queryEnabled) {
+				log(LOG_LOGIC,"query: msg3a: Bad reply (size=%i) from "
+					"host #%"INT32". Dead? Timeout? OOM?"
+					,(int)replySize
+					,i);
+            }
 			m_reply       [i] = NULL;
 			m_replyMaxSize[i] = 0;
 			// it might have been timd out, just ignore it!!

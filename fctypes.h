@@ -237,7 +237,7 @@ bool saveTimeAdjustment ( ) ;
 #define is_hspace_a(c)         g_map_is_hspace[(unsigned char)c]
 #define is_ascii(c)           g_map_is_ascii[(unsigned char)c]
 #define is_ascii9(c)           g_map_is_ascii[(unsigned char)c]
-#define is_ascii3(c)           g_map_is_ascii3[(unsigned char)c]
+#define is_ascii3(c)           ((unsigned char)c<128 || g_map_is_ascii3[(unsigned char)c])
 #define is_punct_a(c)          g_map_is_punct[(unsigned char)c]
 #define is_alnum_a(c)          g_map_is_alnum[(unsigned char)c]
 #define is_alpha_a(c)          g_map_is_alpha[(unsigned char)c]
@@ -627,6 +627,6 @@ int32_t deserializeMsg ( int32_t  baseSize ,
 		      char **firstStrPtr ,
 		      char *stringBuf ) ;
 
-void deserializeMsg2 ( char **firstStrPtr , int32_t  *firstSizeParm );
+bool deserializeMsg2 ( char **firstStrPtr , int32_t  *firstSizeParm );
 
 #endif 
