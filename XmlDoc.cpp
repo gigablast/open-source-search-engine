@@ -15637,6 +15637,8 @@ void gotDiffbotReplyWrapper ( void *state , TcpSocket *s ) {
 				code = EDIFFBOTEMPTYCONTENT;
 			if ( err && !strncmp(err,"Request timed",13))
 				code = EDIFFBOTREQUESTTIMEDOUT;
+			if ( err &&!strncmp(err,"Request of third-party c",13))
+				code = EDIFFBOTREQUESTTIMEDOUTTHIRDPARTY;
 			// error processing url
 			if ( err && !strncmp(err,"Error processing",16))
 				code = EDIFFBOTURLPROCESSERROR;
