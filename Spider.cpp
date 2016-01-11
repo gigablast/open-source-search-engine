@@ -9654,7 +9654,10 @@ bool printList ( State11 *st ) {
 		if ( list->getCurrentRecSize() <= 16 ) { char *xx=NULL;*xx=0;}
 		// sanity check. requests ONLY in doledb
 		if ( ! g_spiderdb.isSpiderRequest ( (key128_t *)rec )) {
-			char*xx=NULL;*xx=0;}
+			log("spider: not printing spiderreply");
+			continue;
+			//char*xx=NULL;*xx=0;
+		}
 		// get the spider rec, encapsed in the data of the doledb rec
 		SpiderRequest *sreq = (SpiderRequest *)rec;
 		// print it into sbTable
