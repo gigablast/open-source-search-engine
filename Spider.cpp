@@ -14895,7 +14895,8 @@ bool SpiderRequest::isCorrupt ( ) {
 	}
 
 	// sanity check. check for http(s)://
-	if ( m_url[0] == 'h' ) 
+	if ( m_url[0] == 'h' && m_url[1]=='t' && m_url[2]=='t' &&
+	     m_url[3] == 'p' ) 
 		return false;
 	// might be a docid from a pagereindex.cpp
 	if ( ! is_digit(m_url[0]) ) { 
