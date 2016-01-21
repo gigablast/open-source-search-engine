@@ -4108,9 +4108,11 @@ bool SpiderColl::scanListForWinners ( ) {
 					    "scan "
 					    "uh48=%"INT64" "
 					    "httpstatus=%"INT32" "
+					    "datasize=%"INT32" "
 					    "(cn=%"INT32")",
 					    tmp->getUrlHash48(),
 					    (int32_t)tmp->m_httpStatus,
+					    tmp->m_dataSize,
 					    (int32_t)m_collnum);
 				}
 				m_cr->m_spiderCorruptCount++;
@@ -4168,6 +4170,9 @@ bool SpiderColl::scanListForWinners ( ) {
 			// if ( tmp->m_errCode == 0 ) m_numSuccessReplies++;
 			// else                       m_numFailedReplies ++;
 
+			// if we are corrupt, skip us
+			if ( tmp->getRecSize() > (int32_t)MAX_SP_REPLY_SIZE )
+				continue;
 			// if we have a more recent reply already, skip this 
 			if ( srep && 
 			     srep->getUrlHash48() == tmp->getUrlHash48() &&
@@ -4426,6 +4431,14 @@ bool SpiderColl::scanListForWinners ( ) {
 			if ( m_cr->m_spiderCorruptCount == 0 )
 				log("spider: got corrupt 1 spiderRequest in "
 				    "scan because url is %s (cn=%"INT32")"
+				    ,sreq->m_url,(int32_t)m_collnum);
+			m_cr->m_spiderCorruptCount++;
+			continue;
+		}
+		if ( sreq->m_dataSize > (int32_t)sizeof(SpiderRequest) ) {
+			if ( m_cr->m_spiderCorruptCount == 0 )
+				log("spider: got corrupt 11 spiderRequest in "
+				    "scan because rectoobig u=%s (cn=%"INT32")"
 				    ,sreq->m_url,(int32_t)m_collnum);
 			m_cr->m_spiderCorruptCount++;
 			continue;
@@ -14891,6 +14904,11 @@ bool SpiderRequest::isCorrupt ( ) {
 	// more corruption detection
 	if ( m_hopCount < -1 ) {
 		log("spider: got corrupt 5 spiderRequest");
+		return true;
+	}
+
+	if ( m_dataSize > (int32_t)sizeof(SpiderRequest) ) {
+		log("spider: got corrupt oversize spiderrequest");
 		return true;
 	}
 

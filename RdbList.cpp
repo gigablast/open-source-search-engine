@@ -281,7 +281,13 @@ bool RdbList::addRecord ( char *key , int32_t dataSize , char *data ,
 
 	if ( m_ks == 18 ) { // m_rdbId == RDB_POSDB ) {
 		// sanity
-		if ( key[0] & 0x06 ) { char *xx=NULL;*xx=0; }
+		if ( key[0] & 0x06 ) { 
+			log("rdblist: posdb: cannot add bad key. please "
+			    "delete posdb-buckets-saved.dat and restart.");
+			// return true so rdbbuckets::getlist doesn't stop
+			//return true;
+			char *xx=NULL;*xx=0; 
+		}
 		// grow the list if we need to
 		if ( m_listEnd + 18 >  m_alloc + m_allocSize )
 			if ( ! growList ( m_allocSize + 18 ) ) 
