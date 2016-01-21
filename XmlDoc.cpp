@@ -15856,6 +15856,10 @@ void gotDiffbotReplyWrapper ( void *state , TcpSocket *s ) {
 			char *err = strstr(page,"\"error\":\"");
 			if ( err ) err += 9;
 			int32_t code = EDIFFBOTUNKNOWNERROR;
+			if ( ! err &&
+			     page[0]=='{' &&
+			     page[1]=='}' )
+				code = EDIFFBOTCURLYREPLY;
 			if ( err && !strncmp(err,"Unable to apply rules",21))
 				code = EDIFFBOTUNABLETOAPPLYRULES;
 			// like .pdf pages get this error
@@ -15871,15 +15875,23 @@ void gotDiffbotReplyWrapper ( void *state , TcpSocket *s ) {
 				code = EDIFFBOTVERSIONREQ;
 			if ( err && !strncmp(err,"Empty content",13))
 				code = EDIFFBOTEMPTYCONTENT;
+			if ( err && !strncmp(err,"The selected pages contains too many TextNodes",46))
+				code = EDIFFBOTTOOMANYTEXTNODES;
 			if ( err && !strncmp(err,"No content received",19))
 				code = EDIFFBOTEMPTYCONTENT;
 			if ( err && !strncmp(err,"Request timed",13))
 				code = EDIFFBOTREQUESTTIMEDOUT;
+			if ( err &&!strncmp(err,"Request of third-party c",24))
+				code = EDIFFBOTREQUESTTIMEDOUTTHIRDPARTY;
 			// error processing url
 			if ( err && !strncmp(err,"Error processing",16))
 				code = EDIFFBOTURLPROCESSERROR;
 			if ( err && !strncmp(err,"Your token has exp",18))
 				code = EDIFFBOTTOKENEXPIRED;
+			if ( err && !strncmp(err,"Not authorized API tok",22))
+				code = EDIFFBOTTOKENUNAUTHORIZED;
+			if ( err && !strncmp(err,"Error.",6) )
+				code = EDIFFBOTPLAINERROR;
 			THIS->m_diffbotReplyError = code;
 		}
 		// a hack for detecting if token is expired
