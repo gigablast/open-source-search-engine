@@ -14994,6 +14994,14 @@ bool *XmlDoc::getIsAllowed ( ) {
 	// double get?
 	if ( m_crawlDelayValid ) { char *xx=NULL;*xx=0; }
 
+	// bulk jobs don't need this
+	CollectionRec *cr = getCollRec();
+	if ( cr && cr->m_isCustomCrawl == 2 ) {
+		m_isAllowed      = true;
+		m_isAllowedValid = true;
+		return &m_isAllowed;
+	}
+
 	// . if WE are robots.txt that is always allowed!!!
 	// . check the *first* url since these often redirect to wierd things
 	Url *fu = getFirstUrl();
