@@ -174,6 +174,9 @@ bool Msg3a::getDocIds ( Msg39Request *r          ,
 	// we modify this, so copy it from request
 	m_docsToGet = r->m_docsToGet;
 
+	// fix empty queries saying a shard is down
+	m_skippedShards = 0;
+
 	// . return now if query empty, no docids, or none wanted...
 	// . if query terms = 0, might have been "x AND NOT x"
 	if ( m_q->getNumTerms() <= 0 ) return true;
