@@ -51012,7 +51012,8 @@ Msg25 *XmlDoc::getAllInlinks ( bool forSite ) {
 						  m_masterLoop, // callback
 					      false, // isInjecting?
 					      false, // pbuf (for printing)
-					      this, // xd holder (Msg25::m_xd)
+					      //this, // xd holder (Msg25::m_xd
+					      false, // printInXml
 					      // this is irrelevant since we
 					      // are getting all inlinks:
 					      0, // siteNumInlinks, irrelevant
