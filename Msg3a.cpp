@@ -27,6 +27,9 @@ void Msg3a::constructor ( ) {
 	m_inUse        = false;
 	m_q            = NULL;
 
+	m_numTotalEstimatedHits = 0LL;
+	m_skippedShards = 0;
+
 	// need to call all safebuf constructors now to set m_label
 	m_rbuf2.constructor();
 
@@ -78,6 +81,7 @@ void Msg3a::reset ( ) {
 	m_numDocIds    = 0;
 	m_collnums     = NULL;
 	m_numTotalEstimatedHits = 0LL;
+	m_skippedShards = 0;
 }
 
 Msg39Request *g_r = NULL;

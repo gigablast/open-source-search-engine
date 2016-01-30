@@ -4613,6 +4613,9 @@ int32_t *XmlDoc::getIndexCode2 ( ) {
 	// it will always be 100% the same
 	if ( m_recycleContent )
 		check = false;
+	// never check for a bulk job
+	if ( cr->m_isCustomCrawl == 2 )
+		check = false;
 
 	if ( check ) {
 		// check inlinks now too!
