@@ -6928,6 +6928,8 @@ void dumpDoledb (char *coll,int32_t startFileNum,int32_t numFiles,bool includeTr
 		printf("\n");
 		// must be a request -- for now, for stats
 		if ( ! g_spiderdb.isSpiderRequest((key128_t *)srec) ) {
+			// error!
+			continue;
 			char *xx=NULL;*xx=0; }
 		// cast it
 		SpiderRequest *sreq = (SpiderRequest *)srec;

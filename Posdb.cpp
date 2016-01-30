@@ -909,7 +909,7 @@ bool PosdbTable::allocTopTree ( ) {
 	if ( m_debug )
 		log("toptree: toptree: initializing %"INT64" nodes",nn);
 
-	if ( nn < m_r->m_docsToGet )
+	if ( nn < m_r->m_docsToGet && m_debug )
 		log("query: warning only getting up to %"INT64" docids "
 		    "even though %"INT32" requested because termlist "
 		    "sizes are so small!! splits=%"INT32""

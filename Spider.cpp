@@ -3198,6 +3198,13 @@ void SpiderColl::populateDoledbFromWaitingTree ( ) { // bool reentry ) {
 		return;
 	}
 
+	// are we trying to exit? some firstip lists can be quite long, so
+	// terminate here so all threads can return and we can exit properly
+	if ( g_process.m_mode == EXIT_MODE ) {
+		m_isPopulatingDoledb = false; 
+		return;
+	}
+
 	// . get next IP that is due to be spidered from
 	// . also sets m_waitingTreeKey so we can delete it easily!
 	int32_t ip = getNextIpFromWaitingTree();
@@ -3563,6 +3570,10 @@ bool SpiderColl::evalIpLoop ( ) {
 
 	// sanity
 	if ( m_scanningIp == 0 || m_scanningIp == -1 ) { char *xx=NULL;*xx=0;}
+
+	// are we trying to exit? some firstip lists can be quite long, so
+	// terminate here so all threads can return and we can exit properly
+	if ( g_process.m_mode == EXIT_MODE ) return true;
 
 	// if this ip is in the winnerlistcache use that. it saves
 	// us a lot of time.
@@ -4108,9 +4119,11 @@ bool SpiderColl::scanListForWinners ( ) {
 					    "scan "
 					    "uh48=%"INT64" "
 					    "httpstatus=%"INT32" "
+					    "datasize=%"INT32" "
 					    "(cn=%"INT32")",
 					    tmp->getUrlHash48(),
 					    (int32_t)tmp->m_httpStatus,
+					    tmp->m_dataSize,
 					    (int32_t)m_collnum);
 				}
 				m_cr->m_spiderCorruptCount++;
@@ -4168,6 +4181,9 @@ bool SpiderColl::scanListForWinners ( ) {
 			// if ( tmp->m_errCode == 0 ) m_numSuccessReplies++;
 			// else                       m_numFailedReplies ++;
 
+			// if we are corrupt, skip us
+			if ( tmp->getRecSize() > (int32_t)MAX_SP_REPLY_SIZE )
+				continue;
 			// if we have a more recent reply already, skip this 
 			if ( srep && 
 			     srep->getUrlHash48() == tmp->getUrlHash48() &&
@@ -4426,6 +4442,14 @@ bool SpiderColl::scanListForWinners ( ) {
 			if ( m_cr->m_spiderCorruptCount == 0 )
 				log("spider: got corrupt 1 spiderRequest in "
 				    "scan because url is %s (cn=%"INT32")"
+				    ,sreq->m_url,(int32_t)m_collnum);
+			m_cr->m_spiderCorruptCount++;
+			continue;
+		}
+		if ( sreq->m_dataSize > (int32_t)sizeof(SpiderRequest) ) {
+			if ( m_cr->m_spiderCorruptCount == 0 )
+				log("spider: got corrupt 11 spiderRequest in "
+				    "scan because rectoobig u=%s (cn=%"INT32")"
 				    ,sreq->m_url,(int32_t)m_collnum);
 			m_cr->m_spiderCorruptCount++;
 			continue;
@@ -7223,7 +7247,14 @@ void SpiderLoop::spiderDoledUrls ( ) {
 				// "goto listLoop" below if the url we want
 				// to dole is locked.
 				// seems like a ton of negative recs
-				2000            , // minRecSizes
+				// MDW: let's now read in 50k, not 2k,of doledb
+				// spiderrequests because often the first one
+				// has an ip already in use and then we'd
+				// just give up on the whole PRIORITY! which
+				// really freezes the spiders up.
+				// Also, if a spider request is corrupt in
+				// doledb it would cork us up too!
+				50000            , // minRecSizes
 				true            , // includeTree
 				false           , // addToCache
 				0               , // max cache age
@@ -7562,7 +7593,7 @@ bool SpiderLoop::gotDoledbList2 ( ) {
 	// skip? and re-get another doledb list from next priority...
 	if ( out >= max ) {
 		// come here if we hit our ip limit too
-	hitMax:
+		//	hitMax:
 		// assume we could have launched a spider
 		if ( max > 0 ) ci->m_lastSpiderCouldLaunch = nowGlobal;
 		// this priority is maxed out, try next
@@ -7594,6 +7625,9 @@ bool SpiderLoop::gotDoledbList2 ( ) {
 	// what is this? a dataless positive key?
 	if ( m_list.getCurrentRecSize() <= 16 ) { char *xx=NULL;*xx=0; }
 
+	int32_t ipOut = 0;
+	int32_t globalOut = 0;
+
 	// get the "spider rec" (SpiderRequest) (embedded in the doledb rec)
 	SpiderRequest *sreq = (SpiderRequest *)(rec + sizeof(key_t)+4);
 	// sanity check. check for http(s)://
@@ -7605,20 +7639,19 @@ bool SpiderLoop::gotDoledbList2 ( ) {
 			log("spider: got corrupt doledb record. ignoring. "
 			    "pls fix!!! cn=%i",(int)m_collnum);
 		g_corruptCount++;
+		goto skipDoledbRec;
 		// skip for now....!! what is causing this???
-		m_list.skipCurrentRecord();
+		//m_list.skipCurrentRecord();
 		// if exhausted -- try another load with m_nextKey set
-		if ( m_list.isExhausted() ) return true;
+		//if ( m_list.isExhausted() ) return true;
 		// otherwise, try the next doledb rec in this list
-		goto listLoop;
+		//goto listLoop;
 	}		
 
 
 	// . how many spiders out for this ip now?
 	// . TODO: count locks in case twin is spidering... but it did not seem
 	//   to work right for some reason
-	int32_t ipOut = 0;
-	int32_t globalOut = 0;
 	for ( int32_t i = 0 ; i <= m_maxUsed ; i++ ) {
 		// get it
 		XmlDoc *xd = m_docs[i];
@@ -7635,13 +7668,40 @@ bool SpiderLoop::gotDoledbList2 ( ) {
 		if ( xd->m_collnum != cr->m_collnum ) continue;
 		if ( xd->m_sreq.m_firstIp == sreq->m_firstIp ) ipOut++;
 	}
-	if ( ipOut >= maxSpidersOutPerIp ) goto hitMax;
+	// don't give up on this priority, just try next in the list.
+	// we now read 50k instead of 2k from doledb in order to fix
+	// one ip from bottle corking the whole priority!!
+	if ( ipOut >= maxSpidersOutPerIp ) {
+		// assume we could have launched a spider
+		if ( maxSpidersOutPerIp > 0 ) 
+			ci->m_lastSpiderCouldLaunch = nowGlobal;
+		//goto hitMax;
+	skipDoledbRec:
+		// skip
+		m_list.skipCurrentRecord();
+		// if not exhausted try the next doledb rec in this list
+		if ( ! m_list.isExhausted() ) goto listLoop;
+		// print a log msg if we corked things up even
+		// though we read 50k from doledb
+		static bool s_flag = true;
+		if ( m_list.m_listSize > 50000 && s_flag ) {
+			s_flag = true;
+			log("spider: 50k not big enough");
+		}
+		// list is exhausted...
+		return true;
+	}
 
 	// but if the global is high, only allow one out per coll so at 
 	// least we dont starve and at least we don't make a huge wait in
 	// line of queued results just sitting there taking up mem and
 	// spider slots so the crawlbot hourly can't pass.
-	if ( globalOut >= maxSpidersOutPerIp && ipOut >= 1 ) goto hitMax;
+	if ( globalOut >= maxSpidersOutPerIp && ipOut >= 1 ) {
+		// assume we could have launched a spider
+		if ( maxSpidersOutPerIp > 0 ) 
+			ci->m_lastSpiderCouldLaunch = nowGlobal;
+		goto skipDoledbRec;
+	}
 
 	if ( g_conf.m_logDebugSpider )
 		log("spider: %"INT32" spiders out for %s for %s",
@@ -9654,7 +9714,10 @@ bool printList ( State11 *st ) {
 		if ( list->getCurrentRecSize() <= 16 ) { char *xx=NULL;*xx=0;}
 		// sanity check. requests ONLY in doledb
 		if ( ! g_spiderdb.isSpiderRequest ( (key128_t *)rec )) {
-			char*xx=NULL;*xx=0;}
+			log("spider: not printing spiderreply");
+			continue;
+			//char*xx=NULL;*xx=0;
+		}
 		// get the spider rec, encapsed in the data of the doledb rec
 		SpiderRequest *sreq = (SpiderRequest *)rec;
 		// print it into sbTable
@@ -11494,7 +11557,7 @@ int32_t getUrlFilterNum2 ( SpiderRequest *sreq       ,
 	if ( langId >= 0 ) { // if ( srep ) {
 		// this is NULL on corruption
 		lang = getLanguageAbbr ( langId );//srep->m_langId );	
-		langLen = gbstrlen(lang);
+		if (lang) langLen = gbstrlen(lang);
 	}
 
 	// . get parent language in the request
@@ -14891,8 +14954,14 @@ bool SpiderRequest::isCorrupt ( ) {
 		return true;
 	}
 
+	if ( m_dataSize > (int32_t)sizeof(SpiderRequest) ) {
+		log("spider: got corrupt oversize spiderrequest");
+		return true;
+	}
+
 	// sanity check. check for http(s)://
-	if ( m_url[0] == 'h' ) 
+	if ( m_url[0] == 'h' && m_url[1]=='t' && m_url[2]=='t' &&
+	     m_url[3] == 'p' ) 
 		return false;
 	// might be a docid from a pagereindex.cpp
 	if ( ! is_digit(m_url[0]) ) { 

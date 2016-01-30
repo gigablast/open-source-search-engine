@@ -4613,6 +4613,9 @@ int32_t *XmlDoc::getIndexCode2 ( ) {
 	// it will always be 100% the same
 	if ( m_recycleContent )
 		check = false;
+	// never check for a bulk job
+	if ( cr->m_isCustomCrawl == 2 )
+		check = false;
 
 	if ( check ) {
 		// check inlinks now too!
@@ -14994,6 +14997,14 @@ bool *XmlDoc::getIsAllowed ( ) {
 	// double get?
 	if ( m_crawlDelayValid ) { char *xx=NULL;*xx=0; }
 
+	// bulk jobs don't need this
+	CollectionRec *cr = getCollRec();
+	if ( cr && cr->m_isCustomCrawl == 2 ) {
+		m_isAllowed      = true;
+		m_isAllowedValid = true;
+		return &m_isAllowed;
+	}
+
 	// . if WE are robots.txt that is always allowed!!!
 	// . check the *first* url since these often redirect to wierd things
 	Url *fu = getFirstUrl();
@@ -15856,6 +15867,10 @@ void gotDiffbotReplyWrapper ( void *state , TcpSocket *s ) {
 			char *err = strstr(page,"\"error\":\"");
 			if ( err ) err += 9;
 			int32_t code = EDIFFBOTUNKNOWNERROR;
+			if ( ! err &&
+			     page[0]=='{' &&
+			     page[1]=='}' )
+				code = EDIFFBOTCURLYREPLY;
 			if ( err && !strncmp(err,"Unable to apply rules",21))
 				code = EDIFFBOTUNABLETOAPPLYRULES;
 			// like .pdf pages get this error
@@ -15871,15 +15886,23 @@ void gotDiffbotReplyWrapper ( void *state , TcpSocket *s ) {
 				code = EDIFFBOTVERSIONREQ;
 			if ( err && !strncmp(err,"Empty content",13))
 				code = EDIFFBOTEMPTYCONTENT;
+			if ( err && !strncmp(err,"The selected pages contains too many TextNodes",46))
+				code = EDIFFBOTTOOMANYTEXTNODES;
 			if ( err && !strncmp(err,"No content received",19))
 				code = EDIFFBOTEMPTYCONTENT;
 			if ( err && !strncmp(err,"Request timed",13))
 				code = EDIFFBOTREQUESTTIMEDOUT;
+			if ( err &&!strncmp(err,"Request of third-party c",24))
+				code = EDIFFBOTREQUESTTIMEDOUTTHIRDPARTY;
 			// error processing url
 			if ( err && !strncmp(err,"Error processing",16))
 				code = EDIFFBOTURLPROCESSERROR;
 			if ( err && !strncmp(err,"Your token has exp",18))
 				code = EDIFFBOTTOKENEXPIRED;
+			if ( err && !strncmp(err,"Not authorized API tok",22))
+				code = EDIFFBOTTOKENUNAUTHORIZED;
+			if ( err && !strncmp(err,"Error.",6) )
+				code = EDIFFBOTPLAINERROR;
 			THIS->m_diffbotReplyError = code;
 		}
 		// a hack for detecting if token is expired
@@ -27321,6 +27344,8 @@ char *XmlDoc::addOutlinkSpiderRecsToMetaList ( ) {
 	if ( ! m_hopCountValid       ) { char *xx=NULL;*xx=0; }
 	//if ( ! m_spideredTimeValid   ) { char *xx=NULL;*xx=0; }
 
+	int64_t myUh48 = m_firstUrl.getUrlHash48();
+
 	// . pre-allocate a buffer to hold the spider recs
 	// . taken from SpiderRequest::store()
 	int32_t size = 0;
@@ -27781,8 +27806,14 @@ char *XmlDoc::addOutlinkSpiderRecsToMetaList ( ) {
 		strcpy(ksr.m_url,s);
 		// this must be valid
 		if ( ! m_docIdValid ) { char *xx=NULL;*xx=0; }
+
 		// set the key, ksr.m_key. isDel = false
 		ksr.setKey ( firstIp, *d , false );
+
+		// we were hopcount 0, so if we link to ourselves we override
+		// our original hopcount of 0 with this guy that has a
+		// hopcount of 1. that sux... so don't do it.
+		if ( ksr.getUrlHash48() == myUh48 ) continue;
 
 		// if we've recently added this url to spiderdb in Spider.cpp, skip it
 		//if ( sc && sc->isInDupCache ( &ksr , false ) )
