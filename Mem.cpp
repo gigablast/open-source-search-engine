@@ -681,7 +681,7 @@ void Mem::addMem ( void *mem , int32_t size , const char *note , char isnew ) {
 			if ( s_mptrs  ) sysfree ( s_mptrs  );
 			if ( s_sizes  ) sysfree ( s_sizes  );
 			if ( s_labels ) sysfree ( s_labels );
-			if ( s_isnew  ) sysfree ( s_labels );
+			if ( s_isnew  ) sysfree ( s_isnew );
 			log("mem: addMem: Init failed. Disabling checks.");
 			g_conf.m_detectMemLeaks = false;
 			return;
