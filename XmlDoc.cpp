@@ -29545,6 +29545,10 @@ SafeBuf *XmlDoc::getSpiderStatusDocMetaList2 ( SpiderReply *reply1 ) {
 	else
 		jd.safePrintf("\"gbssSpiderTime\":%"INT32",\n",0);
 
+	if ( m_firstIndexedDateValid )
+		jd.safePrintf("\"gbssFirstIndexed\":%"UINT32",\n",
+			      m_firstIndexedDate);
+
 	// so we know what hostid spidered the url. this is not the
 	// same hostid that will store it necessarily
 	jd.safePrintf("\"gbssSpideredByHostId\":%"INT32",\n",
@@ -29556,10 +29560,6 @@ SafeBuf *XmlDoc::getSpiderStatusDocMetaList2 ( SpiderReply *reply1 ) {
 		int32_t shardNum = getShardNumFromDocId ( m_docId );
 		jd.safePrintf("\"gbssStoredOnShard\":%"INT32",\n",shardNum);
 	}
-
-	if ( m_firstIndexedDateValid )
-		jd.safePrintf("\"gbssFirstIndexed\":%"UINT32",\n",
-			      m_firstIndexedDate);
 
 	if ( m_contentHash32Valid )
 		jd.safePrintf("\"gbssContentHash32\":%"UINT32",\n",
