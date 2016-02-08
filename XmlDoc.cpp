@@ -12722,6 +12722,13 @@ char *XmlDoc::getIsIndexed ( ) {
 	// get the url
 	//char *u = getFirstUrl()->getUrl();
 
+	if ( m_oldDocValid ) {
+		m_isIndexedValid = true;
+		if ( m_oldDoc ) m_isIndexed = true;
+		else            m_isIndexed = false;
+		return &m_isIndexed;
+	}
+
 	CollectionRec *cr = getCollRec();
 	if ( ! cr ) return NULL;
 
