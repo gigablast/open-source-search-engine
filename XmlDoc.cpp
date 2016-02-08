@@ -12063,13 +12063,16 @@ XmlDoc **XmlDoc::getOldXmlDoc ( ) {
 		//log("xmldoc: nuke xmldoc1=%"PTRFMT"",(PTRTYPE)m_oldDoc);
 		m_oldDoc = NULL;
 		g_errno = saved;
-		return NULL; //mdwmdwmdw
+		// MDW: i removed this on 2/8/2016 again so the code below
+		// would execute.
+		//return NULL; //mdwmdwmdw
 		// if it is data corruption, just assume empty so
 		// we don't stop spidering a url because of this. so we'll
 		// think this is the first time indexing it. otherwise
 		// we get "Bad cached document" in the logs and the
 		// SpiderReply and it never gets re-spidered because it is
 		// not a 'temporary' error according to the url filters.
+		log("build: treating corrupted titlerec as not found");
 		g_errno = 0;
 		m_oldDoc = NULL;
 		m_oldDocValid = true;
@@ -29535,6 +29538,10 @@ SafeBuf *XmlDoc::getSpiderStatusDocMetaList2 ( SpiderReply *reply1 ) {
 	else
 		jd.safePrintf("\"gbssSpiderTime\":%"INT32",\n",0);
 
+	// so we know what hostid spidered the url. this is not the
+	// same hostid that will store it necessarily
+	jd.safePrintf("\"gbssSpideredByHostId\":%"INT32",\n",
+		      (int32_t)g_hostdb.getMyHostId());
 
 	if ( m_firstIndexedDateValid )
 		jd.safePrintf("\"gbssFirstIndexed\":%"UINT32",\n",
