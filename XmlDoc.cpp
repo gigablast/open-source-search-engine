@@ -29543,6 +29543,13 @@ SafeBuf *XmlDoc::getSpiderStatusDocMetaList2 ( SpiderReply *reply1 ) {
 	jd.safePrintf("\"gbssSpideredByHostId\":%"INT32",\n",
 		      (int32_t)g_hostdb.getMyHostId());
 
+	// which shard will store the titlerec and index terms? it
+	// is based on docid.
+	if ( m_docIdValid ) {
+		int32_t shardNum = getShardNumFromDocId ( m_docId );
+		jd.safePrintf("\"gbssStoredOnShard\":%"INT32",\n",shardNum);
+	}
+
 	if ( m_firstIndexedDateValid )
 		jd.safePrintf("\"gbssFirstIndexed\":%"UINT32",\n",
 			      m_firstIndexedDate);
