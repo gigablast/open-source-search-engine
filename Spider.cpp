@@ -14955,7 +14955,14 @@ bool SpiderRequest::isCorrupt ( ) {
 	}
 
 	if ( m_dataSize > (int32_t)sizeof(SpiderRequest) ) {
-		log("spider: got corrupt oversize spiderrequest");
+		log("spider: got corrupt oversize spiderrequest %i",
+		    (int)m_dataSize);
+		return true;
+	}
+
+	if ( m_dataSize <= 0 ) {
+		log("spider: got corrupt undersize spiderrequest %i",
+		    (int)m_dataSize);
 		return true;
 	}
 
