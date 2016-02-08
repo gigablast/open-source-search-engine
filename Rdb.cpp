@@ -1981,7 +1981,7 @@ bool Rdb::addList ( collnum_t collnum , RdbList *list,
 	// pick it
 	if ( collnum < 0 || collnum > getNumBases() || ! getBase(collnum) ) {
 		g_errno = ENOCOLLREC;
-		return log("db: %s bad collnum of %i.",m_dbname,collnum);
+		return log("db: %s bad collnum1 of %i.",m_dbname,collnum);
 	}
 	// make sure list is reset
 	list->resetListPtr();
@@ -2952,7 +2952,7 @@ int64_t Rdb::getListSize ( collnum_t collnum,
 	// pick it
 	//collnum_t collnum = g_collectiondb.getCollnum ( coll );
 	if ( collnum < 0 || collnum > getNumBases() || ! getBase(collnum) )
-		return log("db: %s bad collnum of %i",m_dbname,collnum);
+		return log("db: %s bad collnum2 of %i",m_dbname,collnum);
 	return getBase(collnum)->getListSize(startKey,endKey,max,
 					    oldTruncationLimit);
 }

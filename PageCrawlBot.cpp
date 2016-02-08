@@ -3387,6 +3387,7 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 		sb.safePrintf("<tr><td><b>Ready Hosts</b></td><td>");
 		for ( int32_t i = 0 ; i < g_hostdb.getNumHosts() ; i++ ) {
 			CrawlInfo *ci = &cis[i];
+			if ( ! ci ) continue;
 			if ( ! ci->m_hasUrlsReadyToSpider ) continue;
 			Host *h = g_hostdb.getHost ( i );
 			if ( ! h ) continue;

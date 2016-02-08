@@ -51,7 +51,7 @@
 extern int g_inMemcpy;
 
 //#define MAXDOCLEN (1024*1024 * 5)
-#define MAXDOCLEN (1024*1024)
+//#define MAXDOCLEN (1024*1024)
 
 HashTableX *g_ct = NULL;
 XmlDoc *g_doc = NULL;
@@ -11727,6 +11727,9 @@ Url **XmlDoc::getRedirUrl() {
 	int32_t  dlen2 = m_firstUrl.getDomainLen();
 	if ( dlen2 == 11 && strncmp(dom2,"nytimes.com",dlen2)==0 )
 		allowSimplifiedRedirs = true;
+	// same for bananarepublic.gap.com ?
+	if ( dlen2 == 7 && strncmp(dom2,"gap.com",dlen2)==0 )
+		allowSimplifiedRedirs = true;
 
 
 	// . don't bother indexing this url if the redir is better
@@ -17320,8 +17323,14 @@ char **XmlDoc::getHttpReply2 ( ) {
 
 	// sanity check
 	if ( ! m_firstIpValid ) { char *xx=NULL;*xx=0; }
+
+	// r->m_maxTextDocLen          = maxDownload;
+	// r->m_maxOtherDocLen         = maxDownload;
+	r->m_maxTextDocLen          = cr->m_maxTextDocLen;
+	r->m_maxOtherDocLen         = cr->m_maxOtherDocLen;
+
 	// max to download in bytes. currently 1MB.
-	int32_t maxDownload = (int32_t)MAXDOCLEN;
+	//int32_t maxDownload = (int32_t)MAXDOCLEN;
 	// but if url is http://127.0.0.1.... or local then
 	if ( m_ipValid ) {
 		// make into a string
@@ -17334,8 +17343,11 @@ char **XmlDoc::getHttpReply2 ( ) {
 		// . if local then make web page download max size unlimited
 		// . this is for adding the gbdmoz.urls.txt.* files to
 		//   populate dmoz. those files are about 25MB each.
-		if ( isLocal )
-			maxDownload = -1;
+		if ( isLocal ) {
+			//maxDownload = -1;
+			r->m_maxTextDocLen  = -1;
+			r->m_maxOtherDocLen = -1;
+		}
 	}
 	// m_maxCacheAge is set for getting contact or root docs in 
 	// getContactDoc() and getRootDoc() and it only applies to
@@ -17345,8 +17357,8 @@ char **XmlDoc::getHttpReply2 ( ) {
 	r->m_urlIp                  = *ip;
 	r->m_firstIp                = m_firstIp;
 	r->m_urlHash48              = getFirstUrlHash48();
-	r->m_maxTextDocLen          = maxDownload;
-	r->m_maxOtherDocLen         = maxDownload;
+	if ( r->m_maxTextDocLen  < 100000 ) r->m_maxTextDocLen  = 100000;
+	if ( r->m_maxOtherDocLen < 200000 ) r->m_maxOtherDocLen = 200000;
 	r->m_forwardDownloadRequest = (bool)m_forwardDownloadRequest;
 	r->m_useTestCache           = (bool)useTestCache;
 	r->m_spideredTime           = getSpideredTime();//m_spideredTime;
@@ -17684,6 +17696,9 @@ char **XmlDoc::gotHttpReply ( ) {
 	// clear this i guess
 	g_errno = 0;
 
+	/*
+	  MDW: 2/8/16 this logic now below in getIsContentTruncated() function
+
 	// int16_tcut - convert size to length
 	int32_t LEN = m_httpReplySize - 1;
 
@@ -17698,6 +17713,7 @@ char **XmlDoc::gotHttpReply ( ) {
 	m_isContentTruncated2 = (bool)m_isContentTruncated;
 	// validate it
 	m_isContentTruncatedValid = true;
+	*/
 
 	return &m_httpReply;
 }
@@ -17726,10 +17742,35 @@ char *XmlDoc::getIsContentTruncated ( ) {
 	// need a valid reply
 	char **replyPtr = getHttpReply ();
 	if ( ! replyPtr || replyPtr == (void *)-1 ) return (char *)replyPtr;
-	// return it
-	if ( ! m_isContentTruncatedValid ) { char *xx=NULL;*xx=0; }
-	// set shadow member
+
+	uint8_t *ct = getContentType();
+	if ( ! ct || ct == (void *)-1 ) return (char *)ct;
+
+	CollectionRec *cr = getCollRec();
+	if ( ! cr ) return NULL;
+
+	// shortcut - convert size to length
+	int32_t LEN = m_httpReplySize - 1;
+
+	m_isContentTruncated  = false;
+	// was the content truncated? these might label a doc is truncated
+	// when it really is not... but we only use this for link spam stuff,
+	// so it should not matter too much. it should only happen rarely.
+	if ( cr->m_maxTextDocLen >= 0 &&
+	     LEN >= cr->m_maxTextDocLen-1  &&
+	     *ct == CT_HTML ) 
+		m_isContentTruncated = true;
+
+	if ( cr->m_maxOtherDocLen >= 0 &&
+	     LEN >= cr->m_maxOtherDocLen-1 &&
+	     *ct != CT_HTML ) 
+		m_isContentTruncated = true;
+
+	//if ( LEN > MAXDOCLEN ) m_isContentTruncated = true;
+	// set this
 	m_isContentTruncated2 = (bool)m_isContentTruncated;
+	// validate it
+	m_isContentTruncatedValid = true;
 
 	return &m_isContentTruncated2;
 }
@@ -18817,7 +18858,7 @@ char **XmlDoc::getFilteredContent ( ) {
 	// 	char *xx=NULL;*xx=0; }
 
 	int32_t max , max2;
-
+	CollectionRec *cr;
 	bool filterable = false;
 
 	if ( m_calledThread ) goto skip;
@@ -18863,6 +18904,9 @@ char **XmlDoc::getFilteredContent ( ) {
 	// invalidate
 	m_filteredContentValid = false;
 
+	cr = getCollRec();
+	if ( ! cr ) return NULL;
+
 	// . if we have no filter specified...
 	// . usually "gbfilter" and it is a script in the working directory
 	//if ( ! cr->m_filter[0] ) {
@@ -18871,7 +18915,8 @@ char **XmlDoc::getFilteredContent ( ) {
 	//}
 
 	// if not text/html or text/plain, use the other max
-	max = MAXDOCLEN; // cr->m_maxOtherDocLen;
+	//max = MAXDOCLEN; // cr->m_maxOtherDocLen;
+	max = cr->m_maxOtherDocLen;
 	// now we base this on the pre-filtered length to save memory because
 	// our maxOtherDocLen can be 30M and when we have a lot of injections
 	// at the same time we lose all our memory quickly
@@ -22038,6 +22083,10 @@ bool XmlDoc::logIt ( SafeBuf *bb ) {
 	
 	if ( m_contentValid )
 		sb->safePrintf("contentlen=%06"INT32" ",m_contentLen);
+
+	if ( m_isContentTruncatedValid )
+		sb->safePrintf("contenttruncated=%"INT32" ",
+			       (int32_t)m_isContentTruncated);
 
 	if ( m_robotsTxtLenValid )
 		sb->safePrintf("robotstxtlen=%04"INT32" ",m_robotsTxtLen );
@@ -29549,6 +29598,10 @@ SafeBuf *XmlDoc::getSpiderStatusDocMetaList2 ( SpiderReply *reply1 ) {
 		jd.safePrintf("\"gbssFirstIndexed\":%"UINT32",\n",
 			      m_firstIndexedDate);
 
+	if ( m_contentHash32Valid )
+		jd.safePrintf("\"gbssContentHash32\":%"UINT32",\n",
+			      m_contentHash32);
+
 	// so we know what hostid spidered the url. this is not the
 	// same hostid that will store it necessarily
 	jd.safePrintf("\"gbssSpideredByHostId\":%"INT32",\n",
@@ -29560,10 +29613,6 @@ SafeBuf *XmlDoc::getSpiderStatusDocMetaList2 ( SpiderReply *reply1 ) {
 		int32_t shardNum = getShardNumFromDocId ( m_docId );
 		jd.safePrintf("\"gbssStoredOnShard\":%"INT32",\n",shardNum);
 	}
-
-	if ( m_contentHash32Valid )
-		jd.safePrintf("\"gbssContentHash32\":%"UINT32",\n",
-			      m_contentHash32);
 
 	if ( m_downloadStartTimeValid && m_downloadEndTimeValid ) {
 		jd.safePrintf("\"gbssDownloadStartTimeMS\":%"INT64",\n",
@@ -29584,6 +29633,10 @@ SafeBuf *XmlDoc::getSpiderStatusDocMetaList2 ( SpiderReply *reply1 ) {
 
 	jd.safePrintf("\"gbssUsedRobotsTxt\":%"INT32",\n",
 		      m_useRobotsTxt);
+
+	if ( m_linksValid )
+		jd.safePrintf("\"gbssNumOutlinksOnPage\":%"INT32",\n",
+			      (int32_t)m_links.getNumLinks());
 
 	//if ( m_numOutlinksAddedValid ) 
 	// crap, this is not right because we only call addOutlinksToMetaList()
@@ -29647,6 +29700,11 @@ SafeBuf *XmlDoc::getSpiderStatusDocMetaList2 ( SpiderReply *reply1 ) {
 	if ( m_contentValid )
 		jd.safePrintf("\"gbssContentLen\":%"INT32",\n",
 			      m_contentLen);
+
+	if ( m_isContentTruncatedValid )
+		jd.safePrintf("\"gbssIsContentTruncated\":%"INT32",\n",
+			      (int32_t)m_isContentTruncated);
+
 
 	// do not show the -1 any more, just leave it out then
 	// to make things look prettier
@@ -33742,7 +33800,12 @@ Msg20Reply *XmlDoc::getMsg20Reply ( ) {
 						     m_siteNumInlinks,
 						     &m_xml, 
 						     links,
-						     MAXDOCLEN,//150000,
+						     // if doc length more
+						     // than 150k then consider
+						     // it linkspam 
+						     // automatically so it
+						     // can't vote
+						     150000,//MAXDOCLEN//150000
 						     &note , 
 						     &linkeeUrl , // url ,
 						     linkNode , 
@@ -35213,7 +35276,7 @@ char *XmlDoc::getIsLinkSpam ( ) {
 				      *sni ,
 				      xml, 
 				      links,
-				      MAXDOCLEN,//150000,//maxDocLen , 
+				      150000,//MAXDOCLEN,//maxDocLen , 
 				      &m_note , 
 				      NULL , // &linkee , // url ,
 				      -1 , // linkNode , 
@@ -35472,7 +35535,8 @@ int gbcompress7 ( unsigned char *dest      ,
 		return -1;
 	}
 	// to read - leave room for \0
-	int32_t toRead = MAXDOCLEN + 1000;
+	//int32_t toRead = MAXDOCLEN + 1000;
+	int32_t toRead = 150000 + 1000;
  retry14:
 	// read right from pipe descriptor
 	int32_t r = read (fd, dest,toRead);

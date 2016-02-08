@@ -2430,9 +2430,14 @@ int32_t getMsgSize ( char *buf, int32_t bufSize, TcpSocket *s ) {
 		if ( p + 15 < pend&&strncasecmp(p,"application/x-gzip",18)==0)
 			allOrNothing = true;
 		// adjust "max to read" if we don't have an html/plain doc
+		// this can be pdf or xml etc.
 		if ( ! isPost ) {
 			max = s->m_maxOtherDocLen + 10*1024 ;
 			if ( s->m_maxOtherDocLen == -1 ) max = 0x7fffffff;
+			// overflow? we added 10k to it make sure did not
+			// wrap around to a negative number
+			if ( max<s->m_maxOtherDocLen && s->m_maxOtherDocLen>0 )
+				max = s->m_maxOtherDocLen;
 		}
 	}
 

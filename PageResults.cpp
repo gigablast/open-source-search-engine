@@ -4290,13 +4290,13 @@ bool printResult ( State0 *st, int32_t ix , int32_t *numPrintedSoFar ) {
 			snprintf(tmp,512,"<a href=/search?q=gbdocid%%3A%"INT64
 				 "&c=%s>", docId,cr->m_coll);
 			sb->insert ( tmp , insertPos );
-		}
-		find = ",\n\"gbssHopCount\":";
-		start = sb->getBufStart() + startOff;
-		insertPtr = strstr ( start , find );
-		if ( insertPtr ) {
-			insertPos = insertPtr - sb->getBufStart();
-			sb->insert ( "</a>" , insertPos );
+			// now insert the corresponding </a>
+			// look for comma after "gbssDocId\":"
+			insertPtr = strstr ( insertPtr , "," );
+			if ( insertPtr ) {
+				insertPos = insertPtr - sb->getBufStart();
+				sb->insert ( "</a>" , insertPos );
+			}
 		}
 		// replace \n with <br>
 		// sb->safeReplace2 ( "\n" , 1 ,
