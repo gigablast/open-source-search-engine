@@ -4184,9 +4184,12 @@ bool printResult ( State0 *st, int32_t ix , int32_t *numPrintedSoFar ) {
 			log("results: missing gbssStatusCode");
 			goto badformat;
 		}
-		char *m = strstr ( e , "\"gbssConsecutiveErrors\":");
+		// start the second column at the start of this line:
+		char *m = strstr ( e , "\"gbssUsedRobotsTxt\":");
+		if ( ! m ) 
+			m = strstr ( e , "\"gbssConsecutiveErrors\":");
 		if ( ! m ) {
-			log("results: missing gbssConsecutiveErrors");
+			log("results: missing gbssUsedRobotsTxt");
 			goto badformat;
 		}
 		// exclude \0
@@ -4216,6 +4219,7 @@ bool printResult ( State0 *st, int32_t ix , int32_t *numPrintedSoFar ) {
 		}
 		sb->safePrintf("<table border=0 cellpadding=0 cellspacing=0>"
 			       "<tr><td>");
+		int32_t startOff = sb->getLength();
 		sb->safePrintf("<pre>");
 		//int32_t off = sb->length();
 		sb->safeMemcpy ( e , m - e );
@@ -4229,6 +4233,71 @@ bool printResult ( State0 *st, int32_t ix , int32_t *numPrintedSoFar ) {
 		sb->removeLastChar('\n');
 		sb->safePrintf("</pre>\n");
 		sb->safePrintf("</td></tr></table>");
+		//////
+		// insert date strings so we don't have to convert
+		// numeric timestamps to human time strings manually
+		//////
+		char *dateStr1 = strstr(mr->ptr_content,"\"gbssSpiderTime\":");
+		if ( dateStr1 ) dateStr1 += 17;
+		time_t dateInt1 = 0;
+		if ( dateStr1 ) dateInt1 = atoll(dateStr1);
+		struct tm *timeStruct = gmtime ( &dateInt1 );
+		char tmp[513];
+		strftime(tmp,64," <font color=gray>"
+			 "[%b-%d-%Y %H:%M:%S]</font>", timeStruct );
+		// insert position is before 'find'
+		char *find = "\n\"gbssFirstIndexed\":";
+		// sb has multiple results in it so just match on what we just
+		// printed
+		char *start = sb->getBufStart() + startOff;
+		char *insertPtr = strstr ( start, find );
+		int32_t insertPos = -1;
+		if ( insertPtr ) {
+			insertPos = insertPtr - sb->getBufStart();
+			sb->insert ( tmp , insertPos );
+		}
+		// repeat for first indexed timestamp too
+		dateStr1 = strstr(mr->ptr_content,"\"gbssFirstIndexed\":");
+		if ( dateStr1 ) dateStr1 += 19;
+		if ( dateStr1 ) dateInt1 = atoll(dateStr1);
+		timeStruct = gmtime ( &dateInt1 );
+		strftime(tmp,64," <font color=gray>"
+			 "[%b-%d-%Y %H:%M:%S]</font>", timeStruct );
+		// insert position is before 'find'
+		find = "\n\"gbssContentHash32\":";
+		// sb has multiple results in it so just match on what we just
+		// printed
+		start = sb->getBufStart() + startOff;
+		insertPtr = strstr ( start, find );
+		if ( insertPtr ) {
+			insertPos = insertPtr - sb->getBufStart();
+			sb->insert ( tmp , insertPos );
+		}
+		///////
+		// done inserting date strings
+		//////
+
+		/////
+		// insert link for gbssDocId
+		/////
+		find = "gbssDocId\":";
+		start = sb->getBufStart() + startOff;
+		insertPtr = strstr ( start , find );
+		if ( insertPtr ) {
+			insertPtr += 11;
+			insertPos = insertPtr - sb->getBufStart();
+			int64_t docId = atoll(insertPtr);
+			snprintf(tmp,512,"<a href=/search?q=gbdocid%%3A%"INT64
+				 "&c=%s>", docId,cr->m_coll);
+			sb->insert ( tmp , insertPos );
+			// now insert the corresponding </a>
+			// look for comma after "gbssDocId\":"
+			insertPtr = strstr ( insertPtr , "," );
+			if ( insertPtr ) {
+				insertPos = insertPtr - sb->getBufStart();
+				sb->insert ( "</a>" , insertPos );
+			}
+		}
 		// replace \n with <br>
 		// sb->safeReplace2 ( "\n" , 1 ,
 		// 		   "<br>" , 4 ,

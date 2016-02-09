@@ -1499,7 +1499,7 @@ bool saveAddsInProgress ( char *prefix ) {
 		// write that
 		write ( fd , &slot->m_sendBufSize , 4 );
 		// then the buf data itself
-		write ( fd , &slot->m_sendBuf , slot->m_sendBufSize );
+		write ( fd , slot->m_sendBuf , slot->m_sendBufSize );
 	}
 	
 

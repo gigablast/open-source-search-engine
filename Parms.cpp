@@ -17893,28 +17893,37 @@ void Parms::init ( ) {
 	m->m_obj   = OBJ_COLL;
 	m++;
 
-	/*
 	m->m_title = "max text doc length";
 	m->m_desc  = "Gigablast will not download, index or "
-		"store more than this many bytes of an html or text "
-		"document. Use -1 for no max.";
+		"store more than this many bytes of an HTML or text "
+		"document. XML is NOT considered to be HTML or text, use "
+		"the rule below to control the maximum length of an XML "
+		"document. "
+		"Use -1 for no max.";
 	m->m_cgi   = "mtdl";
 	m->m_off   = (char *)&cr.m_maxTextDocLen - x;
 	m->m_type  = TYPE_LONG;
-	m->m_def   = "204800";
+	m->m_def   = "1048576"; // 1MB
+	m->m_page  = PAGE_SPIDER;
+	m->m_obj   = OBJ_COLL;
+	m->m_flags = PF_CLONE|PF_API;
 	m++;
 
 	m->m_title = "max other doc length";
 	m->m_desc  = "Gigablast will not download, index or "
 		"store more than this many bytes of a non-html, non-text "
-		"document. Use -1 for no max.";
+		"document. XML documents will be restricted to this "
+		"length. "
+		"Use -1 for no max.";
 	m->m_cgi   = "modl";
 	m->m_off   = (char *)&cr.m_maxOtherDocLen - x;
 	m->m_type  = TYPE_LONG;
-	m->m_def   = "1048576";
+	m->m_def   = "1048576"; // 1MB
 	m->m_group = 0;
+	m->m_page  = PAGE_SPIDER;
+	m->m_obj   = OBJ_COLL;
+	m->m_flags = PF_CLONE|PF_API;
 	m++;
-	*/
 
 	//m->m_title = "indexdb truncation limit";
 	//m->m_cgi   = "itl";

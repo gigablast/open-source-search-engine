@@ -34,6 +34,12 @@
 #include "HttpMime.h"
 
 #define DEFAULT_HTTP_PROTO "HTTP/1.0"
+// prevent HTTP STATUS 206
+// not acceptable response by using 1.1
+// instead of 1.0 for www.mindanews.com.
+// keep-alive is controlled by the client/spider so should be ok
+// to not support it.
+#define DEFAULT_SPIDER_HTTP_PROTO "HTTP/1.1"
 
 //this is for low priority requests which come in while we are
 //in a quickpoll
