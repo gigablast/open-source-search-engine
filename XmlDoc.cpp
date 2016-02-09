@@ -11736,9 +11736,13 @@ Url **XmlDoc::getRedirUrl() {
 	if ( dlen2 == 11 && strncmp(dom2,"nytimes.com",dlen2)==0 )
 		allowSimplifiedRedirs = true;
 	// same for bananarepublic.gap.com ?
-	if ( dlen2 == 7 && strncmp(dom2,"gap.com",dlen2)==0 )
-		allowSimplifiedRedirs = true;
+	// if ( dlen2 == 7 && strncmp(dom2,"gap.com",dlen2)==0 )
+	// 	allowSimplifiedRedirs = true;
 
+	// if redirect is setting cookies we have to follow the redirect
+	// all the way through so we can stop now.
+	if ( m_redirCookieBufValid && m_redirCookieBuf.getLength() )
+		allowSimplifiedRedirs = true;
 
 	// . don't bother indexing this url if the redir is better
 	// . 301 means moved PERMANENTLY...
