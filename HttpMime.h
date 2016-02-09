@@ -121,6 +121,8 @@ class HttpMime {
 	// make a redirect mime
 	void makeRedirMime ( char *redirUrl , int32_t redirUrlLen );
 
+	bool addCookiesIntoBuffer ( class SafeBuf *sb ) ;
+
 	char *getMime    ( ) { return m_buf; };
 	// does this include the last \r\n\r\n? yes!
 	int32_t  getMimeLen ( ) { return m_bufLen; };
@@ -163,7 +165,8 @@ class HttpMime {
 	char *m_locationField    ;
 	int32_t  m_locationFieldLen ;
 
-	
+	char *m_mimeStartPtr;
+
 	// buf used to hold a mime we create
 	char m_buf[1024];
 	int32_t m_bufLen;
@@ -183,6 +186,8 @@ class HttpMime {
 	// Content-Type: text/html;charset=gb2312  // chinese (gb2312)
 	char *m_charset;
 	int32_t  m_charsetLen;
+
+	char *m_firstCookie;
 
 	char *m_cookie;
 	int32_t  m_cookieLen;

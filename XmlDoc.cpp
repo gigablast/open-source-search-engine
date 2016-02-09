@@ -11443,7 +11443,14 @@ Url **XmlDoc::getRedirUrl() {
 	// breathe
 	QUICKPOLL(m_niceness);
 
-	// get cookie for redirect to fix nyt.com
+	// get cookie for redirect to fix nyt.com/nytimes.com
+	// for gap.com it uses multiple Set-Cookie:\r\n lines so we have
+	// to accumulate all of them into a buffer now
+	m_redirCookieBuf.reset();
+	mime.addCookiesIntoBuffer ( &m_redirCookieBuf );
+	m_redirCookieBufValid = true;
+
+	/*
 	char *cookie = mime.getCookie();
 	// find end of cookie at the semicolon
 	char *s = cookie;
@@ -11456,6 +11463,7 @@ Url **XmlDoc::getRedirUrl() {
 		m_redirCookieBuf.nullTerm();
 		m_redirCookieBufValid = true;
 	}
+	*/
 
 	// mdw23
 	//log("http: reply=%s",m_httpReply);
@@ -17375,7 +17383,7 @@ char **XmlDoc::getHttpReply2 ( ) {
 		// . only do once per redirect
 		// . do not invalidate because we might have to carry it
 		//   through to the next redir... unless we change domain
-		// . this fixes the nyt.com bug some more
+		// . this fixes the nyt.com/nytimes.com bug some more
 		//m_redirCookieBufValid = false;
 	}
 
