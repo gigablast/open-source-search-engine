@@ -211,7 +211,8 @@ bool HttpServer::getDoc ( char   *url      ,
 			// TODO: ensure we close the socket on this error!
 			return true;
 		}
-		//log("archive: %s",r.m_reqBuf.getBufStart());
+		if ( g_conf.m_logDebugTcp )
+			log("archive: %s",r.m_reqBuf.getBufStart());
 		reqSize = r.getRequestLen();
 		int32_t need = reqSize + pcLen;
 		// if we are requesting an HTTPS url through a proxy then

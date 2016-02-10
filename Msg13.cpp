@@ -1291,6 +1291,9 @@ void gotHttpReply9 ( void *state , TcpSocket *ts ) {
 	//if ( ! g_errno ) 
 	bool banned = ipWasBanned ( ts , &banMsg , r );
 
+	if ( g_conf.m_logDebugTcp && ts )
+		log("msg13: got reply=%s",ts->m_readBuf);
+
 
 	// inc this every time we try
 	r->m_proxyTries++;
@@ -1487,6 +1490,10 @@ void gotHttpReply ( void *state , TcpSocket *ts ) {
 
 	// if we had no error, TcpSocket should be legit
 	if ( ts ) {
+
+		if ( g_conf.m_logDebugTcp )
+			log("msg13: got reply=%s",ts->m_readBuf);
+
 		gotHttpReply2 ( state , 
 				ts->m_readBuf ,
 				ts->m_readOffset ,
