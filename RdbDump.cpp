@@ -770,11 +770,12 @@ bool RdbDump::doneReadingForVerify ( ) {
 	//   set m_isCollectionless to false
 	if ( ! cr && m_doCollCheck ) {
 		g_errno = ENOCOLLREC;
-		// m_file is invalid if collrec got nuked because so did
-		// the Rdbbase which has the files
 		log("db: lost collection while dumping to disk. making "
 		    "map null so we can stop.");
 		m_map = NULL;
+		// m_file is probably invalid too since it is stored
+		// in cr->m_bases[i]->m_files[j]
+		m_file = NULL;
 	}
 
 
@@ -935,6 +936,7 @@ bool RdbDump::doneReadingForVerify ( ) {
 	// problem?
 	if ( ! s && ! m_tried ) {
 		m_tried = true;
+		if ( m_file )
 		log("db: Corruption in tree detected when dumping to %s. "
 		    "Fixing. Your memory had an error. Consider replacing it.",
 		    m_file->getFilename());
@@ -1076,8 +1078,9 @@ void doneWritingWrapper ( void *state ) {
 	// done writing
 	THIS->m_writing = false;
 	// bitch about errors
-	if ( g_errno ) log("db: Dump to %s had write error: %s.",
-			   THIS->m_file->getFilename(),mstrerror(g_errno));
+	if ( g_errno && THIS->m_file ) 
+		log("db: Dump to %s had write error: %s.",
+		    THIS->m_file->getFilename(),mstrerror(g_errno));
 	// delete list from tree, incorporate list into cache, add to map
 	if ( ! THIS->doneDumpingList( true ) ) return;
 	// continue
@@ -1093,13 +1096,17 @@ void RdbDump::continueDumping() {
 	//   set m_isCollectionless to false
 	if ( ! cr && m_doCollCheck ) {
 		g_errno = ENOCOLLREC;
-		// m_file is invalid if collrec got nuked because so did
-		// the Rdbbase which has the files
+		// m_file is probably invalid too since it is stored
+		// in cr->m_bases[i]->m_files[j]
+		m_file = NULL;
 		log("db: continue dumping lost collection");
 	}
 
-	// bitch about errors
-	if (g_errno)log("db: Dump to %s had error writing: %s.",
+	// bitch about errors, but i guess if we lost our collection
+	// then the m_file could be invalid since that was probably stored
+	// in the CollectionRec::RdbBase::m_files[] array of BigFile ptrs
+	// so we can't say m_file->getFilename()
+	else if (g_errno)log("db: Dump to %s had error writing: %s.",
 			     m_file->getFilename(),mstrerror(g_errno));
 
 	// go back now if we were NOT dumping a tree
