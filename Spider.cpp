@@ -4109,6 +4109,26 @@ bool SpiderColl::scanListForWinners ( ) {
 			//   they do not become the winning reply because
 			//   their date is in the future!!
 
+			if ( tmp->m_spideredTime > nowGlobal + 1 ) {
+				if ( m_cr->m_spiderCorruptCount == 0 ) {
+					log("spider: got corrupt time "
+					    "spiderReply in "
+					    "scan "
+					    "uh48=%"INT64" "
+					    "httpstatus=%"INT32" "
+					    "datasize=%"INT32" "
+					    "(cn=%"INT32")",
+					    tmp->getUrlHash48(),
+					    (int32_t)tmp->m_httpStatus,
+					    tmp->m_dataSize,
+					    (int32_t)m_collnum);
+				}
+				m_cr->m_spiderCorruptCount++;
+				// don't nuke it just for that...
+				//srep = NULL;
+				continue;
+			}
+
 			// . this is -1 on corruption
 			// . i've seen -31757, 21... etc for bad http replies
 			//   in the qatest123 doc cache... so turn off for that
