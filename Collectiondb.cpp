@@ -3841,6 +3841,33 @@ bool CollectionRec::rebuildUrlFiltersDiffbot() {
 		i++;
 	}
 
+	// 3rd rule for respidering
+	// put this above the errocount>= rules below otherwise the crawl
+	// may never advance its round because it keeps retrying a ton of
+	// errored urls.
+	if ( respiderFreq > 0.0 ) {
+		m_regExs[i].set("lastspidertime>={roundstart}");
+		// do not "remove" from index
+		m_spiderPriorities   [i] = 10;
+		// just turn off spidering. if we were to set priority to
+		// filtered it would be removed from index!
+		//m_spidersEnabled     [i] = 0;
+		m_maxSpidersPerRule[i] = 0;
+		// temp hack so it processes in xmldoc.cpp::getUrlFilterNum()
+		// which has been obsoleted, but we are running old code now!
+		//m_spiderDiffbotApiUrl[i].set ( api );
+		i++;
+	}
+	// if doing a one-shot crawl limit error retries to 3 times or
+	// if no urls currently available to spider, whichever comes first.
+	else {
+		m_regExs[i].set("errorcount>=3");
+		m_spiderPriorities   [i] = 11;
+		m_spiderFreqs        [i] = 0.0416;
+		m_maxSpidersPerRule  [i] = 0; // turn off spiders
+		i++;
+	}
+
 	// diffbot needs to retry even on 500 or 404 errors since sometimes
 	// a seed url gets a 500 error mistakenly and it haults the crawl.
 	// so take out "!hastmperror".
@@ -3871,23 +3898,9 @@ bool CollectionRec::rebuildUrlFiltersDiffbot() {
 	if ( m_isCustomCrawl == 2 ) m_maxSpidersPerRule [i] = 0;
 	i++;
 
-	// 3rd rule for respidering
-	if ( respiderFreq > 0.0 ) {
-		m_regExs[i].set("lastspidertime>={roundstart}");
-		// do not "remove" from index
-		m_spiderPriorities   [i] = 10;
-		// just turn off spidering. if we were to set priority to
-		// filtered it would be removed from index!
-		//m_spidersEnabled     [i] = 0;
-		m_maxSpidersPerRule[i] = 0;
-		// temp hack so it processes in xmldoc.cpp::getUrlFilterNum()
-		// which has been obsoleted, but we are running old code now!
-		//m_spiderDiffbotApiUrl[i].set ( api );
-		i++;
-	}
 	// if collectiverespiderfreq is 0 or less then do not RE-spider
 	// documents already indexed.
-	else {
+	if ( respiderFreq <= 0.0 ) { // else {
 		// this does NOT work! error docs continuosly respider
 		// because they are never indexed!!! like EDOCSIMPLIFIEDREDIR
 		//m_regExs[i].set("isindexed");

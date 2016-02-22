@@ -4214,6 +4214,16 @@ bool SpiderColl::scanListForWinners ( ) {
 			srepUh48 = srep->getUrlHash48();
 			continue;
 		}
+
+		// MDW: this is handled in url filters now just fine.
+		// regardless of the spider request, if it has a spider
+		// reply for THIS ROUND, and we are doing crawl rounds,
+		// then skip it
+		// if ( m_cr->m_isCustomCrawl &&
+		//      srep &&
+		//      srep->m_spideredTime >= m_cr->m_spiderRoundStartTime )
+		// 	continue;
+
 		// cast it
 		SpiderRequest *sreq = (SpiderRequest *)rec;
 
