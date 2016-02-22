@@ -18359,6 +18359,26 @@ Url **XmlDoc::getMetaRedirUrl ( ) {
 	for ( ; p < pend ; p++ ) {
 		// breathe
 		QUICKPOLL ( m_niceness );		
+		// fix <!--[if lte IE 6]>
+		// <meta http-equiv="refresh" content="0; url=/error-ie6/" />
+		if ( *p == '!' && 
+		     p[-1]=='<' &&
+		     p[1] == '-' &&
+		     p[2] == '-' ) {
+			// find end of comment
+			for ( ; p < pend ; p++ ) {
+				QUICKPOLL(m_niceness);
+				if ( p[0] == '-' &&
+				     p[1] == '-' &&
+				     p[2] == '>' )
+					break;
+			}
+			// if found no end of comment, then stop
+			if ( p >= pend )
+				break;
+			// resume looking for meta redirect tags
+			continue;
+		}
 		// base everything off the equal sign
 		if ( *p != '=' ) continue;
 		// did we match "http-equiv="?
