@@ -14602,10 +14602,13 @@ bool getSpiderStatusMsg ( CollectionRec *cx , SafeBuf *msg , int32_t *status ) {
 
 	// try to fix crawlbot nightly test complaining about job status
 	// for TestRepeatCrawlWithMaxToCrawl
-	if ( (spiderStatus == SP_MAXTOCRAWL ||
-	      spiderStatus == SP_MAXTOPROCESS ) &&
+	if ( //(spiderStatus == SP_MAXTOCRAWL ||
+	     // spiderStatus == SP_MAXTOPROCESS ) &&
+	     spiderStatus == SP_INPROGRESS &&
 	     cx->m_collectiveRespiderFrequency > 0.0 &&
 	     now < cx->m_spiderRoundStartTime &&
+	     cx->m_maxCrawlRounds > 0 &&
+	     cx->m_isCustomCrawl &&
 	     cx->m_spiderRoundNum >= cx->m_maxCrawlRounds ) {
 		*status = SP_MAXROUNDS;
 		return msg->safePrintf ( "Job has reached maxRounds "
