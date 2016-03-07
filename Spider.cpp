@@ -3587,6 +3587,12 @@ bool SpiderColl::evalIpLoop ( ) {
 	bool inCache = false;
 	bool useCache = true;
 	CollectionRec *cr = g_collectiondb.getRec ( m_collnum );
+
+	// did our collection rec get deleted? since we were doing a read
+	// the SpiderColl will have been preserved in that case but its
+	// m_deleteMyself flag will have been set.
+	if ( tryToDeleteSpiderColl ( this ,"6") ) return false;
+
 	// if doing site or page quotes for the sitepages or domainpages
 	// url filter expressions, we can't muck with the cache because
 	// we end up skipping the counting part.
