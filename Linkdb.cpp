@@ -5865,7 +5865,7 @@ bool Links::addLink ( char *link , int32_t linkLen , int32_t nodeNum ,
 
 	// stop http://0x0017.0000000000000000000000000000000000000024521276/
 	// which somehow make it through without this!!
-	if ( url.getTLDLen() <= 0 ) return true;
+	if ( ! url.isIp() && url.getTLDLen() <= 0 ) return true;
 
 	// count dirty links
 	//if ( url.isDirty() ) m_numDirtyLinks++;
