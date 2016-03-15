@@ -1145,6 +1145,8 @@ void RdbTree::deleteOrderedList ( collnum_t collnum ,
 	if ( m_useProtection ) protect ( );
 }
 
+#include "Spider.h"
+
 // . this fixes the tree
 // returns false if could not fix tree and sets g_errno, otherwise true
 
@@ -1170,6 +1172,12 @@ bool RdbTree::fixTree ( ) {
 	//CollectionRec *recs = g_collectiondb.m_recs;
 	int32_t           max  = g_collectiondb.m_numRecs;
 	log("db: Valid collection numbers range from 0 to %"INT32".",max);
+
+	bool isTitledb = false;
+	if ( !strcmp(m_dbname,"titledb" ) ) isTitledb = true;
+	bool isSpiderdb = false;
+	if ( !strcmp(m_dbname,"spiderdb" ) ) isSpiderdb = true;
+
 	// now re-add the old nods to the tree, they should not be overwritten
 	// by addNode()
 	for ( int32_t i = 0 ; i < n ; i++ ) {
@@ -1178,6 +1186,34 @@ bool RdbTree::fixTree ( ) {
 			log("db: Fixing node #%"INT32" of %"INT32".",i,n);
 		// skip if empty
 		if ( m_parents[i] <= -2 ) continue;
+
+
+		if ( isTitledb && m_data[i] ) {
+			char *data = m_data[i];
+			int32_t ucompSize = *(int32_t *)data;
+			if ( ucompSize < 0 || ucompSize > 100000000 ) {
+				log("db: removing titlerec with uncompressed "
+				     "size of %i from tree",(int)ucompSize);
+				continue;
+			}
+		}
+
+		char *key = &m_keys[i*m_ks];
+		if ( isSpiderdb && m_data[i] &&
+		     g_spiderdb.isSpiderRequest ( (SPIDERDBKEY *)key ) ) {
+			char *data = m_data[i];
+			data -= sizeof(SPIDERDBKEY);
+			data -= 4;
+			SpiderRequest *sreq ;
+			sreq =(SpiderRequest *)data;
+			if ( strncmp(sreq->m_url,"http",4) ) {
+				log("db: removing spiderrequest bad url "
+				    "%s from tree",sreq->m_url);
+				//return false;
+				continue;
+			}
+		}
+
 		collnum_t cn = m_collnums[i];
 		// verify collnum
 		if ( cn <  0   ) continue;
@@ -1185,6 +1221,7 @@ bool RdbTree::fixTree ( ) {
 		// collnum of non-existent coll
 		if ( m_rdbId>=0 && ! g_collectiondb.m_recs[cn] )
 			continue;
+
 		// now add just to set m_right/m_left/m_parent
 		if ( m_fixedDataSize == 0 )
 			addNode(cn,&m_keys[i*m_ks], NULL, 0 );
@@ -1233,6 +1270,12 @@ bool RdbTree::checkTree2 ( bool printMsgs , bool doChainTest ) {
 	if ( !strcmp(m_dbname,"datedb" ) ) useHalfKeys = true;
 	if ( !strcmp(m_dbname,"tfndb"  ) ) useHalfKeys = true;
 	if ( !strcmp(m_dbname,"linkdb" ) ) useHalfKeys = true;
+
+	bool isTitledb = false;
+	if ( !strcmp(m_dbname,"titledb" ) ) isTitledb = true;
+	bool isSpiderdb = false;
+	if ( !strcmp(m_dbname,"spiderdb" ) ) isSpiderdb = true;
+
 	// now check parent kid correlations
 	for ( int32_t i = 0 ; i < m_minUnusedNode ; i++ ) {
 		// this thing blocks for 1.5 secs for indexdb
@@ -1249,6 +1292,31 @@ bool RdbTree::checkTree2 ( bool printMsgs , bool doChainTest ) {
 		// for posdb
 		if ( m_ks == 18 &&(m_keys[i*m_ks] & 0x06) ) {
 			char *xx=NULL;*xx=0; }
+
+		if ( isTitledb && m_data[i] ) {
+			char *data = m_data[i];
+			int32_t ucompSize = *(int32_t *)data;
+			if ( ucompSize < 0 || ucompSize > 100000000 ) {
+				log("db: found titlerec with uncompressed "
+				    "size of %i from tree",(int)ucompSize);
+				return false;
+			}
+		}
+
+		char *key = &m_keys[i*m_ks];
+		if ( isSpiderdb && m_data[i] &&
+		     g_spiderdb.isSpiderRequest ( (SPIDERDBKEY *)key ) ) {
+			char *data = m_data[i];
+			data -= sizeof(SPIDERDBKEY);
+			data -= 4;
+			SpiderRequest *sreq ;
+			sreq =(SpiderRequest *)data;
+			if ( strncmp(sreq->m_url,"http",4) ) {
+				log("db: spiderrequest bad url "
+				    "%s",sreq->m_url);
+				return false;
+			}
+		}
 
 		// bad collnum?
 		if ( doCollRecCheck ) {

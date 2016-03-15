@@ -213,6 +213,8 @@ class XmlDoc *g_xd;
 
 void XmlDoc::reset ( ) {
 
+	m_oldDocExistedButHadError = false;
+
 	m_addedStatusDocId = 0;
 
 	if ( m_diffbotProxyReplyValid && m_diffbotProxyReply ) {
@@ -12087,6 +12089,7 @@ XmlDoc **XmlDoc::getOldXmlDoc ( ) {
 		// ok, fix the memleak here
 		mdelete ( m_oldDoc , sizeof(XmlDoc), "odnuke" );
 		delete ( m_oldDoc );
+		m_oldDocExistedButHadError = true;
 		//log("xmldoc: nuke xmldoc1=%"PTRFMT"",(PTRTYPE)m_oldDoc);
 		m_oldDoc = NULL;
 		g_errno = saved;
@@ -16155,6 +16158,12 @@ bool *XmlDoc::getRecycleDiffbotReply ( ) {
 	if ( cr->m_diffbotOnlyProcessIfNewUrl &&
 	     od && od->m_gotDiffbotSuccessfulReply )
 		m_recycleDiffbotReply = true;
+
+	// to fight off corrupted title recs just assume that even though
+	// we could not uncompress the title rec that it had a successful reply
+	// if ( cr->m_diffbotOnlyProcessIfNewUrl &&
+	//      m_oldDocExistedButHadError )
+	// 	m_recycleDiffbotReply = true;
 
 	// don't recycle if specfically asked to reindex though
 	if ( m_sreqValid && m_sreq.m_isPageReindex )

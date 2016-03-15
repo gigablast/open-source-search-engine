@@ -776,7 +776,7 @@ bool RdbList::checkList_r ( bool removeNegRecs , bool sleepOnProblem ,
 		if ( rdbId == RDB_TITLEDB && ! KEYNEG(k) ) {
 			char *rec = getCurrentRec();
 			int32_t usize = *(int32_t *)(rec+12+4);
-			if ( usize <= 0 ) {
+			if ( usize <= 0 || usize>100000000) {
 				log("db: bad titlerec uncompress size");
 				char *xx=NULL;*xx=0; 
 			}

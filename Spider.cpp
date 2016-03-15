@@ -6044,7 +6044,8 @@ uint64_t SpiderColl::getSpiderTimeMS ( SpiderRequest *sreq,
 	int64_t waitInSecs = (uint64_t)(m_cr->m_spiderFreqs[ufn]*3600*24.0);
 	// do not spider more than once per 15 seconds ever!
 	// no! might be a query reindex!!
-	if ( waitInSecs < 15 && ! sreq->m_isPageReindex ) { //urlIsDocId ) { 
+	/*
+	if ( waitInSecs < 1 && ! sreq->m_isPageReindex ) { //urlIsDocId ) { 
 		static bool s_printed = false;
 		if ( ! s_printed ) {
 			s_printed = true;
@@ -6053,6 +6054,7 @@ uint64_t SpiderColl::getSpiderTimeMS ( SpiderRequest *sreq,
 		}
 		waitInSecs = 15;//900; this was 15 minutes
 	}
+	*/
 	// in fact, force docid based guys to be zero!
 	//if ( sreq->m_urlIsDocId ) waitInSecs = 0;
 	if ( sreq->m_isPageReindex ) waitInSecs = 0;
