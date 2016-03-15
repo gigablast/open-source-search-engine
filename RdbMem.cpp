@@ -90,15 +90,21 @@ void *RdbMem::dupData ( char *key , char *data , int32_t dataSize ,
 void *RdbMem::allocData ( char *key , int32_t dataSize , collnum_t collnum ) {
 	// if we're dumping and key has been dumped, use the secondary mem
 	//if ( m_dump->isDumping() && key < m_dump->getLastKeyInQueue() ) {
-	if ( m_rdb->m_inDumpLoop && // m_dump->isDumping() && 
-	     ( collnum < m_rdb->m_dumpCollnum ||
-	       (collnum == m_rdb->m_dumpCollnum &&
-		// if dump fails to alloc mem in RdbDump::dumpTree it does
-		// a sleep wrapper and keeps retrying, and 
-		// RdbDump::m_lastKeyInQueue can remain NULL because we've
-		// never dumped out a list from the tree yet
-		m_rdb->m_dump.m_lastKeyInQueue &&
-		KEYCMP(key,m_rdb->m_dump.getLastKeyInQueue(),m_ks)<0)) ){
+	if ( m_rdb->m_inDumpLoop ) {
+		/////
+		// MDW: 3/15/2016
+		// if we're dumping then ALWAYS use secondary mem, wtf...
+		// primary is being dumped out and when the dump completes
+		// the ptr gets reset so we'll end up point to garbage.
+		///////
+	     // ( collnum < m_rdb->m_dumpCollnum ||
+	     //   (collnum == m_rdb->m_dumpCollnum &&
+	     //	// if dump fails to alloc mem in RdbDump::dumpTree it does
+	     //	// a sleep wrapper and keeps retrying, and 
+	     //	// RdbDump::m_lastKeyInQueue can remain NULL because we've
+	     // 	// never dumped out a list from the tree yet
+	     // 	m_rdb->m_dump.m_lastKeyInQueue &&
+	     //	KEYCMP(key,m_rdb->m_dump.getLastKeyInQueue(),m_ks)<0))){
 		// if secondary mem is growing down...
 		if ( m_ptr2 > m_ptr1 ) {
 			// return NULL if it would breech,

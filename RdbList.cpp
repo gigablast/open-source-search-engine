@@ -776,7 +776,7 @@ bool RdbList::checkList_r ( bool removeNegRecs , bool sleepOnProblem ,
 		if ( rdbId == RDB_TITLEDB && ! KEYNEG(k) ) {
 			char *rec = getCurrentRec();
 			int32_t usize = *(int32_t *)(rec+12+4);
-			if ( usize <= 0 ) {
+			if ( usize <= 0 || usize>100000000) {
 				log("db: bad titlerec uncompress size");
 				char *xx=NULL;*xx=0; 
 			}
@@ -1686,9 +1686,12 @@ void RdbList::merge_r ( RdbList **lists         ,
 	// did they call prepareForMerge()?
 	if ( m_mergeMinListSize == -1 ) {
 		log(LOG_LOGIC,"db: rdblist: merge_r: prepareForMerge() not "
-		    "called.");
+		    "called. ignoring error and returning emtpy list.");
+		// this happens if we nuke doledb during a merge of it. it
+		// is just bad timing
+		return;
 		// save state and dump core, sigBadHandler will catch this
-		char *p = NULL;	*p = 0;
+		//char *p = NULL;	*p = 0;
 	}
 	// already there?
 	if ( minRecSizes >= 0 && m_listSize >= minRecSizes ) return;

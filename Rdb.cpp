@@ -2004,6 +2004,10 @@ bool Rdb::addList ( collnum_t collnum , RdbList *list,
 		g_errno = ETRYAGAIN; 
 		return false;
 	}
+	// if ( m_inDumpLoop ) {
+	// 	g_errno = ETRYAGAIN;
+	// 	return false;
+	// }
 	// if we are well into repair mode, level 2, do not add anything
 	// to spiderdb or titledb... that can mess up our titledb scan.
 	// we always rebuild tfndb, clusterdb, checksumdb and spiderdb
@@ -2419,6 +2423,30 @@ bool Rdb::addRecord ( collnum_t collnum,
 		return false;
 	}
 
+
+	// do not add if range being dumped at all because when the
+	// dump completes it calls deleteList() and removes the nodes from
+	// the tree, so if you were overriding a node currently being dumped
+	// we would lose it.
+	if ( m_dump.isDumping() &&
+	     //oppKey >= m_dump.getFirstKeyInQueue() &&
+	     // ensure the dump is dumping the collnum of this key
+	     m_dump.m_collnum == collnum &&
+	     m_dump.m_lastKeyInQueue &&
+	     // the dump should not split positive/negative keys so
+	     // if our positive/negative twin should be in the dump with us
+	     // or not in the dump with us, so any positive/negative 
+	     // annihilation below should be ok and we should be save
+	     // to call deleteNode() below
+	     KEYCMP(key,m_dump.getFirstKeyInQueue(),m_ks)>=0 &&
+	     //oppKey <= m_dump.getLastKeyInQueue ()   ) goto addIt;
+	     KEYCMP(key,m_dump.getLastKeyInQueue (),m_ks)<=0   )  {
+		// tell caller to wait and try again later
+		g_errno = ETRYAGAIN;
+		return false;
+	}
+
+
 	// save orig
 	char *orig = NULL;
 
@@ -2618,13 +2646,17 @@ bool Rdb::addRecord ( collnum_t collnum,
 		// CAUTION: we should not annihilate with oppKey if oppKey may
 		// be in the process of being dumped to disk! This would 
 		// render our annihilation useless and make undeletable data
+		/*
 		if ( m_dump.isDumping() &&
 		     //oppKey >= m_dump.getFirstKeyInQueue() &&
+		     // ensure the dump is dumping the collnum of this key
+		     m_dump.m_collnum == collnum &&
 		     m_dump.m_lastKeyInQueue &&
 		     KEYCMP(oppKey,m_dump.getFirstKeyInQueue(),m_ks)>=0 &&
 		     //oppKey <= m_dump.getLastKeyInQueue ()   ) goto addIt;
 		     KEYCMP(oppKey,m_dump.getLastKeyInQueue (),m_ks)<=0   ) 
 			goto addIt;
+		*/
 		// BEFORE we delete it, save it. this is a special hack
 		// so we can UNDO this deleteNode() should the titledb rec
 		// add fail.
@@ -2698,7 +2730,7 @@ bool Rdb::addRecord ( collnum_t collnum,
 	// if we did not find an oppKey and are tfndb, flag this
 	//if ( n<0 && m_rdbId == RDB_TFNDB ) s_tfndbHadOppKey = false;
 
- addIt:
+	// addIt:
 	// mark as changed
 	//if ( ! m_needsSave ) {
 	//	m_needsSave = true;

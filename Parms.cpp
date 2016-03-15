@@ -12426,6 +12426,22 @@ void Parms::init ( ) {
 	m++;
 	*/
 
+	m->m_title = "verify written lists";
+	m->m_desc  = "Ensure lists being written to disk are not corrupt. "
+		"That title recs appear valid, etc. Helps isolate sources "
+		"of corruption. Used for debugging.";
+	m->m_cgi   = "vwl";
+	m->m_off   = (char *)&g_conf.m_verifyDumpedLists - g;
+	m->m_type  = TYPE_BOOL;
+	m->m_def   = "0";
+	m->m_group = 0;
+	m->m_flags = 0;//PF_HIDDEN | PF_NOSAVE;
+	m->m_page  = PAGE_MASTER;
+	m->m_obj   = OBJ_CONF;
+	m->m_group = 0;
+	m++;
+
+
 	m->m_title = "verify disk writes";
 	m->m_desc  = "Read what was written in a verification step. Decreases "
 		"performance, but may help fight disk corruption mostly on "

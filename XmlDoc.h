@@ -1643,6 +1643,8 @@ class XmlDoc {
 	char m_isInIndex;
 	char m_wasInIndex;
 
+	bool m_oldDocExistedButHadError;
+
 	Msg8a   m_msg8a;
 	char   *m_tagdbColl;
 	int32_t    m_tagdbCollLen;

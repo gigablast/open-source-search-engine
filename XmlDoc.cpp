@@ -213,6 +213,8 @@ class XmlDoc *g_xd;
 
 void XmlDoc::reset ( ) {
 
+	m_oldDocExistedButHadError = false;
+
 	m_addedStatusDocId = 0;
 
 	if ( m_diffbotProxyReplyValid && m_diffbotProxyReply ) {
@@ -11443,6 +11445,11 @@ Url **XmlDoc::getRedirUrl() {
 	// breathe
 	QUICKPOLL(m_niceness);
 
+	// did we send a cookie with our last request?
+	bool sentCookieLastTime = false;
+	if ( m_redirCookieBuf.length() )
+		sentCookieLastTime = true;
+
 	// get cookie for redirect to fix nyt.com/nytimes.com
 	// for gap.com it uses multiple Set-Cookie:\r\n lines so we have
 	// to accumulate all of them into a buffer now
@@ -11557,6 +11564,13 @@ Url **XmlDoc::getRedirUrl() {
 	//   until you send a cookie!!
 	// . www.twomileborris.com does the cookie thing, too
 	if ( strcmp ( cu->getUrl(), loc->getUrl() ) == 0 ) {
+		// try sending the cookie if we got one now and didn't have
+		// one for this last request
+		if ( ! sentCookieLastTime && m_redirCookieBuf.length() ) {
+			m_redirUrl.set ( loc->getUrl() );
+			m_redirUrlPtr = &m_redirUrl;
+			return &m_redirUrlPtr;
+		}
 		if ( ! keep ) m_redirError = EDOCREDIRECTSTOSELF;
 		return &m_redirUrlPtr;
 	}
@@ -12075,6 +12089,7 @@ XmlDoc **XmlDoc::getOldXmlDoc ( ) {
 		// ok, fix the memleak here
 		mdelete ( m_oldDoc , sizeof(XmlDoc), "odnuke" );
 		delete ( m_oldDoc );
+		m_oldDocExistedButHadError = true;
 		//log("xmldoc: nuke xmldoc1=%"PTRFMT"",(PTRTYPE)m_oldDoc);
 		m_oldDoc = NULL;
 		g_errno = saved;
@@ -16144,6 +16159,12 @@ bool *XmlDoc::getRecycleDiffbotReply ( ) {
 	     od && od->m_gotDiffbotSuccessfulReply )
 		m_recycleDiffbotReply = true;
 
+	// to fight off corrupted title recs just assume that even though
+	// we could not uncompress the title rec that it had a successful reply
+	// if ( cr->m_diffbotOnlyProcessIfNewUrl &&
+	//      m_oldDocExistedButHadError )
+	// 	m_recycleDiffbotReply = true;
+
 	// don't recycle if specfically asked to reindex though
 	if ( m_sreqValid && m_sreq.m_isPageReindex )
 		m_recycleDiffbotReply = false;
@@ -18359,6 +18380,26 @@ Url **XmlDoc::getMetaRedirUrl ( ) {
 	for ( ; p < pend ; p++ ) {
 		// breathe
 		QUICKPOLL ( m_niceness );		
+		// fix <!--[if lte IE 6]>
+		// <meta http-equiv="refresh" content="0; url=/error-ie6/" />
+		if ( *p == '!' && 
+		     p[-1]=='<' &&
+		     p[1] == '-' &&
+		     p[2] == '-' ) {
+			// find end of comment
+			for ( ; p < pend ; p++ ) {
+				QUICKPOLL(m_niceness);
+				if ( p[0] == '-' &&
+				     p[1] == '-' &&
+				     p[2] == '>' )
+					break;
+			}
+			// if found no end of comment, then stop
+			if ( p >= pend )
+				break;
+			// resume looking for meta redirect tags
+			continue;
+		}
 		// base everything off the equal sign
 		if ( *p != '=' ) continue;
 		// did we match "http-equiv="?
@@ -37604,6 +37645,11 @@ bool XmlDoc::printDoc ( SafeBuf *sb ) {
 			"</tr>\n"
 
 			"<tr>"
+			"<td>http status</td>"
+			"<td>%i</td>"
+			"</tr>\n"
+
+			"<tr>"
 			"<td>url filter num</td>"
 			"<td>%"INT32"</td>"
 			"</tr>\n"
@@ -37638,6 +37684,7 @@ bool XmlDoc::printDoc ( SafeBuf *sb ) {
 			getFirstUrlHash64(), // uh48
 
 			mstrerror(m_indexCode),
+			m_httpStatus,
 			ufn,
 			mstrerror(g_errno),
 			allowed,

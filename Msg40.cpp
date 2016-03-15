@@ -1761,6 +1761,11 @@ Msg20 *Msg40::getAvailMsg20 ( ) {
 
 Msg20 *Msg40::getCompletedSummary ( int32_t ix ) {
 	for ( int32_t i = 0 ; i < m_numMsg20s ; i++ ) {
+		// it seems m_numMsg20s can be > m_numRequests when doing
+		// a multi collection federated search somehow and this
+		// can therefore be null
+		if ( ! m_msg20[i] ) 
+			continue;
 		if ( m_msg20[i]->m_ii != ix ) continue;
 		if ( m_msg20[i]->m_inProgress ) return NULL;
 		return m_msg20[i];

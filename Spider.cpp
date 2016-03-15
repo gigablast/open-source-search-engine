@@ -3587,6 +3587,12 @@ bool SpiderColl::evalIpLoop ( ) {
 	bool inCache = false;
 	bool useCache = true;
 	CollectionRec *cr = g_collectiondb.getRec ( m_collnum );
+
+	// did our collection rec get deleted? since we were doing a read
+	// the SpiderColl will have been preserved in that case but its
+	// m_deleteMyself flag will have been set.
+	if ( tryToDeleteSpiderColl ( this ,"6") ) return false;
+
 	// if doing site or page quotes for the sitepages or domainpages
 	// url filter expressions, we can't muck with the cache because
 	// we end up skipping the counting part.
@@ -4109,6 +4115,26 @@ bool SpiderColl::scanListForWinners ( ) {
 			//   they do not become the winning reply because
 			//   their date is in the future!!
 
+			if ( tmp->m_spideredTime > nowGlobal + 1 ) {
+				if ( m_cr->m_spiderCorruptCount == 0 ) {
+					log("spider: got corrupt time "
+					    "spiderReply in "
+					    "scan "
+					    "uh48=%"INT64" "
+					    "httpstatus=%"INT32" "
+					    "datasize=%"INT32" "
+					    "(cn=%"INT32")",
+					    tmp->getUrlHash48(),
+					    (int32_t)tmp->m_httpStatus,
+					    tmp->m_dataSize,
+					    (int32_t)m_collnum);
+				}
+				m_cr->m_spiderCorruptCount++;
+				// don't nuke it just for that...
+				//srep = NULL;
+				continue;
+			}
+
 			// . this is -1 on corruption
 			// . i've seen -31757, 21... etc for bad http replies
 			//   in the qatest123 doc cache... so turn off for that
@@ -4194,6 +4220,16 @@ bool SpiderColl::scanListForWinners ( ) {
 			srepUh48 = srep->getUrlHash48();
 			continue;
 		}
+
+		// MDW: this is handled in url filters now just fine.
+		// regardless of the spider request, if it has a spider
+		// reply for THIS ROUND, and we are doing crawl rounds,
+		// then skip it
+		// if ( m_cr->m_isCustomCrawl &&
+		//      srep &&
+		//      srep->m_spideredTime >= m_cr->m_spiderRoundStartTime )
+		// 	continue;
+
 		// cast it
 		SpiderRequest *sreq = (SpiderRequest *)rec;
 
@@ -6008,7 +6044,8 @@ uint64_t SpiderColl::getSpiderTimeMS ( SpiderRequest *sreq,
 	int64_t waitInSecs = (uint64_t)(m_cr->m_spiderFreqs[ufn]*3600*24.0);
 	// do not spider more than once per 15 seconds ever!
 	// no! might be a query reindex!!
-	if ( waitInSecs < 15 && ! sreq->m_isPageReindex ) { //urlIsDocId ) { 
+	/*
+	if ( waitInSecs < 1 && ! sreq->m_isPageReindex ) { //urlIsDocId ) { 
 		static bool s_printed = false;
 		if ( ! s_printed ) {
 			s_printed = true;
@@ -6017,6 +6054,7 @@ uint64_t SpiderColl::getSpiderTimeMS ( SpiderRequest *sreq,
 		}
 		waitInSecs = 15;//900; this was 15 minutes
 	}
+	*/
 	// in fact, force docid based guys to be zero!
 	//if ( sreq->m_urlIsDocId ) waitInSecs = 0;
 	if ( sreq->m_isPageReindex ) waitInSecs = 0;
@@ -14572,10 +14610,13 @@ bool getSpiderStatusMsg ( CollectionRec *cx , SafeBuf *msg , int32_t *status ) {
 
 	// try to fix crawlbot nightly test complaining about job status
 	// for TestRepeatCrawlWithMaxToCrawl
-	if ( (spiderStatus == SP_MAXTOCRAWL ||
-	      spiderStatus == SP_MAXTOPROCESS ) &&
+	if ( //(spiderStatus == SP_MAXTOCRAWL ||
+	     // spiderStatus == SP_MAXTOPROCESS ) &&
+	     spiderStatus == SP_INPROGRESS &&
 	     cx->m_collectiveRespiderFrequency > 0.0 &&
 	     now < cx->m_spiderRoundStartTime &&
+	     cx->m_maxCrawlRounds > 0 &&
+	     cx->m_isCustomCrawl &&
 	     cx->m_spiderRoundNum >= cx->m_maxCrawlRounds ) {
 		*status = SP_MAXROUNDS;
 		return msg->safePrintf ( "Job has reached maxRounds "
