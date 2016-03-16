@@ -412,7 +412,10 @@ bool RdbDump::dumpTree ( bool recall ) {
 			char *s = "none";
 			if ( m_rdb ) s = getDbnameFromId(m_rdb->m_rdbId);
 			log("dump: verifying list before dumping (rdb=%s "
-			    "collnum=%i)",s,(int)m_collnum);
+			    "collnum=%i k1=%s k2=%s)",s,
+			    (int)m_collnum,
+			    KEYSTR(m_firstKeyInQueue,m_list->m_ks),
+			    KEYSTR(m_lastKeyInQueue ,m_list->m_ks));
 			m_list->checkList_r ( false , // removeNegRecs?
 					      false , // sleep on problem?
 					      m_rdb->m_rdbId );
@@ -460,6 +463,10 @@ bool RdbDump::dumpTree ( bool recall ) {
 	// . this doesn't work if you're doing an unordered dump, but we should
 	//   not allow adds when closing
 	m_lastKeyInQueue  = m_list->getLastKey();
+
+	// ensure we are getting the first key of the list
+	m_list->resetListPtr();
+
 	//m_firstKeyInQueue = m_list->getCurrentKey();
 	m_list->getCurrentKey(m_firstKeyInQueue);
 	// . write this list to disk

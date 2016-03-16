@@ -4659,6 +4659,11 @@ int32_t *XmlDoc::getIndexCode2 ( ) {
 		if ( *ch32 == od->m_contentHash32 ) {
 			m_indexCode = EDOCUNCHANGED;
 			m_indexCodeValid = true;
+			// hack these values on or off.
+			// really should be function calls.
+			// but it never gets set when it should if the
+			// doc is unchanged.
+			m_sentToDiffbot = od->m_sentToDiffbot;
 			return &m_indexCode;
 		}
 	}
