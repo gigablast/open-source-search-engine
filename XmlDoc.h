@@ -1204,6 +1204,9 @@ class XmlDoc {
 	HashTableX m_vctab;
 	HashTableX m_vcduptab;
 
+	bool isFirstUrlRobotsTxt();
+	bool m_isRobotsTxtUrl;
+
 	Images     m_images;
 	HashTableX m_countTable;
 	HttpMime   m_mime;
@@ -1260,6 +1263,7 @@ class XmlDoc {
 	char     m_filteredRootTitleBufValid;
 	char     m_titleBufValid;
 	char     m_fragBufValid;
+	char     m_isRobotsTxtUrlValid;
 	char     m_inlineSectionVotingBufValid;
 	char     m_wordSpamBufValid;
 	char     m_finalSummaryBufValid;

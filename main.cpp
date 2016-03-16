@@ -6564,6 +6564,7 @@ void dumpTitledb (char *coll,int32_t startFileNum,int32_t numFiles,bool includeT
 					"cs=%04d "
 					"lang=%02d "
 					"sni=%03"INT32" "
+					"usetimeaxis=%i "
 					//"cats=%"INT32" "
 					"lastspidered=%s "
 					"ip=%s "
@@ -6589,6 +6590,7 @@ void dumpTitledb (char *coll,int32_t startFileNum,int32_t numFiles,bool includeT
 					xd->m_charset,//tr.getCharset(),
 					xd->m_langId,//tr.getLanguage(),
 					(int32_t)xd->m_siteNumInlinks,//tr.getDo
+					xd->m_useTimeAxis,
 					//nc,
 					ppp, 
 					iptoa(xd->m_ip),//ipbuf , 
@@ -6692,6 +6694,7 @@ void dumpTitledb (char *coll,int32_t startFileNum,int32_t numFiles,bool includeT
 			"ctype=%s "
 			"lang=%02d "
 			"sni=%03"INT32" "
+			"usetimeaxis=%i "
 			//"cats=%"INT32" "
 			"lastspidered=%s "
 			"ip=%s "
@@ -6718,6 +6721,7 @@ void dumpTitledb (char *coll,int32_t startFileNum,int32_t numFiles,bool includeT
 			g_contentTypeStrings[xd->m_contentType],
 			xd->m_langId,//tr.getLanguage(),
 			(int32_t)xd->m_siteNumInlinks,//tr.getDocQuality(),
+			xd->m_useTimeAxis,
 			//nc,
 			ppp, 
 			iptoa(xd->m_ip),//ipbuf , 
