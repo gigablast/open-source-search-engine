@@ -3094,7 +3094,7 @@ int main2 ( int argc , char *argv[] ) {
 	// failing because another process is already running using this port
 	//if ( ! g_udpServer.testBind ( g_hostdb.getMyPort() ) )
 	if ( ! g_httpServer.m_tcp.testBind(g_hostdb.getMyHost()->m_httpPort,
-					   true)) // printmsg?
+					   true)) // printmsg? 
 		return 1;
 
 	int32_t *ips;
@@ -3137,7 +3137,20 @@ int main2 ( int argc , char *argv[] ) {
 	cleanFileName.safePrintf("%s/cleanexit",g_hostdb.m_dir);
 	::unlink ( cleanFileName.getBufStart() );
 
-
+	// move the log file name logxxx to logxxx-2016_03_16-14:59:24
+	// we did the test bind so no gb process is bound on the port yet
+	// TODO: probably should bind on the port before doing this
+	if ( doesFileExist ( g_hostdb.m_logFilename ) ) {
+	     char tmp2[128];
+	     SafeBuf newName(tmp2,128);
+	     time_t ts = getTimeLocal();
+	     struct tm *timeStruct = localtime ( &ts );
+	     //struct tm *timeStruct = gmtime ( &ts );
+	     char ppp[100];
+	     strftime(ppp,100,"%Y-%m-%d-%H-%M-%S",timeStruct);
+	     newName.safePrintf("%s-%s",g_hostdb.m_logFilename, ppp );
+	     ::rename ( g_hostdb.m_logFilename, newName.getBufStart() );
+	}
 
 	log("db: Logging to file %s.",
 	    g_hostdb.m_logFilename );
@@ -5303,12 +5316,18 @@ int install ( install_flag_konst_t installFlag , int32_t hostId , char *dir ,
 
 				//"exit 0; "
 
+				// if pidfile exists then gb is already
+				// running so do not move its log file!
+				// "if [ -f \"./pidfile\" ]; then  "
+				// "echo \"./pidfile exists. can not start "
+				// "gb\" >& /dev/stdout; break; fi;"
+
 				// in case gb was updated...
 				"mv -f gb.installed gb ; "
 
 				// move the log file
-				"mv ./log%03"INT32" ./log%03"INT32"-\\`date '+"
-				"%%Y_%%m_%%d-%%H:%%M:%%S'\\` ; " 
+				// "mv ./log%03"INT32" ./log%03"INT32"-\\`date '+"
+				// "%%Y_%%m_%%d-%%H:%%M:%%S'\\` ; " 
 
 				// indicate -l so we log to a logfile
 				"./gb -l "//%"INT32" "
@@ -5331,6 +5350,10 @@ int install ( install_flag_konst_t installFlag , int32_t hostId , char *dir ,
 				//"} " 
  				"done >& /dev/null & \" %s",
  				//"done & \" %s",
+ 				//"done & \" %s",
+
+
+ 				//"done & \" %s",
 				//"\" %s",
 				iptoa(h2->m_ip),
 				h2->m_dir      ,
@@ -5340,8 +5363,8 @@ int install ( install_flag_konst_t installFlag , int32_t hostId , char *dir ,
 				// h2->m_httpPort ,
 
 				// for moving log file
-				 h2->m_hostId   ,
-				 h2->m_hostId   ,
+				 // h2->m_hostId   ,
+				 // h2->m_hostId   ,
 
 				//h2->m_dir      ,
 				extraBreak ,
