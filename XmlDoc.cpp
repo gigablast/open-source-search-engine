@@ -315,6 +315,8 @@ void XmlDoc::reset ( ) {
 
 	m_sentToDiffbot = 0;
 	m_gotDiffbotSuccessfulReply = 0;
+	// we need to reset this to false
+	m_useTimeAxis = false;
 
 	m_sentToDiffbotThisTime = false;
 
@@ -10291,6 +10293,15 @@ char *XmlDoc::getIsDup ( ) {
 		}
 	}
 
+	// do not dedup seeds
+	bool isSeed = ( m_sreqValid && m_sreq.m_isAddUrl );
+	if ( cr->m_isCustomCrawl && isSeed ) {
+		m_isDupValid = true;
+		m_isDup = false;
+		return &m_isDup;
+	}
+
+
 	setStatus ( "checking for dups" );
 
 	// BUT if we are already indexed and a a crawlbot/bulk diffbot job
@@ -11396,8 +11407,7 @@ Url **XmlDoc::getRedirUrl() {
 	Url *loc = NULL;
 
 	// quickly see if we are a robots.txt url originally
-	Url *fu = getFirstUrl();
-	bool isRobotsTxt = isRobotsTxtFile ( fu->getUrl() , fu->getUrlLen() );
+	bool isRobotsTxt = isFirstUrlRobotsTxt ( );
 
 	// 
 	// check for <meta http-equiv="Refresh" content="1; URL=contact.htm">
@@ -12728,8 +12738,32 @@ int64_t *XmlDoc::getDocId ( ) {
 	setStatus ("getting docid");
 	// . set our docid
 	// . *od is NULL if no title rec found with that docid in titledb
-	if ( *od ) m_docId = *(*od)->getDocId();
-	else       m_docId = m_msg22a.getAvailDocId();
+	if ( *od ) {
+		m_docId = *(*od)->getDocId();
+		m_docIdValid = true;
+		return &m_docId;
+	}
+
+	m_docId = m_msg22a.getAvailDocId();
+
+	// if titlerec was there but not od it had an error uncompressing
+	// because of the corruption bug in RdbMem.cpp when dumping to disk.
+	if ( m_docId == 0 && m_oldTitleRec && m_oldTitleRecSize > 12 ) {
+		m_docId = g_titledb.getDocIdFromKey ( (key_t *)m_oldTitleRec );
+		log("build: salvaged docid %"INT64" from corrupt title rec "
+		    "for %s",m_docId,m_firstUrl.m_url);
+	}
+
+	// ensure it is within probable range
+	if ( ! getUseTimeAxis () ) {
+		char *u = getFirstUrl()->getUrl();
+		int64_t pd = g_titledb.getProbableDocId(u);
+		int64_t d1 = g_titledb.getFirstProbableDocId ( pd );
+		int64_t d2 = g_titledb.getLastProbableDocId  ( pd );
+		if ( m_docId < d1 || m_docId > d2 ) {
+			char *xx=NULL;*xx=0; }
+	}
+
 	// if docid is zero, none is a vailable!!!
 	//if ( m_docId == 0LL ) m_indexCode = ENODOCID;
 	m_docIdValid = true;
@@ -14990,6 +15024,14 @@ int32_t *XmlDoc::getFinalCrawlDelay() {
 	return &m_finalCrawlDelay;
 }
 
+bool XmlDoc::isFirstUrlRobotsTxt ( ) {
+	if ( m_isRobotsTxtUrlValid )
+		return m_isRobotsTxtUrl;
+	Url *fu = getFirstUrl();
+	m_isRobotsTxtUrl = isRobotsTxtFile ( fu->getUrl() , fu->getUrlLen() );
+	m_isRobotsTxtUrlValid = true;
+	return m_isRobotsTxtUrl;
+}
 
 // . get the Robots.txt and see if we are allowed
 // . returns NULL and sets g_errno on error
@@ -15047,9 +15089,7 @@ bool *XmlDoc::getIsAllowed ( ) {
 
 	// . if WE are robots.txt that is always allowed!!!
 	// . check the *first* url since these often redirect to wierd things
-	Url *fu = getFirstUrl();
-	bool isRobotsTxt = isRobotsTxtFile ( fu->getUrl() , fu->getUrlLen() );
-	if ( isRobotsTxt ) {
+	if ( isFirstUrlRobotsTxt() ) {
 		m_isAllowed      = true;
 		m_isAllowedValid = true;
 		m_crawlDelayValid = true;
@@ -15071,6 +15111,7 @@ bool *XmlDoc::getIsAllowed ( ) {
 	int32_t *ip = getIp ();
 	// error? or blocked?
 	if ( ! ip || ip == (void *)-1 ) return (bool *)ip;
+	Url *fu = getFirstUrl();
 	// if ip does not exist on the dns, do not try to download robots.txt
 	// it is pointless... this can happen in the dir coll and we basically
 	// have "m_siteInCatdb" set to true
@@ -17272,7 +17313,9 @@ char **XmlDoc::getHttpReply2 ( ) {
 	//if ( ! hc || hc == (void *)-1 ) return (char **)hc;
 
 	XmlDoc *od = NULL;
-	if ( ! m_isSpiderProxy ) {
+	if ( ! m_isSpiderProxy &&
+	     // don't lookup xyz.com/robots.txt in titledb
+	     ! isFirstUrlRobotsTxt() ) {
 		XmlDoc **pod = getOldXmlDoc ( );
 		if ( ! pod || pod == (XmlDoc **)-1 ) return (char **)pod;
 		// get ptr to old xml doc, could be NULL if non exists
@@ -22088,6 +22131,16 @@ bool XmlDoc::logIt ( SafeBuf *bb ) {
 
 	if (  m_docIdValid ) 
 		sb->safePrintf("docid=%"UINT64" ",m_docId);
+
+	char *u = getFirstUrl()->getUrl();
+	int64_t pd = g_titledb.getProbableDocId(u);
+	int64_t d1 = g_titledb.getFirstProbableDocId ( pd );
+	int64_t d2 = g_titledb.getLastProbableDocId  ( pd );
+	sb->safePrintf("probdocid=%"UINT64" ",pd);
+	sb->safePrintf("probdocidmin=%"UINT64" ",d1);
+	sb->safePrintf("probdocidmax=%"UINT64" ",d2);
+	sb->safePrintf("usetimeaxis=%i ",(int)m_useTimeAxis);
+
 
 	if ( m_siteNumInlinksValid ) {
 		sb->safePrintf("siteinlinks=%04"INT32" ",m_siteNumInlinks );
@@ -30729,6 +30782,12 @@ bool XmlDoc::getUseTimeAxis ( ) {
 	if ( ! cr ) return false;
 	m_useTimeAxis = cr->m_useTimeAxis;
 	m_useTimeAxisValid = true;
+	// sanity check
+	// if ( cr->m_isCustomCrawl && m_useTimeAxis ) {
+	// 	log("build: custom crawls can't use time axis");
+	// 	char *xx=NULL;*xx=0; 
+	// 	m_useTimeAxis = false;
+	// }
 	return m_useTimeAxis;
 }
 
