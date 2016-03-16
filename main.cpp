@@ -3094,8 +3094,10 @@ int main2 ( int argc , char *argv[] ) {
 	// failing because another process is already running using this port
 	//if ( ! g_udpServer.testBind ( g_hostdb.getMyPort() ) )
 	if ( ! g_httpServer.m_tcp.testBind(g_hostdb.getMyHost()->m_httpPort,
-					   true)) // printmsg? 
-		return 1;
+					   true)) {// printmsg? 
+		// return 0 so keep alive bash loop exits
+		exit(0);
+	}
 
 	int32_t *ips;
 	// char tmp[64];
@@ -5339,10 +5341,20 @@ int install ( install_flag_konst_t installFlag , int32_t hostId , char *dir ,
 				" ;"
 
 				// this doesn't always work so use
-				// the cleanexit file approach
-				//"EXITSTATUS=\\$? ; "
+				// the cleanexit file approach.
+				// but if we run a second gb accidentally
+				// it would write a ./cleanexit file 
+				// to get out of its loop and it wouldn't
+				// be deleted! crap. so try this again
+				// for this short cases when we exit right
+				// away.
+				"EXITSTATUS=\\$? ; "
+				// if gb does exit(0) then stop
+				"if [ \\$EXITSTATUS = 0 ]; then break; fi;"
 
-				// stop if ./cleanexit is there
+				// also stop if ./cleanexit is there
+				// because the above exit(0) does not always
+				// work for some strange reasons
 				"if [ -f \"./cleanexit\" ]; then  break; fi;"
 				"%s"
 				"ADDARGS='-r'\\$INC ; "
