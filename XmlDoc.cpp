@@ -12754,6 +12754,12 @@ int64_t *XmlDoc::getDocId ( ) {
 		    "for %s",m_docId,m_firstUrl.m_url);
 	}
 
+	if ( m_docId == 0 ) {
+		log("build: docid is 0 for %s",m_firstUrl.m_url);
+		g_errno = ENODOCID;
+		return NULL;
+	}
+
 	// ensure it is within probable range
 	if ( ! getUseTimeAxis () ) {
 		char *u = getFirstUrl()->getUrl();
