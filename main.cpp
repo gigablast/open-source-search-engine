@@ -389,13 +389,22 @@ void stack_test(){
 
 int main2 ( int argc , char *argv[] ) ;
 
+// SafeBuf g_pidFileName;
+// bool g_createdPidFile = false;
+
 int main ( int argc , char *argv[] ) {
 
 	//fprintf(stderr,"Starting gb.\n");
 
 	int ret = main2 ( argc , argv );
 
-	if ( ret ) fprintf(stderr,"Failed to start gb. Exiting.\n");
+	// returns 1 if failed, 0 on successful/graceful exit
+	if ( ret )
+		fprintf(stderr,"Failed to start gb. Exiting.\n");
+
+	// remove pid file if we created it
+	// if ( g_createdPidFile && ret == 0 && g_pidFileName.length() )
+	// 	::unlink ( g_pidFileName.getBufStart() );
 }
 
 int main2 ( int argc , char *argv[] ) {
@@ -3089,12 +3098,45 @@ int main2 ( int argc , char *argv[] ) {
 		return 1;
 
 	int32_t *ips;
+	// char tmp[64];
+	// SafeBuf pidFile(tmp,64);
+	char tmp[128];
+	SafeBuf cleanFileName(tmp,128);
 
 	//if ( strcmp ( cmd , "gendbs"       ) == 0 ) goto jump;
 	//if ( strcmp ( cmd , "gentfndb"     ) == 0 ) goto jump;
 	if ( strcmp ( cmd , "gencatdb"     ) == 0 ) goto jump;
 	//if ( strcmp ( cmd , "genclusterdb" ) == 0 ) goto jump;
 	//	if ( cmd && ! is_digit(cmd[0]) ) goto printHelp;
+
+
+	// if pid file is there then do not start up
+	// g_pidFileName.safePrintf("%spidfile",g_hostdb.m_dir );
+	// if ( doesFileExist ( g_pidFileName.getBufStart() ) ) {
+	// 	fprintf(stderr,"pidfile %s exists. Either another gb "
+	// 		"is already running in this directory or "
+	// 		"it exited uncleanly. Can not start up if that "
+	// 		"file exists.",
+	// 		g_pidFileName.getBufStart() );
+	// 	// if we return 0 then main() should not delete the pidfile
+	// 	return 0;
+	// }
+	// // make a new pidfile
+	// pidFile.safePrintf("%i\n",getpid());
+	// if ( ! pidFile.save ( g_pidFileName.getBufStart() ) ) {
+	// 	log("db: could not save %s",g_pidFileName.getBufStart());
+	// 	return 1;
+	// }
+	// // ok, now if we exit SUCCESSFULLY then delete it. we return an
+	// // exit status of 0
+	// g_createdPidFile = true;
+
+
+	// remove the file called 'cleanexit' so if we get killed suddenly
+	// the bashloop will know we did not exit cleanly
+	cleanFileName.safePrintf("%s/cleanexit",g_hostdb.m_dir);
+	::unlink ( cleanFileName.getBufStart() );
+
 
 
 	log("db: Logging to file %s.",
@@ -5212,7 +5254,11 @@ int install ( install_flag_konst_t installFlag , int32_t hostId , char *dir ,
 			// execute it
 			system ( tmp );
 		}
-		else if ( installFlag == ifk_kstart ) {
+		else if ( installFlag == ifk_kstart ||
+			  installFlag == ifk_dstart ) {
+			char *extraBreak = "";
+			if ( installFlag == ifk_dstart )
+				extraBreak = "break;";
 			//keepalive
 			// . save old log now, too
 			//char tmp2[1024];
@@ -5235,9 +5281,10 @@ int install ( install_flag_konst_t installFlag , int32_t hostId , char *dir ,
 				"cp -f gb gb.oldsave ; "
 				"ADDARGS='' "
 				"INC=1 "
-				"EXITSTATUS=1 ; "
-				 "while [ \\$EXITSTATUS != 0 ]; do "
- 				 "{ "
+				//"EXITSTATUS=1 "
+				" ; "
+				 "while true; do "
+				//"{ "
 
 				// if gb still running, then do not try to
 				// run it again. we
@@ -5272,10 +5319,16 @@ int install ( install_flag_konst_t installFlag , int32_t hostId , char *dir ,
 				//" >& ./log%03"INT32""
 				" ;"
 
-				"EXITSTATUS=\\$? ; "
+				// this doesn't always work so use
+				// the cleanexit file approach
+				//"EXITSTATUS=\\$? ; "
+
+				// stop if ./cleanexit is there
+				"if [ -f \"./cleanexit\" ]; then  break; fi;"
+				"%s"
 				"ADDARGS='-r'\\$INC ; "
 				"INC=\\$((INC+1));"
-				"} " 
+				//"} " 
  				"done >& /dev/null & \" %s",
  				//"done & \" %s",
 				//"\" %s",
@@ -5291,7 +5344,7 @@ int install ( install_flag_konst_t installFlag , int32_t hostId , char *dir ,
 				 h2->m_hostId   ,
 
 				//h2->m_dir      ,
-
+				extraBreak ,
 				// hostid is now inferred from path
 				//h2->m_hostId   ,
 				amp );
@@ -5302,6 +5355,7 @@ int install ( install_flag_konst_t installFlag , int32_t hostId , char *dir ,
 			// execute it
 			system ( tmp );
 		}
+		/*
 		else if ( installFlag == ifk_dstart ) {
 			//keepalive
 			// . save old log now, too
@@ -5364,6 +5418,7 @@ int install ( install_flag_konst_t installFlag , int32_t hostId , char *dir ,
 			// execute it
 			system ( tmp );
 		}
+		*/
 		/*
 		else if ( installFlag == ifk_gendbs ) {
 			// . save old log now, too
