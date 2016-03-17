@@ -159,11 +159,70 @@ void *RdbMem::allocData ( char *key , int32_t dataSize , collnum_t collnum ) {
 	return m_ptr1 - dataSize;
 }
 
+#include "Threads.h"
+
 // . when a dump completes we free the primary mem space and make
 //   the secondary mem space the new primary mem space
-void RdbMem::freeDumpedMem() {
+void RdbMem::freeDumpedMem( RdbTree *tree ) {
 	// bail if we have no mem
 	if ( m_memSize == 0 ) return;
+
+	log("rdbmem: start freeing dumped mem");
+
+	//char *memEnd = m_mem + m_memSize;
+
+	// count how many data nodes we had to move to avoid corruption
+	int32_t count = 0;
+	int32_t scanned = 0;
+	for ( int32_t i = 0 ; i < tree->m_minUnusedNode ; i++ ) {
+		// give up control to handle search query stuff of niceness 0
+		QUICKPOLL ( MAX_NICENESS );
+		// skip node if parents is -2 (unoccupied)
+		if ( tree->m_parents[i] == -2 ) continue;
+		scanned++;
+		// get the ptr
+		char *data = tree->m_data[i];
+		if ( ! data ) continue;
+		// how could it's data not be stored in here?
+		// if ( data < m_mem ) continue;
+		// if ( data > memEnd ) continue;
+		// is it in primary mem? m_ptr1 mem was just dump
+		// if growing upward
+		bool needsMove = false;
+		// if the primary mem (that was being dumped) is
+		// growing upwards
+		if ( m_ptr1 < m_ptr2 && 
+		     // and the node data is in it...
+		     data < m_ptr1 ) 
+			needsMove = true;
+		// growing downward otherwise
+		else if ( data >= m_ptr1 ) 
+			needsMove = true;
+		if ( ! needsMove ) continue;
+		// move it. m_inDumpLoop should still 
+		// be true so we will get added to
+		// m_ptr2
+		int32_t size;
+		if ( tree->m_sizes ) size = tree->m_sizes[i];
+		else size = tree->m_fixedDataSize;
+		if ( size < 0 ) { char *xx=NULL;*xx=0; }
+		if ( size == 0 ) continue;
+		char *newData = (char *)allocData(NULL,size,0);
+		if ( ! newData ) {
+			log("rdbmem: failed to alloc %i "
+			    "bytes node %i",(int)size,(int)i);
+			continue;
+		}
+		count++;
+		gbmemcpy(newData,data,size);
+		tree->m_data[i] = newData;
+	}
+	if ( count > 0 )
+		log("rdbmem: moved %i tree nodes for %s",(int)count,
+		    m_rdb->m_dbname);
+				
+	log("rdbmem: stop freeing dumped mem. scanned %i nodes.",(int)scanned);
+
 	// save primary ptr
 	char *tmp = m_ptr1;
 	// debug

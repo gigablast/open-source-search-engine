@@ -411,11 +411,26 @@ bool RdbDump::dumpTree ( bool recall ) {
 		     g_conf.m_verifyDumpedLists ) {
 			char *s = "none";
 			if ( m_rdb ) s = getDbnameFromId(m_rdb->m_rdbId);
+			char *ks1 = "";
+			char *ks2 = "";
+			char tmp1[32];
+			char tmp2[32];
+			if ( m_firstKeyInQueue ) {
+				strcpy ( tmp1 , 
+					 KEYSTR(m_firstKeyInQueue,
+						m_list->m_ks));
+				ks1 = tmp1;
+			}
+			if ( m_lastKeyInQueue ) {
+				strcpy ( tmp2 , 
+					 KEYSTR(m_lastKeyInQueue,
+						m_list->m_ks));
+				ks2 = tmp2;
+			}
+
 			log("dump: verifying list before dumping (rdb=%s "
 			    "collnum=%i k1=%s k2=%s)",s,
-			    (int)m_collnum,
-			    KEYSTR(m_firstKeyInQueue,m_list->m_ks),
-			    KEYSTR(m_lastKeyInQueue ,m_list->m_ks));
+			    (int)m_collnum,ks1,ks2);
 			m_list->checkList_r ( false , // removeNegRecs?
 					      false , // sleep on problem?
 					      m_rdb->m_rdbId );

@@ -1746,7 +1746,7 @@ void Rdb::doneDumping ( ) {
 	// give the token back so someone else can dump or merge
 	//g_msg35.releaseToken();
 	// free mem in the primary buffer
-	if ( ! m_dumpErrno ) m_mem.freeDumpedMem();
+	if ( ! m_dumpErrno ) m_mem.freeDumpedMem( &m_tree );
 	// . tell RdbDump it is done
 	// . we have to set this here otherwise RdbMem's memory ring buffer
 	//   will think the dumping is no longer going on and use the primary
