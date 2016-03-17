@@ -1187,18 +1187,19 @@ bool RdbTree::fixTree ( ) {
 		// skip if empty
 		if ( m_parents[i] <= -2 ) continue;
 
-
+		char *key = &m_keys[i*m_ks];
 		if ( isTitledb && m_data[i] ) {
 			char *data = m_data[i];
 			int32_t ucompSize = *(int32_t *)data;
 			if ( ucompSize < 0 || ucompSize > 100000000 ) {
 				log("db: removing titlerec with uncompressed "
-				     "size of %i from tree",(int)ucompSize);
+				     "size of %i from tree (docid=%"INT64"",
+				    (int)ucompSize,
+				    g_titledb.getDocIdFromKey((key_t *)key));
 				continue;
 			}
 		}
 
-		char *key = &m_keys[i*m_ks];
 		if ( isSpiderdb && m_data[i] &&
 		     g_spiderdb.isSpiderRequest ( (SPIDERDBKEY *)key ) ) {
 			char *data = m_data[i];

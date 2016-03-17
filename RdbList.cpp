@@ -742,7 +742,11 @@ bool RdbList::checkList_r ( bool removeNegRecs , bool sleepOnProblem ,
 			if ( data && 
 			     (*(int32_t *)data < 0 || 
 			      *(int32_t *)data > 100000000 ) ) {
-				char *xx = NULL; *xx = 0; }
+				log("rdblist: bad titlerec data for docid "
+				    "%"INT64,
+				    g_titledb.getDocIdFromKey((key_t *)k));
+				char *xx = NULL; *xx = 0; 
+			}
 		}		
 		// tagrec?
 		if ( rdbId == RDB_TAGDB && ! KEYNEG(k) ) {

@@ -52,7 +52,7 @@ class RdbMem {
 
 	// . when a dump completes we free the primary mem space and make
 	//   the secondary mem space the new primary mem space
-	void  freeDumpedMem();
+	void  freeDumpedMem( class RdbTree *tree );
 
 	// Rdb which contains this class calls this to prevent swap-out once
 	// per minute or so
