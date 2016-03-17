@@ -111,6 +111,15 @@ void *RdbMem::allocData ( char *key , int32_t dataSize , collnum_t collnum ) {
 			// don't allow ptrs to equal each other because
 			// we know which way they're growing based on order
 			if ( m_ptr2 - dataSize <= m_ptr1 ) return NULL;
+
+		// debug why recs added during dump aren't going into
+		// secondary mem
+		// log("rdbmem: allocating %i bytes for rec in %s (cn=%i) "
+		//     "ptr1=%"PTRFMT" --ptr2=%"PTRFMT" mem=%"PTRFMT,
+		//     (int)dataSize,m_rdb->m_dbname,(int)collnum,
+		//     (PTRTYPE)m_ptr1,(PTRTYPE)m_ptr2,(PTRTYPE)m_mem);
+
+
 			// otherwise, grow downward
 			m_ptr2 -= dataSize;
 			// note it
@@ -122,6 +131,14 @@ void *RdbMem::allocData ( char *key , int32_t dataSize , collnum_t collnum ) {
 		// . if it's growing up...
 		// . return NULL if it would breech
 		if ( m_ptr2 + dataSize >= m_ptr1 ) return NULL;
+
+		// debug why recs added during dump aren't going into
+		// secondary mem
+		// log("rdbmem: allocating %i bytes for rec in %s (cn=%i) "
+		//     "ptr1=%"PTRFMT" ++ptr2=%"PTRFMT" mem=%"PTRFMT,
+		//     (int)dataSize,m_rdb->m_dbname,(int)collnum,
+		//     (PTRTYPE)m_ptr1,(PTRTYPE)m_ptr2,(PTRTYPE)m_mem);
+
 		// otherwise, grow downward
 		m_ptr2 += dataSize;
 		// note it
@@ -171,6 +188,9 @@ void RdbMem::freeDumpedMem( RdbTree *tree ) {
 
 	//char *memEnd = m_mem + m_memSize;
 
+	// this should still be true so allocData() returns m_ptr2 ptrs
+	if ( ! m_rdb->m_inDumpLoop ) { char *xx=NULL;*xx=0; }
+
 	// count how many data nodes we had to move to avoid corruption
 	int32_t count = 0;
 	int32_t scanned = 0;
@@ -184,20 +204,28 @@ void RdbMem::freeDumpedMem( RdbTree *tree ) {
 		char *data = tree->m_data[i];
 		if ( ! data ) continue;
 		// how could it's data not be stored in here?
-		// if ( data < m_mem ) continue;
-		// if ( data > memEnd ) continue;
+		// if ( data < m_mem ) {
+		// 	log("rdbmem: bad data1");
+		// 	continue;
+		// }
+		// if ( data >= memEnd ) {
+		// 	log("rdbmem: bad data2");
+		// 	continue;
+		// }
 		// is it in primary mem? m_ptr1 mem was just dump
 		// if growing upward
 		bool needsMove = false;
-		// if the primary mem (that was being dumped) is
+		// if the primary mem (that was dumped) is
 		// growing upwards
-		if ( m_ptr1 < m_ptr2 && 
+		if ( m_ptr1 < m_ptr2 ) {
 		     // and the node data is in it...
-		     data < m_ptr1 ) 
-			needsMove = true;
+			if ( data < m_ptr1 ) 
+				needsMove = true;
+		}
 		// growing downward otherwise
-		else if ( data >= m_ptr1 ) 
+		else if ( data >= m_ptr1 ) {
 			needsMove = true;
+		}
 		if ( ! needsMove ) continue;
 		// move it. m_inDumpLoop should still 
 		// be true so we will get added to
@@ -207,11 +235,29 @@ void RdbMem::freeDumpedMem( RdbTree *tree ) {
 		else size = tree->m_fixedDataSize;
 		if ( size < 0 ) { char *xx=NULL;*xx=0; }
 		if ( size == 0 ) continue;
+		// m_inDumpLoop is still true at this point so 
+		// so allocData should return m_ptr2 guys
 		char *newData = (char *)allocData(NULL,size,0);
 		if ( ! newData ) {
 			log("rdbmem: failed to alloc %i "
 			    "bytes node %i",(int)size,(int)i);
 			continue;
+		}
+		// debug test
+		bool stillNeedsMove = false;
+		if ( m_ptr1 < m_ptr2 ) {
+		     // and the node data is in it...
+			if ( newData < m_ptr1 ) 
+				stillNeedsMove = true;
+		}
+		// growing downward otherwise
+		else if ( newData >= m_ptr1 ) {
+			stillNeedsMove = true;
+		}
+		if ( stillNeedsMove ) {// this should never happen!!
+			log("rdbmem: olddata=0x%"PTRFMT" newdata=0x%"PTRFMT,
+			    (PTRTYPE)data, (PTRTYPE)newData);
+			log("rdbmem: still needs move!");
 		}
 		count++;
 		gbmemcpy(newData,data,size);
