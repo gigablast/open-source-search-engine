@@ -1475,6 +1475,13 @@ bool Rdb::dumpCollLoop ( ) {
 			    "memory.",base->m_files[m_fn]->getFilename());
 			base->buryFiles ( m_fn , m_fn+1 );
 		}
+		// if it was because a collection got deleted, keep going
+		if ( g_errno == ENOCOLLREC ) {
+			log("rdb: ignoring deleted collection and "
+			    "continuing dump");
+			g_errno = 0;
+			goto keepGoing;
+		}
 		// game over, man
 		doneDumping();
 		// update this so we don't try too much and flood the log
@@ -1482,6 +1489,7 @@ bool Rdb::dumpCollLoop ( ) {
 		s_lastTryTime = getTime();
 		return true;
 	}
+ keepGoing:
 	// advance for next round
 	m_dumpCollnum++;
 
@@ -2343,6 +2351,10 @@ bool Rdb::hasRoom ( RdbList *list , int32_t niceness ) {
 		if ( reclaimed >= 0 )
 			m_lastReclaim = reclaimed;
 	}
+
+	//if ( dataSpace <= 0 ) return true;
+	// if rdbmem is already 90 percent full, just say no in case
+	// we have to realloc in RdbMem.cpp::...
 
 	// does m_mem have room for "dataSpace"?
 	if ( (int64_t)m_mem.getAvailMem() < dataSpace ) return false;
