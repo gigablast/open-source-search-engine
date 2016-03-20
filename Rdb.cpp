@@ -1196,6 +1196,14 @@ bool Rdb::dumpTree ( int32_t niceness ) {
 	// bail if already dumping
 	//if ( m_dump.isDumping() ) return true;
 	if ( m_inDumpLoop ) return true;
+
+	// don't allow spiderdb and titledb to dump at same time
+	// it seems to cause corruption in rdbmem for some reason
+	if ( m_rdbId == RDB_SPIDERDB && g_titledb.m_rdb.m_inDumpLoop )
+		return true;
+	if ( m_rdbId == RDB_TITLEDB && g_spiderdb.m_rdb.m_inDumpLoop )
+		return true;
+
 	// . if tree is saving do not dump it, that removes things from tree
 	// . i think this caused a problem messing of RdbMem before when
 	//   both happened at once
@@ -3533,6 +3541,8 @@ int32_t Rdb::reclaimMemFromDeletedTreeNodes( int32_t niceness ) {
 	// start scanning the mem pool
 	char *p    = m_mem.m_mem;
 	char *pend = m_mem.m_ptr1;
+	
+	char *memEnd = m_mem.m_mem + m_mem.m_memSize;
 
 	char *dst = p;
 
@@ -3616,7 +3626,22 @@ int32_t Rdb::reclaimMemFromDeletedTreeNodes( int32_t niceness ) {
 			skipped++; 
 			continue;
 		}
-		//
+		// corrupted? or breach of mem buf?
+		if ( sreq->isCorrupt() ||  dst + recSize > memEnd ) {
+			log("rdb: not readding corrupted doledb1 in scan. "
+			    "deleting from tree.");
+			// a dup? sanity check
+			int32_t *nodePtr = (int32_t *)ht.getValue (&oldOffset);
+			if ( ! nodePtr ) {
+				log("rdb: strange. not in tree anymore.");
+				skipped++;
+				continue;
+			}
+			// delete node from doledb tree
+			m_tree.deleteNode3(*nodePtr,true);//true=freedata
+			skipped++;
+			continue;
+		}
 		//// re -add with the proper value now
 		//
 		// otherwise, copy it over if still in tree
@@ -3649,6 +3674,8 @@ int32_t Rdb::reclaimMemFromDeletedTreeNodes( int32_t niceness ) {
 	int32_t reclaimed = inUseOld - inUseNew;
 
 	if ( reclaimed < 0 ) { char *xx=NULL;*xx=0; }
+	if ( inUseNew  < 0 ) { char *xx=NULL;*xx=0; }
+	if ( inUseNew  > m_mem.m_memSize ) { char *xx=NULL;*xx=0; }
 
 	//if ( reclaimed == 0 && marked ) { char *xx=NULL;*xx=0;}
 
