@@ -417,6 +417,8 @@ bool HttpRequest::set (char *url,int32_t offset,int32_t size,time_t ifModifiedSi
 	 //	 log("build: HttpRequest buf is too small.");
 	 //	 char *xx = NULL; *xx = 0;
 	 // }
+	 // debug it
+	 // log("hreq: %s",m_reqBuf.getBufStart());
 
 	 // restore url buffer
 	 if ( pathEnd ) *pathEnd = '?';
