@@ -239,8 +239,10 @@ void RdbMem::freeDumpedMem( RdbTree *tree ) {
 		// so allocData should return m_ptr2 guys
 		char *newData = (char *)allocData(NULL,size,0);
 		if ( ! newData ) {
+			int32_t cn = 0;
+			if ( tree->m_collnums ) cn = tree->m_collnums[i];
 			log("rdbmem: failed to alloc %i "
-			    "bytes node %i",(int)size,(int)i);
+			    "bytes node %i (cn=%i)",(int)size,(int)i,(int)cn);
 			continue;
 		}
 		// debug test

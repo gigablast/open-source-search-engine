@@ -336,6 +336,9 @@ void Url::set ( char *t , int32_t tlen , bool addWWW , bool stripSessionId ,
 	int32_t anchorLen = 0;
 	for ( int32_t i = 0 ; i < tlen ; i++ ) {
 		if ( t[i] != '#' ) continue;
+		// ignore anchor if a ! follows it. 'google hash bang hack'
+		// which breaks the web and is now deprecated, but, there it is
+		if ( i+1<tlen && t[i+1] == '!' ) continue;
 		anchorPos = i;
 		anchorLen = tlen - i;
 		if ( stripPound )

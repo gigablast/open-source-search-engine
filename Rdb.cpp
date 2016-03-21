@@ -1196,6 +1196,23 @@ bool Rdb::dumpTree ( int32_t niceness ) {
 	// bail if already dumping
 	//if ( m_dump.isDumping() ) return true;
 	if ( m_inDumpLoop ) return true;
+
+	// don't allow spiderdb and titledb to dump at same time
+	// it seems to cause corruption in rdbmem for some reason
+	// if ( m_rdbId == RDB_SPIDERDB && g_titledb.m_rdb.m_inDumpLoop )
+	// 	return true;
+	// if ( m_rdbId == RDB_TITLEDB && g_spiderdb.m_rdb.m_inDumpLoop )
+	// 	return true;
+	// ok, seems to happen if we are dumping any two rdbs at the same
+	// time. we end up missing tree nodes or something.
+	// for ( int32_t i = RDB_START ; i < RDB_PLACEDB  ; i++ ) {
+	// 	Rdb *rdb = getRdbFromId ( i );
+	// 	if ( ! rdb )
+	// 		continue;
+	// 	if ( rdb->m_inDumpLoop )
+	// 		return true;
+	// }
+
 	// . if tree is saving do not dump it, that removes things from tree
 	// . i think this caused a problem messing of RdbMem before when
 	//   both happened at once
@@ -1475,6 +1492,13 @@ bool Rdb::dumpCollLoop ( ) {
 			    "memory.",base->m_files[m_fn]->getFilename());
 			base->buryFiles ( m_fn , m_fn+1 );
 		}
+		// if it was because a collection got deleted, keep going
+		if ( g_errno == ENOCOLLREC ) {
+			log("rdb: ignoring deleted collection and "
+			    "continuing dump");
+			g_errno = 0;
+			goto keepGoing;
+		}
 		// game over, man
 		doneDumping();
 		// update this so we don't try too much and flood the log
@@ -1482,6 +1506,7 @@ bool Rdb::dumpCollLoop ( ) {
 		s_lastTryTime = getTime();
 		return true;
 	}
+ keepGoing:
 	// advance for next round
 	m_dumpCollnum++;
 
@@ -1495,7 +1520,9 @@ bool Rdb::dumpCollLoop ( ) {
 		// skip if empty
 		if ( ! cr ) continue;
 		// skip if no recs in tree
-		if ( cr->m_treeCount == 0 ) continue;
+		// this is maybe causing us not to dump out all recs
+		// so comment this out
+		//if ( cr->m_treeCount == 0 ) continue;
 		// ok, it's good to dump
 		break;
 	}
@@ -2343,6 +2370,19 @@ bool Rdb::hasRoom ( RdbList *list , int32_t niceness ) {
 		if ( reclaimed >= 0 )
 			m_lastReclaim = reclaimed;
 	}
+
+	// if we have data-less records, we do not use RdbMem, so
+	// return true at this point since there are enough tree nodes
+	//if ( dataSpace <= 0 ) return true;
+
+	// if rdbmem is already 90 percent full, just say no so when we
+	// dump to disk we have some room to add records that come in
+	// during the dump, and we have some room for RdbMem::freeDumpedMem()
+	// to fix things and realloc/move them within the rdb mem
+	// if ( m_mem.is90PercentFull () && 
+	//      ! m_inDumpLoop &&
+	//      m_rdbId != RDB_DOLEDB )
+	// 	return false;
 
 	// does m_mem have room for "dataSpace"?
 	if ( (int64_t)m_mem.getAvailMem() < dataSpace ) return false;
@@ -3521,6 +3561,8 @@ int32_t Rdb::reclaimMemFromDeletedTreeNodes( int32_t niceness ) {
 	// start scanning the mem pool
 	char *p    = m_mem.m_mem;
 	char *pend = m_mem.m_ptr1;
+	
+	char *memEnd = m_mem.m_mem + m_mem.m_memSize;
 
 	char *dst = p;
 
@@ -3604,7 +3646,22 @@ int32_t Rdb::reclaimMemFromDeletedTreeNodes( int32_t niceness ) {
 			skipped++; 
 			continue;
 		}
-		//
+		// corrupted? or breach of mem buf?
+		if ( sreq->isCorrupt() ||  dst + recSize > memEnd ) {
+			log("rdb: not readding corrupted doledb1 in scan. "
+			    "deleting from tree.");
+			// a dup? sanity check
+			int32_t *nodePtr = (int32_t *)ht.getValue (&oldOffset);
+			if ( ! nodePtr ) {
+				log("rdb: strange. not in tree anymore.");
+				skipped++;
+				continue;
+			}
+			// delete node from doledb tree
+			m_tree.deleteNode3(*nodePtr,true);//true=freedata
+			skipped++;
+			continue;
+		}
 		//// re -add with the proper value now
 		//
 		// otherwise, copy it over if still in tree
@@ -3637,6 +3694,8 @@ int32_t Rdb::reclaimMemFromDeletedTreeNodes( int32_t niceness ) {
 	int32_t reclaimed = inUseOld - inUseNew;
 
 	if ( reclaimed < 0 ) { char *xx=NULL;*xx=0; }
+	if ( inUseNew  < 0 ) { char *xx=NULL;*xx=0; }
+	if ( inUseNew  > m_mem.m_memSize ) { char *xx=NULL;*xx=0; }
 
 	//if ( reclaimed == 0 && marked ) { char *xx=NULL;*xx=0;}
 

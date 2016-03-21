@@ -4482,10 +4482,12 @@ bool SpiderColl::scanListForWinners ( ) {
 			m_cr->m_spiderCorruptCount++;
 			continue;
 		}
-		if ( sreq->m_dataSize > (int32_t)sizeof(SpiderRequest) ) {
+		if ( sreq->m_dataSize > (int32_t)sizeof(SpiderRequest) ||
+		     sreq->m_dataSize < 0 ) {
 			if ( m_cr->m_spiderCorruptCount == 0 )
 				log("spider: got corrupt 11 spiderRequest in "
-				    "scan because rectoobig u=%s (cn=%"INT32")"
+				    "scan because size=%i u=%s (cn=%"INT32")"
+				    ,(int)sreq->m_dataSize
 				    ,sreq->m_url,(int32_t)m_collnum);
 			m_cr->m_spiderCorruptCount++;
 			continue;

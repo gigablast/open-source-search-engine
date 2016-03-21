@@ -954,10 +954,12 @@ bool RdbDump::doneReadingForVerify ( ) {
 	bool s;
 	if(m_tree) {
 		s = m_tree->deleteList(m_collnum,m_list,true/*do balancing?*/);
+		log("dump: tree now has %i nodes",(int)m_tree->m_numUsedNodes);
 	}
 	else if(m_buckets) {
 		s = m_buckets->deleteList(m_collnum, m_list);
 	}
+
 	// problem?
 	if ( ! s && ! m_tried ) {
 		m_tried = true;

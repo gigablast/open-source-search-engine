@@ -3209,8 +3209,8 @@ void RdbTree::cleanTree ( ) { // char **bases ) {
 		     m_collnums[i] <  max &&
 		     g_collectiondb.m_recs[m_collnums[i]] ) continue;
 		// if it is negtiave, remove it, that is wierd corruption
-		if ( m_collnums[i] < 0 ) 
-			deleteNode3 ( i , true );
+		// if ( m_collnums[i] < 0 ) 
+		// 	deleteNode3 ( i , true );
 		// remove it otherwise
 		// don't actually remove it!!!! in case collection gets
 		// moved accidentally.
