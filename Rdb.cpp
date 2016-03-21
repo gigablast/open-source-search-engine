@@ -1199,10 +1199,19 @@ bool Rdb::dumpTree ( int32_t niceness ) {
 
 	// don't allow spiderdb and titledb to dump at same time
 	// it seems to cause corruption in rdbmem for some reason
-	if ( m_rdbId == RDB_SPIDERDB && g_titledb.m_rdb.m_inDumpLoop )
-		return true;
-	if ( m_rdbId == RDB_TITLEDB && g_spiderdb.m_rdb.m_inDumpLoop )
-		return true;
+	// if ( m_rdbId == RDB_SPIDERDB && g_titledb.m_rdb.m_inDumpLoop )
+	// 	return true;
+	// if ( m_rdbId == RDB_TITLEDB && g_spiderdb.m_rdb.m_inDumpLoop )
+	// 	return true;
+	// ok, seems to happen if we are dumping any two rdbs at the same
+	// time. we end up missing tree nodes or something.
+	// for ( int32_t i = RDB_START ; i < RDB_PLACEDB  ; i++ ) {
+	// 	Rdb *rdb = getRdbFromId ( i );
+	// 	if ( ! rdb )
+	// 		continue;
+	// 	if ( rdb->m_inDumpLoop )
+	// 		return true;
+	// }
 
 	// . if tree is saving do not dump it, that removes things from tree
 	// . i think this caused a problem messing of RdbMem before when
@@ -1511,7 +1520,9 @@ bool Rdb::dumpCollLoop ( ) {
 		// skip if empty
 		if ( ! cr ) continue;
 		// skip if no recs in tree
-		if ( cr->m_treeCount == 0 ) continue;
+		// this is maybe causing us not to dump out all recs
+		// so comment this out
+		//if ( cr->m_treeCount == 0 ) continue;
 		// ok, it's good to dump
 		break;
 	}
@@ -2360,9 +2371,18 @@ bool Rdb::hasRoom ( RdbList *list , int32_t niceness ) {
 			m_lastReclaim = reclaimed;
 	}
 
+	// if we have data-less records, we do not use RdbMem, so
+	// return true at this point since there are enough tree nodes
 	//if ( dataSpace <= 0 ) return true;
-	// if rdbmem is already 90 percent full, just say no in case
-	// we have to realloc in RdbMem.cpp::...
+
+	// if rdbmem is already 90 percent full, just say no so when we
+	// dump to disk we have some room to add records that come in
+	// during the dump, and we have some room for RdbMem::freeDumpedMem()
+	// to fix things and realloc/move them within the rdb mem
+	// if ( m_mem.is90PercentFull () && 
+	//      ! m_inDumpLoop &&
+	//      m_rdbId != RDB_DOLEDB )
+	// 	return false;
 
 	// does m_mem have room for "dataSpace"?
 	if ( (int64_t)m_mem.getAvailMem() < dataSpace ) return false;
