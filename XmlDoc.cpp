@@ -919,6 +919,7 @@ void XmlDoc::reset ( ) {
 	m_forwardDownloadRequest = false;
 
 	m_isChildDoc = false;
+	m_parentDocPtr = NULL;
 
 	// for utf8 content functions
 	m_savedp       = NULL;
@@ -12258,6 +12259,7 @@ XmlDoc **XmlDoc::getExtraDoc ( char *u , int32_t maxCacheAge ) {
 	m_extraDoc->m_forwardDownloadRequest = true;
 	// set this flag so msg13.cpp doesn't print the "hammering ip" msg
 	m_extraDoc->m_isChildDoc = true;
+	m_extraDoc->m_parentDocPtr = this;
 	// debug it
 	//g_doc = this;
 
@@ -12447,6 +12449,7 @@ XmlDoc **XmlDoc::getRootXmlDoc ( int32_t maxCacheAge ) {
 	m_rootDoc->m_forwardDownloadRequest = true;
 	// set this flag so msg13.cpp doesn't print the "hammering ip" msg
 	m_rootDoc->m_isChildDoc = true;
+	m_rootDoc->m_parentDocPtr = this;
 
 	// validate it
 	m_rootDocValid = true;
@@ -23728,6 +23731,7 @@ int32_t *XmlDoc::redoJSONObjects ( int32_t *newTitleHashes ,
 			m_dx->m_usePlacedb    = false;
 			m_dx->m_useLinkdb     = false;
 			m_dx->m_isChildDoc    = true;
+			m_dx->m_parentDocPtr  = this;
 			// are we doing a query reindex or a nuke?
 			m_dx->m_deleteFromIndex = deleteFromIndex;//true;
 			// do not try to download this url
@@ -25090,6 +25094,7 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 			m_dx->m_usePlacedb    = false;
 			m_dx->m_useLinkdb     = false;
 			m_dx->m_isChildDoc    = true;
+			m_dx->m_parentDocPtr  = this;
 			// we like to sort json objects using
 			// 'gbsortby:spiderdate' query to get the most
 			// recent json objects, so this must be valid
@@ -29664,6 +29669,10 @@ SafeBuf *XmlDoc::getSpiderStatusDocMetaList2 ( SpiderReply *reply1 ) {
 
 	if ( m_docIdValid )
 		jd.safePrintf("\"gbssDocId\":%"INT64",\n", m_docId);//*uqd);
+
+	if ( m_parentDocPtr && m_isChildDoc && m_parentDocPtr->m_docIdValid )
+		jd.safePrintf("\"gbssParentDocId\":%"INT64",\n", 
+			      m_parentDocPtr->m_docId);
 
 	if ( m_hopCountValid )
 		//jd.safePrintf("\"gbssHopCount\":%"INT32",\n",(int32_t)*hc);

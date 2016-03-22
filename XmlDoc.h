@@ -1710,6 +1710,7 @@ class XmlDoc {
 	bool m_isAllowed;
 	bool m_forwardDownloadRequest;
 	bool m_isChildDoc;
+	class XmlDoc *m_parentDocPtr;
 	Msg13 m_msg13;
 	Msg13Request m_msg13Request;
 	Msg13Request m_diffbotProxyRequest;
