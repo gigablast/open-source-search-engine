@@ -728,7 +728,13 @@ void Url::set ( char *t , int32_t tlen , bool addWWW , bool stripSessionId ,
 	// . j,i should point to start of path slash '/'
 	// . scan so it points to end or a ? or # 
 	j = i;
-	while ( s[j] && s[j]!='?' && s[j]!='#' ) j++;
+	// now we include # as part of the path if it is a hash bang '#!'
+	// which was the web-breaking google hack that is now deprecated
+	while ( s[j] && s[j]!='?' ) {
+		if ( s[j] == '#' && s[j+1] != '!' )
+			break;
+		j++;
+	}
 	// point the path inside m_url even though we haven't written it yet
 	m_path = m_url + m_ulen;
 	m_plen = m_ulen; 

@@ -4280,11 +4280,13 @@ bool printResult ( State0 *st, int32_t ix , int32_t *numPrintedSoFar ) {
 		/////
 		// insert link for gbssDocId
 		/////
-		find = "gbssDocId\":";
+		//find = "gbssDocId\":";
+		// support gbssParentDocId too
+		find = "DocId\":";
 		start = sb->getBufStart() + startOff;
 		insertPtr = strstr ( start , find );
 		if ( insertPtr ) {
-			insertPtr += 11;
+			insertPtr += gbstrlen(find);
 			insertPos = insertPtr - sb->getBufStart();
 			int64_t docId = atoll(insertPtr);
 			snprintf(tmp,512,"<a href=/search?q=gbdocid%%3A%"INT64
