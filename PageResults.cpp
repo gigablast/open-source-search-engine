@@ -4058,10 +4058,12 @@ bool printResult ( State0 *st, int32_t ix , int32_t *numPrintedSoFar ) {
 		return true;
 	}
 
+	char *xp = NULL;
+
 	// just print cached web page?
 	if ( mr->ptr_content && 
 	     si->m_format == FORMAT_JSON &&
-	     strstr(mr->ptr_ubuf,"-diffbotxyz") ) {
+	     ( xp = strstr(mr->ptr_ubuf,"-diffbotxyz") ) ) {
 
 		// for json items separate with \n,\n
 		if ( si->m_format != FORMAT_HTML && *numPrintedSoFar > 0 )
@@ -4109,6 +4111,17 @@ bool printResult ( State0 *st, int32_t ix , int32_t *numPrintedSoFar ) {
 			// comma?
 			if ( mr->size_content>1 ) sb->pushChar(',');
 			sb->safePrintf("\"docId\":%"INT64"", mr->m_docId);
+
+			// we don't store it explcitly, but the guess
+			// here should almost always be right.
+			char *parentUrl = mr->ptr_ubuf;
+			int32_t ulen = xp - parentUrl;
+			parentUrl[ulen] = '\0';
+			int64_t pdocId = g_titledb.getProbableDocId(parentUrl);
+			sb->safePrintf(",\"parentUrlDocId\":%"INT64"", pdocId);
+			parentUrl[ulen] = '-';			
+
+
 			sb->safePrintf(",\"gburl\":\"");
 			sb->jsonEncode(mr->ptr_ubuf);
 			sb->safePrintf("\"");
