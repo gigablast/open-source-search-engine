@@ -2089,11 +2089,11 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 		SafeBuf em;
 		if ( status1 ) {
 			log("xmldoc: regcomp %s failed.",rx1);
-			em.safePrintf("Invalid regular expresion: %s",rx1);
+			em.safePrintf("Invalid regular expression: %s",rx1);
 		}
 		else if ( status2 ) {
 			log("xmldoc: regcomp %s failed.",rx2);
-			em.safePrintf("Invalid regular expresion: %s",rx2);
+			em.safePrintf("Invalid regular expression: %s",rx2);
 		}
 		if ( status1 || status2 ) {
 			mdelete ( st , sizeof(StateCD) , "stcd" );
