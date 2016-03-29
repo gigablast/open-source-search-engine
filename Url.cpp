@@ -193,7 +193,7 @@ void Url::set ( char *t , int32_t tlen , bool addWWW , bool stripSessionId ,
 		// Find the start of the domain
 		if(tlen > 7 && strncmp(p, "http://", 7) == 0) p += 7;
 		else if(tlen > 8 && strncmp(p, "https://", 8) == 0) p += 8;
-
+ 
 		gbmemcpy(encodedDomStart, t, p-t);
 		encodedDomStart += p-t;
 
@@ -314,7 +314,7 @@ void Url::set ( char *t , int32_t tlen , bool addWWW , bool stripSessionId ,
 		//gbmemcpy(encodedDomStart, p, restOfUrlLen);
 		encoded[newUrlLen] = '\0';
 		return this->set(encoded, newUrlLen, addWWW, stripSessionId, 
-						 stripPound, stripCommonFile, titleRecVersion);
+				 stripPound, stripCommonFile, titleRecVersion);
     }
 	// truncate length to the first occurence of an unacceptable char
 	tlen = i;
@@ -2550,6 +2550,7 @@ bool Url::hasMediaExtension ( ) {
 
 uint32_t Url::unitTests() {
 	char* urls[] = {
+		"http://сацминэнерго.рф/robots.txt",
 		"http://www.fas.org/blog/ssp/2009/08/securing-venezuela\032s-arsenals.php",
 		"http://topbeskæring.dk/velkommen",
 		"www.Alliancefrançaise.nu",
@@ -2575,14 +2576,14 @@ uint32_t Url::unitTests() {
 		"https://pypi.python\n\n\t\t\t\t.org/packages/source/p/pyramid/pyramid-1.5.tar.gz#md5=8747658dcbab709a9c491e43d3b0d58b"
 	};
 
-    StackBuf(sb);
+	StackBuf(sb);
 	uint32_t len = sizeof(urls) / sizeof(char*);
 	for(uint32_t i = 0; i < len; i++) {
 		Url u;
 		u.set(urls[i], strlen(urls[i]));
 		log("build:%s normalized to %s, printed to %s ", 
-            urls[i], u.getUrl(), Url::getDisplayUrl(u.getUrl(), &sb));
-        sb.reset();
+		    urls[i], u.getUrl(), Url::getDisplayUrl(u.getUrl(), &sb));
+		sb.reset();
 	}
 	//FIXME: need to return an error if there is a problem
 	return 0;
@@ -2591,7 +2592,7 @@ uint32_t Url::unitTests() {
 
 char* Url::getDisplayUrl(char* url, SafeBuf* sb) {
 	char* found;
-    char* labelCursor = url;
+	char* labelCursor = url;
 	if((found = strstr(labelCursor, "xn--"))) {
 		sb->safeMemcpy(url, found - url);
 
@@ -2626,7 +2627,7 @@ char* Url::getDisplayUrl(char* url, SafeBuf* sb) {
 				return url;
 			}
 			sb->utf32Encode(decoded, decodedLen);
-			//sb->pushChar(*labelEnd);
+			if(*labelEnd == '.') sb->pushChar(*labelEnd++);
 			labelCursor = labelEnd;
 		} while((found = strstr(labelCursor, "xn--")));
 	}
