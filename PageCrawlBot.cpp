@@ -2089,11 +2089,11 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 		SafeBuf em;
 		if ( status1 ) {
 			log("xmldoc: regcomp %s failed.",rx1);
-			em.safePrintf("Invalid regular expresion: %s",rx1);
+			em.safePrintf("Invalid regular expression: %s",rx1);
 		}
 		else if ( status2 ) {
 			log("xmldoc: regcomp %s failed.",rx2);
-			em.safePrintf("Invalid regular expresion: %s",rx2);
+			em.safePrintf("Invalid regular expression: %s",rx2);
 		}
 		if ( status1 || status2 ) {
 			mdelete ( st , sizeof(StateCD) , "stcd" );
@@ -3387,6 +3387,7 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 		sb.safePrintf("<tr><td><b>Ready Hosts</b></td><td>");
 		for ( int32_t i = 0 ; i < g_hostdb.getNumHosts() ; i++ ) {
 			CrawlInfo *ci = &cis[i];
+			if ( ! ci ) continue;
 			if ( ! ci->m_hasUrlsReadyToSpider ) continue;
 			Host *h = g_hostdb.getHost ( i );
 			if ( ! h ) continue;

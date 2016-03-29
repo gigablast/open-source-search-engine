@@ -84,7 +84,9 @@
 // raised from 80MB to 180MB since we could be sending back a Msg95Reply
 // which is a list of QueryChanges. 3/29/13.
 //#define MAX_DGRAMS (((180*1024*1024) / DGRAM_SIZE_LB) + 1)
-#define MAX_DGRAMS (((80*1024*1024) / DGRAM_SIZE) + 1)
+//#define MAX_DGRAMS (((80*1024*1024) / DGRAM_SIZE) + 1)
+// raise from 80MB to 280MB for choi EMSGTOOBIG error
+#define MAX_DGRAMS (((280*1024*1024) / DGRAM_SIZE) + 1)
 //#endif
 
 #define MAX_ABSDOCLEN ((MAX_DGRAMS * DGRAM_SIZE)-50000)

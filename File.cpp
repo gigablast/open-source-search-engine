@@ -1056,6 +1056,18 @@ time_t File::getLastModifiedTime ( ) {
 	return 0;
 }
 
+bool doesFileExist ( char *filename ) {
+	// allow the substitution of another filename
+        struct stat stats;
+	// return true if it exists
+        if ( stat ( filename , &stats ) == 0 ) return true;
+        // return 0 if it just does not exist and reset g_errno
+        if ( errno == ENOENT ) return false;
+        // resource temporarily unavailable (for newer libc)
+        if ( errno == EAGAIN ) return false;
+	// error
+        return false;
+}
 
 // . returns -1 on error
 // . returns  0 if does not exist

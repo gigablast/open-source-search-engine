@@ -77,11 +77,12 @@ bool Msg22::getTitleRec ( Msg22Request  *r              ,
 			  int32_t           timeout        ,
 			  bool           doLoadBalancing ) {
 
+	m_availDocId = 0;
 	// sanity
 	if ( getAvailDocIdOnly && justCheckTfndb ) { char *xx=NULL;*xx=0; }
 	if ( getAvailDocIdOnly && url            ) { char *xx=NULL;*xx=0; }
 
-	//if ( m_url ) log(LOG_DEBUG,"build: getting TitleRec for %s",m_url);
+	//if ( url ) log(LOG_DEBUG,"build: getting TitleRec for %s",url);
 	// sanity checks
 	if ( url    && docId!=0LL ) { char *xx=NULL;*xx=0; }
 	if ( url    && !url[0]    ) { char *xx=NULL;*xx=0; }
@@ -857,6 +858,7 @@ void gotTitleList ( void *state , RdbList *list , Msg5 *msg5 ) {
 	// set probable docid
 	int64_t pd = 0LL;
 	if ( r->m_url[0] ) {
+		//log("msg22: url= %s",r->m_url);
 		pd = g_titledb.getProbableDocId(r->m_url);
 		if ( pd != st->m_pd ) { 
 			log("db: crap probable docids do not match! u=%s",

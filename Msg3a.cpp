@@ -27,6 +27,9 @@ void Msg3a::constructor ( ) {
 	m_inUse        = false;
 	m_q            = NULL;
 
+	m_numTotalEstimatedHits = 0LL;
+	m_skippedShards = 0;
+
 	// need to call all safebuf constructors now to set m_label
 	m_rbuf2.constructor();
 
@@ -78,6 +81,7 @@ void Msg3a::reset ( ) {
 	m_numDocIds    = 0;
 	m_collnums     = NULL;
 	m_numTotalEstimatedHits = 0LL;
+	m_skippedShards = 0;
 }
 
 Msg39Request *g_r = NULL;
@@ -173,6 +177,9 @@ bool Msg3a::getDocIds ( Msg39Request *r          ,
 	m_numTotalEstimatedHits = 0;
 	// we modify this, so copy it from request
 	m_docsToGet = r->m_docsToGet;
+
+	// fix empty queries saying a shard is down
+	m_skippedShards = 0;
 
 	// . return now if query empty, no docids, or none wanted...
 	// . if query terms = 0, might have been "x AND NOT x"

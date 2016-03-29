@@ -1196,6 +1196,23 @@ bool Rdb::dumpTree ( int32_t niceness ) {
 	// bail if already dumping
 	//if ( m_dump.isDumping() ) return true;
 	if ( m_inDumpLoop ) return true;
+
+	// don't allow spiderdb and titledb to dump at same time
+	// it seems to cause corruption in rdbmem for some reason
+	// if ( m_rdbId == RDB_SPIDERDB && g_titledb.m_rdb.m_inDumpLoop )
+	// 	return true;
+	// if ( m_rdbId == RDB_TITLEDB && g_spiderdb.m_rdb.m_inDumpLoop )
+	// 	return true;
+	// ok, seems to happen if we are dumping any two rdbs at the same
+	// time. we end up missing tree nodes or something.
+	// for ( int32_t i = RDB_START ; i < RDB_PLACEDB  ; i++ ) {
+	// 	Rdb *rdb = getRdbFromId ( i );
+	// 	if ( ! rdb )
+	// 		continue;
+	// 	if ( rdb->m_inDumpLoop )
+	// 		return true;
+	// }
+
 	// . if tree is saving do not dump it, that removes things from tree
 	// . i think this caused a problem messing of RdbMem before when
 	//   both happened at once
@@ -1475,6 +1492,13 @@ bool Rdb::dumpCollLoop ( ) {
 			    "memory.",base->m_files[m_fn]->getFilename());
 			base->buryFiles ( m_fn , m_fn+1 );
 		}
+		// if it was because a collection got deleted, keep going
+		if ( g_errno == ENOCOLLREC ) {
+			log("rdb: ignoring deleted collection and "
+			    "continuing dump");
+			g_errno = 0;
+			goto keepGoing;
+		}
 		// game over, man
 		doneDumping();
 		// update this so we don't try too much and flood the log
@@ -1482,6 +1506,7 @@ bool Rdb::dumpCollLoop ( ) {
 		s_lastTryTime = getTime();
 		return true;
 	}
+ keepGoing:
 	// advance for next round
 	m_dumpCollnum++;
 
@@ -1495,7 +1520,9 @@ bool Rdb::dumpCollLoop ( ) {
 		// skip if empty
 		if ( ! cr ) continue;
 		// skip if no recs in tree
-		if ( cr->m_treeCount == 0 ) continue;
+		// this is maybe causing us not to dump out all recs
+		// so comment this out
+		//if ( cr->m_treeCount == 0 ) continue;
 		// ok, it's good to dump
 		break;
 	}
@@ -1746,7 +1773,7 @@ void Rdb::doneDumping ( ) {
 	// give the token back so someone else can dump or merge
 	//g_msg35.releaseToken();
 	// free mem in the primary buffer
-	if ( ! m_dumpErrno ) m_mem.freeDumpedMem();
+	if ( ! m_dumpErrno ) m_mem.freeDumpedMem( &m_tree );
 	// . tell RdbDump it is done
 	// . we have to set this here otherwise RdbMem's memory ring buffer
 	//   will think the dumping is no longer going on and use the primary
@@ -1981,7 +2008,7 @@ bool Rdb::addList ( collnum_t collnum , RdbList *list,
 	// pick it
 	if ( collnum < 0 || collnum > getNumBases() || ! getBase(collnum) ) {
 		g_errno = ENOCOLLREC;
-		return log("db: %s bad collnum of %i.",m_dbname,collnum);
+		return log("db: %s bad collnum1 of %i.",m_dbname,collnum);
 	}
 	// make sure list is reset
 	list->resetListPtr();
@@ -2004,6 +2031,10 @@ bool Rdb::addList ( collnum_t collnum , RdbList *list,
 		g_errno = ETRYAGAIN; 
 		return false;
 	}
+	// if ( m_inDumpLoop ) {
+	// 	g_errno = ETRYAGAIN;
+	// 	return false;
+	// }
 	// if we are well into repair mode, level 2, do not add anything
 	// to spiderdb or titledb... that can mess up our titledb scan.
 	// we always rebuild tfndb, clusterdb, checksumdb and spiderdb
@@ -2340,6 +2371,19 @@ bool Rdb::hasRoom ( RdbList *list , int32_t niceness ) {
 			m_lastReclaim = reclaimed;
 	}
 
+	// if we have data-less records, we do not use RdbMem, so
+	// return true at this point since there are enough tree nodes
+	//if ( dataSpace <= 0 ) return true;
+
+	// if rdbmem is already 90 percent full, just say no so when we
+	// dump to disk we have some room to add records that come in
+	// during the dump, and we have some room for RdbMem::freeDumpedMem()
+	// to fix things and realloc/move them within the rdb mem
+	// if ( m_mem.is90PercentFull () && 
+	//      ! m_inDumpLoop &&
+	//      m_rdbId != RDB_DOLEDB )
+	// 	return false;
+
 	// does m_mem have room for "dataSpace"?
 	if ( (int64_t)m_mem.getAvailMem() < dataSpace ) return false;
 	// otherwise, we do have room
@@ -2418,6 +2462,30 @@ bool Rdb::addRecord ( collnum_t collnum,
 		char *xx=NULL;*xx=0;
 		return false;
 	}
+
+
+	// do not add if range being dumped at all because when the
+	// dump completes it calls deleteList() and removes the nodes from
+	// the tree, so if you were overriding a node currently being dumped
+	// we would lose it.
+	if ( m_dump.isDumping() &&
+	     //oppKey >= m_dump.getFirstKeyInQueue() &&
+	     // ensure the dump is dumping the collnum of this key
+	     m_dump.m_collnum == collnum &&
+	     m_dump.m_lastKeyInQueue &&
+	     // the dump should not split positive/negative keys so
+	     // if our positive/negative twin should be in the dump with us
+	     // or not in the dump with us, so any positive/negative 
+	     // annihilation below should be ok and we should be save
+	     // to call deleteNode() below
+	     KEYCMP(key,m_dump.getFirstKeyInQueue(),m_ks)>=0 &&
+	     //oppKey <= m_dump.getLastKeyInQueue ()   ) goto addIt;
+	     KEYCMP(key,m_dump.getLastKeyInQueue (),m_ks)<=0   )  {
+		// tell caller to wait and try again later
+		g_errno = ETRYAGAIN;
+		return false;
+	}
+
 
 	// save orig
 	char *orig = NULL;
@@ -2618,13 +2686,17 @@ bool Rdb::addRecord ( collnum_t collnum,
 		// CAUTION: we should not annihilate with oppKey if oppKey may
 		// be in the process of being dumped to disk! This would 
 		// render our annihilation useless and make undeletable data
+		/*
 		if ( m_dump.isDumping() &&
 		     //oppKey >= m_dump.getFirstKeyInQueue() &&
+		     // ensure the dump is dumping the collnum of this key
+		     m_dump.m_collnum == collnum &&
 		     m_dump.m_lastKeyInQueue &&
 		     KEYCMP(oppKey,m_dump.getFirstKeyInQueue(),m_ks)>=0 &&
 		     //oppKey <= m_dump.getLastKeyInQueue ()   ) goto addIt;
 		     KEYCMP(oppKey,m_dump.getLastKeyInQueue (),m_ks)<=0   ) 
 			goto addIt;
+		*/
 		// BEFORE we delete it, save it. this is a special hack
 		// so we can UNDO this deleteNode() should the titledb rec
 		// add fail.
@@ -2698,7 +2770,7 @@ bool Rdb::addRecord ( collnum_t collnum,
 	// if we did not find an oppKey and are tfndb, flag this
 	//if ( n<0 && m_rdbId == RDB_TFNDB ) s_tfndbHadOppKey = false;
 
- addIt:
+	// addIt:
 	// mark as changed
 	//if ( ! m_needsSave ) {
 	//	m_needsSave = true;
@@ -2952,7 +3024,7 @@ int64_t Rdb::getListSize ( collnum_t collnum,
 	// pick it
 	//collnum_t collnum = g_collectiondb.getCollnum ( coll );
 	if ( collnum < 0 || collnum > getNumBases() || ! getBase(collnum) )
-		return log("db: %s bad collnum of %i",m_dbname,collnum);
+		return log("db: %s bad collnum2 of %i",m_dbname,collnum);
 	return getBase(collnum)->getListSize(startKey,endKey,max,
 					    oldTruncationLimit);
 }
@@ -3489,6 +3561,8 @@ int32_t Rdb::reclaimMemFromDeletedTreeNodes( int32_t niceness ) {
 	// start scanning the mem pool
 	char *p    = m_mem.m_mem;
 	char *pend = m_mem.m_ptr1;
+	
+	char *memEnd = m_mem.m_mem + m_mem.m_memSize;
 
 	char *dst = p;
 
@@ -3572,7 +3646,22 @@ int32_t Rdb::reclaimMemFromDeletedTreeNodes( int32_t niceness ) {
 			skipped++; 
 			continue;
 		}
-		//
+		// corrupted? or breach of mem buf?
+		if ( sreq->isCorrupt() ||  dst + recSize > memEnd ) {
+			log("rdb: not readding corrupted doledb1 in scan. "
+			    "deleting from tree.");
+			// a dup? sanity check
+			int32_t *nodePtr = (int32_t *)ht.getValue (&oldOffset);
+			if ( ! nodePtr ) {
+				log("rdb: strange. not in tree anymore.");
+				skipped++;
+				continue;
+			}
+			// delete node from doledb tree
+			m_tree.deleteNode3(*nodePtr,true);//true=freedata
+			skipped++;
+			continue;
+		}
 		//// re -add with the proper value now
 		//
 		// otherwise, copy it over if still in tree
@@ -3605,6 +3694,8 @@ int32_t Rdb::reclaimMemFromDeletedTreeNodes( int32_t niceness ) {
 	int32_t reclaimed = inUseOld - inUseNew;
 
 	if ( reclaimed < 0 ) { char *xx=NULL;*xx=0; }
+	if ( inUseNew  < 0 ) { char *xx=NULL;*xx=0; }
+	if ( inUseNew  > m_mem.m_memSize ) { char *xx=NULL;*xx=0; }
 
 	//if ( reclaimed == 0 && marked ) { char *xx=NULL;*xx=0;}
 

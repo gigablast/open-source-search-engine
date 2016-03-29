@@ -1777,10 +1777,33 @@ bool Process::shutdown2 ( ) {
 		log(LOG_INFO,"gb: still has hdtemp thread");
 
 
-	log("gb. EXITING.");
+	log("gb. EXITING GRACEFULLY.");
+
+	// from main.cpp:
+	// extern SafeBuf g_pidFileName;
+	// extern bool g_createdPidFile;
+	// // first remove the pid file on graceful exit
+	// // remove pid file if we created it
+	// // take from main.cpp
+	// if ( g_createdPidFile && g_pidFileName.length() )
+	// 	::unlink ( g_pidFileName.getBufStart() );
+
+	// make a file called 'cleanexit' so bash keep alive loop will stop
+	// because bash does not get the correct exit code, 0 in this case,
+	// even though we explicitly say 'exit(0)' !!!! poop
+	char tmp[128];
+	SafeBuf cleanFileName(tmp,128);
+	cleanFileName.safePrintf("%s/cleanexit",g_hostdb.m_dir);
+	SafeBuf nothing;
+	// returns # of bytes written, -1 if could not create file
+	if ( nothing.save ( cleanFileName.getBufStart() ) == -1 )
+		log("gb: could not create %s",cleanFileName.getBufStart());
+
 
 	// exit abruptly
 	exit(0);
+
+	// let's return control to Loop.cpp?
 
 	// keep compiler happy
 	return true;

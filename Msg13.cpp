@@ -1135,7 +1135,10 @@ void downloadTheDocForReals3b ( Msg13Request *r ) {
 				     maxDocLen1,//r->m_maxTextDocLen   ,
 				     maxDocLen2,//r->m_maxOtherDocLen  ,
 				     agent                ,
-				     DEFAULT_HTTP_PROTO , // "HTTP/1.0"
+				     // prevent HTTP STATUS 406
+				     // not acceptable response by using 1.1
+				     // instead of 1.0 for www.mindanews.com
+				     DEFAULT_SPIDER_HTTP_PROTO , // "HTTP/1.1"
 				     false , // doPost?
 				     r->ptr_cookie , // cookie
 				     NULL , // additionalHeader
@@ -1287,6 +1290,9 @@ void gotHttpReply9 ( void *state , TcpSocket *ts ) {
 
 	//if ( ! g_errno ) 
 	bool banned = ipWasBanned ( ts , &banMsg , r );
+
+	if ( g_conf.m_logDebugTcp && ts )
+		log("msg13: got reply=%s",ts->m_readBuf);
 
 
 	// inc this every time we try
@@ -1484,6 +1490,10 @@ void gotHttpReply ( void *state , TcpSocket *ts ) {
 
 	// if we had no error, TcpSocket should be legit
 	if ( ts ) {
+
+		if ( g_conf.m_logDebugTcp )
+			log("msg13: got reply=%s",ts->m_readBuf);
+
 		gotHttpReply2 ( state , 
 				ts->m_readBuf ,
 				ts->m_readOffset ,
