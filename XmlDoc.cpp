@@ -512,6 +512,8 @@ void XmlDoc::reset ( ) {
 		m_query3a = NULL;
 	}
 
+	m_surroundingTextBuf.purge();
+	m_rssItemBuf.purge();
 	//m_twbuf.purge();
 	m_topMatchingQueryBuf.purge();
 	//m_queryPtrs.purge();
@@ -11392,8 +11394,8 @@ Url **XmlDoc::getRedirUrl() {
 		// return a fake thing. content length is 0.
 		return &m_redirUrlPtr;
 	}
-	// set it
-	if ( LEN && ! mime.set ( m_httpReply, LEN, getCurrentUrl() ) ) {
+	// set it. if 'connection refused' then LEN is -1.
+	if ( LEN<0 || ! mime.set ( m_httpReply, LEN, getCurrentUrl() ) ) {
 		// set this on mime error
 		//if ( ! m_indexCode ) m_indexCode = EBADMIME;
 		// bad mime, but i guess valid empty redir url
@@ -33893,18 +33895,22 @@ Msg20Reply *XmlDoc::getMsg20Reply ( ) {
 	reply->size_linkUrl = links->getLinkLen(linkNum)+1;
 
 	// save the rss item in our state so we can point to it, include \0
-	if ( rssItemLen > MAX_RSSITEM_SIZE-2 ) rssItemLen = MAX_RSSITEM_SIZE-2;
-	char rssItemBuf[MAX_RSSITEM_SIZE];
+	//if(rssItemLen > MAX_RSSITEM_SIZE-2 ) rssItemLen = MAX_RSSITEM_SIZE-2;
+	//char rssItemBuf[MAX_RSSITEM_SIZE];
+	if ( rssItemLen > MAX_RSSITEM_SIZE )
+		rssItemLen = MAX_RSSITEM_SIZE;
 	if ( rssItemLen > 0) {
-		gbmemcpy ( rssItemBuf, rssItem , rssItemLen );
-		// NULL terminate it
-		rssItemBuf[rssItemLen] = 0;
+		m_rssItemBuf.safeMemcpy ( rssItem , rssItemLen );
+		m_rssItemBuf.pushChar('\0');
+		// gbmemcpy ( rssItemBuf, rssItem , rssItemLen );
+		// // NULL terminate it
+		// rssItemBuf[rssItemLen] = 0;
 	}
 
 	// point to it, include the \0
 	if ( rssItemLen > 0 ) {
-		reply->ptr_rssItem  = rssItemBuf;
-		reply->size_rssItem = rssItemLen + 1; 
+		reply->ptr_rssItem  = m_rssItemBuf.getBufStart();
+		reply->size_rssItem = m_rssItemBuf.getLength();
 	}
 
 	// breathe
@@ -34114,8 +34120,10 @@ Msg20Reply *XmlDoc::getMsg20Reply ( ) {
 		// ensure NULL terminated
 		p[len2] = '\0';
 		// store in reply. it will be serialized when sent.
-		reply->ptr_surroundingText  = p;
-		reply->size_surroundingText = len2 + 1;
+		// thanks to isj for finding this bug fix.
+		m_surroundingTextBuf.safeMemcpy ( p , len2 + 1 );
+		reply->ptr_surroundingText =m_surroundingTextBuf.getBufStart();
+		reply->size_surroundingText=m_surroundingTextBuf.getLength();
 	}
 
 	// breathe

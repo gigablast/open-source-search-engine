@@ -2150,6 +2150,8 @@ class XmlDoc {
 	Msg20Reply m_reply;
 	Msg20Request *m_req;
 	//char *m_gsbuf;
+	SafeBuf m_surroundingTextBuf;
+	SafeBuf m_rssItemBuf;
 	SafeBuf m_gsbuf;
 	//int32_t  m_gsbufSize;
 	//int32_t  m_gsbufAllocSize;

@@ -20161,8 +20161,6 @@ void Parms::init ( ) {
 				exit(-1);
 			}
 		}
-		// skip if already set
-		if ( m_parms[i].m_size ) goto skipSize;
 		// string sizes should already be set!
 		size = 0;
 		t = m_parms[i].m_type;
@@ -20171,6 +20169,8 @@ void Parms::init ( ) {
 			    i,m_parms[i].m_title);
 			exit(-1);
 		}
+		// skip if already set
+		if ( m_parms[i].m_size ) goto skipSize;
 		if ( t == TYPE_CHAR           ) size = 1;
 		if ( t == TYPE_CHAR2          ) size = 1;
 		if ( t == TYPE_BOOL           ) size = 1;
