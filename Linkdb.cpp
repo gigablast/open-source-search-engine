@@ -669,7 +669,16 @@ static void sendReplyWrapper ( void *state ) {
 	// sanity
 	if ( req->m_udpSlot != slot2 ) { char *xx=NULL;*xx=0;}
 	// if in table, nuke it
-	g_lineTable.removeKey ( &req->m_siteHash64 );
+	// but only if it was in SITE mode, not PAGE. we've lost our
+	// table entry like this before.
+	// TODO: if this still doesn't work then ensure the stored 'req'
+	// is the same!
+	if ( req->m_mode == MODE_SITELINKINFO ) {
+		g_lineTable.removeKey ( &req->m_siteHash64 );
+		if ( g_conf.m_logDebugLinkInfo )
+			log("linkdb: removing sitehash64=%"INT64"",
+			    req->m_siteHash64);
+	}
 
  nextLink:
 
@@ -750,6 +759,7 @@ void  handleRequest25 ( UdpSlot *slot , int32_t netnice ) {
 		if ( head->m_next ) 
 			req->m_next = head->m_next;
 		head->m_next = req;
+		req->m_waitingInLine = 1;
 		// note it for debugging
 		log("build: msg25 request waiting in line for %s "
 		    "udpslot=0x%"PTRFMT"",
@@ -758,6 +768,8 @@ void  handleRequest25 ( UdpSlot *slot , int32_t netnice ) {
 		// getting the reply for the head msg25request
 		return;
 	}
+
+	req->m_waitingInLine = 0;
 
 	// make a new Msg25
 	Msg25 *m25;
@@ -5853,7 +5865,7 @@ bool Links::addLink ( char *link , int32_t linkLen , int32_t nodeNum ,
 
 	// stop http://0x0017.0000000000000000000000000000000000000024521276/
 	// which somehow make it through without this!!
-	if ( url.getTLDLen() <= 0 ) return true;
+	if ( ! url.isIp() && url.getTLDLen() <= 0 ) return true;
 
 	// count dirty links
 	//if ( url.isDirty() ) m_numDirtyLinks++;

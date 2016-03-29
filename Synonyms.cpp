@@ -544,7 +544,8 @@ bool Synonyms::addStripped ( char *w , int32_t wlen , HashTableX *dt ) {
 	// no langs
 	*m_langIdsPtr++ = 0;
 
-	m_synWordBuf.safeStrcpy(abuf);
+	// fixed thanks to isj:
+	m_synWordBuf.safeMemcpy(abuf,alen);
 	m_synWordBuf.pushChar('\0');
 
 	return true;

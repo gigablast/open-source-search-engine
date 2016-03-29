@@ -32,6 +32,8 @@ char *g_contentTypeStrings [] = {
 HttpMime::HttpMime () { reset(); }
 
 void HttpMime::reset ( ) {
+	m_mimeStartPtr     = NULL;
+	m_firstCookie      = NULL;
 	m_status           = -1;
 	m_contentLen       = -1;
 	m_lastModifiedDate =  0;
@@ -52,6 +54,8 @@ void HttpMime::reset ( ) {
 // . we need the url in case there's a Location: mime that's base-relative
 bool HttpMime::set ( char *buf , int32_t bufLen , Url *url ) {
 	// reset some stuff
+	m_mimeStartPtr     = NULL;
+	m_firstCookie      = NULL;
 	m_contentLen       = -1;
 	m_content          = NULL;
 	m_bufLen           =  0;
@@ -64,6 +68,7 @@ bool HttpMime::set ( char *buf , int32_t bufLen , Url *url ) {
 	if ( bufLen < 13 ) { m_boundaryLen = 0; return false; }
 	// . get the length of the Mime, must end in \r\n\r\n , ...
 	// . m_bufLen is used as the mime length
+	m_mimeStartPtr = buf;
 	m_bufLen = getMimeLen ( buf , bufLen , &m_boundaryLen );
 	// . return false if we had no mime boundary
 	// . but set m_bufLen to 0 so getMimeLen() will return 0 instead of -1
@@ -170,6 +175,7 @@ bool HttpMime::parse ( char *mime , int32_t mimeLen , Url *url ) {
 			m_contentTypePos = s;
 		}
 		else if ( strncasecmp ( p , "Set-Cookie:"   ,10) == 0 ) {
+			if ( ! m_firstCookie ) m_firstCookie = p;
 			m_cookie = p + 11;
 			if ( m_cookie[0] == ' ' ) m_cookie++;
 			m_cookieLen = gbstrlen ( m_cookie );
@@ -1121,3 +1127,43 @@ bool HttpMime::init ( ) {
 	return true;
 }
 
+bool HttpMime::addCookiesIntoBuffer ( SafeBuf *sb ) {
+	// point to start of request
+	if ( m_bufLen <= 0 ) return true;
+	if ( ! m_mimeStartPtr ) return true;
+	if ( ! m_firstCookie  ) return true;
+	char *p = m_firstCookie;
+	char *pend = m_mimeStartPtr + m_bufLen;
+	while ( p < pend ) {
+		// compute the length of the string starting at p and ending
+		// at a \n or \r
+		int32_t len = 0;
+		while ( &p[len] < pend && p[len]!='\n' && p[len]!='\r' ) len++;
+		// . if we could not find a \n or \r there was an error
+		// . MIMEs must always end in \n or \r
+		if ( &p[len] >= pend ) return false;
+		// . stick a NULL at the end of the line 
+		// . overwrites \n or \r TEMPORARILY
+		char c = p [ len ];
+		p [ len ] = '\0';
+		// parse out some meaningful data
+		if ( strncasecmp ( p , "Set-Cookie:"   ,10) == 0 ) {
+			char *cookie = p + 11;
+			if ( cookie[0] == ' ' ) cookie++;
+			char *cookieEnd = cookie;
+			for ( ; *cookieEnd && *cookieEnd != ';';cookieEnd++);
+			int32_t cookieLen = cookieEnd - cookie;
+			// accumulate into buffer
+			sb->safeMemcpy ( cookie , cookieLen );
+			sb->pushChar(';');
+			sb->nullTerm();
+		}
+		// re-insert the character that we replaced with a '\0'
+		p [ len ] = c;
+		// go to next line
+		p += len;
+		// skip over the cruft at the end of this line
+		while ( p < pend && ( *p=='\r' || *p=='\n' ) ) p++;
+	}
+	return true;
+}

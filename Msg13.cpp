@@ -282,6 +282,12 @@ bool Msg13::forwardRequest ( ) {
 	int32_t nh     = g_hostdb.m_numHosts;
 	int32_t hostId = hash32h(((uint32_t)r->m_firstIp >> 8), 0) % nh;
 
+	if((uint32_t)r->m_firstIp >> 8 == 0) {
+		// If the first IP is not set for the request then we don't
+		// want to hammer the first host with spidering enabled.
+		hostId = hash32n ( r->ptr_url ) % nh;
+	}
+
 	// avoid host #0 for diffbot hack which is dropping some requests
 	// because of the streaming bug methinks
 	if ( hostId == 0 && nh >= 2 && g_conf.m_diffbotMsg13Hack ) 
@@ -296,11 +302,20 @@ bool Msg13::forwardRequest ( ) {
 		//h = g_hostdb.getProxy ( hostId );;
 		h = g_hostdb.getHost ( hostId );
 
+		// Get the other one in shard instead of getting the first
+		// one we find sequentially because that makes the load
+		// imbalanced to the lowest host with spidering enabled.
+		if(!h->m_spiderEnabled) {
+			h = g_hostdb.getHost(g_hostdb.getHostIdWithSpideringEnabled(
+			  h->m_hostId));
+		}
+
 		// stop if he is alive and able to spider
 		if ( h->m_spiderEnabled && ! g_hostdb.isDead ( h ) ) break;
 		// get the next otherwise
 		if ( ++hostId >= nh ) hostId = 0;
 	}
+
 
 	hostId = 0; // HACK!!
 
@@ -1120,7 +1135,10 @@ void downloadTheDocForReals3b ( Msg13Request *r ) {
 				     maxDocLen1,//r->m_maxTextDocLen   ,
 				     maxDocLen2,//r->m_maxOtherDocLen  ,
 				     agent                ,
-				     DEFAULT_HTTP_PROTO , // "HTTP/1.0"
+				     // prevent HTTP STATUS 406
+				     // not acceptable response by using 1.1
+				     // instead of 1.0 for www.mindanews.com
+				     DEFAULT_SPIDER_HTTP_PROTO , // "HTTP/1.1"
 				     false , // doPost?
 				     r->ptr_cookie , // cookie
 				     NULL , // additionalHeader
@@ -1272,6 +1290,9 @@ void gotHttpReply9 ( void *state , TcpSocket *ts ) {
 
 	//if ( ! g_errno ) 
 	bool banned = ipWasBanned ( ts , &banMsg , r );
+
+	if ( g_conf.m_logDebugTcp && ts )
+		log("msg13: got reply=%s",ts->m_readBuf);
 
 
 	// inc this every time we try
@@ -1469,6 +1490,10 @@ void gotHttpReply ( void *state , TcpSocket *ts ) {
 
 	// if we had no error, TcpSocket should be legit
 	if ( ts ) {
+
+		if ( g_conf.m_logDebugTcp )
+			log("msg13: got reply=%s",ts->m_readBuf);
+
 		gotHttpReply2 ( state , 
 				ts->m_readBuf ,
 				ts->m_readOffset ,

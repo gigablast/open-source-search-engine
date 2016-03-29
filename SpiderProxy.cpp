@@ -143,7 +143,10 @@ bool buildProxyTable ( ) {
 			*s = '\0';
 			log("buf: %s for %s",msg,p);
 			*s = c;
-			return false;
+			//return false;
+			// advance p
+			p = s;
+			continue;
 		}
 
 		// convert it
@@ -706,6 +709,7 @@ void handleRequest54 ( UdpSlot *udpSlot , int32_t niceness ) {
 	int32_t hslot = s_loadTable.getSlot ( &urlIp );
 	// scan all proxies that have this urlip outstanding
 	for ( int32_t i = hslot ; i >= 0 ; i = s_loadTable.getNextSlot(i,&urlIp)){
+		QUICKPOLL(niceness);
 		// get the bucket
 		LoadBucket *lb;
 		lb = (LoadBucket *)s_loadTable.getValueFromSlot(i);
@@ -736,6 +740,7 @@ void handleRequest54 ( UdpSlot *udpSlot , int32_t niceness ) {
 	// get the min of the counts
 	int32_t minCount = 999999;
 	for ( int32_t i = 0 ; i < s_iptab.getNumSlots() ; i++ ) {
+		QUICKPOLL(niceness);
 		// skip empty slots
 		if ( ! s_iptab.m_flags[i] ) continue;
 		// get the spider proxy
@@ -824,6 +829,7 @@ void handleRequest54 ( UdpSlot *udpSlot , int32_t niceness ) {
 	int32_t slotCount = s_iptab.getNumSlots();
 	// . now find the best proxy wih the minCount
 	for ( int32_t i = start ; ; i++ ) {
+		QUICKPOLL(niceness);
 		// scan all slots in hash table, then stop
 		if ( slotCount-- <= 0 ) break;
 		// wrap around to zero if we hit the end
@@ -896,8 +902,8 @@ void handleRequest54 ( UdpSlot *udpSlot , int32_t niceness ) {
 	static int32_t s_lbid = 0;
 	// add it now, iff not for passing to diffbot backend
 	if ( preq->m_opCode != OP_GETPROXYFORDIFFBOT ) {
-		s_loadTable.addKey ( &urlIp , &bb );
 		bb.m_id = s_lbid++;
+		s_loadTable.addKey ( &urlIp , &bb );
 		// winner count update
 		winnersp->m_timesUsed++;
 	}
@@ -931,12 +937,29 @@ void handleRequest54 ( UdpSlot *udpSlot , int32_t niceness ) {
 	// and the loadbucket id
 	//*(int32_t *)p = bb.m_id; p += 4;
 
-	//int32_t sanityCount = 0;//s_loadTable.getNumSlots();
-	// top:
+	// with dup keys we end up with long chains of crap and this
+	// takes forever. so just flush the whole thing every 2 minutes AND
+	// when 20000+ entries are in there
+	static time_t s_lastTime = 0;
+	time_t now = nowms / 1000;
+	if ( s_lastTime == 0 ) s_lastTime = now;
+	time_t elapsed = now - s_lastTime;
+	if ( elapsed > 120 && s_loadTable.getNumSlots() > 10000 ) {
+		log("sproxy: flushing %i entries from proxy loadtable that "
+		    "have accumulated since %i seconds ago",
+		    (int)s_loadTable.m_numSlotsUsed,(int)elapsed);
+		s_loadTable.clear();
+		// only do this one per minute
+		s_lastTime = now;
+	}
 
+
+	int32_t sanityCount = 0;//s_loadTable.getNumSlots();
+	// top:
 	// now remove old entries from the load table. entries that
 	// have completed and have a download end time more than 10 mins ago.
 	for ( int32_t i = s_loadTable.getNumSlots() - 1 ; i >= 0 ; i-- ) {
+		QUICKPOLL(niceness);
 		// skip if empty
 		if ( ! s_loadTable.m_flags[i] ) continue;
 		// get the bucket
@@ -948,8 +971,8 @@ void handleRequest54 ( UdpSlot *udpSlot , int32_t niceness ) {
 		// < 10 mins? now it's < 15 seconds to prevent clogging.
 		if ( took < LOADPOINT_EXPIRE_MS ) continue;
 
-		// 100 at a time
-		//if ( sanityCount++ > 100 ) break;
+		// 100 at a time so we don't slam cpu
+		if ( sanityCount++ > 100 ) break;
 
 		// ok, its too old, nuke it to save memory
 		s_loadTable.removeSlot(i);

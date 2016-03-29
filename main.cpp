@@ -289,7 +289,7 @@ bool summaryTest1   ( char *rec, int32_t listSize, char *coll , int64_t docId ,
 // time a big write, read and then seeks
 bool thrutest ( char *testdir , int64_t fileSize ) ;
 void seektest ( char *testdir , int32_t numThreads , int32_t maxReadSize ,
-		char *filename );
+		char *filename , bool doSeqWriteThread );
 
 bool pingTest ( int32_t hid , uint16_t clientPort );
 bool memTest();
@@ -389,13 +389,22 @@ void stack_test(){
 
 int main2 ( int argc , char *argv[] ) ;
 
+// SafeBuf g_pidFileName;
+// bool g_createdPidFile = false;
+
 int main ( int argc , char *argv[] ) {
 
 	//fprintf(stderr,"Starting gb.\n");
 
 	int ret = main2 ( argc , argv );
 
-	if ( ret ) fprintf(stderr,"Failed to start gb. Exiting.\n");
+	// returns 1 if failed, 0 on successful/graceful exit
+	if ( ret )
+		fprintf(stderr,"Failed to start gb. Exiting.\n");
+
+	// remove pid file if we created it
+	// if ( g_createdPidFile && ret == 0 && g_pidFileName.length() )
+	// 	::unlink ( g_pidFileName.getBufStart() );
 }
 
 int main2 ( int argc , char *argv[] ) {
@@ -810,17 +819,21 @@ int main2 ( int argc , char *argv[] ) {
 			"parser speed tests\n\n"
 			*/
 
-			/*
-			"thrutest [dir] [fileSize]\n\tdisk write/read speed "
-			"test\n\n"
+			"thrutest [dir] [fileSize]\n\tdisk sequential "
+			"write then read speed tests.\n\n"
 
 			"seektest [dir] [numThreads] [maxReadSize] "
 			"[filename]\n"
-			"\tdisk seek speed test\n\n"
+			"\tdisk access speed test. (IOps)\n\n"
+
+			"rwtest [dir] [numThreads] [maxReadSize] "
+			"[filename]\n"
+			"\tdisk read access speed test while sequentially "
+			"writing. Simulates Gigablast while spidering and "
+			"querying nicely.\n\n"
 			
 			"memtest\n"
 			"\t Test how much memory we can use\n\n"
-			*/
 
 			/*
 			// Quality Tests
@@ -1390,7 +1403,20 @@ int main2 ( int argc , char *argv[] ) {
 		if ( cmdarg+2 < argc ) numThreads  = atol(argv[cmdarg+2]);
 		if ( cmdarg+3 < argc ) maxReadSize = atoll1(argv[cmdarg+3]);
 		if ( cmdarg+4 < argc ) filename    = argv[cmdarg+4];
-		seektest ( testdir , numThreads , maxReadSize , filename );
+		seektest ( testdir , numThreads , maxReadSize ,filename,false);
+		return 0;
+	}
+	// gb rwtest <testdir> <numThreads> <maxReadSize>
+	if ( strcmp ( cmd , "rwtest" ) == 0 ) {
+		char     *testdir         = "/tmp/";
+		int32_t      numThreads      = 20; //30;
+		int64_t maxReadSize     = 20000;
+		char     *filename        = NULL;
+		if ( cmdarg+1 < argc ) testdir     = argv[cmdarg+1];
+		if ( cmdarg+2 < argc ) numThreads  = atol(argv[cmdarg+2]);
+		if ( cmdarg+3 < argc ) maxReadSize = atoll1(argv[cmdarg+3]);
+		if ( cmdarg+4 < argc ) filename    = argv[cmdarg+4];
+		seektest ( testdir , numThreads , maxReadSize,filename,true);
 		return 0;
 	}
 
@@ -3068,10 +3094,16 @@ int main2 ( int argc , char *argv[] ) {
 	// failing because another process is already running using this port
 	//if ( ! g_udpServer.testBind ( g_hostdb.getMyPort() ) )
 	if ( ! g_httpServer.m_tcp.testBind(g_hostdb.getMyHost()->m_httpPort,
-					   true)) // printmsg?
-		return 1;
+					   true)) {// printmsg? 
+		// return 0 so keep alive bash loop exits
+		exit(0);
+	}
 
 	int32_t *ips;
+	// char tmp[64];
+	// SafeBuf pidFile(tmp,64);
+	char tmp[128];
+	SafeBuf cleanFileName(tmp,128);
 
 	//if ( strcmp ( cmd , "gendbs"       ) == 0 ) goto jump;
 	//if ( strcmp ( cmd , "gentfndb"     ) == 0 ) goto jump;
@@ -3079,6 +3111,48 @@ int main2 ( int argc , char *argv[] ) {
 	//if ( strcmp ( cmd , "genclusterdb" ) == 0 ) goto jump;
 	//	if ( cmd && ! is_digit(cmd[0]) ) goto printHelp;
 
+
+	// if pid file is there then do not start up
+	// g_pidFileName.safePrintf("%spidfile",g_hostdb.m_dir );
+	// if ( doesFileExist ( g_pidFileName.getBufStart() ) ) {
+	// 	fprintf(stderr,"pidfile %s exists. Either another gb "
+	// 		"is already running in this directory or "
+	// 		"it exited uncleanly. Can not start up if that "
+	// 		"file exists.",
+	// 		g_pidFileName.getBufStart() );
+	// 	// if we return 0 then main() should not delete the pidfile
+	// 	return 0;
+	// }
+	// // make a new pidfile
+	// pidFile.safePrintf("%i\n",getpid());
+	// if ( ! pidFile.save ( g_pidFileName.getBufStart() ) ) {
+	// 	log("db: could not save %s",g_pidFileName.getBufStart());
+	// 	return 1;
+	// }
+	// // ok, now if we exit SUCCESSFULLY then delete it. we return an
+	// // exit status of 0
+	// g_createdPidFile = true;
+
+
+	// remove the file called 'cleanexit' so if we get killed suddenly
+	// the bashloop will know we did not exit cleanly
+	cleanFileName.safePrintf("%s/cleanexit",g_hostdb.m_dir);
+	::unlink ( cleanFileName.getBufStart() );
+
+	// move the log file name logxxx to logxxx-2016_03_16-14:59:24
+	// we did the test bind so no gb process is bound on the port yet
+	// TODO: probably should bind on the port before doing this
+	if ( doesFileExist ( g_hostdb.m_logFilename ) ) {
+	     char tmp2[128];
+	     SafeBuf newName(tmp2,128);
+	     time_t ts = getTimeLocal();
+	     struct tm *timeStruct = localtime ( &ts );
+	     //struct tm *timeStruct = gmtime ( &ts );
+	     char ppp[100];
+	     strftime(ppp,100,"%Y-%m-%d-%H-%M-%S",timeStruct);
+	     newName.safePrintf("%s-%s",g_hostdb.m_logFilename, ppp );
+	     ::rename ( g_hostdb.m_logFilename, newName.getBufStart() );
+	}
 
 	log("db: Logging to file %s.",
 	    g_hostdb.m_logFilename );
@@ -5195,7 +5269,11 @@ int install ( install_flag_konst_t installFlag , int32_t hostId , char *dir ,
 			// execute it
 			system ( tmp );
 		}
-		else if ( installFlag == ifk_kstart ) {
+		else if ( installFlag == ifk_kstart ||
+			  installFlag == ifk_dstart ) {
+			char *extraBreak = "";
+			if ( installFlag == ifk_dstart )
+				extraBreak = "break;";
 			//keepalive
 			// . save old log now, too
 			//char tmp2[1024];
@@ -5218,9 +5296,10 @@ int install ( install_flag_konst_t installFlag , int32_t hostId , char *dir ,
 				"cp -f gb gb.oldsave ; "
 				"ADDARGS='' "
 				"INC=1 "
-				"EXITSTATUS=1 ; "
-				 "while [ \\$EXITSTATUS != 0 ]; do "
- 				 "{ "
+				//"EXITSTATUS=1 "
+				" ; "
+				 "while true; do "
+				//"{ "
 
 				// if gb still running, then do not try to
 				// run it again. we
@@ -5239,12 +5318,18 @@ int install ( install_flag_konst_t installFlag , int32_t hostId , char *dir ,
 
 				//"exit 0; "
 
+				// if pidfile exists then gb is already
+				// running so do not move its log file!
+				// "if [ -f \"./pidfile\" ]; then  "
+				// "echo \"./pidfile exists. can not start "
+				// "gb\" >& /dev/stdout; break; fi;"
+
 				// in case gb was updated...
 				"mv -f gb.installed gb ; "
 
 				// move the log file
-				"mv ./log%03"INT32" ./log%03"INT32"-\\`date '+"
-				"%%Y_%%m_%%d-%%H:%%M:%%S'\\` ; " 
+				// "mv ./log%03"INT32" ./log%03"INT32"-\\`date '+"
+				// "%%Y_%%m_%%d-%%H:%%M:%%S'\\` ; " 
 
 				// indicate -l so we log to a logfile
 				"./gb -l "//%"INT32" "
@@ -5255,11 +5340,31 @@ int install ( install_flag_konst_t installFlag , int32_t hostId , char *dir ,
 				//" >& ./log%03"INT32""
 				" ;"
 
+				// this doesn't always work so use
+				// the cleanexit file approach.
+				// but if we run a second gb accidentally
+				// it would write a ./cleanexit file 
+				// to get out of its loop and it wouldn't
+				// be deleted! crap. so try this again
+				// for this short cases when we exit right
+				// away.
 				"EXITSTATUS=\\$? ; "
+				// if gb does exit(0) then stop
+				"if [ \\$EXITSTATUS = 0 ]; then break; fi;"
+
+				// also stop if ./cleanexit is there
+				// because the above exit(0) does not always
+				// work for some strange reasons
+				"if [ -f \"./cleanexit\" ]; then  break; fi;"
+				"%s"
 				"ADDARGS='-r'\\$INC ; "
 				"INC=\\$((INC+1));"
-				"} " 
+				//"} " 
  				"done >& /dev/null & \" %s",
+ 				//"done & \" %s",
+ 				//"done & \" %s",
+
+
  				//"done & \" %s",
 				//"\" %s",
 				iptoa(h2->m_ip),
@@ -5270,11 +5375,11 @@ int install ( install_flag_konst_t installFlag , int32_t hostId , char *dir ,
 				// h2->m_httpPort ,
 
 				// for moving log file
-				 h2->m_hostId   ,
-				 h2->m_hostId   ,
+				 // h2->m_hostId   ,
+				 // h2->m_hostId   ,
 
 				//h2->m_dir      ,
-
+				extraBreak ,
 				// hostid is now inferred from path
 				//h2->m_hostId   ,
 				amp );
@@ -5285,6 +5390,7 @@ int install ( install_flag_konst_t installFlag , int32_t hostId , char *dir ,
 			// execute it
 			system ( tmp );
 		}
+		/*
 		else if ( installFlag == ifk_dstart ) {
 			//keepalive
 			// . save old log now, too
@@ -5347,6 +5453,7 @@ int install ( install_flag_konst_t installFlag , int32_t hostId , char *dir ,
 			// execute it
 			system ( tmp );
 		}
+		*/
 		/*
 		else if ( installFlag == ifk_gendbs ) {
 			// . save old log now, too
@@ -6391,6 +6498,7 @@ void dumpTitledb (char *coll,int32_t startFileNum,int32_t numFiles,bool includeT
 		  bool justPrintSentences, 
 		  bool justPrintWords ) {
 
+	g_isDumpingRdbFromMain = 1;
 	if (!ucInit(g_hostdb.m_dir, true)) {
 		log("Unicode initialization failed!");
 		return;
@@ -6546,6 +6654,7 @@ void dumpTitledb (char *coll,int32_t startFileNum,int32_t numFiles,bool includeT
 					"cs=%04d "
 					"lang=%02d "
 					"sni=%03"INT32" "
+					"usetimeaxis=%i "
 					//"cats=%"INT32" "
 					"lastspidered=%s "
 					"ip=%s "
@@ -6571,6 +6680,7 @@ void dumpTitledb (char *coll,int32_t startFileNum,int32_t numFiles,bool includeT
 					xd->m_charset,//tr.getCharset(),
 					xd->m_langId,//tr.getLanguage(),
 					(int32_t)xd->m_siteNumInlinks,//tr.getDo
+					xd->m_useTimeAxis,
 					//nc,
 					ppp, 
 					iptoa(xd->m_ip),//ipbuf , 
@@ -6674,6 +6784,7 @@ void dumpTitledb (char *coll,int32_t startFileNum,int32_t numFiles,bool includeT
 			"ctype=%s "
 			"lang=%02d "
 			"sni=%03"INT32" "
+			"usetimeaxis=%i "
 			//"cats=%"INT32" "
 			"lastspidered=%s "
 			"ip=%s "
@@ -6700,6 +6811,7 @@ void dumpTitledb (char *coll,int32_t startFileNum,int32_t numFiles,bool includeT
 			g_contentTypeStrings[xd->m_contentType],
 			xd->m_langId,//tr.getLanguage(),
 			(int32_t)xd->m_siteNumInlinks,//tr.getDocQuality(),
+			xd->m_useTimeAxis,
 			//nc,
 			ppp, 
 			iptoa(xd->m_ip),//ipbuf , 
@@ -6910,6 +7022,8 @@ void dumpDoledb (char *coll,int32_t startFileNum,int32_t numFiles,bool includeTr
 		printf("\n");
 		// must be a request -- for now, for stats
 		if ( ! g_spiderdb.isSpiderRequest((key128_t *)srec) ) {
+			// error!
+			continue;
 			char *xx=NULL;*xx=0; }
 		// cast it
 		SpiderRequest *sreq = (SpiderRequest *)srec;
@@ -11649,17 +11763,19 @@ static BigFile s_f;
 static int32_t s_numThreads = 0;
 static int64_t s_maxReadSize = 1;
 static int64_t s_startTime = 0;
+static bool s_doSeqWriteThread;
 //#define MAX_READ_SIZE (2000000)
 #include <sys/types.h>
 #include <sys/wait.h>
 
 void seektest ( char *testdir, int32_t numThreads, int32_t maxReadSize , 
-		char *filename ) {
+		char *filename , bool doSeqWriteThread ) {
 
 	g_loop.init();
 	g_threads.init();
 	s_numThreads = numThreads;
 	s_maxReadSize = maxReadSize;
+	s_doSeqWriteThread = doSeqWriteThread;
 	if ( s_maxReadSize <= 0 ) s_maxReadSize = 1;
 	//if ( s_maxReadSize > MAX_READ_SIZE ) s_maxReadSize = MAX_READ_SIZE;
 
@@ -11696,7 +11812,7 @@ void seektest ( char *testdir, int32_t numThreads, int32_t maxReadSize ,
 	    "exist. Use ./gb thrutest ... to create speedtest* files.");
 	return;
 skip:
-	s_f.open ( O_RDONLY );
+	s_f.open ( O_RDWR );
 	s_filesize = s_f.getFileSize();
 	log ( LOG_INIT, "admin: file size = %"INT64".",s_filesize);
 	// always block
@@ -11725,6 +11841,30 @@ skip:
 	//}
 	//s_lock = 1;
 	//pthread_t tid1 ; //, tid2;
+
+	//g_conf.m_logDebugThread = 1;
+
+	// garbage collection on ssds seems to be triggered by writes so
+	// that they do not hurt read times, do this:
+	g_conf.m_flushWrites = 1;
+
+	// disable linux file cache
+  	// system("echo 1 > /proc/sys/vm/drop_caches");
+
+	// -o sync TOTAL WORKS!!!!!!!
+	// mount with -o sync to disable write page caching on linux
+
+	// disable on-disk write cache
+	// system("sudo hdparm -W 0 /dev/sda2");
+	// system("sudo hdparm -W 0 /dev/sdb1");
+	// system("sudo hdparm -W 0 /dev/sdc1");
+	// system("sudo hdparm -W 0 /dev/sdd1");
+
+	// disable read-ahead
+	// system("sudo hdparm -A 0 /dev/sda2");
+	// system("sudo hdparm -A 0 /dev/sdb1");
+	// system("sudo hdparm -A 0 /dev/sdc1");
+	// system("sudo hdparm -A 0 /dev/sdd1");
 
 	// set time
 	s_startTime = gettimeofdayInMilliseconds_force();
@@ -11778,6 +11918,7 @@ void *startUp ( void *state , ThreadEntry *t ) {
 	//	fprintf(stderr,"Threads::startUp: setpriority: failed\n");
 	//	exit(-1);
 	//}
+
 	// read buf
 	//char buf [ MAX_READ_SIZE ];
 #undef malloc
@@ -11789,13 +11930,25 @@ void *startUp ( void *state , ThreadEntry *t ) {
 	}
 	// we got ourselves
 	s_launched++;
+
+	char *s = "reads";
+	if ( id == 0 && s_doSeqWriteThread )
+		s = "writes";
 	// msg
-	fprintf(stderr,"id=%"INT32" launched. Performing 100000 reads.\n",id);
+	fprintf(stderr,"threadid=%"INT32" launched. "
+		"Performing 100000 %s.\n",id,s);
+
+// #undef sleep
+// 	if (  id == 0 ) sleep(1000);
+// #define sleep(a) { char *xx=NULL;*xx=0; }
+
+
 	// wait for lock to be unleashed
 	//while ( s_launched != s_numThreads ) usleep(10);
 	// now do a stupid loop
 	//int32_t j, off , size;
 	int64_t off , size;
+	int64_t seqOff = 0;
 	for ( int32_t i = 0 ; i < 100000 ; i++ ) {
 		uint64_t r = rand();
 		r <<= 32 ;
@@ -11809,7 +11962,13 @@ void *startUp ( void *state , ThreadEntry *t ) {
 		int64_t start = gettimeofdayInMilliseconds_force();
 		//fprintf(stderr,"%"INT32") i=%"INT32" start\n",id,i );
 		//pread ( s_fd1 , buf , size , off );
-		s_f.read ( buf , size , off );
+		if ( id == 0 && s_doSeqWriteThread )
+			s_f.write ( buf , size , seqOff );
+		else
+			s_f.read ( buf , size , off );
+		seqOff += size;
+		if ( seqOff + size > s_filesize )
+			seqOff = 0;
 		//fprintf(stderr,"%"INT32") i=%"INT32" done\n",id,i );
 		int64_t now = gettimeofdayInMilliseconds_force();
 #undef usleep
@@ -11818,13 +11977,25 @@ void *startUp ( void *state , ThreadEntry *t ) {
 		s_count++;
 		float sps = (float)((float)s_count * 1000.0) / 
 			(float)(now - s_startTime);
-		fprintf(stderr,"count=%"INT32" off=%012"INT64" size=%"INT32" time=%"INT32"ms "
-			"(%.2f seeks/sec)\n",
+		int64_t poff = off;
+		char *str = "seeks";
+		if ( id == 0 && s_doSeqWriteThread ) {
+			poff = seqOff;
+			str = "writes";
+		}
+		fprintf(stderr,"threadid=%i "
+			"count=%"INT32" "
+			"off=%012"INT64" "
+			"size=%"INT32" "
+			"time=%"INT32"ms "
+			"(%.2f %s/sec)\n",
+			(int)id,
 			(int32_t)s_count,
-			(int64_t)off,
+			(int64_t)poff,
 			(int32_t)size,
 			(int32_t)(now - start) , 
-			sps );
+			sps ,
+			str );
 	}
 		
 

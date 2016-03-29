@@ -50,7 +50,8 @@
 
 extern int g_inMemcpy;
 
-#define MAXDOCLEN (1024*1024 * 5)
+//#define MAXDOCLEN (1024*1024 * 5)
+//#define MAXDOCLEN (1024*1024)
 
 HashTableX *g_ct = NULL;
 XmlDoc *g_doc = NULL;
@@ -212,6 +213,10 @@ class XmlDoc *g_xd;
 
 void XmlDoc::reset ( ) {
 
+	m_oldDocExistedButHadError = false;
+
+	m_addedStatusDocId = 0;
+
 	if ( m_diffbotProxyReplyValid && m_diffbotProxyReply ) {
 		mfree ( m_diffbotProxyReply , sizeof(ProxyReply) , "dprox" );
 		m_diffbotProxyReply = NULL;
@@ -310,6 +315,8 @@ void XmlDoc::reset ( ) {
 
 	m_sentToDiffbot = 0;
 	m_gotDiffbotSuccessfulReply = 0;
+	// we need to reset this to false
+	m_useTimeAxis = false;
 
 	m_sentToDiffbotThisTime = false;
 
@@ -505,6 +512,8 @@ void XmlDoc::reset ( ) {
 		m_query3a = NULL;
 	}
 
+	m_surroundingTextBuf.purge();
+	m_rssItemBuf.purge();
 	//m_twbuf.purge();
 	m_topMatchingQueryBuf.purge();
 	//m_queryPtrs.purge();
@@ -912,6 +921,7 @@ void XmlDoc::reset ( ) {
 	m_forwardDownloadRequest = false;
 
 	m_isChildDoc = false;
+	m_parentDocPtr = NULL;
 
 	// for utf8 content functions
 	m_savedp       = NULL;
@@ -1412,6 +1422,10 @@ bool XmlDoc::set4 ( SpiderRequest *sreq      ,
 	//     // in the niceness converstion logic.
 	//     ! g_hostdb.m_myHost->m_isProxy ) {
 	//	char *xx=NULL; *xx=0; }
+
+	if ( sreq->isCorrupt() ) 
+		return log("XmlDoc: set4() spider request is corrupt in coll "
+			   "%s u=%s",coll,sreq->m_url);
 
 	m_sreqValid    = true;
 
@@ -2689,7 +2703,7 @@ bool XmlDoc::indexDoc ( ) {
 	SpiderReply *nsr = NULL;
 
 	// if only rebuilding posdb do not rebuild spiderdb
-	if ( m_useSpiderdb ) {
+	if ( m_useSpiderdb && ! m_addedSpiderReplySizeValid ) {
 
 		////
 		//
@@ -2715,6 +2729,37 @@ bool XmlDoc::indexDoc ( ) {
 		m_addedSpiderReplySizeValid = true;
 	}
 
+	// for other errors like EBADTITLEREC we are not adding spider
+	// status docs, so add them here
+	/*
+	if ( ! m_addedStatusDocSizeValid ) {
+		SafeBuf *ssDocMetaList = NULL;
+		// if calling getSpiderStatusDocMetaList blocks then
+		// call addErrorStuffWrapper() to call msg4
+		//m_masterLoop = addErrorStuffWrapper();
+		//m_state = this;
+		// this uses m_indexCode to set it
+		// if this blocks it ends up calling m_masterLoop and
+		// re-entering this function with g_errno clear possibly
+		// so do we make it back here????? MDW
+		ssDocMetaList = getSpiderStatusDocMetaList(NULL ,false);
+		// error?
+		if ( ! ssDocMetaList ) return true;
+		// blocked?
+		if ( ssDocMetaList == (void *)-1 ) return false;
+		// need to alloc space for it too
+		char *list = ssDocMetaList->getBufStart();
+		int32_t len = ssDocMetaList->length();
+		// this too
+		m_addedStatusDocSize = len;
+		m_addedStatusDocSizeValid = true;
+		// also count it as a crawl attempt
+		cr->m_localCrawlInfo.m_pageDownloadAttempts++;
+		cr->m_globalCrawlInfo.m_pageDownloadAttempts++;
+		if ( ! m_metaList2.safeMemcpy ( list , len ) )
+			return true;
+	}
+	*/
 
 	m_msg4Launched = true;
 
@@ -3514,6 +3559,14 @@ bool XmlDoc::readMoreWarc() {
 // . returns true and sets g_errno on err
 // . injectwarc
 bool XmlDoc::indexWarcOrArc ( ) {
+
+	CollectionRec *cr = getCollRec();
+	if ( ! cr ) return true;
+	if ( ! cr->m_indexWarcs ) {
+		g_errno = EDOCWARC;
+		return true;
+	}
+
 	// This can be a busy loop if we have max injections out but we
 	// are getting a read ready callback.  Should we unregister
 	// when max injections are out and then reregister when we have room?
@@ -4567,6 +4620,9 @@ int32_t *XmlDoc::getIndexCode2 ( ) {
 	// it will always be 100% the same
 	if ( m_recycleContent )
 		check = false;
+	// never check for a bulk job
+	if ( cr->m_isCustomCrawl == 2 )
+		check = false;
 
 	if ( check ) {
 		// check inlinks now too!
@@ -4606,6 +4662,11 @@ int32_t *XmlDoc::getIndexCode2 ( ) {
 		if ( *ch32 == od->m_contentHash32 ) {
 			m_indexCode = EDOCUNCHANGED;
 			m_indexCodeValid = true;
+			// hack these values on or off.
+			// really should be function calls.
+			// but it never gets set when it should if the
+			// doc is unchanged.
+			m_sentToDiffbot = od->m_sentToDiffbot;
 			return &m_indexCode;
 		}
 	}
@@ -10220,6 +10281,35 @@ char *XmlDoc::getIsDup ( ) {
 		return &m_isDup;
 	}
 
+	// if &links was given in the diffbot api url then do not do 
+	// spider time deduping because the pages are likely rendered using
+	// javascript, so they'd all seem to be dups of one another.
+	if ( cr->m_isCustomCrawl ) {
+		SafeBuf *au = getDiffbotApiUrl();
+		if ( ! au || au == (void *)-1 ) return (char *)au;
+		char *linksParm = NULL;
+		if ( au->length() > 0 )
+			linksParm = strstr ( au->getBufStart() , "&links");
+		if ( ! linksParm && au->length() > 0 )
+			linksParm = strstr ( au->getBufStart() , "?links");
+		if ( linksParm && linksParm[6] && linksParm[6] != '&' )
+			linksParm = NULL;
+		if ( linksParm ) {
+			m_isDupValid = true;
+			m_isDup = false;
+			return &m_isDup;
+		}
+	}
+
+	// do not dedup seeds
+	bool isSeed = ( m_sreqValid && m_sreq.m_isAddUrl );
+	if ( cr->m_isCustomCrawl && isSeed ) {
+		m_isDupValid = true;
+		m_isDup = false;
+		return &m_isDup;
+	}
+
+
 	setStatus ( "checking for dups" );
 
 	// BUT if we are already indexed and a a crawlbot/bulk diffbot job
@@ -11304,8 +11394,8 @@ Url **XmlDoc::getRedirUrl() {
 		// return a fake thing. content length is 0.
 		return &m_redirUrlPtr;
 	}
-	// set it
-	if ( LEN && ! mime.set ( m_httpReply, LEN, getCurrentUrl() ) ) {
+	// set it. if 'connection refused' then LEN is -1.
+	if ( LEN<0 || ! mime.set ( m_httpReply, LEN, getCurrentUrl() ) ) {
 		// set this on mime error
 		//if ( ! m_indexCode ) m_indexCode = EBADMIME;
 		// bad mime, but i guess valid empty redir url
@@ -11325,8 +11415,7 @@ Url **XmlDoc::getRedirUrl() {
 	Url *loc = NULL;
 
 	// quickly see if we are a robots.txt url originally
-	Url *fu = getFirstUrl();
-	bool isRobotsTxt = isRobotsTxtFile ( fu->getUrl() , fu->getUrlLen() );
+	bool isRobotsTxt = isFirstUrlRobotsTxt ( );
 
 	// 
 	// check for <meta http-equiv="Refresh" content="1; URL=contact.htm">
@@ -11374,7 +11463,19 @@ Url **XmlDoc::getRedirUrl() {
 	// breathe
 	QUICKPOLL(m_niceness);
 
-	// get cookie for redirect to fix nyt.com
+	// did we send a cookie with our last request?
+	bool sentCookieLastTime = false;
+	if ( m_redirCookieBuf.length() )
+		sentCookieLastTime = true;
+
+	// get cookie for redirect to fix nyt.com/nytimes.com
+	// for gap.com it uses multiple Set-Cookie:\r\n lines so we have
+	// to accumulate all of them into a buffer now
+	m_redirCookieBuf.reset();
+	mime.addCookiesIntoBuffer ( &m_redirCookieBuf );
+	m_redirCookieBufValid = true;
+
+	/*
 	char *cookie = mime.getCookie();
 	// find end of cookie at the semicolon
 	char *s = cookie;
@@ -11387,6 +11488,7 @@ Url **XmlDoc::getRedirUrl() {
 		m_redirCookieBuf.nullTerm();
 		m_redirCookieBufValid = true;
 	}
+	*/
 
 	// mdw23
 	//log("http: reply=%s",m_httpReply);
@@ -11480,6 +11582,13 @@ Url **XmlDoc::getRedirUrl() {
 	//   until you send a cookie!!
 	// . www.twomileborris.com does the cookie thing, too
 	if ( strcmp ( cu->getUrl(), loc->getUrl() ) == 0 ) {
+		// try sending the cookie if we got one now and didn't have
+		// one for this last request
+		if ( ! sentCookieLastTime && m_redirCookieBuf.length() ) {
+			m_redirUrl.set ( loc->getUrl() );
+			m_redirUrlPtr = &m_redirUrl;
+			return &m_redirUrlPtr;
+		}
 		if ( ! keep ) m_redirError = EDOCREDIRECTSTOSELF;
 		return &m_redirUrlPtr;
 	}
@@ -11658,7 +11767,14 @@ Url **XmlDoc::getRedirUrl() {
 	int32_t  dlen2 = m_firstUrl.getDomainLen();
 	if ( dlen2 == 11 && strncmp(dom2,"nytimes.com",dlen2)==0 )
 		allowSimplifiedRedirs = true;
+	// same for bananarepublic.gap.com ?
+	// if ( dlen2 == 7 && strncmp(dom2,"gap.com",dlen2)==0 )
+	// 	allowSimplifiedRedirs = true;
 
+	// if redirect is setting cookies we have to follow the redirect
+	// all the way through so we can stop now.
+	if ( m_redirCookieBufValid && m_redirCookieBuf.getLength() )
+		allowSimplifiedRedirs = true;
 
 	// . don't bother indexing this url if the redir is better
 	// . 301 means moved PERMANENTLY...
@@ -11991,10 +12107,24 @@ XmlDoc **XmlDoc::getOldXmlDoc ( ) {
 		// ok, fix the memleak here
 		mdelete ( m_oldDoc , sizeof(XmlDoc), "odnuke" );
 		delete ( m_oldDoc );
+		m_oldDocExistedButHadError = true;
 		//log("xmldoc: nuke xmldoc1=%"PTRFMT"",(PTRTYPE)m_oldDoc);
 		m_oldDoc = NULL;
 		g_errno = saved;
-		return NULL;
+		// MDW: i removed this on 2/8/2016 again so the code below
+		// would execute.
+		//return NULL; //mdwmdwmdw
+		// if it is data corruption, just assume empty so
+		// we don't stop spidering a url because of this. so we'll
+		// think this is the first time indexing it. otherwise
+		// we get "Bad cached document" in the logs and the
+		// SpiderReply and it never gets re-spidered because it is
+		// not a 'temporary' error according to the url filters.
+		log("build: treating corrupted titlerec as not found");
+		g_errno = 0;
+		m_oldDoc = NULL;
+		m_oldDocValid = true;
+		return &m_oldDoc;
 	}
 	m_oldDocValid = true;
 	// share our masterloop and state!
@@ -12131,6 +12261,7 @@ XmlDoc **XmlDoc::getExtraDoc ( char *u , int32_t maxCacheAge ) {
 	m_extraDoc->m_forwardDownloadRequest = true;
 	// set this flag so msg13.cpp doesn't print the "hammering ip" msg
 	m_extraDoc->m_isChildDoc = true;
+	m_extraDoc->m_parentDocPtr = this;
 	// debug it
 	//g_doc = this;
 
@@ -12182,6 +12313,8 @@ XmlDoc **XmlDoc::getRootXmlDoc ( int32_t maxCacheAge ) {
 	// otherwise, we gotta get it!
 	char **rtr = getRootTitleRec ( );
 	if ( ! rtr || rtr == (char **)-1 ) return (XmlDoc **)rtr;
+	Url *cu = getCurrentUrl();
+	if ( ! cu || cu == (void *)-1 ) return (XmlDoc **)cu;
 	// if no title rec, return ptr to a null
 	//m_rootDoc = NULL;
 	//if ( ! *rtr ) { 
@@ -12257,7 +12390,10 @@ XmlDoc **XmlDoc::getRootXmlDoc ( int32_t maxCacheAge ) {
 		// clear it
 		sreq.reset();
 		// spider the url "u"
-		strcpy ( sreq.m_url , mysite );
+		char *p = sreq.m_url;
+		if ( cu->isHttps() ) p += sprintf ( p , "https://" );
+		else                 p += sprintf ( p , "http://" );
+		strcpy ( p , mysite );
 		// set this
 		if ( m_sreqValid ) {
 			// this will avoid it adding to tagdb!
@@ -12315,6 +12451,7 @@ XmlDoc **XmlDoc::getRootXmlDoc ( int32_t maxCacheAge ) {
 	m_rootDoc->m_forwardDownloadRequest = true;
 	// set this flag so msg13.cpp doesn't print the "hammering ip" msg
 	m_rootDoc->m_isChildDoc = true;
+	m_rootDoc->m_parentDocPtr = this;
 
 	// validate it
 	m_rootDocValid = true;
@@ -12369,6 +12506,10 @@ SafeBuf *XmlDoc::getTimeAxisUrl ( ) {
 char **XmlDoc::getOldTitleRec ( ) {
 	// clear if we blocked
 	//if ( g_errno == ENOTFOUND ) g_errno = 0;
+
+	// g_errno = EBADTITLEREC;
+	// return NULL;
+
 	// if valid return that
 	if ( m_oldTitleRecValid ) return &m_oldTitleRec;
 	// update status msg
@@ -12607,8 +12748,38 @@ int64_t *XmlDoc::getDocId ( ) {
 	setStatus ("getting docid");
 	// . set our docid
 	// . *od is NULL if no title rec found with that docid in titledb
-	if ( *od ) m_docId = *(*od)->getDocId();
-	else       m_docId = m_msg22a.getAvailDocId();
+	if ( *od ) {
+		m_docId = *(*od)->getDocId();
+		m_docIdValid = true;
+		return &m_docId;
+	}
+
+	m_docId = m_msg22a.getAvailDocId();
+
+	// if titlerec was there but not od it had an error uncompressing
+	// because of the corruption bug in RdbMem.cpp when dumping to disk.
+	if ( m_docId == 0 && m_oldTitleRec && m_oldTitleRecSize > 12 ) {
+		m_docId = g_titledb.getDocIdFromKey ( (key_t *)m_oldTitleRec );
+		log("build: salvaged docid %"INT64" from corrupt title rec "
+		    "for %s",m_docId,m_firstUrl.m_url);
+	}
+
+	if ( m_docId == 0 ) {
+		log("build: docid is 0 for %s",m_firstUrl.m_url);
+		g_errno = ENODOCID;
+		return NULL;
+	}
+
+	// ensure it is within probable range
+	if ( ! getUseTimeAxis () ) {
+		char *u = getFirstUrl()->getUrl();
+		int64_t pd = g_titledb.getProbableDocId(u);
+		int64_t d1 = g_titledb.getFirstProbableDocId ( pd );
+		int64_t d2 = g_titledb.getLastProbableDocId  ( pd );
+		if ( m_docId < d1 || m_docId > d2 ) {
+			char *xx=NULL;*xx=0; }
+	}
+
 	// if docid is zero, none is a vailable!!!
 	//if ( m_docId == 0LL ) m_indexCode = ENODOCID;
 	m_docIdValid = true;
@@ -12630,6 +12801,13 @@ char *XmlDoc::getIsIndexed ( ) {
 	//}
 	// get the url
 	//char *u = getFirstUrl()->getUrl();
+
+	if ( m_oldDocValid ) {
+		m_isIndexedValid = true;
+		if ( m_oldDoc ) m_isIndexed = true;
+		else            m_isIndexed = false;
+		return &m_isIndexed;
+	}
 
 	CollectionRec *cr = getCollRec();
 	if ( ! cr ) return NULL;
@@ -14862,6 +15040,14 @@ int32_t *XmlDoc::getFinalCrawlDelay() {
 	return &m_finalCrawlDelay;
 }
 
+bool XmlDoc::isFirstUrlRobotsTxt ( ) {
+	if ( m_isRobotsTxtUrlValid )
+		return m_isRobotsTxtUrl;
+	Url *fu = getFirstUrl();
+	m_isRobotsTxtUrl = isRobotsTxtFile ( fu->getUrl() , fu->getUrlLen() );
+	m_isRobotsTxtUrlValid = true;
+	return m_isRobotsTxtUrl;
+}
 
 // . get the Robots.txt and see if we are allowed
 // . returns NULL and sets g_errno on error
@@ -14909,11 +15095,17 @@ bool *XmlDoc::getIsAllowed ( ) {
 	// double get?
 	if ( m_crawlDelayValid ) { char *xx=NULL;*xx=0; }
 
+	// bulk jobs don't need this
+	CollectionRec *cr = getCollRec();
+	if ( cr && cr->m_isCustomCrawl == 2 ) {
+		m_isAllowed      = true;
+		m_isAllowedValid = true;
+		return &m_isAllowed;
+	}
+
 	// . if WE are robots.txt that is always allowed!!!
 	// . check the *first* url since these often redirect to wierd things
-	Url *fu = getFirstUrl();
-	bool isRobotsTxt = isRobotsTxtFile ( fu->getUrl() , fu->getUrlLen() );
-	if ( isRobotsTxt ) {
+	if ( isFirstUrlRobotsTxt() ) {
 		m_isAllowed      = true;
 		m_isAllowedValid = true;
 		m_crawlDelayValid = true;
@@ -14935,6 +15127,7 @@ bool *XmlDoc::getIsAllowed ( ) {
 	int32_t *ip = getIp ();
 	// error? or blocked?
 	if ( ! ip || ip == (void *)-1 ) return (bool *)ip;
+	Url *fu = getFirstUrl();
 	// if ip does not exist on the dns, do not try to download robots.txt
 	// it is pointless... this can happen in the dir coll and we basically
 	// have "m_siteInCatdb" set to true
@@ -14958,13 +15151,15 @@ bool *XmlDoc::getIsAllowed ( ) {
 	int32_t *pfip = getFirstIp();
 	if ( ! pfip || pfip == (void *)-1 ) return (bool *)pfip;
 
-	// set m_extraUrl to the robots.txt url
-	char buf[MAX_URL_LEN+1];
-	char *p = buf;
-	p += sprintf ( p , "http://" );
 	// get the current url after redirects
 	Url *cu = getCurrentUrl();
 	if ( ! cu || cu == (void *)-1 ) return (bool *)cu;
+
+	// set m_extraUrl to the robots.txt url
+	char buf[MAX_URL_LEN+2];
+	char *p = buf;
+	if ( cu->isHttps() ) p += sprintf ( p , "https://" );
+	else                 p += sprintf ( p , "http://" );
 	// sanity
 	if ( ! cu->getHost() ) { char *xx=NULL;*xx=0; }
 	gbmemcpy ( p , cu->getHost() , cu->getHostLen() );
@@ -15130,6 +15325,16 @@ char *XmlDoc::getIsWWWDup ( ) {
 
 	// must NOT have a www
 	if ( ! u->isHostWWW() ) {
+		m_isWWWDup      = false;
+		m_isWWWDupValid = true;
+		return &m_isWWWDup;
+	}
+
+	// watch out for idiot urls like www.gov.uk and www.gov.za
+	// treat them as though the TLD is uk/za and the domain
+	// is gov.uk and gov.za
+	if ( u->getDomain() &&
+	     strncmp ( u->getDomain() , "www." , 4 ) == 0 ) {
 		m_isWWWDup      = false;
 		m_isWWWDupValid = true;
 		return &m_isWWWDup;
@@ -15561,6 +15766,12 @@ char *XmlDoc::getSite ( ) {
 	if ( ! cr ) return NULL;
 	// get url
 	Url *f = getFirstUrl();
+	// bogus first url? prevent core in getIsSiteRoot().
+	if ( f->getUrlLen() <= 1 ) {
+		log("xmldoc: getSite: got bogus first url.");
+		g_errno = EBADURL;
+		return NULL;
+	}
 	// this must be valid
 	//if ( ! m_spideredTimeValid ) { char *xx=NULL;*xx=0; }
 	int32_t timestamp = getSpideredTime();//m_spideredTime;
@@ -15753,6 +15964,10 @@ void gotDiffbotReplyWrapper ( void *state , TcpSocket *s ) {
 			char *err = strstr(page,"\"error\":\"");
 			if ( err ) err += 9;
 			int32_t code = EDIFFBOTUNKNOWNERROR;
+			if ( ! err &&
+			     page[0]=='{' &&
+			     page[1]=='}' )
+				code = EDIFFBOTCURLYREPLY;
 			if ( err && !strncmp(err,"Unable to apply rules",21))
 				code = EDIFFBOTUNABLETOAPPLYRULES;
 			// like .pdf pages get this error
@@ -15768,15 +15983,23 @@ void gotDiffbotReplyWrapper ( void *state , TcpSocket *s ) {
 				code = EDIFFBOTVERSIONREQ;
 			if ( err && !strncmp(err,"Empty content",13))
 				code = EDIFFBOTEMPTYCONTENT;
+			if ( err && !strncmp(err,"The selected pages contains too many TextNodes",46))
+				code = EDIFFBOTTOOMANYTEXTNODES;
 			if ( err && !strncmp(err,"No content received",19))
 				code = EDIFFBOTEMPTYCONTENT;
 			if ( err && !strncmp(err,"Request timed",13))
 				code = EDIFFBOTREQUESTTIMEDOUT;
+			if ( err &&!strncmp(err,"Request of third-party c",24))
+				code = EDIFFBOTREQUESTTIMEDOUTTHIRDPARTY;
 			// error processing url
 			if ( err && !strncmp(err,"Error processing",16))
 				code = EDIFFBOTURLPROCESSERROR;
 			if ( err && !strncmp(err,"Your token has exp",18))
 				code = EDIFFBOTTOKENEXPIRED;
+			if ( err && !strncmp(err,"Not authorized API tok",22))
+				code = EDIFFBOTTOKENUNAUTHORIZED;
+			if ( err && !strncmp(err,"Error.",6) )
+				code = EDIFFBOTPLAINERROR;
 			THIS->m_diffbotReplyError = code;
 		}
 		// a hack for detecting if token is expired
@@ -15992,6 +16215,12 @@ bool *XmlDoc::getRecycleDiffbotReply ( ) {
 	if ( cr->m_diffbotOnlyProcessIfNewUrl &&
 	     od && od->m_gotDiffbotSuccessfulReply )
 		m_recycleDiffbotReply = true;
+
+	// to fight off corrupted title recs just assume that even though
+	// we could not uncompress the title rec that it had a successful reply
+	// if ( cr->m_diffbotOnlyProcessIfNewUrl &&
+	//      m_oldDocExistedButHadError )
+	// 	m_recycleDiffbotReply = true;
 
 	// don't recycle if specfically asked to reindex though
 	if ( m_sreqValid && m_sreq.m_isPageReindex )
@@ -17100,7 +17329,9 @@ char **XmlDoc::getHttpReply2 ( ) {
 	//if ( ! hc || hc == (void *)-1 ) return (char **)hc;
 
 	XmlDoc *od = NULL;
-	if ( ! m_isSpiderProxy ) {
+	if ( ! m_isSpiderProxy &&
+	     // don't lookup xyz.com/robots.txt in titledb
+	     ! isFirstUrlRobotsTxt() ) {
 		XmlDoc **pod = getOldXmlDoc ( );
 		if ( ! pod || pod == (XmlDoc **)-1 ) return (char **)pod;
 		// get ptr to old xml doc, could be NULL if non exists
@@ -17184,8 +17415,14 @@ char **XmlDoc::getHttpReply2 ( ) {
 
 	// sanity check
 	if ( ! m_firstIpValid ) { char *xx=NULL;*xx=0; }
+
+	// r->m_maxTextDocLen          = maxDownload;
+	// r->m_maxOtherDocLen         = maxDownload;
+	r->m_maxTextDocLen          = cr->m_maxTextDocLen;
+	r->m_maxOtherDocLen         = cr->m_maxOtherDocLen;
+
 	// max to download in bytes. currently 1MB.
-	int32_t maxDownload = (int32_t)MAXDOCLEN;
+	//int32_t maxDownload = (int32_t)MAXDOCLEN;
 	// but if url is http://127.0.0.1.... or local then
 	if ( m_ipValid ) {
 		// make into a string
@@ -17198,8 +17435,11 @@ char **XmlDoc::getHttpReply2 ( ) {
 		// . if local then make web page download max size unlimited
 		// . this is for adding the gbdmoz.urls.txt.* files to
 		//   populate dmoz. those files are about 25MB each.
-		if ( isLocal )
-			maxDownload = -1;
+		if ( isLocal ) {
+			//maxDownload = -1;
+			r->m_maxTextDocLen  = -1;
+			r->m_maxOtherDocLen = -1;
+		}
 	}
 	// m_maxCacheAge is set for getting contact or root docs in 
 	// getContactDoc() and getRootDoc() and it only applies to
@@ -17209,8 +17449,8 @@ char **XmlDoc::getHttpReply2 ( ) {
 	r->m_urlIp                  = *ip;
 	r->m_firstIp                = m_firstIp;
 	r->m_urlHash48              = getFirstUrlHash48();
-	r->m_maxTextDocLen          = maxDownload;
-	r->m_maxOtherDocLen         = maxDownload;
+	if ( r->m_maxTextDocLen  < 100000 ) r->m_maxTextDocLen  = 100000;
+	if ( r->m_maxOtherDocLen < 200000 ) r->m_maxOtherDocLen = 200000;
 	r->m_forwardDownloadRequest = (bool)m_forwardDownloadRequest;
 	r->m_useTestCache           = (bool)useTestCache;
 	r->m_spideredTime           = getSpideredTime();//m_spideredTime;
@@ -17227,7 +17467,7 @@ char **XmlDoc::getHttpReply2 ( ) {
 		// . only do once per redirect
 		// . do not invalidate because we might have to carry it
 		//   through to the next redir... unless we change domain
-		// . this fixes the nyt.com bug some more
+		// . this fixes the nyt.com/nytimes.com bug some more
 		//m_redirCookieBufValid = false;
 	}
 
@@ -17548,6 +17788,9 @@ char **XmlDoc::gotHttpReply ( ) {
 	// clear this i guess
 	g_errno = 0;
 
+	/*
+	  MDW: 2/8/16 this logic now below in getIsContentTruncated() function
+
 	// int16_tcut - convert size to length
 	int32_t LEN = m_httpReplySize - 1;
 
@@ -17562,6 +17805,7 @@ char **XmlDoc::gotHttpReply ( ) {
 	m_isContentTruncated2 = (bool)m_isContentTruncated;
 	// validate it
 	m_isContentTruncatedValid = true;
+	*/
 
 	return &m_httpReply;
 }
@@ -17590,10 +17834,35 @@ char *XmlDoc::getIsContentTruncated ( ) {
 	// need a valid reply
 	char **replyPtr = getHttpReply ();
 	if ( ! replyPtr || replyPtr == (void *)-1 ) return (char *)replyPtr;
-	// return it
-	if ( ! m_isContentTruncatedValid ) { char *xx=NULL;*xx=0; }
-	// set shadow member
+
+	uint8_t *ct = getContentType();
+	if ( ! ct || ct == (void *)-1 ) return (char *)ct;
+
+	CollectionRec *cr = getCollRec();
+	if ( ! cr ) return NULL;
+
+	// shortcut - convert size to length
+	int32_t LEN = m_httpReplySize - 1;
+
+	m_isContentTruncated  = false;
+	// was the content truncated? these might label a doc is truncated
+	// when it really is not... but we only use this for link spam stuff,
+	// so it should not matter too much. it should only happen rarely.
+	if ( cr->m_maxTextDocLen >= 0 &&
+	     LEN >= cr->m_maxTextDocLen-1  &&
+	     *ct == CT_HTML ) 
+		m_isContentTruncated = true;
+
+	if ( cr->m_maxOtherDocLen >= 0 &&
+	     LEN >= cr->m_maxOtherDocLen-1 &&
+	     *ct != CT_HTML ) 
+		m_isContentTruncated = true;
+
+	//if ( LEN > MAXDOCLEN ) m_isContentTruncated = true;
+	// set this
 	m_isContentTruncated2 = (bool)m_isContentTruncated;
+	// validate it
+	m_isContentTruncatedValid = true;
 
 	return &m_isContentTruncated2;
 }
@@ -18170,6 +18439,26 @@ Url **XmlDoc::getMetaRedirUrl ( ) {
 	for ( ; p < pend ; p++ ) {
 		// breathe
 		QUICKPOLL ( m_niceness );		
+		// fix <!--[if lte IE 6]>
+		// <meta http-equiv="refresh" content="0; url=/error-ie6/" />
+		if ( *p == '!' && 
+		     p[-1]=='<' &&
+		     p[1] == '-' &&
+		     p[2] == '-' ) {
+			// find end of comment
+			for ( ; p < pend ; p++ ) {
+				QUICKPOLL(m_niceness);
+				if ( p[0] == '-' &&
+				     p[1] == '-' &&
+				     p[2] == '>' )
+					break;
+			}
+			// if found no end of comment, then stop
+			if ( p >= pend )
+				break;
+			// resume looking for meta redirect tags
+			continue;
+		}
 		// base everything off the equal sign
 		if ( *p != '=' ) continue;
 		// did we match "http-equiv="?
@@ -18681,7 +18970,7 @@ char **XmlDoc::getFilteredContent ( ) {
 	// 	char *xx=NULL;*xx=0; }
 
 	int32_t max , max2;
-
+	CollectionRec *cr;
 	bool filterable = false;
 
 	if ( m_calledThread ) goto skip;
@@ -18727,6 +19016,9 @@ char **XmlDoc::getFilteredContent ( ) {
 	// invalidate
 	m_filteredContentValid = false;
 
+	cr = getCollRec();
+	if ( ! cr ) return NULL;
+
 	// . if we have no filter specified...
 	// . usually "gbfilter" and it is a script in the working directory
 	//if ( ! cr->m_filter[0] ) {
@@ -18735,7 +19027,8 @@ char **XmlDoc::getFilteredContent ( ) {
 	//}
 
 	// if not text/html or text/plain, use the other max
-	max = MAXDOCLEN; // cr->m_maxOtherDocLen;
+	//max = MAXDOCLEN; // cr->m_maxOtherDocLen;
+	max = cr->m_maxOtherDocLen;
 	// now we base this on the pre-filtered length to save memory because
 	// our maxOtherDocLen can be 30M and when we have a lot of injections
 	// at the same time we lose all our memory quickly
@@ -21855,6 +22148,16 @@ bool XmlDoc::logIt ( SafeBuf *bb ) {
 	if (  m_docIdValid ) 
 		sb->safePrintf("docid=%"UINT64" ",m_docId);
 
+	char *u = getFirstUrl()->getUrl();
+	int64_t pd = g_titledb.getProbableDocId(u);
+	int64_t d1 = g_titledb.getFirstProbableDocId ( pd );
+	int64_t d2 = g_titledb.getLastProbableDocId  ( pd );
+	sb->safePrintf("probdocid=%"UINT64" ",pd);
+	sb->safePrintf("probdocidmin=%"UINT64" ",d1);
+	sb->safePrintf("probdocidmax=%"UINT64" ",d2);
+	sb->safePrintf("usetimeaxis=%i ",(int)m_useTimeAxis);
+
+
 	if ( m_siteNumInlinksValid ) {
 		sb->safePrintf("siteinlinks=%04"INT32" ",m_siteNumInlinks );
 		// sb->safePrintf("siteipinlinks=%"INT32" ",
@@ -21902,6 +22205,10 @@ bool XmlDoc::logIt ( SafeBuf *bb ) {
 	
 	if ( m_contentValid )
 		sb->safePrintf("contentlen=%06"INT32" ",m_contentLen);
+
+	if ( m_isContentTruncatedValid )
+		sb->safePrintf("contenttruncated=%"INT32" ",
+			       (int32_t)m_isContentTruncated);
 
 	if ( m_robotsTxtLenValid )
 		sb->safePrintf("robotstxtlen=%04"INT32" ",m_robotsTxtLen );
@@ -21957,11 +22264,16 @@ bool XmlDoc::logIt ( SafeBuf *bb ) {
 		sb->safePrintf("addspiderrepsize=%05"INT32" ",0);
 
 
-	if ( m_addedStatusDocSizeValid )
+	if ( m_addedStatusDocSizeValid ) {
 		sb->safePrintf("addstatusdocsize=%05"INT32" ",
 			       m_addedStatusDocSize);
-	else
+		sb->safePrintf("addstatusdocid=%"UINT64" ",
+			       m_addedStatusDocId);
+	}
+	else {
 		sb->safePrintf("addstatusdocsize=%05"INT32" ",0);
+		sb->safePrintf("addstatusdocid=0 ");
+	}
 
 
 	if ( m_useSecondaryRdbs ) {
@@ -23421,6 +23733,7 @@ int32_t *XmlDoc::redoJSONObjects ( int32_t *newTitleHashes ,
 			m_dx->m_usePlacedb    = false;
 			m_dx->m_useLinkdb     = false;
 			m_dx->m_isChildDoc    = true;
+			m_dx->m_parentDocPtr  = this;
 			// are we doing a query reindex or a nuke?
 			m_dx->m_deleteFromIndex = deleteFromIndex;//true;
 			// do not try to download this url
@@ -24783,6 +25096,7 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 			m_dx->m_usePlacedb    = false;
 			m_dx->m_useLinkdb     = false;
 			m_dx->m_isChildDoc    = true;
+			m_dx->m_parentDocPtr  = this;
 			// we like to sort json objects using
 			// 'gbsortby:spiderdate' query to get the most
 			// recent json objects, so this must be valid
@@ -27213,6 +27527,8 @@ char *XmlDoc::addOutlinkSpiderRecsToMetaList ( ) {
 	if ( ! m_hopCountValid       ) { char *xx=NULL;*xx=0; }
 	//if ( ! m_spideredTimeValid   ) { char *xx=NULL;*xx=0; }
 
+	int64_t myUh48 = m_firstUrl.getUrlHash48();
+
 	// . pre-allocate a buffer to hold the spider recs
 	// . taken from SpiderRequest::store()
 	int32_t size = 0;
@@ -27673,8 +27989,14 @@ char *XmlDoc::addOutlinkSpiderRecsToMetaList ( ) {
 		strcpy(ksr.m_url,s);
 		// this must be valid
 		if ( ! m_docIdValid ) { char *xx=NULL;*xx=0; }
+
 		// set the key, ksr.m_key. isDel = false
 		ksr.setKey ( firstIp, *d , false );
+
+		// we were hopcount 0, so if we link to ourselves we override
+		// our original hopcount of 0 with this guy that has a
+		// hopcount of 1. that sux... so don't do it.
+		if ( ksr.getUrlHash48() == myUh48 ) continue;
 
 		// if we've recently added this url to spiderdb in Spider.cpp, skip it
 		//if ( sc && sc->isInDupCache ( &ksr , false ) )
@@ -29199,6 +29521,8 @@ SafeBuf *XmlDoc::getSpiderStatusDocMetaList2 ( SpiderReply *reply1 ) {
 	int64_t *uqd = getAvailDocIdOnly ( d );
 	if ( ! uqd || uqd == (void *)-1 ) return  (SafeBuf *)uqd;
 
+	m_addedStatusDocId = *uqd;
+
 	// unsigned char *hc = (unsigned char *)getHopCount();
 	// if ( ! hc || hc == (void *)-1 ) return (SafeBuf *)hc;
 
@@ -29348,6 +29672,10 @@ SafeBuf *XmlDoc::getSpiderStatusDocMetaList2 ( SpiderReply *reply1 ) {
 	if ( m_docIdValid )
 		jd.safePrintf("\"gbssDocId\":%"INT64",\n", m_docId);//*uqd);
 
+	if ( m_parentDocPtr && m_isChildDoc && m_parentDocPtr->m_docIdValid )
+		jd.safePrintf("\"gbssParentDocId\":%"INT64",\n", 
+			      m_parentDocPtr->m_docId);
+
 	if ( m_hopCountValid )
 		//jd.safePrintf("\"gbssHopCount\":%"INT32",\n",(int32_t)*hc);
 		jd.safePrintf("\"gbssHopCount\":%"INT32",\n",(int32_t)m_hopCount);
@@ -29394,7 +29722,6 @@ SafeBuf *XmlDoc::getSpiderStatusDocMetaList2 ( SpiderReply *reply1 ) {
 	else
 		jd.safePrintf("\"gbssSpiderTime\":%"INT32",\n",0);
 
-
 	if ( m_firstIndexedDateValid )
 		jd.safePrintf("\"gbssFirstIndexed\":%"UINT32",\n",
 			      m_firstIndexedDate);
@@ -29402,6 +29729,18 @@ SafeBuf *XmlDoc::getSpiderStatusDocMetaList2 ( SpiderReply *reply1 ) {
 	if ( m_contentHash32Valid )
 		jd.safePrintf("\"gbssContentHash32\":%"UINT32",\n",
 			      m_contentHash32);
+
+	// so we know what hostid spidered the url. this is not the
+	// same hostid that will store it necessarily
+	jd.safePrintf("\"gbssSpideredByHostId\":%"INT32",\n",
+		      (int32_t)g_hostdb.getMyHostId());
+
+	// which shard will store the titlerec and index terms? it
+	// is based on docid.
+	if ( m_docIdValid ) {
+		int32_t shardNum = getShardNumFromDocId ( m_docId );
+		jd.safePrintf("\"gbssStoredOnShard\":%"INT32",\n",shardNum);
+	}
 
 	if ( m_downloadStartTimeValid && m_downloadEndTimeValid ) {
 		jd.safePrintf("\"gbssDownloadStartTimeMS\":%"INT64",\n",
@@ -29422,6 +29761,10 @@ SafeBuf *XmlDoc::getSpiderStatusDocMetaList2 ( SpiderReply *reply1 ) {
 
 	jd.safePrintf("\"gbssUsedRobotsTxt\":%"INT32",\n",
 		      m_useRobotsTxt);
+
+	if ( m_linksValid )
+		jd.safePrintf("\"gbssNumOutlinksOnPage\":%"INT32",\n",
+			      (int32_t)m_links.getNumLinks());
 
 	//if ( m_numOutlinksAddedValid ) 
 	// crap, this is not right because we only call addOutlinksToMetaList()
@@ -29485,6 +29828,11 @@ SafeBuf *XmlDoc::getSpiderStatusDocMetaList2 ( SpiderReply *reply1 ) {
 	if ( m_contentValid )
 		jd.safePrintf("\"gbssContentLen\":%"INT32",\n",
 			      m_contentLen);
+
+	if ( m_isContentTruncatedValid )
+		jd.safePrintf("\"gbssIsContentTruncated\":%"INT32",\n",
+			      (int32_t)m_isContentTruncated);
+
 
 	// do not show the -1 any more, just leave it out then
 	// to make things look prettier
@@ -30456,6 +30804,12 @@ bool XmlDoc::getUseTimeAxis ( ) {
 	if ( ! cr ) return false;
 	m_useTimeAxis = cr->m_useTimeAxis;
 	m_useTimeAxisValid = true;
+	// sanity check
+	// if ( cr->m_isCustomCrawl && m_useTimeAxis ) {
+	// 	log("build: custom crawls can't use time axis");
+	// 	char *xx=NULL;*xx=0; 
+	// 	m_useTimeAxis = false;
+	// }
 	return m_useTimeAxis;
 }
 
@@ -32039,6 +32393,10 @@ Url *XmlDoc::getBaseUrl ( ) {
 		m_baseUrl.set(link, linkLen, false);//true);
 		break;
 	}
+	// fix invalid <base href="/" target="_self"/> tag
+	if ( m_baseUrl.getHostLen  () <= 0 || m_baseUrl.getDomainLen() <= 0 )
+		m_baseUrl.set ( cu , false );
+
 	m_baseUrlValid = true;
 	return &m_baseUrl;
 }
@@ -32989,11 +33347,14 @@ Msg20Reply *XmlDoc::getMsg20Reply ( ) {
 	// . Matches.cpp checks the link text, dmoz, etc. for all query terms
 	// . it must get into the results form indexdb corruption?
 	// . this filtering method is/was known as the "BIG HACK"
+	// . We also make sure that matches aren't based on
+	// . "anomalous" link text, where a doc has so many link texts
+	// . that most common dictionary terms appear in or around
+	// . a link to the site.
 	if ( m_req->size_qbuf > 1 ) {
-		reply->m_hasAllQueryTerms = true;
-	//	Matches *mm = getMatches();
-	//	if ( ! mm || mm == (Matches *)-1 ) return (Msg20Reply *)mm;
-	//	reply->m_hasAllQueryTerms = mm->m_matchesQuery;
+		Matches *mm = getMatches();
+		int32_t numInlinks = getLinkInfo1()->getNumLinkTexts( );
+		reply->m_hasAllQueryTerms = mm->docHasQueryTerms(numInlinks);
 	}
 
 	// breathe
@@ -33382,7 +33743,7 @@ Msg20Reply *XmlDoc::getMsg20Reply ( ) {
 	//    (int32_t)reply->m_linkTextScoreWeight, m_siteNumInlinks);
 
 	// breathe
-	QUICKPOLL( m_niceness );
+	//QUICKPOLL( m_niceness );
 
 	// . we need the mid doma hash in addition to the ip domain because
 	//   chat.yahoo.com has different ip domain than www.yahoo.com , ...
@@ -33534,18 +33895,22 @@ Msg20Reply *XmlDoc::getMsg20Reply ( ) {
 	reply->size_linkUrl = links->getLinkLen(linkNum)+1;
 
 	// save the rss item in our state so we can point to it, include \0
-	if ( rssItemLen > MAX_RSSITEM_SIZE-2 ) rssItemLen = MAX_RSSITEM_SIZE-2;
-	char rssItemBuf[MAX_RSSITEM_SIZE];
+	//if(rssItemLen > MAX_RSSITEM_SIZE-2 ) rssItemLen = MAX_RSSITEM_SIZE-2;
+	//char rssItemBuf[MAX_RSSITEM_SIZE];
+	if ( rssItemLen > MAX_RSSITEM_SIZE )
+		rssItemLen = MAX_RSSITEM_SIZE;
 	if ( rssItemLen > 0) {
-		gbmemcpy ( rssItemBuf, rssItem , rssItemLen );
-		// NULL terminate it
-		rssItemBuf[rssItemLen] = 0;
+		m_rssItemBuf.safeMemcpy ( rssItem , rssItemLen );
+		m_rssItemBuf.pushChar('\0');
+		// gbmemcpy ( rssItemBuf, rssItem , rssItemLen );
+		// // NULL terminate it
+		// rssItemBuf[rssItemLen] = 0;
 	}
 
 	// point to it, include the \0
 	if ( rssItemLen > 0 ) {
-		reply->ptr_rssItem  = rssItemBuf;
-		reply->size_rssItem = rssItemLen + 1; 
+		reply->ptr_rssItem  = m_rssItemBuf.getBufStart();
+		reply->size_rssItem = m_rssItemBuf.getLength();
 	}
 
 	// breathe
@@ -33573,7 +33938,12 @@ Msg20Reply *XmlDoc::getMsg20Reply ( ) {
 						     m_siteNumInlinks,
 						     &m_xml, 
 						     links,
-						     MAXDOCLEN,//150000,
+						     // if doc length more
+						     // than 150k then consider
+						     // it linkspam 
+						     // automatically so it
+						     // can't vote
+						     150000,//MAXDOCLEN//150000
 						     &note , 
 						     &linkeeUrl , // url ,
 						     linkNode , 
@@ -33750,8 +34120,10 @@ Msg20Reply *XmlDoc::getMsg20Reply ( ) {
 		// ensure NULL terminated
 		p[len2] = '\0';
 		// store in reply. it will be serialized when sent.
-		reply->ptr_surroundingText  = p;
-		reply->size_surroundingText = len2 + 1;
+		// thanks to isj for finding this bug fix.
+		m_surroundingTextBuf.safeMemcpy ( p , len2 + 1 );
+		reply->ptr_surroundingText =m_surroundingTextBuf.getBufStart();
+		reply->size_surroundingText=m_surroundingTextBuf.getLength();
 	}
 
 	// breathe
@@ -34318,13 +34690,10 @@ char *XmlDoc::getHighlightedSummary ( ) {
 
 	if ( ! m_langIdValid ) { char *xx=NULL;*xx=0; }
 
-	//char tt[5000];
 	Highlight hi;
 	StackBuf(hb);
 	// highlight the query in it
 	int32_t hlen = hi.set ( &hb,
-			     //tt , 
-			     //4999 ,
 			     sum, 
 			     sumLen,
 			     m_langId,
@@ -35047,7 +35416,7 @@ char *XmlDoc::getIsLinkSpam ( ) {
 				      *sni ,
 				      xml, 
 				      links,
-				      MAXDOCLEN,//150000,//maxDocLen , 
+				      150000,//MAXDOCLEN,//maxDocLen , 
 				      &m_note , 
 				      NULL , // &linkee , // url ,
 				      -1 , // linkNode , 
@@ -35306,7 +35675,8 @@ int gbcompress7 ( unsigned char *dest      ,
 		return -1;
 	}
 	// to read - leave room for \0
-	int32_t toRead = MAXDOCLEN + 1000;
+	//int32_t toRead = MAXDOCLEN + 1000;
+	int32_t toRead = 150000 + 1000;
  retry14:
 	// read right from pipe descriptor
 	int32_t r = read (fd, dest,toRead);
@@ -37362,6 +37732,11 @@ bool XmlDoc::printDoc ( SafeBuf *sb ) {
 			"</tr>\n"
 
 			"<tr>"
+			"<td>http status</td>"
+			"<td>%i</td>"
+			"</tr>\n"
+
+			"<tr>"
 			"<td>url filter num</td>"
 			"<td>%"INT32"</td>"
 			"</tr>\n"
@@ -37396,6 +37771,7 @@ bool XmlDoc::printDoc ( SafeBuf *sb ) {
 			getFirstUrlHash64(), // uh48
 
 			mstrerror(m_indexCode),
+			m_httpStatus,
 			ufn,
 			mstrerror(g_errno),
 			allowed,
@@ -46413,11 +46789,11 @@ SafeBuf *XmlDoc::getRelatedDocIdsScored ( ) {
 	//   getRelatedQueryLinks() which make a new xmldoc. then it can
 	//   call newxd->getTermListBuf() instead of us passing it in.
 	// . so each host has a bin, a host bin
-#ifdef __APPLE__
+	//#ifdef __APPLE__
 	SafeBuf hostBin[MAX_HOSTS];
-#else
-	SafeBuf hostBin[g_hostdb.m_numHosts];
-#endif
+	//#else
+	//SafeBuf hostBin[g_hostdb.m_numHosts];
+	//#endif
 
 	// scan the related docids and send the requests if we have not already
 	for ( int32_t i = 0 ; ! m_sentMsg4fRequests && i < numRelated ; i++ ) {
@@ -50871,7 +51247,8 @@ Msg25 *XmlDoc::getAllInlinks ( bool forSite ) {
 						  m_masterLoop, // callback
 					      false, // isInjecting?
 					      false, // pbuf (for printing)
-					      this, // xd holder (Msg25::m_xd)
+					      //this, // xd holder (Msg25::m_xd
+					      false, // printInXml
 					      // this is irrelevant since we
 					      // are getting all inlinks:
 					      0, // siteNumInlinks, irrelevant

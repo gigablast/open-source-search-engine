@@ -1075,6 +1075,7 @@ class XmlDoc {
 	int32_t m_addedSpiderRequestSize;
 	int32_t m_addedSpiderReplySize;
 	int32_t m_addedStatusDocSize;
+	int64_t m_addedStatusDocId;
 
 	SafeBuf  m_metaList2;
 	SafeBuf  m_zbuf;
@@ -1203,6 +1204,9 @@ class XmlDoc {
 	HashTableX m_vctab;
 	HashTableX m_vcduptab;
 
+	bool isFirstUrlRobotsTxt();
+	bool m_isRobotsTxtUrl;
+
 	Images     m_images;
 	HashTableX m_countTable;
 	HttpMime   m_mime;
@@ -1259,6 +1263,7 @@ class XmlDoc {
 	char     m_filteredRootTitleBufValid;
 	char     m_titleBufValid;
 	char     m_fragBufValid;
+	char     m_isRobotsTxtUrlValid;
 	char     m_inlineSectionVotingBufValid;
 	char     m_wordSpamBufValid;
 	char     m_finalSummaryBufValid;
@@ -1642,6 +1647,8 @@ class XmlDoc {
 	char m_isInIndex;
 	char m_wasInIndex;
 
+	bool m_oldDocExistedButHadError;
+
 	Msg8a   m_msg8a;
 	char   *m_tagdbColl;
 	int32_t    m_tagdbCollLen;
@@ -1703,6 +1710,7 @@ class XmlDoc {
 	bool m_isAllowed;
 	bool m_forwardDownloadRequest;
 	bool m_isChildDoc;
+	class XmlDoc *m_parentDocPtr;
 	Msg13 m_msg13;
 	Msg13Request m_msg13Request;
 	Msg13Request m_diffbotProxyRequest;
@@ -2142,6 +2150,8 @@ class XmlDoc {
 	Msg20Reply m_reply;
 	Msg20Request *m_req;
 	//char *m_gsbuf;
+	SafeBuf m_surroundingTextBuf;
+	SafeBuf m_rssItemBuf;
 	SafeBuf m_gsbuf;
 	//int32_t  m_gsbufSize;
 	//int32_t  m_gsbufAllocSize;

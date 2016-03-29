@@ -483,7 +483,7 @@ bool processLoop ( void *state ) {
 			  "><td>"
 			  //"<font face=times,sans-serif color=black size=-1>"
 			  "<span style=\"%s\">"
-			  "This is Gigablast's cached page of </span>"
+			  "This is <a href=/>Gigablast<a>'s cached page of </span>"
 			  "<a href=\"%s\" style=\"%s\">%s</a>"
 			  "" , styleTitle, f->getUrl(), styleLink,
 			  f->getUrl() );

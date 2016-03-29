@@ -668,10 +668,10 @@ inline char KEYCMP ( char *k1, char *k2, char keySize ) {
 		return 0;
 	}
 	if ( keySize == 8 ) {
-		if ( (*(uint32_t  *)(k1+0)) <
-		     (*(uint32_t  *)(k2+0)) ) return -1;
-		if ( (*(uint32_t  *)(k1+0)) >
-		     (*(uint32_t  *)(k2+0)) ) return  1;
+		if ( (*(uint64_t  *)(k1+0)) <
+		     (*(uint64_t  *)(k2+0)) ) return -1;
+		if ( (*(uint64_t  *)(k1+0)) >
+		     (*(uint64_t  *)(k2+0)) ) return  1;
 		return 0;
 	}
 	char *xx=NULL;*xx=0;

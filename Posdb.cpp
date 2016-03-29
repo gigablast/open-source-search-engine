@@ -909,7 +909,7 @@ bool PosdbTable::allocTopTree ( ) {
 	if ( m_debug )
 		log("toptree: toptree: initializing %"INT64" nodes",nn);
 
-	if ( nn < m_r->m_docsToGet )
+	if ( nn < m_r->m_docsToGet && m_debug )
 		log("query: warning only getting up to %"INT64" docids "
 		    "even though %"INT32" requested because termlist "
 		    "sizes are so small!! splits=%"INT32""
@@ -7673,7 +7673,9 @@ void PosdbTable::intersectLists10_r ( ) {
 		t->m_score = score;
 		t->m_docId = m_docId;
 		// sanity
-		if ( m_docId == 0 ) { char *xx=NULL;*xx=0; }
+		// take this out i've seen this core here before, no idea
+		// why, but why core?
+		//if ( m_docId == 0 ) { char *xx=NULL;*xx=0; }
 		// use an integer score like lastSpidered timestamp?
 		if ( m_sortByTermNumInt >= 0 ) {
 			t->m_intScore = intScore;

@@ -281,7 +281,13 @@ bool RdbList::addRecord ( char *key , int32_t dataSize , char *data ,
 
 	if ( m_ks == 18 ) { // m_rdbId == RDB_POSDB ) {
 		// sanity
-		if ( key[0] & 0x06 ) { char *xx=NULL;*xx=0; }
+		if ( key[0] & 0x06 ) { 
+			log("rdblist: posdb: cannot add bad key. please "
+			    "delete posdb-buckets-saved.dat and restart.");
+			// return true so rdbbuckets::getlist doesn't stop
+			//return true;
+			char *xx=NULL;*xx=0; 
+		}
 		// grow the list if we need to
 		if ( m_listEnd + 18 >  m_alloc + m_allocSize )
 			if ( ! growList ( m_allocSize + 18 ) ) 
@@ -736,7 +742,11 @@ bool RdbList::checkList_r ( bool removeNegRecs , bool sleepOnProblem ,
 			if ( data && 
 			     (*(int32_t *)data < 0 || 
 			      *(int32_t *)data > 100000000 ) ) {
-				char *xx = NULL; *xx = 0; }
+				log("rdblist: bad titlerec data for docid "
+				    "%"INT64,
+				    g_titledb.getDocIdFromKey((key_t *)k));
+				char *xx = NULL; *xx = 0; 
+			}
 		}		
 		// tagrec?
 		if ( rdbId == RDB_TAGDB && ! KEYNEG(k) ) {
@@ -770,7 +780,7 @@ bool RdbList::checkList_r ( bool removeNegRecs , bool sleepOnProblem ,
 		if ( rdbId == RDB_TITLEDB && ! KEYNEG(k) ) {
 			char *rec = getCurrentRec();
 			int32_t usize = *(int32_t *)(rec+12+4);
-			if ( usize <= 0 ) {
+			if ( usize <= 0 || usize>100000000) {
 				log("db: bad titlerec uncompress size");
 				char *xx=NULL;*xx=0; 
 			}
@@ -1340,6 +1350,7 @@ bool RdbList::constrain ( char   *startKey    ,
 	// ensure we our first key is 12 bytes if m_useHalfKeys is true
 	if ( m_useHalfKeys && isHalfBitOn ( m_list ) ) {
 		g_errno = ECORRUPTDATA;
+		g_numCorrupt++;
 		return log("db: First key is 6 bytes. Corrupt data "
 			   "file.");
 	}
@@ -1347,12 +1358,14 @@ bool RdbList::constrain ( char   *startKey    ,
 	// sanity. hint key should be full key
 	if ( m_ks == 18 && hintKey && (hintKey[0]&0x06)){
 		g_errno = ECORRUPTDATA;
+		g_numCorrupt++;
 		return log("db: Hint key is corrupt.");
 		//char *xx=NULL;*xx=0;}
 	}
 
 	if ( hintOffset > m_listSize ) { //char *xx=NULL;*xx=0; }
 		g_errno = ECORRUPTDATA;
+		g_numCorrupt++;
 		return log("db: Hint offset %"INT32" > %"INT32" is corrupt."
 			   ,hintOffset,
 			   m_listSize);
@@ -1418,6 +1431,7 @@ bool RdbList::constrain ( char   *startKey    ,
 			m_listPtrHi = savelistPtrHi ;
 			m_listPtrLo = savelistPtrLo ;
 			g_errno = ECORRUPTDATA;
+			g_numCorrupt++;
 			return log("db: Got record size of %"INT32" < 0. "
 				   "Corrupt data file.",recSize);
 		}
@@ -1525,13 +1539,16 @@ bool RdbList::constrain ( char   *startKey    ,
 	if ( minRecSizes < 0 ) maxPtr = m_listEnd;
 	// size of last rec we read in the list
 	int32_t size = -1 ;
+	// char *savedp = p;
+	// if ( savedp == (char *)0x001 ) { char *xx=NULL;*xx=0;}
 	// advance until endKey or minRecSizes kicks us out
 	//while ( p < m_listEnd && getKey(p) <= endKey && p < maxPtr ) {
 	while ( p < m_listEnd ) {
 		QUICKPOLL(niceness);
 		getKey(p,k);
 		if ( KEYCMP(k,endKey,m_ks)>0 ) break;
-		if ( p >= maxPtr ) break;
+		// only break out if we've set the size AND are >= maxPtr
+		if ( p >= maxPtr && size > 0 ) break;
 		size = getRecSize ( p );
 		// watch out for corruption, let Msg5 fix it
 		if ( size < 0 ) {
@@ -1540,6 +1557,7 @@ bool RdbList::constrain ( char   *startKey    ,
 			m_listPtrLo = savelistPtrLo;
 			m_listPtr   = savelist;
 			g_errno = ECORRUPTDATA;
+			g_numCorrupt++;
 			return log("db: Corrupt record size of %"INT32" "
 				   "bytes in %s.",size,filename);
 		}
@@ -1559,6 +1577,7 @@ bool RdbList::constrain ( char   *startKey    ,
 			m_listPtrLo = savelistPtrLo;
 			m_listPtr   = savelist;
 			g_errno = ECORRUPTDATA;
+			g_numCorrupt++;
 			return log("db: Corrupt record size of %"INT32" "
 				   "bytes in %s.",size,filename);
 		}
@@ -1580,6 +1599,7 @@ bool RdbList::constrain ( char   *startKey    ,
 			m_listPtrLo = savelistPtrLo;
 			m_listPtr   = savelist;
 			g_errno = ECORRUPTDATA;
+			g_numCorrupt++;
 			return log("db: Corrupt record size of %"INT32" "
 				   "bytes in %s.",size,filename);
 		}
@@ -1587,17 +1607,23 @@ bool RdbList::constrain ( char   *startKey    ,
 		//endKey = getKey ( p - size );
 		getKey(p-size,endKey);
 	}
+	// bitch if size is -1 still
+	if ( size == -1 ) {
+		log("db: Corruption. Encountered bad endkey in %s.",filename);
+		char *xx=NULL;*xx=0;
+		m_list      = savelist;
+		m_listPtrHi = savelistPtrHi;
+		m_listPtrLo = savelistPtrLo;
+		m_listPtr   = savelist;
+		g_errno = ECORRUPTDATA;
+		g_numCorrupt++;
+		return false;
+	}
 	// cut the tail
 	m_listEnd   = p;
 	m_listSize  = m_listEnd - m_list;
-	// bitch if size is -1 still
-	if ( size == -1 ) {
-		log("db: Encountered bad endkey in %s. listSize=%"INT32"",
-		    filename,m_listSize);
-		char *xx=NULL;*xx=0;
-	}
 	// otherwise store the last key if size is not -1
-	else if ( m_listSize > 0 ) {
+	if ( m_listSize > 0 ) {
 		//m_lastKey        = getKey ( p - size );
 		getKey(p-size,m_lastKey);
 		m_lastKeyIsValid = true;
@@ -1664,9 +1690,12 @@ void RdbList::merge_r ( RdbList **lists         ,
 	// did they call prepareForMerge()?
 	if ( m_mergeMinListSize == -1 ) {
 		log(LOG_LOGIC,"db: rdblist: merge_r: prepareForMerge() not "
-		    "called.");
+		    "called. ignoring error and returning emtpy list.");
+		// this happens if we nuke doledb during a merge of it. it
+		// is just bad timing
+		return;
 		// save state and dump core, sigBadHandler will catch this
-		char *p = NULL;	*p = 0;
+		//char *p = NULL;	*p = 0;
 	}
 	// already there?
 	if ( minRecSizes >= 0 && m_listSize >= minRecSizes ) return;

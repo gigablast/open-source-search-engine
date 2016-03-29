@@ -333,6 +333,15 @@ bool Collectiondb::addExistingColl ( char *coll, collnum_t collnum ) {
 	if ( cr->m_isCustomCrawl ) {
 		cr->m_getLinkInfo = false;
 		cr->m_computeSiteNumInlinks = false;
+		// limit each shard to 5 spiders per collection to prevent
+		// ppl from spidering the web and hogging up resources
+		cr->m_maxNumSpiders = 5;
+		// diffbot download docs up to 50MB so we don't truncate
+		// things like sitemap.xml. but keep regular html pages
+		// 1MB
+		cr->m_maxTextDocLen  = 1024*1024;
+		// xml, pdf, etc can be this. 50MB
+		cr->m_maxOtherDocLen = 50000000;
 	}
 
 	// we need to compile the regular expressions or update the url
@@ -568,6 +577,10 @@ bool Collectiondb::addNewColl ( char *coll ,
 		cr->m_maxToProcess = 100000;
 		// -1 means no max
 		cr->m_maxCrawlRounds = -1;
+		// diffbot download docs up to 10MB so we don't truncate
+		// things like sitemap.xml
+		cr->m_maxTextDocLen  = 10000000;
+		cr->m_maxOtherDocLen = 10000000;
 		// john want's deduping on by default to avoid 
 		// processing similar pgs
 		cr->m_dedupingEnabled = true;
@@ -1973,6 +1986,29 @@ bool CollectionRec::load ( char *coll , int32_t i ) {
 		// it is binary now
 		gbmemcpy ( &m_localCrawlInfo , sb.getBufStart(),sb.length() );
 
+	// if it had corrupted data from saving corrupted mem zero it out
+	CrawlInfo *stats = &m_localCrawlInfo;
+	// point to the stats for that host
+	int64_t *ss = (int64_t *)stats;
+	// are stats crazy?
+	bool crazy = false;
+	for ( int32_t j = 0 ; j < NUMCRAWLSTATS ; j++ ) {
+		// crazy stat?
+		if ( *ss > 1000000000LL ||
+		     *ss < -1000000000LL ) {
+			crazy = true;
+			break;
+		}
+		ss++;
+	}
+	if ( m_localCrawlInfo.m_collnum != m_collnum )
+		crazy = true;
+	if ( crazy ) {
+		log("coll: had crazy spider stats for coll %s. zeroing out.",
+		    m_coll);
+		m_localCrawlInfo.reset();
+	}
+
 
 	if ( ! g_conf.m_doingCommandLine && ! g_collectiondb.m_initializing )
 		log("coll: Loaded %s (%"INT32") local hasurlsready=%"INT32"",
@@ -2340,7 +2376,7 @@ bool CollectionRec::rebuildUrlFilters2 ( ) {
 	// a non temporary error, like a 404? retry once per 3 months i guess
 	m_regExs[n].set("errorcount>=1");
 	m_harvestLinks       [n] = 1;
-	m_spiderFreqs        [n] = 90; // 90 day retry
+	m_spiderFreqs        [n] = 5; // 5 day retry
 	m_maxSpidersPerRule  [n] = 1; // max spiders
 	m_spiderIpMaxSpiders [n] = 1; // max spiders per ip
 	m_spiderIpWaits      [n] = 1000; // same ip wait
@@ -3789,12 +3825,57 @@ bool CollectionRec::rebuildUrlFiltersDiffbot() {
 		i++;
 	}
 
+	// don't bother re-spidering old pages if hopcount == maxhopcount
+	// and only process new urls is true. because we don't need to 
+	// harvest outlinks from them.
+	if ( m_diffbotOnlyProcessIfNewUrl && m_diffbotMaxHops > 0 &&
+	     // only crawls, not bulk jobs
+	     m_isCustomCrawl == 1 ) {
+		m_regExs[i].purge();
+		m_regExs[i].safePrintf("isindexed && hopcount==%"INT32,
+				       m_diffbotMaxHops );
+		m_spiderPriorities   [i] = 14;
+		m_spiderFreqs        [i] = 0.0;
+		m_maxSpidersPerRule  [i] = 0; // turn off spiders
+		m_harvestLinks       [i] = false;
+		i++;
+	}
 
+	// 3rd rule for respidering
+	// put this above the errocount>= rules below otherwise the crawl
+	// may never advance its round because it keeps retrying a ton of
+	// errored urls.
+	if ( respiderFreq > 0.0 ) {
+		m_regExs[i].set("lastspidertime>={roundstart}");
+		// do not "remove" from index
+		m_spiderPriorities   [i] = 10;
+		// just turn off spidering. if we were to set priority to
+		// filtered it would be removed from index!
+		//m_spidersEnabled     [i] = 0;
+		m_maxSpidersPerRule[i] = 0;
+		// temp hack so it processes in xmldoc.cpp::getUrlFilterNum()
+		// which has been obsoleted, but we are running old code now!
+		//m_spiderDiffbotApiUrl[i].set ( api );
+		i++;
+	}
+	// if doing a one-shot crawl limit error retries to 3 times or
+	// if no urls currently available to spider, whichever comes first.
+	else {
+		m_regExs[i].set("errorcount>=3");
+		m_spiderPriorities   [i] = 11;
+		m_spiderFreqs        [i] = 0.0416;
+		m_maxSpidersPerRule  [i] = 0; // turn off spiders
+		i++;
+	}
+
+	// diffbot needs to retry even on 500 or 404 errors since sometimes
+	// a seed url gets a 500 error mistakenly and it haults the crawl.
+	// so take out "!hastmperror".
 
 	m_regExs[i].set("errorcount>=1 && !hastmperror");
-	m_spiderPriorities   [i] = 15;
-	m_spiderFreqs        [i] = 0.0;
-	m_maxSpidersPerRule  [i] = 0; // turn off spiders if not tmp error
+	m_spiderPriorities   [i] = 14;
+	m_spiderFreqs        [i] = 0.0416; // every hour
+	//m_maxSpidersPerRule  [i] = 0; // turn off spiders if not tmp error
 	i++;
 
 	// and for docs that have errors respider once every 5 hours
@@ -3811,29 +3892,15 @@ bool CollectionRec::rebuildUrlFiltersDiffbot() {
 
 	// excessive errors? (tcp/dns timed out, etc.) retry once per month?
 	m_regExs[i].set("errorcount>=3 && hastmperror");
-	m_spiderPriorities   [i] = 3;
-	m_spiderFreqs        [i] = 30; // 30 days
+	m_spiderPriorities   [i] = 39;
+	m_spiderFreqs        [i] = .25; // 1/4 day
 	// if bulk job, do not download a url more than 3 times
 	if ( m_isCustomCrawl == 2 ) m_maxSpidersPerRule [i] = 0;
 	i++;
 
-	// 3rd rule for respidering
-	if ( respiderFreq > 0.0 ) {
-		m_regExs[i].set("lastspidertime>={roundstart}");
-		// do not "remove" from index
-		m_spiderPriorities   [i] = 10;
-		// just turn off spidering. if we were to set priority to
-		// filtered it would be removed from index!
-		//m_spidersEnabled     [i] = 0;
-		m_maxSpidersPerRule[i] = 0;
-		// temp hack so it processes in xmldoc.cpp::getUrlFilterNum()
-		// which has been obsoleted, but we are running old code now!
-		//m_spiderDiffbotApiUrl[i].set ( api );
-		i++;
-	}
 	// if collectiverespiderfreq is 0 or less then do not RE-spider
 	// documents already indexed.
-	else {
+	if ( respiderFreq <= 0.0 ) { // else {
 		// this does NOT work! error docs continuosly respider
 		// because they are never indexed!!! like EDOCSIMPLIFIEDREDIR
 		//m_regExs[i].set("isindexed");
@@ -3855,6 +3922,9 @@ bool CollectionRec::rebuildUrlFiltersDiffbot() {
 		m_regExs[i].set("matchesucp");
 		m_spiderPriorities   [i] = 53;
 		if ( m_collectiveRespiderFrequency<=0.0) m_spiderFreqs [i] = 0;
+		// let's always make this without delay because if we
+		// restart the round we want these to process right away
+		if ( respiderFreq > 0.0 ) m_spiderFreqs[i] = 0.0;
 		i++;
 		// crawl everything else, but don't harvest links,
 		// we have to see if the page content matches the "ppp"
@@ -3862,6 +3932,9 @@ bool CollectionRec::rebuildUrlFiltersDiffbot() {
 		m_regExs[i].set("default");
 		m_spiderPriorities   [i] = 52;
 		if ( m_collectiveRespiderFrequency<=0.0) m_spiderFreqs [i] = 0;
+		// let's always make this without delay because if we
+		// restart the round we want these to process right away
+		if ( respiderFreq > 0.0 ) m_spiderFreqs[i] = 0.0;
 		m_harvestLinks       [i] = false;
 		i++;
 		goto done;
@@ -3872,19 +3945,27 @@ bool CollectionRec::rebuildUrlFiltersDiffbot() {
 		m_regExs[i].set("matchesucp && matchesupp");
 		m_spiderPriorities   [i] = 55;
 		if ( m_collectiveRespiderFrequency<=0.0) m_spiderFreqs [i] = 0;
-
+		// let's always make this without delay because if we
+		// restart the round we want these to process right away
+		if ( respiderFreq > 0.0 ) m_spiderFreqs[i] = 0.0;
 		//m_spiderDiffbotApiUrl[i].set ( api );
 		i++;
 		// if just matches ucp, just crawl it, do not process
 		m_regExs[i].set("matchesucp");
 		m_spiderPriorities   [i] = 53;
 		if ( m_collectiveRespiderFrequency<=0.0) m_spiderFreqs [i] = 0;
+		// let's always make this without delay because if we
+		// restart the round we want these to process right away
+		if ( respiderFreq > 0.0 ) m_spiderFreqs[i] = 0.0;
 		i++;
 		// just process, do not spider links if does not match ucp
 		m_regExs[i].set("matchesupp");
 		m_spiderPriorities   [i] = 54;
 		m_harvestLinks       [i] = false;
 		if ( m_collectiveRespiderFrequency<=0.0) m_spiderFreqs [i] = 0;
+		// let's always make this without delay because if we
+		// restart the round we want these to process right away
+		if ( respiderFreq > 0.0 ) m_spiderFreqs[i] = 0.0;
 		//m_spiderDiffbotApiUrl[i].set ( api );
 		i++;
 		// do not crawl anything else
@@ -3906,6 +3987,9 @@ bool CollectionRec::rebuildUrlFiltersDiffbot() {
 		m_regExs[i].set("matchesucp");
 		m_spiderPriorities   [i] = 53;
 		if ( m_collectiveRespiderFrequency<=0.0) m_spiderFreqs [i] = 0;
+		// let's always make this without delay because if we
+		// restart the round we want these to process right away.
+		if ( respiderFreq > 0.0 ) m_spiderFreqs[i] = 0.0;
 		// process everything since upp is empty
 		//m_spiderDiffbotApiUrl[i].set ( api );
 		i++;
@@ -3928,6 +4012,9 @@ bool CollectionRec::rebuildUrlFiltersDiffbot() {
 		m_regExs[i].set("matchesupp");
 		m_spiderPriorities   [i] = 54;
 		if ( m_collectiveRespiderFrequency<=0.0) m_spiderFreqs [i] = 0;
+		// let's always make this without delay because if we
+		// restart the round we want these to process right away
+		if ( respiderFreq > 0.0 ) m_spiderFreqs[i] = 0.0;
 		//m_harvestLinks       [i] = false;
 		//m_spiderDiffbotApiUrl[i].set ( api );
 		i++;

@@ -406,10 +406,31 @@ bool RdbDump::dumpTree ( bool recall ) {
 		// . check the list we got from the tree for problems
 		// . ensures keys are ordered from lowest to highest as well
 		//#ifdef GBSANITYCHECK
-		if ( g_conf.m_verifyWrites ) {
+		if ( 1==1 ||
+		     g_conf.m_verifyWrites ||
+		     g_conf.m_verifyDumpedLists ) {
 			char *s = "none";
 			if ( m_rdb ) s = getDbnameFromId(m_rdb->m_rdbId);
-			log("dump: verifying list before dumping (rdb=%s)",s);
+			char *ks1 = "";
+			char *ks2 = "";
+			char tmp1[32];
+			char tmp2[32];
+			if ( m_firstKeyInQueue ) {
+				strcpy ( tmp1 , 
+					 KEYSTR(m_firstKeyInQueue,
+						m_list->m_ks));
+				ks1 = tmp1;
+			}
+			if ( m_lastKeyInQueue ) {
+				strcpy ( tmp2 , 
+					 KEYSTR(m_lastKeyInQueue,
+						m_list->m_ks));
+				ks2 = tmp2;
+			}
+
+			log("dump: verifying list before dumping (rdb=%s "
+			    "collnum=%i k1=%s k2=%s)",s,
+			    (int)m_collnum,ks1,ks2);
 			m_list->checkList_r ( false , // removeNegRecs?
 					      false , // sleep on problem?
 					      m_rdb->m_rdbId );
@@ -457,6 +478,10 @@ bool RdbDump::dumpTree ( bool recall ) {
 	// . this doesn't work if you're doing an unordered dump, but we should
 	//   not allow adds when closing
 	m_lastKeyInQueue  = m_list->getLastKey();
+
+	// ensure we are getting the first key of the list
+	m_list->resetListPtr();
+
 	//m_firstKeyInQueue = m_list->getCurrentKey();
 	m_list->getCurrentKey(m_firstKeyInQueue);
 	// . write this list to disk
@@ -770,11 +795,12 @@ bool RdbDump::doneReadingForVerify ( ) {
 	//   set m_isCollectionless to false
 	if ( ! cr && m_doCollCheck ) {
 		g_errno = ENOCOLLREC;
-		// m_file is invalid if collrec got nuked because so did
-		// the Rdbbase which has the files
 		log("db: lost collection while dumping to disk. making "
 		    "map null so we can stop.");
 		m_map = NULL;
+		// m_file is probably invalid too since it is stored
+		// in cr->m_bases[i]->m_files[j]
+		m_file = NULL;
 	}
 
 
@@ -928,13 +954,16 @@ bool RdbDump::doneReadingForVerify ( ) {
 	bool s;
 	if(m_tree) {
 		s = m_tree->deleteList(m_collnum,m_list,true/*do balancing?*/);
+		log("dump: tree now has %i nodes",(int)m_tree->m_numUsedNodes);
 	}
 	else if(m_buckets) {
 		s = m_buckets->deleteList(m_collnum, m_list);
 	}
+
 	// problem?
 	if ( ! s && ! m_tried ) {
 		m_tried = true;
+		if ( m_file )
 		log("db: Corruption in tree detected when dumping to %s. "
 		    "Fixing. Your memory had an error. Consider replacing it.",
 		    m_file->getFilename());
@@ -1076,8 +1105,9 @@ void doneWritingWrapper ( void *state ) {
 	// done writing
 	THIS->m_writing = false;
 	// bitch about errors
-	if ( g_errno ) log("db: Dump to %s had write error: %s.",
-			   THIS->m_file->getFilename(),mstrerror(g_errno));
+	if ( g_errno && THIS->m_file ) 
+		log("db: Dump to %s had write error: %s.",
+		    THIS->m_file->getFilename(),mstrerror(g_errno));
 	// delete list from tree, incorporate list into cache, add to map
 	if ( ! THIS->doneDumpingList( true ) ) return;
 	// continue
@@ -1093,13 +1123,17 @@ void RdbDump::continueDumping() {
 	//   set m_isCollectionless to false
 	if ( ! cr && m_doCollCheck ) {
 		g_errno = ENOCOLLREC;
-		// m_file is invalid if collrec got nuked because so did
-		// the Rdbbase which has the files
+		// m_file is probably invalid too since it is stored
+		// in cr->m_bases[i]->m_files[j]
+		m_file = NULL;
 		log("db: continue dumping lost collection");
 	}
 
-	// bitch about errors
-	if (g_errno)log("db: Dump to %s had error writing: %s.",
+	// bitch about errors, but i guess if we lost our collection
+	// then the m_file could be invalid since that was probably stored
+	// in the CollectionRec::RdbBase::m_files[] array of BigFile ptrs
+	// so we can't say m_file->getFilename()
+	else if (g_errno)log("db: Dump to %s had error writing: %s.",
 			     m_file->getFilename(),mstrerror(g_errno));
 
 	// go back now if we were NOT dumping a tree

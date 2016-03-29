@@ -503,6 +503,10 @@ class Conf {
 	// lookup requests to a host to maxmize tfndb page cache hits?
 	//bool   m_useBiasedTfndb;
 
+	// just ensure lists being written are valid rdb records (titlerecs)
+	// trying to isolate titlerec corruption
+	bool m_verifyDumpedLists;
+
 	// calls fsync(fd) if true after each write
 	bool   m_flushWrites ; 
 	bool   m_verifyWrites;

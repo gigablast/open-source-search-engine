@@ -379,7 +379,7 @@ HtmlParser.o:
 
 # Url::set() seems to take too much time
 Url.o:
-	$(CC) $(DEFS) $(CPPFLAGS) -c $*.cpp 
+	$(CC) $(DEFS) $(CPPFLAGS) -O2 -c $*.cpp 
 
 # Sitedb has that slow matching code
 Sitedb.o:
@@ -402,12 +402,12 @@ RdbBuckets.o:
 Linkdb.o:
 	$(CC) $(DEFS) $(CPPFLAGS) -O3 -c $*.cpp 
 
-#XmlDoc.o:
-#	$(CC) $(DEFS) $(CPPFLAGS) $(XMLDOCOPT) -c $*.cpp 
+XmlDoc.o:
+	$(CC) $(DEFS) $(CPPFLAGS) $(XMLDOCOPT) -c $*.cpp 
 
 # final gigabit generation in here:
 Msg40.o:
-	$(CC) $(DEFS) $(CPPFLAGS) -O3 -c $*.cpp 
+	$(CC) $(DEFS) $(CPPFLAGS) -O2 -c $*.cpp 
 
 seo.o:
 	$(CC) $(DEFS) $(CPPFLAGS) -O3 -c $*.cpp 

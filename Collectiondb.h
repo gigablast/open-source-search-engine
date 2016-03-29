@@ -494,6 +494,7 @@ class CollectionRec {
 	char  m_useSimplifiedRedirects  ;
 	char  m_useIfModifiedSince      ;
 	char  m_useTimeAxis             ;
+	char  m_indexWarcs;
 	char  m_buildVecFromCont        ;
 	int32_t  m_maxPercentSimilarPublishDate;
 	char  m_useSimilarityPublishDate;
@@ -1066,13 +1067,13 @@ class CollectionRec {
 
 	// . max content length of text/html or text/plain document
 	// . we will not download, index or store more than this many bytes
-	//int32_t  m_maxTextDocLen;
+	int32_t  m_maxTextDocLen;
 	// . max content length of other (pdf, word, xls, ppt, ps)
 	// . we will not download, index or store more than this many bytes
 	// . if content would be truncated, we will not even download at all
 	//   because the html converter needs 100% of the doc otherwise it
 	//   will have an error
-	//int32_t  m_maxOtherDocLen;
+	int32_t  m_maxOtherDocLen;
 
 	// the proxy ip, 0 if none
 	//int32_t  m_proxyIp;

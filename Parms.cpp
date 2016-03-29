@@ -6800,7 +6800,7 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&cr.m_maxSearchResultsPerQuery - x;
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "100";
-	m->m_flags = PF_HIDDEN | PF_NOSAVE;
+	m->m_flags = 0;
 	m->m_page  = PAGE_SEARCH;
 	m->m_obj   = OBJ_COLL;
 	m++;
@@ -10548,7 +10548,7 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&g_conf.m_maxHeartbeatDelay - g;
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "0";
-	m->m_flags = PF_HIDDEN | PF_NOSAVE;
+	m->m_flags = PF_CLONE; // PF_HIDDEN | PF_NOSAVE;
 	m->m_page  = PAGE_MASTER;
 	m->m_obj   = OBJ_CONF;
 	m++;
@@ -12425,6 +12425,22 @@ void Parms::init ( ) {
 	m->m_group = 0;
 	m++;
 	*/
+
+	m->m_title = "verify written lists";
+	m->m_desc  = "Ensure lists being written to disk are not corrupt. "
+		"That title recs appear valid, etc. Helps isolate sources "
+		"of corruption. Used for debugging.";
+	m->m_cgi   = "vwl";
+	m->m_off   = (char *)&g_conf.m_verifyDumpedLists - g;
+	m->m_type  = TYPE_BOOL;
+	m->m_def   = "0";
+	m->m_group = 0;
+	m->m_flags = 0;//PF_HIDDEN | PF_NOSAVE;
+	m->m_page  = PAGE_MASTER;
+	m->m_obj   = OBJ_CONF;
+	m->m_group = 0;
+	m++;
+
 
 	m->m_title = "verify disk writes";
 	m->m_desc  = "Read what was written in a verification step. Decreases "
@@ -16674,6 +16690,21 @@ void Parms::init ( ) {
 	m->m_flags = PF_CLONE;
 	m++;
 
+	m->m_title = "index warc or arc files";
+	m->m_desc  = "If this is true Gigablast will index .warc and .arc "
+		"files by injecting the pages contained in them as if they "
+		"were spidered with the content in the .warc or .arc file. "
+		"The spidered time will be taken from the archive file "
+		"as well.";
+	m->m_cgi   = "indexwarcs";
+	m->m_off   = (char *)&cr.m_indexWarcs - x;
+	m->m_type  = TYPE_BOOL;
+	m->m_def   = "0";
+	m->m_page  = PAGE_SPIDER;
+	m->m_obj   = OBJ_COLL;
+	m->m_flags = PF_CLONE;
+	m++;
+
 	/*
 	m->m_title = "add url enabled";
 	m->m_desc  = "If this is enabled others can add "
@@ -17878,28 +17909,37 @@ void Parms::init ( ) {
 	m->m_obj   = OBJ_COLL;
 	m++;
 
-	/*
 	m->m_title = "max text doc length";
 	m->m_desc  = "Gigablast will not download, index or "
-		"store more than this many bytes of an html or text "
-		"document. Use -1 for no max.";
+		"store more than this many bytes of an HTML or text "
+		"document. XML is NOT considered to be HTML or text, use "
+		"the rule below to control the maximum length of an XML "
+		"document. "
+		"Use -1 for no max.";
 	m->m_cgi   = "mtdl";
 	m->m_off   = (char *)&cr.m_maxTextDocLen - x;
 	m->m_type  = TYPE_LONG;
-	m->m_def   = "204800";
+	m->m_def   = "1048576"; // 1MB
+	m->m_page  = PAGE_SPIDER;
+	m->m_obj   = OBJ_COLL;
+	m->m_flags = PF_CLONE|PF_API;
 	m++;
 
 	m->m_title = "max other doc length";
 	m->m_desc  = "Gigablast will not download, index or "
 		"store more than this many bytes of a non-html, non-text "
-		"document. Use -1 for no max.";
+		"document. XML documents will be restricted to this "
+		"length. "
+		"Use -1 for no max.";
 	m->m_cgi   = "modl";
 	m->m_off   = (char *)&cr.m_maxOtherDocLen - x;
 	m->m_type  = TYPE_LONG;
-	m->m_def   = "1048576";
+	m->m_def   = "1048576"; // 1MB
 	m->m_group = 0;
+	m->m_page  = PAGE_SPIDER;
+	m->m_obj   = OBJ_COLL;
+	m->m_flags = PF_CLONE|PF_API;
 	m++;
-	*/
 
 	//m->m_title = "indexdb truncation limit";
 	//m->m_cgi   = "itl";
@@ -20121,8 +20161,6 @@ void Parms::init ( ) {
 				exit(-1);
 			}
 		}
-		// skip if already set
-		if ( m_parms[i].m_size ) goto skipSize;
 		// string sizes should already be set!
 		size = 0;
 		t = m_parms[i].m_type;
@@ -20131,6 +20169,8 @@ void Parms::init ( ) {
 			    i,m_parms[i].m_title);
 			exit(-1);
 		}
+		// skip if already set
+		if ( m_parms[i].m_size ) goto skipSize;
 		if ( t == TYPE_CHAR           ) size = 1;
 		if ( t == TYPE_CHAR2          ) size = 1;
 		if ( t == TYPE_BOOL           ) size = 1;
@@ -21357,9 +21397,23 @@ void tryToCallCallbacks ( ) {
 		if ( pn->m_calledCallback ) continue;
 		// should we call the callback?
 		bool callIt = false;
-		// 8 seconds is enough to wait for all replies to come in
-		if ( now - pn->m_startTime > 8 ) callIt = true;
 		if ( pn->m_numReplies >= pn->m_numRequests ) callIt = true;
+		// sometimes we don't launch any requests to update parms
+		// because we are jammed up. same logic as we use for
+		// freeing the pn below.
+		if ( pn->m_numGoodReplies < pn->m_numHostsTotal )
+			callIt = false;
+
+		// 8 seconds is enough to wait for all replies to come in.
+		// a host might be dead, so we need this here lest the
+		// underlying page handler (i.e. sendPageCrawlbot()) never
+		// get called if a host is dead. if you are updating some
+		// parms you want the page to return.
+		if ( now - pn->m_startTime > 8 && 
+		     ! callIt &&
+		     g_hostdb.hasDeadHost() ) 
+			callIt = true;
+
 		if ( ! callIt ) continue;
 		// callback is NULL for updating parms like spiderRoundNum
 		// in Spider.cpp
@@ -21494,6 +21548,8 @@ bool Parms::doParmSendingLoop ( ) {
 
 	if ( ! s_headNode ) return true;
 
+	if ( g_isDumpingRdbFromMain ) return true;
+
 	if ( s_inLoop ) return true;
 
 	s_inLoop = true;
@@ -21570,8 +21626,8 @@ bool Parms::doParmSendingLoop ( ) {
 		}
 
 		// debug log
-		log(LOG_INFO,"parms: sending parm request "
-		    "to hostid %"INT32"",h->m_hostId);
+		log(LOG_INFO,"parms: sending parm request id %i "
+		    "to hostid %"INT32"",(int)pn->m_parmId,h->m_hostId);
 
 		// count it
 		pn->m_numRequests++;
@@ -22963,6 +23019,14 @@ bool printUrlExpressionExamples ( SafeBuf *sb ) {
 			  "or any HTTP status error, like 404 or "
 			  "505 is included in this count, in addition to "
 			  "\"temporary\" errors like DNS timeouts."
+			  "</td></tr>"
+
+			  "<tr class=poo><td>errorcode==32880</td>"
+			  "<td>"
+			  "If the last time it was spidered it had this "
+			  "numeric error code. See the error codes in "
+			  "Errno.cpp. In this particular example 32880 is "
+			  "for EBADURL."
 			  "</td></tr>"
 
 			  "<tr class=poo><td>hastmperror</td>"

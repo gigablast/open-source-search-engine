@@ -211,7 +211,8 @@ bool HttpServer::getDoc ( char   *url      ,
 			// TODO: ensure we close the socket on this error!
 			return true;
 		}
-		//log("archive: %s",r.m_reqBuf.getBufStart());
+		if ( g_conf.m_logDebugTcp )
+			log("archive: %s",r.m_reqBuf.getBufStart());
 		reqSize = r.getRequestLen();
 		int32_t need = reqSize + pcLen;
 		// if we are requesting an HTTPS url through a proxy then
@@ -1778,8 +1779,8 @@ bool HttpServer::sendSuccessReply ( TcpSocket *s , char format, char *addMsg) {
 	else                   now = getTimeLocal();
 	// . buffer for the MIME request and brief html err msg
 	// . NOTE: ctime appends a \n to the time, so we don't need to
-	char msg[1024];
-	SafeBuf sb(msg,1024,0,false);
+	char msg[1524];
+	SafeBuf sb(msg,1524,0,false);
 
 	char *tt = asctime(gmtime ( &now ));
 	tt [ gbstrlen(tt) - 1 ] = '\0';
@@ -1838,7 +1839,7 @@ bool HttpServer::sendSuccessReply ( TcpSocket *s , char format, char *addMsg) {
 
 	// use this new function that will compress the reply now if the
 	// request was a ZET instead of a GET
-	return sendReply2 ( msg , sb.length() , NULL , 0 , s );
+	return sendReply2 ( sb.getBufStart(), sb.length() , NULL , 0 , s );
 }
 
 bool HttpServer::sendErrorReply ( GigablastRequest *gr ) {
@@ -1851,8 +1852,8 @@ bool HttpServer::sendErrorReply ( GigablastRequest *gr ) {
 	else                   now = getTimeLocal();
 
 	int32_t format = gr->m_hr.getReplyFormat();
-	char msg[1024];
-	SafeBuf sb(msg,1024,0,false);
+	char msg[1524];
+	SafeBuf sb(msg,1524,0,false);
 	char *tt = asctime(gmtime ( &now ));
 	tt [ gbstrlen(tt) - 1 ] = '\0';
 
@@ -1904,7 +1905,7 @@ bool HttpServer::sendErrorReply ( GigablastRequest *gr ) {
 
 	// use this new function that will compress the reply now if the
 	// request was a ZET instead of a GET
-	return sendReply2 ( msg , sb.length() , NULL , 0 , gr->m_socket );
+	return sendReply2 ( sb.getBufStart(),sb.length(),NULL,0,gr->m_socket );
 }
 
 // . send an error reply, like "HTTP/1.1 404 Not Found"
@@ -1931,8 +1932,8 @@ bool HttpServer::sendErrorReply ( TcpSocket *s , int32_t error , char *errmsg ,
 
 	// . buffer for the MIME request and brief html err msg
 	// . NOTE: ctime appends a \n to the time, so we don't need to
-	char msg[1024];
-	SafeBuf sb(msg,1024,0,false);
+	char msg[1524];
+	SafeBuf sb(msg,1524,0,false);
 	// if it's a 404, redirect to home page
 	/*
 	if ( error == 404 ) 
@@ -2000,8 +2001,8 @@ bool HttpServer::sendErrorReply ( TcpSocket *s , int32_t error , char *errmsg ,
 	// record it
 	if ( bytesSent ) *bytesSent = sb.length();//sendBufSize;
 	// use this new function that will compress the reply now if the
-	// request was a ZET instead of a GET
-	return sendReply2 ( msg , sb.length() , NULL , 0 , s );
+	// request was a ZET instead of a GET mdw
+	return sendReply2 ( sb.getBufStart() , sb.length() , NULL , 0 , s );
 
 	/*
 	// . this returns false if blocked, true otherwise
@@ -2430,9 +2431,14 @@ int32_t getMsgSize ( char *buf, int32_t bufSize, TcpSocket *s ) {
 		if ( p + 15 < pend&&strncasecmp(p,"application/x-gzip",18)==0)
 			allOrNothing = true;
 		// adjust "max to read" if we don't have an html/plain doc
+		// this can be pdf or xml etc.
 		if ( ! isPost ) {
 			max = s->m_maxOtherDocLen + 10*1024 ;
 			if ( s->m_maxOtherDocLen == -1 ) max = 0x7fffffff;
+			// overflow? we added 10k to it make sure did not
+			// wrap around to a negative number
+			if ( max<s->m_maxOtherDocLen && s->m_maxOtherDocLen>0 )
+				max = s->m_maxOtherDocLen;
 		}
 	}
 

@@ -27,6 +27,9 @@ void Msg3a::constructor ( ) {
 	m_inUse        = false;
 	m_q            = NULL;
 
+	m_numTotalEstimatedHits = 0LL;
+	m_skippedShards = 0;
+
 	// need to call all safebuf constructors now to set m_label
 	m_rbuf2.constructor();
 
@@ -78,6 +81,7 @@ void Msg3a::reset ( ) {
 	m_numDocIds    = 0;
 	m_collnums     = NULL;
 	m_numTotalEstimatedHits = 0LL;
+	m_skippedShards = 0;
 }
 
 Msg39Request *g_r = NULL;
@@ -173,6 +177,9 @@ bool Msg3a::getDocIds ( Msg39Request *r          ,
 	m_numTotalEstimatedHits = 0;
 	// we modify this, so copy it from request
 	m_docsToGet = r->m_docsToGet;
+
+	// fix empty queries saying a shard is down
+	m_skippedShards = 0;
 
 	// . return now if query empty, no docids, or none wanted...
 	// . if query terms = 0, might have been "x AND NOT x"
@@ -707,10 +714,12 @@ bool Msg3a::gotAllShardReplies ( ) {
 		// bad reply?
 		if ( ! mr || replySize < 29 ) {
 			m_skippedShards++;
-			log(LOG_LOGIC,"query: msg3a: Bad reply (size=%i) from "
-			    "host #%"INT32". Dead? Timeout? OOM?"
-			    ,(int)replySize
-			    ,i);
+			if(g_hostdb.getHost(i)->m_queryEnabled) {
+				log(LOG_LOGIC,"query: msg3a: Bad reply (size=%i) from "
+					"host #%"INT32". Dead? Timeout? OOM?"
+					,(int)replySize
+					,i);
+            }
 			m_reply       [i] = NULL;
 			m_replyMaxSize[i] = 0;
 			// it might have been timd out, just ignore it!!

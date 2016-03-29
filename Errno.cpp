@@ -196,6 +196,12 @@ case	EDNSERROR        : return "DNS lookup error";
 case ETHREADSDISABLED:return "Threads Disabled";
 case EMALFORMEDQUERY: return "Malformed query";
 case ESHARDDOWN: return "One or more shards are down";
+case EDOCWARC: return "Doc is WARC or ARC and support is disabled";
+case EDIFFBOTREQUESTTIMEDOUTTHIRDPARTY: return "Diffbot request of third-party content timed out";
+case EDIFFBOTTOOMANYTEXTNODES: return "The selected pages contains too many TextNodes (>50000) for Diffbot";
+case EDIFFBOTCURLYREPLY: return "Diffbot reply was {}";
+case EDIFFBOTTOKENUNAUTHORIZED: return "Diffbot token was unauthorized";
+case EDIFFBOTPLAINERROR: return "Diffbot error code was 500";
 	}
 	// if the remote error bit is clear it must be a regulare errno
 	//if ( ! ( errnum & REMOTE_ERROR_BIT ) ) return strerror ( errnum );
