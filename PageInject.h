@@ -65,8 +65,7 @@ class InjectionRequest {
 	int32_t size_diffbotReply; // secret thing from dan
 	int32_t size_metadata;
 
-	// serialized space for the ptr_* strings above
-	char m_buf[0];
+	// variable data begins here
 };
 
 
