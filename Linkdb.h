@@ -108,7 +108,7 @@ public:
 	int32_t       size_url;
 	int32_t       size_oldLinkInfo;
 
-	char m_buf[0];
+	//variable data begins here
 
 	int32_t getStoredSize();
 	void serialize();
