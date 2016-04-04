@@ -60,9 +60,6 @@ class Msg20Request {
 		m_boolFlag           = 2   ; // autodetect if query boolean
 		m_titleMaxLen        = 64  ;
 		m_summaryMaxLen      = 512 ;
-		// reset ptr sizes
-		int32_t size = m_buf - (char *)&size_qbuf;
-		memset ( &size_qbuf , 0 , size );
 	};
 
 	int32_t  getStoredSize ( );
