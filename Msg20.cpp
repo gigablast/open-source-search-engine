@@ -719,72 +719,34 @@ int32_t Msg20Request::deserialize ( ) {
 }
 
 int32_t Msg20Reply::getStoredSize ( ) {
-	int32_t size = (int32_t)sizeof(Msg20Reply);
-	// add up string buffer sizes
-	int32_t *sizePtr = &size_tbuf;
-	int32_t *sizeEnd = &size_note;
-	for ( ; sizePtr <= sizeEnd ; sizePtr++ )
-		size += *sizePtr;
-	return size;
+	return getMsgStoredSize(sizeof(*this), &size_tbuf, &size_note);
 }
 
 
 // returns NULL and set g_errno on error
 int32_t Msg20Reply::serialize ( char *buf , int32_t bufSize ) {
-	// copy the easy stuff
-	char *p = buf;
-	gbmemcpy ( p , (char *)this , sizeof(Msg20Reply) );
-	p += (int32_t)sizeof(Msg20Reply);
-	// then store the strings!
-	int32_t  *sizePtr = &size_tbuf;
-	int32_t  *sizeEnd = &size_note;
-	char **strPtr  = &ptr_tbuf;
-	//char **strEnd= &ptr_note;
-	for ( ; sizePtr <= sizeEnd ;  ) {
-		// sometimes the ptr is NULL but size is positive
-		// so watch out for that
-		if ( *strPtr ) {
-			gbmemcpy ( p , *strPtr , *sizePtr );
-			// advance our destination ptr
-			p += *sizePtr;
-		}
-		// advance both ptrs to next string
-		sizePtr++;
-		strPtr++;
-	}
-	int32_t used = p - buf;
-	// sanity check, core on overflow of supplied buffer
-	if ( used > bufSize ) { char *xx = NULL; *xx = 0; }
-	// return it
-	return used;
+	int32_t retSize;
+	serializeMsg(sizeof(*this),
+	             &size_tbuf, &size_note,
+	             &ptr_tbuf,
+	             this,
+	             &retSize,
+	             buf, bufSize,
+	             false);
+	if ( retSize > bufSize ) { char *xx = NULL; *xx = 0; }
+ 	// return it
+	return retSize;
 }
 
 // convert offsets back into ptrs
 int32_t Msg20Reply::deserialize ( ) {
-	// point to our string buffer
-	char *p = m_buf;
-	// reset this since constructor never called
-	m_tmp = 0;
-	// then store the strings!
-	int32_t  *sizePtr = &size_tbuf;
-	int32_t  *sizeEnd = &size_note;
-	char **strPtr  = &ptr_tbuf;
-	//char **strEnd= &ptr_note;
-	for ( ; sizePtr <= sizeEnd ;  ) {
-		// convert the offset to a ptr
-		*strPtr = p;
-		// make it NULL if size is 0 though
-		if ( *sizePtr == 0 ) *strPtr = NULL;
-		// null str?
-		if ( ! p ) *sizePtr = 0;
-		// sanity check
-		if ( *sizePtr < 0 ) { char *xx = NULL; *xx =0; }
-		// advance our destination ptr
-		p += *sizePtr;
-		// advance both ptrs to next string
-		sizePtr++;
-		strPtr++;
-	}
+	int32_t bytesParsed = deserializeMsg(sizeof(*this),
+					     &size_tbuf, &size_note,
+					     &ptr_tbuf,
+					     ((char*)this) + sizeof(*this));
+	if(bytesParsed<0)
+		return bytesParsed;
+	
 	// sanity
 	if ( ptr_linkInfo && ((LinkInfo *)ptr_linkInfo)->m_lisize !=
 		    size_linkInfo ) { 
@@ -795,5 +757,5 @@ int32_t Msg20Reply::deserialize ( ) {
 	}
 
 	// return how many bytes we used
-	return (int32_t)sizeof(Msg20Reply) + (p - m_buf);
+	return bytesParsed;
 }
