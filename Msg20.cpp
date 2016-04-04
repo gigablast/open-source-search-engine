@@ -645,13 +645,7 @@ int32_t Msg20::deserialize ( char *buf , int32_t bufSize ) {
 }
 
 int32_t Msg20Request::getStoredSize ( ) {
-	int32_t size = (int32_t)sizeof(Msg20Request);
-	// add up string buffer sizes
-	int32_t *sizePtr = &size_qbuf;
-	int32_t *sizeEnd = &size_displayMetas;
-	for ( ; sizePtr <= sizeEnd ; sizePtr++ )
-		size += *sizePtr;
-	return size;
+	return getMsgStoredSize(sizeof(*this), &size_qbuf, &size_displayMetas);
 }
 
 // . return ptr to the buffer we serialize into
@@ -668,54 +662,22 @@ char *Msg20Request::serialize ( int32_t *retSize     ,
 	if ( ! buf ) buf = (char *)mmalloc ( need , "Msg20Ra" );
 	// bail on error, g_errno should be set
 	if ( ! buf ) return NULL;
-	// set how many bytes we will serialize into
-	*retSize = need;
-	// copy the easy stuff
-	char *p = buf;
-	gbmemcpy ( p , (char *)this , sizeof(Msg20Request) );
-	p += (int32_t)sizeof(Msg20Request);
-	// then store the strings!
-	int32_t  *sizePtr = &size_qbuf;
-	int32_t  *sizeEnd = &size_displayMetas;
-	char **strPtr  = &ptr_qbuf;
-	for ( ; sizePtr <= sizeEnd ;  ) {
-		// sanity check -- cannot copy onto ourselves
-		if ( p > *strPtr && p < *strPtr + *sizePtr ) {
-			char *xx = NULL; *xx = 0; }
-		// copy the string into the buffer
-		gbmemcpy ( p , *strPtr , *sizePtr );
-		// advance our destination ptr
-		p += *sizePtr;
-		// advance both ptrs to next string
-		sizePtr++;
-		strPtr++;
-	}
-	return buf;
+
+	return serializeMsg(sizeof(*this),
+			    &size_qbuf, &size_displayMetas,
+			    &ptr_qbuf,
+			    this,
+			    retSize,
+			    buf, need,
+			    false);
 }
 
 // convert offsets back into ptrs
 int32_t Msg20Request::deserialize ( ) {
-	// point to our string buffer
-	char *p = m_buf;
-	// then store the strings!
-	int32_t  *sizePtr = &size_qbuf;
-	int32_t  *sizeEnd = &size_displayMetas;
-	char **strPtr  = &ptr_qbuf;
-	for ( ; sizePtr <= sizeEnd ;  ) {
-		// convert the offset to a ptr
-		*strPtr = p;
-		// make it NULL if size is 0 though
-		if ( *sizePtr == 0 ) *strPtr = NULL;
-		// sanity check
-		if ( *sizePtr < 0 ) { char *xx = NULL; *xx =0; }
-		// advance our destination ptr
-		p += *sizePtr;
-		// advance both ptrs to next string
-		sizePtr++;
-		strPtr++;
-	}
-	// return how many bytes we processed
-	return (int32_t)sizeof(Msg20Request) + (p - m_buf);
+	return deserializeMsg(sizeof(*this),
+			      &size_qbuf, &size_displayMetas,
+		              &ptr_qbuf,
+		              ((char*)this) + sizeof(*this));
 }
 
 int32_t Msg20Reply::getStoredSize ( ) {
