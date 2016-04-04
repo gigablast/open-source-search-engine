@@ -562,7 +562,7 @@ void handleRequest13 ( UdpSlot *slot , int32_t niceness  ) {
 			 &r->size_url,
 			 &r->size_cookie,
 			 &r->ptr_url,
-			 r->m_buf );
+			 ((char*)r) + sizeof(*r) );
 
 	// . sanity - otherwise xmldoc::set cores!
 	// . no! sometimes the niceness gets converted!
