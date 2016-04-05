@@ -922,6 +922,7 @@ class Inlink { // : public Msg {
 	// and hash that and store it here
 
 	// we got a 2 byte padding before this PADPADPADPADP
+	int16_t    m_pad0;
 
 	int32_t       m_siteHash            ; // www.hompages.com/~fred/ // 56
 	//int32_t     m_hostHash            ; // www.ibm.com
