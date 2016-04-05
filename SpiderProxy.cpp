@@ -58,7 +58,7 @@ public:
 	// id of this loadbucket in case same host is using the same
 	// proxy to download the same urlip
 	int32_t m_id;
-};
+} __attribute__((packed, aligned(4)));
 
 // . similar to s_ipTable but maps a URL's ip to a LoadBucket
 // . every download request in the last 10 minutes is represented by one

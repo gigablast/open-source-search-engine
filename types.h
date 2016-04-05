@@ -32,8 +32,6 @@
 #define key128_t  u_int128_t
 #define uint128_t u_int128_t
 
-#pragma pack(4)
-
 class u_int96_t {
 
  public:
@@ -194,8 +192,7 @@ class u_int96_t {
 	int32_t operator %  ( uint32_t mod ) { 
 		return n0 % mod; };
 
-};
-//__attribute__((packed));
+} __attribute__((packed, aligned(4)));
 
 class u_int128_t {
 
@@ -319,7 +316,7 @@ class u_int128_t {
 	int32_t operator %  ( uint32_t mod ) { 
 		return n0 % mod; };
 
-};
+} __attribute__((packed, aligned(4)));
 
 // used only by m_orderTree in Spider.cpp for RdbTree.cpp
 class key192_t {
@@ -369,7 +366,7 @@ class key192_t {
 	};
 
 
-};
+} __attribute__((packed, aligned(4)));
 
 class key224_t {
  public:
@@ -429,9 +426,7 @@ class key224_t {
 	};
 
 
-};
-
-#pragma pack(2)
+} __attribute__((packed, aligned(4)));
 
 class key144_t {
  public:
@@ -477,9 +472,8 @@ class key144_t {
 	};
 
 
-};
+} __attribute__((packed, aligned(2)));
 
-#pragma pack(4)
 
 // handy quicky functions
 inline char KEYCMP ( char *k1, int32_t a, char *k2, int32_t b , char keySize ) {

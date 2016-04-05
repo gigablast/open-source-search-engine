@@ -814,7 +814,7 @@ class SpiderRequest {
 	bool setFromInject ( char *url ) ;
 
 	bool isCorrupt ( );
-};
+} __attribute__((packed, aligned(4)));
 
 // . XmlDoc adds this record to spiderdb after attempting to spider a url
 //   supplied to it by a SpiderRequest
@@ -964,7 +964,7 @@ class SpiderReply {
 
 	int64_t  getUrlHash48  () {return g_spiderdb.getUrlHash48(&m_key); };
 	int64_t getParentDocId (){return g_spiderdb.getParentDocId(&m_key);};
-};
+} __attribute__((packed, aligned(4)));
 
 // are we responsible for this ip?
 bool isAssignedToUs ( int32_t firstIp ) ;
