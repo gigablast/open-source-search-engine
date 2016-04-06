@@ -86,6 +86,8 @@
 
 #define XD_MAX_AD_IDS         5
 
+#define MAX_LINK_TEXT_LEN     512
+
 double getTrafficPercent ( int32_t rank ) ;
 
 bool setLangVec ( class Words *words , 
@@ -2149,6 +2151,7 @@ class XmlDoc {
 	Url m_baseUrl;
 	Msg20Reply m_reply;
 	Msg20Request *m_req;
+	char  m_linkTextBuf[MAX_LINK_TEXT_LEN];
 	//char *m_gsbuf;
 	SafeBuf m_surroundingTextBuf;
 	SafeBuf m_rssItemBuf;

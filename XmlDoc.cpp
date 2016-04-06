@@ -33809,7 +33809,7 @@ Msg20Reply *XmlDoc::getMsg20Reply ( ) {
 	char  *rssItem    = NULL;
 	int32_t   rssItemLen = 0;
 	// store link text in here
-	char  linkTextBuf[MAX_LINK_TEXT_LEN];
+	//char  linkTextBuf[MAX_LINK_TEXT_LEN];
 
 	//
 	// TODO: for getting siteinlinks just match the site in the url
@@ -33822,7 +33822,7 @@ Msg20Reply *XmlDoc::getMsg20Reply ( ) {
 	//   something like blogspot.com/mary/ or some other site.
 	int32_t blen = links->getLinkText ( m_req->ptr_linkee  ,//&linkee,
 					 m_req->m_isSiteLinkInfo ,
-					 linkTextBuf         ,
+					 m_linkTextBuf         ,
 					 MAX_LINK_TEXT_LEN-2 ,
 					 &rssItem            ,
 					 &rssItemLen         ,
@@ -33861,10 +33861,10 @@ Msg20Reply *XmlDoc::getMsg20Reply ( ) {
 	// breathe
 	QUICKPOLL(m_niceness);
 
-	if ( ! verifyUtf8 ( linkTextBuf , blen ) ) {
+	if ( ! verifyUtf8 ( m_linkTextBuf , blen ) ) {
 		log("xmldoc: bad OUT link text from url=%s for %s",
 		    m_req->ptr_linkee,m_firstUrl.m_url);
-		linkTextBuf[0] = '\0';
+		m_linkTextBuf[0] = '\0';
 		blen = 0;
 	}
 
@@ -33879,13 +33879,13 @@ Msg20Reply *XmlDoc::getMsg20Reply ( ) {
 
 	// point to it, include the \0.
 	if ( blen > 0 ) {
-		reply->ptr_linkText  = linkTextBuf;
+		reply->ptr_linkText  = m_linkTextBuf;
 		// save the size into the reply, include the \0
 		reply->size_linkText = blen + 1;
 		// sanity check
 		if ( blen + 2 > MAX_LINK_TEXT_LEN ) { char *xx=NULL;*xx=0; }
 		// sanity check. null termination required.
-		if ( linkTextBuf[blen] ) { char *xx=NULL;*xx=0; }
+		if ( m_linkTextBuf[blen] ) { char *xx=NULL;*xx=0; }
 	}
 
 	// . the link we link to
