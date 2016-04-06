@@ -840,7 +840,7 @@ int64_t Summary::getBestWindow ( Matches *matches       ,
 	// . the match at the center of the window is match #"mm", so that
 	//   matches->m_matches[mm] is the Match class
 	// . set "mi" to it and back up "mi" as int32_t as >= a
-	for ( mi = mm ; mi >= 0 && ms[mi-1].m_wordNum >=a ; mi-- ) ;
+	for ( mi = mm ; mi > 0 && ms[mi-1].m_wordNum >=a ; mi-- ) ;
 
 	// now get the score of this excerpt. Also mark all the represented 
 	// query words. Mark the represented query words in the array that
