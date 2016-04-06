@@ -6716,11 +6716,17 @@ bool sendNotificationForCollRec ( CollectionRec *cr )  {
 	// do not re-call this stuff
 	cr->m_sendingAlertInProgress = true;
 
+	// use fake ei since sendNotification frees it if would not block
+	EmailInfo fake;
+	fake.m_collnum = ei->m_collnum;
+	fake.m_collRec = ei->m_collRec;
+
 	// ok, put it back...
 	if ( ! sendNotification ( ei ) ) return false;
 
 	// so handle this ourselves in that case:
-	doneSendingNotification ( ei );
+	doneSendingNotification ( &fake );
+
 	return true;
 }
 
