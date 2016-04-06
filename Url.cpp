@@ -2590,47 +2590,51 @@ uint32_t Url::unitTests() {
 }
 
 
-char* Url::getDisplayUrl(char* url, SafeBuf* sb) {
-	char* found;
-	char* labelCursor = url;
-	if((found = strstr(labelCursor, "xn--"))) {
-		sb->safeMemcpy(url, found - url);
+char* Url::getDisplayUrl( char* url, SafeBuf* sb ) {
+	const char *urlEnd = url + strlen(url);
+	const char *p = url;
+	if ( strncmp( p, "http://", 7 ) == 0 )
+		p += 7;
+	else if ( strncmp(p, "https://", 8 ) == 0 )
+		p += 8;
 
-		char* p = url;
-		char* pend = url + gbstrlen(url);
-		if(strncmp(p, "http://", 7) == 0) p += 7;
-		else if(strncmp(p, "https://", 8) == 0) p += 8;
+	const char *domEnd = static_cast<const char*>( memchr( p, '/', urlEnd - p ) ) ?: urlEnd;
 
-		while(p < pend && *p != '/') p++;
-		char* domEnd = p;
+	bool firstRun = true;
+	const char *found = NULL;
+	const char *labelCursor = url;
 
-		do {
-			if(found > domEnd) {
-				// Dont even look if it is past the domain
-				break;
-			}
+	while( ( found = strstr( labelCursor, "xn--" ) ) && ( found < domEnd ) ) {
+		if ( firstRun ) {
+			sb->safeMemcpy( url, found - url );
+			firstRun = false;
+		}
 
-			char* encodedStart = found + 4;
-			uint32_t decoded [ MAX_URL_LEN];
-			size_t decodedLen = MAX_URL_LEN - 1 ;
-			char* labelEnd = encodedStart;
-			while( labelEnd < domEnd && *labelEnd != '/' &&  *labelEnd != '.' ) 
-				labelEnd++;
+		const char* encodedStart = found + 4;
+		uint32_t decoded [ MAX_URL_LEN];
+		size_t decodedLen = MAX_URL_LEN - 1 ;
+		const char* labelEnd = encodedStart;
+		while( labelEnd < domEnd && *labelEnd != '/' && *labelEnd != '.' ) {
+			labelEnd++;
+		}
 
-			punycode_status status = punycode_decode(labelEnd - encodedStart,
-													 encodedStart, 
-													 &decodedLen, 
-													 decoded, NULL);
-			if(status != 0) {
-				log("build: Bad Engineer, failed to depunycode international url %s", url);
-				sb->safePrintf("%s", url);
-				return url;
-			}
-			sb->utf32Encode(decoded, decodedLen);
-			if(*labelEnd == '.') sb->pushChar(*labelEnd++);
-			labelCursor = labelEnd;
-		} while((found = strstr(labelCursor, "xn--")));
+		punycode_status status = punycode_decode(labelEnd - encodedStart, encodedStart, &decodedLen, decoded, NULL);
+		if ( status != 0 ) {
+			log( "build: Bad Engineer, failed to depunycode international url %s", url );
+			sb->safePrintf("%s", labelCursor);
+			sb->nullTerm();
+			return sb->getBufStart();
+		}
+
+		sb->utf32Encode( decoded, decodedLen );
+
+		if ( *labelEnd == '.' ) {
+			sb->pushChar( *labelEnd++ );
+		}
+
+		labelCursor = labelEnd;
 	}
+
     // Copy in the rest
     sb->safePrintf("%s", labelCursor);
     sb->nullTerm();
