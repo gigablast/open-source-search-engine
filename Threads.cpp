@@ -507,7 +507,8 @@ bool Threads::call ( char   type                         ,
 	// . returns NULL and sets g_errno on error
 	ThreadEntry *t = m_threadQueues[i].addEntry(niceness,state,
 						    callback,startRoutine);
-	if ( ! t ) return log("thread: Failed to add entry to thread pool: "
+	if ( ! t ) return log(LOG_DEBUG, 
+			      "thread: Failed to add entry to thread pool: "
 			      "%s.",mstrerror(g_errno));
 	// debug msg
 	//log("added");

@@ -6851,6 +6851,10 @@ void SpiderLoop::spiderDoledUrls ( ) {
 	// don't spider if not all hosts are up, or they do not all
 	// have the same hosts.conf.
 	if ( ! g_pingServer.m_hostsConfInAgreement ) return;
+
+	// trying this to avoid gridlock
+	if ( g_hostdb.hasOverloadedHost() ) return;
+
 	// if nothin in the active list then return as well
 	if ( ! m_activeList ) return;
 
