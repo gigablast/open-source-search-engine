@@ -669,7 +669,7 @@ bool Spiderdb::init ( ) {
 			    // we don't have to keep spiderdb so tightly merged i guess..
 			    // MDW: it seems to slow performance when not tightly merged
 			    // so put this back to "2"...
-			    2,//g_conf.m_spiderdbMinFilesToMerge , mintomerge
+			    -1,//g_conf.m_spiderdbMinFilesToMerge , mintomerge
 			    maxMem,//g_conf.m_spiderdbMaxTreeMem ,
 			    maxTreeNodes                ,
 			    true                        , // balance tree?

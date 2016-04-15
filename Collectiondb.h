@@ -605,7 +605,7 @@ class CollectionRec {
 	int32_t m_sectiondbMinFilesToMerge ;
 	//int32_t m_indexdbMinFilesToMerge ;
 	//int32_t m_indexdbMinTotalFilesToMerge ;
-	//int32_t m_spiderdbMinFilesToMerge ;
+	int32_t m_spiderdbMinFilesToMerge ;
 	//int32_t m_checksumdbMinFilesToMerge ;
 	//int32_t m_clusterdbMinFilesToMerge ;
 	//int32_t m_datedbMinFilesToMerge ;

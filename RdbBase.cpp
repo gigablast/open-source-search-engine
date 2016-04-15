@@ -1521,6 +1521,8 @@ bool RdbBase::attemptMerge ( int32_t niceness, bool forceMergeAll, bool doLog ,
 		m_minToMerge = cr->m_posdbMinFilesToMerge;
 	if ( cr && m_rdb == g_titledb.getRdb() ) 
 		m_minToMerge = cr->m_titledbMinFilesToMerge;
+	if ( cr && m_rdb == g_spiderdb.getRdb() ) 
+		m_minToMerge = cr->m_spiderdbMinFilesToMerge;
 	//if ( cr && m_rdb == g_spiderdb.getRdb() ) 
 	//	m_minToMerge = cr->m_spiderdbMinFilesToMerge;
 	//if ( cr && m_rdb == g_sectiondb.getRdb() ) 

@@ -2104,6 +2104,7 @@ bool CollectionRec::load ( char *coll , int32_t i ) {
 		m_titledbMinFilesToMerge = 4;
 		m_linkdbMinFilesToMerge  = 3;
 		m_tagdbMinFilesToMerge   = 2;
+		m_spiderdbMinFilesToMerge = 4;
 	}
 
 	// always turn on distributed spider locking because otherwise

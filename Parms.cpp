@@ -17377,6 +17377,19 @@ void Parms::init ( ) {
 	m->m_obj   = OBJ_COLL;
 	m++;
 
+	m->m_title = "spiderdb min files needed to trigger to merge";
+	m->m_desc  = "Merge is triggered when this many spiderdb data files "
+		"are on disk.";
+	m->m_cgi   = "msftm";
+	m->m_off   = (char *)&cr.m_spiderdbMinFilesToMerge - x;
+	m->m_def   = "4"; 
+	m->m_type  = TYPE_LONG;
+	m->m_group = 0;
+	m->m_flags = PF_CLONE;//PF_HIDDEN | PF_NOSAVE;
+	m->m_page  = PAGE_SPIDER;
+	m->m_obj   = OBJ_COLL;
+	m++;
+
 	m->m_title = "recycle content";
 	m->m_desc   = "Rather than downloading the content again when "
 		"indexing old urls, use the stored content. Useful for "
