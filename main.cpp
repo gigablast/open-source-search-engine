@@ -4,6 +4,8 @@
 
 #include "gb-include.h"
 
+#include <malloc.h>
+
 #include <sched.h>        // clone()
 // declare this stuff up here for call the pread() in our seek test below
 //
@@ -417,6 +419,19 @@ int main2 ( int argc , char *argv[] ) {
 	// let's try again on gk127 to make sure
 	// YES! gk0 cluster has run for months with this just fine!!
 	mlockall(MCL_CURRENT|MCL_FUTURE);
+	// no more giving free mem at the top of the heap back to the kernel
+	// because the kernel just is constantly defraging/compacting it
+	// by calling  isolate_freepages_block (according to 'perf top')
+	// and causing the system to screech to a halt
+	//if ( mallopt ( M_TRIM_THRESHOLD , -1 ) != 1 )
+	// try returning/trimming 100MB at a time so if user lowers
+	// maxmem we can give mem back to system
+	if ( mallopt ( M_TRIM_THRESHOLD , 100*1024*1024 ) != 1 )
+		fprintf(stderr,"mallopt M_TRIM_THRESHOLD: error\n");
+	// turn off the default-on malloc checking for speed
+	if ( mallopt ( M_CHECK_ACTION , 0 ) != 1 )
+		fprintf(stderr,"mallopt M_CHECK_ACTION: error\n");
+	
 #endif
 
 	//g_timedb.makeStartKey ( 0 );
@@ -4811,7 +4826,7 @@ int install ( install_flag_konst_t installFlag , int32_t hostId , char *dir ,
 			//to test add: ulimit -t 10; to the ssh cmd
 			sprintf(tmp,
 				"ssh %s \"cd %s ; "
-				"export MALLOC_CHECK_=0;"
+				//"export MALLOC_CHECK_=0;"
 				"cp -f gb gb.oldsave ; "
 				"mv -f gb.installed gb ; "
 				"ADDARGS='' ; "
@@ -5293,7 +5308,7 @@ int install ( install_flag_konst_t installFlag , int32_t hostId , char *dir ,
 			//to test add: ulimit -t 10; to the ssh cmd
 			sprintf(tmp,
 				"ssh %s \"cd %s ; ulimit -c unlimited; "
-				"export MALLOC_CHECK_=0;"
+				//"export MALLOC_CHECK_=0;"
 				"cp -f gb gb.oldsave ; "
 				"ADDARGS='' "
 				"INC=1 "
@@ -5413,7 +5428,7 @@ int install ( install_flag_konst_t installFlag , int32_t hostId , char *dir ,
 			//to test add: ulimit -t 10; to the ssh cmd
 			sprintf(tmp,
 				"ssh %s \"cd %s ; ulimit -c unlimited; "
-				"export MALLOC_CHECK_=0;"
+				//"export MALLOC_CHECK_=0;"
 				"cp -f gb gb.oldsave ; "
 				"mv -f gb.installed gb ; "
 				//"ADDARGS='' ; "

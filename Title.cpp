@@ -314,7 +314,10 @@ bool Title::setTitle4 ( XmlDoc   *xd            ,
 	// only allow 4 internal inlink titles
 	//int32_t didHost = 0;
 
-	LinkInfo *info = xd->getLinkInfo1();
+	// i've seen this return -1 (blocked) before so just get it directly
+	//LinkInfo *info = xd->getLinkInfo1();
+	LinkInfo *info = xd->ptr_linkInfo1;
+	if ( ! xd->m_linkInfo1Valid ) info = NULL;
 	// a flag to control subloop jumping
 	char didit = false;
 

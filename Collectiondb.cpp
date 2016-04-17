@@ -331,6 +331,7 @@ bool Collectiondb::addExistingColl ( char *coll, collnum_t collnum ) {
 
 	// and don't do link voting, will help speed up
 	if ( cr->m_isCustomCrawl ) {
+		cr->m_doTagdbLookups = false;
 		cr->m_getLinkInfo = false;
 		cr->m_computeSiteNumInlinks = false;
 		// limit each shard to 5 spiders per collection to prevent
@@ -2100,6 +2101,7 @@ bool CollectionRec::load ( char *coll , int32_t i ) {
 	// make min to merge smaller than normal since most collections are
 	// small and we want to reduce the # of vfds (files) we have
 	if ( m_isCustomCrawl ) {
+		m_doTagdbLookups = false;
 		m_posdbMinFilesToMerge   = 6;
 		m_titledbMinFilesToMerge = 4;
 		m_linkdbMinFilesToMerge  = 3;
