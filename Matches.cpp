@@ -426,13 +426,16 @@ bool Matches::set ( XmlDoc   *xd         ,
 
 	// . now the link text
 	// . loop through each link text and it its matches
-	LinkInfo *info = xd->getLinkInfo1();	
+	//LinkInfo *info = xd->getLinkInfo1();	
+	// the above returns -1 in some cases
+	LinkInfo *info = NULL;
+	if ( xd->m_linkInfo1Valid ) info = xd->ptr_linkInfo1;
 	// this is not the second pass, it is the first pass
 	bool secondPass = false;
  loop:
 	// loop through the Inlinks
 	Inlink *k = NULL;
-	for ( ; (k = info->getNextInlink(k)) ; ) {
+	for ( ; info && (k = info->getNextInlink(k)) ; ) {
 		// does it have link text? skip if not.
 		if ( k->size_linkText <= 1 ) continue;
 		// set the flag, the type of match
