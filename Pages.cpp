@@ -800,6 +800,7 @@ bool Pages::sendDynamicReply ( TcpSocket *s , HttpRequest *r , int32_t page ) {
 
 	// get safebuf stored in TcpSocket class
 	SafeBuf *parmList = &s->m_handyBuf;
+	SafeBuf errMsg;
 
 	parmList->reset();
 
@@ -816,8 +817,13 @@ bool Pages::sendDynamicReply ( TcpSocket *s , HttpRequest *r , int32_t page ) {
 	// . will only add parm recs we have permission to modify!!!
 	// . if no collection supplied will just return true with no g_errno
 	if ( //isMasterAdmin &&
-	     ! g_parms.convertHttpRequestToParmList ( r, parmList, page, s))
+	    ! g_parms.convertHttpRequestToParmList ( r, parmList, page, 
+						     s, &errMsg)) {
+		if(errMsg.length() != 0)
+			return g_httpServer.sendErrorReply(s,505,
+							   errMsg.getBufStart());
 		return g_httpServer.sendErrorReply(s,505,mstrerror(g_errno));
+	}
 		
 	// . add parmList using Parms::m_msg4 to all hosts!
 	// . returns true and sets g_errno on error

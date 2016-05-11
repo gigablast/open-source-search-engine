@@ -491,7 +491,8 @@ class Parms {
 				     int32_t occNum ,
 				     Parm *m ) ;
 	bool convertHttpRequestToParmList (HttpRequest *hr,SafeBuf *parmList,
-					   int32_t page , TcpSocket *sock );
+					   int32_t page , TcpSocket *sock,
+					   SafeBuf* errMsg);
 	Parm *getParmFast2 ( int32_t cgiHash32 ) ;
 	Parm *getParmFast1 ( char *cgi , int32_t *occNum ) ;
 	bool broadcastParmList ( SafeBuf *parmList ,

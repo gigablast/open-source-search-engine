@@ -1375,4 +1375,6 @@ class CollectionRec {
 	//char m_cachedPageName[MAX_NAME_LEN];
 };
 
+bool expandRegExShortcuts ( SafeBuf *sb );
+
 #endif

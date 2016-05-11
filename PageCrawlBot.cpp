@@ -2063,9 +2063,9 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 		}
 	}
 
-	//
-	// if we can't compile the provided regexes, return error
-	//
+	// If we can't compile the provided regexes, return error
+	// Now we do this before we broadcast the request to change
+	// the parameters too.
 	if ( cr ) {
 		char *rx1 = hr->getString("urlCrawlRegEx",NULL);
 		if ( rx1 && ! rx1[0] ) rx1 = NULL;

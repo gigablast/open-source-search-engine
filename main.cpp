@@ -2620,6 +2620,42 @@ int main2 ( int argc , char *argv[] ) {
 			exit(Url::unitTests());
 		}
 	}
+	if(strcmp(cmd, "egrep") == 0) {
+	  // for testing our regexs
+		  StackBuf(inRegexSb);
+		  inRegexSb.safePrintf("%s", argv[cmdarg+1]);
+		  expandRegExShortcuts(&inRegexSb);
+		  char *inRegex = inRegexSb.getBufStart();
+
+		  char *toMatch; //= argv[cmdarg+3];
+		  char errBuf[1024];
+		  regex_t crx;
+		  int32_t err = 0;
+		  if ( ( err = regcomp ( &crx, inRegex,
+					 REG_ICASE
+					 |REG_EXTENDED
+					 |REG_NEWLINE
+					 //|REG_NOSUB
+					 ) ) ) {
+		    regerror(err, &crx, errBuf, 1024);
+		    log("could not compile %s: %s", inRegex, errBuf);
+		    exit(1);
+		  }
+		  
+		  char toMatchBuf[2048];
+		  while((toMatch = fgets(toMatchBuf, 2048, stdin))) {
+		    if ( regexec(&crx,toMatch,0,NULL,0) ) {
+		      //exit(0);
+		    } else {
+		      log("match: %s on %s",
+			  inRegex,toMatch);
+		      // log("no match: %s on %s",
+		      // 	  inRegex,toMatch);
+		      //exit(2);
+		    }
+		  }
+		  exit(0);
+	}
 
 	// gb startclassifier coll ruleset [hostId]
 	/*
@@ -4290,7 +4326,7 @@ void doCmdAll ( int fd, void *state ) {
 
 	SafeBuf parmList;
 	// returns false and sets g_errno on error
-	if (!g_parms.convertHttpRequestToParmList(&s_r,&parmList,0,NULL)){
+	if (!g_parms.convertHttpRequestToParmList(&s_r,&parmList,0,NULL, NULL)){
 		log("cmd: error converting command: %s",mstrerror(g_errno));
 		exit(0);
 	}

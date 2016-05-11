@@ -20776,7 +20776,8 @@ bool Parms::addCurrentParmToList2 ( SafeBuf *parmList ,
 
 // returns false and sets g_errno on error
 bool Parms::convertHttpRequestToParmList (HttpRequest *hr, SafeBuf *parmList,
-					  int32_t page , TcpSocket *sock ) {
+					  int32_t page , TcpSocket *sock,
+					  SafeBuf* errMsg) {
 
 	// false = useDefaultRec?
 	CollectionRec *cr = g_collectiondb.getRec ( hr , false );
@@ -20858,6 +20859,57 @@ bool Parms::convertHttpRequestToParmList (HttpRequest *hr, SafeBuf *parmList,
 	bool hasSeeds    = hr->hasField("seeds");
 	// check for bulk jobs as well
 	if ( ! hasSeeds ) hasSeeds = hr->hasField("urls");
+
+	// Before we create anything, lets do some input validation
+	// so we don't do a bunch of work for nothing.
+	char *rx1 = hr->getString("urlCrawlRegEx",NULL);
+	if ( rx1 && ! rx1[0] ) rx1 = NULL;
+	char *rx2 = hr->getString("urlProcessRegEx",NULL);
+	if ( rx2 && ! rx2[0] ) rx2 = NULL;
+
+	if( errMsg && ( rx1 || rx2 ) ) {
+		regex_t re1;
+		regex_t re2;
+		int32_t status1 = 0;
+		int32_t status2 = 0;
+		if ( rx1 )
+			status1 = regcomp ( &re1 , rx1 ,
+					    REG_EXTENDED|REG_ICASE|
+					    REG_NEWLINE|REG_NOSUB);
+		if ( rx2 )
+			status2 = regcomp ( &re2 , rx2 ,
+					    REG_EXTENDED|REG_ICASE|
+					    REG_NEWLINE|REG_NOSUB);
+		if ( rx1 ) regfree ( &re1 );
+		if ( rx2 ) regfree ( &re2 );
+		
+		char*   errBuf;
+		int32_t remaining;
+		if ( status1 || status2 ) {
+		  errMsg->reserve(1024);
+		  errMsg->safePrintf("Invalid Regex: ");
+		  errBuf = errMsg->getBuf();
+		  remaining = errMsg->getAvail();
+		  g_errno = EDIFFBOTBADREGEX;
+		}
+
+		if ( status1 ) {
+			log("xmldoc: regcomp %s failed.",rx1);
+			int32_t n = regerror(status1, &re1, errBuf, remaining);
+			errMsg->incrementLength(n);
+			return false;
+
+		}
+
+		else if ( status2 ) {
+			log("xmldoc: regcomp %s failed.",rx2);
+			int32_t n = regerror(status2, &re2, errBuf, remaining);
+			errMsg->incrementLength(n);
+			return false;
+		}
+	}
+
+
 	if ( ! cr          && 
 	     token         && 
 	     name          && 
