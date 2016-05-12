@@ -101,7 +101,7 @@ bool isTLD ( char *tld , int32_t tldLen ) {
 	for ( int32_t i = 0 ; i < tldLen ; i++ ) {
 		// period count
 		if ( tld[i] == '.' ) { pcount++; continue; }
-		if ( ! is_alpha_a(tld[i]) ) return false;
+		if ( ! is_alnum_a(tld[i]) && tld[i] != '-' ) return false;
 	}
 
 	if ( pcount == 0 ) return true;
