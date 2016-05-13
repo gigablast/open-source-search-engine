@@ -736,6 +736,9 @@ int32_t RdbBase::addFile ( int32_t id , bool isNew , int32_t mergeNum ,
 	int64_t mm = g_conf.m_maxMem;
 	g_conf.m_maxMem = 0x0fffffffffffffffLL;
 	BigFile *f ;
+
+ tryAgain:
+
 	try { f = new (BigFile); }
 	catch ( ...  ) { 
 		g_conf.m_maxMem = mm;
@@ -768,24 +771,29 @@ int32_t RdbBase::addFile ( int32_t id , bool isNew , int32_t mergeNum ,
 		    f->getDir(),
 		    f->getFilename());
 		// if length is NOT 0 then that sucks, just return
-		if ( f->getFileSize() != 0 ) {
-			mdelete ( f , sizeof(BigFile),"RdbBFile");
-			delete (f); 
+		bool isEmpty = ( f->getFileSize() == 0 );
+		// move to trash if empty
+		if ( isEmpty ) {
+			// otherwise, move it to the trash
+			SafeBuf cmd;
+			cmd.safePrintf("mv %s/%s %s/trash/",
+				       f->getDir(),
+				       f->getFilename(),
+				       g_hostdb.m_dir);
+			log("rdb: %s",cmd.getBufStart() );
+			gbsystem ( cmd.getBufStart() );
+		}
+		// nuke it either way
+		mdelete ( f , sizeof(BigFile),"RdbBFile");
+		delete (f); 
+		// if it was not empty, we are done. i guess merges
+		// will stockpile, that sucks... things will slow down
+		if ( ! isEmpty ) {
 			return -1;
 			char *xx=NULL;*xx=0;
 		}
-		// otherwise, move it to the trash
-		SafeBuf cmd;
-		cmd.safePrintf("mv %s/%s %s/trash/",
-			       f->getDir(),
-			       f->getFilename(),
-			       g_hostdb.m_dir);
-		log("rdb: %s",cmd.getBufStart() );
-		gbsystem ( cmd.getBufStart() );
-		// ok, now re-set it since it is no longer there
-		f->reset();
-		// and set it again
-		f->set ( getDir() , name , NULL );
+		// ok, now try again since bogus file is gone
+		goto tryAgain;
 	}
 
 
