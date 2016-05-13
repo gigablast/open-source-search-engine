@@ -243,6 +243,7 @@ void Url::set ( char *t , int32_t tlen , bool addWWW , bool stripSessionId ,
 			gbmemcpy(encodedDomStart, "xn--", 4);
 			encodedDomStart += 4;
 
+			encodedLen = MAX_URL_LEN - (encodedDomStart - encoded);
 			punycode_status status ;
 			status = punycode_encode(tmpLen, 
 						 tmpBuf,
@@ -252,7 +253,8 @@ void Url::set ( char *t , int32_t tlen , bool addWWW , bool stripSessionId ,
 			if ( status != 0 ) {
 				// Give up? try again?
 				log("build: Bad Engineer, failed to "
-				    "punycode international url %s", t);
+				    "punycode international url %s (%"INT32")",
+				    t, (int32_t)status);
 				return;
 			}
 			// We should check if what we encoded were valid url 
