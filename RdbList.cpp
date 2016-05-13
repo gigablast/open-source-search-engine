@@ -770,8 +770,8 @@ bool RdbList::checkList_r ( bool removeNegRecs , bool sleepOnProblem ,
 			// bad url in spider request?
 			if ( g_spiderdb.isSpiderRequest ( (key128_t *)rec ) ){
 				SpiderRequest *sr = (SpiderRequest *)rec;
-				if ( strncmp(sr->m_url,"http",4) != 0 ) {
-					log("db: spider req url");
+				if ( sr->isCorrupt() ) {
+					log("db: spider req corrupt");
 					char *xx=NULL;*xx=0;
 				}
 			}

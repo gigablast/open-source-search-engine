@@ -13599,9 +13599,31 @@ void dedupSpiderdbList ( RdbList *list , int32_t niceness , bool removeNegRecs )
 	int64_t reqUh48  = 0LL;
 	int64_t repUh48  = 0LL;
 	SpiderReply   *oldRep = NULL;
-	SpiderRequest *oldReq = NULL;
+	//SpiderRequest *oldReq = NULL;
 	char *lastKey     = NULL;
-	char *prevLastKey = NULL;
+
+	int32_t oldSize = list->m_listSize;
+	int32_t corrupt = 0;
+	// debug
+	// static int32_t s_count = 0;
+	// s_count++;
+	// if ( s_count == 2524 )
+	// 	log("gotit");
+
+	int32_t numToFilter = 0;
+
+	class Link {
+	public:
+		uint32_t m_srh;
+		SpiderRequest *m_sreq;
+		class Link *m_prev;
+		class Link *m_next;
+	};
+#define MAXLINKS 30
+	Link *headLink = NULL;
+	Link *tailLink = NULL;
+	Link  links[MAXLINKS];
+	int32_t numLinks = 0;
 
 	// save list ptr in case of re-read?
 	//char *saved = list->m_listPtr;
@@ -13624,10 +13646,8 @@ void dedupSpiderdbList ( RdbList *list , int32_t niceness , bool removeNegRecs )
 				log("spider: filter got negative key");
 				char *xx=NULL;*xx=0;
 			}
-			// save this
-			prevLastKey = lastKey;
-			lastKey     = dst;
 			// otherwise, keep it
+			lastKey = dst;
 			memmove ( dst , rec , sizeof(key128_t) );
 			dst += sizeof(key128_t);
 			continue;
@@ -13655,15 +13675,13 @@ void dedupSpiderdbList ( RdbList *list , int32_t niceness , bool removeNegRecs )
 					continue;
 				// otherwise, erase him
 				dst     = restorePoint;
-				lastKey = prevLastKey;
 			}
 			// save in case we get erased
 			restorePoint = dst;
-			prevLastKey  = lastKey;
-			lastKey      = dst;
 			// get our size
 			int32_t recSize = srep->getRecSize();
 			// and add us
+			lastKey = dst;
 			memmove ( dst , rec , recSize );
 			// advance
 			dst += recSize;
@@ -13676,6 +13694,12 @@ void dedupSpiderdbList ( RdbList *list , int32_t niceness , bool removeNegRecs )
 
 		// int16_tcut
 		SpiderRequest *sreq = (SpiderRequest *)rec;
+
+		// might as well filter out corruption
+		if ( sreq->isCorrupt() ) {
+			corrupt += sreq->getRecSize();
+			continue;
+		}
 
 		// int16_tcut
 		int64_t uh48 = sreq->getUrlHash48();
@@ -13714,26 +13738,15 @@ void dedupSpiderdbList ( RdbList *list , int32_t niceness , bool removeNegRecs )
 			//sreq->m_hasSiteVenue       = old->m_hasSiteVenue;
 		}
 
-		// if we are not the same url as last request, add it
+		// if we are not the same url as last request, then
+		// we will not need to dedup, but should add ourselves to
+		// the linked list, which we also reset here.
 		if ( uh48 != reqUh48 ) {
-			// a nice hook in
-		addIt:
-			// save in case we get erased
-			restorePoint = dst;
-			prevLastKey  = lastKey;
-			// get our size
-			int32_t recSize = sreq->getRecSize();
-			// save this
-			lastKey = dst;
-			// and add us
-			memmove ( dst , rec , recSize );
-			// advance
-			dst += recSize;
-			// update this crap for comparing to next reply
-			reqUh48  = uh48;
-			oldReq   = sreq;
-			// get next spiderdb record
-			continue;
+			numLinks = 0;
+			headLink = NULL;
+			tailLink = NULL;
+			// we are the new banner carrier
+			reqUh48 = uh48;
 		}
 
 		// try to kinda grab the min hop count as well
@@ -13745,9 +13758,140 @@ void dedupSpiderdbList ( RdbList *list , int32_t niceness , bool removeNegRecs )
 		// 		oldReq->m_hopCount = sreq->m_hopCount;
 		// }
 
+		// why does sitehash32 matter really?
+		uint32_t srh = sreq->m_siteHash32;
+		if ( sreq->m_isNewOutlink  ) srh ^= 0xb714d3a3;
+		if ( sreq->m_isInjecting   ) srh ^= 0x42538909;
+		if ( sreq->m_hasContent    ) srh ^= 0xbbbefd59;
+		if ( sreq->m_isAddUrl      ) srh ^= 0x587c5a0b;
+		if ( sreq->m_isPageReindex ) srh ^= 0x70fb3911;
+		if ( sreq->m_forceDelete   ) srh ^= 0x4e6e9aee;
+
+		if ( sreq->m_parentIsSiteMap    ) srh ^= 0xe0c20e3f;
+		if ( sreq->m_urlIsDocId         ) srh ^= 0xee015b07;
+		if ( sreq->m_fakeFirstIp        ) srh ^= 0x95b8d376;
+		if ( sreq->m_parentIsRSS        ) srh ^= 0xb08c7545;
+		if ( sreq->m_parentIsPermalink  ) srh ^= 0xbd688268;
+		if ( sreq->m_parentIsPingServer ) srh ^= 0xb4c8a811;
+		if ( sreq->m_isMenuOutlink      ) srh ^= 0xd97bb80b;
+
+		// we may assign url filter priority based on parent langid
+		srh ^= (uint32_t)g_hashtab[0][(uint8_t)sreq->m_parentLangId];
+
 		// if he's essentially different input parms but for the
 		// same url, we want to keep him because he might map the
 		// url to a different url priority!
+		bool skipUs = false;
+		Link *myLink = NULL;
+		Link *link = headLink;
+
+		// debug point. should be deduped by
+		// if ( sreq->m_key.n0==7199823231990374913LL &&
+		//      sreq->m_key.n1==6511615362168588088 )
+		// 	log("hey1");
+		// if ( sreq->m_key.n0==7199823542662487041LL &&
+		//      sreq->m_key.n1==6511615362168588088 )
+		// 	log("hey2");
+
+		// now we keep a list of the last ten
+		for ( ; link ; link = link->m_next ) {
+			if ( srh != link->m_srh ) continue;
+			SpiderRequest *prevReq = link->m_sreq;
+			// if we are better, replace him and stop
+			if ( sreq->m_hopCount < prevReq->m_hopCount ) 
+				goto replacePrevReq;
+			// skip us if previous guy is better
+			if ( sreq->m_hopCount > prevReq->m_hopCount ) {
+				skipUs = true;
+				break;
+			}
+
+			// TODO: for pro, base on parentSiteNumInlinks here,
+			// and hash hopcounts, but only 0,1,2,3. use 3
+			// for all that are >=3. we can also have two hashes,
+			// m_srh and m_srh2 in the Link class, and if your
+			// new secondary hash is unique we can let you in
+			// if your parentpageinlinks is the highest of all.
+
+			// resort to added time if hopcount is tied
+			// . if the same check who has the most recentaddedtime
+			// . if we are not the most recent, just do not add us
+			// . no, now i want the oldest so we can do 
+			//   gbssDiscoveryTime and set sreq->m_discoveryTime 
+			//   accurately, above
+			if ( sreq->m_addedTime >= prevReq->m_addedTime ) {
+				skipUs = true;
+				break;
+			}
+			// otherwise, replace him
+		replacePrevReq:
+			if ( prevReq->m_url[0] != 'h' ) { char *xx=NULL;*xx=0;}
+			prevReq->m_url[0] = 'x'; // mark for removal. xttp://
+			myLink = link;
+			// make a note of this so we physically remove these
+			// entries after we are done with this scan.
+			numToFilter++;
+			goto promoteLinkToHead;
+		}
+		// if we were not as good as someone that was basically the
+		// same SpiderRequest before us, keep going
+		if ( skipUs )
+			continue;
+
+		// add to linked list
+		if ( numLinks < MAXLINKS ) {
+			myLink = &links[numLinks++];
+			myLink->m_prev = NULL;
+			myLink->m_next = NULL;
+			// if first one, we are head and tail
+			if ( numLinks == 1 ) {
+				headLink = myLink;
+				tailLink = myLink;
+			}
+		}
+		// if full, just supplant the tail link
+		else 
+			myLink = tailLink;
+
+	promoteLinkToHead:
+
+		myLink->m_srh  = srh;
+		myLink->m_sreq = (SpiderRequest *)dst;//sreq;
+
+		// move link to head if not already
+		if ( myLink != headLink ) {
+			// if we are the tail, there will be a new tail
+			if ( myLink == tailLink ) tailLink = myLink->m_prev;
+			// make previous link point over us
+			if ( myLink->m_prev )
+				myLink->m_prev->m_next = myLink->m_next;
+			// make next link ptr point backward over us
+			if ( myLink->m_next )
+				myLink->m_next->m_prev = myLink->m_prev;
+			// make current head point backward to us
+			headLink->m_prev = myLink;
+			// and we point forward to him
+			myLink->m_next = headLink;
+			// and backward to nobody
+			myLink->m_prev = NULL;
+			// and we are the head now
+			headLink = myLink;
+		}
+
+
+		// get our size
+		int32_t recSize = sreq->getRecSize();
+
+		// and add us
+		lastKey = dst;
+		memmove ( dst , rec , recSize );
+		// advance
+		dst += recSize;
+
+		// get next spiderdb record
+		continue;
+
+		/*
 		if ( oldReq->m_siteHash32    != sreq->m_siteHash32    ||
 		     oldReq->m_isNewOutlink  != sreq->m_isNewOutlink  ||
 		     //  use hopcount now too!
@@ -13771,11 +13915,14 @@ void dedupSpiderdbList ( RdbList *list , int32_t niceness , bool removeNegRecs )
 		// . no, now i want the oldest so we can do gbssDiscoveryTime
 		//   and set sreq->m_discoveryTime accurately, above
 		if ( sreq->m_addedTime >= oldReq->m_addedTime ) continue;
+
 		// otherwise, erase over him
 		dst     = restorePoint;
 		lastKey = prevLastKey;
 		// and add us over top of him
 		goto addIt;
+		*/
+
 	}
 
 	// free the old list
@@ -13785,6 +13932,57 @@ void dedupSpiderdbList ( RdbList *list , int32_t niceness , bool removeNegRecs )
 	// sanity check
 	if ( dst < list->m_list || dst > list->m_list + list->m_listSize ) {
 		char *xx=NULL;*xx=0; }
+
+
+	/////////
+	//
+	// now remove xttp:// urls if we had some
+	//
+	/////////
+	if ( numToFilter > 0 ) {
+		// update list so for-loop below works
+		list->m_listSize  = dst - newList;
+		list->m_listPtr   = newList;//dst;
+		list->m_listEnd   = list->m_list + list->m_listSize;
+		list->m_listPtrHi = NULL;
+		// and we'll re-write everything back into itself at "dst"
+		dst = newList;
+	}
+	for ( ; ! list->isExhausted() ; ) {
+		// breathe. NO! assume in thread!!
+		//QUICKPOLL(niceness);
+		// get rec
+		char *rec = list->getCurrentRec();
+		// pre skip it
+		list->skipCurrentRec();
+		// skip if negative, just copy over
+		if ( ( rec[0] & 0x01 ) == 0x00 ) {
+			lastKey = dst;
+			memmove ( dst , rec , sizeof(key128_t) );
+			dst += sizeof(key128_t);
+			continue;
+		}
+		// is it a reply?
+		if ( g_spiderdb.isSpiderReply ( (key128_t *)rec ) ) {
+			SpiderReply *srep = (SpiderReply *)rec;
+			int32_t recSize = srep->getRecSize();
+			lastKey = dst;
+			memmove ( dst , rec , recSize );
+			dst += recSize;
+			continue;
+		}
+		SpiderRequest *sreq = (SpiderRequest *)rec;
+		// skip if filtered out
+		if ( sreq->m_url[0] == 'x' ) 
+			continue;
+		int32_t recSize = sreq->getRecSize();
+		lastKey = dst;
+		memmove ( dst , rec , recSize );
+		dst += recSize;
+		// if ( sreq->getUrlHash48() == 49553538838LL )
+		// 	log("napkins");
+	}
+
 
 	// and stick our newly filtered list in there
 	//list->m_list      = newList;
@@ -13796,6 +13994,15 @@ void dedupSpiderdbList ( RdbList *list , int32_t niceness , bool removeNegRecs )
 	list->m_listEnd   = list->m_list + list->m_listSize;
 	list->m_listPtrHi = NULL;
 	//KEYSET(list->m_lastKey,lastKey,list->m_ks);
+
+	// log("spiderdb: remove ME!!!");
+	// // check it
+	// list->checkList_r(false,false,RDB_SPIDERDB);
+	// list->resetListPtr();
+
+	int32_t delta = oldSize - list->m_listSize;
+	log("spider: deduped %i bytes (of which %i were corrupted) "
+	    "out of %i",(int)delta,(int)corrupt,(int)oldSize);
 
 	if ( lastKey ) KEYSET(list->m_lastKey,lastKey,list->m_ks);
 
@@ -15019,6 +15226,11 @@ bool SpiderRequest::isCorrupt ( ) {
 	if ( m_url[0] == 'h' && m_url[1]=='t' && m_url[2]=='t' &&
 	     m_url[3] == 'p' ) 
 		return false;
+	// to be a docid as url must have this set
+	if ( ! m_isPageReindex && ! m_urlIsDocId ) {
+		log("spider: got corrupt 3 spiderRequest");
+		return true;
+	}
 	// might be a docid from a pagereindex.cpp
 	if ( ! is_digit(m_url[0]) ) { 
 		log("spider: got corrupt 1 spiderRequest");
