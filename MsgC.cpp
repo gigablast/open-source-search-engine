@@ -419,8 +419,11 @@ void gotMsgCIpWrapper( void *state, int32_t ip){
 	log(LOG_DEBUG,"dns: msgc sending reply for state=%"PTRFMT".",(PTRTYPE)state);
 
 	//to fit the ip address
-	char reply[12];
+	//char reply[12];
+	// don't put it on the stack because sendReply_ass does not copy!
+	char *reply = slot->m_tmpBuf;
 	int32_t replySize=12;
+	if ( TMPBUFSIZE < replySize ) { char *xx=NULL;*xx=0; }
 	//	reply=(char*) mmalloc(replySize,"MsgC");
 	char *p = reply;
 	*(int32_t *)p = ip; p += 4;
