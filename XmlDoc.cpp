@@ -17134,7 +17134,9 @@ SafeBuf *XmlDoc::getDiffbotReply ( ) {
 				     // seconds so we can figure out why
 				     // diffbot times out, etc. what is
 				     // going on.
-				     18000*1000, // 180 sec timeout
+				     // this is slowing things too much
+				     // so make it 240 seconds
+				     240*1000, // 240 sec timeout
 				     0,//proxyip
 				     0,//proxyport
 				     // unlimited replies i guess
