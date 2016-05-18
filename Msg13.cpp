@@ -1129,7 +1129,8 @@ void downloadTheDocForReals3b ( Msg13Request *r ) {
 				     r->m_ifModifiedSince ,
 				     r                    , // state
 				     callback       , // callback
-				     30*1000              , // 30 sec timeout
+				     // MDW: make this 60 seconds now
+				     60*1000              , // 30 sec timeout
 				     r->m_proxyIp     ,
 				     r->m_proxyPort   ,
 				     maxDocLen1,//r->m_maxTextDocLen   ,
