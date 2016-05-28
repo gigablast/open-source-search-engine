@@ -7677,9 +7677,9 @@ bool SpiderLoop::gotDoledbList2 ( ) {
 	// get the "spider rec" (SpiderRequest) (embedded in the doledb rec)
 	SpiderRequest *sreq = (SpiderRequest *)(rec + sizeof(key_t)+4);
 	// sanity check. check for http(s)://
-	if ( sreq->m_url[0] != 'h' &&
+	if ( sreq->isCorrupt() ) { // m_url[0] != 'h' &&
 	     // might be a docid from a pagereindex.cpp
-	     ! is_digit(sreq->m_url[0]) ) { 
+	     //! is_digit(sreq->m_url[0]) ) { 
 		// note it
 		if ( (g_corruptCount % 1000) == 0 )
 			log("spider: got corrupt doledb record. ignoring. "
