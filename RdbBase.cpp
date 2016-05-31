@@ -776,7 +776,8 @@ int32_t RdbBase::addFile ( int32_t id , bool isNew , int32_t mergeNum ,
 		if ( isEmpty ) {
 			// otherwise, move it to the trash
 			SafeBuf cmd;
-			cmd.safePrintf("mv %s/%s %s/trash/",
+			cmd.safePrintf("mkdir %s/trash ; mv %s/%s %s/trash/",
+				       g_hostdb.m_dir,
 				       f->getDir(),
 				       f->getFilename(),
 				       g_hostdb.m_dir);
