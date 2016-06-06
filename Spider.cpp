@@ -2235,6 +2235,11 @@ bool SpiderColl::addSpiderRequest ( SpiderRequest *sreq ,
 		return true;
 	}
 
+	if ( sreq->isCorrupt() ) {
+		log("spider: not adding corrupt spider req to doledb");
+		return true;
+	}
+
 	// . get the url's length contained in this record
 	// . it should be NULL terminated
 	// . we set the ip here too
@@ -4468,30 +4473,15 @@ bool SpiderColl::scanListForWinners ( ) {
 			continue;
 		}
 
-		// sanity check. check for http(s)://
-		if ( ( sreq->m_url[0] != 'h' ||
-		       sreq->m_url[1] != 't' ||
-		       sreq->m_url[2] != 't' ||
-		       sreq->m_url[3] != 'p' ) &&
-		     // might be a docid from a pagereindex.cpp
-		     ! is_digit(sreq->m_url[0]) ) { 
+		if ( sreq->isCorrupt() ) {
 			if ( m_cr->m_spiderCorruptCount == 0 )
-				log("spider: got corrupt 1 spiderRequest in "
+				log("spider: got corrupt xx spiderRequest in "
 				    "scan because url is %s (cn=%"INT32")"
 				    ,sreq->m_url,(int32_t)m_collnum);
 			m_cr->m_spiderCorruptCount++;
 			continue;
 		}
-		if ( sreq->m_dataSize > (int32_t)sizeof(SpiderRequest) ||
-		     sreq->m_dataSize < 0 ) {
-			if ( m_cr->m_spiderCorruptCount == 0 )
-				log("spider: got corrupt 11 spiderRequest in "
-				    "scan because size=%i u=%s (cn=%"INT32")"
-				    ,(int)sreq->m_dataSize
-				    ,sreq->m_url,(int32_t)m_collnum);
-			m_cr->m_spiderCorruptCount++;
-			continue;
-		}
+
 		int32_t delta = sreq->m_addedTime - nowGlobal;
 		if ( delta > 86400 ) {
 			static bool s_first = true;
