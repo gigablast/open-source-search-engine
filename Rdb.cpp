@@ -3650,8 +3650,8 @@ int32_t Rdb::reclaimMemFromDeletedTreeNodes( int32_t niceness ) {
 		if ( sreq->isCorrupt() ||  dst + recSize > memEnd ) {
 			log("rdb: not readding corrupted doledb1 in scan. "
 			    "deleting from tree.");
-			char *xx=NULL;*xx=0;
 			// a dup? sanity check
+			p += recSize;
 			int32_t *nodePtr = (int32_t *)ht.getValue (&oldOffset);
 			if ( ! nodePtr ) {
 				log("rdb: strange. not in tree anymore.");
