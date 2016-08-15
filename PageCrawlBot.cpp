@@ -832,7 +832,7 @@ void StateCD::printSpiderdbList ( RdbList *list,SafeBuf *sb,char **lastKeyPtr){
 		// ok, we got a spider request
 		sreq = (SpiderRequest *)rec;
 		
-		if ( sreq->isCorrupt() ) {
+		if ( sreq->isCorrupt(cr->m_collnum) ) {
 			log("spider: encountered a corrupt spider req "
 			    "when dumping cn=%"INT32". skipping.",
 			    (int32_t)cr->m_collnum);

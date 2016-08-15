@@ -3647,7 +3647,7 @@ int32_t Rdb::reclaimMemFromDeletedTreeNodes( int32_t niceness ) {
 			continue;
 		}
 		// corrupted? or breach of mem buf?
-		if ( sreq->isCorrupt() ||  dst + recSize > memEnd ) {
+		if ( sreq->isCorrupt(-1) ||  dst + recSize > memEnd ) {
 			log("rdb: not readding corrupted doledb1 in scan. "
 			    "deleting from tree.");
 			// a dup? sanity check

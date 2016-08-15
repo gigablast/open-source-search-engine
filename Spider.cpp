@@ -2235,7 +2235,7 @@ bool SpiderColl::addSpiderRequest ( SpiderRequest *sreq ,
 		return true;
 	}
 
-	if ( sreq->isCorrupt() ) {
+	if ( sreq->isCorrupt(m_collnum) ) {
 		log("spider: not adding corrupt spider req to doledb");
 		return true;
 	}
@@ -4473,7 +4473,7 @@ bool SpiderColl::scanListForWinners ( ) {
 			continue;
 		}
 
-		if ( sreq->isCorrupt() ) {
+		if ( sreq->isCorrupt(m_collnum) ) {
 			if ( m_cr->m_spiderCorruptCount == 0 )
 				log("spider: got corrupt xx spiderRequest in "
 				    "scan because url is %s (cn=%"INT32")"
@@ -7667,7 +7667,7 @@ bool SpiderLoop::gotDoledbList2 ( ) {
 	// get the "spider rec" (SpiderRequest) (embedded in the doledb rec)
 	SpiderRequest *sreq = (SpiderRequest *)(rec + sizeof(key_t)+4);
 	// sanity check. check for http(s)://
-	if ( sreq->isCorrupt() ) { // m_url[0] != 'h' &&
+	if ( sreq->isCorrupt(m_collnum) ) { // m_url[0] != 'h' &&
 	     // might be a docid from a pagereindex.cpp
 	     //! is_digit(sreq->m_url[0]) ) { 
 		// note it
@@ -13686,7 +13686,7 @@ void dedupSpiderdbList ( RdbList *list , int32_t niceness , bool removeNegRecs )
 		SpiderRequest *sreq = (SpiderRequest *)rec;
 
 		// might as well filter out corruption
-		if ( sreq->isCorrupt() ) {
+		if ( sreq->isCorrupt(-1) ) {
 			corrupt += sreq->getRecSize();
 			continue;
 		}
@@ -15200,23 +15200,32 @@ bool SpiderRequest::setFromInject ( char *url ) {
 }
 
 
-bool SpiderRequest::isCorrupt ( ) {
+bool SpiderRequest::isCorrupt ( collnum_t collnum ) {
+
+	static int32_t s_printed = 0;
 
 	// more corruption detection
 	if ( m_hopCount < -1 ) {
-		log("spider: got corrupt 5 spiderRequest");
+		if ( s_printed++ < 100 )
+		log("spider: got corrupt 5 spiderRequest (cn=%i)",
+		    (int)collnum);
+		if ( s_printed > 100000 ) s_printed = 0;
 		return true;
 	}
 
 	if ( m_dataSize > (int32_t)sizeof(SpiderRequest) ) {
-		log("spider: got corrupt oversize spiderrequest %i",
-		    (int)m_dataSize);
+		if ( s_printed++ < 1000 )
+		log("spider: got corrupt oversize spiderrequest %i (cn=%i)",
+		    (int)m_dataSize,(int)collnum);
+		if ( s_printed > 100000 ) s_printed = 0;
 		return true;
 	}
 
 	if ( m_dataSize <= 0 ) {
-		log("spider: got corrupt undersize spiderrequest %i",
-		    (int)m_dataSize);
+		if ( s_printed++ < 1000 )
+		log("spider: got corrupt undersize spiderrequest %i (cn=%i)",
+		    (int)m_dataSize,(int)collnum);
+		if ( s_printed > 100000 ) s_printed = 0;
 		return true;
 	}
 
@@ -15226,12 +15235,18 @@ bool SpiderRequest::isCorrupt ( ) {
 		return false;
 	// to be a docid as url must have this set
 	if ( ! m_isPageReindex && ! m_urlIsDocId ) {
-		log("spider: got corrupt 3 spiderRequest");
+		if ( s_printed++ < 1000 )
+		log("spider: got corrupt 3 spiderRequest (cn=%i)",
+		    (int)collnum);
+		if ( s_printed > 100000 ) s_printed = 0;
 		return true;
 	}
 	// might be a docid from a pagereindex.cpp
 	if ( ! is_digit(m_url[0]) ) { 
-		log("spider: got corrupt 1 spiderRequest");
+		if ( s_printed++ < 1000 )
+		log("spider: got corrupt 1 spiderRequest (cn=%i)",
+		    (int)collnum);
+		if ( s_printed > 100000 ) s_printed = 0;
 		return true;
 	}
 	// if it is a digit\0 it is ok, not corrupt
@@ -15239,7 +15254,10 @@ bool SpiderRequest::isCorrupt ( ) {
 		return false;
 	// if it is not a digit after the first digit, that is bad
 	if ( ! is_digit(m_url[1]) ) { 
-		log("spider: got corrupt 2 spiderRequest");
+		if ( s_printed++ < 1000 )
+		log("spider: got corrupt 2 spiderRequest (cn=%i)",
+		    (int)collnum);
+		if ( s_printed > 100000 ) s_printed = 0;
 		return true;
 	}
 	char *p    = m_url + 2;
@@ -15247,7 +15265,10 @@ bool SpiderRequest::isCorrupt ( ) {
 	for ( ; p < pend && *p ; p++ ) {
 		// the whole url must be digits, a docid
 		if ( ! is_digit(*p) ) {
-			log("spider: got corrupt 13 spiderRequest");
+			if ( s_printed++ < 1000 )
+			log("spider: got corrupt 13 spiderRequest (cn=%i)",
+			    (int)collnum);
+			if ( s_printed > 100000 ) s_printed = 0;
 			return true;
 		}
 	}

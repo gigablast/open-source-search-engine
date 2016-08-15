@@ -1423,7 +1423,7 @@ bool XmlDoc::set4 ( SpiderRequest *sreq      ,
 	//     ! g_hostdb.m_myHost->m_isProxy ) {
 	//	char *xx=NULL; *xx=0; }
 
-	if ( sreq->isCorrupt() ) 
+	if ( sreq->isCorrupt(m_collnum) ) 
 		return log("XmlDoc: set4() spider request is corrupt in coll "
 			   "%s u=%s",coll,sreq->m_url);
 

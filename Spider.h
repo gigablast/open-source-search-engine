@@ -813,7 +813,7 @@ class SpiderRequest {
 	bool setFromAddUrl ( char *url ) ;
 	bool setFromInject ( char *url ) ;
 
-	bool isCorrupt ( );
+	bool isCorrupt ( collnum_t collnum );
 };
 
 // . XmlDoc adds this record to spiderdb after attempting to spider a url
