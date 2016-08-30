@@ -213,6 +213,8 @@ class XmlDoc *g_xd;
 
 void XmlDoc::reset ( ) {
 
+	m_zeroedOut = false;
+
 	m_oldDocExistedButHadError = false;
 
 	m_addedStatusDocId = 0;
@@ -5210,6 +5212,39 @@ bool XmlDoc::setTitleRecBuf ( SafeBuf *tbuf, int64_t docId, int64_t uh48 ){
 	// this must be valid now
 	//if ( ! m_skipIndexingValid ) { char *xx=NULL;*xx=0; }
 
+	CollectionRec *cr = getCollRec();
+	if ( ! cr ) return false;
+
+	// zero out the content to save disk space if it is a custom crawl
+	// and the page was not processed (i.e. sent to diffbot).
+	// this will cause some undeletable data in the index, like for
+	// indexing meta tags perhaps, but in general we do not index
+	// most of the html document in custom crawls because we set
+	// 'indexBody/indexDoc' to false. but don't do this if we have
+	// ever sent this url to diffbot for processing before at any time.
+	// this may screw up content hash deduping, because the original
+	// hash will always be indexed, even if the doc changes or is
+	// deleted.
+	bool zeroOut = false;
+	if ( cr->m_isCustomCrawl && ! m_sentToDiffbot ) zeroOut = true;
+	if ( m_isDiffbotJSONObject ) zeroOut = false;
+	if ( ! m_exactContentHash64Valid ) zeroOut = false;
+	// disable for now. probably most disk space is from the spider status
+	// docs.
+	//zeroOut = false;
+	char    *savedPtr  = ptr_utf8Content;
+	int32_t  savedSize = size_utf8Content;
+	char tmp[64];
+	if ( zeroOut ) {
+		// record the 64 bit content hash here and make
+		// getExactContentHash64() return it as a 64-bit binary number.
+		// that way we can preserve it.
+		sprintf(tmp,"gbzeroedout:%"UINT64"",m_exactContentHash64);
+		ptr_utf8Content  = tmp;
+		size_utf8Content = gbstrlen(ptr_utf8Content) + 1;
+		m_zeroedOut = true;
+	}
+
 	// set this
 	m_headerSize = (char *)&ptr_firstUrl - (char *)&m_headerSize;
 
@@ -5244,7 +5279,12 @@ bool XmlDoc::setTitleRecBuf ( SafeBuf *tbuf, int64_t docId, int64_t uh48 ){
 	// alloc the buffer
 	char *ubuf = (char *) mmalloc ( need1 , "xdtrb" );
 	// return NULL with g_errno set on error
-	if ( ! ubuf ) return false;
+	if ( ! ubuf ) {
+		// restore if we were zeroed out
+		ptr_utf8Content  = savedPtr;
+		size_utf8Content = savedSize;
+		return false;
+	}
 	// serialize into it
 	char *p = ubuf;
 	// copy our crap into there
@@ -5274,6 +5314,10 @@ bool XmlDoc::setTitleRecBuf ( SafeBuf *tbuf, int64_t docId, int64_t uh48 ){
 	}
 	// sanity check
 	if ( p != ubuf + need1 ) { char *xx=NULL; *xx=0; }
+
+	// restore in case zeroOut was true
+	ptr_utf8Content  = savedPtr;
+	size_utf8Content = savedSize;
 
 	// now restore it for other functions to use
 	//size_content = saved;
@@ -10147,11 +10191,21 @@ int64_t *XmlDoc::getExactContentHash64 ( ) {
 		return &m_exactContentHash64;
 	}
 
-
 	unsigned char *p = (unsigned char *)*u8;
 
 	int32_t plen = size_utf8Content;
 	if ( plen > 0 ) plen--;
+
+	// if we zeroed out this doc to save disk space, then we only
+	// record the exact 64-bit hash, so extract it here so that
+	// we can delete the gbcontenthash: term from the index if we are
+	// deleting this doc or updating it with a fresh copy.
+	if ( plen < 100 &&  strncmp((char *)p,"gbzeroedout:",12) == 0 ) {
+		sscanf((char *)p+12,"%"UINT64,&m_exactContentHash64);
+		m_exactContentHash64Valid = true;
+		return &m_exactContentHash64;
+	}
+
 
 	// sanity
 	//if ( ! p ) return 0LL;
@@ -22215,6 +22269,9 @@ bool XmlDoc::logIt ( SafeBuf *bb ) {
 	
 	if ( m_contentValid )
 		sb->safePrintf("contentlen=%06"INT32" ",m_contentLen);
+
+	if ( m_contentValid && cr->m_isCustomCrawl ) 
+		sb->safePrintf("zeroedout=%i ",(int)m_zeroedOut);
 
 	if ( m_isContentTruncatedValid )
 		sb->safePrintf("contenttruncated=%"INT32" ",

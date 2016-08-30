@@ -1071,6 +1071,8 @@ class XmlDoc {
 	char      *m_content;
 	int32_t       m_contentLen;
 
+	char m_zeroedOut;
+
 	char *m_metaList;
 	int32_t  m_metaListSize;
 
