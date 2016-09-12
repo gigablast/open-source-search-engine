@@ -21592,6 +21592,9 @@ void gotParmReplyWrapper ( void *state , UdpSlot *slot ) {
 		if ( pn->m_nextNode )
 			pn->m_nextNode->m_prevNode = pn->m_prevNode;
 
+		// free the parm reply memory first that we called
+		// stealBuf() on above
+		pn->m_parmList.purge();
 		mfree ( pn , sizeof(ParmNode) , "pndfr");
 	}
 
