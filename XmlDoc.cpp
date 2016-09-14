@@ -5212,8 +5212,15 @@ bool XmlDoc::setTitleRecBuf ( SafeBuf *tbuf, int64_t docId, int64_t uh48 ){
 	// this must be valid now
 	//if ( ! m_skipIndexingValid ) { char *xx=NULL;*xx=0; }
 
-	CollectionRec *cr = getCollRec();
-	if ( ! cr ) return false;
+	// CT_STATUS docs do not have a valid XmlDoc really, it is
+	// just the first 2048 bytes, so there is no m_collnum member
+	// in the first 2048 bytes that is valid or even in legit memory.
+	// see 'char xdhead[2048];' below.
+	CollectionRec *cr = NULL;
+	if ( m_contentType != CT_STATUS ) {
+		cr = getCollRec();
+		if ( ! cr ) return false;
+	}
 
 	// zero out the content to save disk space if it is a custom crawl
 	// and the page was not processed (i.e. sent to diffbot).
@@ -5226,11 +5233,11 @@ bool XmlDoc::setTitleRecBuf ( SafeBuf *tbuf, int64_t docId, int64_t uh48 ){
 	// hash will always be indexed, even if the doc changes or is
 	// deleted.
 	bool zeroOut = false;
-	if ( cr->m_isCustomCrawl && ! m_sentToDiffbot ) zeroOut = true;
-	if ( m_isDiffbotJSONObject ) zeroOut = false;
-	if ( ! m_exactContentHash64Valid ) zeroOut = false;
+	if ( cr && cr->m_isCustomCrawl && ! m_sentToDiffbot ) zeroOut = true;
+	if ( zeroOut && m_isDiffbotJSONObject ) zeroOut = false;
+	if ( zeroOut && ! m_exactContentHash64Valid ) zeroOut = false;
 	// don't zero out spider status documents
-	if ( m_contentType == CT_STATUS ) zeroOut = false;
+	if ( zeroOut && m_contentType == CT_STATUS ) zeroOut = false;
 	// disable for now. probably most disk space is from the spider status
 	// docs.
 	//zeroOut = false;
@@ -30079,8 +30086,9 @@ SafeBuf *XmlDoc::getSpiderStatusDocMetaList2 ( SpiderReply *reply1 ) {
 		xd->size_site = m_firstUrl.getHostLen();
 	}
 
-	xd->m_collnum = m_collnum;
-	xd->m_collnumValid = m_collnumValid;
+	// we can't do this the head is not big enough
+	// xd->m_collnum = m_collnum;
+	// xd->m_collnumValid = m_collnumValid;
 
 	// use the same uh48 of our parent
 	int64_t uh48 = m_firstUrl.getUrlHash48();
