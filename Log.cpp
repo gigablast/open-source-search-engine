@@ -71,7 +71,7 @@ bool renameCurrentLogFile ( ) {
 	time_t now = getTimeLocal();
 	tm *tm1 = gmtime((const time_t *)&now);
 	char tmp2[64];
-	strftime(tmp2,64,"%Y_%m_%d-%T",tm1);
+	strftime(tmp2,64,"%Y-%m-%d-%H-%M-%S",tm1);
 	SafeBuf newName;
 	if ( ! newName.safePrintf ( "%slog%03"INT32"-%s",
 				    g_hostdb.m_dir,
@@ -372,7 +372,8 @@ bool Log::logR ( int64_t now , int32_t type , char *msg , bool asterisk ,
 
 	// . if filesize would be too big then make a new log file
 	// . should make a new m_fd
-	if ( m_logFileSize + tlen+1 > MAXLOGFILESIZE && g_conf.m_runAsDaemon )
+	if ( m_logFileSize + tlen+1 > MAXLOGFILESIZE && 
+	     (g_conf.m_runAsDaemon || g_conf.m_logToFile) )
 		makeNewLogFile();
 
 	if ( m_fd >= 0 ) {
