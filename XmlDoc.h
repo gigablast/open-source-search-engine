@@ -1178,6 +1178,8 @@ class XmlDoc {
 	bool m_gotFacets;
 	SafeBuf m_tmpBuf2;
 
+	char m_tmp9[64];
+
 	SafeBuf m_inlineSectionVotingBuf;
 
 	//HashTableX m_rvt;

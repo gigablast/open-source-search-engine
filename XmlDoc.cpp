@@ -5234,13 +5234,12 @@ bool XmlDoc::setTitleRecBuf ( SafeBuf *tbuf, int64_t docId, int64_t uh48 ){
 	//zeroOut = false;
 	char    *savedPtr  = ptr_utf8Content;
 	int32_t  savedSize = size_utf8Content;
-	char tmp[64];
 	if ( zeroOut ) {
 		// record the 64 bit content hash here and make
 		// getExactContentHash64() return it as a 64-bit binary number.
 		// that way we can preserve it.
-		sprintf(tmp,"gbzeroedout:%"UINT64"",m_exactContentHash64);
-		ptr_utf8Content  = tmp;
+		sprintf(m_tmp9,"gbzeroedout:%"UINT64"",m_exactContentHash64);
+		ptr_utf8Content  = m_tmp9;
 		size_utf8Content = gbstrlen(ptr_utf8Content) + 1;
 		m_zeroedOut = true;
 	}
