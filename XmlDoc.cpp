@@ -10199,7 +10199,8 @@ int64_t *XmlDoc::getExactContentHash64 ( ) {
 	// record the exact 64-bit hash, so extract it here so that
 	// we can delete the gbcontenthash: term from the index if we are
 	// deleting this doc or updating it with a fresh copy.
-	if ( plen < 100 &&  strncmp((char *)p,"gbzeroedout:",12) == 0 ) {
+	if ( plen < 100 && p && plen > 12 &&
+	     strncmp((char *)p,"gbzeroedout:",12) == 0 ) {
 		sscanf((char *)p+12,"%"UINT64,&m_exactContentHash64);
 		m_exactContentHash64Valid = true;
 		return &m_exactContentHash64;
