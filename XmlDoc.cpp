@@ -5229,6 +5229,8 @@ bool XmlDoc::setTitleRecBuf ( SafeBuf *tbuf, int64_t docId, int64_t uh48 ){
 	if ( cr->m_isCustomCrawl && ! m_sentToDiffbot ) zeroOut = true;
 	if ( m_isDiffbotJSONObject ) zeroOut = false;
 	if ( ! m_exactContentHash64Valid ) zeroOut = false;
+	// don't zero out spider status documents
+	if ( m_contentType == CT_STATUS ) zeroOut = false;
 	// disable for now. probably most disk space is from the spider status
 	// docs.
 	//zeroOut = false;
@@ -30076,6 +30078,9 @@ SafeBuf *XmlDoc::getSpiderStatusDocMetaList2 ( SpiderReply *reply1 ) {
 		xd->ptr_site  = m_firstUrl.getHost();
 		xd->size_site = m_firstUrl.getHostLen();
 	}
+
+	xd->m_collnum = m_collnum;
+	xd->m_collnumValid = m_collnumValid;
 
 	// use the same uh48 of our parent
 	int64_t uh48 = m_firstUrl.getUrlHash48();
