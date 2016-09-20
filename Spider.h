@@ -728,7 +728,7 @@ class SpiderRequest {
 	// . its so XMlDoc.cpp can increment it and add it to the new
 	//   SpiderReply it adds in case there is another download error ,
 	//   like ETCPTIMEDOUT or EDNSTIMEDOUT
-	char    m_errCount;
+	uint8_t m_errCount;
 
 	// we really only need store the url for *requests* and not replies
 	char    m_url[MAX_URL_LEN+1];
@@ -885,7 +885,7 @@ class SpiderReply {
 	// . only non-zero if errCode is set!
 	// . 1 means it is the first time we tried to download and got an error
 	// . 2 means second, etc.
-	char    m_errCount;
+	uint8_t m_errCount;
 
 	// what language was the page in?
 	char    m_langId;
