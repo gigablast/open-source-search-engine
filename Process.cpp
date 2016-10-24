@@ -1816,7 +1816,9 @@ void Process::disableTreeWrites ( bool shuttingDown ) {
 		// if we save doledb while spidering it screws us up
 		// because Spider.cpp can not directly write into the
 		// rdb tree and it expects that to always be available!
-		if ( ! shuttingDown && rdb->m_rdbId == RDB_DOLEDB )
+                // never save doledb tree now, see comments below as to why.
+                //if ( ! shuttingDown && rdb->m_rdbId == RDB_DOLEDB )    
+		if ( rdb->m_rdbId == RDB_DOLEDB )
 			continue;
 		rdb->disableWrites();
 	}
@@ -1892,7 +1894,14 @@ bool Process::saveRdbTrees ( bool useThread , bool shuttingDown ) {
 		// if we save doledb while spidering it screws us up
 		// because Spider.cpp can not directly write into the
 		// rdb tree and it expects that to always be available!
-		if ( ! shuttingDown && rdb->m_rdbId == RDB_DOLEDB )
+		// just never save it because if we change url filter
+		// defaults in the code and restart, we need to rebuild 
+		// doledb but we don't, and it messes up spidering because
+		// we could have spider priorities in the doledb record
+		// that are not longer in the url filters table and therefore
+		// the "int32_t max = 0" statement in Spider.cpp never
+		// gets set to a proper value and the url never gets spidered.
+		if ( rdb->m_rdbId == RDB_DOLEDB )
 			continue;
 		// note it
 		if ( ! rdb->m_dbname || ! rdb->m_dbname[0] )
