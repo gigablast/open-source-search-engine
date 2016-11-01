@@ -3607,6 +3607,9 @@ bool SpiderColl::evalIpLoop ( ) {
 		useCache = false;
 	if ( m_countingPagesIndexed )
 		useCache = false;
+	// disable cache since it cores a lot because of it. doesn't
+	// happen in pro. don't know why.
+	//useCache = false;
 	// assume not from cache
 	if ( useCache ) {
 		//wc->verify();
@@ -5887,9 +5890,45 @@ bool SpiderColl::addDoleBufIntoDoledb ( SafeBuf *doleBuf, bool isFromCache ) {
 	//tmpList.setFromSafeBuf ( &m_doleBuf , RDB_DOLEDB );
 	tmpList.setFromPtr ( doledbRec , doledbRecSize , RDB_DOLEDB );
 
-	// now that doledb is tree-only and never dumps to disk, just
-	// add it directly
-	g_doledb.m_rdb.addList ( m_collnum , &tmpList , MAX_NICENESS );
+
+	// when adding individual records, check to make sure not
+	// in doledb already. if it is then do not add it or INC the
+	// doleip table count for the firstip.
+	// see if already in doledb first...
+	key_t *doleKey = (key_t *)doledbRec;
+	int32_t dn ;
+	dn = g_doledb.m_rdb.m_tree.getNode ( m_collnum,(char *)doleKey);
+	if ( dn >= 0 ) {
+		log("spider: got doledb dup2 url with different firstip "
+		    "for uh48=%"UINT64" url=%s already in doledb tree "
+		    "cn=%i"
+		    , sreq3->getUrlHash48()
+		    , sreq3->m_url
+		    , (int)m_collnum);
+	}
+	else {
+		// now that we know this doledb key is not already in doledb
+		// under a different firstip, but same uh48, let's 
+		// increment the doleip table. otherwise, if it was
+		// already in doledb's tree it will get overwritten and 
+		// we double increment the dole ip table and cause crawls
+		// to hang, thinking doledb has something in it when in
+		// reality it is empty.
+		if ( ! addToDoleTable ( sreq3 ) ) return true;
+
+		// if ( m_collnum == 9127 ) {
+		// 	SafeBuf xx;
+		// 	sreq3->print ( &xx , m_collnum );
+		// 	log("spider: MDWMDW added sreq to doledb cn=%i "
+		// 	    "sreq=%s",m_collnum,xx.getBufStart());
+		// }
+
+		//oldNum = (int)g_doledb.m_rdb.m_tree.getNumUsedNodes();
+			    
+		// now that doledb is tree-only and never dumps to disk, just
+		// add it directly
+		g_doledb.m_rdb.addList ( m_collnum , &tmpList , MAX_NICENESS );
+	}
 
 	if ( g_conf.m_logDebugSpider )
 		log("spider: adding doledb tree node size=%"INT32"",
