@@ -5725,7 +5725,7 @@ bool SpiderColl::addDoleBufIntoDoledb ( SafeBuf *doleBuf, bool isFromCache ) {
 	int32_t doledbRecSize = sizeof(key_t) + 4 + sreq3->getRecSize();
 	// process sreq3 my incrementing the firstip count in 
 	// m_doleIpTable
-	if ( ! addToDoleTable ( sreq3 ) ) return true;	
+	//if ( ! addToDoleTable ( sreq3 ) ) return true;	
 
 	// only add the top key for now!
 	//break;
