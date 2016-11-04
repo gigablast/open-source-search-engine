@@ -1048,8 +1048,8 @@ bool atob ( const char *s, int32_t len ) {
 	// return false if all spaces
 	if ( s == end ) return false;
 	// parse the ascii bool value
-	if ( s[0] == 't' || s[1] == 'T' ) return true;
-	if ( s[0] == 'y' || s[0] == 'y' ) return true;
+	if ( s[0] == 't' || s[0] == 'T' ) return true;
+	if ( s[0] == 'y' || s[0] == 'Y' ) return true;
 	if ( ! is_digit ( *s ) || *s == '0' ) return false;
 	return true;
 }
