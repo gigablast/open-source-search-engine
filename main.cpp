@@ -7060,13 +7060,15 @@ void dumpDoledb (char *coll,int32_t startFileNum,int32_t numFiles,bool includeTr
 		fprintf(stdout,"dolekey=%s (n1=%"UINT32" n0=%"UINT64") "
 			"pri=%"INT32" "
 			"spidertime=%"UINT32" "
-			"uh48=0x%"XINT64"\n",
+			//"uh48=0x%"XINT64
+			"\n",
 			KEYSTR(&k,12),
 			k.n1,
 			k.n0,
 			(int32_t)g_doledb.getPriority(&k),
-			g_doledb.getSpiderTime(&k),
-			g_doledb.getUrlHash48(&k));
+			g_doledb.getSpiderTime(&k)
+			//g_doledb.getUrlHash48(&k));
+			);
 		fprintf(stdout,"spiderkey=");
 		// print it
 		g_spiderdb.print ( srec );

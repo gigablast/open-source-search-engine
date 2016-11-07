@@ -628,6 +628,7 @@ bool Spiderdb::init ( ) {
 	char      priority   = 12;
 	int32_t      spiderTime = 0x3fe96610;
 	int64_t urlHash48  = 0x1234567887654321LL & 0x0000ffffffffffffLL;
+	int32_t firstIp = 0x23991688;
 	//int64_t pdocid     = 0x567834222LL;
 	//key192_t k = makeOrderKey ( ip,priority,spiderTime,urlHash48,pdocid);
 	//if (getOrderKeyUrlHash48  (&k)!=urlHash48 ){char*xx=NULL;*xx=0;}
@@ -637,15 +638,14 @@ bool Spiderdb::init ( ) {
 	//if (getOrderKeyParentDocId(&k)!=pdocid    ){char*xx=NULL;*xx=0;}
 
 	// doledb key test
-	key_t dk = g_doledb.makeKey(priority,spiderTime,urlHash48,false);
+	key_t dk=g_doledb.makeKey(priority,spiderTime,urlHash48,false,firstIp);
 	if(g_doledb.getPriority(&dk)!=priority){char*xx=NULL;*xx=0;}
 	if(g_doledb.getSpiderTime(&dk)!=spiderTime){char*xx=NULL;*xx=0;}
-	if(g_doledb.getUrlHash48(&dk)!=urlHash48){char*xx=NULL;*xx=0;}
+	//if(g_doledb.getUrlHash48(&dk)!=urlHash48){char*xx=NULL;*xx=0;}
 	if(g_doledb.getIsDel(&dk)!= 0){char*xx=NULL;*xx=0;}
 
 	// spiderdb key test
 	int64_t docId = 123456789;
-	int32_t firstIp = 0x23991688;
 	key128_t sk = g_spiderdb.makeKey ( firstIp,urlHash48,1,docId,false);
 	if ( ! g_spiderdb.isSpiderRequest (&sk) ) { char *xx=NULL;*xx=0; }
 	if ( g_spiderdb.getUrlHash48(&sk) != urlHash48){char *xx=NULL;*xx=0;}
@@ -5421,7 +5421,8 @@ bool SpiderColl::addWinnersIntoDoledb ( ) {
 						   // convert to secs from ms
 						   winSpiderTimeMS / 1000     ,
 						   winUh48 ,
-						   false                    );
+						   false ,
+						   winIp );
 		// dedup. if we add dups the problem is is that they
 		// overwrite the key in doledb yet the doleiptable count
 		// remains undecremented and doledb is empty and never

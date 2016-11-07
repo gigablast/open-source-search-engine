@@ -23118,11 +23118,11 @@ void XmlDoc::printMetaList ( char *p , char *pend , SafeBuf *sb ) {
 			sb->safePrintf("<td><nobr>");
 			sb->safePrintf("priority=%"INT32" "
 				       "spidertime=%"UINT32" "
-				       "uh48=%"XINT64" "
+				       //"uh48=%"XINT64" "
 				       "isdel=%"INT32"",
 				       g_doledb.getPriority(k2),
 				       (uint32_t)g_doledb.getSpiderTime(k2),
-				       g_doledb.getUrlHash48(k2),
+				       //g_doledb.getUrlHash48(k2),
 				       g_doledb.getIsDel(k2));
 			sb->safePrintf("</nobr></td>");
 		}

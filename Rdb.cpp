@@ -2585,10 +2585,12 @@ bool Rdb::addRecord ( collnum_t collnum,
 		if ( KEYNEG(key) ) {
 			// log debug
 			logf(LOG_DEBUG,"spider: removed doledb key "
-			     "for pri=%"INT32" time=%"UINT32" uh48=%"UINT64"",
+			     "for pri=%"INT32" time=%"UINT32" ",
+			     //uh48=%"UINT64"",
 			     (int32_t)g_doledb.getPriority(&doleKey),
-			     (uint32_t)g_doledb.getSpiderTime(&doleKey),
-			     g_doledb.getUrlHash48(&doleKey));
+			     (uint32_t)g_doledb.getSpiderTime(&doleKey)
+			     //g_doledb.getUrlHash48(&doleKey));
+			     );
 		}
 		else {
 			// what collection?
@@ -2598,12 +2600,12 @@ bool Rdb::addRecord ( collnum_t collnum,
 			SpiderRequest *sreq = (SpiderRequest *)data;
 			logf(LOG_DEBUG,"spider: added doledb key "
 			     "for pri=%"INT32" time=%"UINT32" "
-			     "uh48=%"UINT64" "
+			     //"uh48=%"UINT64" "
 			     //"docid=%"INT64" "
 			     "u=%s",
 			     (int32_t)g_doledb.getPriority(&doleKey),
 			     (uint32_t)g_doledb.getSpiderTime(&doleKey),
-			     g_doledb.getUrlHash48(&doleKey),
+			     //g_doledb.getUrlHash48(&doleKey),
 			     //sreq->m_probDocId,
 			     sreq->m_url);
 		}

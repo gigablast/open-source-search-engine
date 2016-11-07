@@ -997,7 +997,8 @@ class Doledb {
 	key_t makeKey ( int32_t      priority   ,
 			uint32_t    spiderTime , // time_t
 			int64_t urlHash48  ,
-			bool      isDelete   ) {
+			bool      isDelete   ,
+			int32_t firstIp ) {
 		// sanity checks
 		if ( priority  & 0xffffff00           ) { char *xx=NULL;*xx=0;}
 		if ( urlHash48 & 0xffff000000000000LL ) { char *xx=NULL;*xx=0;}
@@ -1007,7 +1008,12 @@ class Doledb {
 		k.n1 |= (spiderTime >>8);
 		k.n0 = spiderTime & 0xff;
 		k.n0 <<= 48;
-		k.n0 |= urlHash48;
+		// now we XOR in firstip in case we add the same url 
+		// with different firstips to doledb's tree, so that one
+		// url does not just overwrite the other in the tree and
+		// therefore mess up the counting in the m_doleIpTable, whose
+		// key is also based on firstIp.
+		k.n0 |= urlHash48 ^ (int64_t)firstIp;
 		// 7 bits reserved
 		k.n0 <<= 7;
 		// still reserved but when adding to m_doleReqTable it needs
@@ -1026,8 +1032,9 @@ class Doledb {
 	key_t makeReindexKey ( int32_t priority ,
 			       uint32_t spiderTime , // time_t
 			       int64_t docId ,
-			       bool isDelete ) {
-		return makeKey ( priority,spiderTime,docId,isDelete); };
+			       bool isDelete ,
+			       int32_t firstIp ) {
+		return makeKey ( priority,spiderTime,docId,isDelete,firstIp);};
 
 
 	key_t makeFirstKey2 ( int32_t priority ) { 
@@ -1062,7 +1069,7 @@ class Doledb {
 	int32_t getIsDel     ( key_t *k ) {
 		if ( (k->n0 & 0x01) ) return 0;
 		return 1; };
-	int64_t getUrlHash48 ( key_t *k ) {
+	int64_t getUrlHash48Kinda ( key_t *k ) {
 		return (k->n0>>8)&0x0000ffffffffffffLL; }
 
 	key_t makeFirstKey ( ) { key_t k; k.setMin(); return k;};
