@@ -21224,6 +21224,20 @@ bool Parms::convertHttpRequestToParmList (HttpRequest *hr, SafeBuf *parmList,
 		}
 		*/
 
+		// providing an empty &seeds= is not allowed
+		if ( m->m_obj == OBJ_COLL && 
+		     m->m_cgi[0] == 's' &&
+		     m->m_cgi[1] == 'e' &&
+		     m->m_cgi[2] == 'e' &&
+		     m->m_cgi[3] == 'd' &&
+		     m->m_cgi[4] == 's' &&
+		     m->m_cgi[5] == '\0' &&
+		     ( ! val || ! val[0] ) ) {
+			errMsg->safePrintf("empty seeds parameter supplied");
+			g_errno = EMISSINGINPUT;
+			return false;
+		}
+
 		// add it to a list now
 		if ( ! addNewParmToList2 ( parmList ,
 					   // HACK! operate on the to-be-added
