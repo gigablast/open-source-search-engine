@@ -4942,6 +4942,23 @@ bool SpiderColl::scanListForWinners ( ) {
 		//}
 		*/
 
+		// ok, one last check, make sure not already in doledb!
+		// sometimes the same url is under a different first IP
+		// so we have to check doledb directly i guess
+		key_t doleKey = g_doledb.makeKey ( priority,
+						   spiderTimeMS / 1000     ,
+						   uh48 ,
+                                                   false ,
+						   firstIp );
+		int32_t dn ;
+		dn =g_doledb.m_rdb.m_tree.getNode (m_collnum,(char *)&doleKey);
+		if ( dn >= 0 ) {
+			log("spider: got doledb dup url with different firstip \
+"
+			    "for uh48=%"UINT64"", uh48);
+			continue;
+		}
+
 		// . add to table which allows us to ensure same url not 
 		//   repeated in tree
 		// . just skip if fail to add...
@@ -8253,6 +8270,26 @@ bool SpiderLoop::spiderUrl9 ( SpiderRequest *sreq ,
 
 	// now remove from doleiptable since we removed from doledb
 	m_sc->removeFromDoledbTable ( sreq->m_firstIp );
+
+	// to fix strange bug that happens rarely, if doletree is empty
+	// then make doleiptable empty
+	if ( m_sc && m_sc->m_doleIpTable.getNumSlotsUsed() > 0 ) {
+		int32_t dn ;
+		key_t startKey;
+		startKey.setMin();
+		RdbTree *dt = &g_doledb.m_rdb.m_tree;
+		// will return -1 if no recs for m_collnum collection in tree
+		dn = dt->getNextNode(m_sc->m_collnum,(char *)&startKey);
+		// if nothing left in tree, clear doleiptable
+		if ( dn < 0 ) {
+			log("spider: fixing bug. clearing doleip table of %i "
+			    "used slots because doletree is empty for cn=%i",
+			    (int)m_sc->m_doleIpTable.getNumSlotsUsed(),
+			    (int)m_sc->m_collnum);
+			m_sc->m_doleIpTable.clear();
+		}
+	}
+
 
 	// DO NOT add back to waiting tree if max spiders
 	// out per ip was 1 OR there was a crawldelay. but better
@@ -14706,6 +14743,30 @@ void handleRequestc1 ( UdpSlot *slot , int32_t niceness ) {
 			bool printIt = true;
 			if ( now < sc->m_lastPrinted ) printIt = false;
 			if ( printIt ) sc->m_lastPrinted = now + 5;
+
+			// try to fix the bug for like the 6th time of
+			// the doleiptable not being empty
+			if ( ! sc->m_doleIpTable.isEmpty() ) {
+				int32_t dn ;
+				key_t startKey;
+				startKey.setMin();
+				RdbTree *dt = &g_doledb.m_rdb.m_tree;
+				// will return -1 if no recs for m_collnum 
+				// collection in tree
+				dn = dt->getNextNode(sc->m_collnum,
+						     (char *)&startKey);
+				// if nothing left in tree, clear doleiptable
+				if ( dn < 0 ) {
+					log("spider: fixing bug2. clearing "
+					    "doleip table of %i "
+					    "used slots because doletree is "
+					    "empty for cn=%i",
+					    (int)sc->m_doleIpTable.
+					    getNumSlotsUsed(),
+					    (int)sc->m_collnum);
+					sc->m_doleIpTable.clear();
+				}
+			}
 
 			// doledb must be empty
 			if ( ! sc->m_doleIpTable.isEmpty() ) {
