@@ -3737,44 +3737,48 @@ bool Parms::setFromFile ( void *THIS        ,
 		continue;
 	}
 
-	// backwards compatible hack for old <masterPassword> tags
-	for ( int32_t i = 1 ; i < numNodes ; i++ ) {
-		if ( objType != OBJ_CONF ) break;
-		XmlNode *pn = &xml.m_nodes[i-1];
-		XmlNode *xn = &xml.m_nodes[i];
-		// look for <masterPassword>
-		if ( pn->m_tagNameLen != 14 ) continue;
-		if ( xn->m_tagNameLen != 8 ) continue;
-		// if it is not the OLD supported tag then skip
-		if ( strncmp ( pn->m_tagName,"masterPassword",14 ) ) continue;
-		if ( strncmp ( xn->m_tagName,"![CDATA[",8 ) ) continue;
-		// otherwise append to buf
-		char *text = xn->m_node + 9;
-		int32_t  tlen = xn->m_nodeLen - 12;
-		g_conf.m_masterPwds.safeMemcpy(text,tlen);
-		// a \n
-		g_conf.m_masterPwds.pushChar('\n');
-		g_conf.m_masterPwds.nullTerm();
-	}
-	// another backwards compatible hack for old masterIp tags
-	for ( int32_t i = 1 ; i < numNodes ; i++ ) {
-		if ( objType != OBJ_CONF ) break;
-		XmlNode *xn = &xml.m_nodes[i];
-		XmlNode *pn = &xml.m_nodes[i-1];
-		// look for <masterPassword>
-		if ( pn->m_tagNameLen != 8 ) continue;
-		if ( xn->m_tagNameLen != 8 ) continue;
-		// if it is not the OLD supported tag then skip
-		if ( strncmp ( pn->m_tagName,"masterIp",8 ) ) continue;
-		if ( strncmp ( xn->m_tagName,"![CDATA[",8 ) ) continue;
-		// otherwise append to buf
-		char *text = xn->m_node + 9;
-		int32_t  tlen = xn->m_nodeLen - 12;
-		// otherwise append to buf
-		g_conf.m_connectIps.safeMemcpy(text,tlen);
-		// a \n
-		g_conf.m_connectIps.pushChar('\n');
-		g_conf.m_connectIps.nullTerm();
+	if ( objType == OBJ_CONF ) {
+		// backwards compatible hack for old <masterPassword> tags
+		for ( int32_t i = 1 ; i < numNodes ; i++ ) {
+			XmlNode *pn = &xml.m_nodes[i-1];
+			XmlNode *xn = &xml.m_nodes[i];
+			// look for <masterPassword>
+			if ( pn->m_nodeId != TAG_XMLTAG) continue;
+			if ( xn->m_nodeId != TAG_CDATA) continue;
+			if ( pn->m_tagNameLen != 14 ) continue;
+			if ( xn->m_tagNameLen != 8 ) continue;
+			// if it is not the OLD supported tag then skip
+			if ( strncmp ( pn->m_tagName,"masterPassword",14 ) ) continue;
+			if ( strncmp ( xn->m_tagName,"![CDATA[",8 ) ) continue;
+			// otherwise append to buf
+			char *text = xn->m_node + 9;
+			int32_t  tlen = xn->m_nodeLen - 12;
+			g_conf.m_masterPwds.safeMemcpy(text,tlen);
+			// a \n
+			g_conf.m_masterPwds.pushChar('\n');
+			g_conf.m_masterPwds.nullTerm();
+		}
+		// another backwards compatible hack for old masterIp tags
+		for ( int32_t i = 1 ; i < numNodes ; i++ ) {
+			XmlNode *xn = &xml.m_nodes[i];
+			XmlNode *pn = &xml.m_nodes[i-1];
+			// look for <masterPassword>
+			if ( pn->m_nodeId != TAG_XMLTAG) continue;
+			if ( xn->m_nodeId != TAG_CDATA) continue;
+			if ( pn->m_tagNameLen != 8 ) continue;
+			if ( xn->m_tagNameLen != 8 ) continue;
+			// if it is not the OLD supported tag then skip
+			if ( strncmp ( pn->m_tagName,"masterIp",8 ) ) continue;
+			if ( strncmp ( xn->m_tagName,"![CDATA[",8 ) ) continue;
+			// otherwise append to buf
+			char *text = xn->m_node + 9;
+			int32_t  tlen = xn->m_nodeLen - 12;
+			// otherwise append to buf
+			g_conf.m_connectIps.safeMemcpy(text,tlen);
+			// a \n
+			g_conf.m_connectIps.pushChar('\n');
+			g_conf.m_connectIps.nullTerm();
+		}
 	}
 
 	/*
