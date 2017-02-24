@@ -1506,8 +1506,11 @@ static void nukeDoledbWrapper ( int fd , void *state ) {
 void nukeDoledb ( collnum_t collnum ) {
 
 	//g_spiderLoop.m_winnerListCache.verify();	
+
 	// in case we changed url filters for this collection #
-	g_spiderLoop.m_winnerListCache.clear ( collnum );
+	// this is causing random 0xffff guys to be written over records
+	// and causing corription, so take out for now!!! MDW 2/24/2017
+	//g_spiderLoop.m_winnerListCache.clear ( collnum );
 
 	//g_spiderLoop.m_winnerListCache.verify();	
 
@@ -4912,6 +4915,12 @@ bool SpiderColl::scanListForWinners ( ) {
 			    (int)m_collnum);
 			log("spider: ip1=%s",iptoa(sreq->m_firstIp));
 			log("spider: ip2=%s",iptoa(firstIp));
+			continue;
+		}
+
+		if ( sreq->isCorrupt(m_collnum) ) {
+			log("spider: got corrupt request 61 %s "
+			    sreq->m_url);
 			continue;
 		}
 
