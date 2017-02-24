@@ -4919,7 +4919,7 @@ bool SpiderColl::scanListForWinners ( ) {
 		}
 
 		if ( sreq->isCorrupt(m_collnum) ) {
-			log("spider: got corrupt request 61 %s "
+			log("spider: got corrupt request 61 %s ",
 			    sreq->m_url);
 			continue;
 		}
