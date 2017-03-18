@@ -1700,6 +1700,14 @@ Host *Hostdb::getLeastLoadedInShard ( uint32_t shardNum , char niceness ) {
 }
 
 
+bool Hostdb::hasOverloadedHost() {
+	for ( int32_t i = 0 ; i < m_numHosts ; i++ ) {
+		if (m_hosts[i].m_pingInfo.m_udpSlotsInUseIncoming > 800) 
+			return true;
+	}
+	return false;
+}
+
 
 
 // if all are dead just return host #0
