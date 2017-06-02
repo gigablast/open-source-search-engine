@@ -146,6 +146,8 @@ bool buildProxyTable ( ) {
 			//return false;
 			// advance p
 			p = s;
+			// skip to next entry on error
+			while(*p && !is_wspace_a(*p)) p++;
 			continue;
 		}
 
