@@ -14,7 +14,7 @@
 
 #include "Rdb.h"
 #include "Conf.h"
-#include "DiskPageCache.h"
+//#include "DiskPageCache.h"
 
 // we define these here, NUMDOCIDBITS is in ../titledb/Titledb.h
 #define NUMTERMIDBITS 48
@@ -173,9 +173,9 @@ class Indexdb {
 
 	Rdb m_rdb;
 
-	DiskPageCache *getDiskPageCache ( ) { return &m_pc; };
+	//DiskPageCache *getDiskPageCache ( ) { return &m_pc; };
 
-	DiskPageCache m_pc;
+	//DiskPageCache m_pc;
 
 //#ifdef SPLIT_INDEXDB
 	// . groupId Table, for getting the correct group id based

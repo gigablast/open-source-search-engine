@@ -87,6 +87,9 @@ class RdbScan {
 	bool  m_allowPageCache;
 
 	bool  m_hitDisk;
+
+	// this is set by Msg3.cpp
+	char m_inPageCache;
 };
 
 #endif

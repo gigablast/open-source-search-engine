@@ -66,15 +66,26 @@ static int utf8_sane[] = {
 
 // how many bytes is char pointed to by p?
 inline char getUtf8CharSize ( uint8_t *p ) {
-	return bytes_in_utf8_code[*p];
+	uint8_t c = *p;
+	if(c<128)
+		return 1;
+	else
+		return bytes_in_utf8_code[c];
 }
 
 inline char getUtf8CharSize ( char *p ) {
-	return bytes_in_utf8_code[*(uint8_t *)p];
+	uint8_t c = (uint8_t)*p;
+	if(c<128)
+		return 1;
+	else
+		return bytes_in_utf8_code[c];
 }
 
 inline char getUtf8CharSize ( uint8_t c ) {
-	return bytes_in_utf8_code[c];
+	if(c<128)
+		return 1;
+	else
+		return bytes_in_utf8_code[c];
 }
 
 inline char getUtf8CharSize2 ( uint8_t *p ) {

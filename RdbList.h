@@ -1,28 +1,43 @@
 // Matt Wells, Copyright May 2001
 
-// . RdbList is the heart of Rdb, Record DataBase
-// . an RdbList is a list of rdb records sorted by their keys
-// . an rdb record is just a key with an optional dataSize and/or data
-// . all records in the RdbList must have keys in [m_startKey, m_endKey]
-// . TODO: speed up by using templates are by having 2-3 different RdbLists:
-//         1 for dataLess Rdb's, 1 for fixedDataSize Rdb's, 1 for var dataSize
-
-// . m_useHalfKeys is only for IndexLists
-// . it is a compression method for key-only lists (data-less)
-// . it allows use of 6-byte keys if the last 12-byte key before has the same
-//   most significant 6 bytes
-// . this saves space and time (35% of indexdb can be cut)
-// . we cannot just override skipCurrentRecord(), etc. in IndexList because
-//   it would have to be a virtual function thing (ptr to a function) when
-//   called in RdbMap, Msg1, merge_r(), ... OR the callers would have
-//   to have a separate routine just for IndexLists
-// . for speed I opted to just add the m_useHalfKeys option to the RdbList 
-//   class rather than have a virtual function or having to write lots of 
-//   additional support routines for IndexLists
-
 #ifndef _RDBLIST_H_
 #define _RDBLIST_H_
 
+/**
+ *
+ * Core of the storage, this implements a list of <key><dataSize><data>.
+ *
+ * Additional documentation by Sam, May 15th 2015
+ * Compared to a standard vector, this class offers a few low level optimizations
+ * it seems, like compression of the keys when successive keys start with the same
+ * bits.
+ * The size of the key seems to be defined during creation (with maximum of 28 bytes,
+ * defined in type.h
+ * Sometimes, this type of list is used without any <data> (I guess in this case dataSize is 0)
+ * This is the case for the term-lists used in Msg2 for instance.
+ *
+ *
+ * Original documentation by Matt (2001?)
+ * RdbList is the heart of Rdb, Record DataBase
+ * an RdbList is a list of rdb records sorted by their keys.
+ * An rdb record is just a key with an optional dataSize and/or data
+ * All records in the RdbList must have keys in [m_startKey, m_endKey].
+ * TODO: speed up by using templates are by having 2-3 different RdbLists:
+ *         1 for dataLess Rdb's, 1 for fixedDataSize Rdb's, 1 for var dataSize
+
+ *  m_useHalfKeys is only for IndexLists
+ * it is a compression method for key-only lists (data-less)
+ * it allows use of 6-byte keys if the last 12-byte key before has the same
+ * most significant 6 bytes
+ * this saves space and time (35% of indexdb can be cut)
+ * we cannot just override skipCurrentRecord(), etc. in IndexList because
+ * it would have to be a virtual function thing (ptr to a function) when
+ * called in RdbMap, Msg1, merge_r(), ... OR the callers would have
+ * to have a separate routine just for IndexLists
+ * for speed I opted to just add the m_useHalfKeys option to the RdbList
+ * class rather than have a virtual function or having to write lots of
+ * additional support routines for IndexLists
+ */
 class RdbList {
 
  public:
@@ -92,6 +107,7 @@ class RdbList {
 		  char  keySize       = sizeof(key_t) );
 
 	void setFromSafeBuf ( class SafeBuf *sb , char rdbId );
+	void setFromPtr ( char *p , int32_t psize , char rdbId ) ;
 
 	// just set the start and end keys
 	//void set ( key_t startKey , key_t endKey );

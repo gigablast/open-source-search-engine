@@ -15,6 +15,9 @@
 
 bool makeTrashDir() ;
 
+void removeFromMergeLinkedList ( class CollectionRec *cr ) ;
+void addCollnumToLinkedListOfMergeCandidates ( collnum_t dumpCollnum ) ;
+
 // . each Rdb instance has an ID
 // . these ids are also return values for getIdFromRdb()
 #define	RDB_START 1
@@ -78,8 +81,10 @@ char *getDbnameFromId ( uint8_t rdbId ) ;
 char getKeySizeFromRdbId  ( uint8_t rdbId );
 // and this is -1 if dataSize is variable
 int32_t getDataSizeFromRdbId ( uint8_t rdbId );
+void forceMergeAll ( char rdbId , char niceness ) ;
 // main.cpp calls this
 void attemptMergeAll ( int fd , void *state ) ;
+void attemptMergeAll2 ( );
 
 class Rdb {
 
@@ -108,7 +113,8 @@ class Rdb {
 		    int32_t   maxCacheNodes   ,
 		    bool   useHalfKeys     ,
 		    bool   loadCacheFromDisk ,
-		    class DiskPageCache *pc = NULL ,
+		    //class DiskPageCache *pc = NULL ,
+		    void *pc = NULL,
 		    bool   isTitledb    = false , // use fileIds2[]?
 		    bool   preloadDiskPageCache = false ,
 		    char   keySize = 12    ,
@@ -146,7 +152,10 @@ class Rdb {
 		return addRecord(coll,(char *)&key,data,dataSize, niceness);};
 
 	// returns false if no room in tree or m_mem for a list to add
-	bool hasRoom ( RdbList *list );
+	bool hasRoom ( RdbList *list , int32_t niceness );
+
+	int32_t reclaimMemFromDeletedTreeNodes( int32_t niceness ) ;
+	int32_t m_lastReclaim;
 
 	// . returns false on error and sets errno
 	// . return true on success
@@ -234,6 +243,8 @@ class Rdb {
 	// positive minus negative
 	int64_t getNumTotalRecs ( bool useCache = false ) ;
 
+	int64_t getCollNumTotalRecs ( collnum_t collnum );
+
 	int64_t getNumRecsOnDisk ( );
 
 	int64_t getNumGlobalRecs ( );
@@ -272,8 +283,8 @@ class Rdb {
 	
 	// private:
 
-	void attemptMerge ( int32_t niceness , bool forceMergeAll ,
-			    bool doLog = true );
+	//void attemptMerge ( int32_t niceness , bool forceMergeAll ,
+	//		    bool doLog = true );
 
 	bool gotTokenForDump  ( ) ;
 	//void gotTokenForMerge ( ) ;
@@ -475,7 +486,7 @@ class Rdb {
 	// so only one save thread launches at a time
 	bool m_isSaving;
 
-	class DiskPageCache *m_pc;
+	//class DiskPageCache *m_pc;
 
 	bool m_isTitledb;
 

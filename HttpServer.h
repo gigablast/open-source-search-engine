@@ -34,6 +34,16 @@
 #include "HttpMime.h"
 
 #define DEFAULT_HTTP_PROTO "HTTP/1.0"
+// prevent HTTP STATUS 206
+// not acceptable response by using 1.1
+// instead of 1.0 for www.mindanews.com.
+// keep-alive is controlled by the client/spider so should be ok
+// to not support it.
+// MDW: crap, we don't support chunked transfer encoding so until we do
+// we have to use 1.0
+// Transfer-Encoding: chunked\r\n
+//#define DEFAULT_SPIDER_HTTP_PROTO "HTTP/1.1"
+#define DEFAULT_SPIDER_HTTP_PROTO "HTTP/1.0"
 
 //this is for low priority requests which come in while we are
 //in a quickpoll
@@ -101,7 +111,8 @@ class HttpServer {
 		      char *additionalHeader = NULL , // does not include \r\n
 		      // specify your own mime and post data here...
 		      char *fullRequest = NULL ,
-		      char *postContent = NULL );
+		      char *postContent = NULL ,
+		      char *proxyUsernamePwdAuth = NULL );
 
 	bool getDoc ( int32_t ip,
 		      int32_t port,

@@ -47,14 +47,14 @@ bool Datedb::init ( ) {
 	// old rec cache. i am trying to do away with the Rdb::m_cache rec
 	// cache in favor of cleverly used disk page caches, because
 	// the rec caches are not real-time and get stale. 
-	int32_t pcmem    = g_conf.m_datedbMaxDiskPageCacheMem;
+	//int32_t pcmem    = g_conf.m_datedbMaxDiskPageCacheMem;
 	// make sure at least 30MB
 	//if ( pcmem < 30000000 ) pcmem = 30000000;
 	// keep this low if we are the tmp cluster, 20MB
-	if ( g_hostdb.m_useTmpCluster && pcmem > 20000000 ) pcmem = 20000000;
+	//if ( g_hostdb.m_useTmpCluster && pcmem > 20000000 ) pcmem = 20000000;
 	// do not use any page cache if doing tmp cluster in order to
 	// prevent swapping
-	if ( g_hostdb.m_useTmpCluster ) pcmem = 0;
+	//if ( g_hostdb.m_useTmpCluster ) pcmem = 0;
 	// . init the page cache
 	// . MDW: "minimize disk seeks" not working otherwise i'd enable it!
 // 	if ( ! m_pc.init ( "datedb",

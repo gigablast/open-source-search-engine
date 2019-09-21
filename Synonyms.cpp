@@ -12,6 +12,7 @@
 #include "Wiktionary.h"
 
 Synonyms::Synonyms() {
+	m_synWordBuf.setLabel("syswbuf");
 }
 
 Synonyms::~Synonyms() {
@@ -543,7 +544,8 @@ bool Synonyms::addStripped ( char *w , int32_t wlen , HashTableX *dt ) {
 	// no langs
 	*m_langIdsPtr++ = 0;
 
-	m_synWordBuf.safeStrcpy(abuf);
+	// fixed thanks to isj:
+	m_synWordBuf.safeMemcpy(abuf,alen);
 	m_synWordBuf.pushChar('\0');
 
 	return true;
@@ -600,7 +602,7 @@ int64_t getSynBaseHash64 ( char *qstr , uint8_t langId ) {
 		//					 true,
 		//					 langId);
 		// is it a queryStopWord like "the" or "and"?
-		bool isQueryStop = ::isQueryStopWord(NULL,0,wids[i]);
+		bool isQueryStop = ::isQueryStopWord(NULL,0,wids[i],langId);
 		// a more restrictive list
 		bool isStop = ::isStopWord(NULL,0,wids[i]);
 		if ( ::isCommonQueryWordInEnglish(wids[i]) ) isStop = true;

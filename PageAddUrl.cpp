@@ -242,7 +242,7 @@ bool sendReply ( void *state , bool addUrlEnabled ) {
 		mbuf.safePrintf("<center><font color=red>");
 		mbuf.safePrintf("<b><u>");
 		mbuf.safeTruncateEllipsis(gr->m_urlsBuf,200);
-		mbuf.safePrintf("</u></b> added to spider "
+		mbuf.safePrintf("</u></b></font> added to spider "
 				 "queue "
 				 "successfully<br><br>");
 		mbuf.safePrintf("</font></center>");

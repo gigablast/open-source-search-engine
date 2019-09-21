@@ -41,7 +41,8 @@ bool RdbDump::set ( //char     *coll          ,
 		    //key_t     prevLastKey   ,
 		    char     *prevLastKey   ,
 		    char      keySize       ,
-		    class DiskPageCache *pc     ,
+		   //class DiskPageCache *pc     ,
+		   void *pc ,
 		    int64_t maxFileSize   ,
 		    Rdb      *rdb           ) {
 
@@ -215,7 +216,7 @@ void RdbDump::doneDumping ( ) {
 	// . map verify
 	// . if continueDumping called us with no collectionrec, it got
 	//   deleted so RdbBase::m_map is nuked too i guess
-	if ( saved != ENOCOLLREC )
+	if ( saved != ENOCOLLREC && m_map )
 		log("db: map # pos=%"INT64" neg=%"INT64"",
 		    m_map->getNumPositiveRecs(),
 		    m_map->getNumNegativeRecs()
@@ -229,12 +230,19 @@ void RdbDump::doneDumping ( ) {
 	// did collection get deleted/reset from under us?
 	if ( saved == ENOCOLLREC ) return;
 
-	// save the map to disk
-	m_map->writeMap();
+	// save the map to disk. true = allDone
+	if ( m_map ) m_map->writeMap( true );
+
+	// now try to merge this collection/db again
+	// if not already in the linked list. but do not add to linked list
+	// if it is statsdb or catdb.
+	if ( m_rdb && ! m_rdb->m_isCollectionLess )
+		addCollnumToLinkedListOfMergeCandidates ( m_collnum );
+
 #ifdef GBSANITYCHECK
 	// sanity check
 	log("DOING SANITY CHECK FOR MAP -- REMOVE ME");
-	if ( ! m_map->verifyMap ( m_file ) ) {
+	if ( m_map && ! m_map->verifyMap ( m_file ) ) {
 		char *xx = NULL; *xx = 0; }
 	// now check the whole file for consistency
 	if ( m_ks == 18 ) { // map->m_rdbId == RDB_POSDB ) {
@@ -373,12 +381,12 @@ bool RdbDump::dumpTree ( bool recall ) {
 		//if ( removeNegRecs )
 		//	m_list.removeNegRecs();
 
-// 		if(!m_list->checkList_r ( false , // removeNegRecs?
-// 					 false , // sleep on problem?
-// 					 m_rdb->m_rdbId )) {
-// 			log("db: list to dump is not sane!");
-//			char *xx=NULL;*xx=0;
-// 		}
+ 		// if(!m_list->checkList_r ( false , // removeNegRecs?
+ 		// 			 false , // sleep on problem?
+ 		// 			 m_rdb->m_rdbId )) {
+ 		// 	log("db: list to dump is not sane!");
+		// 	char *xx=NULL;*xx=0;
+ 		// }
 
 
 	skip:
@@ -397,12 +405,36 @@ bool RdbDump::dumpTree ( bool recall ) {
 		m_totalNegDumped += m_numNegRecs;
 		// . check the list we got from the tree for problems
 		// . ensures keys are ordered from lowest to highest as well
-#ifdef GBSANITYCHECK
-		log("dump: verifying list before dumping");
-		m_list->checkList_r ( false , // removeNegRecs?
-				      false , // sleep on problem?
-				      m_rdb->m_rdbId );
-#endif
+		//#ifdef GBSANITYCHECK
+		if ( 1==1 ||
+		     g_conf.m_verifyWrites ||
+		     g_conf.m_verifyDumpedLists ) {
+			char *s = "none";
+			if ( m_rdb ) s = getDbnameFromId(m_rdb->m_rdbId);
+			char *ks1 = "";
+			char *ks2 = "";
+			char tmp1[32];
+			char tmp2[32];
+			if ( m_firstKeyInQueue ) {
+				strcpy ( tmp1 , 
+					 KEYSTR(m_firstKeyInQueue,
+						m_list->m_ks));
+				ks1 = tmp1;
+			}
+			if ( m_lastKeyInQueue ) {
+				strcpy ( tmp2 , 
+					 KEYSTR(m_lastKeyInQueue,
+						m_list->m_ks));
+				ks2 = tmp2;
+			}
+
+			log("dump: verifying list before dumping (rdb=%s "
+			    "collnum=%i k1=%s k2=%s)",s,
+			    (int)m_collnum,ks1,ks2);
+			m_list->checkList_r ( false , // removeNegRecs?
+					      false , // sleep on problem?
+					      m_rdb->m_rdbId );
+		}
 		// if list is empty, we're done!
 		if ( status && m_list->isEmpty() ) {
 			// consider that a rollover?
@@ -446,6 +478,10 @@ bool RdbDump::dumpTree ( bool recall ) {
 	// . this doesn't work if you're doing an unordered dump, but we should
 	//   not allow adds when closing
 	m_lastKeyInQueue  = m_list->getLastKey();
+
+	// ensure we are getting the first key of the list
+	m_list->resetListPtr();
+
 	//m_firstKeyInQueue = m_list->getCurrentKey();
 	m_list->getCurrentKey(m_firstKeyInQueue);
 	// . write this list to disk
@@ -478,15 +514,15 @@ bool RdbDump::dumpList ( RdbList *list , int32_t niceness , bool recall ) {
 	if ( m_list->isEmpty() ) return true;
 	// we're now in dump mode again 
 	m_isDumping = true;
-#ifdef GBSANITYCHECK
+	//#ifdef GBSANITYCHECK
 	// don't check list if we're dumping an unordered list from tree!
-	if ( m_orderedDump ) {
+	if ( g_conf.m_verifyWrites && m_orderedDump ) {
 		m_list->checkList_r ( false /*removedNegRecs?*/ );
 		// print list stats
-		log("dump: sk=%s ",KEYSTR(m_list->m_startKey,m_ks));
-		log("dump: ek=%s ",KEYSTR(m_list->m_endKey,m_ks));
+		// log("dump: sk=%s ",KEYSTR(m_list->m_startKey,m_ks));
+		// log("dump: ek=%s ",KEYSTR(m_list->m_endKey,m_ks));
 	}
-#endif
+	//#endif
 
 	// before calling RdbMap::addList(), always reset list ptr
 	// since we no longer call this in RdbMap::addList() so we don't
@@ -495,7 +531,7 @@ bool RdbDump::dumpList ( RdbList *list , int32_t niceness , bool recall ) {
 
 	// . SANITY CHECK
 	// . ensure first key is >= last key added to the map map
-	if ( m_offset > 0 ) {
+	if ( m_offset > 0 && m_map ) {
 		//key_t k       = m_list->getCurrentKey();
 		char k[MAX_KEY_BYTES];
 		m_list->getCurrentKey(k);
@@ -517,8 +553,10 @@ bool RdbDump::dumpList ( RdbList *list , int32_t niceness , bool recall ) {
 		}
 	}
 
-	if ( m_ks==18 ) {
-		m_list->checkList_r(false,false,RDB_POSDB);
+	if ( g_conf.m_verifyWrites ) {
+		char rdbId = 0;
+		if ( m_rdb ) rdbId = m_rdb->m_rdbId;
+		m_list->checkList_r(false,false,rdbId);//RDB_POSDB);
 		m_list->resetListPtr();
 	}
 
@@ -678,10 +716,11 @@ bool RdbDump::doneDumpingList ( bool addToMap ) {
 			// note it
 			log(LOG_LOGIC,"db: setting fd for vfd to -1.");
 			// mark our fd as not there...
-			int32_t i = (m_offset - m_bytesToWrite) / MAX_PART_SIZE;
+			//int32_t i=(m_offset-m_bytesToWrite) / MAX_PART_SIZE;
 			// sets s_fds[vfd] to -1
-			if ( m_file->m_files[i] )
-				releaseVfd ( m_file->m_files[i]->m_vfd );
+			// MDW: no, can't do this now
+			// if ( m_file->m_files[i] )
+			// 	releaseVfd ( m_file->m_files[i]->m_vfd );
 		}
 		//log("RdbDump::doneDumpingList: retrying.");
 		return dumpList ( m_list , m_niceness , true );
@@ -748,8 +787,26 @@ void doneReadingForVerifyWrapper ( void *state ) {
 }
 
 bool RdbDump::doneReadingForVerify ( ) {
+
+	// if someone reset/deleted the collection we were dumping...
+	CollectionRec *cr = g_collectiondb.getRec ( m_collnum );
+	// . do not do this for statsdb/catdb which always use collnum of 0
+	// . RdbMerge also calls us but gives a NULL m_rdb so we can't
+	//   set m_isCollectionless to false
+	if ( ! cr && m_doCollCheck ) {
+		g_errno = ENOCOLLREC;
+		log("db: lost collection while dumping to disk. making "
+		    "map null so we can stop.");
+		m_map = NULL;
+		// m_file is probably invalid too since it is stored
+		// in cr->m_bases[i]->m_files[j]
+		m_file = NULL;
+	}
+
+
 	// see if what we wrote is the same as what we read back
-	if ( m_verifyBuf && memcmp(m_verifyBuf,m_buf,m_bytesToWrite) != 0 &&
+	if ( m_verifyBuf && g_conf.m_verifyWrites &&
+	     memcmp(m_verifyBuf,m_buf,m_bytesToWrite) != 0 &&
 	     ! g_errno ) {
 		log("disk: Write verification of %"INT32" bytes to file %s "
 		    "failed at offset=%"INT64". Retrying.",
@@ -765,6 +822,10 @@ bool RdbDump::doneReadingForVerify ( ) {
 	if ( m_addToMap ) t = gettimeofdayInMilliseconds();
 	// sanity check
 	if ( m_list->m_ks != m_ks ) { char *xx = NULL; *xx = 0; }
+
+	bool triedToFix = false;
+
+ tryAgain:
 	// . register this with the map now
 	// . only register AFTER it's ALL on disk so we don't get partial
 	//   record reads and we don't read stuff on disk that's also in tree
@@ -772,6 +833,16 @@ bool RdbDump::doneReadingForVerify ( ) {
 	// . we don't have maps when we do unordered dumps
 	// . careful, map is NULL if we're doing unordered dump
 	if ( m_addToMap && m_map && ! m_map->addList ( m_list ) ) {
+		// keys  out of order in list from tree?
+		if ( g_errno == ECORRUPTDATA ) {
+			log("db: trying to fix tree or buckets");
+			if ( m_tree ) m_tree->fixTree();
+			//if ( m_buckets ) m_buckets->fixBuckets();
+			if ( m_buckets ) { char *xx=NULL;*xx=0; }
+			if ( triedToFix ) { char *xx=NULL;*xx=0; }
+			triedToFix = true;
+			goto tryAgain;
+		}
 		g_errno = ENOMEM; 
 		log("db: Failed to add data to map.");
 		// undo the offset update, the write failed, the parent
@@ -883,13 +954,16 @@ bool RdbDump::doneReadingForVerify ( ) {
 	bool s;
 	if(m_tree) {
 		s = m_tree->deleteList(m_collnum,m_list,true/*do balancing?*/);
+		log("dump: tree now has %i nodes",(int)m_tree->m_numUsedNodes);
 	}
 	else if(m_buckets) {
 		s = m_buckets->deleteList(m_collnum, m_list);
 	}
+
 	// problem?
 	if ( ! s && ! m_tried ) {
 		m_tried = true;
+		if ( m_file )
 		log("db: Corruption in tree detected when dumping to %s. "
 		    "Fixing. Your memory had an error. Consider replacing it.",
 		    m_file->getFilename());
@@ -1031,8 +1105,9 @@ void doneWritingWrapper ( void *state ) {
 	// done writing
 	THIS->m_writing = false;
 	// bitch about errors
-	if ( g_errno ) log("db: Dump to %s had write error: %s.",
-			   THIS->m_file->getFilename(),mstrerror(g_errno));
+	if ( g_errno && THIS->m_file ) 
+		log("db: Dump to %s had write error: %s.",
+		    THIS->m_file->getFilename(),mstrerror(g_errno));
 	// delete list from tree, incorporate list into cache, add to map
 	if ( ! THIS->doneDumpingList( true ) ) return;
 	// continue
@@ -1048,13 +1123,17 @@ void RdbDump::continueDumping() {
 	//   set m_isCollectionless to false
 	if ( ! cr && m_doCollCheck ) {
 		g_errno = ENOCOLLREC;
-		// m_file is invalid if collrec got nuked because so did
-		// the Rdbbase which has the files
+		// m_file is probably invalid too since it is stored
+		// in cr->m_bases[i]->m_files[j]
+		m_file = NULL;
 		log("db: continue dumping lost collection");
 	}
 
-	// bitch about errors
-	if (g_errno)log("db: Dump to %s had error writing: %s.",
+	// bitch about errors, but i guess if we lost our collection
+	// then the m_file could be invalid since that was probably stored
+	// in the CollectionRec::RdbBase::m_files[] array of BigFile ptrs
+	// so we can't say m_file->getFilename()
+	else if (g_errno)log("db: Dump to %s had error writing: %s.",
 			     m_file->getFilename(),mstrerror(g_errno));
 
 	// go back now if we were NOT dumping a tree

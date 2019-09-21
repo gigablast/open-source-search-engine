@@ -17,6 +17,8 @@
 //#include <dmalloc.h>
 //#endif
 
+extern bool g_inMemFunction;
+
 // we share malloc between threads, so you need to get the lock
 //void mutexLock   ( );
 //void mutexUnlock ( );
@@ -81,7 +83,7 @@ class Mem {
 	Mem();
 	~Mem();
 
-	bool init ( int64_t maxMem );
+	bool init ( );//int64_t maxMem );
 
 	void  setPid();
 	pid_t getPid();
@@ -130,7 +132,7 @@ class Mem {
 	int  printBreeches ( char core ) ;
 	// print mem usage stats
 	int  printMem      ( ) ;
-	void addMem ( void *mem , int32_t size , const char *note , char isnew ) ;
+	void addMem ( void *mem , int32_t size , const char *note, char isnew);
 	bool rmMem  ( void *mem , int32_t size , const char *note ) ;
 	bool lblMem ( void *mem , int32_t size , const char *note );
 
@@ -161,7 +163,7 @@ class Mem {
 	int64_t m_maxAlloced; // at any one time
 	int64_t m_maxAlloc; // the biggest single alloc ever done
 	const char *m_maxAllocBy; // the biggest single alloc ever done
-	int64_t m_maxMem;
+	//int64_t m_maxMem;
 
 	// shared mem used
 	int64_t m_sharedUsed;
@@ -278,6 +280,20 @@ inline int32_t getNumBitsOn64 ( uint64_t bits ) {
 		g_a [ *((unsigned char *)(&bits) + 5)  ] +
 		g_a [ *((unsigned char *)(&bits) + 6)  ] +
 		g_a [ *((unsigned char *)(&bits) + 7)  ] ;
+}
+
+inline int32_t getNumBitsOnX ( unsigned char *s , int32_t slen ) {
+	if ( slen == 1 ) return getNumBitsOn8 ( *s );
+	if ( slen == 2 ) return getNumBitsOn16 ( *(uint16_t *)s );
+	if ( slen == 4 ) return getNumBitsOn32 ( *(uint32_t *)s );
+	if ( slen == 3 ) 
+		return  getNumBitsOn8 ( s[0] ) +
+			getNumBitsOn8 ( s[1] ) +
+			getNumBitsOn8 ( s[2] ) ;
+	int32_t total = 0;
+	for ( int32_t i = 0 ; i < slen ; i++ )
+		total += getNumBitsOn8 ( s[i] );
+	return total;
 }
 
 // assume only one bit is set for this (used by Address.cpp)

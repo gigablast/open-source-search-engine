@@ -1164,7 +1164,9 @@ bool Sections::set ( Words     *w                       ,
 			xh ^= g_hashtab[cnt++][(unsigned char )*p];
 		}
 		// sanity check
-		if ( ! xh ) { char *xx=NULL;*xx=0; }
+		//if ( ! xh ) { char *xx=NULL;*xx=0; }
+		// if it is a string of the same chars it can be 0
+		if ( ! xh ) xh = 1;
 		// store that
 		sn->m_xmlNameHash = (int32_t)xh;
 	}
@@ -17292,11 +17294,11 @@ bool Sectiondb::init ( ) {
 	//   cache in favor of cleverly used disk page caches, because
 	//   the rec caches are not real-time and get stale.
 	// . just hard-code 5MB for now
-	int32_t pcmem = 5000000; // = g_conf.m_sectiondbMaxDiskPageCacheMem;
+	//int32_t pcmem = 5000000; // = g_conf.m_sectiondbMaxDiskPageCacheMem;
 
 	// do not use for now i think we use posdb and store the 32bit
 	// val in the key for facet type stuff
-	pcmem = 0;
+	//pcmem = 0;
 	maxTreeMem = 100000;
 	maxTreeNodes = 1000;
 
@@ -17320,14 +17322,14 @@ bool Sectiondb::init ( ) {
 
 	// do not use any page cache if doing tmp cluster in order to
 	// prevent swapping
-	if ( g_hostdb.m_useTmpCluster ) pcmem = 0;
-	int32_t pageSize = GB_INDEXDB_PAGE_SIZE;
-	// init the page cache
-	if ( ! m_pc.init ( "sectiondb",
-			   RDB_SECTIONDB,
-			   pcmem    ,
-			   pageSize ) )
-		return log("db: Sectiondb init failed.");
+	// if ( g_hostdb.m_useTmpCluster ) pcmem = 0;
+	// int32_t pageSize = GB_INDEXDB_PAGE_SIZE;
+	// // init the page cache
+	// if ( ! m_pc.init ( "sectiondb",
+	// 		   RDB_SECTIONDB,
+	// 		   pcmem    ,
+	// 		   pageSize ) )
+	// 	return log("db: Sectiondb init failed.");
 
 	// initialize our own internal rdb
 	if ( ! m_rdb.init ( g_hostdb.m_dir               ,
@@ -17346,7 +17348,7 @@ bool Sectiondb::init ( ) {
 			    0                            , // maxCacheNodes
 			    false                        , // half keys?
 			    false                        , // saveCache?
-			    &m_pc                        , // page cache ptr
+			    NULL,//&m_pc                , // page cache ptr
 			    false                        , // is titledb?
 			    false                        , // preloadcache?
 			    16                           ))// keySize

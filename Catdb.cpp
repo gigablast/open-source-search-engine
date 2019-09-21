@@ -39,18 +39,18 @@ bool Catdb::init (  ) {
 	int32_t maxTreeNodes = treeMem / 82;
 	// do not use any page cache if doing tmp cluster in order to
 	// prevent swapping
-	int32_t pcmem = g_conf.m_catdbMaxDiskPageCacheMem;
-	if ( g_hostdb.m_useTmpCluster ) pcmem = 0;
+	// int32_t pcmem = g_conf.m_catdbMaxDiskPageCacheMem;
+	// if ( g_hostdb.m_useTmpCluster ) pcmem = 0;
 
-	pcmem = 0;
+	// pcmem = 0;
 	// each entry in the cache is usually just a single record, no lists,
 	// unless a hostname has multiple sites in it. has 24 bytes more 
 	// overhead in cache.
 	//int32_t maxCacheNodes = g_conf.m_tagdbMaxCacheMem / 106;
 	// we now use a page cache
-	if ( ! m_pc.init ("catdb",RDB_CATDB,pcmem,
-			  GB_TFNDB_PAGE_SIZE) )
-		return log("db: Catdb init failed.");
+	// if ( ! m_pc.init ("catdb",RDB_CATDB,pcmem,
+	// 		  GB_TFNDB_PAGE_SIZE) )
+	// 	return log("db: Catdb init failed.");
 
 	// . initialize our own internal rdb
 	// . i no longer use cache so changes to tagdb are instant
@@ -71,7 +71,7 @@ bool Catdb::init (  ) {
 			    0 , //maxCacheNodes              ,
 			    false                      , // half keys?
 			    false                      , //m_tagdbSaveCache
-				    &m_pc                      ,
+			     NULL, // &m_pc                      ,
 				    false,
 				    false,
 			     12, // keysize

@@ -273,7 +273,8 @@ static char      *s_days[] = {
 	"wednesdays",
 	"thursdays",
 	"fridays",
-	"saturdays"
+	"saturdays",
+	NULL
 };
 
 
@@ -336,7 +337,8 @@ static HashTableX s_doyTable;
 static bool       s_doyInit = false;
 int32_t getDayOfWeek ( int64_t h ) {
 	if ( ! s_doyInit ) {
-		s_doyInit = initWordTable(&s_doyTable, s_days ,sizeof(s_days),
+		s_doyInit = initWordTable(&s_doyTable, s_days ,
+					  //sizeof(s_days),
 					  "doytbl");
 		if ( ! s_doyInit ) return -1;
 	} 
@@ -3800,7 +3802,8 @@ static char      *s_lcWords[] = {
         "not",
         "from",
         "ll",    // they'll this'll that'll you'll
-        "ve"     // would've should've
+        "ve",    // would've should've
+	NULL
 };
 
 
@@ -6018,12 +6021,14 @@ bool Addresses::set2 ( ) {
 		"juror",
 		"chauffeur",
 		"butler",
-		"cheesemaker"
+		"cheesemaker",
+		NULL
 	};
 	static bool s_initJobs = false;
 	if ( ! s_initJobs ) {
 		// load it up
-		if ( ! initWordTable ( &s_jobTable,s_jobs,sizeof(s_jobs),
+		if ( ! initWordTable ( &s_jobTable,s_jobs,
+				       //sizeof(s_jobs),
 				       "jobstbl") )
 			return false;
 		// do not re-do
@@ -13745,7 +13750,8 @@ bool initPlaceDescTable ( ) {
 	// . has words that can be lower case in a place name
 	//s_lc.set ( 8 , 0 , 0 , s_lcbuf , 2000 , false , 0 ,"plnametbl");
 	// stock the table (StopWords.cpp function)
-	if ( ! initWordTable ( &s_lc , s_lcWords , sizeof(s_lcWords),
+	if ( ! initWordTable ( &s_lc , s_lcWords , 
+			       //sizeof(s_lcWords),
 			       "plnametbl")){
 		char *xx=NULL;*xx=0; }
 

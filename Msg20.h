@@ -354,9 +354,9 @@ public:
 	int32_t       m_pageInlinksLastUpdated;
 	
 	int32_t       m_siteNumInlinks      ; // GOOD inlinks!
-	int32_t       m_siteNumInlinksTotal ; // TOTAL inlinks
-	int32_t       m_siteNumUniqueIps    ;
-	int32_t       m_siteNumUniqueCBlocks;
+	//int32_t       m_siteNumInlinksTotal ; // TOTAL inlinks
+	//int32_t       m_siteNumUniqueIps    ;
+	//int32_t       m_siteNumUniqueCBlocks;
 
 	int32_t       m_numOutlinks         ; // replaced m_linkCount
 	int32_t       m_tmp                 ; // used by Msg40.cpp for event merge
@@ -406,6 +406,7 @@ public:
 	int32_t       m_timeLinkSpam        ; // set for m_getLinkText
 	void         *m_parentOwner;
 	char          m_constructorId;
+
 	char       m_inlinkWeight        ; // set for m_getLinkText
 	char       m_isLinkSpam          ; // set for m_getLinkText
 	char       m_isAnomaly           ; // set for m_getLinkText
@@ -481,13 +482,14 @@ public:
 	char       *ptr_rssItem              ; // set for m_getLinkText
 	char       *ptr_categories           ;
 	char       *ptr_gigabitQuery         ; // , separated list of gigabits
-	int32_t       *ptr_gigabitScores        ; // 1-1 with the terms in query
+	int32_t    *ptr_gigabitScores        ; // 1-1 with the terms in query
 	char       *ptr_content              ; // page content in utf8
 	char       *ptr_sectionVotingInfo    ; // in JSON
 	char       *ptr_tr                   ; // like just using msg22
 	char       *ptr_tlistBuf             ;
 	char       *ptr_tiBuf                ; // terminfobuf
 	char       *ptr_templateVector       ;
+	char       *ptr_metadataBuf;
 
 	// . for eventIds include the title and text of the event, and the addr
 	//   serialized using Address::serialize(), and all the start dates
@@ -579,6 +581,7 @@ public:
 	int32_t       size_tlistBuf             ;
 	int32_t       size_tiBuf                ;
 	int32_t       size_templateVector       ;
+	int32_t       size_metadataBuf          ;
 
 	//int32_t       size_eventSummaryLines    ;
 	//int32_t       size_eventAddr            ;

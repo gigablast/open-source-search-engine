@@ -34,6 +34,8 @@ void attemptMergeAll ( int fd , void *state ) ;
 
 Rdb::Rdb ( ) {
 
+	m_lastReclaim = -1;
+
 	m_cacheLastTime  = 0;
 	m_cacheLastTotal = 0LL;
 
@@ -133,7 +135,8 @@ bool Rdb::init ( char          *dir                  ,
 		  int32_t           maxCacheNodes        ,
 		  bool           useHalfKeys          ,
 		  bool           loadCacheFromDisk    ,
-		  DiskPageCache *pc                   ,
+		 //DiskPageCache *pc                   ,
+		 void *pc ,
 		  bool           isTitledb            ,
 		  bool           preloadDiskPageCache ,
 		  char           keySize              ,
@@ -156,7 +159,7 @@ bool Rdb::init ( char          *dir                  ,
 	m_fixedDataSize    = fixedDataSize;
 	m_maxTreeMem       = maxTreeMem;
 	m_useHalfKeys      = useHalfKeys;
-	m_pc               = pc;
+	//m_pc               = pc;
 	m_isTitledb        = isTitledb;
 	m_preloadCache     = preloadDiskPageCache;
 	m_biasDiskPageCache = biasDiskPageCache;
@@ -371,16 +374,16 @@ bool Rdb::updateToRebuildFiles ( Rdb *rdb2 , char *coll ) {
 	char dstDir[256];
 	// make the trash dir if not there
 	sprintf ( dstDir , "%s/trash/" , g_hostdb.m_dir );
-	int32_t status = ::mkdir ( dstDir ,
-				S_IRUSR | S_IWUSR | S_IXUSR | 
-				S_IRGRP | S_IWGRP | S_IXGRP | 
-				S_IROTH | S_IXOTH ) ;
+	int32_t status = ::mkdir ( dstDir , getDirCreationFlags() );
+				// S_IRUSR | S_IWUSR | S_IXUSR | 
+				// S_IRGRP | S_IWGRP | S_IXGRP | 
+				// S_IROTH | S_IXOTH ) ;
 	// we have to create it
 	sprintf ( dstDir , "%s/trash/rebuilt%"UINT32"/" , g_hostdb.m_dir , t );
-	status = ::mkdir ( dstDir ,
-				S_IRUSR | S_IWUSR | S_IXUSR | 
-				S_IRGRP | S_IWGRP | S_IXGRP | 
-				S_IROTH | S_IXOTH ) ;
+	status = ::mkdir ( dstDir , getDirCreationFlags() );
+				// S_IRUSR | S_IWUSR | S_IXUSR | 
+				// S_IRGRP | S_IWGRP | S_IXGRP | 
+				// S_IROTH | S_IXOTH ) ;
 	if ( status && errno != EEXIST ) {
 		g_errno = errno;
 		return log("repair: Could not mkdir(%s): %s",dstDir,
@@ -569,7 +572,7 @@ bool Rdb::addRdbBase2 ( collnum_t collnum ) { // addColl2()
 					buckets         ,
 					&m_dump         ,
 					this            ,
-					m_pc            ,
+					NULL            ,
 					m_isTitledb     ,
 					m_preloadCache  ,
 					m_biasDiskPageCache ) ) {
@@ -640,10 +643,10 @@ bool Rdb::deleteAllRecs ( collnum_t collnum ) {
 bool makeTrashDir() {
 	char trash[1024];
 	sprintf(trash, "%strash/",g_hostdb.m_dir);
-	if ( ::mkdir ( trash, 
-		       S_IRUSR | S_IWUSR | S_IXUSR | 
-		       S_IRGRP | S_IWGRP | S_IXGRP | 
-		       S_IROTH | S_IXOTH ) == -1 ) {
+	if ( ::mkdir ( trash , getDirCreationFlags() ) ) {
+		       // S_IRUSR | S_IWUSR | S_IXUSR | 
+		       // S_IRGRP | S_IWGRP | S_IXGRP | 
+		       // S_IROTH | S_IXOTH ) == -1 ) {
 		if ( errno != EEXIST ) {
 			log("dir: mkdir %s had error: %s",
 			    trash,mstrerror(errno));
@@ -1176,6 +1179,12 @@ bool Rdb::dumpTree ( int32_t niceness ) {
 	if ( g_conf.m_isWikipedia && m_rdbId == RDB_INDEXDB )
 		return true;
 
+
+
+	// never dump doledb any more. it's rdbtree only.
+	if ( m_rdbId == RDB_DOLEDB )
+		return true;
+
 	// if we are in a quickpoll do not initiate dump.
 	// we might have been called by handleRequest4 with a niceness of 0
 	// which was niceness converted from 1
@@ -1187,6 +1196,23 @@ bool Rdb::dumpTree ( int32_t niceness ) {
 	// bail if already dumping
 	//if ( m_dump.isDumping() ) return true;
 	if ( m_inDumpLoop ) return true;
+
+	// don't allow spiderdb and titledb to dump at same time
+	// it seems to cause corruption in rdbmem for some reason
+	// if ( m_rdbId == RDB_SPIDERDB && g_titledb.m_rdb.m_inDumpLoop )
+	// 	return true;
+	// if ( m_rdbId == RDB_TITLEDB && g_spiderdb.m_rdb.m_inDumpLoop )
+	// 	return true;
+	// ok, seems to happen if we are dumping any two rdbs at the same
+	// time. we end up missing tree nodes or something.
+	// for ( int32_t i = RDB_START ; i < RDB_PLACEDB  ; i++ ) {
+	// 	Rdb *rdb = getRdbFromId ( i );
+	// 	if ( ! rdb )
+	// 		continue;
+	// 	if ( rdb->m_inDumpLoop )
+	// 		return true;
+	// }
+
 	// . if tree is saving do not dump it, that removes things from tree
 	// . i think this caused a problem messing of RdbMem before when
 	//   both happened at once
@@ -1259,6 +1285,7 @@ bool Rdb::dumpTree ( int32_t niceness ) {
 	if ( m_isTitledb && max > 240 ) max = 240;
 	// . keep the number of files down
 	// . dont dump all the way up to the max, leave one open for merging
+	/*
 	for ( int32_t i = 0 ; i < getNumBases() ; i++ ) {
 		CollectionRec *cr = g_collectiondb.m_recs[i];
 		if ( ! cr ) continue;
@@ -1271,7 +1298,7 @@ bool Rdb::dumpTree ( int32_t niceness ) {
 			break;
 		}
 	}
-
+	*/
 	// . wait for all unlinking and renaming activity to flush out
 	// . we do not want to dump to a filename in the middle of being
 	//   unlinked
@@ -1414,10 +1441,12 @@ bool Rdb::gotTokenForDump ( ) {
 			RdbBucket *b = m_buckets.m_buckets[i];
 			collnum_t cn = b->getCollnum();
 			int32_t nk = b->getNumKeys();
-			for ( int32_t j = 0 ; j < nk; j++ ) {
-				cr = g_collectiondb.m_recs[cn];
-				if ( cr ) cr->m_treeCount++;
-			}
+			// for ( int32_t j = 0 ; j < nk; j++ ) {
+			// 	cr = g_collectiondb.m_recs[cn];
+			// 	if ( cr ) cr->m_treeCount++;
+			// }
+			cr = g_collectiondb.m_recs[cn];
+			if ( cr ) cr->m_treeCount += nk;
 		}
 	}
 
@@ -1442,7 +1471,6 @@ bool Rdb::dumpCollLoop ( ) {
  loop:
 	// if no more, we're done...
 	if ( m_dumpCollnum >= getNumBases() ) return true;
-
 	// the only was g_errno can be set here is from a previous dump
 	// error?
 	if ( g_errno ) {
@@ -1464,6 +1492,13 @@ bool Rdb::dumpCollLoop ( ) {
 			    "memory.",base->m_files[m_fn]->getFilename());
 			base->buryFiles ( m_fn , m_fn+1 );
 		}
+		// if it was because a collection got deleted, keep going
+		if ( g_errno == ENOCOLLREC ) {
+			log("rdb: ignoring deleted collection and "
+			    "continuing dump");
+			g_errno = 0;
+			goto keepGoing;
+		}
 		// game over, man
 		doneDumping();
 		// update this so we don't try too much and flood the log
@@ -1471,6 +1506,7 @@ bool Rdb::dumpCollLoop ( ) {
 		s_lastTryTime = getTime();
 		return true;
 	}
+ keepGoing:
 	// advance for next round
 	m_dumpCollnum++;
 
@@ -1484,7 +1520,9 @@ bool Rdb::dumpCollLoop ( ) {
 		// skip if empty
 		if ( ! cr ) continue;
 		// skip if no recs in tree
-		if ( cr->m_treeCount == 0 ) continue;
+		// this is maybe causing us not to dump out all recs
+		// so comment this out
+		//if ( cr->m_treeCount == 0 ) continue;
 		// ok, it's good to dump
 		break;
 	}
@@ -1533,6 +1571,20 @@ bool Rdb::dumpCollLoop ( ) {
 				   "available secondary id for titledb: %s." , 
 				   mstrerror(g_errno) );
 	}
+
+	// if we add to many files then we can not merge, because merge op
+	// needs to add a file and it calls addNewFile() too
+	static int32_t s_flag = 0;
+	if ( base->m_numFiles + 1 >= MAX_RDB_FILES ) {
+		if ( s_flag < 10 )
+			log("db: could not dump tree to disk for cn="
+			    "%i %s because it has %"INT32" files on disk. "
+			    "Need to wait for merge operation.",
+			    (int)m_dumpCollnum,m_dbname,base->m_numFiles);
+		s_flag++;
+		goto loop;
+	}
+
 	// this file must not exist already, we are dumping the tree into it
 	m_fn = base->addNewFile ( id2 ) ;
 	if ( m_fn < 0 ) return log(LOG_LOGIC,"db: rdb: Failed to add new file "
@@ -1540,7 +1592,7 @@ bool Rdb::dumpCollLoop ( ) {
 				m_dbname,mstrerror(g_errno) );
 
 	log(LOG_INFO,"build: Dumping to %s/%s for coll \"%s\".",
-	    base->m_files[m_fn]->m_dir,
+	    base->m_files[m_fn]->getDir(),
 	    base->m_files[m_fn]->getFilename() , 
 	    g_collectiondb.getCollName ( m_dumpCollnum ) );
 	// . append it to "sync" state we have in memory
@@ -1635,7 +1687,7 @@ bool Rdb::dumpCollLoop ( ) {
 			     //0              ,  // prev last key
 			     KEYMIN()       ,  // prev last key
 			     m_ks           ,  // keySize
-			     m_pc           ,  // DiskPageCache ptr
+			     NULL,//m_pc           ,  // DiskPageCache ptr
 			     maxFileSize    ,
 			     this           )) {// for setting m_needsToSave
 		return false;
@@ -1659,8 +1711,51 @@ bool Rdb::dumpCollLoop ( ) {
 	goto loop;
 }	
 
+static CollectionRec *s_mergeHead = NULL;
+static CollectionRec *s_mergeTail = NULL;
+static bool s_needsBuild = true;
+
+void addCollnumToLinkedListOfMergeCandidates ( collnum_t dumpCollnum ) {
+	// add this collection to the linked list of merge candidates
+	CollectionRec *cr = g_collectiondb.getRec ( dumpCollnum );
+	if ( ! cr ) return;
+	// do not double add it, if already there just return
+	if ( cr->m_nextLink ) return;
+	if ( cr->m_prevLink ) return;
+	if ( s_mergeTail && cr ) {
+		s_mergeTail->m_nextLink = cr;
+		cr         ->m_nextLink = NULL;
+		cr         ->m_prevLink = s_mergeTail;
+		s_mergeTail = cr;
+	}
+	else if ( cr ) {
+		cr->m_prevLink = NULL;
+		cr->m_nextLink = NULL;
+		s_mergeHead = cr;
+		s_mergeTail = cr;
+	}
+}
+
+// this is also called in Collectiondb::deleteRec2()
+void removeFromMergeLinkedList ( CollectionRec *cr ) {
+	CollectionRec *prev = cr->m_prevLink;
+	CollectionRec *next = cr->m_nextLink;
+	cr->m_prevLink = NULL;
+	cr->m_nextLink = NULL;
+	if ( prev ) prev->m_nextLink = next;
+	if ( next ) next->m_prevLink = prev;
+	if ( s_mergeTail == cr ) s_mergeTail = prev;
+	if ( s_mergeHead == cr ) s_mergeHead = next;
+}
+
 void doneDumpingCollWrapper ( void *state ) {
 	Rdb *THIS = (Rdb *)state;
+
+	// we just finished dumping to a file, 
+	// so allow it to try to merge again.
+	//RdbBase *base = THIS->getBase(THIS->m_dumpCollnum);
+	//if ( base ) base->m_checkedForMerge = false;
+
 	// return if the loop blocked
 	if ( ! THIS->dumpCollLoop() ) return;
 	// otherwise, call big wrapper
@@ -1678,7 +1773,7 @@ void Rdb::doneDumping ( ) {
 	// give the token back so someone else can dump or merge
 	//g_msg35.releaseToken();
 	// free mem in the primary buffer
-	if ( ! m_dumpErrno ) m_mem.freeDumpedMem();
+	if ( ! m_dumpErrno ) m_mem.freeDumpedMem( &m_tree );
 	// . tell RdbDump it is done
 	// . we have to set this here otherwise RdbMem's memory ring buffer
 	//   will think the dumping is no longer going on and use the primary
@@ -1709,66 +1804,201 @@ void Rdb::doneDumping ( ) {
 	attemptMergeAll(0,NULL);
 }
 
+void forceMergeAll ( char rdbId , char niceness ) {
+	// set flag on all RdbBases
+	for ( int32_t i = 0 ; i < g_collectiondb.m_numRecs ; i++ ) {
+		// we need this quickpoll for when we got 20,000+ collections
+		QUICKPOLL ( niceness );
+		CollectionRec *cr = g_collectiondb.m_recs[i];
+		if ( ! cr ) continue;
+		RdbBase *base = cr->getBase ( rdbId );
+		if ( ! base ) continue;
+		base->m_nextMergeForced = true;
+	}
+	// rebuild the linked list
+	s_needsBuild = true;
+	// and try to merge now
+	attemptMergeAll2 ();
+}
+
 // this should be called every few seconds by the sleep callback, too
 void attemptMergeAll ( int fd , void *state ) {
-
-	if ( state && g_conf.m_logDebugDb ) state = NULL;
-	//g_checksumdb.getRdb()->attemptMerge ( 1 , false , !state);
-	g_linkdb.getRdb()->attemptMerge     ( 1 , false , !state);
-	//g_sectiondb.getRdb()->attemptMerge    ( 1 , false , !state);
-	//g_indexdb.getRdb()->attemptMerge    ( 1 , false , !state);
-	g_posdb.getRdb()->attemptMerge    ( 1 , false , !state);
-	//g_datedb.getRdb()->attemptMerge     ( 1 , false , !state);
-	g_titledb.getRdb()->attemptMerge    ( 1 , false , !state);
-	//g_tfndb.getRdb()->attemptMerge      ( 1 , false , !state);
-	g_tagdb.getRdb()->attemptMerge     ( 1 , false , !state);
-	g_catdb.getRdb()->attemptMerge      ( 1 , false , !state);
-	g_clusterdb.getRdb()->attemptMerge  ( 1 , false , !state);
-	g_statsdb.getRdb()->attemptMerge    ( 1 , false , !state);
-	g_syncdb.getRdb()->attemptMerge    ( 1 , false , !state);
-	//g_placedb.getRdb()->attemptMerge     ( 1 , false , !state);
-	g_doledb.getRdb()->attemptMerge     ( 1 , false , !state);
-	//g_revdb.getRdb()->attemptMerge     ( 1 , false , !state);
-	g_spiderdb.getRdb()->attemptMerge   ( 1 , false , !state);
-	g_cachedb.getRdb()->attemptMerge     ( 1 , false , !state);
-	g_serpdb.getRdb()->attemptMerge     ( 1 , false , !state);
-	g_monitordb.getRdb()->attemptMerge     ( 1 , false , !state);
-	// if we got a rebuild going on
-	g_spiderdb2.getRdb()->attemptMerge   ( 1 , false , !state);
-	//g_checksumdb2.getRdb()->attemptMerge ( 1 , false , !state);
-	//g_indexdb2.getRdb()->attemptMerge    ( 1 , false , !state);
-	g_posdb2.getRdb()->attemptMerge    ( 1 , false , !state);
-	//g_datedb2.getRdb()->attemptMerge     ( 1 , false , !state);
-	//g_sectiondb2.getRdb()->attemptMerge    ( 1 , false , !state);
-	g_titledb2.getRdb()->attemptMerge    ( 1 , false , !state);
-	//g_tfndb2.getRdb()->attemptMerge      ( 1 , false , !state);
-	//g_tagdb2.getRdb()->attemptMerge     ( 1 , false , !state);
-	//g_catdb2.getRdb()->attemptMerge      ( 1 , false , !state);
-	g_clusterdb2.getRdb()->attemptMerge  ( 1 , false , !state);
-	//g_statsdb2.getRdb()->attemptMerge    ( 1 , false , !state);
-	g_linkdb2.getRdb()->attemptMerge     ( 1 , false , !state);
-	//g_placedb2.getRdb()->attemptMerge     ( 1 , false , !state);
-	//g_revdb2.getRdb()->attemptMerge     ( 1 , false , !state);
+	attemptMergeAll2 ( );
 }
 
 // called by main.cpp
-void Rdb::attemptMerge ( int32_t niceness , bool forced , bool doLog ) {
+// . TODO: if rdbbase::attemptMerge() needs to launch a merge but can't
+//   then do NOT remove from linked list. maybe set a flag like 'needsMerge'
+void attemptMergeAll2 ( ) {
 
-	for ( int32_t i = 0 ; i < getNumBases() ; i++ ) {
+	// wait for any current merge to stop!
+	if ( g_merge.isMerging() ) return;
 
-		CollectionRec *cr = g_collectiondb.m_recs[i];
-		if ( ! cr ) continue;
-		// if swapped out, this will be NULL, so skip it
-		RdbBase *base = cr->getBasePtr(m_rdbId);
-		//RdbBase *base = getBase(i);
-		if ( ! base ) continue;
-		base->attemptMerge(niceness,forced,doLog);
-		// stop if we got unlink/rename threads out from a merge
-		// in RdbBase.cpp beause the merge can't go until this is 0
-		// lest we have 2000 collections all trying to merge tagdb
-		// at the same time!!!! this happened once...
-		if ( g_numThreads > 0 ) break;
+	int32_t niceness = MAX_NICENESS;
+	static collnum_t s_lastCollnum = 0;
+	int32_t count = 0;
+
+ tryLoop:
+
+	QUICKPOLL(niceness);
+
+	// if a collection got deleted, reset this to 0
+	if ( s_lastCollnum >= g_collectiondb.m_numRecs ) {
+		s_lastCollnum = 0;
+		// and return so we don't spin 1000 times over a single coll.
+		return;
 	}
+
+	// limit to 1000 checks to save the cpu since we call this once
+	// every 2 seconds.
+	if ( ++count >= 1000 ) return;
+
+	CollectionRec *cr = g_collectiondb.m_recs[s_lastCollnum];
+	if ( ! cr ) { s_lastCollnum++; goto tryLoop; }
+
+	bool force = false;
+	RdbBase *base ;
+	// args = niceness, forceMergeAll, doLog, minToMergeOverride
+	// if RdbBase::attemptMerge() returns true that means it
+	// launched a merge and it will call attemptMergeAll2() when
+	// the merge completes.
+	base = cr->getBasePtr(RDB_POSDB);
+	if ( base && base->attemptMerge(niceness,force,true) ) 
+		return;
+	base = cr->getBasePtr(RDB_TITLEDB);
+	if ( base && base->attemptMerge(niceness,force,true) ) 
+		return;
+	base = cr->getBasePtr(RDB_TAGDB);
+	if ( base && base->attemptMerge(niceness,force,true) ) 
+		return;
+	base = cr->getBasePtr(RDB_LINKDB);
+	if ( base && base->attemptMerge(niceness,force,true) ) 
+		return;
+	base = cr->getBasePtr(RDB_SPIDERDB);
+	if ( base && base->attemptMerge(niceness,force,true) ) 
+		return;
+	base = cr->getBasePtr(RDB_CLUSTERDB);
+	if ( base && base->attemptMerge(niceness,force,true) ) 
+		return;
+
+	// also try to merge on rdbs being rebuilt
+	base = cr->getBasePtr(RDB2_POSDB2);
+	if ( base && base->attemptMerge(niceness,force,true) ) 
+		return;
+	base = cr->getBasePtr(RDB2_TITLEDB2);
+	if ( base && base->attemptMerge(niceness,force,true) ) 
+		return;
+	base = cr->getBasePtr(RDB2_TAGDB2);
+	if ( base && base->attemptMerge(niceness,force,true) ) 
+		return;
+	base = cr->getBasePtr(RDB2_LINKDB2);
+	if ( base && base->attemptMerge(niceness,force,true) ) 
+		return;
+	base = cr->getBasePtr(RDB2_SPIDERDB2);
+	if ( base && base->attemptMerge(niceness,force,true) ) 
+		return;
+	base = cr->getBasePtr(RDB2_CLUSTERDB2);
+	if ( base && base->attemptMerge(niceness,force,true) ) 
+		return;
+
+	// try next collection
+	s_lastCollnum++;
+
+	goto tryLoop;
+
+	/* 
+
+	   MDW: linked list approach is too prone to error. just try to 
+	   merge 1000 collection recs  in a call and keep a cursor.
+
+	CollectionRec *last = NULL;
+	CollectionRec *cr;
+
+ rebuild:
+
+	//
+	// . if the first time then build the linked list
+	// . or if we set s_needsBuild to false, like above, re-build it
+	//
+	if ( s_needsBuild ) {
+		s_mergeHead = NULL;
+		s_mergeTail = NULL;
+	}
+	for ( int32_t i=0 ; s_needsBuild && i<g_collectiondb.m_numRecs ; i++) {
+		// we need this quickpoll for when we got 20,000+ collections
+		QUICKPOLL ( niceness );
+		cr = g_collectiondb.getRec(i);//m_recs[i];
+		if ( ! cr ) continue;
+		// add it
+		if ( ! s_mergeHead ) s_mergeHead = cr;
+		if ( last ) last->m_nextLink = cr;
+		cr->m_prevLink = last;
+		cr->m_nextLink = NULL;
+		s_mergeTail = cr;
+		last = cr;
+	}
+	s_needsBuild = false;
+
+	bool force = false;
+
+	// . just scan the linked list that we now maintain
+	// . if a collection is deleted then we remove it from this list too!
+	cr = s_mergeHead;
+	while ( cr ) {
+		QUICKPOLL(niceness);
+		// this is a requirement in RdbBase::attemptMerge() so check
+		// for it here so we can bail out early
+		if ( g_numThreads > 0 ) break;
+		// sanity
+		CollectionRec *vr = g_collectiondb.getRec(cr->m_collnum);
+		if ( vr != cr ) {
+			log("rdb: attemptmergeall: bad collnum %i. how "
+			    "did this happen?",
+			    (int)cr->m_collnum);
+			s_needsBuild = true;
+			goto rebuild;
+		}
+		// pre advance
+		CollectionRec *next = cr->m_nextLink;
+		// try to merge the next guy in line, in the linked list
+		RdbBase *base ;
+		base = cr->getBasePtr(RDB_POSDB);
+		// args = niceness, forceMergeAll, doLog, minToMergeOverride
+		// if RdbBase::attemptMerge() returns true that means it
+		// launched a merge and it will call attemptMergeAll2() when
+		// the merge completes.
+		if ( base && base->attemptMerge(niceness,force,true) ) 
+			return;
+		base = cr->getBasePtr(RDB_TITLEDB);
+		if ( base && base->attemptMerge(niceness,force,true) ) 
+			return;
+		base = cr->getBasePtr(RDB_TAGDB);
+		if ( base && base->attemptMerge(niceness,force,true) ) 
+			return;
+		base = cr->getBasePtr(RDB_LINKDB);
+		if ( base && base->attemptMerge(niceness,force,true) ) 
+			return;
+		base = cr->getBasePtr(RDB_SPIDERDB);
+		if ( base && base->attemptMerge(niceness,force,true) ) 
+			return;
+		// hey, why was it in the list? remove it. we also remove
+		// guys if the collection gets deleted in Collectiondb.cpp,
+		// so this is a function.
+		removeFromMergeLinkedList ( cr );
+		cr = next;
+	}
+
+	// every 60 seconds try to merge collectionless rdbs
+	static int32_t s_count = 0;
+	if ( ++s_count == 30 ) {
+		s_count = 0;
+		// try to merge collectionless rdbs like statsdb/catdb
+		// RdbBase *base1 = g_catdb.getRdb()->getBase(0);
+		// if ( base1 ) base1->attemptMerge(niceness,force,true);
+		// RdbBase *base2 = g_statsdb.getRdb()->getBase(0);
+		// if ( base2 ) base2->attemptMerge(niceness,force,true);
+	}
+	*/
 }
 
 // . return false and set g_errno on error
@@ -1778,7 +2008,7 @@ bool Rdb::addList ( collnum_t collnum , RdbList *list,
 	// pick it
 	if ( collnum < 0 || collnum > getNumBases() || ! getBase(collnum) ) {
 		g_errno = ENOCOLLREC;
-		return log("db: %s bad collnum of %i.",m_dbname,collnum);
+		return log("db: %s bad collnum1 of %i.",m_dbname,collnum);
 	}
 	// make sure list is reset
 	list->resetListPtr();
@@ -1801,6 +2031,10 @@ bool Rdb::addList ( collnum_t collnum , RdbList *list,
 		g_errno = ETRYAGAIN; 
 		return false;
 	}
+	// if ( m_inDumpLoop ) {
+	// 	g_errno = ETRYAGAIN;
+	// 	return false;
+	// }
 	// if we are well into repair mode, level 2, do not add anything
 	// to spiderdb or titledb... that can mess up our titledb scan.
 	// we always rebuild tfndb, clusterdb, checksumdb and spiderdb
@@ -1825,6 +2059,14 @@ bool Rdb::addList ( collnum_t collnum , RdbList *list,
 	       m_rdbId == RDB_DOLEDB     ||
 	       m_rdbId == RDB_SPIDERDB   ||
 	       m_rdbId == RDB_REVDB      ) ) {
+
+		// exception, spider status docs can be deleted from titledb
+		// if user turns off 'index spider replies' before doing
+		// the rebuild, when not rebuilding titledb.
+		if ( m_rdbId == RDB_TITLEDB && 
+		     list->m_listSize == 12 )
+			goto exception;
+
 		// allow banning of sites still
 		//m_rdbId == RDB_TAGDB     ) ) {
 		log("db: How did an add come in while in repair mode?"
@@ -1832,6 +2074,9 @@ bool Rdb::addList ( collnum_t collnum , RdbList *list,
 		g_errno = EREPAIRING;
 		return false;
 	}
+
+ exception:
+
 	/*
 	if ( g_repair.isRepairActive() &&
 	     g_repair.m_fullRebuild    && 
@@ -1870,7 +2115,7 @@ bool Rdb::addList ( collnum_t collnum , RdbList *list,
 	// . if we don't have enough room to store list, initiate a dump and
 	//   return g_errno of ETRYAGAIN
 	// . otherwise, we're guaranteed to have room for this list
-	if ( ! hasRoom(list) ) { 
+	if ( ! hasRoom(list,niceness) ) { 
 		// stop it
 		m_inAddList = false;
 		// if tree is empty, list will never fit!!!
@@ -2093,7 +2338,7 @@ bool Rdb::needsDump ( ) {
 	return false;
 }
 
-bool Rdb::hasRoom ( RdbList *list ) {
+bool Rdb::hasRoom ( RdbList *list , int32_t niceness ) {
 	// how many nodes will tree need?
 	int32_t numNodes = list->getNumRecs( );
 	if ( !m_useTree && !m_buckets.hasRoom(numNodes)) return false;
@@ -2106,6 +2351,38 @@ bool Rdb::hasRoom ( RdbList *list ) {
 	int64_t dataSpace = list->getListSize() - (numNodes * overhead);
 	// does tree have room for these nodes?
 	if ( m_useTree && m_tree.getNumAvailNodes() < numNodes ) return false;
+
+	// if we are doledb, we are a tree-only rdb, so try to reclaim
+	// memory from deleted nodes. works by condesing the used memory.
+	if ( m_rdbId == RDB_DOLEDB && 
+	     // if there is no room left in m_mem (RdbMem class)...
+	     ( m_mem.m_ptr2 - m_mem.m_ptr1 < dataSpace||g_conf.m_forceIt) &&
+	     //m_mem.m_ptr1 - m_mem.m_mem > 1024 ) {
+	     // and last time we tried this, if any, it reclaimed 1MB+
+	     (m_lastReclaim>1024*1024||m_lastReclaim==-1||g_conf.m_forceIt)){
+		// reclaim the memory now. returns -1 and sets g_errno on error
+		int32_t reclaimed = reclaimMemFromDeletedTreeNodes(niceness);
+		// reset force flag
+		g_conf.m_forceIt = false;
+		// ignore errors for now
+		g_errno = 0;
+		// how much did we free up?
+		if ( reclaimed >= 0 )
+			m_lastReclaim = reclaimed;
+	}
+
+	// if we have data-less records, we do not use RdbMem, so
+	// return true at this point since there are enough tree nodes
+	//if ( dataSpace <= 0 ) return true;
+
+	// if rdbmem is already 90 percent full, just say no so when we
+	// dump to disk we have some room to add records that come in
+	// during the dump, and we have some room for RdbMem::freeDumpedMem()
+	// to fix things and realloc/move them within the rdb mem
+	// if ( m_mem.is90PercentFull () && 
+	//      ! m_inDumpLoop &&
+	//      m_rdbId != RDB_DOLEDB )
+	// 	return false;
 
 	// does m_mem have room for "dataSpace"?
 	if ( (int64_t)m_mem.getAvailMem() < dataSpace ) return false;
@@ -2185,6 +2462,30 @@ bool Rdb::addRecord ( collnum_t collnum,
 		char *xx=NULL;*xx=0;
 		return false;
 	}
+
+
+	// do not add if range being dumped at all because when the
+	// dump completes it calls deleteList() and removes the nodes from
+	// the tree, so if you were overriding a node currently being dumped
+	// we would lose it.
+	if ( m_dump.isDumping() &&
+	     //oppKey >= m_dump.getFirstKeyInQueue() &&
+	     // ensure the dump is dumping the collnum of this key
+	     m_dump.m_collnum == collnum &&
+	     m_dump.m_lastKeyInQueue &&
+	     // the dump should not split positive/negative keys so
+	     // if our positive/negative twin should be in the dump with us
+	     // or not in the dump with us, so any positive/negative 
+	     // annihilation below should be ok and we should be save
+	     // to call deleteNode() below
+	     KEYCMP(key,m_dump.getFirstKeyInQueue(),m_ks)>=0 &&
+	     //oppKey <= m_dump.getLastKeyInQueue ()   ) goto addIt;
+	     KEYCMP(key,m_dump.getLastKeyInQueue (),m_ks)<=0   )  {
+		// tell caller to wait and try again later
+		g_errno = ETRYAGAIN;
+		return false;
+	}
+
 
 	// save orig
 	char *orig = NULL;
@@ -2297,11 +2598,13 @@ bool Rdb::addRecord ( collnum_t collnum,
 			SpiderRequest *sreq = (SpiderRequest *)data;
 			logf(LOG_DEBUG,"spider: added doledb key "
 			     "for pri=%"INT32" time=%"UINT32" "
-			     "uh48=%"UINT64" docid=%"INT64" u=%s",
+			     "uh48=%"UINT64" "
+			     //"docid=%"INT64" "
+			     "u=%s",
 			     (int32_t)g_doledb.getPriority(&doleKey),
 			     (uint32_t)g_doledb.getSpiderTime(&doleKey),
 			     g_doledb.getUrlHash48(&doleKey),
-			     sreq->m_probDocId,
+			     //sreq->m_probDocId,
 			     sreq->m_url);
 		}
 	}
@@ -2383,13 +2686,17 @@ bool Rdb::addRecord ( collnum_t collnum,
 		// CAUTION: we should not annihilate with oppKey if oppKey may
 		// be in the process of being dumped to disk! This would 
 		// render our annihilation useless and make undeletable data
+		/*
 		if ( m_dump.isDumping() &&
 		     //oppKey >= m_dump.getFirstKeyInQueue() &&
+		     // ensure the dump is dumping the collnum of this key
+		     m_dump.m_collnum == collnum &&
 		     m_dump.m_lastKeyInQueue &&
 		     KEYCMP(oppKey,m_dump.getFirstKeyInQueue(),m_ks)>=0 &&
 		     //oppKey <= m_dump.getLastKeyInQueue ()   ) goto addIt;
 		     KEYCMP(oppKey,m_dump.getLastKeyInQueue (),m_ks)<=0   ) 
 			goto addIt;
+		*/
 		// BEFORE we delete it, save it. this is a special hack
 		// so we can UNDO this deleteNode() should the titledb rec
 		// add fail.
@@ -2401,7 +2708,7 @@ bool Rdb::addRecord ( collnum_t collnum,
 		// . we NO LONGER annihilate with him. why?
 		// . freeData should be true, the tree doesn't own the data
 		//   so it shouldn't free it really
-		m_tree.deleteNode ( n , true ); // false =freeData?);
+		m_tree.deleteNode3 ( n , true ); // false =freeData?);
 		// mark as changed
 		//if ( ! m_needsSave ) {
 		//	m_needsSave = true;
@@ -2463,7 +2770,7 @@ bool Rdb::addRecord ( collnum_t collnum,
 	// if we did not find an oppKey and are tfndb, flag this
 	//if ( n<0 && m_rdbId == RDB_TFNDB ) s_tfndbHadOppKey = false;
 
- addIt:
+	// addIt:
 	// mark as changed
 	//if ( ! m_needsSave ) {
 	//	m_needsSave = true;
@@ -2542,6 +2849,19 @@ bool Rdb::addRecord ( collnum_t collnum,
 			if ( g_conf.m_logDebugSpider )
 				log("spider: adding spider req %s is dup. "
 				    "skipping.",sreq->m_url);
+			return true;
+		}
+		// if we are overflowing...
+		if ( isReq &&
+		     ! sreq->m_isAddUrl &&
+		     ! sreq->m_isPageReindex &&
+		     ! sreq->m_urlIsDocId &&
+		     ! sreq->m_forceDelete &&
+		     sc->isFirstIpInOverflowList ( sreq->m_firstIp ) ) {
+			if ( g_conf.m_logDebugSpider )
+				log("spider: skipping for overflow url %s ",
+				    sreq->m_url);
+			g_stats.m_totalOverflows++;
 			return true;
 		}
 	}
@@ -2644,7 +2964,7 @@ bool Rdb::addRecord ( collnum_t collnum,
 				    "errCode = %s",
 				    rr->getUrlHash48(),
 				    mstrerror(indexCode));
-				m_tree.deleteNode(tn,false);
+				m_tree.deleteNode3(tn,false);
 			}
 		}
 		// clear errors from adding to SpiderCache
@@ -2704,7 +3024,7 @@ int64_t Rdb::getListSize ( collnum_t collnum,
 	// pick it
 	//collnum_t collnum = g_collectiondb.getCollnum ( coll );
 	if ( collnum < 0 || collnum > getNumBases() || ! getBase(collnum) )
-		return log("db: %s bad collnum of %i",m_dbname,collnum);
+		return log("db: %s bad collnum2 of %i",m_dbname,collnum);
 	return getBase(collnum)->getListSize(startKey,endKey,max,
 					    oldTruncationLimit);
 }
@@ -2755,6 +3075,24 @@ int64_t Rdb::getNumTotalRecs ( bool useCache ) {
 
 	return total;
 }
+
+
+int64_t Rdb::getCollNumTotalRecs ( collnum_t collnum ) {
+
+	if ( collnum < 0 ) return 0;
+
+	CollectionRec *cr = g_collectiondb.m_recs[collnum];
+	if ( ! cr ) return 0;
+	// if swapped out, this will be NULL, so skip it
+	RdbBase *base = cr->getBasePtr(m_rdbId);
+	if ( ! base ) {
+		log("rdb: getcollnumtotalrecs: base swapped out");
+		return 0;
+	}
+	return base->getNumTotalRecs();
+}
+
+
 
 // . how much mem is alloced for all of our maps?
 // . we have one map per file
@@ -2984,7 +3322,10 @@ char getKeySizeFromRdbId ( uint8_t rdbId ) {
 		}
 	}
 	// sanity check
-	if ( s_table1[rdbId] == 0 ) { char *xx=NULL;*xx=0; }
+	if ( s_table1[rdbId] == 0 ) { 
+		log("rdb: bad lookup rdbid of %i",(int)rdbId);
+		char *xx=NULL;*xx=0; 
+	}
 	return s_table1[rdbId];
 }
 
@@ -3078,7 +3419,10 @@ RdbBase *getRdbBase ( uint8_t rdbId , char *coll ) {
 		collnum = (collnum_t) 0;
 	else    
 		collnum = g_collectiondb.getCollnum ( coll );
-	if(collnum == -1) return NULL;
+	if(collnum == -1) {
+		g_errno = ENOCOLLREC;
+		return NULL;
+	}
 	//return rdb->m_bases [ collnum ];
 	return rdb->getBase(collnum);
 }
@@ -3202,4 +3546,179 @@ bool Rdb::isWritable ( ) {
 bool Rdb::needsSave() {
 	if(m_useTree) return m_tree.m_needsSave; 
 	else return m_buckets.needsSave();
+}
+
+// if we are doledb, we are a tree-only rdb, so try to reclaim
+// memory from deleted nodes. works by condensing the used memory.
+// returns how much we reclaimed.
+int32_t Rdb::reclaimMemFromDeletedTreeNodes( int32_t niceness ) {
+
+	log("rdb: reclaiming tree mem for doledb");
+
+	// this only works for non-dumped RdbMem right now, i.e. doledb only
+	if ( m_rdbId != RDB_DOLEDB ) { char *xx=NULL;*xx=0; }
+
+	// start scanning the mem pool
+	char *p    = m_mem.m_mem;
+	char *pend = m_mem.m_ptr1;
+	
+	char *memEnd = m_mem.m_mem + m_mem.m_memSize;
+
+	char *dst = p;
+
+	int32_t inUseOld = pend - p;
+
+	char *pstart = p;
+
+	int32_t marked = 0;
+	int32_t occupied = 0;
+
+	HashTableX ht;
+	if (!ht.set ( 4, 
+		      4, 
+		      m_tree.m_numUsedNodes*2, 
+		      NULL , 0 , 
+		      false , 
+		      niceness ,
+		      "trectbl",
+		      true )) // useMagic? yes..
+		return -1;
+
+	int32_t dups = 0;
+
+	// mark the data of unoccupied nodes somehow
+	int32_t nn = m_tree.m_minUnusedNode;
+	for ( int32_t i = 0 ; i < nn ; i++ ) {
+		//QUICKPOLL ( niceness );
+		// skip empty nodes in tree
+		if ( m_tree.m_parents[i] == -2 ) {marked++; continue; }
+		// get data ptr
+		char *data = m_tree.m_data[i];
+		// and key ptr, if negative skip it
+		//char *key = m_tree.getKey(i);
+		//if ( (key[0] & 0x01) == 0x00 ) { occupied++; continue; }
+		// sanity, ensure legit
+		if ( data < pstart ) { char *xx=NULL;*xx=0; }
+		// offset
+		int32_t doff = (int32_t)(data - pstart);
+		// a dup? sanity check
+		if ( ht.isInTable ( &doff ) ) {
+			int32_t *vp = (int32_t *) ht.getValue ( &doff );
+			log("rdb: reclaim got dup oldi=0x%"PTRFMT" "
+			    "newi=%"INT32" dataoff=%"INT32"."
+			    ,(PTRTYPE)vp,i,doff);
+			//while ( 1 == 1 ) sleep(1);
+			dups++;
+			continue;
+		}
+		// indicate it is legit
+		int32_t val = i;
+		ht.addKey ( &doff , &val );
+		occupied++;
+	}
+
+	if ( occupied + dups != m_tree.getNumUsedNodes() ) 
+		log("rdb: reclaim mismatch1");
+
+	if ( ht.getNumSlotsUsed() + dups != m_tree.m_numUsedNodes )
+		log("rdb: reclaim mismatch2");
+
+	int32_t skipped = 0;
+
+	// the spider requests should be linear in there. so we can scan
+	// them. then put their offset into a map that maps it to the new
+	// offset after doing the memmove().
+	for ( ; p < pend ; ) {
+		//QUICKPOLL ( niceness );
+		SpiderRequest *sreq = (SpiderRequest *)p;
+		int32_t oldOffset = p - pstart;
+		int32_t recSize = sreq->getRecSize();
+		// negative key? this shouldn't happen
+		if ( (sreq->m_key.n0 & 0x01) == 0x00 ) {
+			log("rdb: reclaim got negative doldb key in scan");
+			p += sizeof(DOLEDBKEY);
+			skipped++;
+			continue;
+		}
+		// if not in hash table it was deleted from tree i guess
+		if ( ! ht.isInTable ( &oldOffset ) ) {
+			p += recSize;
+			skipped++; 
+			continue;
+		}
+		// corrupted? or breach of mem buf?
+		if ( sreq->isCorrupt() ||  dst + recSize > memEnd ) {
+			log("rdb: not readding corrupted doledb1 in scan. "
+			    "deleting from tree.");
+			// a dup? sanity check
+			int32_t *nodePtr = (int32_t *)ht.getValue (&oldOffset);
+			if ( ! nodePtr ) {
+				log("rdb: strange. not in tree anymore.");
+				skipped++;
+				continue;
+			}
+			// delete node from doledb tree
+			m_tree.deleteNode3(*nodePtr,true);//true=freedata
+			skipped++;
+			continue;
+		}
+		//// re -add with the proper value now
+		//
+		// otherwise, copy it over if still in tree
+		gbmemcpy ( dst , p , recSize );
+		int32_t newOffset = dst - pstart;
+		// store in map, overwrite old value of 1
+		ht.addKey ( &oldOffset , &newOffset );
+		dst += recSize;
+		p += recSize;
+	}
+
+	//if ( skipped != marked ) { char *xx=NULL;*xx=0; }
+
+	// sanity -- this breaks us. i tried taking the quickpolls out to stop
+	// if(ht.getNumSlotsUsed()!=m_tree.m_numUsedNodes){
+	// 	log("rdb: %"INT32" != %"INT32
+	// 	    ,ht.getNumSlotsUsed()
+	// 	    ,m_tree.m_numUsedNodes
+	// 	    );
+	// 	while(1==1)sleep(1);
+	// 	char *xx=NULL;*xx=0;
+	// }
+
+	int32_t inUseNew = dst - pstart;
+
+	// update mem class as well
+	m_mem.m_ptr1 = dst;
+
+	// how much did we reclaim
+	int32_t reclaimed = inUseOld - inUseNew;
+
+	if ( reclaimed < 0 ) { char *xx=NULL;*xx=0; }
+	if ( inUseNew  < 0 ) { char *xx=NULL;*xx=0; }
+	if ( inUseNew  > m_mem.m_memSize ) { char *xx=NULL;*xx=0; }
+
+	//if ( reclaimed == 0 && marked ) { char *xx=NULL;*xx=0;}
+
+	// now update data ptrs in the tree, m_data[]
+	for ( int i = 0 ; i < nn ; i++ ) {
+		//QUICKPOLL ( niceness );
+		// skip empty nodes in tree
+		if ( m_tree.m_parents[i] == -2 ) continue;
+		// update the data otherwise
+		char *data = m_tree.m_data[i];
+		// sanity, ensure legit
+		if ( data < pstart ) { char *xx=NULL;*xx=0; }
+		int32_t offset = data - pstart;
+		int32_t *newOffsetPtr = (int32_t *)ht.getValue ( &offset );
+		if ( ! newOffsetPtr ) { char *xx=NULL;*xx=0; }
+		char *newData = pstart + *newOffsetPtr;
+		m_tree.m_data[i] = newData;
+	}
+
+	log("rdb: reclaimed %"INT32" bytes after scanning %"INT32" "
+	    "undeleted nodes and %"INT32" deleted nodes for doledb"
+	    ,reclaimed,nn,marked);
+
+	// return # of bytes of mem we reclaimed
+	return reclaimed;
 }

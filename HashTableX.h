@@ -144,13 +144,19 @@ class HashTableX {
 
 	bool addTerm144 ( key144_t *kp , int32_t score = 1 ) {
 
+		/*
 		// debug XmlDoc.cpp's hash table
-		//int64_t termId = ((key144_t *)kp)->n2 >> 16;
-		//if ( termId == 59194288760543LL ) {
-		//	log("got it");
-		//	char *xx=NULL;*xx=0;
-		//}
-
+		int64_t termId = ((key144_t *)kp)->n2 >> 16;
+		uint64_t d = 0LL;
+		d = ((unsigned char *)kp)[11];
+		d <<= 32;
+		d |= *(uint32_t *)(((unsigned char *)kp)+7);
+		d >>= 2;
+		if ( d==110324895284 && termId == 39206941907955LL ) {
+			log("got it");
+			char *xx=NULL;*xx=0;
+		}
+		*/
 		// grow it!
 		if ( (m_numSlots < 20 || 4 * m_numSlotsUsed >= m_numSlots) &&
 		     m_numSlots < m_maxSlots ) {
@@ -457,6 +463,9 @@ class HashTableX {
 			void (* callback)(void *state) );
 
 	bool setTableSize ( int32_t numSlots , char *buf , int32_t bufSize );
+
+	// print as text into sb for debugging
+	void print ( class SafeBuf *sb );
 
 	void disableWrites () { m_isWritable = false; };
 	void enableWrites  () { m_isWritable = true ; };

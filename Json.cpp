@@ -149,6 +149,7 @@ JsonItem *Json::parseJsonStringIntoJsonItems ( char *json , int32_t niceness ) {
 			// set the name
 			ji->m_name    = NAME;
 			ji->m_nameLen = NAMELEN;
+			ji->m_valueLen = 0;
 			// this goes on the stack
 			if ( m_stackPtr >= MAXJSONPARENTS ) return NULL;
 			m_stack[m_stackPtr++] = ji;
@@ -180,6 +181,10 @@ JsonItem *Json::parseJsonStringIntoJsonItems ( char *json , int32_t niceness ) {
 			// set the name
 			ji->m_name    = NAME;
 			ji->m_nameLen = NAMELEN;
+			// init to a bogus value. should be set below.
+			// at least this should avoid a core in XmlDoc.cpp
+			// getTokenizedDiffbotReply()
+			ji->m_valueLen = 0;
 			// this goes on the stack
 			if ( m_stackPtr >= MAXJSONPARENTS ) return NULL;
 			m_stack[m_stackPtr++] = ji;
@@ -229,6 +234,7 @@ JsonItem *Json::parseJsonStringIntoJsonItems ( char *json , int32_t niceness ) {
 				// json must start with { or [ i guess
 				// otherwise getFirstItem() won't work!
 				if ( m_sb.m_length==0 ) {
+					log("json: length is 0");
 					g_errno = EBADJSONPARSER;
 					return NULL;
 				}
@@ -290,10 +296,12 @@ JsonItem *Json::parseJsonStringIntoJsonItems ( char *json , int32_t niceness ) {
 			// what is the length of it?
 			int32_t slen = 4;
 			ji->m_valueLong = 1;
+			ji->m_value64 = 1;
 			ji->m_valueDouble = 1.0;
 			if ( *p == 'f' ) {
 				slen = 5;
 				ji->m_valueLong = 0;
+				ji->m_value64 = 0;
 				ji->m_valueDouble = 0;
 			}
 			// store decoded string right after jsonitem
@@ -338,6 +346,7 @@ JsonItem *Json::parseJsonStringIntoJsonItems ( char *json , int32_t niceness ) {
 			//char c = str[slen];
 			//str[slen] = '\0';
 			ji->m_valueLong = atol(str);
+			ji->m_value64 = atoll(str);
 			ji->m_valueDouble = atof(str);
 			// copy the number as a string as well
 			int32_t curr = m_sb.length();
@@ -363,7 +372,14 @@ JsonItem *Json::parseJsonStringIntoJsonItems ( char *json , int32_t niceness ) {
 
 	// for testing if we realloc
 	char *memEnd = m_sb.getBufStart();
-	if ( mem != memEnd ) { char *xx=NULL;*xx=0; }
+
+	// bitch if we had to do a realloc. should never happen but i
+	// saw it happen once, so do not core on that.
+	if ( mem != memEnd )
+		log("json: json parser reallocated buffer. inefficient.");
+
+	// return NULL if no json items were found
+	if ( m_sb.length() <= 0 ) return NULL;
 
 	return (JsonItem *)m_sb.getBufStart();
 }
@@ -451,7 +467,7 @@ bool JsonItem::isInArray ( ) {
 	return false;
 }
 
-// convert nubers and bools to strings for this one
+// convert numbers and bools to strings for this one
 char *JsonItem::getValueAsString ( int32_t *valueLen ) {
 
 	// strings are the same
@@ -461,12 +477,101 @@ char *JsonItem::getValueAsString ( int32_t *valueLen ) {
 	}
 
 	// numbers...
-	static char s_numBuf[64];
+	// seems like when this overflowed when it was 64 bytes
+	// it went into s_vbuf in Version.cpp
+	static char s_numBuf[256];
 	if ( (float)m_valueLong == m_valueDouble ) {
-		*valueLen = sprintf ( s_numBuf,"%"INT32"", m_valueLong );
+		*valueLen = snprintf ( s_numBuf,255,"%"INT32"", m_valueLong );
 		return s_numBuf;
 	}
 
-	*valueLen = sprintf ( s_numBuf,"%f", m_valueDouble );
-	return s_numBuf;
+	if ( (double)m_value64 == m_valueDouble ) {
+		*valueLen = snprintf ( s_numBuf,255,"%"INT64"", m_value64 );
+		return s_numBuf;
+	}
+
+	// otherwise return the number as it was written in the json
+	// because it might have too many digits for printing as a double
+	*valueLen = m_valueLen;
+	return (char *)this + sizeof(JsonItem);
+
+	// *valueLen = snprintf ( s_numBuf,255,"%f", m_valueDouble );
+	// return s_numBuf;
 }
+
+bool endsInCurly ( char *s , int32_t slen ) {
+	char *e = s + slen - 1;
+	// don't backup more than 30 chars
+	char *m = e - 30;
+	if ( m < s ) m = s;
+	// \0?
+	if ( e > m && *e == '\0' ) e--;
+	// scan backwards, skipping whitespace
+	for ( ; e > m && is_wspace_a(*e) ; e-- );
+	// should be a } now to be valid json
+	if ( e >= m && *e == '}' ) return true;
+	return false;
+}
+
+
+// Accepts a json string which has a top level object and a "key":val pair
+// return false unless jsonStr has the new key:val
+bool Json::prependKey(SafeBuf& jsonStr, char* keyVal) {
+	int32_t ndx = jsonStr.indexOf('{');
+	// no object? try array? fail for now
+	if( ndx == -1  || ndx == jsonStr.length() - 1 ) return false;
+	ndx++; //the insert pos
+	if(ndx == jsonStr.length()) return false;
+
+	// find if the object had any other keys
+	int32_t jsonStrLen = jsonStr.length();
+	int32_t i = ndx;
+	while(i < jsonStrLen && isspace(jsonStr[i])) i++;
+	if( i == jsonStrLen ) return false;
+
+
+	
+	if (jsonStr[i] != '}') {
+		jsonStr.insert(",\n", i);
+	} //else we are the only item, no comma
+
+	return jsonStr.insert(keyVal, ndx);
+
+
+}
+
+
+// bool Json::printToString(SafeBuf& out, JsonItem* ji = NULL) {
+// 	if(!ji) ji = getFirstItem();
+
+// 	for ( ; ji ; ji = ji->m_next ) {
+// 		switch (ji->m_type) {
+// 		case JT_NULL:
+// 			out.safeMemcpy("null", 4);
+// 		break;
+// 		case JT_NUMBER:
+// 			int32_t vl;
+// 			char* v = ji->getValueAsString(&vl);
+// 			out.safeMemcpy(v, vl);
+// 			break;
+// 		case JT_STRING:
+// 			int32_t vl;
+// 			char* v = ji->getValueAsString(&vl);
+// 			out.pushChar('"');
+// 			out.safeMemcpy(v, vl);
+// 			out.pushChar('"');
+// 		break;
+// 		case JT_ARRAY:
+// 			// wha? really? I would've thought this would contain 
+// 			// jsonitems and not a string
+// 			safeMemcpy(ji->m_valueArray, ji->m_valueArray);
+// 		break;
+// 		case JT_OBJECT:
+// 			out.pushChar('{');
+// 			out.safeMemcpy(v, vl);
+// 			out.pushChar("\"");
+// 		break;
+// 		}
+// 	}
+// 	out->
+// }

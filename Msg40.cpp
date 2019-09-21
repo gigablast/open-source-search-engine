@@ -83,7 +83,7 @@ static bool gotSummaryWrapper            ( void *state );
 bool isSubDom(char *s , int32_t len);
 
 Msg40::Msg40() {
-	m_firstTime = true;
+	m_calledFacets = false;
 	m_doneWithLookup = false;
 	m_socketHadError = 0;
 	m_buf           = NULL;
@@ -108,6 +108,9 @@ Msg40::Msg40() {
 	m_omitCount      = 0;
 	m_printCount = 0;
 	//m_numGigabitInfos = 0;
+	m_numCollsToSearch = 0;
+	m_numMsg20sIn = 0;
+	m_numMsg20sOut = 0;
 }
 
 #define MAX2 50
@@ -140,6 +143,14 @@ void Msg40::resetBuf2 ( ) {
 }
 
 Msg40::~Msg40() {
+	// free tmp msg3as now
+	for ( int32_t i = 0 ; i < m_numCollsToSearch ; i++ ) {
+		if ( ! m_msg3aPtrs[i] ) continue;
+		if ( m_msg3aPtrs[i] == &m_msg3a ) continue;
+		mdelete ( m_msg3aPtrs[i] , sizeof(Msg3a), "tmsg3a");
+		delete  ( m_msg3aPtrs[i] );
+		m_msg3aPtrs[i] = NULL;
+	}
 	if ( m_buf  ) mfree ( m_buf  , m_bufMaxSize  , "Msg40" );
 	m_buf  = NULL;
 	resetBuf2();
@@ -657,7 +668,7 @@ bool Msg40::federatedLoop ( ) {
 	mr.size_whiteList              = slen;
 	mr.m_timeout                   = -1; // auto-determine based on #terms
 	// make sure query term counts match in msg39
-	mr.m_maxQueryTerms             = m_si->m_maxQueryTerms; 
+	//mr.m_maxQueryTerms             = m_si->m_maxQueryTerms; 
 	mr.m_realMaxTop                = m_si->m_realMaxTop;
 
 	mr.m_minSerpDocId              = m_si->m_minSerpDocId;
@@ -687,8 +698,11 @@ bool Msg40::federatedLoop ( ) {
 	// and mult based on index size
 	numDocIdSplits *= mult;
 	// prevent going OOM for type:article AND html
-	//if ( numDocIdSplits < 5 ) numDocIdSplits = 5;
+	if ( numDocIdSplits < 5 ) numDocIdSplits = 5;
 	//}
+
+	if ( cr ) mr.m_maxQueryTerms = cr->m_maxQueryTerms; 
+	else      mr.m_maxQueryTerms = 100;
 
 	// special oom hack fix
 	if ( cr && cr->m_isCustomCrawl && numDocIdSplits < 4 ) 
@@ -1059,7 +1073,7 @@ bool Msg40::reallocMsg20Buf ( ) {
 	// . allocate m_buf2 to hold all our Msg20 pointers and Msg20 classes
 	// . how much mem do we need?
 	// . need space for the msg20 ptrs
-	int32_t need = m_msg3a.m_numDocIds * sizeof(Msg20 *);
+	int64_t need = m_msg3a.m_numDocIds * sizeof(Msg20 *);
 	// need space for the classes themselves, only if "visible" though
 	for ( int32_t i = 0 ; i < m_msg3a.m_numDocIds ; i++ ) 
 		if ( m_msg3a.m_clusterLevels[i] == CR_OK ) 
@@ -1231,6 +1245,13 @@ bool Msg40::reallocMsg20Buf ( ) {
 	m_buf2        = NULL;
 	m_bufMaxSize2 = need;
 
+	// if ( need > 2000000000 ) {
+	// 	log("msg40: need too much mem=%"INT64,need);
+	// 	m_errno = ENOMEM;
+	// 	g_errno = ENOMEM;
+	// 	return false; 
+	// }
+
 	// do the alloc
 	if ( need ) m_buf2 = (char *)mmalloc ( need ,"Msg40msg20");
 	if ( need && ! m_buf2 ) { m_errno = g_errno; return false; }
@@ -1395,7 +1416,7 @@ bool Msg40::launchMsg20s ( bool recalled ) {
 
 	// . launch a msg20 getSummary() for each docid
 	// . m_numContiguous should preceed any gap, see below
-	for ( int32_t i = m_lastProcessedi+1 ; i < m_msg3a.m_numDocIds ; i++ ) {
+	for ( int32_t i = m_lastProcessedi+1 ; i < m_msg3a.m_numDocIds ;i++ ) {
 		// if the user only requested docids, do not get the summaries
 		if ( m_si->m_docIdsOnly ) break;
 		// if we have enough visible then no need to launch more!
@@ -1408,8 +1429,12 @@ bool Msg40::launchMsg20s ( bool recalled ) {
 		// hard limit
 		if ( m_numRequests-m_numReplies >= maxOut ) break;
 		// do not launch another until m_printi comes back because
-		// all summaries are bottlenecked on printing him out now
+		// all summaries are bottlenecked on printing him out now.
 		if ( m_si->m_streamResults &&
+		     // must have at least one outstanding summary guy
+		     // otherwise we can return true below and cause
+		     // the stream to truncate results in gotSummary()
+		     //m_numReplies < m_numRequests &&
 		     i >= m_printi + MAX_OUTSTANDING_MSG20S - 1 )
 			break;
 
@@ -1477,6 +1502,34 @@ bool Msg40::launchMsg20s ( bool recalled ) {
 		else
 			m = m_msg20[i];
 
+		// if to a dead host, skip it
+		int64_t docId = m_msg3a.m_docIds[i];
+		uint32_t shardNum = g_hostdb.getShardNumFromDocId ( docId );
+		// get the collection rec
+		CollectionRec *cr = g_collectiondb.getRec(m_firstCollnum);
+		// if shard is dead then do not send to it if not crawlbot
+		if ( g_hostdb.isShardDead ( shardNum ) &&
+		     cr &&
+		     // diffbot urls.csv downloads often encounter dead
+		     // hosts that are not really dead, so wait for it
+		     ! cr->m_isCustomCrawl &&
+		     // this is causing us to truncate streamed results
+		     // too early when we have false positives that a 
+		     // host is dead because the server is locking up 
+		     // periodically
+		     ! m_si->m_streamResults ) {
+			log("msg40: skipping summary "
+			    "lookup #%"INT32" of "
+			    "docid %"INT64" for dead shard #%"INT32""
+			    , i
+			    , docId
+			    , shardNum );
+			m_numRequests++;
+			m_numReplies++;
+			continue;
+		}
+
+
 		// if msg20 ptr null that means the cluster level is not CR_OK
 		if ( ! m ) {
 			m_numRequests++;
@@ -1513,8 +1566,6 @@ bool Msg40::launchMsg20s ( bool recalled ) {
 		// keep for-loops int16_ter with this
 		//if ( i > m_maxiLaunched ) m_maxiLaunched = i;
 		
-		// get the collection rec
-		CollectionRec *cr =g_collectiondb.getRec(m_firstCollnum);
 		//getRec(m_si->m_coll2,m_si->m_collLen2);
 		if ( ! cr ) {
 			log("msg40: missing coll");
@@ -1703,13 +1754,18 @@ Msg20 *Msg40::getAvailMsg20 ( ) {
 		if ( m_msg20[i]->m_launched ) continue;
 		return m_msg20[i];
 	}
-	// how can this happen???
+	// how can this happen???  THIS HAPPEND
 	char *xx=NULL;*xx=0; 
 	return NULL;
 }
 
 Msg20 *Msg40::getCompletedSummary ( int32_t ix ) {
 	for ( int32_t i = 0 ; i < m_numMsg20s ; i++ ) {
+		// it seems m_numMsg20s can be > m_numRequests when doing
+		// a multi collection federated search somehow and this
+		// can therefore be null
+		if ( ! m_msg20[i] ) 
+			continue;
 		if ( m_msg20[i]->m_ii != ix ) continue;
 		if ( m_msg20[i]->m_inProgress ) return NULL;
 		return m_msg20[i];
@@ -1728,7 +1784,7 @@ bool gotSummaryWrapper ( void *state ) {
 		    THIS->m_numReplies,
 		    THIS->m_msg3a.m_numDocIds);
 	// it returns false if we're still awaiting replies
-	if ( ! THIS->gotSummary ( ) ) return false;
+	if ( ! THIS->m_calledFacets && ! THIS->gotSummary ( ) ) return false;
 	// lookup facets
 	if ( THIS->m_si &&
 	     ! THIS->m_si->m_streamResults &&
@@ -1744,8 +1800,13 @@ void doneSendingWrapper9 ( void *state , TcpSocket *sock ) {
 	// the send completed, count it
 	THIS->m_sendsIn++;
 	// error?
-	if ( THIS->m_sendsIn > THIS->m_sendsOut )
-		log("msg40: sendsin > sendsout");
+	if ( THIS->m_sendsIn > THIS->m_sendsOut ) {
+		log("msg40: sendsin > sendsout. bailing!!!");
+		// try to prevent a core i haven't fixed right yet!!!
+		// seems like a reply coming back after we've destroyed the
+		// state!!!
+		return;
+	}
 	// debug
 	//g_errno = ETCPTIMEDOUT;
 	// socket error? if client closes the socket midstream we get one.
@@ -1875,7 +1936,13 @@ bool Msg40::gotSummary ( ) {
 			for ( k = 0 ; k < m_needFirstReplies ; k++ ) {
 				Msg20 *xx = getCompletedSummary(k);
 				if ( ! xx ) break;
-				if ( ! xx->m_r ) break;
+				if ( ! xx->m_r && 
+				     // and it did not have an error fetching
+				     // because m_r could be NULL and m_errno
+				     // is set to something like Bad Cached
+				     // Document
+				     ! xx->m_errno ) 
+					break;
 			}
 			// if not all have come back yet, wait longer...
 			if ( k < m_needFirstReplies ) break;
@@ -1989,8 +2056,10 @@ bool Msg40::gotSummary ( ) {
 		m20->reset();
 	}
 
-	// set it to true on all but the last thing we send!
-	if ( m_si->m_streamResults )
+	// . set it to true on all but the last thing we send!
+	// . after each chunk of data we send out, TcpServer::sendChunk
+	//   will call our callback, doneSendingWrapper9 
+	if ( m_si->m_streamResults && st->m_socket )
 		st->m_socket->m_streamingMode = true;
 
 
@@ -2072,13 +2141,31 @@ bool Msg40::gotSummary ( ) {
 		if ( g_conf.m_logDebugTcp )
 			log("tcp: disabling streamingMode now");
 		// this will be our final send
-		st->m_socket->m_streamingMode = false;
+		if ( st->m_socket ) st->m_socket->m_streamingMode = false;
 	}
 
 
 	TcpServer *tcp = &g_httpServer.m_tcp;
 
 	//g_conf.m_logDebugTcp = 1;
+
+	// do we still own this socket? i am thinking it got closed somewhere
+	// and the socket descriptor was re-assigned to another socket
+	// getting a diffbot reply from XmLDoc::getDiffbotReply()
+	if ( st->m_socket && 
+	     st->m_socket->m_startTime != st->m_socketStartTimeHack ) {
+		log("msg40: lost control of socket. sd=%i. the socket "
+		    "descriptor closed on us and got re-used by someone else.",
+		    (int)st->m_socket->m_sd);
+		// if there wasn't already an error like 'broken pipe' then
+		// set it here so we stop getting summaries if streaming.
+		if ( ! m_socketHadError ) m_socketHadError = EBADENGINEER;
+		// make it NULL to avoid us from doing anything to it
+		// since sommeone else is using it now.
+		st->m_socket = NULL;
+		//g_errno = EBADENGINEER;
+	}
+
 
 	// . transmit the chunk in sb if non-zero length
 	// . steals the allocated buffer from sb and stores in the 
@@ -2088,10 +2175,12 @@ bool Msg40::gotSummary ( ) {
 	//   socket but rather calls doneSendingWrapper() which can call
 	//   this function again to send another chunk
 	// . when we are truly done sending all the data, then we set lastChunk
-	//   to true and TcpServer.cpp will destroy m_socket when done
+	//   to true and TcpServer.cpp will destroy m_socket when done.
+	//   no, actually we just set m_streamingMode to false i guess above
 	if ( sb->length() &&
 	     // did client browser close the socket on us midstream?
 	     ! m_socketHadError &&
+	     st->m_socket &&
 	     ! tcp->sendChunk ( st->m_socket , 
 				sb  ,
 				this ,
@@ -2104,8 +2193,11 @@ bool Msg40::gotSummary ( ) {
 
 	// writing on closed socket?
 	if ( g_errno ) {
-		m_socketHadError = g_errno;
+		if ( ! m_socketHadError ) m_socketHadError = g_errno;
 		log("msg40: got tcp error : %s",mstrerror(g_errno));
+		// disown it here so we do not damage in case it gets 
+		// reopened by someone else
+		st->m_socket = NULL;
 	}
 
 	// do we need to launch another batch of summary requests?
@@ -2145,11 +2237,10 @@ bool Msg40::gotSummary ( ) {
 
  complete:
 
-	// . ok, now i wait for everybody.
+	// . ok, now i wait for all msg20s (getsummary) to come back in.
 	// . TODO: evaluate if this hurts us
 	if ( m_numReplies < m_numRequests )
 		return false;
-
 
 	// if streaming results, we are done
 	if ( m_si && m_si->m_streamResults ) {
@@ -2159,6 +2250,9 @@ bool Msg40::gotSummary ( ) {
 		//mdelete(st, sizeof(State0), "msg40st0");
 		//delete st;
 		// otherwise, all done!
+		log("msg40: did not send last search result summary. "
+		    "this=0x%"PTRFMT" because had error: %s",(PTRTYPE)this,
+		    mstrerror(m_socketHadError));
 		return true;
 	}
 
@@ -2320,6 +2414,13 @@ bool Msg40::gotSummary ( ) {
                         //m_visibleContiguous--;
 			continue;
 		}
+		// corruptino?
+		if ( mr && ! mr->ptr_ubuf ) {
+			log("msg40: got corrupt msg20 reply for docid %"
+			    INT64,mr->m_docId);
+			*level = CR_BAD_URL;
+			continue;
+		}
 		// filter out urls with <![CDATA in them
 		if ( mr && strstr(mr->ptr_ubuf, "<![CDATA[") ) {
 			*level = CR_BAD_URL;
@@ -2364,6 +2465,9 @@ bool Msg40::gotSummary ( ) {
 	for ( int32_t i = 0 ; dedupPercent && i < m_numReplies ; i++ ) {
 		// skip if already invisible
 		if ( m_msg3a.m_clusterLevels[i] != CR_OK ) continue;
+		// Skip if invalid
+		if ( m_msg20[i]->m_errno ) continue;
+
 		// start with the first docid we have not yet checked!
 		//int32_t m = oldNumContiguous;
 		// get it
@@ -2382,6 +2486,8 @@ bool Msg40::gotSummary ( ) {
 			// skip if already invisible
 			if ( *level != CR_OK ) continue;
 			// get it
+			if ( m_msg20[m]->m_errno ) continue;
+
 			Msg20Reply *mrm = m_msg20[m]->m_r;
 			// do not dedup CT_STATUS results, those are
 			// spider reply "documents" that indicate the last
@@ -3449,7 +3555,10 @@ bool Msg40::computeGigabits( TopicGroup *tg ) {
 			log("gbits: too many words in samples. "
 			    "Discarding the remaining samples "
 			    "(maxWords=%"INT32")", maxWords);
-			char *xx=NULL;*xx=0;
+			// return -1 with g_errno set on error
+			g_errno = EBUFTOOSMALL;
+			return -1;
+			//char *xx=NULL;*xx=0;
 		}
 		// the thing we are counting!!!!
 		maxWords += sampleWords;
@@ -3684,8 +3793,8 @@ bool Msg40::computeGigabits( TopicGroup *tg ) {
 				char *s;
 				s = gb_strcasestr (gj->m_term, gi->m_term);
 				// un-null term longer
-				gi->m_term[gi->m_termLen] = c1;
 				gj->m_term[gj->m_termLen] = c2;
+				gi->m_term[gi->m_termLen] = c1;
 				// even if he's longer, if his score is too
 				// low then he cannot nuke us
 				// MDW: try doing page count!
@@ -3736,8 +3845,8 @@ bool Msg40::computeGigabits( TopicGroup *tg ) {
 				char *s;
 				s = gb_strcasestr ( gi->m_term,gj->m_term );
 				// un-null term
-				gi->m_term[gi->m_termLen] = c1;
 				gj->m_term[gj->m_termLen] = c2;
+				gi->m_term[gi->m_termLen] = c1;
 				// keep going if no match
 				if ( ! s ) continue;
 
@@ -4283,7 +4392,8 @@ void hashExcerpt ( Query *q ,
 		int32_t m_posPtr;
 	};
 	SafeBuf posBuf;
-	int32_t need2 = MAX_QUERY_TERMS * sizeof(PosInfo);
+	//int32_t need2 = MAX_QUERY_TERMS * sizeof(PosInfo);
+	int32_t need2 = q->m_numTerms * sizeof(PosInfo);
 	posBuf.setLabel("m40posbuf");
 	if ( ! posBuf.reserve ( need2 ) ) {
 		log("gigabits: could not allocate 2 local buffer "
@@ -5754,6 +5864,7 @@ bool printHttpMime ( State0 *st ) {
 //
 /////////////////
 
+/*
 // return 1 if a should be before b
 static int csvPtrCmp ( const void *a, const void *b ) {
 	//JsonItem *ja = (JsonItem **)a;
@@ -5771,6 +5882,7 @@ static int csvPtrCmp ( const void *a, const void *b ) {
 	int val = strcmp(pa,pb);
 	return val;
 }
+*/
 	
 #include "Json.h"
 
@@ -5782,11 +5894,9 @@ bool Msg40::printCSVHeaderRow ( SafeBuf *sb ) {
 	//Msg40 *msg40 = &st->m_msg40;
 	//int32_t numResults = msg40->getNumResults();
 
+	/*
 	char tmp1[1024];
 	SafeBuf tmpBuf (tmp1 , 1024);
-
-	char tmp2[1024];
-	SafeBuf nameBuf (tmp2, 1024);
 
 	char nbuf[27000];
 	HashTableX nameTable;
@@ -5885,9 +5995,8 @@ bool Msg40::printCSVHeaderRow ( SafeBuf *sb ) {
 	}
 
 	// sort them
-	qsort ( ptrs , numPtrs , 4 , csvPtrCmp );
+	qsort ( ptrs , numPtrs , sizeof(char *) , csvPtrCmp );
 
-	// set up table to map field name to column for printing the json items
 	HashTableX *columnTable = &m_columnTable;
 	if ( ! columnTable->set ( 8,4, numPtrs * 4,NULL,0,false,0,"coltbl" ) )
 		return false;
@@ -5902,6 +6011,37 @@ bool Msg40::printCSVHeaderRow ( SafeBuf *sb ) {
 		if ( ! columnTable->addKey ( &h64 , &i ) ) 
 			return false;
 	}
+	*/
+
+	Msg20 *msg20s[100];
+	int32_t i;
+	for ( i = 0 ; i < m_needFirstReplies && i < 100 ; i++ ) {
+		Msg20 *m20 = getCompletedSummary(i);
+		if ( ! m20 ) break;
+		msg20s[i] = m20;
+	}
+
+	int32_t numPtrs = 0;
+
+	char tmp2[1024];
+	SafeBuf nameBuf (tmp2, 1024);
+
+	int32_t ct = 0;
+	if ( msg20s[0] && msg20s[0]->m_r ) ct = msg20s[0]->m_r->m_contentType;
+
+	CollectionRec *cr =g_collectiondb.getRec(m_firstCollnum);
+
+	// . set up table to map field name to col for printing the json items
+	// . call this from PageResults.cpp 
+	printCSVHeaderRow2 ( sb , 
+			     ct ,
+			     cr ,
+			     &nameBuf ,
+			     &m_columnTable ,
+			     msg20s ,
+			     i , // numResults ,
+			     &numPtrs 
+			     );
 
 	m_numCSVColumns = numPtrs;
 
@@ -5996,6 +6136,8 @@ bool Msg40::printJsonItemInCSV ( State0 *st , int32_t ix ) {
 
 		// sanity
 		if ( column == -1 ) {//>= numCSVColumns ) { 
+			// don't show it any more...
+			continue;
 			// add a new column...
 			int32_t newColnum = numCSVColumns + 1;
 			// silently drop it if we already have too many cols
@@ -6030,6 +6172,7 @@ bool Msg40::printJsonItemInCSV ( State0 *st , int32_t ix ) {
 		//
 		// get value and print otherwise
 		//
+		/*
 		if ( ji->m_type == JT_NUMBER ) {
 			// print numbers without double quotes
 			if ( ji->m_valueDouble *10000000.0 == 
@@ -6039,11 +6182,15 @@ bool Msg40::printJsonItemInCSV ( State0 *st , int32_t ix ) {
 				sb->safePrintf("%f",ji->m_valueDouble);
 			continue;
 		}
+		*/
+
+		int32_t vlen;
+		char *str = ji->getValueAsString ( &vlen );
 
 		// print the value
 		sb->pushChar('\"');
 		// get the json item to print out
-		int32_t  vlen = ji->getValueLen();
+		//int32_t  vlen = ji->getValueLen();
 		// truncate
 		char *truncStr = NULL;
 		if ( vlen > 32000 ) {
@@ -6053,7 +6200,8 @@ bool Msg40::printJsonItemInCSV ( State0 *st , int32_t ix ) {
 				"JSON to get untruncated data.";
 		}
 		// print it out
-		sb->csvEncode ( ji->getValue() , vlen );
+		//sb->csvEncode ( ji->getValue() , vlen );
+		sb->csvEncode ( str , vlen );
 		// print truncate msg?
 		if ( truncStr ) sb->safeStrcpy ( truncStr );
 		// end the CSV
@@ -6158,8 +6306,8 @@ bool Msg40::lookupFacets ( ) {
 
 	if ( m_doneWithLookup ) return true;
 
-	if ( m_firstTime ) {
-		m_firstTime = false;
+	if ( !m_calledFacets ) {
+		m_calledFacets = true;
 		m_numMsg20sOut = 0;
 		m_numMsg20sIn  = 0;
 		m_j = 0;
@@ -6284,6 +6432,41 @@ bool Msg40::printFacetTables ( SafeBuf *sb ) {
 
 	int32_t saved = sb->length();
 
+        // If json, print beginning of json array
+        if ( format == FORMAT_JSON ) {
+                if ( m_si->m_streamResults ) {
+                        // if we are streaming results in json, we may have hacked off
+                        // the last ,\n so we need a comma to put it back
+                        bool needComma = true;
+
+                        // check if the last non-whitespace char in the
+                        // buffer is a comma
+                        for (int32_t i= sb->m_length-1; i >= 0; i--) {
+                                char c = sb->getBufStart()[i];
+                                if (c == '\n' || c == ' ') {
+                                        // ignore whitespace chars
+                                        continue;
+                                }
+
+                                // If the loop reaches this point, we have a
+                                // non-whitespace char, so we break the loop
+                                // either way
+                                if (c == ',') {
+                                        // last non-whitespace char is a comma,
+                                        // so we don't need to add an extra one
+                                        needComma = false;
+                                }
+                                break;
+                        }
+
+                        if ( needComma ) {
+                                sb->safeStrcpy(",\n\n");
+                        }
+                }
+                sb->safePrintf("\"facets\":[");
+	}
+
+        int numTablesPrinted = 0;
 	for ( int32_t i = 0 ; i < m_si->m_q.getNumTerms() ; i++ ) {
 		// only for html for now i guess
 		//if ( m_si->m_format != FORMAT_HTML ) break;
@@ -6295,9 +6478,24 @@ bool Msg40::printFacetTables ( SafeBuf *sb ) {
 			continue;
 
 		// if had facet ranges, print them out
-		printFacetsForTable ( sb , qt );;
-
+		if ( printFacetsForTable ( sb , qt ) > 0 )
+			numTablesPrinted++;
 	}
+
+        // If josn, print end of json array
+        if ( format == FORMAT_JSON ) {
+                if ( numTablesPrinted > 0 ) {
+                        sb->m_length -= 2; // hack off trailing comma
+			sb->safePrintf("],\n"); // close off json array
+	        }
+		// if no facets then do not print "facets":[]\n,
+		else {
+			// revert string buf to original length
+			sb->m_length = saved;
+			// and cap the string buf just in case
+			sb->nullTerm();
+		}
+        }
 
 	// if json, remove ending ,\n and make it just \n
 	if ( format == FORMAT_JSON && sb->length() != saved ) {
@@ -6319,7 +6517,7 @@ bool Msg40::printFacetTables ( SafeBuf *sb ) {
 	return true;
 }
 
-bool Msg40::printFacetsForTable ( SafeBuf *sb , QueryTerm *qt ) {
+int32_t Msg40::printFacetsForTable ( SafeBuf *sb , QueryTerm *qt ) {
 
 	//QueryWord *qw = qt->m_qword;
 	//if ( qw->m_numFacetRanges > 0 )
@@ -6329,9 +6527,14 @@ bool Msg40::printFacetsForTable ( SafeBuf *sb , QueryTerm *qt ) {
 	int32_t *ptrs = (int32_t *)qt->m_facetIndexBuf.getBufStart();
 	int32_t numPtrs = qt->m_facetIndexBuf.length() / sizeof(int32_t);
 
+	if ( numPtrs == 0 )
+		return 0;
+
+	int32_t numPrinted = 0;
+
 	// now scan the slots and print out
 	HttpRequest *hr = &m_si->m_hr;
-	bool firstTime = true;
+
 	bool isString = false;
 	bool isFloat  = false;
 	bool isInt = false;
@@ -6341,6 +6544,7 @@ bool Msg40::printFacetsForTable ( SafeBuf *sb , QueryTerm *qt ) {
 	char format = m_si->m_format;
 	// a new table for each facet query term
 	bool needTable = true;
+
 	// print out the dumps
 	for ( int32_t x= 0 ; x < numPtrs ; x++ ) {
 		// skip empty slots
@@ -6355,8 +6559,12 @@ bool Msg40::printFacetsForTable ( SafeBuf *sb , QueryTerm *qt ) {
 		FacetEntry *fe;
 		fe = (FacetEntry *)fht->getValueFromSlot(j);
 		int32_t count = 0;
+		int64_t allCount = 0;
 		// could be empty if range had no values in it
-		if ( fe ) count = fe->m_count;
+		if ( fe ) {
+			count = fe->m_count;
+			allCount = fe->m_outsideSearchResultsCount;
+		}
 
 		char *text = NULL;
 
@@ -6444,20 +6652,29 @@ bool Msg40::printFacetsForTable ( SafeBuf *sb , QueryTerm *qt ) {
 			text = m_facetTextBuf.getBufStart() + *offset;
 		}
 
+
 		if ( format == FORMAT_XML ) {
+			numPrinted++;
 			sb->safePrintf("\t<facet>\n"
 				       "\t\t<field>%s</field>\n"
-				       "\t\t<value>"
-				       , term
-				       );
+				       , term );
+			sb->safePrintf("\t\t<totalDocsWithField>%"INT64""
+				       "</totalDocsWithField>\n"
+				       , qt->m_numDocsThatHaveFacet );
+			sb->safePrintf("\t\t<totalDocsWithFieldAndValue>"
+				       "%"INT64""
+				       "</totalDocsWithFieldAndValue>\n"
+				       , allCount );
+			sb->safePrintf("\t\t<value>");
+
 			if ( isString )
 				sb->safePrintf("<![CDATA[%"UINT32",",
 					       (uint32_t)*fvh);
 			sb->cdataEncode ( text );
 			if ( isString )
 				sb->safePrintf("]]>");
-			sb->safePrintf("</value>\n"
-				       "\t\t<docCount>%"INT32""
+			sb->safePrintf("</value>\n");
+			sb->safePrintf("\t\t<docCount>%"INT32""
 				       "</docCount>\n"
 				       ,count);
 			// some stats now for floats
@@ -6492,17 +6709,6 @@ bool Msg40::printFacetsForTable ( SafeBuf *sb , QueryTerm *qt ) {
 			}
 			sb->safePrintf("\t</facet>\n");
 			continue;
-		}
-
-		if ( format == FORMAT_JSON && firstTime ) {
-			firstTime = false;
-			// if streaming results we may have hacked off
-			// the last ,\n so put it back
-			if ( m_si->m_streamResults ) {
-				//sb->m_length -= 1;
-				sb->safeStrcpy(",\n\n");
-			}
-			//sb->safePrintf("\"facets\":[\n");
 		}
 
 		// print that out
@@ -6540,18 +6746,20 @@ bool Msg40::printFacetsForTable ( SafeBuf *sb , QueryTerm *qt ) {
 		}
 
 
-		if ( needTable && format == FORMAT_JSON ) {
-			needTable = false;
-			sb->safePrintf("\"facets\":[");
-		}
-
-
 		if ( format == FORMAT_JSON ) {
+			numPrinted++;
 			sb->safePrintf("{\n"
 				       "\t\"field\":\"%s\",\n"
-				       "\t\"value\":\""
-				       , term
+				       , term 
 				       );
+			sb->safePrintf("\t\"totalDocsWithField\":%"INT64""
+				       ",\n", qt->m_numDocsThatHaveFacet );
+			sb->safePrintf("\t\"totalDocsWithFieldAndValue\":"
+				       "%"INT64""
+				       ",\n", 
+				       allCount );
+			sb->safePrintf("\t\"value\":\"");
+
 			if (  isString )
 				sb->safePrintf("%"UINT32","
 					       , (uint32_t)*fvh);
@@ -6559,10 +6767,10 @@ bool Msg40::printFacetsForTable ( SafeBuf *sb , QueryTerm *qt ) {
 			//if ( isString )
 			// just use quotes for ranges like "[1-3)" now
 			sb->safePrintf("\"");
-			sb->safePrintf(",\n"
-				       "\t\"docCount\":%"INT32""
-				       , count );
+			sb->safePrintf(",\n");
 
+			sb->safePrintf("\t\"docCount\":%"INT32""
+				       , count );
 			// if it's a # then we print stats after
 			if ( isString || fe->m_count == 0 )
 				sb->safePrintf("\n");
@@ -6693,6 +6901,8 @@ bool Msg40::printFacetsForTable ( SafeBuf *sb , QueryTerm *qt ) {
 		SafeBuf newUrl;
 		replaceParm ( newStuff.getBufStart(), &newUrl , hr );
 
+		numPrinted++;
+
 		// print the facet in its numeric form
 		// we will have to lookup based on its docid
 		// and get it from the cached page later
@@ -6713,13 +6923,8 @@ bool Msg40::printFacetsForTable ( SafeBuf *sb , QueryTerm *qt ) {
 			       ,count); // count for printing
 	}
 
-	if ( ! needTable && format == FORMAT_JSON ) {
-		sb->m_length -= 2; // hack off trailing comma
-		sb->safePrintf("],\n"); // close off json array
-	}
-
 	if ( ! needTable && format == FORMAT_HTML ) 
 		sb->safePrintf("</table></div><br>\n");
 
-	return true;
+	return numPrinted;
 }

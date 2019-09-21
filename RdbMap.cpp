@@ -48,13 +48,14 @@ void RdbMap::set ( char *dir , char *mapFilename,
 
 bool RdbMap::close ( bool urgent ) {
 	bool status = true;
-	if ( /*mdw m_numPages > 0 &&*/ m_needToWrite ) status = writeMap ( );
+	if ( /*mdw m_numPages > 0 &&*/ m_needToWrite ) status=writeMap(false);
 	// clears and frees everything
 	if ( ! urgent ) reset ();
 	return status;
 }
 
 void RdbMap::reset ( ) {
+	m_reducedMem = false;
 	m_generatingMap = false;
 	int32_t pps = PAGES_PER_SEGMENT;
 	if ( m_newPagesPerSegment > 0 ) pps = m_newPagesPerSegment;
@@ -70,8 +71,8 @@ void RdbMap::reset ( ) {
 
 	// the ptrs themselves are now a dynamic array to save mem
 	// when we have thousands of collections
-	mfree(m_keys,m_numSegmentPtrs*sizeof(char *),"MapPtrs");
-	mfree(m_offsets,m_numSegmentOffs*sizeof(int16_t *),"MapPtrs");
+	mfree(m_keys,m_numSegmentPtrs*sizeof(char *),"MapPtrs1");
+	mfree(m_offsets,m_numSegmentOffs*sizeof(int16_t *),"MapPtrs2");
 	m_numSegmentPtrs = 0;
 	m_numSegmentOffs = 0;
 
@@ -93,10 +94,12 @@ void RdbMap::reset ( ) {
 	m_lastLogTime = 0;
 	m_badKeys     = 0;
 	m_needVerify  = false;
+
+	m_file.reset();
 }
 
 
-bool RdbMap::writeMap ( ) {
+bool RdbMap::writeMap ( bool allDone ) {
 	if ( g_conf.m_readOnlyMode ) return true;
 	// return true if nothing to write out
 	// mdw if ( m_numPages <= 0 ) return true;
@@ -112,6 +115,8 @@ bool RdbMap::writeMap ( ) {
 	// . close map
 	// . no longer since we use BigFile
 	//m_file.close ( );
+	// map is done so save some memory
+	if ( allDone ) reduceMemFootPrint () ;
 	// return status
 	return status;
 }
@@ -236,7 +241,7 @@ bool RdbMap::verifyMap ( BigFile *dataFile ) {
 		    "db: Map file %s says that file %s should be %"INT64" bytes "
 		    "long, but it is %"INT64" bytes.",
 		    m_file.getFilename(),
-		    dataFile->m_baseFilename ,
+		    dataFile->getFilename() ,
 		    m_offset - m_fileStartOffset ,
 		    dataFile->getFileSize() );
 		// we let headless files squeak by on this because we cannot
@@ -290,7 +295,7 @@ bool RdbMap::verifyMap ( BigFile *dataFile ) {
 		dataFile->doesPartExist ( numMissingParts-1 ) ) 
 		numMissingParts--;
 	if ( numMissingParts > 0 ) {
-		File *f = dataFile->getFile ( numMissingParts );
+		File *f = dataFile->getFile2 ( numMissingParts );
 		if ( f ) log("db: Missing part file before %s.",
 			     f->getFilename());
 	}
@@ -323,10 +328,12 @@ bool RdbMap::verifyMap2 ( ) {
 			KEYSET(lastKey,k,m_ks); continue; }
 		// just bitch for now
 		log(
-		    "db: Key out of order in map file %s. "
-		    "page = %"INT32". key offset = %"INT64". Map or data file is "
-		    "corrupt, but it is probably the data file.", 
-		    m_file.getFilename() ,
+		    "db: Key out of order in map file %s/%s. "
+		    "page = %"INT32". key offset = %"INT64". "
+		    "Map or data file is "
+		    "corrupt, but it is probably the data file. Please "
+		    "delete the map file and restart.", 
+		    m_file.getDir(),m_file.getFilename() ,
 		    i,(int64_t)m_pageSize*(int64_t)i+getOffset(i));
 
 		//log("db: oldk.n1=%08"XINT32" n0=%016"XINT64"",
@@ -336,6 +343,19 @@ bool RdbMap::verifyMap2 ( ) {
 		    KEY1(lastKey,m_ks),KEY0(lastKey));
 		log("db:    k.n1=%016"XINT64" n0=%016"XINT64"",KEY1(k,m_ks),KEY0(k));
 		log("db: m_numPages = %"INT32"",m_numPages);
+
+		SafeBuf cmd;
+		cmd.safePrintf("mv %s/%s %s/trash/",
+			       m_file.getDir(),
+			       m_file.getFilename(),
+			       g_hostdb.m_dir);
+		log("db: %s",cmd.getBufStart() );
+		gbsystem ( cmd.getBufStart() );
+
+		//exit(0);
+		// make the bash shell restart us by returning a 1 error code
+		exit(1);
+
 		//char *xx=NULL;*xx=0;
 		// was k too small?
 		//if ( i + 1 < m_numPages && lastKey <= getKey(i+1) ) {
@@ -492,6 +512,7 @@ int64_t RdbMap::readSegment ( int32_t seg , int64_t offset , int32_t fileSize ) 
 bool RdbMap::addRecord ( char *key, char *rec , int32_t recSize ) {
 	// calculate size of the whole slot
 	//int32_t size = sizeof(key_t) ;
+	if ( m_reducedMem ) { char *xx=NULL;*xx=0; }
 	// include the dataSize, 4 bytes, for each slot if it's not fixed
 	//if ( m_fixedDataSize == -1 ) size += 4;
 	// include the data
@@ -541,7 +562,8 @@ bool RdbMap::addRecord ( char *key, char *rec , int32_t recSize ) {
 		m_lastLogTime = getTime();
 		//pageNum > 0 && getKey(pageNum-1) > getKey(pageNum) ) {
 		log(LOG_LOGIC,"build: RdbMap: added key out of order. "
-		    "count=%"INT64".",m_badKeys);
+		    "count=%"INT64" file=%s/%s.",m_badKeys,
+		    m_file.getDir(),m_file.getFilename());
 		//log(LOG_LOGIC,"build: k.n1=%"XINT32" %"XINT64"  lastKey.n1=%"XINT32" %"XINT64"",
 		//    key.n1,key.n0,m_lastKey.n1,m_lastKey.n0 );
 		log(LOG_LOGIC,"build: offset=%"INT64"",
@@ -554,7 +576,10 @@ bool RdbMap::addRecord ( char *key, char *rec , int32_t recSize ) {
 			g_errno = ECORRUPTDATA;
 			return false;
 		}
-		char *xx=NULL;*xx=0;
+		// if being called from RdbDump.cpp...
+		g_errno = ECORRUPTDATA;
+		return false;
+		//char *xx=NULL;*xx=0;
 		// . during a merge, corruption can happen, so let's core
 		//   here until we figure out how to fix it.
 		// . any why wasn't the corruption discovered and patched
@@ -645,6 +670,9 @@ bool RdbMap::prealloc ( RdbList *list ) {
 	if ( list->m_ks != m_ks ) { char *xx = NULL; *xx = 0; }
 	// bail now if it's empty
 	if ( list->isEmpty() ) return true;
+
+	if ( m_reducedMem ) { char *xx=NULL;*xx=0; }
+
 	// what is the last page we touch?
 	int32_t lastPageNum = (m_offset + list->getListSize() - 1) / m_pageSize;
 	// . need to pre-alloc up here so malloc does not fail mid stream
@@ -674,6 +702,9 @@ bool RdbMap::addList ( RdbList *list ) {
 
 	// what is the last page we touch?
 	int32_t lastPageNum = (m_offset + list->getListSize() - 1) / m_pageSize;
+
+	if ( m_reducedMem ) { char *xx=NULL;*xx=0; }
+
 	// . need to pre-alloc up here so malloc does not fail mid stream
 	// . TODO: only do it if list is big enough
 	while ( lastPageNum + 2 >= m_maxNumPages ) {
@@ -717,7 +748,10 @@ bool RdbMap::addList ( RdbList *list ) {
 	if ( ! addRecord ( key , rec , recSize ) ) {
 		log("db: Failed to add record to map: %s.",
 		    mstrerror(g_errno));
-		char *xx = NULL; *xx = 0;
+		// allow caller to try to fix the tree in the case of dumping
+		// a tree to a file on disk
+		return false;
+		//char *xx = NULL; *xx = 0;
 	}
 	if ( list->skipCurrentRecord() ) goto top2;
 
@@ -739,6 +773,8 @@ bool RdbMap::addIndexList ( IndexList *list ) {
 
 	// return now if empty
 	if ( list->isEmpty() ) return true;
+
+	if ( m_reducedMem ) { char *xx=NULL;*xx=0; }
 
 	// we need to call writeMap() before we exit
 	m_needToWrite = true;
@@ -1212,6 +1248,7 @@ int64_t RdbMap::getMemAlloced ( ) {
 }
 
 bool RdbMap::addSegmentPtr ( int32_t n ) {
+	if ( m_reducedMem ) { char *xx=NULL;*xx=0; }
 	// realloc
 	if ( n >= m_numSegmentPtrs ) {
 		char **k;
@@ -1219,7 +1256,7 @@ bool RdbMap::addSegmentPtr ( int32_t n ) {
 		k = (char **) mrealloc (m_keys,
 					m_numSegmentPtrs * sizeof(char *) ,
 					nn * sizeof(char *) ,
-					"MapPtrs" );
+					"MapPtrs1" );
 		// failed?
 		if ( ! k ) return false;
 		// succeeded
@@ -1234,7 +1271,7 @@ bool RdbMap::addSegmentPtr ( int32_t n ) {
 		o = (int16_t **) mrealloc (m_offsets,
 					 m_numSegmentOffs * sizeof(int16_t *) ,
 					 nn * sizeof(int16_t *) ,
-					 "MapPtrs" );
+					 "MapPtrs2" );
 		// failed?
 		if ( ! o ) return false;
 		// succeeded
@@ -1248,6 +1285,25 @@ bool RdbMap::addSegmentPtr ( int32_t n ) {
 void RdbMap::reduceMemFootPrint () {
 	if ( m_numSegments != 1 ) return;
 	if ( m_numPages >= 100 ) return;
+	// if already reduced, return now
+	if ( m_newPagesPerSegment > 0 ) return;
+
+	// if it is like posdb0054.map then it is being merged into and
+	// we'll resume a killed merge, so don't mess with it, we'll need to
+	// add more pages.
+	char *s = m_file.getFilename();
+	for ( ; s && *s && ! is_digit(*s) ; s++ );
+	int id = 0;
+	if ( s ) id = atoi(s);
+	// id can be zero like for spiderdb0000.map
+	if ( (id % 2) == 0 ) return;
+
+	 // log("map: reducing mem footprint for %s/%s",
+	 //     m_file.getDir(),
+	 //     m_file.getFilename());
+
+	// seems kinda buggy now..
+	m_reducedMem = true;
 	//return;
 	char *oldKeys = m_keys[0];
 	short *oldOffsets = m_offsets[0];
@@ -1275,6 +1331,8 @@ bool RdbMap::addSegment (  ) {
 	// ensure doesn't exceed the max
 	//if ( n >= MAX_SEGMENTS ) return log("db: Mapped file is "
 	//				    "too big. Critical error.");
+
+	if ( m_reducedMem ) { char *xx=NULL;*xx=0; }
 
 	// the array of up to MAX_SEGMENT pool ptrs is now dynamic too!
 	// because diffbot uses thousands of collections, this will save
@@ -1371,11 +1429,18 @@ bool RdbMap::chopHead ( int32_t fileHeadSize ) {
 bool RdbMap::generateMap ( BigFile *f ) {
 	reset();
 	if ( g_conf.m_readOnlyMode ) return false;
+
+	log("db: Generating map for %s/%s",f->getDir(),f->getFilename());
+
 	// we don't support headless datafiles right now
-	if ( ! f->doesPartExist(0) ) {
-		g_errno = EBADENGINEER;
-		return log("db: Cannot generate map for "
-			   "headless data files yet.");
+	bool allowHeadless = true;
+	if ( m_fixedDataSize != 0 ) allowHeadless = false;
+	if ( m_ks != 18 ) allowHeadless = false;
+	// allow posdb to go through
+	if ( ! f->doesPartExist(0) && ! allowHeadless ) {
+	 	g_errno = EBADENGINEER;
+	 	return log("db: Cannot generate map for "
+	 		   "this headless data file yet");
 	}
 	// scan through all the recs in f
 	int64_t offset = 0;
@@ -1384,6 +1449,19 @@ bool RdbMap::generateMap ( BigFile *f ) {
 	if ( fileSize == 0 ) return true;
 	// g_errno should be set on error
 	if ( fileSize < 0 ) return false;
+
+	// find first existing part file
+	bool firstRead = true;
+	int32_t fp = 0;
+	for ( ; ; fp++ )
+		// stop when the part file exists
+		if ( f->doesPartExist(fp) ) break;
+
+	if ( fp > 0 ) {
+		//m_fileStartOffset = MAX_PART_SIZE * fp;
+		offset            = MAX_PART_SIZE * fp;
+	}
+
 	// don't read in more than 10 megs at a time initially
 	int64_t  bufSize = fileSize;
 	if ( bufSize > 10*1024*1024 ) bufSize = 10*1024*1024;
@@ -1428,6 +1506,11 @@ bool RdbMap::generateMap ( BigFile *f ) {
 		mfree ( buf , bufSize , "RdbMap");
 		return true;
 	}
+
+	// debug msg
+	//fprintf(stderr,"reading map @ off=%"INT64" size=%"INT64"\n"
+	//	, offset , readSize );
+
 	// otherwise, read it in
 	if ( ! f->read ( buf , readSize , offset ) ) {
 		mfree ( buf , bufSize , "RdbMap");
@@ -1435,19 +1518,66 @@ bool RdbMap::generateMap ( BigFile *f ) {
 			   "offset=%"INT64". Map generation failed.",
 			   bufSize,f->getFilename(),offset);
 	}
-	// set the list
+
 	RdbList list;
-	list.set ( buf             ,
-		   readSize        ,
-		   buf             ,
-		   readSize        ,
-		   startKey        ,
-		   endKey          ,
-		   m_fixedDataSize ,
-		   false           , // own data?
-		   //m_useHalfKeys   );
-		   m_useHalfKeys   ,
-		   m_ks            );
+
+	// if we were headless then first key on that page could be cut
+	if ( fp > 0 && firstRead ) {
+		firstRead = false;
+		// scan the buffer to find the right key.
+		int32_t fullKeyOff = findNextFullPosdbKeyOffset (buf,readSize);
+		// if none found, bail
+		if ( fullKeyOff < 0 )
+			return log("rdbmap: could not get a full key in the "
+				   "first %"INT64" bytes read of headless "
+				   "file",readSize);
+		// for each page before add a -1 entry i guess
+		int32_t p = 0;
+		int32_t pageNum = 0;
+		for ( ; p + m_pageSize < fullKeyOff ; p += m_pageSize ) {
+			// add a dummy entry indicating a continuation of
+			// a previous thing. we never had the full posdb key
+			// so we don't know what the top 6 bytes were so
+			// just stick -1 in there
+			setOffset (pageNum, -1 );
+			setKey    (pageNum , key );
+			pageNum++;
+		}
+		// tell rdbmap where "list" occurs in the big file
+		m_offset = offset + fullKeyOff;
+		// now the offset on this page
+		//int32_t pageOffset = p - off;
+		// must be less than key size
+		//if ( pageOffset > m_ks ) { char *xx=NULL;*xx=0; }
+		// set the list special here
+		list.set ( buf      + fullKeyOff ,
+			   readSize - fullKeyOff ,
+			   buf             ,
+			   readSize        ,
+			   startKey        ,
+			   endKey          ,
+			   m_fixedDataSize ,
+			   false           , // own data?
+			   //m_useHalfKeys   );
+			   m_useHalfKeys   ,
+			   m_ks            );
+	}
+
+	else {
+		// set the list
+		list.set ( buf             ,
+			   readSize        ,
+			   buf             ,
+			   readSize        ,
+			   startKey        ,
+			   endKey          ,
+			   m_fixedDataSize ,
+			   false           , // own data?
+			   //m_useHalfKeys   );
+			   m_useHalfKeys   ,
+			   m_ks            );
+	}
+
 	// . HACK to fix useHalfKeys compression thing from one read to the nxt
 	// . "key" should still be set to the last record we read last read
 	//if ( offset > 0 ) list.m_listPtrHi = ((char *)&key)+6;
@@ -1618,7 +1748,7 @@ bool RdbMap::truncateFile ( BigFile *f ) {
 	int32_t numParts = f->getNumParts();
 	// what part num are we on?
 	int32_t partnum = f->getPartNum ( m_offset );
-	File *p = f->getFile ( partnum );
+	File *p = f->getFile2 ( partnum );
 	if ( ! p ) return log("db: Unable to get part file.");
 	// get offset relative to the part file
 	int32_t newSize = m_offset % (int64_t)MAX_PART_SIZE;
@@ -1639,7 +1769,7 @@ bool RdbMap::truncateFile ( BigFile *f ) {
 	// MAX_TRUNC_SIZE bytes big
 	File *p2 = NULL;
 	if ( partnum == numParts-2 ) {
-		p2 = f->getFile ( partnum + 1 );
+		p2 = f->getFile2 ( partnum + 1 );
 		if ( ! p2 ) return log("db: Could not get next part in line.");
 		if ( p2->getFileSize() > MAX_TRUNC_SIZE )
 			return log("db: Next part file is bigger than %"INT32" "
@@ -1665,4 +1795,151 @@ bool RdbMap::truncateFile ( BigFile *f ) {
 		return log("db: Failed to reset %s.",f->getFilename());
 	// success
 	return true;
+}
+
+int64_t RdbMap::findNextFullPosdbKeyOffset ( char *buf, int32_t bufSize ) {
+
+	char *p = buf;
+	char *lastKeyLo;
+	char *lastKeyMe;
+	char *lastKeyHi;
+	int32_t keyCount;
+	char *bufEnd = buf + bufSize;
+	int32_t numWinners = 0;
+	int64_t winnerOffset = -1;
+	// try an offset of 0
+	int64_t tryOffset = -2;
+	bool printed;
+	int64_t firstFullKeyOff;
+
+ offsetLoop:
+
+	printed = false;
+	firstFullKeyOff = -1;
+
+	tryOffset += 2;
+
+	// only need to try 18 of them
+	if ( tryOffset >= 18 )
+		goto done;
+
+	keyCount = 0;
+
+	lastKeyLo = NULL;
+	lastKeyMe = NULL;
+	lastKeyHi = NULL;
+
+ keyLoop:
+
+	// posdbkey
+	//key144_t *kp = (key144_t *)p;
+
+	if ( p + 18 >= bufEnd )
+		goto bufExhausted;
+
+	char lastKey[18];
+	if ( lastKeyHi ) {
+		memcpy ( lastKey      , lastKeyLo , 6 );
+		memcpy ( lastKey + 6  , lastKeyMe , 6 );
+		memcpy ( lastKey + 12 , lastKeyHi , 6 );
+	}
+
+	char thisKey[18];
+
+	// get lower compression bits
+	if ( (p[0] & 0x04) ) {
+		// make the full key to compare
+		if ( lastKeyHi ) {
+			memcpy ( thisKey      , p , 6 );
+			memcpy ( thisKey + 6  , lastKeyMe , 6 );
+			memcpy ( thisKey + 12 , lastKeyHi , 6 );
+			if ( KEYCMP ( lastKey , thisKey , m_ks ) >= 0 ) {
+				log("rdbmap: key out of order 1 tryoff of %i",
+				    (int)tryOffset);
+				goto offsetLoop;
+			}
+			keyCount++;
+			//log("rdbmap: good key6 tryoff %i",(int)tryOffset);
+		}
+		lastKeyLo = p;
+		p += 6;
+		goto keyLoop;
+	}
+	// a 12 byte key?
+	if ( (p[0] & 0x02) ) {
+		// make the full key to compare
+		if ( lastKeyHi ) {
+			memcpy ( thisKey      , p , 12 );
+			memcpy ( thisKey + 12 , lastKeyHi , 6 );
+			if ( KEYCMP ( lastKey , thisKey , m_ks ) >= 0 ) {
+				log("rdbmap: key out of order 2 @ %i "
+				    "tryoff of %i",
+				    (int)(p-buf),(int)tryOffset);
+				goto offsetLoop;
+			}
+			keyCount++;
+			//log("rdbmap: good key12 tryoff %i",(int)tryOffset);
+		}
+		lastKeyLo = p;
+		lastKeyMe = p + 6;
+		p += 12;
+		goto keyLoop;
+	}
+
+	// did we have a key before us?
+	if ( lastKeyHi && KEYCMP ( lastKey , p , 18 ) >= 0 ) {
+		log("rdbmap: tryoffset of %i is bogus",(int)tryOffset);
+		// keys out of order must not be a good 'tryOffset'
+		goto offsetLoop;
+	}
+
+	// ensure it is valid with alignment bits
+	
+
+	keyCount++;
+	if ( ! printed ) {
+		log("rdbmap: good key18 @ %i tryoff %i",
+		    (int)(p-buf),(int)tryOffset);
+		printed = true;
+		firstFullKeyOff = p-buf;
+	}
+
+	lastKeyLo = p;
+	lastKeyMe = p + 6;
+	lastKeyHi = p + 12;
+
+	p += 18;
+
+	// if ( keyCount >= 1000 ) {
+	// 	log("rdbmap: got good tryoffset of %i",(int)tryOffset);
+	// 	goodTry = tryOffset;
+	// 	goodOnes++;
+	// 	goto offsetLoop;
+	// }
+
+	goto keyLoop;
+
+ bufExhausted:
+
+	// only one key compared successfully, forget it then, not a winner
+	if ( keyCount > 1 ) {
+		// got a winner?
+		numWinners++;
+		winnerOffset = firstFullKeyOff;
+		log("rdbmap: got winner @ %i at tryoff %i (keycount=%i)",
+		    (int)winnerOffset,(int)tryOffset,(int)keyCount);
+	}
+
+	goto offsetLoop;
+
+ done:
+
+	if ( numWinners != 1 ) {
+		log("rdbmap: could not figure out offset of first full key "
+		    "in headless posdb file (numWinners=%i)",
+		    (int)numWinners);
+		return -1;
+	}
+
+	return winnerOffset;
 }

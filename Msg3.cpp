@@ -39,6 +39,86 @@ void Msg3::reset() {
 	m_alloc = NULL;
 }
 
+key192_t makeCacheKey ( int64_t vfd ,
+			int64_t offset ,
+			int64_t readSize ) {
+	key192_t k;
+	k.n2 = vfd;
+	k.n1 = readSize;
+	k.n0 = offset;
+	return k;
+}
+
+RdbCache g_rdbCaches[5];
+
+class RdbCache *getDiskPageCache ( char rdbId ) {
+
+	RdbCache *rpc = NULL;
+	int64_t *maxSizePtr = NULL;
+	int64_t maxMem;
+	int64_t maxRecs;
+	char *dbname;
+	if ( rdbId == RDB_POSDB ) {
+		rpc = &g_rdbCaches[0];
+		maxSizePtr = &g_conf.m_posdbFileCacheSize;
+		maxMem = *maxSizePtr;
+		maxRecs = maxMem / 5000;
+		dbname = "posdbcache";
+	}
+	if ( rdbId == RDB_TAGDB ) {
+		rpc = &g_rdbCaches[1];
+		maxSizePtr = &g_conf.m_tagdbFileCacheSize;
+		maxMem = *maxSizePtr;
+		maxRecs = maxMem / 200;
+		dbname = "tagdbcache";
+	}
+	if ( rdbId == RDB_CLUSTERDB ) {
+		rpc = &g_rdbCaches[2];
+		maxSizePtr = &g_conf.m_clusterdbFileCacheSize;
+		maxMem = *maxSizePtr;
+		maxRecs = maxMem / 32;
+		dbname = "clustcache";
+	}
+	if ( rdbId == RDB_TITLEDB ) {
+		rpc = &g_rdbCaches[3];
+		maxSizePtr = &g_conf.m_titledbFileCacheSize;
+		maxMem = *maxSizePtr;
+		maxRecs = maxMem / 3000;
+		dbname = "titdbcache";
+	}
+	if ( rdbId == RDB_SPIDERDB ) {
+		rpc = &g_rdbCaches[4];
+		maxSizePtr = &g_conf.m_spiderdbFileCacheSize;
+		maxMem = *maxSizePtr;
+		maxRecs = maxMem / 3000;
+		dbname = "spdbcache";
+	}
+
+	if ( ! rpc )
+		return NULL;
+
+	if ( maxMem < 0 ) maxMem = 0;
+
+	// did size change? if not, return it
+	if ( rpc->m_maxMem == maxMem )
+		return rpc;
+
+	// re-init or init for the first time here
+	if ( ! rpc->init ( maxMem ,
+			   -1 , // fixedDataSize. -1 since we are lists
+			   false , // support lists?
+			   maxRecs ,
+			   false , // use half keys?
+			   dbname ,
+			   false , // loadfromdisk
+			   sizeof(key192_t), // cache key size
+			   0 , // data key size
+			   -1 ) )  // numptrsmax
+		return NULL;
+
+	return rpc;
+}
+
 // . return false if blocked, true otherwise
 // . set g_errno on error
 // . read list of keys in [startKey,endKey] range
@@ -81,6 +161,10 @@ bool Msg3::readList  ( char           rdbId         ,
 		       bool           justGetEndKey ,
 		       bool           allowPageCache ,
 		       bool           hitDisk        ) {
+
+	// set this to true to validate
+	m_validateCache = false;//true;
+
 	// clear, this MUST be done so if we return true g_errno is correct
 	g_errno = 0;
 	// assume lists are not checked for corruption
@@ -599,6 +683,48 @@ bool Msg3::readList  ( char           rdbId         ,
 			break;
 		}
 
+		////////
+		//
+		// try to get from PAGE CACHE
+		//
+		////////
+		BigFile *ff = base->getFile(m_fileNums[i]);
+		RdbCache *rpc = getDiskPageCache ( m_rdbId );
+		if ( ! m_allowPageCache ) rpc = NULL;
+		// . vfd is unique 64 bit file id
+		// . if file is opened vfd is -1, only set in call to open()
+		int64_t vfd = ff->getVfd();
+		key192_t ck = makeCacheKey ( vfd , offset, bytesToRead);
+		char *rec; int32_t recSize;
+		bool inCache = false;
+		if ( rpc && vfd != -1 && ! m_validateCache ) 
+			inCache = rpc->getRecord ( (collnum_t)0 , // collnum
+						   (char *)&ck , 
+						   &rec , 
+						   &recSize ,
+						   true , // copy?
+						   -1 , // maxAge, none 
+						   true ); // inccounts?
+		m_scans[i].m_inPageCache = false;
+		if ( inCache ) {
+			m_scans[i].m_inPageCache = true;
+			m_numScansCompleted++;
+			// now we have to store this value, 6 or 12 so
+			// we can modify the hint appropriately
+			m_scans[i].m_shifted = *rec;
+			m_lists[i].set ( rec +1,
+					 recSize-1 ,
+					 rec , // alloc
+					 recSize , // allocSize
+					 startKey2 ,
+					 endKey2 ,
+					 base->m_fixedDataSize ,
+					 true , // owndata
+					 base->useHalfKeys() ,
+					 getKeySizeFromRdbId ( m_rdbId ) );
+			continue;
+		}
+
 		// . do the scan/read of file #i
 		// . this returns false if blocked, true otherwise
 		// . this will set g_errno on error
@@ -782,6 +908,13 @@ bool Msg3::doneScanning ( ) {
 		}
 	}
 
+	// if shutting down gb then limit to 20 so we can shutdown because
+	// it can't shutdown until all threads are out of the queue i think
+	if ( g_process.m_mode == EXIT_MODE && max < 0 ) {
+		//log("msg3: forcing retries to 0 because shutting down");
+		max = 0;
+	}
+
 	// get base, returns NULL and sets g_errno to ENOCOLLREC on error
 	RdbBase *base; if (!(base=getRdbBase(m_rdbId,m_collnum))) return true;
 
@@ -805,6 +938,10 @@ bool Msg3::doneScanning ( ) {
 	}
 #endif
 
+	// try to fix this error i've seen
+	if ( g_errno == EBADENGINEER && max == -1 )
+		max = 100;
+
 	// . if we had a ETRYAGAIN error, then try again now
 	// . it usually means the whole file or a part of it was deleted 
 	//   before we could finish reading it, so we should re-read all now
@@ -822,7 +959,7 @@ bool Msg3::doneScanning ( ) {
 		if ( now - s_time > 5 || g_errno != ENOTHREADSLOTS ) {
 			log("net: Had error reading %s: %s. Retrying. "
 			    "(retry #%"INT32")", 
-			    base->m_dbname,mstrerror(g_errno) , m_retryNum );
+			    base->m_dbname,mstrerror(m_errno) , m_retryNum );
 			s_time = now;
 		}
 		// send email alert if in an infinite loop, but don't send
@@ -921,21 +1058,82 @@ bool Msg3::doneScanning ( ) {
 		// . this returns false and sets g_errno on error
 		// . like if data is corrupt
 		BigFile *ff = base->getFile(m_fileNums[i]);
+		// if we did a merge really quick and delete one of the 
+		// files we were reading, i've seen 'ff' be NULL
+		char *filename = "lostfilename";
+		if ( ff ) filename = ff->getFilename();
+
+		// compute cache info
+		RdbCache *rpc = getDiskPageCache ( m_rdbId );
+		if ( ! m_allowPageCache ) rpc = NULL;
+		int64_t vfd ;
+		if ( ff ) vfd = ff->getVfd();
+		key192_t ck ;
+		if ( ff )
+			ck = makeCacheKey ( vfd ,
+					    m_scans[i].m_offset ,
+					    m_scans[i].m_bytesToRead );
+		if ( m_validateCache && ff && rpc && vfd != -1 ) {
+			bool inCache;
+			char *rec; int32_t recSize;
+			inCache = rpc->getRecord ( (collnum_t)0 , // collnum
+						   (char *)&ck , 
+						   &rec , 
+						   &recSize ,
+						   true , // copy?
+						   -1 , // maxAge, none 
+						   true ); // inccounts?
+			if ( inCache && 
+			     // 1st byte is RdbScan::m_shifted
+			     ( m_lists[i].m_listSize != recSize-1 ||
+			       memcmp ( m_lists[i].m_list , rec+1,recSize-1) ||
+			       *rec != m_scans[i].m_shifted ) ) {
+				log("msg3: cache did not validate");
+				char *xx=NULL;*xx=0;
+			}
+			mfree ( rec , recSize , "vca" );
+		}
+
+
+		///////
+		//
+		// STORE IN PAGE CACHE
+		//
+		///////
+		// store what we read in the cache. don't bother storing
+		// if it was a retry, just in case something strange happened.
+		// store pre-constrain call is more efficient.
+		if ( m_retryNum<=0 && ff && rpc && vfd != -1 &&
+		     ! m_scans[i].m_inPageCache )
+			rpc->addRecord ( (collnum_t)0 , // collnum
+					 (char *)&ck , 
+					 // rec1 is this little thingy
+					 &m_scans[i].m_shifted,
+					 1,
+					 // rec2
+					 m_lists[i].getList() ,
+					 m_lists[i].getListSize() ,
+					 0 ); // timestamp. 0 = now
+
+		QUICKPOLL(m_niceness);
+
+		// if from our 'page' cache, no need to constrain
 		if ( ! m_lists[i].constrain ( m_startKey       ,
 					      m_constrainKey   , // m_endKey
 					      mrs           , // m_minRecSizes
 					      m_hintOffsets[i] ,
 					      //m_hintKeys   [i] ,
 					      &m_hintKeys   [i*m_ks] ,
-					      ff->getFilename() ,
+					      filename,//ff->getFilename() ,
 					      m_niceness ) ) {
 			log("net: Had error while constraining list read from "
 			    "%s: %s/%s. vfd=%"INT32" parts=%"INT32". "
 			    "This is likely caused by corrupted "
 			    "data on disk.", 
-			    mstrerror(g_errno), ff->m_dir ,
+			    mstrerror(g_errno), ff->getDir(),
 			    ff->getFilename(), ff->m_vfd , 
 			    (int32_t)ff->m_numParts );
+			continue;
 		}
 	}
 

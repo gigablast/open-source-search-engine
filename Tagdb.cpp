@@ -1835,8 +1835,8 @@ bool Tagdb::init ( ) {
 	// overhead in cache.
 	//int32_t maxCacheNodes = g_conf.m_tagdbMaxCacheMem / 106;
 	// we now use a page cache
-	if ( ! m_pc.init ("tagdb",RDB_TAGDB,pcmem,GB_TFNDB_PAGE_SIZE))
-		return log("tagdb: Tagdb init failed.");
+	// if ( ! m_pc.init ("tagdb",RDB_TAGDB,pcmem,GB_TFNDB_PAGE_SIZE))
+	// 	return log("tagdb: Tagdb init failed.");
 
 	// init this
 	//if ( ! s_lockTable2.set(8,4,32,NULL,0,false,0,"taglocktbl") )
@@ -1858,7 +1858,7 @@ bool Tagdb::init ( ) {
 			    0 , //maxCacheNodes              ,
 			    false                      , // half keys?
 			    false                      , //m_tagdbSaveCache
-			    &m_pc                      ,
+			    NULL,//&m_pc                      ,
 			    false,  // is titledb
 			    true ,  // preload disk page cache
 			    sizeof(key128_t),     // key size
@@ -2603,7 +2603,7 @@ bool Msg8a::getTagRec ( Url   *url ,
 	// . msge0 passes this in as NULL an expects us to figure it out
 	// . if site was NULL that means we guess it. default to hostname
 	//   unless in a recognized for like /~mwells/
-	if ( ! site ) {
+	if ( ! site || siteLen <= 0 ) {
 		SiteGetter sg;
 		sg.getSite ( url->getUrl() ,
 			     NULL , // tagrec
@@ -2622,9 +2622,17 @@ bool Msg8a::getTagRec ( Url   *url ,
 
 	// if provided site was NULL and not of a ~mwells type of form
 	// then default it to hostname
-	if ( ! site ) {
+	if ( ! site || siteLen <= 0 ) {
 		site    = url->getHost();
 		siteLen = url->getHostLen();
+	}
+
+	// if still the host is bad, then forget it
+	if ( ! site || siteLen <= 0 ) {
+		log("tagdb: got bad url with no site");
+		m_errno = EBADURL;
+		g_errno = EBADURL;
+		return true;
 	}
 
 	// temp null terminate it
@@ -2803,24 +2811,15 @@ bool Msg8a::launchGetRequests ( ) {
 	//uint32_t gid = g_hostdb.getGroupId ( m_rdbId , &startKey , true );
 	//Host *group = g_hostdb.getGroup ( gid );
 	int32_t shardNum = getShardNum ( m_rdbId , &startKey );//, true );
-	Host *group = g_hostdb.getShard ( shardNum );
-
-	//int32_t numTwins = g_hostdb.getNumHostsPerShard();
-	// use top byte!
-	uint8_t *sks = (uint8_t *)&startKey;
-	uint8_t top = sks[sizeof(TAGDB_KEY)-1];
-	//int32_t hostNum = 0;
-	//if ( numTwins == 2 && (top & 0x80) ) hostNum = 1;
-	// TODO: fix this!
-	//if ( numTwins >= 3 ) { char *xx=NULL;*xx=0; }
-	// support more than 2 stripes now...
-	int32_t hostNum = top % g_hostdb.getNumHostsPerShard();
-	int32_t hostId = group[hostNum].m_hostId;
-
+	Host *firstHost ;
+	// if niceness 0 can't pick noquery host.
+	// if niceness 1 can't pick nospider host.
+	firstHost = g_hostdb.getLeastLoadedInShard ( shardNum , m_niceness );
+	int32_t firstHostId = firstHost->m_hostId;
 
 	// . launch this request, even if to ourselves
 	// . TODO: just use msg0!!
-	bool status = m->getList ( hostId     , // hostId
+	bool status = m->getList ( firstHostId     , // hostId
 				   0          , // ip
 				   0          , // port
 				   0          , // maxCacheAge
@@ -2837,7 +2836,7 @@ bool Msg8a::launchGetRequests ( ) {
 				   true                , // error correction?
 				   true                , // include tree?
 				   true                , // doMerge?
-				   -1                  , // firstHostId
+				   firstHostId         , // firstHostId
 				   0                   , // startFileNum
 				   -1                  , // numFiles
 				   3600*24*365         );// timeout
@@ -4873,7 +4872,19 @@ bool isTagTypeUnique ( int32_t tt ) {
 	// make sure table is valid
 	if ( ! s_initialized ) g_tagdb.setHashTable();
 	// look up in hash table
-	TagDesc *td = *(TagDesc **)s_ht.getValue ( &tt );
+	TagDesc **tdp = (TagDesc **)s_ht.getValue ( &tt );
+	if ( ! tdp ) {
+		log("tagdb: tag desc is NULL for tag type %"INT32" assuming "
+		    "not indexable",tt);
+		return false;
+	}
+	// do not core for now
+	TagDesc *td = *tdp;
+	if ( ! td ) {
+		log("tagdb: got unknown tag type %"INT32" assuming "
+		    "unique",tt);
+		return true;
+	}
 	// if none, that is crazy
 	if ( ! td ) { char *xx=NULL;*xx=0; }
 	// return 
@@ -4887,8 +4898,20 @@ bool isTagTypeIndexable ( int32_t tt ) {
 	// make sure table is valid
 	if ( ! s_initialized ) g_tagdb.setHashTable();
 	// look up in hash table
-	TagDesc *td = *(TagDesc **)s_ht.getValue ( &tt );
-	// if none, that is crazy
+	TagDesc **tdp = (TagDesc **)s_ht.getValue ( &tt );
+	// do not core for now
+	if ( ! tdp ) {
+		log("tagdb: got unknown tag type %"INT32" assuming "
+		    "not indexable",tt);
+		return false;
+	}
+	TagDesc *td = *tdp;
+	if ( ! td ) {
+		log("tagdb: tag desc is NULL for tag type %"INT32" assuming "
+		    "not indexable",tt);
+		return false;
+	}
+	// if none, that is crazy MDW coring here:
 	if ( ! td ) { char *xx=NULL;*xx=0; }
 	// return false if we should not index it
 	if ( td->m_flags & TDF_NOINDEX ) return false;
@@ -4996,6 +5019,17 @@ bool Tagdb::loadMinSiteInlinksBuffer ( ) {
 		log("tagdb: bad siteinlinks. 0009.org not found.");
 		//return false;
 	}
+	// slot #1 in the buffer. make sure b-stepping doesn't lose it between
+	// the roundoff error cracks.
+	hostHash32 = hash32n("www.hindu.com");
+	msi = getMinSiteInlinks ( hostHash32 );
+	if ( msi < 3 ) 	{
+		log("tagdb: bad siteinlinks. www.hindu.com not found "
+		    "(%"INT32").",
+		    hostHash32);
+		//return false;
+	}
+
 	Url tmp;
 	tmp.set("gnu.org");
 	hostHash32 = tmp.getHash32WithWWW();
@@ -5014,8 +5048,8 @@ bool Tagdb::loadMinSiteInlinksBuffer2 ( ) {
 	// use 4 bytes for the first 130,000 entries or so to hold
 	// # of site inlinks. then we only need 1 byte since the remaining
 	// 25M are <256 sitenuminlinksunqiecblocks
-	m_siteBuf1.load("sitelinks1.dat");
-	m_siteBuf2.load("sitelinks2.dat");
+	m_siteBuf1.load(g_hostdb.m_dir,"sitelinks1.dat","stelnks1");
+	m_siteBuf2.load(g_hostdb.m_dir,"sitelinks2.dat","stelnks2");
 
 	m_siteBuf1.setLabel("sitelnks");
 	m_siteBuf2.setLabel("sitelnks");
@@ -5024,11 +5058,11 @@ bool Tagdb::loadMinSiteInlinksBuffer2 ( ) {
 	     m_siteBuf2.length() > 0 ) 
 		return true;
 
-	log("gb: loading ./sitelinks.txt");
+	log("gb: loading %ssitelinks.txt",g_hostdb.m_dir);
 
 	// ok, make it
 	SafeBuf tmp;
-	tmp.load("./sitelinks.txt");
+	tmp.load(g_hostdb.m_dir,"sitelinks.txt");
 	if ( tmp.length() <= 0 ) {
 		log("gb: fatal error. could not find required file "
 		    "./sitelinks.txt");
@@ -5068,6 +5102,7 @@ bool Tagdb::loadMinSiteInlinksBuffer2 ( ) {
 		for ( ; *p && *p != '\n' && *p != ' ' && *p != '\t' ; p++ );
 		// hash it
 		uint32_t hostHash32 = hash32 ( host , p - host );
+
 		// store in buffer
 		if ( numLinks >= 256 ) {
 			Entry1 e1;
@@ -5103,8 +5138,8 @@ bool Tagdb::loadMinSiteInlinksBuffer2 ( ) {
 
 	log("gb: saving sitelinks1.dat and sitelinks2.dat");
 
-	m_siteBuf1.save("./sitelinks1.dat");
-	m_siteBuf2.save("./sitelinks2.dat");
+	m_siteBuf1.save(g_hostdb.m_dir,"sitelinks1.dat");
+	m_siteBuf2.save(g_hostdb.m_dir,"sitelinks2.dat");
 
 	return true;
 }
@@ -5123,18 +5158,18 @@ int32_t Tagdb::getMinSiteInlinks ( uint32_t hostHash32 ) {
 	int32_t i = ne / 2;
 	int32_t step = ne / 2;
 	int32_t count = 0;
+	int32_t divs = 0;
+	int32_t dir = 0;
 
  loop1:
 
 	if ( i < 0 ) i = 0;
 	if ( i >= ne ) i = ne-1;
-	// after 3 single steps if no hit, try next hosthash buf
-	if ( count == 3 ) goto tryNextBuf;
+
 	step /= 2;
-	if ( step == 0 ) {
-		step = 1;
-		count++;
-	}
+
+	if ( step == 1 )
+		goto linearScan1;
 	if ( hostHash32 < ep[i].m_hostHash32 ) {
 		i -= step;
 		goto loop1;
@@ -5145,6 +5180,24 @@ int32_t Tagdb::getMinSiteInlinks ( uint32_t hostHash32 ) {
 	}
 	return ep[i].m_siteNumInlinksUniqueCBlock;
 
+ linearScan1:
+	if ( hostHash32 < ep[i].m_hostHash32 ) {
+		if ( i == 0 ) goto tryNextBuf;
+		if ( dir == +1 ) goto tryNextBuf;
+		i--;
+		dir = -1;
+		goto linearScan1;
+	}
+	if ( hostHash32 > ep[i].m_hostHash32 ) {
+		if ( i == ne-1 ) goto tryNextBuf;
+		if ( dir == -1 ) goto tryNextBuf;
+		i++;
+		dir = +1;
+		goto linearScan1;
+	}
+	return ep[i].m_siteNumInlinksUniqueCBlock;
+
+
  tryNextBuf:
 
 	// reset parms
@@ -5153,18 +5206,16 @@ int32_t Tagdb::getMinSiteInlinks ( uint32_t hostHash32 ) {
 	i = ne / 2;
 	step = ne / 2;
 	count = 0;
+	divs = 0;
+	dir = 0;
 
  loop2:
 
 	if ( i < 0 ) i = 0;
 	if ( i >= ne ) i = ne-1;
-	// after 3 single steps if no hit, that's it...
-	if ( count == 3 ) return -1;
 	step /= 2;
-	if ( step == 0 ) {
-		step = 1;
-		count++;
-	}
+	if ( step == 1 )
+		goto linearScan2;
 	if ( hostHash32 < fp[i].m_hostHash32 ) {
 		i -= step;
 		goto loop2;
@@ -5174,5 +5225,22 @@ int32_t Tagdb::getMinSiteInlinks ( uint32_t hostHash32 ) {
 		goto loop2;
 	}
 	return fp[i].m_siteNumInlinksUniqueCBlock;
-	
+
+ linearScan2:
+
+	if ( hostHash32 < fp[i].m_hostHash32 ) {
+		if ( i == 0    ) return -1;
+		if ( dir == +1 ) return -1;
+		i--;
+		dir = -1;
+		goto linearScan2;
+	}
+	if ( hostHash32 > fp[i].m_hostHash32 ) {
+		if ( i == ne-1 ) return -1;
+		if ( dir == -1 ) return -1;
+		i++;
+		dir = +1;
+		goto linearScan2;
+	}
+	return fp[i].m_siteNumInlinksUniqueCBlock;
 }

@@ -157,6 +157,12 @@ bool Msg20::getSummary ( Msg20Request *req ) {
 	// do not re-route to twins if accessing an external network
 	if ( hostdb != &g_hostdb ) req->m_expected = false;
 
+	if ( req->m_docId < 0 && ! req->ptr_ubuf ) {
+		log("msg20: docid<0 and no url for msg20::getsummary");
+		g_errno = EBADREQUEST;
+		return true;
+	}
+
 	// get groupId from docId, if positive
 	uint32_t shardNum;
 	if ( req->m_docId >= 0 ) 
@@ -171,6 +177,12 @@ bool Msg20::getSummary ( Msg20Request *req ) {
 	int32_t timeout = 9999999; // 10 million seconds, basically inf.
 	if ( req->m_niceness == 0 ) timeout = 20;
 
+	// for diffbot make timeout super long so we aren't tripped up
+	// by dead hosts that aren't really dead.
+	// CollectionRec *cr = g_collectiondb.getRec ( req->m_collnum );
+	// if ( cr && cr->m_isCustomCrawl && req->m_niceness == 0 ) 
+	// 	timeout = 300;
+
 	// get our group
 	int32_t  allNumHosts = hostdb->getNumHostsPerShard();
 	Host *allHosts    = hostdb->getShard ( shardNum );//getGroup(groupId );
@@ -183,13 +195,29 @@ bool Msg20::getSummary ( Msg20Request *req ) {
 		Host *hh = &allHosts[i];
 		// skip if dead
 		if ( g_hostdb.isDead(hh) ) continue;
+
+		// Respect no-spider, no-query directives from hosts.conf 
+		if ( !req->m_getLinkInfo && ! hh->m_queryEnabled ) continue;
+		if ( req->m_getLinkInfo && ! hh->m_spiderEnabled ) continue;
 		// add it if alive
 		cand[nc++] = hh;
 	}
 	// if none alive, make them all candidates then
 	bool allDead = (nc == 0);
-	for ( int32_t i = 0 ; allDead && i < allNumHosts ; i++ ) 
+	for ( int32_t i = 0 ; allDead && i < allNumHosts ; i++ ) {
+		// NEVER add a noquery host to the candidate list, even
+		// if the query host is dead
+		if ( ! allHosts[i].m_queryEnabled ) continue;
 		cand[nc++] = &allHosts[i];
+	}
+
+	if ( nc == 0 ) {
+		log("msg20: error sending mcast: no queryable hosts "
+		    "availble to handle summary generation");
+		g_errno = EBADENGINEER;
+		m_gotReply = true;
+		return true;
+	}
 
 	// route based on docid region, not parity, because we want to hit
 	// the urldb page cache as much as possible
@@ -398,8 +426,11 @@ void handleRequest20 ( UdpSlot *slot , int32_t netnice ) {
 
 	// sanity check, the size include the \0
 	if ( req->m_collnum < 0 ) {
-		log("query: Got empty collection in msg20 handler. FIX!");
-		char *xx =NULL; *xx = 0; 
+		log("query: Got empty collection in msg20 handler. FIX! "
+		    "from ip=%s port=%i",iptoa(slot->m_ip),(int)slot->m_port);
+	        g_udpServer.sendErrorReply ( slot , ENOTFOUND );
+		return; 
+		//char *xx =NULL; *xx = 0; 
 	}
 	// if it's not stored locally that's an error
 	if ( req->m_docId >= 0 && ! g_titledb.isLocal ( req->m_docId ) ) {
@@ -455,6 +486,7 @@ void handleRequest20 ( UdpSlot *slot , int32_t netnice ) {
 bool gotReplyWrapperxd ( void *state ) {
 	// grab it
 	XmlDoc *xd = (XmlDoc *)state;
+
 	// get it
 	UdpSlot *slot = (UdpSlot *)xd->m_slot;
 	// parse the request
@@ -586,6 +618,7 @@ bool Msg20Reply::sendReply ( XmlDoc *xd ) {
 				    xd->m_startTime              , 
 				    gettimeofdayInMilliseconds() ,
 				    color                        );
+	
 	
 	// . del the list at this point, we've copied all the data into reply
 	// . this will free a non-null State20::m_ps (ParseState) for us

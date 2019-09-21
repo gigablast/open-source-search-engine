@@ -32,7 +32,7 @@
 
 #include "Conf.h"
 #include "Rdb.h"
-#include "DiskPageCache.h"
+//#include "DiskPageCache.h"
 #include "Titledb.h"
 
 void  handleRequest25 ( UdpSlot *slot , int32_t netnice ) ;
@@ -75,6 +75,15 @@ public:
 	bool       m_getLinkerTitles ;
 	int32_t       m_ourHostHash32 ;
 	int32_t       m_ourDomHash32 ;
+
+	uint8_t m_waitingInLine:1;
+	uint8_t m_reserved1:1;
+	uint8_t m_reserved2:1;
+	uint8_t m_reserved3:1;
+	uint8_t m_reserved4:1;
+	uint8_t m_reserved5:1;
+	uint8_t m_reserved6:1;
+	uint8_t m_reserved7:1;
 
 	// new stuff
 	int32_t       m_siteHash32;
@@ -358,8 +367,8 @@ class Linkdb {
 
 	Rdb           *getRdb()           { return &m_rdb; };
 
-	DiskPageCache *getDiskPageCache () { return &m_pc; };
-	DiskPageCache m_pc;
+	//DiskPageCache *getDiskPageCache () { return &m_pc; };
+	//DiskPageCache m_pc;
 
  private:
 	Rdb           m_rdb;
@@ -1177,10 +1186,13 @@ public:
 		   Links *oldLinks         , // for LF_OLDLINKS flag
 		   // this is used by Msg13.cpp to quickly get ptrs
 		   // to the links in the document, no normalization!
-		   bool doQuickSet = false );
+		   bool doQuickSet = false ,
+		   class SafeBuf *diffbotReply = NULL );
 
 	// set from a simple text buffer
 	bool set ( char *buf , int32_t niceness ) ;
+
+	bool print ( SafeBuf *sb ) ;
 
 	// Link in ascii text
 	bool addLink(char *link,int32_t linkLen,int32_t nodeNum,bool setLinkHashes,

@@ -15,12 +15,15 @@
 
 #define MAXJSONPARENTS 64
 
+bool endsInCurly ( char *s , int32_t slen );
+
 class JsonItem {
 
  public:
 	// scan the linked list
 	class JsonItem *m_next,*m_prev;
 	class JsonItem *m_parent;//child;
+
 
 	// the JT_* values above
 	int m_type;
@@ -32,6 +35,7 @@ class JsonItem {
 
 	// for JT_NUMBER
 	int32_t m_valueLong;
+	int64_t m_value64;
 	// for JT_NUMBER
 	double m_valueDouble;
 
@@ -39,7 +43,6 @@ class JsonItem {
 	int32_t m_valueLen;
 
 	char *m_valueArray;
-
 
 	// for JT_String
 	int32_t  getValueLen() { return m_valueLen; };
@@ -58,7 +61,7 @@ class JsonItem {
 		return (char *)this + sizeof(JsonItem);
 	};
 
-	// convert nubers and bools to strings for this one
+	// convert numbers and bools to strings for this one
 	char *getValueAsString ( int32_t *valueLen ) ;
 
 	// like acme.product.offerPrice if "acme:{product:{offerprice:1.23}}"
@@ -75,6 +78,8 @@ class Json {
 
 	JsonItem *parseJsonStringIntoJsonItems ( char *json , int32_t niceness );
 
+	bool printToString(SafeBuf& out);
+
 	JsonItem *getFirstItem ( ) ;
 
 	JsonItem *getItem ( char *name );
@@ -83,10 +88,14 @@ class Json {
 
 	Json() { m_stackPtr = 0; m_prev = NULL; };
 	
+	static bool prependKey(SafeBuf& jsonString, char* newKey);
+
+
 	SafeBuf m_sb;
 	JsonItem *m_stack[MAXJSONPARENTS];
 	int32_t m_stackPtr;
 	class JsonItem *m_prev;
+	void reset() { m_sb.purge(); };
 };
 
 #endif

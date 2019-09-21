@@ -18,6 +18,8 @@ void HashTableX::constructor() {
 	m_useKeyMagic = false;
 	m_ks = 0;
 	m_allowGrowth = true;
+	m_numSlots = 0;
+	m_numSlotsUsed = 0;
 }
 
 void HashTableX::destructor() {
@@ -453,8 +455,16 @@ bool HashTableX::load ( char *dir, char *filename, char **tbuf, int32_t *tsize )
 	if ( ! f.read ( &ds         , 4 , off ) ) return false;
 	off += 4;
 
+	if ( numSlots < 0 || numSlotsUsed < 0 ) {
+		log("htable: bogus saved hashtable file %s%s.",dir,filename);
+		return false;
+	}
+
 	// bogus key size?
 	if ( ks <= 0 ) {
+		// is very common for this file so skip it
+		if ( strstr(filename,"ipstouseproxiesfor.dat") )
+			return false;
 		log("htable: reading hashtable from %s%s: "
 		    "bogus keysize of %"INT32"",
 		    dir,filename,ks );
@@ -613,8 +623,10 @@ bool HashTableX::save ( char *dir ,
 	char s[1024];
 	sprintf ( s , "%s/%s", dir , filename );
 	int fd = ::open ( s , 
-			  O_RDWR | O_CREAT | O_TRUNC , S_IRUSR | S_IWUSR | 
-			  S_IRGRP | S_IWGRP | S_IROTH);
+			  O_RDWR | O_CREAT | O_TRUNC ,
+			  getFileCreationFlags() );
+			  // S_IRUSR | S_IWUSR | 
+			  // S_IRGRP | S_IWGRP | S_IROTH);
 	if ( fd < 0 ) {
 		//m_saveErrno = errno;
 		return log("db: Could not open %s for writing: %s.",
@@ -886,4 +898,21 @@ int32_t HashTableX::getKeyChecksum32 () {
 		char *xx=NULL;*xx=0;
 	}
 	return checksum;
+}
+
+// print as text into sb for debugging
+void HashTableX::print ( class SafeBuf *sb ) {
+	for ( int32_t i = 0 ; i < m_numSlots ; i++ ) {
+		// skip empty bucket
+		if ( ! m_flags[i] ) continue;
+		// get the key
+		char *kp = (char *)getKeyFromSlot(i);
+		//char *dp = (char *)getValFromSlot(i);
+		// show key in hex
+		char *kstr = KEYSTR ( kp , m_ks );
+		//char *dstr = KEYSTR ( kp , m_ds );
+		// show key
+		//sb->safePrintf("\n%s -> %s", kstr , dstr );
+		sb->safePrintf("KEY %s\n", kstr );
+	}
 }

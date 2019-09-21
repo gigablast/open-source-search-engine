@@ -77,11 +77,12 @@ bool Msg22::getTitleRec ( Msg22Request  *r              ,
 			  int32_t           timeout        ,
 			  bool           doLoadBalancing ) {
 
+	m_availDocId = 0;
 	// sanity
 	if ( getAvailDocIdOnly && justCheckTfndb ) { char *xx=NULL;*xx=0; }
 	if ( getAvailDocIdOnly && url            ) { char *xx=NULL;*xx=0; }
 
-	//if ( m_url ) log(LOG_DEBUG,"build: getting TitleRec for %s",m_url);
+	//if ( url ) log(LOG_DEBUG,"build: getting TitleRec for %s",url);
 	// sanity checks
 	if ( url    && docId!=0LL ) { char *xx=NULL;*xx=0; }
 	if ( url    && !url[0]    ) { char *xx=NULL;*xx=0; }
@@ -157,46 +158,13 @@ bool Msg22::getTitleRec ( Msg22Request  *r              ,
 	if ( hostNum >= numHosts ) { char *xx = NULL; *xx = 0; }
 	firstHostId = hosts [ hostNum ].m_hostId ;
 	*/
+	
+	Host *firstHost ;
+	// if niceness 0 can't pick noquery host.
+	// if niceness 1 can't pick nospider host.
+	firstHost = g_hostdb.getLeastLoadedInShard ( shardNum, r->m_niceness );
+	int32_t firstHostId = firstHost->m_hostId;
 
-	// get our group
-	int32_t  allNumHosts = g_hostdb.getNumHostsPerShard();
-	Host *allHosts    = g_hostdb.getShard ( shardNum );//Group ( groupId );
-
-	// put all alive hosts in this array
-	Host *cand[32];
-	int64_t  nc = 0;
-	for ( int32_t i = 0 ; i < allNumHosts ; i++ ) {
-		// get that host
-		Host *hh = &allHosts[i];
-		// skip if dead
-		if ( g_hostdb.isDead(hh) ) continue;
-		// add it if alive
-		cand[nc++] = hh;
-	}
-	// if none alive, make them all candidates then
-	bool allDead = (nc == 0);
-	for ( int32_t i = 0 ; allDead && i < allNumHosts ; i++ ) 
-		cand[nc++] = &allHosts[i];
-
-	// route based on docid region, not parity, because we want to hit
-	// the urldb page cache as much as possible
-	int64_t sectionWidth =((128LL*1024*1024)/nc)+1;//(DOCID_MASK/nc)+1LL;
-	// we mod by 1MB since tied scores resort to sorting by docid
-	// so we don't want to overload the host responsible for the lowest
-	// range of docids. CAUTION: do this for msg22 too!
-	// in this way we should still ensure a pretty good biased urldb
-	// cache... 
-	// . TODO: fix the urldb cache preload logic
-	int32_t hostNum = (docId % (128LL*1024*1024)) / sectionWidth;
-	if ( hostNum < 0 ) hostNum = 0; // watch out for negative docids
-	if ( hostNum >= nc ) { char *xx = NULL; *xx = 0; }
-	int32_t firstHostId = cand [ hostNum ]->m_hostId ;
-
-	// while this prevents tfndb seeks, it also causes bottlenecks
-	// if one host is particularly slow, because load balancing is
-	// bypassed.
-	//if ( ! g_conf.m_useBiasedTfndb ) firstHostId = -1;
-	// flag it
 	m_outstanding = true;
 	r->m_inUse    = 1;
 
@@ -890,6 +858,7 @@ void gotTitleList ( void *state , RdbList *list , Msg5 *msg5 ) {
 	// set probable docid
 	int64_t pd = 0LL;
 	if ( r->m_url[0] ) {
+		//log("msg22: url= %s",r->m_url);
 		pd = g_titledb.getProbableDocId(r->m_url);
 		if ( pd != st->m_pd ) { 
 			log("db: crap probable docids do not match! u=%s",
@@ -937,8 +906,10 @@ void gotTitleList ( void *state , RdbList *list , Msg5 *msg5 ) {
 		else if ( r->m_url[0] ) {
 			// get it
 			int64_t uh48 = g_titledb.getUrlHash48(k);
-			// sanity check
-			if ( st->m_uh48 == 0 ) { char *xx=NULL;*xx=0; }
+			// sanity check. MDW: looks like we allow 0 to
+			// be a valid hash. so let this through. i've seen
+			// it core here before.
+			//if ( st->m_uh48 == 0 ) { char *xx=NULL;*xx=0; }
 			// make sure our available docids are availble!
 			if ( dd == ad1 ) ad1++;
 			if ( dd == ad2 ) ad2++;

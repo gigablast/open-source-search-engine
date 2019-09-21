@@ -92,30 +92,28 @@ bool Indexdb::init ( ) {
 	//   enough nodes!!
 	int32_t maxCacheNodes = g_conf.m_indexdbMaxCacheMem / 600;
 
-	int32_t pageSize = GB_INDEXDB_PAGE_SIZE;
+	//int32_t pageSize = GB_INDEXDB_PAGE_SIZE;
 	// we now use a disk page cache as opposed to the
 	// old rec cache. i am trying to do away with the Rdb::m_cache rec
 	// cache in favor of cleverly used disk page caches, because
 	// the rec caches are not real-time and get stale. 
-	int32_t pcmem    = g_conf.m_indexdbMaxDiskPageCacheMem;
+	//int32_t pcmem    = g_conf.m_indexdbMaxDiskPageCacheMem;
 
-	pcmem = 0;
+	//pcmem = 0;
 	// make sure at least 30MB
 	//if ( pcmem < 30000000 ) pcmem = 30000000;
 	// keep this low if we are the tmp cluster, 30MB
-	if ( g_hostdb.m_useTmpCluster && pcmem > 30000000 ) pcmem = 30000000;
+	//if ( g_hostdb.m_useTmpCluster && pcmem > 30000000 ) pcmem = 30000000;
 	// do not use any page cache if doing tmp cluster in order to
 	// prevent swapping
-	if ( g_hostdb.m_useTmpCluster ) pcmem = 0;
+	//if ( g_hostdb.m_useTmpCluster ) pcmem = 0;
 	// . init the page cache
 	// . MDW: "minimize disk seeks" not working otherwise i'd enable it!
-	if ( ! m_pc.init ( "indexdb",
-			   RDB_INDEXDB,
-			   pcmem    ,
-			   pageSize , 
-			   true     ,  // use RAM disk?
-			   false    )) // minimize disk seeks?
-		return log("db: Indexdb init failed.");
+	// if ( ! m_pc.init ( "indexdb",
+	// 		   RDB_INDEXDB,
+	// 		   pcmem    ,
+	// 		   pageSize ))
+	// 	return log("db: Indexdb init failed.");
 
 	// . set our own internal rdb
 	// . max disk space for bin tree is same as maxTreeMem so that we
@@ -135,7 +133,7 @@ bool Indexdb::init ( ) {
 			   maxCacheNodes 	       ,
 			   true                        , // use half keys?
 			   false                       , // g_conf.m_indexdbSav
-			   &m_pc                       ) )
+			   NULL))//&m_pc                       ) )
 		return false;
 	return true;
 	// validate indexdb

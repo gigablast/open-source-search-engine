@@ -1434,8 +1434,9 @@ bool saveAddsInProgress ( char *prefix ) {
 	sprintf ( filename , "%s%saddsinprogress.saving", 
 		  g_hostdb.m_dir , prefix );
 
-	int32_t fd = open ( filename, O_RDWR | O_CREAT | O_TRUNC , 
-			 S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP|S_IROTH );
+	int32_t fd = open ( filename, O_RDWR | O_CREAT | O_TRUNC ,
+			    getFileCreationFlags() );
+			 // S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP|S_IROTH );
 	if ( fd < 0 ) {
 		log ("build: Failed to open %s for writing: %s",
 		     filename,strerror(errno));
@@ -1460,6 +1461,12 @@ bool saveAddsInProgress ( char *prefix ) {
 		// 4 bytes is how much of the total buffer is used, including
 		// those 4 bytes.
 		if ( used == 4 ) continue;
+		// test it
+		if ( used <= 4 || used > 300000000 ) {  // > 300MB????
+			log("msg4: saving addsinprogress. bad bucket "
+			    "used size of %"INT32,used);
+			continue;
+		}
 		// the buf itself
 		write ( fd , s_hostBufs[i] , used );
 	}
@@ -1473,12 +1480,26 @@ bool saveAddsInProgress ( char *prefix ) {
 		if ( ! slot->m_callback ) continue;
 		// skip if got reply
 		if ( slot->m_readBuf ) continue;
+		// if not sending something, skip
+		if ( ! slot->m_sendBuf ) continue;
+		// test it
+		int32_t used = *(int32_t *)slot->m_sendBuf;
+		if ( used <= 4 || used > 300000000 ) {  // > 300MB????
+			log("msg4: saving addsinprogress. bad slot "
+			    "used size of %"INT32,used);
+			continue;
+		}
+		if ( used != slot->m_sendBufSize ) {
+			log("msg4: saving addsinprogress. bad used size of "
+			    "%"INT32" != %"INT32,used,slot->m_sendBufSize);
+			continue;
+		}
 		// write hostid sent to
 		write ( fd , &slot->m_hostId , 4 );
 		// write that
 		write ( fd , &slot->m_sendBufSize , 4 );
 		// then the buf data itself
-		write ( fd , &slot->m_sendBuf , slot->m_sendBufSize );
+		write ( fd , slot->m_sendBuf , slot->m_sendBufSize );
 	}
 	
 
@@ -1510,6 +1531,9 @@ bool saveAddsInProgress ( char *prefix ) {
 		  g_hostdb.m_dir , prefix );
 
 	::rename ( filename , newFilename );
+
+	log(LOG_INFO,"build: Renamed %s to %s",filename,newFilename);
+
 	return true;
 }
 
@@ -1577,12 +1601,12 @@ bool loadAddsInProgress ( char *prefix ) {
 	p += 4;
 	if ( numHostBufs != s_numHostBufs ) {
 		g_errno = EBADENGINEER;
-		return log("build: addsinprogress.dat has wrong number of "
-			   "host bufs.");
+		log("build: addsinprogress.dat has wrong number of "
+		    "host bufs.");
 	}
 
 	// deserialize each hostbuf
-	for ( int32_t i = 0 ; i < s_numHostBufs ; i++ ) {
+	for ( int32_t i = 0 ; i < numHostBufs ; i++ ) {
 		// break if nothing left to read
 		if ( p >= pend ) break;
 		// USED size of the buf
@@ -1595,6 +1619,8 @@ bool loadAddsInProgress ( char *prefix ) {
 			s_hostBufSizes[i] = 0;
 			continue;
 		}
+		if ( used < 4 || used > 300000000 )
+			return log("msg4: bad used bytes in bucket 1");
 		// malloc the min buf size
 		int32_t allocSize = MAXHOSTBUFSIZE;
 		if ( allocSize < used ) allocSize = used;
@@ -1620,6 +1646,12 @@ bool loadAddsInProgress ( char *prefix ) {
 			log("build: file %s is bad.",filename);
 			char *xx = NULL; *xx = 0; 
 		}
+		if ( i >= s_numHostBufs ) {
+			mfree ( buf , allocSize ,"hostbuf");
+			log("build: skipping host buf #%"INT32,i);
+			continue;
+		}
+
 		// set the array
 		s_hostBufs     [i] = buf;
 		s_hostBufSizes [i] = allocSize;
@@ -1635,15 +1667,12 @@ bool loadAddsInProgress ( char *prefix ) {
 		p += 4;
 		// get host
 		Host *h = g_hostdb.getHost(hostId);
-		// must be there
-		if ( ! h ) {
-			close (fd);
-			return log("build: bad msg4 hostid %"INT32"",hostId);
-		}
 		// host many bytes
 		int32_t numBytes;
 		read ( fd , (char *)&numBytes , 4 );
 		p += 4;
+		if ( numBytes < 4 || numBytes > 300000000 )
+			return log("msg4: bad used bytes in slot 1");
 		// allocate buffer
 		char *buf = (char *)mmalloc ( numBytes , "msg4loadbuf");
 		if ( ! buf ) {
@@ -1657,6 +1686,14 @@ bool loadAddsInProgress ( char *prefix ) {
 			return log("build: bad msg4 buf read");
 		}
 		p += numBytes;
+		// must be there
+		if ( ! h ) {
+			//close (fd);
+			log("build: bad msg4 hostid %"INT32" nb=%"INT32,
+			    hostId,nb);
+			mfree ( buf , numBytes,"hostbuf");
+			continue;
+		}
 		// send it!
 		if ( ! g_udpServer.sendRequest ( buf ,
 						 numBytes ,

@@ -1233,9 +1233,13 @@ int32_t ucToAscii(char *buf, int32_t bufsize, char *s, int32_t slen){
 static iconv_t cd_latin1_u8 = (iconv_t)-1;
 int32_t latin1ToUtf8(char *outbuf, int32_t outbufsize, 
 		  char *inbuf, int32_t inbuflen){
-	if ( cd_latin1_u8 < 0) {
+	// fixed from < 0 to == (iconv_t)-1 thanks to isj 
+	// (gcc optimized the condition out)
+	if ( cd_latin1_u8 == (iconv_t)-1 ) {
 		cd_latin1_u8 = gbiconv_open("UTF-8", "WINDOWS-1252");
-		if ( cd_latin1_u8 < 0) {	
+		// fixed from < 0 to == (iconv_t)-1 thanks to isj
+		// (gcc optimized the condition out)
+		if ( cd_latin1_u8 == (iconv_t)-1 ) {	
 			log("uni: Error opening output conversion"
 			    " descriptor for utf-8: %s (%d)\n", 
 			    strerror(g_errno),g_errno);

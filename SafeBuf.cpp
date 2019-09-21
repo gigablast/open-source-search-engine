@@ -55,13 +55,13 @@ void SafeBuf::setLabel ( char *label ) {
 	m_label = label;
 }
 
-SafeBuf::SafeBuf(char* stackBuf, int32_t cap) {
+SafeBuf::SafeBuf(char* stackBuf, int32_t cap, char* label) {
 	m_usingStack = true;
 	m_capacity = cap;
 	m_buf = stackBuf;
 	m_length = 0;
 	m_encoding = csUTF8;
-	m_label = NULL;
+	m_label = label;
 }
 
 SafeBuf::SafeBuf(char *heapBuf, int32_t bufMax, int32_t bytesInUse, bool ownData) {
@@ -77,6 +77,10 @@ SafeBuf::SafeBuf(char *heapBuf, int32_t bufMax, int32_t bytesInUse, bool ownData
 }
 
 SafeBuf::~SafeBuf() {
+	destructor();
+}
+
+void SafeBuf::destructor() {
 	if(!m_usingStack && m_buf) 
 		mfree(m_buf, m_capacity, "SafeBuf");
 	m_buf = NULL;
@@ -194,6 +198,15 @@ bool SafeBuf::safeMemcpy ( Words *w , int32_t a , int32_t b ) {
 	return safeMemcpy ( p , pend - p );
 }
 
+char* SafeBuf::pushStr  (char* str, uint32_t len) {
+	int32_t initLen = m_length;
+	bool status = safeMemcpy ( str , len );
+	status &= nullTerm();
+	m_length++; //count the null so it isn't overwritten
+	if(!status) return NULL;
+	return m_buf + initLen;
+}
+
 bool SafeBuf::pushPtr ( void *ptr ) {
 	if ( m_length + (int32_t)sizeof(char *) > m_capacity ) 
 		if(!reserve(sizeof(char *)))//2*m_capacity + 1))
@@ -232,7 +245,7 @@ bool SafeBuf::pushFloat ( float i) {
 // hack off trailing 0's
 bool SafeBuf::printFloatPretty ( float f ) {
 
-	if ( m_length + 20 > m_capacity && ! reserve(20) )
+	if ( m_length + 40 > m_capacity && ! reserve(40) )
 		return false;
 
 	char *p = m_buf + m_length;
@@ -427,7 +440,7 @@ bool SafeBuf::reserve(int32_t i , char *label, bool clearIt ) {
 //buffer size.
 bool SafeBuf::reserve2x(int32_t i, char *label) {
 	//watch out for overflow!
-	if((m_capacity << 1) + i < 0) return false;
+	if((m_capacity << 1) + i < m_capacity) return false;
 	if(i + m_length >= m_capacity)
 		return reserve(m_capacity + i,label);
 	else return true;
@@ -435,7 +448,7 @@ bool SafeBuf::reserve2x(int32_t i, char *label) {
 
 int32_t SafeBuf::saveToFile ( char *dir , char *filename ) {
 	char buf[1024];
-	sprintf(buf,"%s/%s",dir,filename);
+	snprintf(buf,1024,"%s/%s",dir,filename);
 	return dumpToFile ( buf );
 }
 
@@ -445,8 +458,9 @@ int32_t SafeBuf::save ( char *fullFilename ) {
 
 int32_t SafeBuf::dumpToFile(char *filename ) {
  retry22:
-	int32_t fd = open ( filename , O_CREAT | O_WRONLY | O_TRUNC,
-			 S_IRUSR |S_IWUSR |S_IRGRP |S_IWGRP| S_IROTH );
+	int32_t fd = open ( filename , O_CREAT | O_WRONLY | O_TRUNC ,
+			    getFileCreationFlags() );
+			    //S_IRUSR |S_IWUSR |S_IRGRP |S_IWGRP| S_IROTH );
 	if ( fd < 0 ) {
 		// valgrind
 		if ( errno == EINTR ) goto retry22;
@@ -475,12 +489,14 @@ int32_t SafeBuf::safeSave (char *filename ) {
  retry22:
 
 	// first write to tmp file
-	SafeBuf fn;
+	char tmp[1024];
+	SafeBuf fn(tmp,1024);
 	fn.safePrintf( "%s.saving",filename );
 
 	int32_t fd = open ( fn.getBufStart() ,
-			 O_CREAT | O_WRONLY | O_TRUNC,
-			 S_IRUSR |S_IWUSR |S_IRGRP |S_IWGRP| S_IROTH );
+			    O_CREAT | O_WRONLY | O_TRUNC ,
+			    getFileCreationFlags() );
+			 // S_IRUSR |S_IWUSR |S_IRGRP |S_IWGRP| S_IROTH );
 	if ( fd < 0 ) {
 		// valgrind
 		if ( errno == EINTR ) goto retry22;
@@ -522,10 +538,11 @@ int32_t SafeBuf::safeSave (char *filename ) {
 }
 
 
-int32_t SafeBuf::fillFromFile(char *dir,char *filename) {
+int32_t SafeBuf::fillFromFile(char *dir,char *filename,char *label) {
+	m_label = label;
 	char buf[1024];
-	if ( dir ) sprintf(buf,"%s/%s",dir,filename);
-	else       sprintf(buf,"%s",filename);
+	if ( dir ) snprintf(buf,1024,"%s/%s",dir,filename);
+	else       snprintf(buf,1024,"%s",filename);
 	return fillFromFile ( buf );
 }
 
@@ -565,8 +582,8 @@ int32_t SafeBuf::fillFromFile(char *filename) {
 	reserve(results.st_size+1);
 	
  retry:
-	int32_t fd = open ( filename , O_RDONLY,
-			 S_IRUSR |S_IWUSR |S_IRGRP |S_IWGRP| S_IROTH );
+	int32_t fd = open ( filename , O_RDONLY , getFileCreationFlags() );
+			 // S_IRUSR |S_IWUSR |S_IRGRP |S_IWGRP| S_IROTH );
 	if ( ! fd ) {
 		// valgrind
 		if ( errno == EINTR ) goto retry;
@@ -585,8 +602,6 @@ retry2:
 		m_length += numRead;
 		m_buf[m_length] = '\0';
 	}
-
-	if ( numRead > 0) return numRead;//true;
 
 	return numRead;
 }
@@ -856,6 +871,22 @@ bool  SafeBuf::utf8Encode2(char *s, int32_t len, bool encodeHTML,int32_t nicenes
 		return false;
 	if (!encodeHTML) return true;
 	return htmlEncode(m_length-tmp,niceness);
+}
+
+
+
+bool SafeBuf::utf32Encode(UChar32* codePoints, int32_t cpLen) {
+	if(m_encoding != csUTF8) return safePrintf("FIXME %s:%i", __FILE__, __LINE__);
+
+    int32_t need = 0;
+    for(int32_t i = 0; i < cpLen;i++) need += utf8Size(codePoints[i]);
+	if(!reserve(need)) return false;
+    
+    for(int32_t i = 0; i < cpLen;i++) {
+		m_length += ::utf8Encode(codePoints[i], m_buf + m_length);
+	}
+	
+    return true;
 }
 
 /*
@@ -3222,7 +3253,8 @@ bool SafeBuf::brify ( char *s ,
 			safeMemcpy ( pstart , breakPoint - pstart + 1 );
 			// then br
 			//if ( forced ) pushChar('\n');
-			if ( ! forced ) safeMemcpy ( sep , sepLen ) ; // "<br>"
+			if ( ! forced ) 
+				safeMemcpy ( sep , sepLen ) ; // "<br>"
 			forced = false;
 		}
 		// start right after breakpoint for next line
@@ -3256,6 +3288,7 @@ bool SafeBuf::brify ( char *s ,
 
 	// now do it again but for real!
 	lastRound = true;
+	forced = false;
 	goto redo;
 	return true;
 }
@@ -3525,6 +3558,9 @@ bool SafeBuf::base64Encode ( char *sx , int32_t len , int32_t niceness ) {
 	return true;
 }
 
+bool SafeBuf::base64Encode( char *s ) {
+	return base64Encode(s,gbstrlen(s)); 
+}
 
 bool SafeBuf::base64Decode ( char *src , int32_t srcLen , int32_t niceness ) {
 
@@ -3656,4 +3692,13 @@ bool SafeBuf::hasDigits() {
 	for ( int32_t i = 0 ; i < m_length ; i++ )
 		if ( is_digit(m_buf[i]) ) return true;
 	return false;
+}
+
+
+int32_t SafeBuf::indexOf(char c) {
+	char* p = m_buf;
+	char* pend = m_buf + m_length;
+	while (p < pend && *p != c) p++;
+	if (p == pend) return -1;
+	return p - m_buf;
 }

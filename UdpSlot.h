@@ -10,6 +10,12 @@
 #include "UdpProtocol.h"
 #include "Hostdb.h"
 
+// i'm seeing some networks not liking big dgrams, so
+// lets go super small. we won't be able to send back
+// huge msgs unfortunately, so we'll have to fix that
+// a different way later.
+#define SMALLDGRAMS
+
 // . we want to avoid the overhead of IP level fragmentation
 // . so for an MTU of 1500 we got 28 bytes overhead (IP and UDP headers)
 // . later we can try large DGRAM_SIZE values to see if faster
@@ -19,9 +25,9 @@
 //#define DGRAM_SIZE 7500
 //#define DGRAM_SIZE ((1500-28)*5)
 // this was the most stable size, but now, 4/8/04, i'm trying bigger...
-#ifdef _SMALLDGRAMS_
+#ifdef SMALLDGRAMS
 // newspaperarchive machines need this smaller size
-#define DGRAM_SIZE (1500-28)
+#define DGRAM_SIZE (1500-28-10)
 #else
 // . here's the new size, 4/8/04, about 20x bigger
 // . only use this for our machines
@@ -30,10 +36,11 @@
 // . let's see if smaller dgrams fix the ping spike problem on gk0c
 // . this is in addition to lower the ack windows from 12 to 4
 #define DGRAM_SIZE 16400
+#endif
+
 // . the 45k dgram doesn't travel well over the internet, and javier needs
 //   to do that for the "interface client" code
-#define DGRAM_SIZE_INTERNET (1500-28)
-#endif
+#define DGRAM_SIZE_INTERNET (1500-28-10)
 
 // i'd like to have less dgram to decrease interrupts and
 // to decrease the MAX_DGRAMS define which decrease UdpSlot size
@@ -76,8 +83,13 @@
 // raised from 50MB to 80MB so Msg13 compression proxy can send back big replies > 5MB
 // raised from 80MB to 180MB since we could be sending back a Msg95Reply
 // which is a list of QueryChanges. 3/29/13.
-#define MAX_DGRAMS (((180*1024*1024) / DGRAM_SIZE_LB) + 1)
+//#define MAX_DGRAMS (((180*1024*1024) / DGRAM_SIZE_LB) + 1)
+//#define MAX_DGRAMS (((80*1024*1024) / DGRAM_SIZE) + 1)
+// raise from 80MB to 280MB for choi EMSGTOOBIG error
+#define MAX_DGRAMS (((280*1024*1024) / DGRAM_SIZE) + 1)
 //#endif
+
+#define MAX_ABSDOCLEN ((MAX_DGRAMS * DGRAM_SIZE)-50000)
 
 // . the max size of an incoming request for a hot udp server
 // . we cannot call malloc so it must fit in here
@@ -410,6 +422,13 @@ class UdpSlot {
 	// save cpu by not having to call memset() on m_sentBits et al
 	int32_t m_numBitsInitialized;
 
+	// and for doubly linked list of callback candidates
+ 	class UdpSlot *m_next3;
+	class UdpSlot *m_prev3;
+
+	// memset clears from here and above. so put anything that needs to
+	// be set to zero above this line.
+
 	// . i've discarded the window since msg size is limited
 	// . this way is faster 
 	// . these bits determine what dgrams we've sent/read/sentAck/readAck
@@ -423,15 +442,15 @@ class UdpSlot {
 	// and for doubly linked list of used slots
 	class UdpSlot *m_next2;
 	class UdpSlot *m_prev2;
-	// and for doubly linked list of callback candidates
- 	//class UdpSlot *m_next3;
-	//class UdpSlot *m_prev3;
+
 	// store the key so when returning slot we can remove from hash table
 	key_t m_key;
 
 	char m_preferEth;
 
 	char m_maxResends;
+
+	char m_incoming;
 
 	// . for the hot udp server, we cannot call malloc in the sig handler
 	//   so we set m_readBuf to this to read in int16_t requests

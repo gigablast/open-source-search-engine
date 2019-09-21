@@ -1,6 +1,7 @@
 #include <string.h>
 #include "SafeBuf.h"
 #include "HttpServer.h"
+#include "Posdb.h"
 
 TcpSocket *g_qaSock = NULL;
 SafeBuf g_qaOutput;
@@ -26,6 +27,7 @@ void wait( float seconds ) {
 					    NULL , // state
 					    qatestWrapper,//m_masterLoop
 					    0    )) {// niceness
+		log("qa: waiting %i milliseconds",(int)delay);
 		s_registered = true;
 		// wait for it, return -1 since we blocked
 		return;
@@ -43,6 +45,8 @@ static SafeBuf s_ubuf2;
 static SafeBuf s_cbuf2;
 
 static Url s_url;
+static char *s_expect = NULL;
+static char **s_ignore = NULL;
 
 void markOut ( char *content , char *needle ) {
 
@@ -71,6 +75,127 @@ void markOut ( char *content , char *needle ) {
 	// loop for more for the "rand64=" thing
 	content = s;
 	goto loop;
+}
+
+
+void markOut2 ( char *content , char *needle ) {
+
+	if ( ! content ) return;
+
+	int32_t nlen = gbstrlen(needle);
+
+ loop:
+
+	char *s = strstr ( content , needle );
+	if ( ! s ) return;
+
+	// advance over name like "rand64=" to avoid hitting those digits
+	//s += gbstrlen(needle);
+
+	for (int32_t i = 0 ; i < nlen ; i++ )
+		*s++ = ' ';
+
+	//for ( ; *s && ! is_digit(*s); s++ );
+
+	// find end of digit stream
+	//char *end = s;
+	//while ( ; *end && is_digit(*s); end++ );
+	// just bury the digit stream now, zeroing out was not
+	// a consistent LENGTH if we had 10 hits vs 9... making the hash 
+	// different
+
+	// space out digits. including decimal point.
+	//for ( ; *s && (is_digit(*s)||*s=='.'); s++ ) *s = ' ';
+
+	// loop for more for the "rand64=" thing
+	content = s;
+	goto loop;
+}
+
+
+void markOutBuf ( char *content ) {
+
+	// take out <responseTimeMS>
+	markOut ( content , "<currentTimeUTC>");
+	markOut ( content , "<responseTimeMS>");
+
+	// ...from an index of about 429 pages in 0.91 seconds in collection...
+	markOut ( content , " pages in ");
+
+	// until i figure this one out, take it out
+	markOut ( content , "<docsInCollection>");
+
+	markOut ( content , "spider is done (");
+	markOut ( content , "spider is paused (");
+	markOut ( content , "spider queue empty (");
+	markOut ( content , "spider is active (");
+
+	markOut ( content , "<totalShards>");
+
+	// 3 Collections etc.
+	markOut ( content , "/rocket.jpg></div></a></center><br><br><div style=\"width:190px;padding:4px;margin-left:10px;background-color:white;border-top-left-radius:10px;border-bottom-left-radius:10px;border-color:blue;border-width:3px;border-style:solid;margin-right:-3px;border-right-color:white;overflow-y:auto;overflow-x:hidden;line-height:23px;color:black;\"><center><nobr><b>" );
+
+	// until i figure this one out, take it out
+	markOut ( content , "<hits>");
+
+	// for those links in the html pages
+	markOut ( content, "rand64=");
+
+	// for json
+	markOut ( content , "\"currentTimeUTC\":" );
+	markOut ( content , "\"responseTimeMS\":");
+	markOut ( content , "\"docsInCollection\":");
+
+	// if the results are in json, then status doc is encoded json
+	markOut ( content , "\\\"gbssDownloadStartTime\\\":");
+	markOut ( content , "\\\"gbssDownloadEndTime\\\":");
+	markOut ( content , "\\\"gbssDownloadStartTimeMS\\\":");
+	markOut ( content , "\\\"gbssDownloadEndTimeMS\\\":");
+	markOut ( content , "\\\"gbssDownloadDurationMS\\\":");
+	markOut ( content , "\\\"gbssAgeInIndex\\\":");
+	markOut ( content , "\\\"gbssDiscoveredTime\\\":");
+
+
+	// if the results are in xml, then the status doc is xml encoded
+	markOut ( content , "\"gbssDownloadStartTime\":");
+	markOut ( content , "\"gbssDownloadEndTime\":");
+	markOut ( content , "\"gbssDownloadStartTimeMS\":");
+	markOut ( content , "\"gbssDownloadEndTimeMS\":");
+	markOut ( content , "\"gbssDownloadDurationMS\":");
+	markOut ( content , "\"gbssAgeInIndex\":");
+
+
+	// for xml
+	markOut ( content , "<currentTimeUTC>" );
+	markOut ( content , "<responseTimeMS>");
+	markOut ( content , "<docsInCollection>");
+	markOut ( content , "<firstIndexedDateUTC>");
+
+	// indexed 1 day ago
+	markOut ( content,"indexed:");
+	// modified 1 day ago
+	markOut ( content,"modified:");
+
+	// s_gigabitCount... it is perpetually incrementing static counter
+	// in PageResults.cpp
+	markOut(content,"ccc(");
+	markOut(content,"id=fd");
+	markOut(content,"id=sd");
+
+	// for some reason the term freq seems to change a little in
+	// the scoring table
+	markOut(content,"id=tf");
+
+	// # of collections in the admin page: ..."4 Collections"
+	markOut(content,"px;color:black;\"><center><nobr><b>");
+
+	markOut(content,"spider is done (");
+	markOut(content,"spider is paused (");
+	markOut(content,"spider is active (");
+	markOut(content,"spider queue empty (");
+
+	markOut2(content,"bgcolor=#c0c0f0");
+	markOut2(content,"bgcolor=#d0d0e0");
 }
 
 // do not hash 
@@ -123,10 +248,10 @@ void makeQADir ( ) {
 	char dir[1024];
 	snprintf(dir,1000,"%sqa",g_hostdb.m_dir);
 	log("mkdir mkdir %s",dir);
-	int32_t status = ::mkdir ( dir ,
-				S_IRUSR | S_IWUSR | S_IXUSR | 
-				S_IRGRP | S_IWGRP | S_IXGRP | 
-				S_IROTH | S_IXOTH );
+	int32_t status = ::mkdir ( dir ,getDirCreationFlags() );
+				// S_IRUSR | S_IWUSR | S_IXUSR | 
+				// S_IRGRP | S_IWGRP | S_IXGRP | 
+				// S_IROTH | S_IXOTH );
 	if ( status == -1 && errno != EEXIST && errno )
 		log("qa: Failed to make directory %s: %s.",
 		    dir,mstrerror(errno));
@@ -145,8 +270,8 @@ void processReply ( char *reply , int32_t replyLen ) {
 	fb2.nullTerm();
 
 	// log that we got the reply
-	log("qa: got reply(len=%"INT32")(errno=%s)=%s",
-	    replyLen,mstrerror(g_errno),reply);
+	log("qa: got reply(len=%"INT32")(errno=%s)",
+	    replyLen,mstrerror(g_errno));
 
 	char *content = NULL;
 	int32_t  contentLen = 0;
@@ -169,58 +294,8 @@ void processReply ( char *reply , int32_t replyLen ) {
 
 	s_content = content;
 
-	// take out <responseTimeMS>
-	markOut ( content , "<currentTimeUTC>");
-	markOut ( content , "<responseTimeMS>");
+	markOutBuf ( content );
 
-	// ...from an index of about 429 pages in 0.91 seconds in collection...
-	markOut ( content , " pages in ");
-
-	// until i figure this one out, take it out
-	markOut ( content , "<docsInCollection>");
-
-	markOut ( content , "spider is done (");
-	markOut ( content , "spider is paused (");
-
-	// until i figure this one out, take it out
-	markOut ( content , "<hits>");
-
-	// for those links in the html pages
-	markOut ( content, "rand64=");
-
-	// for json
-	markOut ( content , "\"currentTimeUTC\":" );
-	markOut ( content , "\"responseTimeMS\":");
-	markOut ( content , "\"docsInCollection\":");
-
-	// for xml
-	markOut ( content , "<currentTimeUTC>" );
-	markOut ( content , "<responseTimeMS>");
-	markOut ( content , "<docsInCollection>");
-	markOut ( content , "<firstIndexedDateUTC>");
-
-	// indexed 1 day ago
-	markOut ( content,"indexed:");
-	// modified 1 day ago
-	markOut ( content,"modified:");
-
-	// s_gigabitCount... it is perpetually incrementing static counter
-	// in PageResults.cpp
-	markOut(content,"ccc(");
-	markOut(content,"id=fd");
-	markOut(content,"id=sd");
-
-	// for some reason the term freq seems to change a little in
-	// the scoring table
-	markOut(content,"id=tf");
-
-	// # of collections in the admin page: ..."4 Collections"
-	markOut(content,"px;color:black;\"><center><nobr><b>");
-
-	markOut(content,"spider is done (");
-	markOut(content,"spider is paused (");
-	markOut(content,"spider is active (");
-	markOut(content,"spider queue empty (");
 
 	// make checksum. we ignore back to back spaces so this
 	// hash works for <docsInCollection>10 vs <docsInCollection>9
@@ -229,7 +304,6 @@ void processReply ( char *reply , int32_t replyLen ) {
 
 	// note it
 	log("qa: got contentCRC of %"UINT32"",contentCRC);
-
 
 	// if what we expected, save to disk if not there yet, then
 	// call s_callback() to resume the qa pipeline
@@ -250,16 +324,60 @@ void processReply ( char *reply , int32_t replyLen ) {
 	}
 	*/
 
-	//
-	// if crc of content does not match what was expected then do a diff
-	// so we can see why not
-	//
+	if(s_ignore) {
+		for(int i = 0;;i++) {
+			if(!s_ignore[i]) break;
+			if(gb_strcasestr(content, s_ignore[i])) return;
+		}
+		s_ignore = NULL;
+	}
+
+	// Just look a substring of the response so we don't have to worry about
+	// miniscule changes in output formats or changing dates.
+	if(s_expect) {
+		log("expecting for %s", s_expect);
+		if(gb_strcasestr(content, s_expect)) {
+			g_qaOutput.safePrintf("<b style=color:green;>"
+								  "passed test</b><br>%s : "
+								  "<a href=%s>%s</a> Found %s (crc=%"UINT32")<br>"
+								  "<hr>",
+								  s_qt->m_testName,
+								  s_url.getUrl(),
+								  s_url.getUrl(),
+								  s_expect,
+								  contentCRC);
+
+		} else {
+			g_numErrors++;
+
+			g_qaOutput.safePrintf("<b style=color:red;>FAILED TEST</b><br>%s : "
+								  "<a href=%s>%s</a><br> Expected: %s in reply"
+								  " (crc=%"UINT32")<br>"
+								  "<hr>",
+								  s_qt->m_testName,
+								  s_url.getUrl(),
+								  s_url.getUrl(),
+								  s_expect,
+								  contentCRC);
+
+
+		}
+		s_expect = NULL;
+		return;
+
+	}
 
 	// this means caller does not care about the response
 	if ( ! s_checkCRC ) {
 		//s_callback();
 		return;
 	}
+
+	//
+	// if crc of content does not match what was expected then do a diff
+	// so we can see why not
+	//
+
 
 	//const char *emsg = "qa: bad contentCRC of %"INT32" should be %"INT32" "
 	//	"\n";//"phase=%"INT32"\n";
@@ -333,14 +451,34 @@ void processReply ( char *reply , int32_t replyLen ) {
 	fb1.load(fn1);
 	fb1.nullTerm();
 
+	// markout both
+	markOutBuf ( fb1.getBufStart() );
+	markOutBuf ( fb2.getBufStart() );
+
+	// save temps
+	SafeBuf tmpfn1; 
+	SafeBuf tmpfn2; 
+	tmpfn1.safePrintf("%strash/tmpdiff1.txt",g_hostdb.m_dir); 
+	tmpfn2.safePrintf("%strash/tmpdiff2.txt",g_hostdb.m_dir); 
+	fb1.save(tmpfn1.getBufStart());
+	fb2.save(tmpfn2.getBufStart());
+
 	// do the diff between the two replies so we can see what changed
+	// now do the diffs between the marked out versions so it is less
+	// spammy
 	char cmd[1024];
-	sprintf(cmd,"diff %s %s > /tmp/diffout",fn1,fn2);
+	sprintf(cmd,"diff %s %s > /tmp/diffout",
+		tmpfn1.getBufStart(),
+		tmpfn2.getBufStart());
+	//fn1,fn2);
 	//log("qa: %s\n",cmd);
 	gbsystem(cmd);
 
 	g_numErrors++;
 	
+	SafeBuf he;
+	he.htmlEncode ( s_url.getUrl() );
+
 	g_qaOutput.safePrintf("<b style=color:red;>FAILED TEST</b><br>%s : "
 			      "<a href=%s>%s</a> (urlhash=%"UINT32")<br>"
 
@@ -361,7 +499,7 @@ void processReply ( char *reply , int32_t replyLen ) {
 			      "<pre id=%"UINT32" style=background-color:0xffffff;>",
 			      s_qt->m_testName,
 			      s_url.getUrl(),
-			      s_url.getUrl(),
+			      he.getBufStart(),
 			      urlHash32,
 
 			      // input checkbox name field
@@ -407,11 +545,15 @@ static void gotReplyWrapper ( void *state , TcpSocket *sock ) {
 
 	processReply ( sock->m_readBuf , sock->m_readOffset );
 
+    // Avoid resuming execution if someone called wait while a reply
+    // was outstanding.
+    if(s_registered) return;
 	s_callback ();
 }
 
 // returns false if blocked, true otherwise, like on quick connect error
-bool getUrl( char *path , int32_t checkCRC = 0 , char *post = NULL ) {
+bool getUrl( char *path , int32_t checkCRC = 0 , char *post = NULL ,
+             char* expect = NULL, char** ignore = NULL) {
 
 	SafeBuf sb;
 	sb.safePrintf ( "http://%s:%"INT32"%s"
@@ -428,6 +570,9 @@ bool getUrl( char *path , int32_t checkCRC = 0 , char *post = NULL ) {
 
 	//Url u;
 	s_url.set ( sb.getBufStart() );
+    s_expect = expect;
+    s_ignore = ignore;
+
 	log("qa: getting %s",sb.getBufStart());
 	if ( ! g_httpServer.getDoc ( s_url.getUrl() ,
 				     0 , // ip
@@ -455,7 +600,7 @@ bool getUrl( char *path , int32_t checkCRC = 0 , char *post = NULL ) {
 	return true;
 }	
 
-bool loadUrls ( ) {
+bool loadUrls () {
 	static bool s_loaded = false;
 	if ( s_loaded ) return true;
 	s_loaded = true;
@@ -539,7 +684,7 @@ bool qainject1 ( ) {
 	// turn off images thumbnails
 	if ( ! s_flags[17] ) {
 		s_flags[17] = true;
-		if ( ! getUrl ( "/admin/spider?c=qatest123&mit=0&mns=1"
+		if ( ! getUrl ( "/admin/spider?c=qatest123&qa=1&mit=0&mns=1"
 				// no spider replies because it messes
 				// up our last test to make sure posdb
 				// is 100% empty. 
@@ -673,7 +818,7 @@ bool qainject1 ( ) {
 	}
 
 
-	// stop for now
+	// stop for now so we can analyze the index
 	//return true; //
 
 	//
@@ -721,7 +866,7 @@ bool qainject1 ( ) {
 
 
 	if ( ! s_flags[21] ) {
-		wait(2.0);
+		wait(6.0);
 		s_flags[21] = true;
 		return false;
 	}
@@ -769,6 +914,16 @@ bool qainject1 ( ) {
 			log("qa: failed qa test of posdb0001.dat. "
 			    "has %i bytes of positive keys! coring.",
 			    (int)list.m_listSize);
+			char rec [ 64];
+			for ( list.getCurrentKey ( rec ) ;
+			      ! list.isExhausted() ;
+			      list.skipCurrentRecord() ) {
+				// parse it up
+				int64_t tid = g_posdb.getTermId ( rec );
+				int64_t d = g_posdb.getDocId ( rec ) ;
+				log("qa: termid=%"INT64" docid=%"INT64,
+				    tid,d);
+			}
 			//char *xx=NULL;*xx=0;
 			exit(0);
 		}
@@ -845,7 +1000,7 @@ bool qainject2 ( ) {
 	if ( ! s_flags[17] ) {
 		s_flags[17] = true;
 		// can't turn off spiders because we need for query reindex
-		if ( ! getUrl ( "/admin/spider?c=qatest123&mit=0&mns=1"
+		if ( ! getUrl ( "/admin/spider?c=qatest123&qa=1&mit=0&mns=1"
 				// turn off use robots to avoid that
 				// xyz.com/robots.txt redir to seekseek.com
 				"&obeyRobots=0"
@@ -973,7 +1128,8 @@ bool qainject2 ( ) {
 	if ( ! s_flags[33] ) {
 		s_flags[33] = true;
 		if ( ! getUrl ( "/search?c=qatest123&qa=1&format=xml&q="
-				"url2%3Axyz.com%2F-13737921970569011262&xml=1"
+				"gbssUrl%3Axyz.com%2F-13737921970569011262&"
+				"xml=1"
 				,-1405546537 ) )
 			return false;
 	}
@@ -1035,7 +1191,7 @@ bool qaSyntax ( ) {
 	if ( ! s_flags[2] ) {
 		s_flags[2] = true;
 		// can't turn off spiders because we need for query reindex
-		if ( ! getUrl ( "/admin/spider?c=qatest123&mit=0&mns=1"
+		if ( ! getUrl ( "/admin/spider?c=qatest123&qa=1&mit=0&mns=1"
 				// index spider reply status docs
 				"&isr=1"
 				// turn off use robots to avoid that
@@ -1071,18 +1227,20 @@ bool qaSyntax ( ) {
 			return false;
 	}
 
+	static int s_i;
+
 	// now query check
 	//static bool s_y4 = false;
 	if ( ! s_flags[4] ) {
 		wait(1.5);
 		s_flags[4] = true;
+		s_i = 0;
 		return false;
 	}
 
 	//
 	// now run a bunch of queries
 	//
-	static int s_i = 0;
 	static char *s_q[] ={"cat dog",
 			     "+cat",
 			     "mp3 \"take five\"",
@@ -1155,17 +1313,17 @@ bool qaSyntax ( ) {
 			     "gbpermalink:1",
 			     "gbdocid:123456",
 
-			     "gbstatus:0",
-			     "gbstatusmsg:tcp",
-			     "url2:www.abc.com/page.html",
-			     "site2:mysite.com",
-			     "ip2:1.2.3.4",
-			     "inurl2:dog",
-			     "gbpathdepth2:2",
-			     "gbhopcount2:3",
-			     "gbhasfilename2:1",
-			     "gbiscgi2:1",
-			     "gbhasext2:1",
+			     "gbssStatusCode:0",
+			     "gbssStatusmsg:tcp",
+			     "gbssUrl:www.abc.com/page.html",
+			     "gbssDomain:mysite.com",
+			     "gbssIp:1.2.3.4",
+			     "gbssUrl:dog",
+			     //"gbpathdepth:2",
+			     "gbssHopcount:3",
+			     //"gbhasfilename2:1",
+			     //"gbiscgi2:1",
+			     //"gbhasext2:1",
 
 			     "cat AND dog",
 			     "cat OR dog",
@@ -1191,6 +1349,10 @@ bool qaSyntax ( ) {
 				"format=json&"
 				"q=");
 		tmp.urlEncode ( s_q[s_i] );
+		// get back 100 for debugging better
+		if ( strcmp(s_q[s_i],"gbssStatusCode:0") == 0 ) {
+			tmp.safePrintf("&n=100");
+		}
 		tmp.nullTerm();
 		// point to next query
 		s_i++;
@@ -1212,6 +1374,435 @@ bool qaSyntax ( ) {
 
 	return true;
 }
+
+typedef enum {
+    DELETE_COLLECTION = 0, 
+    ADD_COLLECTION = 1,
+    ADD_INITIAL_URLS = 2,
+    URL_COUNTER = 20,
+    CONTENT_COUNTER = 21,
+    SET_PARAMETERS = 17,
+    WAIT_A_BIT = 3,
+    EXAMINE_RESULTS1 = 16,
+    EXAMINE_RESULTS2 = 22,
+    EXAMINE_RESULTS3 = 24
+} TimeAxisFlags;
+char* g_timeAxisIgnore[3] = {"Bad IP", "Doc is error page", NULL};
+
+
+bool qaTimeAxis ( ) {
+	if ( ! s_flags[DELETE_COLLECTION] ) {
+		s_flags[DELETE_COLLECTION] = true;
+		if ( ! getUrl ( "/admin/delcoll?xml=1&delcoll=qatest123" ) )
+			return false;
+	}
+
+	if ( ! s_flags[ADD_COLLECTION] ) {
+		s_flags[ADD_COLLECTION] = true;
+		if ( ! getUrl ( "/admin/addcoll?addcoll=qatest123&xml=1&"
+				"collectionips=127.0.0.1" , 
+				// checksum of reply expected
+				238170006 ) )
+			return false;
+	}
+
+	if ( ! s_flags[SET_PARAMETERS] ) {
+		s_flags[SET_PARAMETERS] = true;
+		if ( ! getUrl ( "/admin/spider?c=qatest123&qa=1&mit=0&mns=1"
+				// no spider replies because it messes
+				// up our last test to make sure posdb
+				// is 100% empty. 
+				// see "index spider replies" in Parms.cpp.
+				"&isr=0"
+				// turn off use robots to avoid that
+				// xyz.com/robots.txt redir to seekseek.com
+				"&obeyRobots=0"
+                // This is what we are testing
+				"&usetimeaxis=1"
+				"&de=0"
+				,
+				// checksum of reply expected
+				238170006 ) )
+			return false;
+	}
+
+
+	// this only loads once
+	loadUrls();
+	int32_t numDocsToInject = s_ubuf2.length()/(int32_t)sizeof(char *);
+
+
+	//
+	// Inject urls, return false if not done yet.
+	// Here we alternate sending the same url -> content pair with sending 
+    // the same url with different content to simulate a site that is updated
+    // at about half the rate that we spider them.
+	if ( ! s_flags[ADD_INITIAL_URLS] ) {
+		for ( ; s_flags[URL_COUNTER] < numDocsToInject &&
+                s_flags[URL_COUNTER] + s_flags[CONTENT_COUNTER] < numDocsToInject; ) {
+            // inject using html api
+            SafeBuf sb;
+
+            int32_t urlIndex = s_flags[URL_COUNTER];
+            int32_t flipFlop = s_flags[CONTENT_COUNTER] % 2;
+            int32_t contentIndex = s_flags[URL_COUNTER] +
+                s_flags[CONTENT_COUNTER] - flipFlop ;
+
+            char* expect = "[Success]";
+            if(flipFlop && urlIndex != contentIndex) {
+                expect = "[Doc unchanged]";
+            }
+
+            log("sending url num %d with content num %d, flip %d expect %s",
+                urlIndex, contentIndex, flipFlop, expect);
+            sb.safePrintf("&c=qatest123&deleteurl=0&"
+                          "format=xml&u=");
+            sb.urlEncode ( s_urlPtrs[s_flags[URL_COUNTER]]);
+            sb.safePrintf("&hasmime=1");
+	    // add some meta data now, the current time stamp so we can
+	    // make sure the meta data is updated even if its EDOCUNCHANGED
+	    sb.safePrintf("&metadata=");
+	    static int32_t s_count9 = 0;
+	    SafeBuf tmp;
+	    tmp.safePrintf("{\"qatesttime\":%"INT32"}\n",s_count9++);
+	    sb.urlEncode ( tmp.getBufStart(), tmp.getLength() );
+            sb.safePrintf("&content=");
+            sb.urlEncode(s_contentPtrs[contentIndex]);
+
+            sb.nullTerm();
+
+
+            if(s_flags[CONTENT_COUNTER] >= 5) {
+                s_flags[URL_COUNTER] += s_flags[CONTENT_COUNTER];
+                s_flags[CONTENT_COUNTER] = 0;
+            }
+            s_flags[CONTENT_COUNTER]++;
+
+            // if(s_flags[URL_COUNTER] >= 12) {
+            //     s_flags[ADD_INITIAL_URLS] = true;
+            // }
+
+            //wait(1.0);
+            if ( ! getUrl("/admin/inject",
+                          0, // no idea what crc to expect
+                          sb.getBufStart(),
+                          expect,
+                          g_timeAxisIgnore)
+                 )
+                return false;
+            return false;
+        }
+		s_flags[ADD_INITIAL_URLS] = true;
+	}
+
+	if ( ! s_flags[WAIT_A_BIT] ) {
+		wait(1.5);
+		s_flags[3] = true;
+		return false;
+	}
+
+	// this doc should have qatesttime:197 and qatesttime:198
+	// since it had a EDOCUNCHANGED error the 2nd time around but
+	// different metadata.
+	if ( ! s_flags[EXAMINE_RESULTS1] ) {
+	 	s_flags[EXAMINE_RESULTS1] = true;
+	 	if ( ! getUrl ( "/search?c=qatest123&qa=1&"
+				"format=json&"
+				"q=qatesttime:197",
+	 			702467314 ) )
+	 		return false;
+	}
+
+    return true;
+}
+
+bool qaWarcFiles ( ) {
+	if ( ! s_flags[DELETE_COLLECTION] ) {
+		s_flags[DELETE_COLLECTION] = true;
+		if ( ! getUrl ( "/admin/delcoll?xml=1&delcoll=qatest123" ) )
+			return false;
+	}
+
+	if ( ! s_flags[ADD_COLLECTION] ) {
+		s_flags[ADD_COLLECTION] = true;
+		if ( ! getUrl ( "/admin/addcoll?addcoll=qatest123&xml=1&"
+				"collectionips=127.0.0.1" , 
+				// checksum of reply expected
+				238170006 ) )
+			return false;
+	}
+
+	if ( ! s_flags[SET_PARAMETERS] ) {
+		s_flags[SET_PARAMETERS] = true;
+		if ( ! getUrl ( "/admin/spider?c=qatest123&qa=1&mit=0&mns=1"
+				// no spider replies because it messes
+				// up our last test to make sure posdb
+				// is 100% empty. 
+				// see "index spider replies" in Parms.cpp.
+				"&isr=0"
+				// turn off use robots to avoid that
+				// xyz.com/robots.txt redir to seekseek.com
+				"&obeyRobots=0"
+				// This is what we are testing
+				"&usetimeaxis=1"
+				// we are indexing warc files
+				"&indexwarcs=1"
+				,
+				// checksum of reply expected
+				0 ) )
+			return false;
+	}
+
+
+	//
+	// Inject urls, return false if not done yet.
+	// Here we alternate sending the same url -> content pair with sending 
+	// the same url with different content to simulate a site that is updated
+	// at about half the rate that we spider them.
+	if ( s_flags[ADD_INITIAL_URLS] == 0) {
+		s_flags[ADD_INITIAL_URLS]++;
+		SafeBuf sb;
+
+		sb.safePrintf("&c=qatest123"
+					  "&format=json"
+					  "&url=http://%s:%"INT32"/test.warc.gz"
+				  , iptoa(g_hostdb.m_myHost->m_ip)
+				  , (int32_t)g_hostdb.m_myHost->m_httpPort
+
+			      );
+		if ( ! getUrl ( "/admin/inject",0,sb.getBufStart()) )
+			return false;
+	}
+	if ( s_flags[EXAMINE_RESULTS1] == 0) {
+		s_flags[EXAMINE_RESULTS1]++;
+		if ( ! getUrl ( "/search?c=qatest123&qa=1&format=xml&q=%2Bthe"
+				"&dsrt=500",
+				702467314 ) )
+			return false;
+	}
+
+
+	if ( s_flags[ADD_INITIAL_URLS] == 1) {
+		s_flags[ADD_INITIAL_URLS]++;
+
+		SafeBuf sb;
+		sb.safePrintf("&c=qatest123"
+				"&format=json"
+				"&url=http://%s:%"INT32"/test.arc.gz"
+				, iptoa(g_hostdb.m_myHost->m_ip)
+				, (int32_t)g_hostdb.m_myHost->m_httpPort);
+
+		if ( ! getUrl ( "/admin/inject",0,sb.getBufStart()) )
+			return false;
+	}
+
+	if ( s_flags[EXAMINE_RESULTS2] == 0) {
+		s_flags[EXAMINE_RESULTS2]++;
+		if ( ! getUrl ( "/search?c=qatest123&qa=1&format=xml&q=%2Bthe"
+				"&dsrt=500",
+				702467314 ) )
+			return false;
+	}
+	return true;
+}
+
+bool qaInjectMetadata ( ) {
+	if ( ! s_flags[DELETE_COLLECTION] ) {
+		s_flags[DELETE_COLLECTION] = true;
+		if ( ! getUrl ( "/admin/delcoll?xml=1&delcoll=qatest123" ) )
+			return false;
+	}
+
+	if ( ! s_flags[ADD_COLLECTION] ) {
+		s_flags[ADD_COLLECTION] = true;
+		if ( ! getUrl ( "/admin/addcoll?addcoll=qatest123&xml=1&"
+				"collectionips=127.0.0.1" , 
+				// checksum of reply expected
+				238170006 ) )
+			return false;
+	}
+
+	if ( ! s_flags[SET_PARAMETERS] ) {
+		s_flags[SET_PARAMETERS] = true;
+		if ( ! getUrl ( "/admin/spider?c=qatest123&qa=1&mit=0&mns=1"
+				// no spider replies because it messes
+				// up our last test to make sure posdb
+				// is 100% empty. 
+				// see "index spider replies" in Parms.cpp.
+				"&isr=0"
+				// turn off use robots to avoid that
+				// xyz.com/robots.txt redir to seekseek.com
+				"&obeyRobots=0"
+				// This is what we are testing
+				"&usetimeaxis=1"
+				,
+				// checksum of reply expected
+				0 ) )
+			return false;
+	}
+
+
+	//
+	// Inject urls, return false if not done yet.
+	// Here we alternate sending the same url -> content pair with sending 
+	// the same url with different content to simulate a site that is updated
+	// at about half the rate that we spider them.
+	if ( s_flags[ADD_INITIAL_URLS] == 0) {
+
+		char* metadata = "{\"testtest\":42,\"a-hyphenated-name\":5, "
+			"\"a-string-value\":\"can we search for this\", "
+			"\"an array\":[\"a\",\"b\", \"c\", 1,2,3], "
+			"\"a field with spaces\":6, \"compound\":{\"field\":7}}";
+		
+		s_flags[ADD_INITIAL_URLS]++;
+		SafeBuf sb;
+
+		sb.safePrintf("&c=qatest123"
+					  "&format=json"
+					  "&spiderlinks=1"
+					  "&url=http://%s:%"INT32"/test.warc.gz"
+					  "&metadata=%s"
+					  , iptoa(g_hostdb.m_myHost->m_ip)
+					  , (int32_t)g_hostdb.m_myHost->m_httpPort
+					  , metadata
+					  );
+		if ( ! getUrl ( "/admin/inject",0,sb.getBufStart()) )
+			return false;
+	}
+	if ( s_flags[EXAMINE_RESULTS1] == 0) {
+		s_flags[EXAMINE_RESULTS1]++;
+		log("searching for metadata");
+		if ( ! getUrl ( "/search?c=qatest123&q=testtest%3A42"
+                        "&n=1000&sb=1&dr=0&sc=0&s=0&showerrors=1&format=json",
+                        1,// Checksum
+						NULL,
+                        "hits\":106"
+                        ) )
+		  return false;
+	}
+
+	if ( s_flags[EXAMINE_RESULTS2] == 0) {
+		s_flags[EXAMINE_RESULTS2]++;
+		log("searching for metadata");
+		if ( ! getUrl ( "/search?c=qatest123&q=a-hyphenated-name%3A5"
+                        "&n=1000&sb=1&dr=0&sc=0&s=0&showerrors=1&format=json",
+                        1,// Checksum
+						NULL,
+                        "hits\":106"
+                        ) )
+		  return false;
+	}
+
+	if ( s_flags[EXAMINE_RESULTS3] == 0) {
+		s_flags[EXAMINE_RESULTS3]++;
+		log("searching for metadata");
+		if ( ! getUrl ( "/search?c=qatest123&q=a-string-value%3A\"can+we+search+for+this\""
+                        "&n=1000&sb=1&dr=0&sc=0&s=0&showerrors=1&format=json",
+                        1,// Checksum
+						NULL,
+                        "hits\":106"
+                        ) )
+		  return false;
+	}
+
+	return true;
+}
+
+bool qaMetadataFacetSearch ( ) {
+	if ( ! s_flags[DELETE_COLLECTION] ) {
+		s_flags[DELETE_COLLECTION] = true;
+		if ( ! getUrl ( "/admin/delcoll?xml=1&delcoll=qatest123" ) )
+			return false;
+	}
+
+	if ( ! s_flags[ADD_COLLECTION] ) {
+		s_flags[ADD_COLLECTION] = true;
+		if ( ! getUrl ( "/admin/addcoll?addcoll=qatest123&xml=1&"
+				"collectionips=127.0.0.1" , 
+				// checksum of reply expected
+				238170006 ) )
+			return false;
+	}
+
+	if ( ! s_flags[SET_PARAMETERS] ) {
+		s_flags[SET_PARAMETERS] = true;
+		if ( ! getUrl ( "/admin/spider?c=qatest123&qa=1&mit=0&mns=1"
+				// no spider replies because it messes
+				// up our last test to make sure posdb
+				// is 100% empty. 
+				// see "index spider replies" in Parms.cpp.
+				"&isr=0"
+				// turn off use robots to avoid that
+				// xyz.com/robots.txt redir to seekseek.com
+				"&obeyRobots=0"
+                // This is what we are testing
+				"&usetimeaxis=1"
+				"&de=0"
+				,
+				// checksum of reply expected
+				238170006 ) )
+			return false;
+	}
+
+
+	// this only loads once
+	loadUrls();
+	int32_t numDocsToInject = s_ubuf2.length()/(int32_t)sizeof(char *);
+
+
+	//
+	// Inject urls, return false if not done yet.
+	// Here we alternate sending the same url -> content pair with sending 
+    // the same url with different content to simulate a site that is updated
+    // at about half the rate that we spider them.
+	if ( ! s_flags[ADD_INITIAL_URLS] ) {
+		for ( ; s_flags[URL_COUNTER] < numDocsToInject ; s_flags[URL_COUNTER]++) {
+            // inject using html api
+            SafeBuf sb;
+
+            char* expect = "[Success]";
+
+            sb.safePrintf("&c=qatest123&deleteurl=0&"
+                          "format=xml&u=");
+            sb.urlEncode ( s_urlPtrs[s_flags[URL_COUNTER]]);
+            sb.safePrintf("&hasmime=1");
+            sb.safePrintf("&metadata= {\"string-facets\":\"testing %d\", \"number-facets\":%d }",
+						  s_flags[URL_COUNTER] % 10,s_flags[URL_COUNTER] % 10);
+            sb.safePrintf("&content=");
+            sb.urlEncode(s_contentPtrs[s_flags[URL_COUNTER]]);
+            sb.nullTerm();
+
+
+			s_flags[URL_COUNTER]++;
+            if ( ! getUrl("/admin/inject",
+                          0, // no idea what crc to expect
+                          sb.getBufStart(),
+                          expect,
+                          g_timeAxisIgnore)
+                 )
+                return false;
+            return false;
+        }
+		s_flags[ADD_INITIAL_URLS] = true;
+	}
+
+	if ( ! s_flags[WAIT_A_BIT] ) {
+		wait(1.5);
+		s_flags[3] = true;
+		return false;
+	}
+
+	// if ( ! s_flags[EXAMINE_RESULTS] ) {
+	// 	s_flags[16] = true;
+	// 	if ( ! getUrl ( "/search?c=qatest123&qa=1&q=%2Bthe"
+	// 			"&dsrt=500",
+	// 			702467314 ) )
+	// 		return false;
+	// }
+
+    return true;
+}
+
 
 
 bool qaimport () {
@@ -1241,7 +1832,7 @@ bool qaimport () {
 	// turn spiders off so it doesn't spider while we are importing
 	if ( ! s_flags[18] ) {
 		s_flags[18] = true;
-		if ( ! getUrl ( "/admin/spider?cse=0&c=qatest123",
+		if ( ! getUrl ( "/admin/spider?cse=0&qa=1&c=qatest123",
 				// checksum of reply expected
 				238170006 ) )
 			return false;
@@ -1317,6 +1908,9 @@ bool qaimport () {
 	return true;
 }
 
+
+
+
 bool qainlinks() {
 
 	//
@@ -1345,7 +1939,7 @@ bool qainlinks() {
 	// turn spiders off so it doesn't spider while we are importing
 	if ( ! s_flags[18] ) {
 		s_flags[18] = true;
-		if ( ! getUrl ( "/admin/spider?cse=0&c=qatest123",
+		if ( ! getUrl ( "/admin/spider?cse=0&qa=1&c=qatest123",
 				// checksum of reply expected
 				238170006 ) )
 			return false;
@@ -1477,7 +2071,7 @@ bool qareindex() {
 	// turn off images thumbnails
 	if ( ! s_flags[17] ) {
 		s_flags[17] = true;
-		if ( ! getUrl ( "/admin/spider?c=qatest123&mit=0&mns=1",
+		if ( ! getUrl ( "/admin/spider?c=qatest123&qa=1&mit=0&mns=1",
 				// checksum of reply expected
 				238170006 ) )
 			return false;
@@ -1544,6 +2138,7 @@ bool qareindex() {
 			      "ufp=custom&"
 			      // zero spiders if not isreindex
 			      "fe1=default&hspl1=0&hspl1=1&fsf1=1.000000&"
+			      "fdu1=0&"
 			      "mspr1=0&mspi1=0&xg1=1000&fsp1=45&"
 		);
 		if ( ! getUrl ( "/admin/filters",0,sb.getBufStart()) )
@@ -1747,7 +2342,7 @@ bool qaspider1 ( ) {
 	// set max spiders to 1 for consistency!
 	if ( ! s_flags[24] ) {
 		s_flags[24] = true;
-		if ( ! getUrl ( "/admin/spider?c=qatest123&mit=0&mns=1"
+		if ( ! getUrl ( "/admin/spider?c=qatest123&qa=1&mit=0&mns=1"
 				// so site2:www.walmart.com works
                                 "&isr=1"
 				,
@@ -1767,15 +2362,15 @@ bool qaspider1 ( ) {
 			      // make it the custom filter
 			      "ufp=custom&"
 
-	       "fe=%%21ismanualadd+%%26%%26+%%21insitelist&hspl=0&hspl=1&fsf=0.000000&mspr=0&mspi=1&xg=1000&fsp=-3&"
+	       "fdu=0&fe=%%21ismanualadd+%%26%%26+%%21insitelist&hspl=0&hspl=1&fsf=0.000000&mspr=0&mspi=1&xg=1000&fsp=-3&"
 
 			      // take out hopcount for now, just test quotas
 			      //	       "fe1=tag%%3Ashallow+%%26%%26+hopcount%%3C%%3D1&hspl1=0&hspl1=1&fsf1=1.000000&mspr1=1&mspi1=1&xg1=1000&fsp1=3&"
 
 			      // just one spider out allowed for consistency
-	       "fe1=tag%%3Ashallow+%%26%%26+sitepages%%3C%%3D20&hspl1=0&hspl1=1&fsf1=1.000000&mspr1=1&mspi1=1&xg1=1000&fsp1=45&"
+	       "fdu1=0&fe1=tag%%3Ashallow+%%26%%26+sitepages%%3C%%3D20&hspl1=0&hspl1=1&fsf1=1.000000&mspr1=1&mspi1=1&xg1=1000&fsp1=45&"
 
-	       "fe2=default&hspl2=0&hspl2=1&fsf2=1.000000&mspr2=0&mspi2=1&xg2=1000&fsp2=45&"
+	       "fdu2=0&fe2=default&hspl2=0&hspl2=1&fsf2=1.000000&mspr2=0&mspi2=1&xg2=1000&fsp2=45&"
 
 		);
 		if ( ! getUrl ( "/admin/filters",0,sb.getBufStart()) )
@@ -1926,8 +2521,8 @@ bool qaspider1 ( ) {
 	if ( ! s_flags[17] ) {
 		s_flags[17] = true;
 		if ( ! getUrl ( "/search?c=qatest123&qa=1&format=xml&"
-				"q=site2%3Awww.walmart.com+"
-				"gbsortby%3Agbspiderdate",
+				"q=gbssSubdomain%3Awww.walmart.com+"
+				"gbsortbyint%3AgbssDownloadStartTime",
 				999 ) )
 			return false;
 	}
@@ -2014,7 +2609,7 @@ bool qaspider2 ( ) {
 	// turn off images thumbnails
 	if ( ! s_flags[24] ) {
 		s_flags[24] = true;
-		if ( ! getUrl ( "/admin/spider?c=qatest123&mit=0&mns=1",
+		if ( ! getUrl ( "/admin/spider?c=qatest123&qa=1&mit=0&mns=1",
 				// checksum of reply expected
 				238170006 ) )
 			return false;
@@ -2030,7 +2625,7 @@ bool qaspider2 ( ) {
 			      // make it the custom filter
 			      "ufp=custom&"
 
-	       "fe=%%21ismanualadd+%%26%%26+%%21insitelist&hspl=0&hspl=1&fsf=0.000000&mspr=0&mspi=1&xg=1000&fsp=-3&"
+	       "fdu=0&fe=%%21ismanualadd+%%26%%26+%%21insitelist&hspl=0&hspl=1&fsf=0.000000&mspr=0&mspi=1&xg=1000&fsp=-3&"
 
 			      // take out hopcount for now, just test quotas
 			      //	       "fe1=tag%%3Ashallow+%%26%%26+hopcount%%3C%%3D1&hspl1=0&hspl1=1&fsf1=1.000000&mspr1=1&mspi1=1&xg1=1000&fsp1=3&"
@@ -2038,9 +2633,9 @@ bool qaspider2 ( ) {
 			      // sitepages is a little fuzzy so take it
 			      // out for this test and use hopcount!!!
 			      //"fe1=tag%%3Ashallow+%%26%%26+sitepages%%3C%%3D20&hspl1=0&hspl1=1&fsf1=1.000000&mspr1=1&mspi1=1&xg1=1000&fsp1=45&"
-			      "fe1=tag%%3Ashallow+%%26%%26+hopcount<%%3D1&hspl1=0&hspl1=1&fsf1=1.000000&mspr1=1&mspi1=1&xg1=1000&fsp1=45&"
+			      "fdu1=0&fe1=tag%%3Ashallow+%%26%%26+hopcount<%%3D1&hspl1=0&hspl1=1&fsf1=1.000000&mspr1=1&mspi1=1&xg1=1000&fsp1=45&"
 
-	       "fe2=default&hspl2=0&hspl2=1&fsf2=1.000000&mspr2=0&mspi2=1&xg2=1000&fsp2=45&"
+	       "fdu2=0&fe2=default&hspl2=0&hspl2=1&fsf2=1.000000&mspr2=0&mspi2=1&xg2=1000&fsp2=45&"
 
 		);
 		if ( ! getUrl ( "/admin/filters",0,sb.getBufStart()) )
@@ -2219,7 +2814,7 @@ bool qascrape ( ) {
 	// turn off images thumbnails
 	if ( ! s_flags[24] ) {
 		s_flags[24] = true;
-		if ( ! getUrl ( "/admin/spider?c=qatest123&mit=0&mns=1",
+		if ( ! getUrl ( "/admin/spider?c=qatest123&qa=1&mit=0&mns=1",
 				// checksum of reply expected
 				238170006 ) )
 			return false;
@@ -2338,7 +2933,7 @@ bool qajson ( ) {
 	// turn off images thumbnails
 	if ( ! s_flags[24] ) {
 		s_flags[24] = true;
-		if ( ! getUrl ( "/admin/spider?c=qatest123&mit=0&mns=1"
+		if ( ! getUrl ( "/admin/spider?c=qatest123&qa=1&mit=0&mns=1"
 				// index spider replies status docs
 				"&isr=1"
 				,
@@ -2441,7 +3036,7 @@ bool qajson ( ) {
 	if ( ! s_flags[12] ) {
 		s_flags[12] = true;
 		if ( ! getUrl ( "/search?c=qatest123&qa=1&format=json&"
-				"q=inurl2%3Aquirksmode.org%2Fm%2F",
+				"q=gbssUrl%3Aquirksmode.org%2Fm%2F",
 				-1310551262 ) )
 			return false;
 	}
@@ -2562,7 +3157,7 @@ bool qaxml ( ) {
 	// turn off images thumbnails
 	if ( ! s_flags[24] ) {
 		s_flags[24] = true;
-		if ( ! getUrl ( "/admin/spider?c=qatest123&mit=0&mns=1",
+		if ( ! getUrl ( "/admin/spider?c=qatest123&qa=1&mit=0&mns=1",
 				// checksum of reply expected
 				238170006 ) )
 			return false;
@@ -2810,7 +3405,29 @@ static QATest s_qatests[] = {
 
 	{qaSyntax,
 	 "querySyntaxTest",
-	 "Test the queries in the syntax.html page and inject injectmedemo."}
+	 "Test the queries in the syntax.html page and inject injectmedemo."},
+
+	{qaTimeAxis,
+	 "timeAxisTest",
+	 "Use Inject api to inject the same url at different times, "
+	 "sometimes changed and sometimes not.  Ensure docId is different "
+	 "when content has changed, even if the url is the same. "},
+
+
+	// {qaWarcFiles,
+	//  "indexWarcFiles",
+	//  "Ensure the spider handles arc.gz and warc.gz file formats."},
+
+	{qaInjectMetadata,
+	 "injectMetadata",
+	 "When we pass json encoded metadata to an injection, make sure we can"
+     "search for the fields."},
+
+	{qaMetadataFacetSearch,
+	 "metadatafacetsearch",
+	 "When we pass json encoded metadata to an injection, make sure the"
+     "metadata is faceted properly."}
+
 
 };
 
@@ -2830,6 +3447,7 @@ bool qatest ( ) {
 	if ( s_registered ) {
 		g_loop.unregisterSleepCallback(NULL,qatestWrapper);
 		s_registered = false;
+		log("qa: done waiting");
 	}
 
 	if ( ! s_callback ) s_callback = qatest;

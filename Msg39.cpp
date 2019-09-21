@@ -34,6 +34,10 @@ Msg39::Msg39 () {
 	reset();
 }
 
+Msg39::~Msg39 () {
+	reset();
+}
+
 void Msg39::reset() {
 	if ( m_inUse ) { char *xx=NULL;*xx=0; }
 	m_allocedTree = false;
@@ -46,8 +50,16 @@ void Msg39::reset() {
 
 void Msg39::reset2() {
 	// reset lists
-	for ( int32_t j = 0 ; j < m_msg2.m_numLists ; j++ ) 
-		m_lists[j].freeList();
+	int32_t nqt = m_stackBuf.getLength() / sizeof(RdbList);
+	//for ( int32_t j = 0 ; j < m_msg2.m_numLists && m_lists ; j++ ) {
+	for ( int32_t j = 0 ; j < nqt && m_lists ; j++ ) {
+		//m_lists[j].freeList();
+		//log("msg39: destroy list @ 0x%"PTRFMT,(PTRTYPE)&m_lists[j]);
+		// same thing but more generic
+		m_lists[j].destructor();
+	}
+	m_stackBuf.purge();
+	m_lists = NULL;
 	m_msg2.reset();
 	m_posdbTable.reset();
 	m_callback = NULL;
@@ -142,6 +154,7 @@ void Msg39::getDocIds ( UdpSlot *slot ) {
         int32_t requestSize = m_slot->m_readBufSize;
         // ensure it's size is ok
         if ( requestSize < 8 ) { 
+	BadReq:
 		g_errno = EBADREQUESTSIZE; 
 		log(LOG_LOGIC,"query: msg39: getDocIds: %s." , 
 		    mstrerror(g_errno) );
@@ -157,7 +170,11 @@ void Msg39::getDocIds ( UdpSlot *slot ) {
 					  m_r->m_buf );
 
 	// sanity check
-	if ( finalSize != requestSize ) {char *xx=NULL;*xx=0; }
+	if ( finalSize != requestSize ) {
+		log("msg39: sending bad request.");
+		goto BadReq;
+		//char *xx=NULL;*xx=0; }
+	}
 
 	getDocIds2 ( m_r );
 }
@@ -205,7 +222,8 @@ void Msg39::getDocIds2 ( Msg39Request *req ) {
 	if ( ! m_tmpq.set2 ( m_r->ptr_query  , 
 			     m_r->m_language ,
 			     m_r->m_queryExpansion ,
-			     m_r->m_useQueryStopWords ) ) {
+			     m_r->m_useQueryStopWords ,
+			     m_r->m_maxQueryTerms ) ) {
 		log("query: msg39: setQuery: %s." , 
 		    mstrerror(g_errno) );
 		sendReply ( m_slot , this , NULL , 0 , 0 , true );
@@ -223,11 +241,14 @@ void Msg39::getDocIds2 ( Msg39Request *req ) {
 	if ( m_tmpq.getNumTerms() != m_r->m_nqt ) {
 		g_errno = EBADENGINEER;
 		log("query: Query parsing inconsistency for q=%s. "
+		    "%i != %i. "
 		    "langid=%"INT32". Check langids and m_queryExpansion parms "
 		    "which are the only parms that could be different in "
 		    "Query::set2(). You probably have different mysynoyms.txt "
 		    "files on two different hosts! check that!!"
 		    ,m_tmpq.m_orig
+		    ,(int)m_tmpq.getNumTerms()
+		    ,(int)m_r->m_nqt
 		    ,(int32_t)m_r->m_language
 		    );
 		sendReply ( m_slot , this , NULL , 0 , 0 , true );
@@ -713,7 +734,7 @@ bool Msg39::getLists () {
 			     //(int64_t)m_tmpq.m_qterms[i].m_explicitBit  ,
 			     //(int64_t)m_tmpq.m_qterms[i].m_implicitBits ,
 			     (int32_t)m_tmpq.m_qterms[i].m_hardCount ,
-			     (int32_t)m_tmpq.m_componentCodes[i],
+			     (int32_t)m_tmpq.m_qterms[i].m_componentCode,
 			     (int32_t)m_tmpq.getTermLen(i) ,
 			     isSynonym,
 			     (int32_t)m_tmpq.m_langId ); // ,tt
@@ -762,6 +783,19 @@ bool Msg39::getLists () {
 	// split is us????
 	//int32_t split = g_hostdb.m_myHost->m_group;
 	int32_t split = g_hostdb.m_myHost->m_shardNum;
+
+
+	int32_t nqt = m_tmpq.getNumTerms();
+	int32_t need = sizeof(RdbList) * nqt ;
+	m_stackBuf.setLabel("stkbuf2");
+	if ( ! m_stackBuf.reserve ( need ) ) return true;
+	m_lists = (IndexList *)m_stackBuf.getBufStart();
+	m_stackBuf.setLength ( need );
+	for ( int32_t i = 0 ; i < nqt ; i++ ) {
+		m_lists[i].constructor();
+		//log("msg39: constructlist @ 0x%"PTRFMT,(PTRTYPE)&m_lists[i]);
+	}
+
 	// call msg2
 	if ( ! m_msg2.getLists ( rdbId                      ,
 				 m_r->m_collnum,//m_r->ptr_coll              ,
@@ -1452,6 +1486,9 @@ void Msg39::estimateHitsAndSendReply ( ) {
 			need += 4;
 			// then buckets. keys and counts
 			need += (4+sizeof(FacetEntry)) * used;
+			// for # of ALL docs that have this facet, even if
+			// not in search results
+			need += sizeof(int64_t);
 		}
 		// allocate
 		SafeBuf tmp;
@@ -1523,6 +1560,11 @@ void Msg39::estimateHitsAndSendReply ( ) {
 		//
 		/////////////
 
+		// how many docs IN TOTAL had the facet, including all docs
+		// that did not match the query.
+		// it's 1-1 with the query terms.
+		mr.ptr_numDocsThatHaveFacetList  = NULL;
+		mr.size_numDocsThatHaveFacetList = nqt * sizeof(int64_t);
 
 		// . that is pretty much it,so serialize it into buffer,"reply"
 		// . mr.ptr_docIds, etc., will point into the buffer so we can
@@ -1548,6 +1590,44 @@ void Msg39::estimateHitsAndSendReply ( ) {
 		topDocIds    = (int64_t *) mr.ptr_docIds;
 		topScores    = (double    *) mr.ptr_scores;
 		topRecs      = (key_t     *) mr.ptr_clusterRecs;
+
+		// sanity
+		if ( nqt != m_msg2.m_numLists )
+			log("query: nqt mismatch for q=%s",m_tmpq.m_orig);
+		int64_t *facetCounts=(int64_t*)mr.ptr_numDocsThatHaveFacetList;
+		for ( int32_t i = 0 ; i < nqt ; i++ ) {
+			QueryTerm *qt = &m_tmpq.m_qterms[i];
+			// default is 0 for non-facet termlists
+			facetCounts[i] = qt->m_numDocsThatHaveFacet;
+		}
+		/*
+		  MDW - no, because some docs have the same facet field
+		  multiple times and we want a doc count. so do it in Posdb.cpp
+		// fill these in now too
+		int64_t *facetCounts=(int64_t*)mr.ptr_numDocsThatHaveFacetList;
+		for ( int32_t i = 0 ; i < nqt ; i++ ) {
+			// default is 0 for non-facet termlists
+			facetCounts[i] = 0;
+			QueryTerm *qt = &m_tmpq.m_qterms[i];
+			// skip if not facet term
+			bool isFacetTerm = false;
+			if ( qt->m_fieldCode == FIELD_GBFACETSTR )
+				isFacetTerm = true;
+			if ( qt->m_fieldCode == FIELD_GBFACETINT )
+				isFacetTerm = true;
+			if ( qt->m_fieldCode == FIELD_GBFACETFLOAT )
+				isFacetTerm = true;
+			if ( ! isFacetTerm )
+				continue;
+			RdbList *list = &m_lists[i];
+			// they should be all 12 bytes except first rec which
+			// is 18 bytes.
+			int64_t count = list->m_listSize;
+			count -= 6;
+			count /= 12;
+			facetCounts[i] = count;
+		}
+		*/	
 	}
 
 	int32_t docCount = 0;

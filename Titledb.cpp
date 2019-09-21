@@ -56,14 +56,14 @@ bool Titledb::init ( ) {
 	// do not use any page cache if doing tmp cluster in order to
 	// prevent swapping
 	if ( g_hostdb.m_useTmpCluster ) pcmem = 0;
-	int32_t pageSize = GB_INDEXDB_PAGE_SIZE;
+	//int32_t pageSize = GB_INDEXDB_PAGE_SIZE;
 	// init the page cache
 	// . MDW: "minimize disk seeks" not working otherwise i'd enable it!
-	if ( ! m_pc.init ( "titledb",
-			   RDB_TITLEDB,
-			   pcmem    ,
-			   pageSize ) )
-		return log("db: Titledb init failed.");
+	// if ( ! m_pc.init ( "titledb",
+	// 		   RDB_TITLEDB,
+	// 		   pcmem    ,
+	// 		   pageSize ) )
+	// 	return log("db: Titledb init failed.");
 
 	// each entry in the cache is usually just a single record, no lists
 	//int32_t maxCacheNodes = g_conf.m_titledbMaxCacheMem / (10*1024);
@@ -89,7 +89,7 @@ bool Titledb::init ( ) {
 			    0,//maxCacheNodes               ,
 			    false                       ,// half keys?
 			    false                       ,// g_conf.m_titledbSav
-			    &m_pc               , // page cache ptr
+			    NULL,//&m_pc               , // page cache ptr
 			    true                        ) )// is titledb?
 		return false;
 	return true;

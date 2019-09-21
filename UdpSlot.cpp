@@ -291,14 +291,17 @@ bool UdpSlot::sendSetup ( char      *msg         ,
 
 	// can't be too big
 	if ( msgSize / m_maxDgramSize + 1 >= MAX_DGRAMS ) {
-		g_errno = EMSGTOOBIG;//EBADENGINEER;
 		int32_t maxMsgSize = m_maxDgramSize * MAX_DGRAMS;
 		log(LOG_LOGIC,"udp: Msg size of %"INT32" bytes is too big "
 		    "to send. Max dgram size = %"INT32". Max dgrams = "
-		    "%"INT32". Max msg size = %"INT32".",
+		    "%"INT32". Max msg size = %"INT32" msgtype=0x%hhx. Please "
+		    "increase the #define MAX_DGRAMS in UdpSlot.h and "
+		    "recompile to fix this.",
 		    (int32_t)msgSize,(int32_t)m_maxDgramSize,
-		    (int32_t)MAX_DGRAMS,maxMsgSize);
-		char *xx=NULL; *xx=0;
+		    (int32_t)MAX_DGRAMS,maxMsgSize,
+		    msgType);
+		//char *xx=NULL; *xx=0;
+		g_errno = EMSGTOOBIG;//EBADENGINEER;
 		return false;
 		//msgSize = MAX_DGRAMS * DGRAM_SIZE;
 		//sleep(50000);
@@ -1277,6 +1280,8 @@ bool UdpSlot::readDatagramOrAck ( int        sock    ,
 	}
 	// handle acks
 	if ( m_proto->isAck ( peek , peekSize ) ) {
+		// if ack for msg4 core to test its save stuff
+		//if ( m_msgType == 0x04 ) { char *xx=NULL;*xx=0; }
 		readAck ( sock, dgramNum , now ); 
 		// keep stats
 		if ( m_host ) m_host->m_dgramsFrom++;
@@ -1499,6 +1504,9 @@ bool UdpSlot::readDatagramOrAck ( int        sock    ,
 	// if its a msg 0x0c reply from a proxy ove roadrunner wireless
 	// they tend to damage our packets for some reason so i repeat
 	// the ip for a total of an 8 byte reply
+	/*
+	  MDW: this seems to be causing problems on local networks
+	  so taking it out. 4/7/2015.
 	if ( m_msgType == 0x0c && msgSize == 12 && peekSize == 24 &&
 	     // must be reply! not request.
 	     m_callback ) {
@@ -1525,6 +1533,7 @@ bool UdpSlot::readDatagramOrAck ( int        sock    ,
 			return true;
 		}
 	}	
+	*/
 
 	// we're doing the call to recvfrom() for sure now
 	*discard = false;
@@ -1569,6 +1578,7 @@ bool UdpSlot::readDatagramOrAck ( int        sock    ,
 					 0      ,
 					 NULL   ,
 					 NULL   );
+		//log("udp: recvfrom1 = %i",(int)numRead);
 		// let caller know how much we read for stats purposes
 		*readSize = numRead;
 		// restore what was at the header before we stored it there
@@ -1611,6 +1621,7 @@ bool UdpSlot::readDatagramOrAck ( int        sock    ,
 				   0             , 
 				   NULL          , 
 				   NULL          );
+	//log("udp: recvfrom2 = %i",(int)dgramSize);
 	// bail on error, how could this happen?
 	if ( dgramSize < 0 ) {
 		// valgrind
@@ -1886,6 +1897,15 @@ int32_t UdpSlot::getScore ( int64_t now ) {
 	     s_token && s_token != this && ! old )
 		return -1;
 	*/
+
+	// do not do sends if callback was called. maybe cancelled?
+	// this was causing us to get into an infinite loop in 
+	// UdpServer.cpp's sendPoll_ass(). there wasn't anything to send i
+	// guess because it got cancelled (?) but we kept returning it here
+	// nonetheless.
+	if ( m_calledCallback )
+		return -1;
+
 	// send ACKs before regular dgrams so we don't hold people up
 	if ( m_sentAckBitsOn < m_readBitsOn && m_proto->useAcks() ) 
 		return 0x7fffffff;

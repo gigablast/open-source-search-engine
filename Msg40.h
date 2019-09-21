@@ -15,7 +15,7 @@
 #include "Msg20.h"      // for getting summary from docId
 #include "Msg17.h"      // a distributed cache of serialized/compressed Msg40s
 //#include "Msg2b.h"      // for generating directories
-#include "IndexReadInfo.h" // STAGE0,...
+//#include "IndexReadInfo.h" // STAGE0,...
 #include "Msg3a.h"
 #include "PostQueryRerank.h"
 
@@ -109,6 +109,7 @@ class Msg40 {
 			  //void (* callback)(class Msg40 *THIS, void *state));
 			  void             (* callback)(void *state));
 
+	void makeCallback();
 	bool gotCacheReply();
 	// a continuation function of getResults() above
 	bool prepareToGetDocIds ( );
@@ -222,11 +223,11 @@ class Msg40 {
 	bool m_doneWithLookup;
 	HashTableX m_facetTextTable;
 	SafeBuf m_facetTextBuf;
-	bool m_firstTime;
+	bool m_calledFacets;
 	int32_t m_omitCount;
 
 	bool printFacetTables ( class SafeBuf *sb ) ;
-	bool printFacetsForTable ( SafeBuf *sb , QueryTerm *qt );
+	int32_t printFacetsForTable ( SafeBuf *sb , QueryTerm *qt );
 	bool lookupFacets ( ) ;
 	void lookupFacets2 ( ) ;
 	void gotFacetText ( class Msg20 *msg20 ) ;

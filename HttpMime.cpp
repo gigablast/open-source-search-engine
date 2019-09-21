@@ -32,6 +32,8 @@ char *g_contentTypeStrings [] = {
 HttpMime::HttpMime () { reset(); }
 
 void HttpMime::reset ( ) {
+	m_mimeStartPtr     = NULL;
+	m_firstCookie      = NULL;
 	m_status           = -1;
 	m_contentLen       = -1;
 	m_lastModifiedDate =  0;
@@ -45,12 +47,15 @@ void HttpMime::reset ( ) {
 	m_locationFieldLen = 0;
 	m_contentEncodingPos = NULL;
 	m_contentLengthPos = NULL;
+	m_contentTypePos   = NULL;
 }
 
 // . returns false if could not get a valid mime
 // . we need the url in case there's a Location: mime that's base-relative
 bool HttpMime::set ( char *buf , int32_t bufLen , Url *url ) {
 	// reset some stuff
+	m_mimeStartPtr     = NULL;
+	m_firstCookie      = NULL;
 	m_contentLen       = -1;
 	m_content          = NULL;
 	m_bufLen           =  0;
@@ -63,11 +68,17 @@ bool HttpMime::set ( char *buf , int32_t bufLen , Url *url ) {
 	if ( bufLen < 13 ) { m_boundaryLen = 0; return false; }
 	// . get the length of the Mime, must end in \r\n\r\n , ...
 	// . m_bufLen is used as the mime length
+	m_mimeStartPtr = buf;
 	m_bufLen = getMimeLen ( buf , bufLen , &m_boundaryLen );
 	// . return false if we had no mime boundary
 	// . but set m_bufLen to 0 so getMimeLen() will return 0 instead of -1
 	//   thus avoiding a potential buffer overflow
-	if ( m_bufLen < 0 ) { m_bufLen = 0; m_boundaryLen = 0; return false; }
+	if ( m_bufLen < 0 ) { 
+		m_bufLen = 0; 
+		m_boundaryLen = 0; 
+		log("mime: no rnrn boundary detected");
+		return false; 
+	}
 	// set this
 	m_content = buf + m_bufLen;
 	// . parse out m_status, m_contentLen, m_lastModifiedData, contentType
@@ -157,9 +168,14 @@ bool HttpMime::parse ( char *mime , int32_t mimeLen , Url *url ) {
 			time_t now = time(NULL);
 			if (m_lastModifiedDate > now) m_lastModifiedDate = now;
 		}
-		else if ( strncasecmp ( p , "Content-Type:"   ,13) == 0 ) 
+		else if ( strncasecmp ( p , "Content-Type:"   ,13) == 0 ) {
 			m_contentType = getContentTypePrivate ( p + 13 );
+			char *s = p + 13;
+			while ( *s == ' ' || *s == '\t' ) s++;
+			m_contentTypePos = s;
+		}
 		else if ( strncasecmp ( p , "Set-Cookie:"   ,10) == 0 ) {
+			if ( ! m_firstCookie ) m_firstCookie = p;
 			m_cookie = p + 11;
 			if ( m_cookie[0] == ' ' ) m_cookie++;
 			m_cookieLen = gbstrlen ( m_cookie );
@@ -210,6 +226,8 @@ bool HttpMime::parse ( char *mime , int32_t mimeLen , Url *url ) {
 // . #3: Sun Nov  6 08:49:37 1994       ;ANSI C's asctime() format
 // . #4: 06 Nov 1994 08:49:37 GMT  ... my own
 // . #5: 2007-12-31
+// . #6: 2008-04-30T20:48:25Z (ISO8601)
+
 time_t atotime ( char *s ) {
 
 	// skip non-alnum padding
@@ -388,6 +406,7 @@ time_t atotime4 ( char *s ) {
 }
 
 // 2007-12-31
+// 2008-04-30T20:48:25Z (ISO8601)
 time_t atotime5 ( char *s ) {
 	// this time structure, once filled, will help yield a time_t
 	struct tm t;
@@ -419,6 +438,7 @@ time_t atotime5 ( char *s ) {
 	t.tm_mday = atol ( s );
 	while ( isdigit (*s) ) s++;
 	while ( isspace (*s) ) s++;	
+        if (*s == 'T')         s++;
 
 	// TIME
 	getTime ( s , &t.tm_sec , &t.tm_min , &t.tm_hour );
@@ -533,6 +553,8 @@ int32_t getContentTypeFromStr ( char *s ) {
 	else if (!strcasecmp(s,"application/vnd.ms-powerpoint")) ct = CT_PPT;
 	else if (!strcasecmp(s,"application/mspowerpoint") ) ct = CT_PPT;
 	else if (!strcasecmp(s,"application/postscript"  ) ) ct = CT_PS;
+	else if (!strcasecmp(s,"application/warc"        ) ) ct = CT_WARC;
+	else if (!strcasecmp(s,"application/arc"         ) ) ct = CT_ARC;
         else if (!strcasecmp(s,"image/gif"               ) ) ct = CT_GIF;
         else if (!strcasecmp(s,"image/jpeg"              ) ) ct = CT_JPG;
         else if (!strcasecmp(s,"image/png"               ) ) ct = CT_PNG;
@@ -540,6 +562,7 @@ int32_t getContentTypeFromStr ( char *s ) {
         else if (!strncasecmp(s,"image/",6               ) ) ct = CT_IMAGE;
 	else if (!strcasecmp(s,"application/javascript"  ) ) ct = CT_JS;
 	else if (!strcasecmp(s,"application/x-javascript") ) ct = CT_JS;
+	else if (!strcasecmp(s,"application/x-gzip"      ) ) ct = CT_GZ;
 	else if (!strcasecmp(s,"text/javascript"         ) ) ct = CT_JS;
 	else if (!strcasecmp(s,"text/x-js"               ) ) ct = CT_JS;
 	else if (!strcasecmp(s,"text/js"                 ) ) ct = CT_JS;
@@ -624,6 +647,17 @@ bool s_init = false;
 
 void resetHttpMime ( ) {
 	s_mimeTable.reset();
+}
+
+const char *extensionToContentTypeStr2 ( char *ext , int32_t elen ) {
+	// assume text/html if no extension provided
+	if ( ! ext || ! ext[0] ) return NULL;
+	if ( elen <= 0 ) return NULL;
+	// get hash for table look up
+	int32_t key = hash32 ( ext , elen );
+	char **pp = (char **)s_mimeTable.getValue ( &key );
+	if ( ! pp ) return NULL;
+	return *pp;
 }
 
 const char *HttpMime::getContentTypeFromExtension ( char *ext , int32_t elen) {
@@ -1051,7 +1085,10 @@ static char *s_ext[] = {
      "xwd" , "image/x-xwindowdump",
      "xyz" , "chemical/x-pdb",
       "zip" , "application/zip" ,
-      "xpi", "application/x-xpinstall"
+      "xpi", "application/x-xpinstall",
+      // newstuff
+      "warc", "application/warc",
+      "arc", "application/arc"
 };
 
 // . init s_mimeTable in this call
@@ -1090,3 +1127,43 @@ bool HttpMime::init ( ) {
 	return true;
 }
 
+bool HttpMime::addCookiesIntoBuffer ( SafeBuf *sb ) {
+	// point to start of request
+	if ( m_bufLen <= 0 ) return true;
+	if ( ! m_mimeStartPtr ) return true;
+	if ( ! m_firstCookie  ) return true;
+	char *p = m_firstCookie;
+	char *pend = m_mimeStartPtr + m_bufLen;
+	while ( p < pend ) {
+		// compute the length of the string starting at p and ending
+		// at a \n or \r
+		int32_t len = 0;
+		while ( &p[len] < pend && p[len]!='\n' && p[len]!='\r' ) len++;
+		// . if we could not find a \n or \r there was an error
+		// . MIMEs must always end in \n or \r
+		if ( &p[len] >= pend ) return false;
+		// . stick a NULL at the end of the line 
+		// . overwrites \n or \r TEMPORARILY
+		char c = p [ len ];
+		p [ len ] = '\0';
+		// parse out some meaningful data
+		if ( strncasecmp ( p , "Set-Cookie:"   ,10) == 0 ) {
+			char *cookie = p + 11;
+			if ( cookie[0] == ' ' ) cookie++;
+			char *cookieEnd = cookie;
+			for ( ; *cookieEnd && *cookieEnd != ';';cookieEnd++);
+			int32_t cookieLen = cookieEnd - cookie;
+			// accumulate into buffer
+			sb->safeMemcpy ( cookie , cookieLen );
+			sb->pushChar(';');
+			sb->nullTerm();
+		}
+		// re-insert the character that we replaced with a '\0'
+		p [ len ] = c;
+		// go to next line
+		p += len;
+		// skip over the cruft at the end of this line
+		while ( p < pend && ( *p=='\r' || *p=='\n' ) ) p++;
+	}
+	return true;
+}

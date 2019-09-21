@@ -10,7 +10,9 @@
 
 // keep these down to save memory
 //#define MAX_QUERY_LEN   8000 // url:XXX can be quite long! (MAX_URL_LEN)
-#define MAX_QUERY_LEN 3200
+//#define MAX_QUERY_LEN 3200
+// support big OR queries for image shingles
+#define ABS_MAX_QUERY_LEN 62000
 // . words need to deal with int32_t list of sites!
 // . remember, words can be string of punctuation, too
 //#define MAX_QUERY_WORDS 5000 
@@ -21,7 +23,8 @@
 // seems like we alloc just enough to hold our words now so that this
 // is really a performance capper but it is used in Summary.cpp
 // and Matches.h so don't go too big just yet
-#define MAX_QUERY_WORDS 800
+//#define MAX_QUERY_WORDS 800
+#define ABS_MAX_QUERY_WORDS 99000
 
 // . how many IndexLists might we get/intersect
 // . we now use a int64_t to hold the query term bits for non-boolean queries
@@ -36,7 +39,8 @@
 //#define MAX_QUERY_TERMS 40
 // how to make a lock pick set loses synonyms from 40!
 //#define MAX_QUERY_TERMS 80
-#define MAX_QUERY_TERMS 160
+//#define MAX_QUERY_TERMS 160
+#define ABS_MAX_QUERY_TERMS 9000
 
 // only allow up to 200 interests from facebook plus manually entered
 // because we are limited by the query terms above so we can only
@@ -270,6 +274,9 @@ class QueryWord {
 			if ( is_wspace_utf8 ( p ) ) return true;
 		return false;
 	};
+	void constructor ();
+	void destructor ();
+
 	//UCScript wordScript() { 
 	//	UChar*foo;
 	//	return ucGetScript(utf16Decode((UChar*)(m_word),&foo));
@@ -397,6 +404,11 @@ class QueryWord {
 class QueryTerm {
 
  public:
+
+	//QueryTerm ( ) { constructor(); };
+
+	void constructor ( ) ;
+
 	// the query word we were derived from
 	QueryWord *m_qword;
 	// . are we a phrase termid or single word termid from that QueryWord?
@@ -457,6 +469,10 @@ class QueryTerm {
 	// values outside the ranges will be ignored
 	char *m_parenList;
 	int32_t  m_parenListLen;
+
+	int32_t   m_componentCode;
+	int64_t   m_termFreq;
+	float     m_termFreqWeight;
 
 	// . our representative bits
 	// . the bits in this bit vector is 1-1 with the QueryTerms
@@ -557,6 +573,7 @@ class QueryTerm {
 	int64_t m_hash64d;
 	int32_t      m_popWeight;
 
+	uint64_t m_numDocsThatHaveFacet;
 };
 
 //#define MAX_OPSLOTS 256
@@ -618,10 +635,10 @@ class Query {
 		    //int32_t  collLen  ,
 		    uint8_t  langId ,
 		    char     queryExpansion ,
-		    bool     useQueryStopWords = true );
-		   //char  boolFlag = 2 , // auto-detect if boolean query
-		   //bool  keepAllSingles = false ,
-		   //int32_t  maxQueryTerms = 0x7fffffff );
+		    bool     useQueryStopWords = true ,
+		    //char  boolFlag = 2 , // auto-detect if boolean query
+		    //bool  keepAllSingles = false ,
+		    int32_t  maxQueryTerms = 0x7fffffff );
 
 	// serialize/deserialize ourselves so we don't have to pass the
 	// unmodified string around and reparse it every time
@@ -674,9 +691,9 @@ class Query {
 	// . the signs and ids are dupped in the QueryTerm classes, too
 	//int64_t *getTermFreqs ( ) { return m_termFreqs ; };
 	//int64_t  getTermFreq  ( int32_t i ) { return m_termFreqs[i]; };
-	int64_t *getTermIds   ( ) { return m_termIds   ; };
-	char      *getTermSigns ( ) { return m_termSigns ; };
-	int32_t      *getComponentCodes   ( ) { return m_componentCodes; };
+	//int64_t *getTermIds   ( ) { return m_termIds   ; };
+	//char      *getTermSigns ( ) { return m_termSigns ; };
+	//int32_t      *getComponentCodes   ( ) { return m_componentCodes; };
 	int64_t  getRawWordId ( int32_t i ) { return m_qwords[i].m_rawWordId;};
 
 	int32_t getNumComponentTerms ( ) { return m_numComponents; };
@@ -871,6 +888,9 @@ class Query {
 		return NULL;
 	};
 
+	// for debugging fhtqt mem leak
+	char *m_st0Ptr;
+
 	// silly little functions that support the BIG HACK
 	//int32_t getNumNonFieldedSingletonTerms() { return m_numTermsSpecial; };
 	//int32_t getTermsFound ( Query *q , char *foundTermVector ) ;
@@ -917,17 +937,26 @@ class Query {
 	int32_t       m_qwordsAllocSize;
 
 	// QueryWords are converted to QueryTerms
-	QueryTerm m_qterms [ MAX_QUERY_TERMS ];
+	//QueryTerm m_qterms [ MAX_QUERY_TERMS ];
 	int32_t      m_numTerms;
 	int32_t      m_numTermsSpecial;
 
+	int32_t m_numTermsUntruncated;
+
 	// separate vectors for easier interfacing, 1-1 with m_qterms
 	//int64_t m_termFreqs      [ MAX_QUERY_TERMS ];
-	int64_t m_termIds        [ MAX_QUERY_TERMS ];
-	char      m_termSigns      [ MAX_QUERY_TERMS ];
-	int32_t      m_componentCodes [ MAX_QUERY_TERMS ];
-	char      m_ignore         [ MAX_QUERY_TERMS ]; // is term ignored?
-	int32_t      m_numComponents;
+	//int64_t m_termIds        [ MAX_QUERY_TERMS ];
+	//char      m_termSigns      [ MAX_QUERY_TERMS ];
+	//int32_t      m_componentCodes [ MAX_QUERY_TERMS ];
+	//char      m_ignore         [ MAX_QUERY_TERMS ]; // is term ignored?
+	SafeBuf    m_stackBuf;
+	QueryTerm *m_qterms         ;
+	//int64_t   *m_termIds        ;
+	//char      *m_termSigns      ;
+	//int32_t   *m_componentCodes ;
+	//char      *m_ignore         ; // is term ignored?
+
+	int32_t   m_numComponents;
 
 	// how many bits in the full vector?
 	//int32_t      m_numExplicitBits;
@@ -965,18 +994,27 @@ class Query {
 	class Host *m_groupThatHasDocId;
 
 	// for holding the filtered query, in utf8
-	char m_buf [ MAX_QUERY_LEN ];
-	int32_t m_bufLen;
+	//char m_buf [ MAX_QUERY_LEN ];
+	//int32_t m_bufLen;
+
+	// for holding the filtered query, in utf8
+	SafeBuf m_sb;
+	char m_tmpBuf3[128];
 
 	// for holding the filtered/NULL-terminated query for doing
 	// matching. basically store phrases in here without punct
 	// so we can point a needle to them for matching in XmlDoc.cpp.
-	char m_needleBuf [ MAX_QUERY_LEN + 1 ];
-	int32_t m_needleBufLen;
+	//char m_needleBuf [ MAX_QUERY_LEN + 1 ];
+	//int32_t m_needleBufLen;
 
 	// the original query
-	char m_orig [ MAX_QUERY_LEN ];
+	//char m_orig [ MAX_QUERY_LEN ];
+	//int32_t m_origLen;
+
+	char *m_orig;
 	int32_t m_origLen;
+	SafeBuf m_osb;
+	char m_otmpBuf[128];
 
 	// we just have a ptr to this so don't pull the rug out
 	//char *m_coll;

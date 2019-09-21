@@ -13,7 +13,7 @@ void Cachedb::reset() {
 
 bool Cachedb::init ( ) {
 	// we use the same disk page size as indexdb (for rdbmap.cpp)
-	int32_t pageSize = GB_INDEXDB_PAGE_SIZE;
+	//int32_t pageSize = GB_INDEXDB_PAGE_SIZE;
 	// set this for debugging
 	//int64_t maxTreeMem = 1000000;
 	// i've seen some debug entries like 33MB because of
@@ -26,7 +26,7 @@ bool Cachedb::init ( ) {
 	// . >1000 bytes of data per rec
 	int32_t maxTreeNodes = maxTreeMem /(sizeof(key96_t)+16+1000);
 	// disk page cache mem, 100MB on gk0 now
-	int32_t pcmem = 0; // g_conf.m_cachedbMaxDiskPageCacheMem;
+	//int32_t pcmem = 0; // g_conf.m_cachedbMaxDiskPageCacheMem;
 	// keep this low if we are the tmp cluster
 	//if ( g_hostdb.m_useTmpCluster ) pcmem = 0;
 	// TODO: would be nice to just do page caching on the satellite files;
@@ -38,13 +38,11 @@ bool Cachedb::init ( ) {
 		m_rdbId = RDB_SERPDB;
 	}
 
-	if ( ! m_pc.init ( m_name ,
-			   m_rdbId, // RDB_CACHEDB,
-			   pcmem    ,
-			   pageSize ,
-			   true     ,  // use shared mem?
-			   false    )) // minimizeDiskSeeks?
-		return log("db: %s init failed.",m_name);
+	// if ( ! m_pc.init ( m_name ,
+	// 		   m_rdbId, // RDB_CACHEDB,
+	// 		   pcmem    ,
+	// 		   pageSize ))
+	// 	return log("db: %s init failed.",m_name);
 	// init the rdb
 	if ( ! m_rdb.init ( g_hostdb.m_dir ,
 			    m_name ,
@@ -62,7 +60,7 @@ bool Cachedb::init ( ) {
 			    0        , // cache nodes
 			    false, // true     , // use half keys
 			    false    , // load cache from disk
-			    &m_pc    ,
+			    NULL,//&m_pc    ,
 			    false    , // false
 			    false    , // preload page cache
 			    sizeof(key96_t) ,

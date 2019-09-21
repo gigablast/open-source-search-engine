@@ -49,9 +49,18 @@ class StateStatsdb {
 static time_t genDate( char *date, int32_t dateLen ) ;
 static void   sendReply ( void *st ) ;
 
+static bool s_graphInUse = false;
+
 // . returns false if blocked, otherwise true
 // . sets g_errno on error
 bool sendPageGraph ( TcpSocket *s, HttpRequest *r ) {
+
+	if ( s_graphInUse ) {
+		char *msg = "stats graph calculating for another user. "
+			"Try again later.";
+		g_httpServer.sendErrorReply(s,500,msg);
+		return true;
+	}
 	
 	char *cgi;
 	int32_t cgiLen;
@@ -129,8 +138,10 @@ bool sendPageGraph ( TcpSocket *s, HttpRequest *r ) {
 				   st->m_samples ,
 				   &st->m_sb2 ,
 				   st               ,
-				   sendReply        ) )
+				   sendReply        ) ) {
+		s_graphInUse = true;
 		return false;
+	}
 
 	// if we didn't block call it ourselves directly
 	sendReply ( st );
@@ -138,9 +149,63 @@ bool sendPageGraph ( TcpSocket *s, HttpRequest *r ) {
 	return true;
 }
 
+void genStatsDataset(SafeBuf *buf, StateStatsdb *st) {
+	if ( ! g_conf.m_useStatsdb ) {
+		buf->safePrintf("{\"error\":\"statsdb disabled\"}\n" );
+        return;
+    }
+    
+
+}
+
 static void writeControls ( SafeBuf *buf, StateStatsdb *st ) ;
+void genStatsGraphTable(SafeBuf *buf, StateStatsdb *st) {
+	if ( ! g_conf.m_useStatsdb ) 
+		buf->safePrintf("<font color=red><b>Statsdb disabled. "
+			       "Turn on in the master controls.</b>"
+			       "</font>\n" );
+
+
+	buf->safePrintf("<table %s>\n",TABLE_STYLE);
+
+	buf->safePrintf("<tr><td bgcolor=#%s>"
+		       "<center>",LIGHT_BLUE);
+
+	/////////////////////////
+	//
+	// insert the div graph here
+	//
+	/////////////////////////
+	buf->cat ( g_statsdb.m_gw );
+
+	// purge it
+	g_statsdb.m_gw.purge();
+	g_statsdb.m_dupTable.reset();
+
+	//"<img src=\"/stats%"INT32".gif\" height=%"INT32" width=%"INT32" "
+	//"border=\"0px\">"
+	//st->m_hostId,
+	//g_statsdb.getImgHeight(),
+	//g_statsdb.getImgWidth());
+
+	buf->safePrintf("</center>"
+		       //"class=\"statsdb_image\">"
+		       "</td></tr>\n");
+
+	// the map key
+	buf->safePrintf("<tr><td>");
+	buf->cat ( st->m_sb2 );
+	buf->safePrintf("</td></tr>\n");
+
+	buf->safePrintf( "</table>\n" );
+}
+
+
+
 
 void sendReply ( void *state ) {
+
+	s_graphInUse = false;
 
 	StateStatsdb *st = (StateStatsdb *)state;
 
@@ -151,6 +216,19 @@ void sendReply ( void *state ) {
 	}
 
 	TcpSocket *s = st->m_socket;
+
+	if(st->m_request.getLong("json", 0)) {
+        //xxxxxxxxxxxxxxxxxxxxxxxxx
+    }
+
+	if(st->m_request.getLong("justgraph", 0)) {
+		SafeBuf buf( 1024*32 , "tmpbuf0" );
+		genStatsGraphTable(&buf, st);
+		g_statsdb.m_gw.purge();
+		g_statsdb.m_dupTable.reset();
+		g_httpServer.sendDynamicPage ( s, buf.getBufStart(), buf.length() ); 
+		return;
+	}
 
 	SafeBuf buf( 1024*32 , "tmpbuf0" );
 	SafeBuf tmpBuf( 1024 , "tmpbuf1" );
@@ -208,47 +286,9 @@ void sendReply ( void *state ) {
 		       );
 
 
-	buf.safePrintf("<center>\n");
+	buf.safePrintf("<center id=\"graph-container\">\n");
 
-	if ( ! g_conf.m_useStatsdb ) 
-		buf.safePrintf("<font color=red><b>Statsdb disabled. "
-			       "Turn on in the master controls.</b>"
-			       "</font>\n" );
-
-
-	buf.safePrintf("<table %s>\n",TABLE_STYLE);
-
-	buf.safePrintf("<tr><td bgcolor=#%s>"
-		       "<center>",LIGHT_BLUE);
-
-	/////////////////////////
-	//
-	// insert the div graph here
-	//
-	/////////////////////////
-	buf.cat ( g_statsdb.m_gw );
-
-	// purge it
-	g_statsdb.m_gw.purge();
-	g_statsdb.m_dupTable.reset();
-
-	//"<img src=\"/stats%"INT32".gif\" height=%"INT32" width=%"INT32" "
-	//"border=\"0px\">"
-	//st->m_hostId,
-	//g_statsdb.getImgHeight(),
-	//g_statsdb.getImgWidth());
-
-	buf.safePrintf("</center>"
-		       //"class=\"statsdb_image\">"
-		       "</td></tr>\n");
-
-	// the map key
-	buf.safePrintf("<tr><td>");
-	buf.cat ( st->m_sb2 );
-	buf.safePrintf("</td></tr>\n");
-
-	buf.safePrintf( "</table>\n" );
-
+	genStatsGraphTable(&buf, st);
 	buf.safePrintf("</center>");
 
 	// write the controls section of the page
@@ -308,15 +348,15 @@ void writeControls ( SafeBuf *buf, StateStatsdb *st ) {
 		"<button type=\"reset\" name=\"strigger\" "
 		"id=\"s_date_trigger\">...</button>\n"
 		"<script type=\"text/javascript\">\n"
-		"Calendar.setup({\n"
-		"inputField     :    \"s_date_field\"	,\n"
-		"ifFormat       :    \"%%m/%%d/%%Y %%H:%%M\"	,\n"
-		"showsTime      :    true		,\n"
-		"button         :    \"s_date_trigger\"	,\n"
-		"singleClick    :    false		,\n"
-		"step           :    1			,\n"
-		"timeFormat     :    \"24\"\n"
-		"});\n"
+		// "Calendar.setup({\n"
+		// "inputField     :    \"s_date_field\"	,\n"
+		// "ifFormat       :    \"%%m/%%d/%%Y %%H:%%M\"	,\n"
+		// "showsTime      :    true		,\n"
+		// "button         :    \"s_date_trigger\"	,\n"
+		// "singleClick    :    false		,\n"
+		// "step           :    1			,\n"
+		// "timeFormat     :    \"24\"\n"
+		// "});\n"
 		"</script>\n"
 		"</td>\n"
 		"</tr>\n"
@@ -401,16 +441,75 @@ void writeControls ( SafeBuf *buf, StateStatsdb *st ) {
 	buf->safePrintf (
 		"<button type=\"reset\" name=\"etrigger\" "
 		"id=\"e_date_trigger\">...</button>\n"
+        "<style>"
+        ".hidden {display:none;}"
+        "</style>"
 		"<script type=\"text/javascript\">\n"
-		"Calendar.setup({\n"
-		"inputField     :    \"e_date_field\"	,\n"
-		"ifFormat       :    \"%%m/%%d/%%Y %%H:%%M\"	,\n"
-		"showsTime      :    true		,\n"
-		"button         :    \"e_date_trigger\"	,\n"
-		"singleClick    :    false		,\n"
-		"step           :    1			,\n"
-		"timeFormat     :    \"24\"\n"
-		"});\n"
+		// "Calendar.setup({\n"
+		// "inputField     :    \"e_date_field\"	,\n"
+		// "ifFormat       :    \"%%m/%%d/%%Y %%H:%%M\"	,\n"
+		// "showsTime      :    true		,\n"
+		// "button         :    \"e_date_trigger\"	,\n"
+		// "singleClick    :    false		,\n"
+		// "step           :    1			,\n"
+		// "timeFormat     :    \"24\"\n"
+		// "});\n"
+		"function hideColor(val, checked) {"
+		"  var elmsToToggle = document.querySelectorAll('.color-'+ val);"
+		"  for(var i = 0; i < elmsToToggle.length; i++) {"
+        "    if(checked) {"
+        "      elmsToToggle[i].className = elmsToToggle[i].className.replace(' hidden', '');"
+        "    } else {"
+        "      elmsToToggle[i].className = elmsToToggle[i].className + ' hidden';"
+        "    } "
+        "  } "
+		"}"
+		"function toggleVisible(ev) {"
+		"  var val = ev.target.value;"
+		"  var checked = ev.target.checked;"
+		"  window.localStorage.setItem(val, checked);"
+		"  console.log('toggling', val, checked , 	  window.localStorage.getItem(val));"
+		"  hideColor(val, checked)"
+		"}"
+
+		"function initToggles() {"
+		"  var graphToggles = document.querySelectorAll('.graph-toggles');"
+		"  for(var i = 0; i < graphToggles.length; i++) {"
+		"    graphToggles[i].addEventListener('click', toggleVisible);"
+		"    if(window.localStorage.getItem(graphToggles[i].value) == 'false') {"
+		"      graphToggles[i].checked = false;"
+		"      hideColor(graphToggles[i].value, false);"
+		"    } else {"
+		"      graphToggles[i].checked = true;"
+		"    }"
+		"    console.log('xxxx', graphToggles[i].value, 'yyy', window.localStorage.getItem(graphToggles[i].value));"
+		"  }"
+		"} "
+		"function callAjax(url, callback) { "
+		"    var xmlhttp;"
+		"    xmlhttp = new XMLHttpRequest();"
+		"    xmlhttp.onreadystatechange = function() {"
+		"        if (xmlhttp.readyState == 4 && xmlhttp.status == 200) {"
+		"            callback(xmlhttp.responseText);"
+		"        } "
+		"    }; "
+		"    xmlhttp.open('GET', url, true);"
+		"    xmlhttp.send();"
+		"} "
+		"initToggles();"
+		
+		"function refreshGraph() {"
+		"  var autoUpdate = document.querySelector('#auto_update_trigger');"
+		"  if(!autoUpdate.checked) return;"
+		"  callAjax(document.location + '&justgraph=1&dontlog=1', function(elm) {"
+		"    var gc = document.querySelector('#graph-container');"
+		"    gc.innerHTML = elm;"
+		"    initToggles();"
+		"  });"
+		"}"
+		"setInterval(refreshGraph, 2000);"
+
+
 		"</script>\n"
 		"</td>\n"
 		"</tr>\n"
@@ -444,6 +543,34 @@ void writeControls ( SafeBuf *buf, StateStatsdb *st ) {
 		"</td>\n"
 		"</tr>\n");
 	*/
+
+	buf->safePrintf(
+		"<tr class=\"show\" id=\"e_auto_trigger\">\n"
+		"<td colspan=\"2\">\n"
+		"<input type=\"checkbox\" name=\"auto_update\" "
+		"id=\"auto_update_trigger\" value=\"1\" "
+		//"onclick=\"javascript:st_auto_update()\""
+	);
+
+	if ( st->m_autoUpdate ) buf->safePrintf( " checked" );
+
+	buf->safePrintf (
+		" /> Auto Update Stats\n"
+	);
+	
+	buf->safePrintf (
+		"</td>\n"
+		"</tr>\n"
+		"</table>\n"
+		"<input type=\"hidden\" name=\"genstats\" value=\"1\" />\n"
+	);
+
+	g_pages.printFormData( buf, st->m_socket, &st->m_request );
+
+	buf->safePrintf (
+		"<input type=\"submit\" name=\"action\" value=\"submit\" />"
+		"</div>\n</form>\n</div>\n</div>\n"
+	);
 
 	// This checkbox pulls the current time from the server,
 	// and uses it for the request. Can only use the time
@@ -646,35 +773,10 @@ void writeControls ( SafeBuf *buf, StateStatsdb *st ) {
 	//	buf->safePrintf( ">%u</option>\n", i );
 	//}
 
-	buf->safePrintf(
-		"<tr class=\"show\" id=\"e_auto_trigger\">\n"
-		"<td colspan=\"2\">\n"
-		"<input type=\"checkbox\" name=\"auto_update\" "
-		"id=\"auto_update_trigger\" value=\"1\" "
-		"onclick=\"javascript:st_auto_update()\""
-	);
-
-	if ( st->m_autoUpdate ) buf->safePrintf( " checked" );
-
-	buf->safePrintf (
-		" /> Auto Update Stats\n"
-	);
-	
-	buf->safePrintf (
-		"</td>\n"
-		"</tr>\n"
-		"</table>\n"
-		"<input type=\"hidden\" name=\"genstats\" value=\"1\" />\n"
-	);
-
-	g_pages.printFormData( buf, st->m_socket, &st->m_request );
-
-	buf->safePrintf (
-		"<input type=\"submit\" name=\"action\" value=\"submit\" />"
-		"</div>\n</form>\n</div>\n</div>\n"
-	);
 
 }
+
+
 
 time_t genDate( char *date, int32_t dateLen ) {
 

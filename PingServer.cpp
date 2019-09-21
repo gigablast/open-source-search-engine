@@ -28,6 +28,7 @@ int32_t klogctl( int, char *,int ) { return 0; }
 
 // from main.cpp. when keepalive script restarts us this is true
 extern bool g_recoveryMode;
+extern int32_t g_recoveryLevel;
 
 // a global class extern'd in .h file
 PingServer g_pingServer;
@@ -281,6 +282,9 @@ void PingServer::sendPingsToAll ( ) {
 
 // };
 
+// from Loop.cpp
+extern float g_cpuUsage;
+
 // ping host #i
 void PingServer::pingHost ( Host *h , uint32_t ip , uint16_t port ) {
 	// don't ping on interface machines
@@ -491,6 +495,10 @@ void PingServer::pingHost ( Host *h , uint32_t ip , uint16_t port ) {
 		flags |= PFLAG_MERGEMODE0OR6;
 	if ( ! isClockInSync() ) flags |= PFLAG_OUTOFSYNC;
 
+	uint8_t rv8 = (uint8_t)g_recoveryLevel;
+	if ( g_recoveryLevel > 255 ) rv8 = 255;
+	pi->m_recoveryLevel = rv8;
+
 	//*(int32_t *)p = flags; p += 4; // 4 bytes
 	pi->m_flags = flags;
 
@@ -504,7 +512,12 @@ void PingServer::pingHost ( Host *h , uint32_t ip , uint16_t port ) {
 
 	pi->m_localHostTimeMS = gettimeofdayInMillisecondsLocal();
 
-	pi->m_udpSlotsInUse = g_udpServer.getNumUsedSlots();
+	pi->m_udpSlotsInUseIncoming = g_udpServer.getNumUsedSlotsIncoming();
+
+	pi->m_tcpSocketsInUse = g_httpServer.m_tcp.m_numUsed;
+
+	// from Loop.cpp
+	pi->m_cpuUsage = g_cpuUsage;
 
 	// store hd temps
 	// gbmemcpy ( p , me->m_hdtemps , 4 * 2 );
@@ -3061,8 +3074,17 @@ bool gotMxIp ( EmailInfo *ei ) {
 
 
 static void gotMandrillReplyWrapper ( void *state , TcpSocket *s ) {
-	// log the mandril reply
-	log("email: got mandrill reply: %s",s->m_readBuf);
+	// why core here with s NULL
+	if ( ! s ) {
+		// crap seems like we do not retry so they will not get
+		// the notification... how to fix better?
+		log("email: failed to lookup mandrill ip. sock is null.");
+		g_errno = EBADIP;
+	}
+	else {
+		// log the mandril reply
+		log("email: got mandrill reply: %s",s->m_readBuf);
+	}
 	EmailInfo *ei = (EmailInfo *)state;
 	if ( ei->m_callback ) ei->m_callback ( ei->m_state );
 }
@@ -3199,28 +3221,34 @@ void doneSendingNotifyEmailWrapper ( void *state ) {
 	EmailInfo *ei = (EmailInfo *)state;
 	ei->m_notifyBlocked--;
 	// error?
-	log("build: email notification status: %s",mstrerror(g_errno));
+	log("build: email notification status (count=%i) (ei=0x%"PTRFMT"): %s",
+	    (int)ei->m_notifyBlocked,(PTRTYPE)ei,mstrerror(g_errno));
 	// ignore it for rest
 	g_errno = 0;
 	// wait for post url to get done
 	if ( ei->m_notifyBlocked > 0 ) return;
 	// unmark it
-	ei->m_inUse = false;
+	//ei->m_inUse = false;
 	// all done
 	ei->m_finalCallback ( ei->m_finalState );
+	// nuke it
+	mfree ( ei , sizeof(EmailInfo) ,"eialrt" );
 }
 
 void doneGettingNotifyUrlWrapper ( void *state , TcpSocket *sock ) {
 	EmailInfo *ei = (EmailInfo *)state;
 	ei->m_notifyBlocked--;
 	// error?
-	log("build: url notification status: %s",mstrerror(g_errno));
+	log("build: url notification status (count=%i) (ei=0x%"PTRFMT"): %s",
+	    (int)ei->m_notifyBlocked,(PTRTYPE)ei,mstrerror(g_errno));
 	// wait for email to get done
 	if ( ei->m_notifyBlocked > 0 ) return;
 	// unmark it
-	ei->m_inUse = false;
+	//ei->m_inUse = false;
 	// all done
 	ei->m_finalCallback ( ei->m_finalState );
+	// nuke it
+	mfree ( ei , sizeof(EmailInfo) ,"eialrt" );
 }
 
 // for printCrawlDetailsInJson()
@@ -3231,7 +3259,11 @@ void doneGettingNotifyUrlWrapper ( void *state , TcpSocket *sock ) {
 //   or maxToProcess limitation.
 bool sendNotification ( EmailInfo *ei ) {
 
-	if ( ei->m_inUse ) { char *xx=NULL;*xx=0; }
+	// disable for now
+	//log("ping: NOT SENDING NOTIFICATION -- DEBUG!!");
+	//return true;
+
+	//if ( ei->m_inUse ) { char *xx=NULL;*xx=0; }
 
 	// caller must set this, as well as m_finalCallback/m_finalState
 	CollectionRec *cr = g_collectiondb.m_recs[ei->m_collnum];
@@ -3247,7 +3279,7 @@ bool sendNotification ( EmailInfo *ei ) {
 	// sanity check, can only call once
 	if ( ei->m_notifyBlocked != 0 ) { char *xx=NULL;*xx=0; }
 
-	ei->m_inUse = true;
+	//ei->m_inUse = true;
 
 
 	if ( email && email[0] ) {
@@ -3343,7 +3375,9 @@ bool sendNotification ( EmailInfo *ei ) {
 	}
 
 	if ( ei->m_notifyBlocked == 0 ) {
-		ei->m_inUse = false;
+		//ei->m_inUse = false;
+		// nuke it
+		mfree ( ei , sizeof(EmailInfo) ,"eialrt" );
 		return true;
 	}
 

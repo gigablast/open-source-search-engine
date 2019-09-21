@@ -98,7 +98,7 @@ bool Msg2::getLists ( int32_t     rdbId       ,
 	// set this
 	m_numLists = m_query->m_numTerms;
 	// make sure not too many lists being requested
-	if ( m_numLists > MAX_NUM_LISTS ) {g_errno=ETOOMANYLISTS; return true;}
+	//if(m_numLists > MAX_NUM_LISTS ) {g_errno=ETOOMANYLISTS; return true;}
 	// clear them all
 	//for ( int32_t i = 0 ; i < m_numLists ; i++ ) {
 	//	m_inProgress[i] = true;
@@ -133,7 +133,7 @@ bool Msg2::getLists ( ) {
 	// . make slots for all
 	for (  ; m_i < m_numLists ; m_i++ ) {
 		// sanity for Msg39's sake. do no breach m_lists[].
-		if ( m_i >= MAX_QUERY_TERMS ) { char *xx=NULL;*xx=0; }
+		if ( m_i >= ABS_MAX_QUERY_TERMS ) { char *xx=NULL;*xx=0; }
 		// if any had error, forget the rest. do not launch any more
 		if ( m_errno ) break;
 		// skip if already did it
@@ -194,11 +194,11 @@ bool Msg2::getLists ( ) {
 		int32_t minRecSize = m_minRecSizes[m_i];
 
 		// sanity check
-		if ( ( minRecSize > ( 500 * 1024 * 1024 ) || 
-		       minRecSize < 0) ){
-			log( "minRecSize = %"INT32"", minRecSize );
-			char *xx=NULL; *xx=0;
-		}
+		// if ( ( minRecSize > ( 500 * 1024 * 1024 ) || 
+		//        minRecSize < 0) ){
+		// 	log( "minRecSize = %"INT32"", minRecSize );
+		// 	char *xx=NULL; *xx=0;
+		// }
 
 		//bool forceLocalIndexdb = true;
 		// if it is a no-split term, we may gotta get it over the net
@@ -407,7 +407,15 @@ bool Msg2::getLists ( ) {
 
 		// like 90MB last time i checked. so it won't read more
 		// than that...
-		int32_t minRecSizes = DEFAULT_POSDB_READSIZE;
+		// MDW: no, it's better to print oom then not give all the
+		// results leaving users scratching their heads. besides,
+		// we should do docid range splitting before we go out of
+		// mem. we should also report the size of each termlist
+		// in bytes in the query info header.
+		//int32_t minRecSizes = DEFAULT_POSDB_READSIZE;
+		// MDW TODO fix this later we go oom too easily for queries
+		// like 'www.disney.nl'
+		int32_t minRecSizes = -1;
 
 		// start up the read. thread will wait in thread queue to 
 		// launch if too many threads are out.
@@ -596,12 +604,13 @@ bool Msg2::gotList ( RdbList *list ) {
 	for ( int32_t i = 0 ; i < m_numLists ; i++ ) {
 		if ( m_lists[i].m_listSize < m_minRecSizes[i] ) continue;
 		if ( m_minRecSizes[i] == 0 ) continue;
+		if ( m_minRecSizes[i] == -1 ) continue;
 		// do not print this if compiling section xpathsitehash stats
 		// because we only need like 10k of list to get a decent
 		// reading
 		if ( m_req->m_forSectionStats ) break;
-		log("msg2: read termlist #%"INT32" size=%"INT32" maxSize=%"INT32". losing "
-		    "docIds!",
+		log("msg2: read termlist #%"INT32" size=%"INT32" "
+		    "maxSize=%"INT32". losing docIds!",
 		    i,m_lists[i].m_listSize,m_minRecSizes[i]);
 	}
 

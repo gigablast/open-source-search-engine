@@ -6,6 +6,8 @@
 //#include "Events.h" // class EventIdBits...printEventIds()
 #include "sort.h"
 
+#include "Stats.h"
+
 static void gotReplyWrapper3a     ( void *state , void *state2 ) ;
 //static void gotRerankedDocIds     ( void *state );
 
@@ -23,6 +25,10 @@ void Msg3a::constructor ( ) {
 	m_numDocIds    = 0;
 	m_collnums     = NULL;
 	m_inUse        = false;
+	m_q            = NULL;
+
+	m_numTotalEstimatedHits = 0LL;
+	m_skippedShards = 0;
 
 	// need to call all safebuf constructors now to set m_label
 	m_rbuf2.constructor();
@@ -75,6 +81,7 @@ void Msg3a::reset ( ) {
 	m_numDocIds    = 0;
 	m_collnums     = NULL;
 	m_numTotalEstimatedHits = 0LL;
+	m_skippedShards = 0;
 }
 
 Msg39Request *g_r = NULL;
@@ -141,6 +148,7 @@ bool Msg3a::getDocIds ( Msg39Request *r          ,
 	reset();
 	// remember ALL the stuff
 	m_r        = r;
+	// this should be &SearchInput::m_q
 	m_q        = q;
 	m_callback = callback;
 	m_state    = state;
@@ -169,6 +177,9 @@ bool Msg3a::getDocIds ( Msg39Request *r          ,
 	m_numTotalEstimatedHits = 0;
 	// we modify this, so copy it from request
 	m_docsToGet = r->m_docsToGet;
+
+	// fix empty queries saying a shard is down
+	m_skippedShards = 0;
 
 	// . return now if query empty, no docids, or none wanted...
 	// . if query terms = 0, might have been "x AND NOT x"
@@ -313,8 +324,8 @@ bool Msg3a::gotCacheReply ( ) {
 
 	//CollectionRec *cr;
 	//cr = g_collectiondb.getRec(m_r->ptr_coll,m_r->size_coll-1);
-
-	setTermFreqWeights ( m_r->m_collnum,m_q,m_termFreqs,m_termFreqWeights);
+	//setTermFreqWeights(m_r->m_collnum,m_q,m_termFreqs,m_termFreqWeights);
+	setTermFreqWeights ( m_r->m_collnum,m_q );
 
 	if ( m_debug ) {
 		//int64_t *termIds = m_q->getTermIds();
@@ -334,8 +345,8 @@ bool Msg3a::gotCacheReply ( ) {
 			     i,
 			     qt->m_term, 
 			     qt->m_termId,
-			     m_termFreqs[i],
-			     m_termFreqWeights[i]);
+			     qt->m_termFreq,//m_termFreqs[i],
+			     qt->m_termFreqWeight);//m_termFreqWeights[i]);
 			// put it back
 			*tpc = c;
 		}
@@ -347,6 +358,7 @@ bool Msg3a::gotCacheReply ( ) {
 
 	// reset replies received count
 	m_numReplies  = 0;
+	m_skippedShards = 0;
 	// int16_tcut
 	int32_t n = m_q->m_numTerms;
 
@@ -363,7 +375,8 @@ bool Msg3a::gotCacheReply ( ) {
 	}
 
 	// a tmp buf
-	int32_t readSizes[MAX_QUERY_TERMS];
+	int32_t readSizes[ABS_MAX_QUERY_TERMS];
+	float   tfw      [ABS_MAX_QUERY_TERMS];
 	// update our read info
 	for ( int32_t j = 0; j < n ; j++ ) {
 		// the read size for THIS query term
@@ -372,6 +385,11 @@ bool Msg3a::gotCacheReply ( ) {
 		// 'time enough for love' query was hitting 30MB termlists.
 		//rs = 50000000;
 		rs = DEFAULT_POSDB_READSIZE;//90000000; // 90MB!
+		// it is better to go oom then leave users scratching their
+		// heads as to why some results are not being returned.
+		// no, because we are going out of mem for queries like
+		// 'www.disney.nl' etc.
+		//rs = -1;
 		// if section stats, limit to 1MB
 		//if ( m_r->m_getSectionStats ) rs = 1000000;
 		// get the jth query term
@@ -380,13 +398,14 @@ bool Msg3a::gotCacheReply ( ) {
 		if ( qt->m_ignored ) rs = 0;
 		// set it
 		readSizes[j] = rs;
+		// serialize these too
+		tfw[j] = qt->m_termFreqWeight;
 	}
 
 	// serialize this
 	m_r->ptr_readSizes  = (char *)readSizes;
 	m_r->size_readSizes = 4 * n;
-	// and this
-	m_r->ptr_termFreqWeights  = (char *)m_termFreqWeights;
+	m_r->ptr_termFreqWeights  = (char *)tfw;//m_termFreqWeights;
 	m_r->size_termFreqWeights = 4 * n;
 	// store query into request, might have changed since we called
 	// Query::expandQuery() above
@@ -419,6 +438,10 @@ bool Msg3a::gotCacheReply ( ) {
 				   false );
 	
 	if ( ! m_rbufPtr ) return true;
+
+	// how many seconds since our main process was started?
+	long long now = gettimeofdayInMilliseconds();
+	long elapsed = (now - g_stats.m_startTime) / 1000;
 
 	// free this one too
 	m_rbuf2.purge();
@@ -454,11 +477,16 @@ bool Msg3a::gotCacheReply ( ) {
 	for ( int32_t i = 0; i < m_numHosts ; i++ ) { // m_indexdbSplit; i++ ) {
 		// get that host
 		Host *h = g_hostdb.getHost(i);
+
+		if(!h->m_queryEnabled) {
+			m_numReplies++;
+			continue;
+		}
+
 		// if not a full split, just round robin the group, i am not
 		// going to sweat over performance on non-fully split indexes
 		// because they suck really bad anyway compared to full
 		// split indexes. "gid" is already set if we are not split.
-		//uint32_t gid = h->m_groupId;//g_hostdb.getGroupId(i);
 		int32_t shardNum = h->m_shardNum;
 		int32_t firstHostId = h->m_hostId;
 		// get strip num
@@ -487,6 +515,26 @@ bool Msg3a::gotCacheReply ( ) {
 		Multicast *m = &m_mcast[i];
 		// clear it for transmit
 		m->reset();
+
+		// if all hosts in group dead, just skip it!
+		// only do this if main process has been running more than
+		// 300 seconds because our brother hosts show up as "dead"
+		// until we've got a ping reply back from them.
+		// use 160 seconds. seems to take 138 secs or so to
+		// get pings from everyone.
+		if ( g_hostdb.isShardDead ( shardNum ) ) {
+			m_numReplies++;
+			log("msg3a: skipping dead shard # %i "
+			    "(elapsed=%li)",(int)shardNum,elapsed);
+			// see if this fixes the core?
+			// assume reply is empty!!
+			//m_reply[t][i] = NULL;
+			// nuke reply in there so getBestReply() returns NULL
+			//m_mcast[i].reset();
+			continue;
+		}
+
+
 		// . send out a msg39 request to each shard
 		// . multicasts to a host in group "groupId"
 		// . we always block waiting for the reply with a multicast
@@ -664,9 +712,14 @@ bool Msg3a::gotAllShardReplies ( ) {
 			char *xx = NULL; *xx=0; 
 		}
 		// bad reply?
-		if ( ! mr ) {
-			log(LOG_LOGIC,"query: msg3a: Bad NULL reply from "
-			    "host #%"INT32". Timeout? OOM?",i);
+		if ( ! mr || replySize < 29 ) {
+			m_skippedShards++;
+			if(g_hostdb.getHost(i)->m_queryEnabled) {
+				log(LOG_LOGIC,"query: msg3a: Bad reply (size=%i) from "
+					"host #%"INT32". Dead? Timeout? OOM?"
+					,(int)replySize
+					,i);
+            }
 			m_reply       [i] = NULL;
 			m_replyMaxSize[i] = 0;
 			// it might have been timd out, just ignore it!!
@@ -678,15 +731,16 @@ bool Msg3a::gotAllShardReplies ( ) {
 			return true;
 		}
 		// how did this happen?
-		if ( replySize < 29 && ! mr->m_errno ) {
-			// if size is 0 it can be Msg39 giving us an error!
-			g_errno = EBADREPLYSIZE;
-			m_errno = EBADREPLYSIZE;
-			log(LOG_LOGIC,"query: msg3a: Bad reply size of %"INT32".",
-			    replySize);
-			// all reply buffers should be freed on reset()
-			return true;
-		}
+		// if ( replySize < 29 && ! mr->m_errno ) {
+		// 	// if size is 0 it can be Msg39 giving us an error!
+		// 	g_errno = EBADREPLYSIZE;
+		// 	m_errno = EBADREPLYSIZE;
+		// 	log(LOG_LOGIC,"query: msg3a: Bad reply size "
+		// 	    "of %"INT32".",
+		// 	    replySize);
+		// 	// all reply buffers should be freed on reset()
+		// 	return true;
+		// }
 
 		// can this be non-null? we shouldn't be overwriting one
 		// without freeing it...
@@ -697,14 +751,6 @@ bool Msg3a::gotAllShardReplies ( ) {
 		// cast it and set it
 		m_reply       [i] = mr;
 		m_replyMaxSize[i] = replyMaxSize;
-		// deserialize it (just sets the ptr_ and size_ member vars)
-		//mr->deserialize ( );
-		deserializeMsg ( sizeof(Msg39Reply) ,
-				 &mr->size_docIds,
-				 &mr->size_clusterRecs,
-				 &mr->ptr_docIds,
-				 mr->m_buf );
-
 		// sanity check
 		if ( mr->m_nqt != m_q->getNumTerms() ) {
 			g_errno = EBADREPLY;
@@ -722,6 +768,20 @@ bool Msg3a::gotAllShardReplies ( ) {
 			    mstrerror(g_errno));
 			return true;
 		}
+		// deserialize it (just sets the ptr_ and size_ member vars)
+		//mr->deserialize ( );
+		if ( ! deserializeMsg ( sizeof(Msg39Reply) ,
+					&mr->size_docIds,
+					&mr->size_clusterRecs,
+					&mr->ptr_docIds,
+					mr->m_buf ) ) {
+			g_errno = ECORRUPTDATA;
+			m_errno = ECORRUPTDATA;
+			log("query: msg3a: Shard had error: %s",
+			    mstrerror(g_errno));
+			return true;
+
+		}
 		// skip down here if reply was already set
 		//skip:
 		// add of the total hits from each shard, this is how many
@@ -730,6 +790,16 @@ bool Msg3a::gotAllShardReplies ( ) {
 		// . THIS should now be exact since we read all termlists
 		//   of posdb...
 		m_numTotalEstimatedHits += mr->m_estimatedHits;
+
+		// accumulate total facet count from all shards for each term
+		int64_t *facetCounts;
+		facetCounts = (int64_t*)mr->ptr_numDocsThatHaveFacetList;
+		for ( int32_t k = 0 ; k < mr->m_nqt ;  k++ ) {
+			QueryTerm *qt = &m_q->m_qterms[k];
+			// sanity. this should never happen.
+			if ( k >= m_q->m_numTerms ) break;
+			qt->m_numDocsThatHaveFacet += facetCounts[k];
+		}
 
 		// debug log stuff
 		if ( ! m_debug ) continue;
@@ -741,7 +811,8 @@ bool Msg3a::gotAllShardReplies ( ) {
 			// print out score_t
 			logf( LOG_DEBUG,
 			     "query: msg3a: [%"PTRFMT"] %03"INT32") "
-			     "shard=%"INT32" docId=%012"UINT64" domHash=0x%02"XINT32" "
+			     "shard=%"INT32" docId=%012"UINT64" "
+			      "domHash=0x%02"XINT32" "
 			     "score=%f"                     ,
 			     (PTRTYPE)this                      ,
 			     j                                        , 
@@ -1033,15 +1104,26 @@ bool Msg3a::mergeLists ( ) {
 		// and Msg40.cpp ultimately.
 		HashTableX *ht = &qt->m_facetHashTable;
 		// we have to manually call this because Query::constructor()
-		// might have been called explicitly
-		ht->constructor();
+		// might have been called explicitly. not now because
+		// i added a call the Query::constructor() to call
+		// QueryTerm::constructor() for each QueryTerm in
+		// Query::m_qterms[]. this was causing a mem leak of 
+		// 'fhtqt' too beacause we were re-using the query for each 
+		// coll in the federated loop search.
+		//ht->constructor();
 		// 4 byte key, 4 byte score for counting facet values
 		if ( ! ht->set(4,sizeof(FacetEntry),
 			       128,NULL,0,false,
 			       m_r->m_niceness,"fhtqt")) 
 			return true;
+		// debug note
+		// log("results: alloc fhtqt of %"PTRFMT" for st0=%"PTRFMT,
+		//     (PTRTYPE)ht->m_buf,(PTRTYPE)m_q->m_st0Ptr);
 		// sanity
-		if ( ! ht->m_isWritable ) {char *xx=NULL;*xx=0;}
+		if ( ! ht->m_isWritable ) {
+			log("msg3a: queryterm::constructor not called?");
+			char *xx=NULL;*xx=0;
+		}
 	}
 
 	// now scan each facethashlist from each shard and compile into 
@@ -1110,12 +1192,6 @@ bool Msg3a::mergeLists ( ) {
 				continue;
 			}
 
-			fe2->m_count += fe->m_count;
-
-			// prefer docid kinda randomly to balance 
-			// lookupFacets() load in Msg40.cpp
-			if ( rand() % 2 )
-				fe2->m_docId = fe->m_docId;
 
 
 			if ( isFloat ) {
@@ -1125,22 +1201,37 @@ bool Msg3a::mergeLists ( ) {
 				sum2 += sum1;
 				*((double *)&fe2->m_sum) = sum2;
 				// and min/max as floats
+
 				float min1 = *((float *)&fe ->m_min);
 				float min2 = *((float *)&fe2->m_min);
-				if ( min1 < min2 ) min2 = min1;
+				if ( fe2->m_count==0 || (fe->m_count!=0 && min1 < min2 )) min2 = min1;
 				*((float *)&fe2->m_min) = min2;
 				float max1 = *((float *)&fe ->m_max);
 				float max2 = *((float *)&fe2->m_max);
-				if ( max1 > max2 ) max2 = max1;
+				if ( fe2->m_count==0 || (fe->m_count!=0 && max1 > max2 )) max2 = max1;
 				*((float *)&fe2->m_max) = max2;
 			}
 			if ( isInt ) {
 				fe2->m_sum += fe->m_sum;
-				if ( fe->m_min < fe2->m_min )
+				if ( fe2->m_count==0 || (fe->m_count!=0 && fe->m_min < fe2->m_min ))
 					fe2->m_min = fe->m_min;
-				if ( fe->m_max > fe2->m_max )
+				if ( fe2->m_count==0 || (fe->m_count!=0 && fe->m_max > fe2->m_max ))
 					fe2->m_max = fe->m_max;
 			}
+
+			fe2->m_count += fe->m_count;
+
+			// also accumualte count of total docs, not just in
+			// the search results, that have this value for this
+			// facet
+			fe2->m_outsideSearchResultsCount +=
+				fe->m_outsideSearchResultsCount;
+
+			// prefer docid kinda randomly to balance
+			// lookupFacets() load in Msg40.cpp
+			if ( rand() % 2 )
+				fe2->m_docId = fe->m_docId;
+
 
 		}
 
@@ -1155,7 +1246,6 @@ bool Msg3a::mergeLists ( ) {
 	// sets g_errno on error and returns false so we return true.
 	if ( ! sortFacetEntries() )
 		return true;
-
 
 	//if ( m_r->m_getSectionStats ) return true;
 	//
@@ -1181,6 +1271,13 @@ bool Msg3a::mergeLists ( ) {
 
 	int32_t need =  nd * (8+sizeof(double)+
 			   sizeof(key_t)+sizeof(DocIdScore *)+1);
+	if ( need < 0 ) {
+		log("msg3a: need is %i, nd = %i is too many docids",
+		    (int)need,(int)nd);
+		g_errno = EBUFTOOSMALL;
+		return true;
+	}
+		
 	// allocate it
 	m_finalBuf     = (char *)mmalloc ( need , "finalBuf" );
 	m_finalBufSize = need;
@@ -1489,9 +1586,9 @@ void Msg3a::printTerms ( ) {
 }
 
 void setTermFreqWeights ( collnum_t collnum , // char *coll,
-			  Query *q , 
-			  int64_t *termFreqs, 
-			  float *termFreqWeights ) {
+			  Query *q ) {
+			  // int64_t *termFreqs, 
+			  // float *termFreqWeights ) {
 
 	int64_t numDocsInColl = 0;
 	RdbBase *base = getRdbBase ( RDB_CLUSTERDB  , collnum );	
@@ -1503,13 +1600,16 @@ void setTermFreqWeights ( collnum_t collnum , // char *coll,
 		numDocsInColl = 1;
 	}
 	// now get term freqs again, like the good old days
-	int64_t *termIds = q->getTermIds();
+	//int64_t *termIds = q->getTermIds();
 	// just use rdbmap to estimate!
 	for ( int32_t i = 0 ; i < q->getNumTerms(); i++ ) {
+		QueryTerm *qt = &q->m_qterms[i];
 		// GET THE TERMFREQ for setting weights
-		int64_t tf = g_posdb.getTermFreq ( collnum ,termIds[i]);
-		if ( termFreqs ) termFreqs[i] = tf;
+		int64_t tf = g_posdb.getTermFreq ( collnum ,qt->m_termId);
+		//if ( termFreqs ) termFreqs[i] = tf;
+		qt->m_termFreq = tf;
 		float tfw = getTermFreqWeight(tf,numDocsInColl);
-		termFreqWeights[i] = tfw;
+		//termFreqWeights[i] = tfw;
+		qt->m_termFreqWeight = tfw;
 	}
 }			      

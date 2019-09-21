@@ -39,6 +39,7 @@
 #define SP_INPROGRESS   7 // it is going on!
 #define SP_ADMIN_PAUSED 8 // g_conf.m_spideringEnabled = false
 #define SP_COMPLETED    9 // crawl is done, and no repeatCrawl is scheduled
+#define SP_SEEDSERROR  10 // all seeds had an error preventing crawling
 
 bool tryToDeleteSpiderColl ( SpiderColl *sc , char *msg ) ;
 void spiderRoundIncremented ( class CollectionRec *cr ) ;
@@ -403,7 +404,7 @@ class Spiderdb {
 
 	Rdb *getRdb  ( ) { return &m_rdb; };
 
-	DiskPageCache *getDiskPageCache() { return &m_pc; };
+	//DiskPageCache *getDiskPageCache() { return &m_pc; };
 
 	// this rdb holds urls waiting to be spidered or being spidered
 	Rdb m_rdb;
@@ -452,11 +453,11 @@ class Spiderdb {
 	*/
 
 	// print the spider rec
-	int32_t print( char *srec );
+	int32_t print( char *srec , SafeBuf *sb = NULL );
 
   private:
 
-	DiskPageCache m_pc;
+	//DiskPageCache m_pc;
 };
 
 void dedupSpiderdbList ( RdbList *list , int32_t niceness , bool removeNegRecs );
@@ -509,15 +510,30 @@ class SpiderRequest {
 	// spidered (when m_url was not an outlink on its parent page)
 	uint32_t  m_parentPrevSpiderTime; // time_t
 
+	//int32_t    m_parentFirstIp;
+	// # of spider requests from different c-blocks. capped at 255.
+	// taken from the # of SpiderRequests.
+	uint8_t    m_pageNumInlinks;
+	uint8_t    m_reservedb2;
+	uint8_t    m_reservedb3;
+	uint8_t    m_reservedb4;
+
 	// info on the page we were harvest from
-	int32_t    m_parentFirstIp;
 	int32_t    m_parentHostHash32;
 	int32_t    m_parentDomHash32;
 	int32_t    m_parentSiteHash32;
 
+	// if there are several spiderrequests for a url, this should be
+	// the earliest m_addedTime, basically, the url discovery time. this is
+	// NOT valid in spiderdb, but only set upon selecting the url to spider
+	// when we scan all of the SpiderRequests it has.
+	int32_t m_discoveryTime;
+
 	// the PROBABLE DOCID. if there is a collision with another docid
 	// then we increment the last 8 bits or so. see Msg22.cpp.
-	int64_t m_probDocId;
+	//int64_t m_probDocId;
+	//int32_t m_reservedc1;
+	int32_t m_reservedc2;
 
 	//int32_t  m_parentPubDate;
 
@@ -550,8 +566,8 @@ class SpiderRequest {
 	/* char    m_onlyDoNotAddLinksLinksLinks   :1; // max hopcount 2 */
 	char    m_ignoreDocUnchangedError:1;//reserved2a:1;
 	char    m_recycleContent:1;//m_reserved2b:1;
-	char    m_reserved2c:1;
-	char    m_reserved2d:1;
+	char    m_hasMediaExtension:1; // reserved2c:1;
+	char    m_hasMediaExtensionValid:1;
 
 	char    m_reserved2e:1;
 	char    m_reserved2f:1;
@@ -583,11 +599,12 @@ class SpiderRequest {
 	// or from PageParser.cpp directly
 	int32_t    m_isPageParser:1; 
 	// should we use the test-spider-dir for caching test coll requests?
-	int32_t    m_useTestSpiderDir:1;
+	//int32_t    m_useTestSpiderDir:1;
+	int32_t    m_parentIsSiteMap:1;
 	// . is the url a docid (not an actual url)
 	// . could be a "query reindex"
 	int32_t    m_urlIsDocId:1;
-	// does m_url end in .rss? or a related rss file extension?
+	// does m_url end in .rss .xml .atom? or a related rss file extension?
 	int32_t    m_isRSSExt:1;
 	// is url in a format known to be a permalink format?
 	int32_t    m_isUrlPermalinkFormat:1;
@@ -819,6 +836,7 @@ class SpiderReply {
 	// a SpiderRec outright
 	key128_t   m_key;
 
+	// this can be used for something else really. all SpiderReplies are fixed sz
 	int32_t    m_dataSize;
 
 	// for calling getHostIdToDole()
@@ -921,7 +939,7 @@ class SpiderReply {
 	// was the request an injection request
 	int32_t    m_fromInjectionRequest    :1; 
 	// did we TRY to send it to the diffbot backend filter? might be err?
-	int32_t    m_sentToDiffbot           :1;
+	int32_t    m_sentToDiffbotThisTime   :1;
 	int32_t    m_hadDiffbotError         :1;
 	// . was it in the index when we started?
 	// . we use this with m_isIndexed above to adjust quota counts for
@@ -971,7 +989,7 @@ class Doledb {
 
 	bool addColl ( char *coll, bool doVerify = true );
 
-	DiskPageCache *getDiskPageCache() { return &m_pc; };
+	//DiskPageCache *getDiskPageCache() { return &m_pc; };
 
 	// . see "overview of spidercache" below for key definition
 	// . these keys when hashed are clogging up the hash table
@@ -1054,7 +1072,7 @@ class Doledb {
 
 	Rdb m_rdb;
 
-	DiskPageCache m_pc;
+	//DiskPageCache m_pc;
 };
 
 
@@ -1065,6 +1083,8 @@ extern class Doledb g_doledb;
 #define MAX_BEST_REQUEST_SIZE (MAX_URL_LEN+1+sizeof(SpiderRequest))
 #define MAX_DOLEREC_SIZE      (MAX_BEST_REQUEST_SIZE+sizeof(key_t)+4)
 #define MAX_SP_REPLY_SIZE     (sizeof(SpiderReply))
+
+#define OVERFLOWLISTSIZE 200
 
 // we have one SpiderColl for each collection record
 class SpiderColl {
@@ -1111,12 +1131,12 @@ class SpiderColl {
 
 	// doledbkey + dataSize + bestRequestRec
 	//char m_doleBuf[MAX_DOLEREC_SIZE];
-	SafeBuf m_doleBuf;
+	//SafeBuf m_doleBuf;
 
 	bool m_isLoading;
 
 	// for scanning the wait tree...
-	bool m_isPopulating;
+	bool m_isPopulatingDoledb;
 	// for reading from spiderdb
 	//bool m_isReadDone;
 	bool m_didRead;
@@ -1143,15 +1163,24 @@ class SpiderColl {
 	int32_t      m_tailHopCount;
 	int64_t m_minFutureTimeMS;
 
+	// these don't work because we only store one reply
+	// which overwrites any older reply. that's how the 
+	// key is. we can change the key to use the timestamp 
+	// and not parent docid in makeKey() for spider 
+	// replies later.
+	// int32_t m_numSuccessReplies;
+	// int32_t m_numFailedReplies;
+
 	// . do not re-send CrawlInfoLocal for a coll if not update
 	// . we store the flags in here as true if we should send our
 	//   CrawlInfoLocal for this coll to this hostId
 	char m_sendLocalCrawlInfoToHost[MAX_HOSTS];
 
 	Msg4 m_msg4x;
-	Msg4 m_msg4;
-	Msg1 m_msg1;
-	bool m_msg1Avail;
+	//Msg4 m_msg4;
+	//Msg1 m_msg1;
+	//bool m_msg1Avail;
+	RdbList m_tmpList;
 
 	bool isInDupCache ( SpiderRequest *sreq , bool addToCache ) ;
 
@@ -1163,6 +1192,9 @@ class SpiderColl {
 
 	bool  addToDoleTable   ( SpiderRequest *sreq ) ;
 
+	bool validateDoleBuf ( SafeBuf *doleBuf ) ;
+	bool addDoleBufIntoDoledb ( SafeBuf *doleBuf , bool isFromCache);
+	//,uint32_t cachedTimestamp);
 
 	bool updateSiteNumInlinksTable ( int32_t siteHash32,int32_t sni,
 					 time_t tstamp); // time_t
@@ -1208,6 +1240,7 @@ class SpiderColl {
 	int32_t     m_numAdded;
 	int64_t m_numBytesScanned;
 	int64_t m_lastPrintCount;
+	int64_t m_lastPrinted;
 
 	// used by SpiderLoop.cpp
 	int32_t m_spidersOut;
@@ -1249,6 +1282,7 @@ class SpiderColl {
 	bool addToWaitingTree    ( uint64_t spiderTime , int32_t firstIp ,
 				   bool callForScan );
 	int32_t getNextIpFromWaitingTree ( );
+	uint64_t getNextSpiderTimeFromWaitingTree ( ) ;
 	void populateDoledbFromWaitingTree ( );
 
 	//bool scanSpiderdb        ( bool needList );
@@ -1280,6 +1314,7 @@ class SpiderColl {
 	key_t m_msg5StartKey;
 
 	void devancePriority();
+	void setPriority(int32_t pri);
 
 	key_t m_nextDoledbKey;
 	bool  m_didRound;
@@ -1295,6 +1330,17 @@ class SpiderColl {
 	int32_t m_outstandingSpiders[MAX_SPIDER_PRIORITIES];
 
 	bool printStats ( SafeBuf &sb ) ;
+
+	bool isFirstIpInOverflowList ( int32_t firstIp ) ;
+	int32_t *m_overflowList;
+	int64_t  m_totalNewSpiderRequests;
+	int64_t  m_lastSreqUh48;
+
+	int32_t m_cblocks[20];
+	int32_t m_pageNumInlinks;
+	int32_t m_lastCBlockIp;
+		
+	int32_t  m_lastOverflowFirstIp;
 
  private:
 	class CollectionRec *m_cr;
@@ -1529,6 +1575,8 @@ class SpiderLoop {
 
 	int32_t m_numSpidersOut;
 
+	int32_t m_launches;
+
 	// for spidering/parsing/indexing a url(s)
 	class XmlDoc *m_docs [ MAX_SPIDERS ];
 
@@ -1553,10 +1601,25 @@ class SpiderLoop {
 	// save on msg12 lookups! keep somewhat local...
 	RdbCache   m_lockCache;
 
+	RdbCache   m_winnerListCache;
+
 	//bool m_gettingLocks;
 
 	// for round robining in SpiderLoop::doleUrls(), etc.
-	int32_t m_cri;
+	//int32_t m_cri;
+
+	CollectionRec *getActiveList();
+	void buildActiveList ( ) ;
+	class CollectionRec *m_crx;
+	class CollectionRec *m_activeList;
+	CollectionRec *m_bookmark;
+	bool m_activeListValid;
+	bool m_activeListModified;
+	int32_t m_activeListCount;
+	uint32_t m_recalcTime;
+	bool m_recalcTimeValid;
+
+	int64_t m_lastCallTime;
 
 	int64_t m_doleStart;
 
@@ -1574,6 +1637,7 @@ int32_t getUrlFilterNum ( class SpiderRequest *sreq ,
 		       int32_t niceness , 
 		       class CollectionRec *cr ,
 		       bool isOutlink , // = false ,
-		       HashTableX *quotaTable );//= NULL ) ;
+			  HashTableX *quotaTable ,//= NULL ) ;
+			  int32_t langIdArg );
 
 #endif

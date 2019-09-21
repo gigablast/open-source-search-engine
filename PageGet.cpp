@@ -40,7 +40,9 @@ public:
 	bool       m_isLocal;
 	//bool       m_seq;
 	bool       m_rtq;
-	char       m_q[MAX_QUERY_LEN+1];
+	//char       m_q[MAX_QUERY_LEN+1];
+	SafeBuf m_qsb;
+	char m_qtmpBuf[128];
 	int32_t       m_qlen;
 	char       m_boolFlag;
 	bool       m_printed;
@@ -98,7 +100,7 @@ bool sendPageGet ( TcpSocket *s , HttpRequest *r ) {
 	int32_t  qlen = 0;
 	char *q = r->getString ( "q" , &qlen , NULL /*default*/);
 	// ensure query not too big
-	if ( qlen >= MAX_QUERY_LEN-1 ) { 
+	if ( qlen >= ABS_MAX_QUERY_LEN-1 ) { 
 		g_errno=EQUERYTOOBIG; 
 		return g_httpServer.sendErrorReply (s,500 ,mstrerror(g_errno));
 	}
@@ -156,8 +158,16 @@ bool sendPageGet ( TcpSocket *s , HttpRequest *r ) {
 	//	delete ( st );
 	//	return sendPageNetResult( s );
 	//}
-	if ( q && qlen > 0 ) strcpy ( st->m_q , q );
-	else                 st->m_q[0] = '\0';
+	//if ( q && qlen > 0 ) strcpy ( st->m_q , q );
+	//else                 st->m_q[0] = '\0';
+
+	st->m_qsb.setBuf ( st->m_qtmpBuf,128,0,false );
+	st->m_qsb.setLabel ( "qsbpg" );
+
+	// save the query
+	if ( q && qlen > 0 )
+		st->m_qsb.safeStrcpy ( q );
+	
 	st->m_qlen = qlen;
 	//st->m_seq      = seq;
 	st->m_rtq      = rtq;
@@ -407,12 +417,16 @@ bool processLoop ( void *state ) {
 	if ( format == FORMAT_XML ) sb->reset();
 	if ( format == FORMAT_JSON ) sb->reset();
 
+	if ( xd->m_contentType == CT_JSON ) sb->reset();
+	if ( xd->m_contentType == CT_XML  ) sb->reset();
+	if ( xd->m_contentType == CT_STATUS ) sb->reset();
+
 	// for undoing the stuff below
 	int32_t startLen2 = sb->length();//p;
 
 	// query should be NULL terminated
-	char *q    = st->m_q;
-	int32_t  qlen = st->m_qlen;
+	char *q    = st->m_qsb.getBufStart();
+	int32_t  qlen = st->m_qsb.getLength(); // m_qlen;
 
 	char styleTitle[128] =  "font-size:14px;font-weight:600;"
 				"color:#000000;";
@@ -429,6 +443,9 @@ bool processLoop ( void *state ) {
 	bool printDisclaimer = st->m_printDisclaimer;
 
 	if ( xd->m_contentType == CT_JSON )
+		printDisclaimer = false;
+
+	if ( xd->m_contentType == CT_STATUS )
 		printDisclaimer = false;
 
 	if ( format == FORMAT_XML ) printDisclaimer = false;
@@ -466,7 +483,7 @@ bool processLoop ( void *state ) {
 			  "><td>"
 			  //"<font face=times,sans-serif color=black size=-1>"
 			  "<span style=\"%s\">"
-			  "This is Gigablast's cached page of </span>"
+			  "This is <a href=/>Gigablast<a>'s cached page of </span>"
 			  "<a href=\"%s\" style=\"%s\">%s</a>"
 			  "" , styleTitle, f->getUrl(), styleLink,
 			  f->getUrl() );
@@ -624,6 +641,8 @@ bool processLoop ( void *state ) {
 		includeHeader = false;
 	if ( xd->m_contentType == CT_XML )
 		includeHeader = false;
+	if ( xd->m_contentType == CT_STATUS )
+		includeHeader = false;
 
 	if ( format == FORMAT_XML ) includeHeader = false;
 	if ( format == FORMAT_JSON ) includeHeader = false;
@@ -679,6 +698,7 @@ bool processLoop ( void *state ) {
 	// do not calc title or print it if doc is xml or json
 	if ( ctype == CT_XML ) sbend = sbstart;
 	if ( ctype == CT_JSON ) sbend = sbstart;
+	if ( ctype == CT_STATUS ) sbend = sbstart;
 
 	for ( char *t = sbstart ; t < sbend ; t++ ) {
 		// title tag?
@@ -813,6 +833,8 @@ bool processLoop ( void *state ) {
 	// do not do term highlighting if json
 	if ( xd->m_contentType == CT_JSON )
 		queryHighlighting = false;
+	if ( xd->m_contentType == CT_STATUS )
+		queryHighlighting = false;
 
 	SafeBuf tmp;
 	SafeBuf *xb = sb;
@@ -915,6 +937,9 @@ bool processLoop ( void *state ) {
 	//if ( ctype == CT_XML ) contentType = "text/xml";
 
 	if ( xd->m_contentType == CT_JSON )
+		contentType = "application/json";
+
+	if ( xd->m_contentType == CT_STATUS )
 		contentType = "application/json";
 
 	if ( xd->m_contentType == CT_XML )

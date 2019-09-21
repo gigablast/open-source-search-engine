@@ -53,6 +53,7 @@
 // normally in seo.cpp, but here so it compiles
 SafeBuf    g_qbuf;
 int32_t       g_qbufNeedSave = 0;
+bool g_inAutoSave;
 
 // for resetAll()
 //#include "Msg6.h"
@@ -467,6 +468,7 @@ Process::Process ( ) {
 }
 
 bool Process::init ( ) {
+	g_inAutoSave = false;
 	// -1 means unknown
 	m_diskUsage = -1.0;
 	m_diskAvail = -1LL;
@@ -858,6 +860,18 @@ void doneCmdWrapper ( void *state ) {
 
 void hdtempWrapper ( int fd , void *state ) {
 
+	// current local time
+	int32_t now = getTime();
+
+	// from SpiderProxy.h
+	static int32_t s_lastTime = 0;
+	if ( ! s_lastTime ) s_lastTime = now;
+	// reset spider proxy stats every hour to alleviate false positives
+	if ( now - s_lastTime >= 3600 ) {
+		s_lastTime = now;
+		resetProxyStats();
+	}
+
 	// also download test urls from spider proxies to ensure they
 	// are up and running properly
 	downloadTestUrlFromProxies();
@@ -868,10 +882,11 @@ void hdtempWrapper ( int fd , void *state ) {
 	if ( g_process.m_threadOut ) return;
 	// skip if exiting
 	if ( g_process.m_mode == EXIT_MODE ) return;
-	// current local time
-	int32_t now = getTime();
 	// or if haven't waited int32_t enough
 	if ( now < s_nextTime ) return;
+
+	// see if this fixes the missed heartbeats
+	//return;
 
 	// set it
 	g_process.m_threadOut = true;
@@ -956,18 +971,27 @@ float getDiskUsage ( int64_t *diskAvail ) {
 	char cmd[10048];
 	char out[1024];
 	sprintf(out,"%sdiskusage",g_hostdb.m_dir);
-	snprintf(cmd,10000,"df -ka %s | tail -1 | "
+	snprintf(cmd,10000,
+		 // "ulimit -v 25000  ; "
+		 // "ulimit -t 30 ; "
+		 // "ulimit -a; "
+		 "df -ka %s | tail -1 | "
 		 "awk '{print $4\" \"$5}' > %s",
 		 g_hostdb.m_dir,
 		 out);
 	errno = 0;
+	// time it to see how long it took. could it be causing load spikes?
+	//log("process: begin df -ka");
 	int err = system ( cmd );
+	//log("process: end   df -ka");
 	if ( err == 127 ) {
 		log("build: /bin/sh does not exist. can not get disk usage.");
 		return -1.0; // unknown
 	}
 	// this will happen if you don't upgrade glibc to 2.2.4-32 or above
-	if ( err != 0 ) {
+	// for some reason it returns no mem but the file is ok.
+	// something to do with being in a thread?
+	if ( err != 0 && errno != ENOMEM ) {
 		log("build: Call to system(\"%s\") had error: %s",
 		    cmd,mstrerror(errno));
 		return -1.0; // unknown
@@ -1160,8 +1184,12 @@ void heartbeatWrapper ( int fd , void *state ) {
 		// check the "cat /proc/<pid>/status | grep SigQ" output
 		// to see if its overflowed. hopefully i will fix this by
 		// queue the signals myself in Loop.cpp.
-		log("db: missed heartbeat by %"INT64" ms. Num elapsed alarms = "
-		    "%"INT32"", elapsed-100,(int32_t)(g_numAlarms - s_lastNumAlarms));
+		log("db: missed calling niceness 0 heartbeatWrapper "
+		    "function by %"INT64" ms. Either you need a quickpoll "
+		    "somewhere or a niceness 0 function is taking too long. "
+		    "Num elapsed alarms = "
+		    "%"INT32"", elapsed-100,(int32_t)(g_numAlarms - 
+						      s_lastNumAlarms));
 	s_last = now;
 	s_lastNumAlarms = g_numAlarms;
 
@@ -1328,7 +1356,9 @@ void processSleepWrapper ( int fd , void *state ) {
 	g_process.m_lastSaveTime = nextLastSaveTime;//now;
 	// save everything
 	logf(LOG_INFO,"db: Autosaving.");
+	g_inAutoSave = 1;
 	g_process.save();
+	g_inAutoSave = 0;
 }
 
 bool Process::save ( ) {
@@ -1340,6 +1370,7 @@ bool Process::save ( ) {
 	logf(LOG_INFO,"db: Entering lock mode for saving.");
 	m_mode   = LOCK_MODE; // SAVE_MODE;
 	m_urgent = false;
+	m_calledSave = false;
 	return save2();
 }
 
@@ -1359,6 +1390,8 @@ bool Process::shutdown ( bool urgent ,
 
 	m_mode   = EXIT_MODE;
 	m_urgent = urgent;
+
+	m_calledSave = false;
 
 	// check memory buffers for overruns/underrunds to see if that
 	// caused this core
@@ -1402,13 +1435,13 @@ bool Process::save2 ( ) {
 	// . Msg1 requests will get ETRYAGAIN error replies
 	// . this is instantaneous because all tree mods happen in this
 	//   main process, not in a thread
-	disableTreeWrites();
+	disableTreeWrites( false );
 
 	bool useThreads = true;
 
 	// . tell all rdbs to save trees
 	// . will return true if no rdb tree needs a save
-	if ( ! saveRdbTrees ( useThreads ) ) return false;
+	if ( ! saveRdbTrees ( useThreads , false ) ) return false;
 
 	// . save all rdb maps if they need it
 	// . will return true if no rdb map needs a save
@@ -1440,7 +1473,7 @@ bool Process::save2 ( ) {
 	g_cacheWritesEnabled = true;
 
 	// reenable tree writes since saves were completed
-	enableTreeWrites();
+	enableTreeWrites( false );
 
 	log(LOG_INFO,"gb: Saved data to disk. Re-enabling Writes.");
 
@@ -1463,15 +1496,35 @@ bool Process::shutdown2 ( ) {
 	if ( g_threads.amThread() ) return true;
 
 	if ( m_urgent )
-		log(LOG_INFO,"gb: Shutting down urgently. Try #%"INT32".",m_try++);
+		log(LOG_INFO,"gb: Shutting down urgently. "
+		    "Timed try #%"INT32".",
+		    m_try++);
 	else
-		log(LOG_INFO,"gb: Shutting down. Try #%"INT32".",m_try++);
+		log(LOG_INFO,"gb: Shutting down. Timed try #%"INT32".",
+		    m_try++);
+
+
+	// switch to urgent if having problems
+	if ( m_try >= 10 )
+		m_urgent = true;
 
 	// turn off statsdb so it does not try to add records for these writes
 	g_statsdb.m_disabled = true;
 
+	if ( g_threads.areThreadsEnabled () ) {
+		log("gb: disabling threads");
+		// now disable threads so we don't exit while threads are 
+		// outstanding
+		g_threads.disableThreads();
+	}
+
+	// . suspend all merges
+	g_merge.suspendMerge () ;
+	g_merge2.suspendMerge() ;
+
 	// assume we will use threads
-	bool useThreads = true;
+	// no, not now that we disabled them
+	bool useThreads = false;//true;
 
 	// if urgent do not allow any further threads to be spawned unless
 	// they were already queued
@@ -1480,6 +1533,33 @@ bool Process::shutdown2 ( ) {
 		useThreads = false;
 		// turn off all threads just in case
 		if ( ! useThreads ) g_threads.disableThreads();
+	}
+
+	static bool s_printed = false;
+
+ waitLoop:
+
+	// wait for all 'write' threads to be done. they can be done
+	// and just waiting for a join, in which case we won't coun them.
+	int32_t n = g_threads.getNumActiveWriteUnlinkRenameThreadsOut();
+	// we can't wait for the write thread if we had a seg fault, but
+	// do print a msg in the log
+	if ( n != 0 && m_urgent ) {
+		log(LOG_INFO,"gb: Has %"INT32" write/unlink/rename "
+		    "threads active. Waiting.",n);
+		sleep(1);
+		goto waitLoop;
+	}
+
+	if ( n != 0 && ! m_urgent ) {
+		log(LOG_INFO,"gb: Has %"INT32" write/unlink/rename "
+		    "threads out. Waiting for "
+		    "them to finish.",n);
+		return false;
+	}
+	else if ( ! s_printed && ! m_urgent ) {
+		s_printed = true;
+		log(LOG_INFO,"gb: No write/unlink/rename threads active.");
 	}
 
 
@@ -1494,12 +1574,9 @@ bool Process::shutdown2 ( ) {
 
 	//g_conf.m_injectionEnabled = false;
 
-	// . suspend all merges
-	g_merge.suspendMerge () ;
-	g_merge2.suspendMerge() ;
 	// make sure they are in a saveable state. we need to make sure
 	// they have dumped out the latest merged list and updated the 
-	// appropriate RdbMap so we can save it below
+	// appropriate RdbMap so we can save it below.
 	bool wait = false;
 	if ( g_merge.m_isMerging  && ! g_merge.m_isReadyToSave  ) wait = true;
 	if ( g_merge2.m_isMerging && ! g_merge2.m_isReadyToSave ) wait = true;
@@ -1507,17 +1584,19 @@ bool Process::shutdown2 ( ) {
 	if ( isRdbDumping() ) wait = true;
 	// . wait for the merge or dump to complete
 	// . but NOT if urgent...
-	if ( wait && ! m_urgent ) return false;
+	// . this stuff holds everything up too long, take out, we already
+	//   wait for write threads to complete, that should be good enough
+	//if ( wait && ! m_urgent ) return false;
 
 	// . disable adds/deletes on all rdb trees
 	// . Msg1 requests will get ECLOSING error msgs
 	// . this is instantaneous because all tree mods happen in this
 	//   main process, not in a thread
-	disableTreeWrites();
+	disableTreeWrites( true );
 
 	// . tell all rdbs to save trees
 	// . will return true if no rdb tree needs a save
-	if ( ! saveRdbTrees ( useThreads ) ) 
+	if ( ! saveRdbTrees ( useThreads , true ) ) 
 		if ( ! m_urgent ) return false;
 
 	// save this right after the trees in case we core
@@ -1595,11 +1674,18 @@ bool Process::shutdown2 ( ) {
 
 	// urgent means we need to dump core, SEGV or something
 	if ( m_urgent ) {
-		// log it
-		log("gb: Dumping core after saving.");
-		// at least destroy the page caches that have shared memory
-		// because they seem to not clean it up
-		resetPageCaches();
+
+		if ( g_threads.amThread() ) {
+			uint64_t tid = (uint64_t)getpidtid();
+			log("gb: calling abort from thread with tid of "
+			    "%"UINT64" (thread)",tid);
+		}
+		else {
+			pid_t pid = getpid();
+			log("gb: calling abort from main process "
+			    "with pid of %"UINT64" (main process)",
+			    (uint64_t)pid);
+		}
 
 		// let's ensure our core file can dump
 		struct rlimit lim;
@@ -1607,9 +1693,48 @@ bool Process::shutdown2 ( ) {
 		if ( setrlimit(RLIMIT_CORE,&lim) )
 			log("gb: setrlimit: %s.", mstrerror(errno) );
 
+		// if we are in this code then we are the main process
+		// and not a thread.
+		// see if this makes it so we always dump core again.
+		// joins with all threads, too.
+		log("gb: Joining with all threads");
+		g_threads.killAllThreads();
+
+		// log it
+		log("gb: Dumping core after saving.");
+		// at least destroy the page caches that have shared memory
+		// because they seem to not clean it up
+		//resetPageCaches();
+
+		// use the default segmentation fault handler which should
+		// dump core rather than call abort() which doesn't always
+		// work because perhaps of threads doing something
+		int signum = SIGSEGV;
+		signal(signum, SIG_DFL);
+		kill(getpid(), signum);
+
+		// this is the trick: it will trigger the core dump by
+		// calling the original SIGSEGV handler.
+		//int signum = SIGSEGV;
+		//signal(signum, SIG_DFL);
+		//kill(getpid(), signum);
+
+		// try resetting the SEGV sig handle to default. when
+		// we return it should call the default handler.
+		// struct sigaction sa;
+		// sigemptyset (&sa.sa_mask);
+		// sa.sa_flags = SA_RESETHAND;
+		// sa.sa_sigaction = NULL;
+		// sigaction ( SIGSEGV, &sa, 0 ) ;
+		// return true;
+
 		// . force an abnormal termination which will cause a core dump
 		// . do not dump core on SIGHUP signals any more though
-		abort();
+		//abort();
+
+		// return from this signal handler so we can execute
+		// original SIGSEGV handler right afterwards
+		// default handler should be called after we return now
 		// keep compiler happy
 		return true;
 	}
@@ -1619,13 +1744,19 @@ bool Process::shutdown2 ( ) {
 	// cleanup threads, this also launches them too
 	g_threads.timedCleanUp(0x7fffffff,MAX_NICENESS);
 
+	// there's no write/unlink/rename threads active, 
+	// so just kill the remaining threads and join
+	// with them so we can try to get a proper exit status code
+	log("gb: Joining with all threads");
+	g_threads.killAllThreads();
+
 	// wait for all threads to complete...
-	int32_t n = g_threads.getNumThreadsOutOrQueued() ;
+	//int32_t n = g_threads.getNumThreadsOutOrQueued() ;
 	//if ( n > 0 )
 	//	return log(LOG_INFO,
 	//		   "gb: Waiting for %"INT32" threads to complete.",n);
 
-	log(LOG_INFO,"gb: Has %"INT32" threads out.",n);
+	//log(LOG_INFO,"gb: Has %"INT32" threads out.",n);
 
 
 	//ok, resetAll will close httpServer's socket so now is the time to 
@@ -1645,19 +1776,52 @@ bool Process::shutdown2 ( ) {
 	if ( g_process.m_threadOut ) 
 		log(LOG_INFO,"gb: still has hdtemp thread");
 
+
+	log("gb. EXITING GRACEFULLY.");
+
+	// from main.cpp:
+	// extern SafeBuf g_pidFileName;
+	// extern bool g_createdPidFile;
+	// // first remove the pid file on graceful exit
+	// // remove pid file if we created it
+	// // take from main.cpp
+	// if ( g_createdPidFile && g_pidFileName.length() )
+	// 	::unlink ( g_pidFileName.getBufStart() );
+
+	// make a file called 'cleanexit' so bash keep alive loop will stop
+	// because bash does not get the correct exit code, 0 in this case,
+	// even though we explicitly say 'exit(0)' !!!! poop
+	char tmp[128];
+	SafeBuf cleanFileName(tmp,128);
+	cleanFileName.safePrintf("%s/cleanexit",g_hostdb.m_dir);
+	SafeBuf nothing;
+	// returns # of bytes written, -1 if could not create file
+	if ( nothing.save ( cleanFileName.getBufStart() ) == -1 )
+		log("gb: could not create %s",cleanFileName.getBufStart());
+
+
 	// exit abruptly
 	exit(0);
+
+	// let's return control to Loop.cpp?
 
 	// keep compiler happy
 	return true;
 }
 
-void Process::disableTreeWrites ( ) {
+void Process::disableTreeWrites ( bool shuttingDown ) {
 	// loop over all Rdbs
 	for ( int32_t i = 0 ; i < m_numRdbs ; i++ ) {
 		Rdb *rdb = m_rdbs[i];
+		// if we save doledb while spidering it screws us up
+		// because Spider.cpp can not directly write into the
+		// rdb tree and it expects that to always be available!
+		if ( ! shuttingDown && rdb->m_rdbId == RDB_DOLEDB )
+			continue;
 		rdb->disableWrites();
 	}
+	// don't save spider related trees if not shutting down
+	if ( ! shuttingDown ) return;
 	// disable all spider trees and tables
 	for ( int32_t i = 0 ; i < g_collectiondb.m_numRecs ; i++ ) {
 		SpiderColl *sc = g_spiderCache.getSpiderCollIffNonNull(i);
@@ -1669,12 +1833,14 @@ void Process::disableTreeWrites ( ) {
 	
 }
 
-void Process::enableTreeWrites ( ) {
+void Process::enableTreeWrites ( bool shuttingDown ) {
 	// loop over all Rdbs
 	for ( int32_t i = 0 ; i < m_numRdbs ; i++ ) {
 		Rdb *rdb = m_rdbs[i];
 		rdb->enableWrites();
 	}
+	// don't save spider related trees if not shutting down
+	if ( ! shuttingDown ) return;
 	// enable all waiting trees
 	for ( int32_t i = 0 ; i < g_collectiondb.m_numRecs ; i++ ) {
 		SpiderColl *sc = g_spiderCache.getSpiderCollIffNonNull(i);
@@ -1707,14 +1873,35 @@ bool Process::isRdbMerging ( ) {
 
 // . returns false if blocked, true otherwise
 // . calls callback when done saving
-bool Process::saveRdbTrees ( bool useThread ) {
+bool Process::saveRdbTrees ( bool useThread , bool shuttingDown ) {
 	// never if in read only mode
 	if ( g_conf.m_readOnlyMode ) return true;
+	// no thread if shutting down
+	if ( shuttingDown ) useThread = false;
+	// debug note
+	if ( shuttingDown ) log("gb: trying to shutdown");
 	// turn off statsdb until everyone is done
 	//g_statsdb.m_disabled = true;
 	// loop over all Rdbs and save them
-	for ( int32_t i = 0 ; ! m_calledSave && i < m_numRdbs ; i++ ) {
+	for ( int32_t i = 0 ; i < m_numRdbs ; i++ ) {
+		if ( m_calledSave ) {
+			log("gb: already saved trees, skipping.");
+			break;
+		}
 		Rdb *rdb = m_rdbs[i];
+		// if we save doledb while spidering it screws us up
+		// because Spider.cpp can not directly write into the
+		// rdb tree and it expects that to always be available!
+		if ( ! shuttingDown && rdb->m_rdbId == RDB_DOLEDB )
+			continue;
+		// note it
+		if ( ! rdb->m_dbname || ! rdb->m_dbname[0] )
+			log("gb: calling save tree for rdbid %i",
+			    (int)rdb->m_rdbId);
+		else
+			log("gb: calling save tree for %s",
+			    rdb->m_dbname);
+
 		rdb->saveTree ( useThread );
 	}
 
@@ -1728,7 +1915,7 @@ bool Process::saveRdbTrees ( bool useThread ) {
 	//   launched.
 	// . and sets m_isSaving=false on SpiderCache::doneSaving when they
 	//   are all done.
-	g_spiderCache.save ( useThread );
+	if ( shuttingDown ) g_spiderCache.save ( useThread );
 
 	// do not re-save the stuff we just did this round
 	m_calledSave = true;
@@ -1737,6 +1924,8 @@ bool Process::saveRdbTrees ( bool useThread ) {
 	// check if any need to finish saving
 	for ( int32_t i = 0 ; i < m_numRdbs ; i++ ) {
 		Rdb *rdb = m_rdbs[i];
+		// do not return until all saved if we are shutting down
+		if ( shuttingDown ) break;
 		//if ( rdb->needsSave ( ) ) return false;
 		// we disable the tree while saving so we can't really add recs
 		// to one rdb tree while saving, but for crawlbot
@@ -1744,11 +1933,15 @@ bool Process::saveRdbTrees ( bool useThread ) {
 		if ( rdb->isSavingTree ( ) ) return false;
 	}
 
+	// only save spiderdb based trees if shutting down so we can
+	// still write to them without writes being disabled
+	if ( ! shuttingDown ) return true;
+
 	// . check spider cache files (doleiptable waitingtree etc.)
 	// . this should return true if it still has some files that haven't
 	//   saved to disk yet... so if it returns true we return false 
 	//   indicating that we are still waiting!
-	if ( g_spiderCache.needsSave () ) return false;
+	if ( ! shuttingDown && g_spiderCache.needsSave () ) return false;
 
 	// reset for next call
 	m_calledSave = false;
@@ -1797,12 +1990,13 @@ bool Process::saveBlockingFiles1 ( ) {
 	if ( g_conf.m_readOnlyMode ) return true;
 
 	// save user accounting files. 3 of them.
-	if ( g_hostdb.m_myHost->m_isProxy )
+	if ( g_hostdb.m_myHost && g_hostdb.m_myHost->m_isProxy )
 		g_proxy.saveUserBufs();
 
-	// save the Conf file now
+	// save the gb.conf file now
 	g_conf.save();
 	// save the conf files
+	// if autosave and we have over 20 colls, just make host #0 do it
         g_collectiondb.save();
 	// . save repair state
 	// . this is repeated above too
@@ -2009,22 +2203,30 @@ void Process::resetAll ( ) {
 	resetTestIpTable();
 }
 
+#include "Msg3.h"
+
 void Process::resetPageCaches ( ) {
 	log("gb: Resetting page caches.");
-	g_posdb           .getDiskPageCache()->reset();
-	//g_datedb          .getDiskPageCache()->reset();
-	g_linkdb          .getDiskPageCache()->reset();
-	g_titledb         .getDiskPageCache()->reset();
-	g_sectiondb       .getDiskPageCache()->reset();
-	g_tagdb           .getDiskPageCache()->reset();
-	g_spiderdb        .getDiskPageCache()->reset();
-	//g_tfndb           .getDiskPageCache()->reset();
-	//g_checksumdb      .getDiskPageCache()->reset();
-	g_clusterdb       .getDiskPageCache()->reset();
-	g_catdb           .getDiskPageCache()->reset();
-	//g_placedb         .getDiskPageCache()->reset();
-	g_doledb          .getDiskPageCache()->reset();
-	//g_statsdb	  .getDiskPageCache()->reset();
+	for ( int32_t i = 0 ; i < RDB_END ; i++ ) {
+		RdbCache *rpc = getDiskPageCache ( i ); // rdbid = i
+		if ( ! rpc ) continue;
+		rpc->reset();
+	}
+		
+	// g_posdb           .getDiskPageCache()->reset();
+	// //g_datedb          .getDiskPageCache()->reset();
+	// g_linkdb          .getDiskPageCache()->reset();
+	// g_titledb         .getDiskPageCache()->reset();
+	// g_sectiondb       .getDiskPageCache()->reset();
+	// g_tagdb           .getDiskPageCache()->reset();
+	// g_spiderdb        .getDiskPageCache()->reset();
+	// //g_tfndb           .getDiskPageCache()->reset();
+	// //g_checksumdb      .getDiskPageCache()->reset();
+	// g_clusterdb       .getDiskPageCache()->reset();
+	// g_catdb           .getDiskPageCache()->reset();
+	// //g_placedb         .getDiskPageCache()->reset();
+	// g_doledb          .getDiskPageCache()->reset();
+	// //g_statsdb	  .getDiskPageCache()->reset();
 }
 
 // ============================================================================

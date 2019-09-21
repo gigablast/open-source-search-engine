@@ -11,6 +11,7 @@
 #include "PageParser.h" // g_inPageParser
 #include "Users.h"
 #include "Rebalance.h"
+#include "Profiler.h"
 
 // a global class extern'd in Pages.h
 Pages g_pages;
@@ -598,6 +599,7 @@ bool Pages::sendDynamicReply ( TcpSocket *s , HttpRequest *r , int32_t page ) {
 	if ( page == PAGE_ADDURL ) publicPage = true;
 	if ( page == PAGE_GET ) publicPage = true;
 	if ( page == PAGE_CRAWLBOT ) publicPage = true;
+	if ( page == PAGE_DIRECTORY ) publicPage = true;
 
 	// get our host
 	//Host *h = g_hostdb.m_myHost;
@@ -642,6 +644,15 @@ bool Pages::sendDynamicReply ( TcpSocket *s , HttpRequest *r , int32_t page ) {
 	if ( page == PAGE_CRAWLBOT && ! isMasterAdmin )
 		log("pages: accessing a crawlbot page without admin privs. "
 		    "no parms can be changed.");
+
+	if ( ! g_conf.m_allowCloudUsers &&
+	     ! publicPage &&
+	     ! isMasterAdmin &&
+	     ! g_conf.isCollAdmin ( s , r ) ) {
+		//char *msg = "Permission Denied";
+		//return g_httpServer.sendErrorReply(s, 403,msg);
+		return sendPageLogin ( s , r );
+	}
 
 	/*
 	// is request coming from a local ip?
@@ -789,6 +800,8 @@ bool Pages::sendDynamicReply ( TcpSocket *s , HttpRequest *r , int32_t page ) {
 
 	// get safebuf stored in TcpSocket class
 	SafeBuf *parmList = &s->m_handyBuf;
+
+	parmList->reset();
 
 	// chuck this in there
 	s->m_pageNum = page;
@@ -1444,20 +1457,25 @@ bool Pages::printAdminTop (SafeBuf     *sb   ,
 	int32_t doneCount = 0;
 	int32_t activeCount = 0;
 	int32_t pauseCount = 0;
+	int32_t betweenRoundsCount = 0;
+	uint32_t nowGlobal = (uint32_t)getTimeGlobal();
 	for (int32_t i = 0 ; i < g_collectiondb.m_numRecs ; i++ ) {
 		CollectionRec *cc = g_collectiondb.m_recs[i];
 		if ( ! cc ) continue;
 		CrawlInfo *ci = &cc->m_globalCrawlInfo;
-		if (   cc->m_spideringEnabled && 
-		     ! ci->m_hasUrlsReadyToSpider &&
-		       ci->m_urlsHarvested )
+		if      ( cc->m_spideringEnabled &&
+			  nowGlobal < cc->m_spiderRoundStartTime )
+			betweenRoundsCount++;
+		else if ( cc->m_spideringEnabled && 
+			  ! ci->m_hasUrlsReadyToSpider &&
+			  ci->m_urlsHarvested )
 			emptyCount++;
 		else if ( ! ci->m_hasUrlsReadyToSpider )
 			doneCount++;
-		else if (cc->m_spideringEnabled && ci->m_hasUrlsReadyToSpider )
-			activeCount++;
 		else if (!cc->m_spideringEnabled && ci->m_hasUrlsReadyToSpider)
 			pauseCount++;
+		else if (cc->m_spideringEnabled && ci->m_hasUrlsReadyToSpider )
+			activeCount++;
 	}
 
 
@@ -1468,29 +1486,42 @@ bool Pages::printAdminTop (SafeBuf     *sb   ,
 		       "<b>Key</b>"
 		       "<br>"
 		       "<br>"
+		       "\n"
 		       );
 	sb->safePrintf(
 		       "<font color=black>"
 		       "&#x25cf;</font> spider is done (%"INT32")"
 		       "<br>"
+		       "\n"
 
 		       "<font color=orange>"
 		       "&#x25cf;</font> spider is paused (%"INT32")"
 		       "<br>"
+		       "\n"
 
 		       "<font color=green>"
 		       "&#x25cf;</font> spider is active (%"INT32")"
 		       "<br>"
+		       "\n"
 
 		       "<font color=gray>"
 		       "&#x25cf;</font> spider queue empty (%"INT32")"
 		       "<br>"
+		       "\n"
+
+		       "<font color=blue>"
+		       "&#x25cf;</font> between rounds (%"INT32")"
+		       "<br>"
+		       "\n"
+
+
 		       "</div>"
 
 		       ,doneCount
 		       ,pauseCount
 		       ,activeCount
 		       ,emptyCount
+		       ,betweenRoundsCount
 
 		       );
 
@@ -2636,12 +2667,34 @@ bool Pages::printCollectionNavBar ( SafeBuf *sb     ,
 		       ".e{background-color:#e0e0e0;}"
 		       "</style>\n");
 
+	int32_t showAll = hr->getLong("showall",0);
+
 	int32_t row = 0;
+	uint32_t nowGlobal = (uint32_t)getTimeGlobal();
+	int32_t numPrinted = 0;
+	bool printMsg = false;
+
+	// if doing qa test don't print out collection names because
+	// they are somewhat random and throw off the diff in qa.cpp
+	int32_t qa = hr->getLong("qa",0);
+	//if ( ! strcmp(coll,"qatest123") ) qa = 1;
 
 	//for ( int32_t i = a ; i < b ; i++ ) {
 	for ( int32_t i = 0 ; i < g_collectiondb.m_numRecs ; i++ ) {
+
+		if ( qa ) 
+			break;
+
 		CollectionRec *cc = g_collectiondb.m_recs[i];
 		if ( ! cc ) continue;
+
+		if ( numPrinted >= 20 && ! showAll ) {
+			printMsg = true;
+			break;
+		}
+
+		// count it
+		numPrinted++;
 
 		//
 		// CLOUD SEARCH ENGINE SUPPORT
@@ -2692,6 +2745,11 @@ bool Pages::printCollectionNavBar ( SafeBuf *sb     ,
 		       ci->m_urlsHarvested )
 			bcolor = "gray";
 
+		if ( cc->m_spideringEnabled &&
+		     nowGlobal < cc->m_spiderRoundStartTime )
+			bcolor = "blue";
+
+
 		sb->safePrintf("<font color=%s>&#x25cf;</font> ",bcolor);
 
 		if ( i != collnum || ! highlight )// || ! coll || ! coll[0])
@@ -2715,7 +2773,19 @@ bool Pages::printCollectionNavBar ( SafeBuf *sb     ,
 			sb->safePrintf("</div>\n");
 		else
 			sb->safePrintf("<br>\n");
+
 	}
+
+	if ( showAll ) return status;
+
+	// convert our current page number to a path
+	if ( printMsg ) {
+		char *path = s_pages[page].m_filename;
+		sb->safePrintf("<a href=\"/%s?c=%s&showall=1\">"
+			       "...show all...</a><br>"
+			       , path , coll );
+	}
+
 
 	//sb->safePrintf ( "</center><br/>" );
 
@@ -3450,6 +3520,7 @@ bool printApiForPage ( SafeBuf *sb , int32_t PAGENUM , CollectionRec *cr ) {
 		if ( pageNum != PAGENUM ) continue;
 
 		SafeBuf tmp;
+		tmp.setLabel("apisb");
 		char diff = 0;
 		bool printVal = false;
 		if ( parm->m_type != TYPE_CMD &&
@@ -3667,43 +3738,597 @@ bool printApiForPage ( SafeBuf *sb , int32_t PAGENUM , CollectionRec *cr ) {
 			       "}\n");
 	}
 
+	int32_t cols = 40;
+
 	if ( PAGENUM == PAGE_RESULTS ) {
 		sb->safePrintf(
-			       "{ \"response:\"{\n"
-			       "\t\"statusCode\":0,\n"
-			       "\t\"statusMsg\":\"Success\",\n"
+			       "<b>{ \"response:\"{\n</b>" );
 
-			       "\t\"currentTimeUTC\":1404588231,\n"
-			       "\t\"responseTimeMS\":312,\n"
-			       "\t\"docsInCollection\":226,\n"
-			       "\t\"hits\":193,\n"
-			       "\t\"moreResultsFollow\":1,\n"
-			       "\t\"results\":[\n"
 
-			       "\t{\n"
-			       "\t\t\"imageBase64\":\"/9j/4AAQSkZJR...\",\n"
-			       "\t\t\"imageHeight\":223,\n"
-			       "\t\t\"imageWidth\":350,\n"
-			       "\t\t\"origImageHeight\":300,\n"
-			       "\t\t\"origImageWidth\":470,\n"
-			       "\t\t\"title\":\"U.S....\",\n"
-			       "\t\t\"sum\":\"Department of the Interior "
-			       "protects America's natural resources.\",\n"
-			       "\t\t\"url\":\"www.doi.gov\",\n"
-			       "\t\t\"size\":\"  64k\",\n"
-			       "\t\t\"docId\":34111603247,\n"
-			       "\t\t\"site\":\"www.doi.gov\",\n"
-			       "\t\t\"spidered\":1404512549,\n"
-			       "\t\t\"firstIndexedDateUTC\":1404512549,\n"
-			       "\t\t\"contentHash32\":2680492249,\n"
-			       "\t\t\"language\":\"English\"\n"
-			       "\t}\n"
-			       "\t,\n"
-			       "\t...\n"
+		sb->brify2 ( "\n"
+			     "\t# This is zero on a successful query. "
+			     "Otherwise "
+			     "it will be a non-zero number indicating the "
+			     "error code.\n"
+			     , cols , "\n\t# " , false );
+		sb->safePrintf ( "<b>\t\"statusCode\":0,\n\n</b>" );
 
-			       "]\n"
-			       "}\n"
-			       );
+
+		sb->brify2 ( "\t# Similar to above, this is \"Success\" "
+			     "on a successful query. Otherwise "
+			     "it will indicate an error message "
+			     "corresponding to the statusCode above.\n"
+			     , cols , "\n\t# " , false );
+		sb->safePrintf ( "<b>\t\"statusMsg\":\"Success\",\n\n</b>");
+
+		sb->brify2 ( "\t# This is the current time in UTC in unix "
+			     "timestamp format (seconds since the epoch) "
+			     "that the "
+			     "server has when generating this JSON response.\n"
+			     , cols , "\n\t# " , false );
+		sb->safePrintf ("<b>\t\"currentTimeUTC\":1404588231,\n\n</b>");
+
+		sb->brify2 ( "\t# This is how long it took in milliseconds "
+			     "to generate "
+			     "the JSON response from reception of the "
+			     "request.\n"
+			     , cols , "\n\t# " , false );
+		sb->safePrintf("<b>\t\"responseTimeMS\":312,\n\n</b>");
+
+
+		sb->brify2 ( "\t# This is how many matches were excluded "
+			     "from the search results because they "
+			     "were considered duplicates, banned, "
+			     "had errors generating the summary, or where "
+			     "from an over-represented site. To show "
+			     "them use the &sc &dr &pss "
+			     "&sb and &showerrors "
+			     "input parameters described above.\n"
+			     , cols , "\n\t# " , false );
+		sb->safePrintf("<b>\t\"numResultsOmitted\":3,\n\n</b>");
+
+
+		sb->brify2 ( "\t# This is how many shards failed to return "
+			     "results. Gigablast gets results from "
+			     "multiple shards (computers) and merges them "
+			     "to get the final result set. Some times a "
+			     "shard is down or malfunctioning so it will "
+			     "not contribute to the results. So If this "
+			     "number is non-zero then you had such a shard.\n"
+			     , cols , "\n\t# " , false );
+		sb->safePrintf("<b>\t\"numShardsSkipped\":0,\n\n</b>");
+
+
+		sb->brify2 ( "\t# This is how many shards are "
+			     "ideally in use by Gigablast to generate "
+			     "search results.\n"
+			     , cols , "\n\t# " , false );
+		sb->safePrintf("<b>\t\"totalShards\":159,\n\n</b>");
+
+		sb->brify2 ( "\t# This is how many total documents are in "
+			     "the collection being searched.\n"
+			     , cols , "\n\t# " , false );
+		sb->safePrintf("<b>\t\"docsInCollection\":226,\n\n</b>");
+
+		sb->brify2 ( "\t# This is how many of those documents "
+			     "matched the query.\n"
+			     , cols , "\n\t# " , false );
+		sb->safePrintf( "<b>\t\"hits\":193,\n\n</b>");
+		
+		sb->brify2 ( "\t# This is 1 if more search results are "
+			     "available, otherwise it is 0.\n"
+			     , cols , "\n\t# " , false );
+		sb->safePrintf("<b>\t\"moreResultsFollow\":1,\n\n</b>");
+
+
+		// queryInfo:
+		sb->brify2 ( "\t# Start of query-based information.\n"
+			     , cols , "\n\t# " , false );
+		sb->safePrintf("<b>\t\"queryInfo\":{\n</b>\n");
+
+		sb->brify2 ( "\t\t# The entire query that was received, "
+			     "represented as a single string.\n"
+			     , cols , "\n\t\t# " , false );
+		sb->safePrintf("<b>\t\t\"fullQuery\":\"test\",\n\n</b>");
+
+
+		sb->brify2 ( 
+			"\t\t# The language of the query. "
+			"This is the 'preferred' language of the "
+			"search results. It is reflecting the "
+			"&qlang input parameter described above. "
+			"Search results in this language (or an unknown "
+		        "language) will receive a large boost. The "
+			"boost is multiplicative. The default boost size "
+		        "can be "
+			"overridden using the &langw input parameter "
+			"described above. This language abbreviation here "
+			"is usually 2 letter, but can be more, like in "
+			"the case of zh-cn, for example.\n"
+			, cols , "\n\t\t# " , false );
+		sb->safePrintf("<b>\t\t\"queryLanguageAbbr\":\"en\",\n\n</b>");
+
+
+		sb->brify2 ( 
+			"\t\t# The language of the query. Just like "
+			"above but the language is spelled out. It may "
+			"be multiple words.\n"
+			, cols , "\n\t\t# " , false );
+		sb->safePrintf("<b>\t\t\"queryLanguage\":\"English\",\n\n"
+			       "</b>");
+
+
+		sb->brify2 ( 
+			"\t\t# List of space separated words in the "
+			"query that were ignored for the most part. "
+			"Because they were common words for the "
+			"query language they are in.\n"
+			, cols , "\n\t\t# " , false );
+		sb->safePrintf("<b>\t\t\"ignoredWords\":\"to the\",\n\n"
+			       "</b>");
+
+		sb->brify2 ( 
+			"\t\t# There is a maximum limit placed on the "
+			"number of query terms we search on to keep things "
+			"fast. This can "
+			"be changed in the search controls.\n"
+			, cols , "\n\t\t# " , false );
+		sb->safePrintf("<b>\t\t\"queryNumTermsTotal\":52,\n</b>");
+		sb->safePrintf("<b>\t\t\"queryNumTermsUsed\":20,\n</b>");
+		sb->safePrintf("<b>\t\t\"queryWasTruncated\":1,\n\n</b>");
+
+		sb->brify2 ( 
+			"\t\t# The start of the terms array. Each query "
+			"is broken down into a list of terms. Each "
+			"term is described here.\n"
+			, cols , "\n\t\t# " , false );
+		sb->safePrintf("<b>\t\t\"terms\":[\n\n</b>");
+
+
+		sb->brify2 ( 
+			"\t\t\t# The first query term in the JSON "
+			"terms array.\n"
+			, cols , "\n\t\t\t# " , false );
+		sb->safePrintf("<b>\t\t\t{\n\n</b>");
+
+
+		sb->brify2 ( 
+			"\t\t\t# The term number, starting at 0.\n"
+			, cols , "\n\t\t# " , false );
+		sb->safePrintf("<b>\t\t\t\"termNum\":0,\n\n</b>");
+
+
+		sb->brify2 ( 
+			"\t\t\t# The term as a string.\n"
+			, cols , "\n\t\t\t# " , false );
+		sb->safePrintf("<b>\t\t\t\"termStr\":\"test\",\n\n</b>");
+
+
+		sb->brify2 ( 
+			"\t\t\t# The term frequency. An estimate of how "
+			"many pages in the collection contain the term. "
+			"Helps us weight terms by popularity when "
+			"scoring the results.\n"
+			, cols , "\n\t\t\t# " , false );
+		sb->safePrintf("<b>\t\t\t\"termFreq\":425239458,\n\n</b>");
+
+		sb->brify2 ( 
+			"\t\t\t# A 48-bit hash of the term. Used to represent "
+			"the term in the index.\n"
+			, cols , "\n\t\t\t# " , false );
+		sb->safePrintf("<b>\t\t\t\"termHash48\":"
+			       "67259736306430,\n\n</b>");
+
+
+		sb->brify2 ( 
+			"\t\t\t# A 64-bit hash of the term.\n"
+			, cols , "\n\t\t\t# " , false );
+		sb->safePrintf("<b>\t\t\t\"termHash64\":"
+			       "9448336835959712000,\n\n</b>");
+
+
+		sb->brify2 ( 
+			"\t\t\t# If the term has a field, like the term "
+			"title:cat, then what is the hash of the field. In "
+			"this example it would be the hash of 'title'. But "
+			"for the query 'test' there is no field so it is "
+			"0.\n"
+			, cols , "\n\t\t\t# " , false );
+		sb->safePrintf("<b>\t\t\t\"prefixHash64\":"
+			       "0\n\n</b>");
+
+		sb->safePrintf("\t\t\t},\n\n");
+
+
+		sb->brify2 ( 
+			"\t\t\t# The second "
+			"query term in the JSON terms array.\n"
+			, cols , "\n\t\t\t# " , false );
+		sb->safePrintf("<b>\t\t\t{\n\n</b>");
+
+
+		sb->safePrintf("<b>\t\t\t\"termNum\":1,\n</b>");
+		sb->safePrintf("<b>\t\t\t\"termStr\":\"tested\",\n\n</b>");
+
+
+		sb->brify2 ( 
+			"\t\t\t# The language the term is from, in the case "
+			"of query expansion on the original query term. "
+			"Gigablast tries to find multiple forms of the word "
+			"that have the same essential meaning. It uses the "
+			"specified query language (&qlang), however, if "
+			"a query term is from a different language, then "
+			"that language will be implied for query expansion.\n"
+			, cols , "\n\t\t\t# " , false );
+		sb->safePrintf("<b>\t\t\t\"termLang\":\"en\",\n\n</b>");
+
+		sb->brify2 ( 
+			    "\t\t\t# The query term that this term is a "
+			    "form of.\n"
+		, cols , "\n\t\t\t# " , false );
+		sb->safePrintf("<b>\t\t\t\"synonymOf\":\"test\",\n\n</b>");
+
+
+		sb->safePrintf("<b>\t\t\t\"termFreq\":73338909,\n</b>");
+		sb->safePrintf("<b>\t\t\t\"termHash48\":"
+			       "66292713121321,\n</b>");
+		sb->safePrintf("<b>\t\t\t\"termHash64\":"
+			       "9448336835959712000,\n</b>");
+		sb->safePrintf("<b>\t\t\t\"prefixHash64\":"
+			       "0\n</b>");
+		sb->safePrintf("\t\t\t},\n\n");
+		sb->safePrintf("\t\t\t...\n\n");
+
+
+		// end terms array
+		sb->brify2 ( 
+			    "\t\t# End of the JSON terms array.\n"
+		, cols , "\n\t\t# " , false );
+		sb->safePrintf("<b>\t\t]\n\n</b>");
+
+
+		// end queryInfo array
+		sb->brify2 ( 
+			    "\t# End of the queryInfo JSON structure.\n"
+		, cols , "\n\t# " , false );
+		sb->safePrintf("<b>\t},\n</b>\n");
+
+
+		// gigabits
+		sb->brify2 ( 
+			"\t# The start of the gigabits array. Each gigabit "
+			"is mined from the content of the search results. "
+			"The top "
+			"N results are mined, and you can control N with the "
+			"&dsrt input parameter described above.\n"
+			, cols , "\n\t# " , false );
+		sb->safePrintf("<b>\t\"gigabits\":[\n\n</b>");
+
+
+		// print gigabit #0
+		sb->brify2 ( "\t\t# The first gigabit in the array.\n"
+			     , cols , "\n\t\t# " , false );
+		sb->safePrintf("<b>\t\t{\n\n</b>");
+
+		sb->brify2 ( "\t\t# The gigabit as a string in utf8.\n"
+			     , cols , "\n\t\t# " , false );
+		sb->safePrintf("<b>\t\t\"term\":\"Membership\",\n\n</b>");
+
+		sb->brify2 ( "\t\t# The numeric score of the gigabit.\n"
+			     , cols , "\n\t\t# " , false );
+		sb->safePrintf("<b>\t\t\"score\":240,\n\n</b>");
+
+		sb->brify2 ( "\t\t# The popularity ranking of the gigabit. "
+			     "Out of 10000 random documents, how many "
+			     "documents contain it?\n"
+			     , cols , "\n\t\t# " , false );
+		sb->safePrintf("<b>\t\t\"minPop\":480,\n\n</b>");
+
+		sb->brify2 ( "\t\t# The gigabit in the context of a "
+			     "document.\n"
+			     , cols , "\n\t\t# " , false );
+		sb->safePrintf("<b>\t\t\"instance\":{\n\n</b>");
+
+		sb->brify2 ( "\t\t\t"
+			     "# A sentence, if it exists, "
+			     "from one of the search results "
+			     "which also contains the gigabit and as many "
+			     "significant query terms as possible. In UTF-8.\n"
+			     , cols , "\n\t\t\t# " , false );
+		sb->brify2("<b>\t\t\t\"sentence\":"
+			       "\"Get a free "
+			       "<b>Tested</b> Premium Membership here!\","
+			       "\n\n</b>"
+			     , 80 , "\n\t\t\t " , false );
+
+		sb->brify2 ( "\t\t\t"
+			     "# The url that contained that sentence. Always "
+			     "starts with http.\n"
+			     , cols , "\n\t\t\t# " , false );
+		sb->safePrintf("<b>\t\t\t\"url\":"
+			       "\"http://www.tested.com/\","
+			       "\n\n</b>");
+
+		sb->brify2 ( "\t\t\t"
+			     "# The domain of that url.\n"
+			     , cols , "\n\t\t\t# " , false );
+		sb->safePrintf("<b>\t\t\t\"domain\":"
+			       "\"tested.com\""
+			       "\n</b>");
+		// end instance
+		sb->safePrintf("<b>\t\t}\n\n</b>");
+		// end gigabit
+		sb->safePrintf("\t\t# End of the first gigabit\n"
+			       "<b>\t\t},\n\n</b>");
+
+		sb->safePrintf("\t\t...\n\n");
+
+		sb->brify2 ( 
+			    "\t# End of the JSON gigabits array.\n"
+		, cols , "\n\t# " , false );
+		sb->safePrintf("<b>\t],\n\n</b>");
+
+
+		// BEGIN FACETS
+		sb->safePrintf( "\t# Start of the facets array, if any.\n");
+		sb->safePrintf("<b>\t\"facets\":[\n</b>\n");
+
+		sb->safePrintf("\t\t# The first facet in the array.\n");
+		sb->safePrintf("<b>\t\t{\n</b>");
+
+		sb->brify2 ( "\t\t\t"
+			     "# The field you are faceting over\n"
+			     , cols , "\n\t\t\t# " , false );
+		sb->safePrintf ( "<b>\t\t\t\"field\":\"Company\",\n\n</b>");
+		sb->brify2 ( "\t\t\t"
+			     "# How many documents in the collection had "
+			     "this particular field? 64-bit integer.\n"
+			     , cols , "\n\t\t\t# " , false );
+		sb->safePrintf ( "<b>\t\t\t\"totalDocsWithField\":148553,"
+				 "\n\n</b>");
+
+		sb->brify2 ( "\t\t\t"
+			     "# How many documents in the collection had "
+			     "this particular field with the same value "
+			     "as the value line directly below? This should "
+			     "always be less than or equal to the "
+			     "totalDocsWithField count. 64-bit integer.\n"
+			     , cols , "\n\t\t\t# " , false );
+		sb->safePrintf ( "<b>\t\t\t\"totalDocsWithFieldAndValue\":"
+				 "44184,\n\n</b>");
+
+		sb->brify2 ( "\t\t\t"
+			     "# The value of the field in the case of "
+			     "this facet. Can be a string or an integer or "
+			     "a float, depending on the type described in "
+			     "the gbfacet query term. i.e. gbfacetstr, "
+			     "gbfacetint or gbfacetfloat.\n"
+			     , cols , "\n\t\t\t# " , false );
+		sb->safePrintf ( "<b>\t\t\t\"value\":"
+				 "\"Widgets, Inc.\",\n\n</b>");
+
+
+		sb->brify2 ( "\t\t\t"
+			     "# Should be the same as totalDocsWith"
+			     "FieldAndValue, "
+			     "above. 64-bit integer.\n"
+			     , cols , "\n\t\t\t# " , false );
+		sb->safePrintf ( "<b>\t\t\t\"docCount\":"
+				 "44184\n\n</b>");
+
+		sb->safePrintf("\t\t# End of the first facet in the array.\n");
+		sb->safePrintf("<b>\t\t}\n\n</b>");
+
+		sb->safePrintf( "\t# End of the facets array.\n");
+		sb->safePrintf("<b>\t],\n\n</b>");
+		// END FACETS
+
+
+
+		// results:
+		sb->brify2 ( "\t# Start of the JSON array of "
+			     "individual search results.\n"
+			     , cols , "\n\t# " , false );
+		sb->safePrintf("<b>\t\"results\":[\n</b>\n");
+
+
+		sb->brify2 ( "\t\t# The first result in the array.\n"
+			     , cols , "\n\t\t# " , false );
+		sb->safePrintf("<b>\t\t{\n\n</b>");
+
+
+		sb->brify2 ( "\t\t# The title of the result. In UTF-8.\n"
+			     , cols , "\n\t\t# " , false );
+		sb->safePrintf("<b>\t\t\"title\":"
+			       "\"This is the title.\",\n\n</b>");
+
+		// dmozEntry
+		sb->brify2 ( "\t\t# A DMOZ entry. One result can have "
+			     "multiple DMOZ entries.\n"
+			     , cols , "\n\t\t# " , false );
+		sb->safePrintf("<b>\t\t\"dmozEntry\":{</b>\n\n");
+
+		sb->brify2 ( "\t\t\t# The DMOZ category ID.\n"
+			     , cols , "\n\t\t\t# " , false );
+		sb->safePrintf("<b>\t\t\t\"dmozCatId\":374449,</b>\n\n");
+
+
+		sb->brify2 ( "\t\t\t# The DMOZ direct category ID.\n"
+			     , cols , "\n\t\t\t# " , false );
+		sb->safePrintf("<b>\t\t\t\"directCatId\":1,</b>\n\n");
+
+
+		sb->brify2 ( "\t\t\t# The DMOZ category as a UTF-8 string.\n"
+			     , cols , "\n\t\t\t# " , false );
+		sb->brify2 ("<b>\t\t\t\"dmozCatStr\":"
+			       "\"Top: Computers: Security: "
+			       "Malicious Software: Viruses: Detection "
+			       "and Removal Tools: Reviews\""
+			       ",</b>\n\n" 
+			     , 60 , "\n\t\t\t " , false );
+
+		sb->brify2 ( "\t\t\t# What title some DMOZ editor gave "
+			     "to this url.\n"
+			     , cols , "\n\t\t\t# " , false );
+		sb->safePrintf("<b>\t\t\t\"dmozTitle\":\"The DMOZ Title\","
+			       "</b>\n\n");
+
+
+		sb->brify2 ( "\t\t\t# What summary some DMOZ editor gave "
+			     "to this url.\n"
+			     , cols , "\n\t\t\t# " , false );
+		sb->safePrintf("<b>\t\t\t\"dmozSum\":\"A great web page.\","
+			       "</b>\n\n");
+
+
+		sb->brify2 ( "\t\t\t# The DMOZ anchor text, if any.\n"
+			     , cols , "\n\t\t\t# " , false );
+		sb->safePrintf("<b>\t\t\t\"dmozAnchor\":\"\","
+			       "</b>\n\n");
+
+
+		sb->brify2 ( "\t\t# End DMOZ entry.\n"
+			     , cols , "\n\t\t# " , false );
+		sb->safePrintf("<b>\t\t},</b>\n\n");
+
+
+
+
+
+		sb->brify2 ( "\t\t# The content type of the url. "
+			     "Can be html, pdf, text, xml, json, doc, xls "
+			     "or ps.\n"
+			     , cols , "\n\t\t# " , false );
+		sb->safePrintf("<b>\t\t\"contentType\":\"html\",\n\n</b>");
+
+		sb->brify2 ( "\t\t# The summary excerpt of the result. "
+			     "In UTF-8.\n"
+			     , cols , "\n\t\t# " , false );
+		sb->safePrintf("<b>\t\t\"sum\":\"Department of the Interior ");
+		sb->safePrintf("protects America's natural "
+			       "resources.\",\n\n</b>");
+
+		sb->brify2 ( "\t\t# The url of the result. If it starts "
+			     "with http:// then that is omitted. Also "
+			     "omits the trailing / if the urls is just "
+			     "a domain or subdomain on the root path.\n"
+			     , cols , "\n\t\t# " , false );
+		sb->safePrintf("<b>\t\t\"url\":\"www.doi.gov\",\n\n</b>");
+
+		sb->brify2 ( "\t\t# The hopcount of the url. The minimum "
+			     "number of links we would have to click to get "
+			     "to it from a root url. If this is 0 that means "
+			     "the url is a root url, like "
+			     "http://www.root.com/.\n"
+			     , cols , "\n\t\t# " , false );
+		sb->safePrintf("<b>\t\t\"hopCount\":0,\n\n</b>");
+
+		sb->brify2 ( "\t\t# The size of the result's content. "
+			     "Always in kilobytes. k stands for kilobytes. "
+			     "Could be a floating point number or and "
+			     "integer.\n"
+			     , cols , "\n\t\t# " , false );
+		sb->safePrintf("<b>\t\t\"size\":\"  64k\",\n\n</b>");
+
+
+		sb->brify2 ( "\t\t# The exact size of the result's content "
+			     "in bytes.\n"
+			     , cols , "\n\t\t# " , false );
+		sb->safePrintf("<b>\t\t\"sizeInBytes\":64560,\n\n</b>");
+
+		sb->brify2 ( "\t\t# The unique document identifier of the "
+			     "result. Used for getting the cached content "
+			     "of the url.\n"
+			     , cols , "\n\t\t# " , false );
+		sb->safePrintf("<b>\t\t\"docId\":34111603247,\n\n</b>");
+
+		sb->brify2 ( "\t\t# The site the result comes from. "
+			     "Usually a subdomain, but can also include "
+			     "part of the URL path, like, "
+			     "abc.com/users/brad/. A site is a set of "
+			     "web pages controlled by the same entity.\n"
+			     , cols , "\n\t\t# " , false );
+		sb->safePrintf("<b>\t\t\"site\":\"www.doi.gov\",\n\n</b>");
+
+		sb->brify2 ( "\t\t# The time the url was last INDEXED. "
+			     "If there was an error or the "
+			     "url's content was unchanged since last "
+			     "download, then this time will remain unchanged "
+			     "because the document is not reindexed in those "
+			     "cases. "
+			     "Time is in unix timestamp format and is in "
+			     "UTC.\n"
+			     , cols , "\n\t\t# " , false );
+		sb->safePrintf("<b>\t\t\"spidered\":1404512549,\n\n</b>");
+
+
+		sb->brify2 ( "\t\t# The first time the url was "
+			     "successfully INDEXED. "
+			     "Time is in unix timestamp format and is in "
+			     "UTC.\n"
+			     , cols , "\n\t\t# " , false );
+		sb->safePrintf("<b>\t\t\"firstIndexedDateUTC\":1404512549,"
+			       "\n\n</b>");
+
+		sb->brify2 ( "\t\t# A 32-bit hash of the url's content. It "
+			     "is used to determine if the content changes "
+			     "the next time we download it.\n"
+			     , cols , "\n\t\t# " , false );
+		sb->safePrintf("<b>\t\t\"contentHash32\":2680492249,\n\n</b>");
+
+		sb->brify2 ( "\t\t# The dominant language that the url's "
+			     "content is in. The language name is spelled "
+			     "out in its entirety.\n"
+			     , cols , "\n\t\t# " , false );
+		sb->safePrintf("<b>\t\t\"language\":\"English\"\n\n</b>");
+
+		sb->brify2 ( "\t\t# A convenient abbreviation of "
+			     "the above language. Most are two characters, "
+			     "but some, like zh-cn, are more.\n"
+			     , cols , "\n\t\t# " , false );
+		sb->safePrintf("<b>\t\t\"langAbbr\":\"en\"\n\n</b>");
+
+
+		sb->brify2 ( "\t\t# If the result has an associated image "
+			     "then the image thumbnail is encoded in "
+			     "base64 format here. It is a jpg image.\n"
+			     , cols , "\n\t\t# " , false );
+		sb->safePrintf("<b>\t\t\"imageBase64\":\"/9j/4AAQSkZJR...\","
+			       "\n\n</b>");
+
+		sb->brify2 ( "\t\t# If the result has an associated image "
+			     "then what is its height and width of the "
+			     "above jpg thumbnail image in pixels?\n"
+			     , cols , "\n\t\t# " , false );
+		sb->safePrintf("<b>\t\t\"imageHeight\":223,\n");
+		sb->safePrintf("\t\t\"imageWidth\":350,\n\n</b>");
+
+		sb->brify2 ( "\t\t# If the result has an associated image "
+			     "then what are the dimensions of the original "
+			     "image in pixels?\n"
+			     , cols , "\n\t\t# " , false );
+		sb->safePrintf("<b>\t\t\"origImageHeight\":300,\n");
+		sb->safePrintf("\t\t\"origImageWidth\":470\n\n</b>");
+
+
+		sb->brify2 ( "\t\t# End of the first result.\n"
+			     , cols , "\n\t\t# " , false );
+		sb->safePrintf("\t\t<b>},</b>\n");
+
+		sb->safePrintf("\n\t\t...\n");
+
+		
+		sb->brify2 ( 
+			    "\n\t# End of the JSON results array.\n"
+		, cols , "\n\t# " , false );
+		sb->safePrintf("<b>\t]</b>\n\n");
+
+		sb->brify2 ( "# End of the response.\n"
+		, cols , "\n\t# " , false );
+		sb->safePrintf("}\n\n");
+
+		sb->safePrintf("}\n");
+
 	}
 
 
@@ -3973,6 +4598,30 @@ bool printRedBox ( SafeBuf *mb , TcpSocket *sock , HttpRequest *hr ) {
 		mb->safePrintf("%s",boxEnd);
 	}
 
+	// injections disabled?
+	if ( ! g_conf.m_injectionsEnabled ) {
+		if ( adds ) mb->safePrintf("<br>");
+		adds++;
+		mb->safePrintf("%s",box);
+		mb->safePrintf("Injections are disabled in the "
+			       "<a href=/admin/master?c=%s>"
+			       "master controls</a>."
+			       ,coll);
+		mb->safePrintf("%s",boxEnd);
+	}
+
+	// querying disabled?
+	if ( ! g_conf.m_queryingEnabled ) {
+		if ( adds ) mb->safePrintf("<br>");
+		adds++;
+		mb->safePrintf("%s",box);
+		mb->safePrintf("Querying is disabled in the "
+			       "<a href=/admin/master?c=%s>"
+			       "master controls</a>."
+			       ,coll);
+		mb->safePrintf("%s",boxEnd);
+	}
+
 
 	bool sameVersions = true;
 	for ( int32_t i = 1 ; i < g_hostdb.getNumHosts() ; i++ ) {
@@ -4000,7 +4649,7 @@ bool printRedBox ( SafeBuf *mb , TcpSocket *sock , HttpRequest *hr ) {
 	for ( int32_t i = 1 ; i < g_hostdb.getNumHosts() ; i++ ) {
 		Host *h = &g_hostdb.m_hosts[i];
 		if ( g_hostdb.isDead( h ) ) continue;
-		if ( h->m_pingInfo.m_udpSlotsInUse >= 400 ) jammedHosts++;
+		if ( h->m_pingInfo.m_udpSlotsInUseIncoming>= 400)jammedHosts++;
 	}
 	if ( jammedHosts > 0 ) {
 		if ( adds ) mb->safePrintf("<br>");
@@ -4009,16 +4658,22 @@ bool printRedBox ( SafeBuf *mb , TcpSocket *sock , HttpRequest *hr ) {
 		if ( out == 1 ) s = " is";
 		mb->safePrintf("%s",box);
 		mb->safePrintf("%"INT32" host%s jammed with "
-			       "over %"INT32" outstanding "
-			       "udp transactions. "
+			       "over %"INT32" unhandled "
+			       "incoming udp requests. "
 			       "See <a href=/admin/sockets?c=%s>sockets</a>"
 			       " table.",jammedHosts,s,400,coll);
 		mb->safePrintf("%s",boxEnd);
 	}
 
-
-
-
+	if ( g_profiler.m_realTimeProfilerRunning ) {
+		if ( adds ) mb->safePrintf("<br>");
+		adds++;
+		mb->safePrintf("%s",box);
+		mb->safePrintf("Profiler is running. Performance is "
+			       "somewhat compromised. Disable on the "
+			       "profiler page.");
+		mb->safePrintf("%s",boxEnd);
+	}
 
 	if ( g_pingServer.m_hostsConfInDisagreement ) {
 		if ( adds ) mb->safePrintf("<br>");
@@ -4046,8 +4701,9 @@ bool printRedBox ( SafeBuf *mb , TcpSocket *sock , HttpRequest *hr ) {
 		mb->safePrintf("%s",box);
 		mb->safePrintf("A host requires a shard rebalance. "
 			       "Click 'rebalance shards' in the "
-			       "<a href=/admin/master>master controls</a> "
-			       "to rebalance all hosts.");
+			       "<a href=/admin/master?c=%s>"
+			       "master controls</a> "
+			       "to rebalance all hosts.",coll);
 		mb->safePrintf("%s",boxEnd);
 	}
 
@@ -4095,7 +4751,7 @@ bool printRedBox ( SafeBuf *mb , TcpSocket *sock , HttpRequest *hr ) {
 		mb->safePrintf("%s",box);
 		mb->safePrintf("%"INT32" %s dead and not responding to "
 			      "pings. See the "
-			       "<a href=/admin/host?c=%s>hosts table</a>.",
+			       "<a href=/admin/hosts?c=%s>hosts table</a>.",
 			       ps->m_numHostsDead ,s ,coll);
 		mb->safePrintf("%s",boxEnd);
 	}
@@ -4107,18 +4763,19 @@ bool printRedBox ( SafeBuf *mb , TcpSocket *sock , HttpRequest *hr ) {
 		mb->safePrintf("All Threads are disabled. "
 			       "Might hurt performance for doing system "
 			       "calls which call 3rd party executables and "
-			       "can take a int32_t time to run, "
-			       "like pdf2html.");
+			       "can take a long time to run, "
+			       "like pdf2html. Enable in master controls.");
 		mb->safePrintf("%s",boxEnd);
 	}
 
 
-	if ( g_conf.m_useThreadsForDisk ) { // || g_threads.m_disabled ) {
+	if ( ! g_conf.m_useThreadsForDisk ) { // || g_threads.m_disabled ) {
 		if ( adds ) mb->safePrintf("<br>");
 		adds++;
 		mb->safePrintf("%s",box);
-		mb->safePrintf("Threads are ENabled for disk. Severely hurts "
-			      "performance because pthreads suck.");
+		mb->safePrintf("Threads are Disabled for disk. Hurts "
+			       "performance mostly on non-SSD systems. "
+			       "Enable threads in the master controls.");
 		mb->safePrintf("%s",boxEnd);
 	}
 
@@ -4130,8 +4787,8 @@ bool printRedBox ( SafeBuf *mb , TcpSocket *sock , HttpRequest *hr ) {
 			       "Might hurt performance because these "
 			       "are calls to "
 			       "3rd party executables and "
-			       "can take a int32_t time to run, "
-			       "like pdf2html.");
+			       "can take a long time to run, "
+			       "like pdf2html. Enable in master controls.");
 		mb->safePrintf("%s",boxEnd);
 	}
 

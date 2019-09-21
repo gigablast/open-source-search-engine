@@ -281,7 +281,13 @@ bool RdbList::addRecord ( char *key , int32_t dataSize , char *data ,
 
 	if ( m_ks == 18 ) { // m_rdbId == RDB_POSDB ) {
 		// sanity
-		if ( key[0] & 0x06 ) { char *xx=NULL;*xx=0; }
+		if ( key[0] & 0x06 ) { 
+			log("rdblist: posdb: cannot add bad key. please "
+			    "delete posdb-buckets-saved.dat and restart.");
+			// return true so rdbbuckets::getlist doesn't stop
+			//return true;
+			char *xx=NULL;*xx=0; 
+		}
 		// grow the list if we need to
 		if ( m_listEnd + 18 >  m_alloc + m_allocSize )
 			if ( ! growList ( m_allocSize + 18 ) ) 
@@ -624,7 +630,8 @@ bool RdbList::growList ( int32_t newSize ) {
 	// don't shrink list
 	if ( newSize <= m_allocSize ) return true;
 	// debug msg
-	//log("RdbList::growList from %"INT32" to %"INT32"",m_allocSize , newSize );
+	// log("RdbList::growList 0x%"PTRFMT "from %"INT32" to %"INT32"",
+	//     (PTRTYPE)this,m_allocSize , newSize );
 	// make a new buffer
 	char *tmp =(char *) mrealloc ( m_alloc,m_allocSize,newSize,"RdbList");
 	//if ( (int32_t)tmp == 0x904dbd0 )
@@ -692,9 +699,9 @@ bool RdbList::checkList_r ( bool removeNegRecs , bool sleepOnProblem ,
 		return false;
 	}
 
-	if ( m_useHalfKeys && m_ks == 12 ) // m_ks != 18 && m_ks != 24 ) 
-		return checkIndexList_r ( removeNegRecs  , 
-					  sleepOnProblem );
+	// if ( m_useHalfKeys && m_ks == 12 ) // m_ks != 18 && m_ks != 24 ) 
+	// 	return checkIndexList_r ( removeNegRecs  , 
+	// 				  sleepOnProblem );
 
 	//log("m_list=%"INT32"",(int32_t)m_list);
 	//key_t oldk;
@@ -720,6 +727,10 @@ bool RdbList::checkList_r ( bool removeNegRecs , bool sleepOnProblem ,
 	if ( KEYCMP(acceptable,KEYMIN(),m_ks)==0 )
 		KEYSET ( acceptable , m_endKey , m_ks );
 	char k[MAX_KEY_BYTES];
+
+	static int32_t th = 0;
+	if ( ! th ) th = hash64Lower_a ( "roottitles" , 10 );
+
 	while ( ! isExhausted() ) {
 		//key_t k = getCurrentKey();
 		getCurrentKey( k );
@@ -731,8 +742,49 @@ bool RdbList::checkList_r ( bool removeNegRecs , bool sleepOnProblem ,
 			if ( data && 
 			     (*(int32_t *)data < 0 || 
 			      *(int32_t *)data > 100000000 ) ) {
-				char *xx = NULL; *xx = 0; }
+				log("rdblist: bad titlerec data for docid "
+				    "%"INT64,
+				    g_titledb.getDocIdFromKey((key_t *)k));
+				char *xx = NULL; *xx = 0; 
+			}
 		}		
+		// tagrec?
+		if ( rdbId == RDB_TAGDB && ! KEYNEG(k) ) {
+			//TagRec *gr = (TagRec *)getCurrentRec();
+			//Tag *tag = gr->getFirstTag   ( );
+			//for ( ; tag ; tag = gr->getNextTag ( tag ) ) {
+			Tag *tag = (Tag *)getCurrentRec();
+			if ( tag->m_type == th ) {
+				char *tdata = tag->getTagData();
+				int32_t tsize = tag->getTagDataSize();
+				// core if tag val is not \0 terminated
+				if ( tsize > 0 && tdata[tsize-1]!='\0' ) {
+					log("db: bad root title tag");
+					char *xx=NULL;*xx=0; }
+			}
+		}
+		if ( rdbId == RDB_SPIDERDB && ! KEYNEG(k) &&
+		     getCurrentDataSize() > 0 ) {
+			//char *data = getCurrentData();
+			char *rec = getCurrentRec();
+			// bad url in spider request?
+			if ( g_spiderdb.isSpiderRequest ( (key128_t *)rec ) ){
+				SpiderRequest *sr = (SpiderRequest *)rec;
+				if ( strncmp(sr->m_url,"http",4) != 0 ) {
+					log("db: spider req url");
+					char *xx=NULL;*xx=0;
+				}
+			}
+		}
+		// title bad uncompress size?
+		if ( rdbId == RDB_TITLEDB && ! KEYNEG(k) ) {
+			char *rec = getCurrentRec();
+			int32_t usize = *(int32_t *)(rec+12+4);
+			if ( usize <= 0 || usize>100000000) {
+				log("db: bad titlerec uncompress size");
+				char *xx=NULL;*xx=0; 
+			}
+		}
 		// debug msg
 		// pause if it's google
 		//if ((((k.n0)  >> 1) & 0x0000003fffffffffLL)  == 70166155664) 
@@ -1298,6 +1350,7 @@ bool RdbList::constrain ( char   *startKey    ,
 	// ensure we our first key is 12 bytes if m_useHalfKeys is true
 	if ( m_useHalfKeys && isHalfBitOn ( m_list ) ) {
 		g_errno = ECORRUPTDATA;
+		g_numCorrupt++;
 		return log("db: First key is 6 bytes. Corrupt data "
 			   "file.");
 	}
@@ -1305,12 +1358,14 @@ bool RdbList::constrain ( char   *startKey    ,
 	// sanity. hint key should be full key
 	if ( m_ks == 18 && hintKey && (hintKey[0]&0x06)){
 		g_errno = ECORRUPTDATA;
+		g_numCorrupt++;
 		return log("db: Hint key is corrupt.");
 		//char *xx=NULL;*xx=0;}
 	}
 
 	if ( hintOffset > m_listSize ) { //char *xx=NULL;*xx=0; }
 		g_errno = ECORRUPTDATA;
+		g_numCorrupt++;
 		return log("db: Hint offset %"INT32" > %"INT32" is corrupt."
 			   ,hintOffset,
 			   m_listSize);
@@ -1376,6 +1431,7 @@ bool RdbList::constrain ( char   *startKey    ,
 			m_listPtrHi = savelistPtrHi ;
 			m_listPtrLo = savelistPtrLo ;
 			g_errno = ECORRUPTDATA;
+			g_numCorrupt++;
 			return log("db: Got record size of %"INT32" < 0. "
 				   "Corrupt data file.",recSize);
 		}
@@ -1483,13 +1539,16 @@ bool RdbList::constrain ( char   *startKey    ,
 	if ( minRecSizes < 0 ) maxPtr = m_listEnd;
 	// size of last rec we read in the list
 	int32_t size = -1 ;
+	// char *savedp = p;
+	// if ( savedp == (char *)0x001 ) { char *xx=NULL;*xx=0;}
 	// advance until endKey or minRecSizes kicks us out
 	//while ( p < m_listEnd && getKey(p) <= endKey && p < maxPtr ) {
 	while ( p < m_listEnd ) {
 		QUICKPOLL(niceness);
 		getKey(p,k);
 		if ( KEYCMP(k,endKey,m_ks)>0 ) break;
-		if ( p >= maxPtr ) break;
+		// only break out if we've set the size AND are >= maxPtr
+		if ( p >= maxPtr && size > 0 ) break;
 		size = getRecSize ( p );
 		// watch out for corruption, let Msg5 fix it
 		if ( size < 0 ) {
@@ -1498,6 +1557,7 @@ bool RdbList::constrain ( char   *startKey    ,
 			m_listPtrLo = savelistPtrLo;
 			m_listPtr   = savelist;
 			g_errno = ECORRUPTDATA;
+			g_numCorrupt++;
 			return log("db: Corrupt record size of %"INT32" "
 				   "bytes in %s.",size,filename);
 		}
@@ -1517,6 +1577,7 @@ bool RdbList::constrain ( char   *startKey    ,
 			m_listPtrLo = savelistPtrLo;
 			m_listPtr   = savelist;
 			g_errno = ECORRUPTDATA;
+			g_numCorrupt++;
 			return log("db: Corrupt record size of %"INT32" "
 				   "bytes in %s.",size,filename);
 		}
@@ -1538,6 +1599,7 @@ bool RdbList::constrain ( char   *startKey    ,
 			m_listPtrLo = savelistPtrLo;
 			m_listPtr   = savelist;
 			g_errno = ECORRUPTDATA;
+			g_numCorrupt++;
 			return log("db: Corrupt record size of %"INT32" "
 				   "bytes in %s.",size,filename);
 		}
@@ -1545,17 +1607,23 @@ bool RdbList::constrain ( char   *startKey    ,
 		//endKey = getKey ( p - size );
 		getKey(p-size,endKey);
 	}
+	// bitch if size is -1 still
+	if ( size == -1 ) {
+		log("db: Corruption. Encountered bad endkey in %s.",filename);
+		char *xx=NULL;*xx=0;
+		m_list      = savelist;
+		m_listPtrHi = savelistPtrHi;
+		m_listPtrLo = savelistPtrLo;
+		m_listPtr   = savelist;
+		g_errno = ECORRUPTDATA;
+		g_numCorrupt++;
+		return false;
+	}
 	// cut the tail
 	m_listEnd   = p;
 	m_listSize  = m_listEnd - m_list;
-	// bitch if size is -1 still
-	if ( size == -1 ) {
-		log("db: Encountered bad endkey in %s. listSize=%"INT32"",
-		    filename,m_listSize);
-		char *xx=NULL;*xx=0;
-	}
 	// otherwise store the last key if size is not -1
-	else if ( m_listSize > 0 ) {
+	if ( m_listSize > 0 ) {
 		//m_lastKey        = getKey ( p - size );
 		getKey(p-size,m_lastKey);
 		m_lastKeyIsValid = true;
@@ -1622,9 +1690,12 @@ void RdbList::merge_r ( RdbList **lists         ,
 	// did they call prepareForMerge()?
 	if ( m_mergeMinListSize == -1 ) {
 		log(LOG_LOGIC,"db: rdblist: merge_r: prepareForMerge() not "
-		    "called.");
+		    "called. ignoring error and returning emtpy list.");
+		// this happens if we nuke doledb during a merge of it. it
+		// is just bad timing
+		return;
 		// save state and dump core, sigBadHandler will catch this
-		char *p = NULL;	*p = 0;
+		//char *p = NULL;	*p = 0;
 	}
 	// already there?
 	if ( minRecSizes >= 0 && m_listSize >= minRecSizes ) return;
@@ -1813,8 +1884,10 @@ void RdbList::merge_r ( RdbList **lists         ,
 		if ( niceness > 0 ) yieldPoint = m_listPtr + 100000;
 		else                yieldPoint = m_listPtr + 500000;
 		// only do this for low priority stuff now, i am concerned
-		// about int32_t merge times during queries (MDW)
-		if ( niceness > 0 ) sched_yield();
+		// about long merge times during queries (MDW)
+		// this is showing up in the profiler, not sure why
+		// so try taking out.
+		//if ( niceness > 0 ) sched_yield();
 	}
 	// we're done if all lists are exhausted
 	if ( mini == -1 ) goto done;
@@ -2729,7 +2802,7 @@ bool RdbList::indexMerge_r ( RdbList **lists         ,
 		if ( niceness > 0 ) yieldPoint = m_listPtr + 100000;
 		else                yieldPoint = m_listPtr + 500000;
 		// only do this for low priority stuff now, i am concerned
-		// about int32_t merge times during queries (MDW)
+		// about long merge times during queries (MDW)
 		if ( niceness > 0 ) sched_yield();
 	}
 
@@ -3246,8 +3319,10 @@ bool RdbList::posdbMerge_r ( RdbList **lists         ,
 		if ( niceness > 0 ) yieldPoint = m_listPtr + 100000;
 		else                yieldPoint = m_listPtr + 500000;
 		// only do this for low priority stuff now, i am concerned
-		// about int32_t merge times during queries (MDW)
-		if ( niceness > 0 ) sched_yield();
+		// about long merge times during queries (MDW)
+		// this is showing up in the profiler, not sure why
+		// so try taking out.
+		//if ( niceness > 0 ) sched_yield();
 	}
 
 #ifdef _MERGEDEBUG_
@@ -3505,6 +3580,34 @@ void RdbList::setFromSafeBuf ( SafeBuf *sb , char rdbId ) {
 	m_listSize      = sb->length();
 	m_alloc         = sb->getBufStart();
 	m_allocSize     = sb->getCapacity();
+	m_listEnd       = m_list + m_listSize;
+
+	KEYMIN(m_startKey,m_ks);
+	KEYMAX(m_endKey  ,m_ks);
+
+	m_fixedDataSize = getDataSizeFromRdbId ( rdbId );
+
+	m_ownData       = false;//ownData;
+	m_useHalfKeys   = false;//useHalfKeys;
+
+	// use this call now to set m_listPtr and m_listPtrHi based on m_list
+	resetListPtr();
+
+}
+
+void RdbList::setFromPtr ( char *p , int32_t psize , char rdbId ) {
+
+	// free and NULLify any old m_list we had to make room for our new list
+	freeList();
+
+	// set this first since others depend on it
+	m_ks = getKeySizeFromRdbId ( rdbId );
+
+	// set our list parms
+	m_list          = p;
+	m_listSize      = psize;
+	m_alloc         = p;
+	m_allocSize     = psize;
 	m_listEnd       = m_list + m_listSize;
 
 	KEYMIN(m_startKey,m_ks);

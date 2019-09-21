@@ -7,6 +7,7 @@
 #include "Dns.h"
 #include "SafeBuf.h"
 #include "Msg13.h"
+#include "Linkdb.h" // Msg25Request
 
 static void printTcpTable  (SafeBuf *p,char *title,TcpServer *server);
 static void printUdpTable  (SafeBuf *p,char *title,UdpServer *server,
@@ -50,6 +51,9 @@ bool sendPageSockets ( TcpSocket *s , HttpRequest *r ) {
 	//printUdpTable(&p,"Udp Server(async)",&g_udpServer2,coll,pwd,s->m_ip);
 	printUdpTable(&p,"Udp Server (dns)", &g_dns.m_udpServer,
 		      coll,NULL,s->m_ip,true/*isDns?*/);
+
+	// from msg13.cpp print the queued url download requests
+	printHammerQueueTable ( &p );
 
 	// get # of disks per machine
 	int32_t count = 0;
@@ -204,6 +208,7 @@ void printTcpTable ( SafeBuf* p, char *title, TcpServer *server ) {
 		case ST_WRITING:    st="sending";    break;
 		case ST_NEEDS_CLOSE:    st="needs close";    break;
 		case ST_CLOSE_CALLED:    st="close called";    break;
+		case ST_SSL_HANDSHAKE: st = "ssl handshake"; break;
 		}
 		// bgcolor is lighter for incoming requests
 		char *bg = "c0c0f0";
@@ -220,11 +225,7 @@ void printTcpTable ( SafeBuf* p, char *title, TcpServer *server ) {
 			       "<td>%s</td>"  // ip
 			       "<td>%hu</td>" // port
 			       "<td>%s</td>"  // state
-			       "<td>%"INT32"</td>" // bytes read
-			       "<td>%"INT32"</td>" // bytes to read
-			       "<td>%"INT32"</td>" // bytes sent
-			       "<td>%"INT32"</td>" // bytes to send
-			       "</tr>\n" ,
+			       ,
 			       bg ,
 			       i,
 			       s->m_sd ,
@@ -233,11 +234,46 @@ void printTcpTable ( SafeBuf* p, char *title, TcpServer *server ) {
 			       //s->m_timeout ,
 			       iptoa(s->m_ip) ,
 			       s->m_port ,
-			       st ,
-			       s->m_readOffset ,
+			       st );
+
+
+		// tool tip to show top 500 bytes of send buf
+		if ( s->m_readOffset && s->m_readBuf ) {
+			p->safePrintf("<td><a title=\"");
+			SafeBuf tmp;
+			tmp.safeTruncateEllipsis ( s->m_readBuf , 
+						   s->m_readOffset ,
+						   500 );
+			p->htmlEncode ( tmp.getBufStart() );
+			p->safePrintf("\">");
+			p->safePrintf("<u>%"INT32"</u></td>",s->m_readOffset);
+		}
+		else
+			p->safePrintf("<td>0</td>");
+
+		p->safePrintf( "<td>%"INT32"</td>" // bytes to read
+			       "<td>%"INT32"</td>" // bytes sent
+			       ,
 			       s->m_totalToRead ,
-			       s->m_sendOffset  ,
-			       s->m_totalToSend );
+			       s->m_sendOffset
+			       );
+
+		// tool tip to show top 500 bytes of send buf
+		if ( s->m_totalToSend && s->m_sendBuf ) {
+			p->safePrintf("<td><a title=\"");
+			SafeBuf tmp;
+			tmp.safeTruncateEllipsis ( s->m_sendBuf , 
+						   s->m_totalToSend ,
+						   500 );
+			p->htmlEncode ( tmp.getBufStart() );
+			p->safePrintf("\">");
+			p->safePrintf("<u>%"INT32"</u></td>",s->m_totalToSend);
+		}
+		else
+			p->safePrintf("<td>0</td>");
+
+		p->safePrintf("</tr>\n");
+
 	}
 	// end the table
 	p->safePrintf ("</table><br>\n" );
@@ -304,11 +340,16 @@ void printUdpTable ( SafeBuf *p, char *title, UdpServer *server ,
 		else
 			msgCount1[s->m_msgType]++;
 	}
+
+	char *wr = "";
+	if ( server->m_writeRegistered )
+		wr = " [write registered]";
+
 	// print the counts
 	p->safePrintf ( "<table %s>"
 			"<tr class=hdrow><td colspan=19>"
 			"<center>"
-			"<b>%s Summary</b> (%"INT32" transactions)"
+			"<b>%s Summary</b> (%"INT32" transactions)%s"
 			"</td></tr>"
 			"<tr bgcolor=#%s>"
 			"<td><b>niceness</td>"
@@ -317,6 +358,7 @@ void printUdpTable ( SafeBuf *p, char *title, UdpServer *server ,
 			"</tr>",
 			TABLE_STYLE,
 			title , server->getNumUsedSlots() ,
+			wr ,
 			DARK_BLUE );
 	for ( int32_t i = 0; i < 96; i++ ) {
 		if ( msgCount0[i] <= 0 ) continue;
@@ -342,11 +384,17 @@ void printUdpTable ( SafeBuf *p, char *title, UdpServer *server ,
 		     "<td><b>hostname</b></td>";
 	}
 
+	//UdpSlot *slot = server->m_head3;
+	//int32_t callbackReadyCount = 0;
+	//for ( ; slot ; slot = slot->m_next3 , callbackReadyCount++ ); 
+
 	p->safePrintf ( "<table %s>"
 			"<tr class=hdrow><td colspan=19>"
 			"<center>"
 			//"<font size=+1>"
 			"<b>%s</b> (%"INT32" transactions)"
+			//"(%"INT32" requests waiting to processed)"
+			"(%"INT32" incoming)"
 			//"</font>"
 			"</td></tr>"
 			"<tr bgcolor=#%s>"
@@ -373,6 +421,8 @@ void printUdpTable ( SafeBuf *p, char *title, UdpServer *server ,
 			"</tr>\n" , 
 			TABLE_STYLE,
 			title , server->getNumUsedSlots() , 
+			//callbackReadyCount ,
+			server->getNumUsedSlotsIncoming() ,
 			DARK_BLUE ,
 			dd );
 
@@ -505,6 +555,62 @@ void printUdpTable ( SafeBuf *p, char *title, UdpServer *server ,
 		if ( msgType == 0x50 ) desc = "get root quality";
 		if ( msgType == 0x25 ) desc = "get link info";
 		if ( msgType == 0xfd ) desc = "proxy forward";
+
+		char *req = NULL;
+		int32_t reqSize = 0;
+		if ( s->m_callback ) {
+			req = s->m_sendBuf;
+			reqSize = s->m_sendBufSize;
+		}
+		// are we receiving the request?
+		else {
+			req = s->m_readBuf;
+			reqSize = s->m_readBufSize;
+			// if not completely read in yet...
+			if ( s->hasDgramsToRead ())
+				req = NULL;
+		}
+
+		SafeBuf tmp;
+		char *altText = "";
+
+		// MSG25
+		if ( req && msgType == 0x25 ) {
+			Msg25Request *mr = (Msg25Request *)req;
+			// it doesn't hurt if we call Msg25Request::deserialize
+			// again if it has already been called
+			mr->deserialize();
+			if ( mr->m_mode == 2 ) { // MODE_SITELINKINFO ) {
+				tmp.safePrintf(" title=\""
+					       "getting site link info for "
+					       "%s "
+					       "in collnum %i.\n"
+					       "sitehash64=%"UINT64" "
+					       "waitinginline=%i"
+					       "\""
+					       ,mr->ptr_site
+					       ,(int)mr->m_collnum
+					       ,mr->m_siteHash64
+					       ,(int)mr->m_waitingInLine
+					       );
+				desc = "getting site link info";
+			}
+			else {
+				tmp.safePrintf(" title=\""
+					       "getting page link info for "
+					       "%s "
+					       "in collnum %i."
+					       "\""
+					       ,mr->ptr_url
+					       ,(int)mr->m_collnum
+					       );
+				desc = "getting page link info";
+			}
+		}
+
+		if ( tmp.getLength() )
+			altText = tmp.getBufStart();
+
 		
 		p->safePrintf ( "<tr bgcolor=#%s>"
 				"<td>%s</td>"  // age
@@ -560,12 +666,14 @@ void printUdpTable ( SafeBuf *p, char *title, UdpServer *server ,
 			if ( ! s->m_callback ) toFrom = "from";
 			//"<td><a href=http://%s:%hu/cgi/15.cgi>%"INT32"</a></td>"
 			p->safePrintf (	"<td>0x%hhx</td>"  // msgtype
-					"<td><nobr>%s</nobr></td>"  // desc
+					"<td%s><nobr>"
+					"%s</nobr></td>"  // desc
 					"<td><nobr>%s <a href=http://%s:%hu/"
 					"admin/sockets?"
 					"c=%s>%s</a></nobr></td>"
 					"<td>%s%"INT32"%s</td>" , // niceness
 					s->m_msgType ,
+					altText,
 					desc,
 					//iptoa(s->m_ip) ,
 					//s->m_port ,

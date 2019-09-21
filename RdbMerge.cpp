@@ -38,7 +38,8 @@ bool RdbMerge::merge ( char     rdbId        ,
 		       int32_t     startFileNum , 
 		       int32_t     numFiles     ,
 		       int32_t     niceness     ,
-		       class DiskPageCache *pc   ,
+		       //class DiskPageCache *pc   ,
+		       void *pc ,
 		       int64_t maxTargetFileSize ,
 		       char     keySize      ) {
 	// reset ourselves
@@ -69,7 +70,7 @@ bool RdbMerge::merge ( char     rdbId        ,
 	m_dedup           = base->m_dedup;
 	m_fixedDataSize   = base->m_fixedDataSize;
 	m_niceness        = niceness;
-	m_pc              = pc;
+	//m_pc              = pc;
 	m_maxTargetFileSize = maxTargetFileSize;
 	m_doneMerging     = false;
 	m_ks              = keySize;
@@ -209,7 +210,7 @@ bool RdbMerge::gotLock ( ) {
 		     startOffset  ,
 		     prevLastKey  ,
 		     m_ks         ,
-		     m_pc         ,
+		     NULL,//m_pc         ,
 		     m_maxTargetFileSize ,
 		     NULL                ); // set m_base::m_needsToSave? no.
 	// what kind of error?
@@ -303,7 +304,14 @@ bool RdbMerge::getNextList ( ) {
 	// no chop threads
 	m_numThreads = 0;
 	// get base, returns NULL and sets g_errno to ENOCOLLREC on error
-	RdbBase *base; if (!(base=getRdbBase(m_rdbId,m_collnum))) return true;
+	RdbBase *base = getRdbBase(m_rdbId,m_collnum);
+	if ( ! base ) {
+		// hmmm it doesn't set g_errno so we set it here now
+		// otherwise we do an infinite loop sometimes if a collection
+		// rec is deleted for the collnum
+		g_errno = ENOCOLLREC;
+		return true;
+	}
 	// . if a contributor has just surpassed a "part" in his BigFile
 	//   then we can delete that part from the BigFile and the map
 	for ( int32_t i = m_startFileNum ; i < m_startFileNum + m_numFiles; i++ ){
@@ -626,6 +634,13 @@ void RdbMerge::doneMerging ( ) {
 	// if collection rec was deleted while merging files for it
 	// then the rdbbase should be NULL i guess.
 	if ( saved == ENOCOLLREC ) return;
+
+	// if we are exiting then dont bother renaming the files around now.
+	// this prevents a core in RdbBase::incorporateMerge()
+	if ( g_process.m_mode == EXIT_MODE ) {
+		log("merge: exiting. not ending merge.");
+		return;
+	}
 
 	// get base, returns NULL and sets g_errno to ENOCOLLREC on error
 	RdbBase *base; if (!(base=getRdbBase(m_rdbId,m_collnum))) return;

@@ -92,6 +92,11 @@ public:
 	bool isBadExtension(int32_t xxx);
 	bool isSet()            { return m_ulen != 0; }
 
+	// is this url a warc or arc url? i.e. ends in .warc or .arc or
+	// .warc.gz or .arc.gz?
+	bool isWarc ( );
+	bool isArc ( );
+
 	// does it end in .xml, .rdb or .rss, etc. kinda thing
 	//bool isRSSFormat ( ) ;
 
@@ -194,6 +199,8 @@ public:
 	int64_t getUrlHash48    ( ) {
 		return getUrlHash64() & 0x0000ffffffffffffLL; }
 
+	bool hasMediaExtension ( ) ;
+
 	// . store url w/o http://
 	// . without trailing / if path is just "/"
 	// . without "www." if in hostname and "rmWWW" is true
@@ -202,7 +209,7 @@ public:
 	char *getShorthandUrl    ( bool rmWWW , int32_t *len );
 
 	// count the path components (root url as 0 path components)
-	int32_t  getPathDepth ( bool countFilename = false );
+	int32_t  getPathDepth ( bool countFilename ); // = false );
 
 	// get path component #num. starts at 0.
 	char *getPathComponent ( int32_t num , int32_t *clen );
@@ -225,6 +232,7 @@ public:
 	// this is private
 	bool isSpam ( char *s , int32_t slen ) ;
 
+
 	// . detects crazy repetetive urls like this:
 	//   http://www.pittsburghlive.com:8000/x/tribune-review/opinion/
 	//   steigerwald/letters/send/archive/letters/send/archive/bish/
@@ -236,6 +244,9 @@ public:
 	//   also have some even better detection logic in Links.cpp which
 	//   is probably more accurate than this function.
 	bool isLinkLoop();
+
+	static uint32_t unitTests();
+	static char* getDisplayUrl(char* url, SafeBuf* sb);
 
 	// private:
 

@@ -24,10 +24,24 @@
 Matches::Matches ( ) {
 	m_detectSubPhrases = false;
 	m_numMatchGroups = 0;
+	m_qwordFlags = NULL;
+	m_qwordAllocSize = 0;
 	reset();
 }
 Matches::~Matches( ) { reset(); }
 void Matches::reset   ( ) { 
+	reset2();
+	if ( m_qwordFlags && m_qwordFlags != (mf_t *)m_tmpBuf ) {
+		mfree ( m_qwordFlags , m_qwordAllocSize , "mmqw" );
+		m_qwordFlags = NULL;
+	}
+	//m_explicitsMatched = 0;
+	//m_matchableRequiredBits = 0;
+	//m_hasAllQueryTerms = false;
+	//m_matchesQuery = false;
+}
+
+void Matches::reset2() {
 	m_numMatches = 0;
 	//m_maxNQT     = -1;
 	m_numAlnums  = 0;
@@ -39,10 +53,6 @@ void Matches::reset   ( ) {
 		m_bitsArray    [i].reset();
 	}
 	m_numMatchGroups = 0;
-	//m_explicitsMatched = 0;
-	//m_matchableRequiredBits = 0;
-	//m_hasAllQueryTerms = false;
-	//m_matchesQuery = false;
 }
 
 bool Matches::isMatchableTerm ( QueryTerm *qt ) { // , int32_t i ) {
@@ -102,6 +112,20 @@ void Matches::setQuery ( Query *q ) {
 	//memset ( m_foundTermVector , 0 , m_q->getNumTerms() );
 
 	//memset ( m_foundNegTermVector, 0, m_q->getNumTerms() );
+
+	if ( m_qwordFlags ) { char *xx=NULL;*xx=0; }
+
+	int32_t need = m_q->m_numWords * sizeof(mf_t) ;
+	m_qwordAllocSize = need;
+	if ( need < 128 ) 
+		m_qwordFlags = (mf_t *)m_tmpBuf;
+	else
+		m_qwordFlags = (mf_t *)mmalloc ( need , "mmqf" );
+
+	if ( ! m_qwordFlags ) {
+		log("matches: alloc failed for query %s",q->m_orig);
+		return;
+	}
 
 	// this is word based. these are each 1 byte
 	memset ( m_qwordFlags  , 0 , m_q->m_numWords * sizeof(mf_t));
@@ -278,7 +302,7 @@ bool Matches::set ( XmlDoc   *xd         ,
 		    int32_t      niceness   ) {
 
 	// don't reset query info!
-	reset();
+	reset2();
 
 	// sanity check
 	if ( ! xd->m_docIdValid ) { char *xx=NULL;*xx=0; }
@@ -1712,6 +1736,76 @@ bool Matches::negTermsFound ( ) {
 }
 */
 
+bool Matches::docHasQueryTerms(int32_t totalInlinks) {
+    // Loop through all matches keeping a count of query term matches 
+    // from link text.
+    // If a match is not from a link text max it out.
+    // Tally up the matched terms vs number of matches
+    // if only one or two link text matches out of > 10 then
+    // return false indicating that the doc does not
+    // have the term
+
+    if(m_numMatches == 0) {
+        // if there is no query and no matches then short circuit
+        return true;
+    }
+
+    int32_t qterms = 1024;
+    int32_t tmpBuf[qterms];
+    int32_t *numMatches = tmpBuf;
+
+    if(qterms < m_q->m_numTerms) {
+        qterms = m_q->m_numTerms;
+        numMatches = (int32_t *)mmalloc(qterms * sizeof(int32_t), 
+                                        "matchesAnomaly");
+    }
+    memset(numMatches, 0, qterms * sizeof(int32_t));
+
+    for ( int32_t i = 0 ; i < m_numMatches ; i++ ) {
+        // get the match
+        Match *m = &m_matches[i];
+        if(m->m_flags & MF_LINK) {
+            numMatches[m->m_qwordNum]++;
+            continue;
+        }
+        numMatches[m->m_qwordNum] = m_numMatches;
+    }
+
+
+    // Assume the best, since we're really only after anomalous link text
+    // at this point.
+    bool hasTerms = true;
+    int32_t nqt = m_q->m_numTerms;
+    for ( int32_t i = 0 ; i < nqt ; i++ ) {
+        QueryTerm *qt = &m_q->m_qterms[i];
+        // For purposes of matching, we ignore all stop words
+        if ( ! isMatchableTerm ( qt ) || qt->m_ignored || 
+             (qt->m_isPhrase && !qt->m_isRequired)) {
+            continue;
+        }
+
+        // get the word it is from
+        QueryWord *qw = qt->m_qword;
+
+        // It is a match if it matched something other than link text
+        // or it matched at least 1 link text and there arent many link texts
+        // or it matched more than 2 link texts and there are many link texts
+        hasTerms &= ((numMatches[qw->m_wordNum] >= m_numMatches) ||  
+                     (numMatches[qw->m_wordNum] > 0 && totalInlinks < 10) ||
+                     (numMatches[qw->m_wordNum] > 2 && totalInlinks > 10));
+
+    }
+
+    if (numMatches != tmpBuf) {
+        mfree(numMatches, qterms * sizeof(int32_t), "matchesAnomaly");
+    }
+    return hasTerms;
+}
+
+
+
+
+
 MatchOffsets::MatchOffsets() {
 	reset();
 }
@@ -1779,6 +1873,7 @@ bool MatchOffsets::set(Xml * xml, Words *words, Matches *matches,
 	}
 	return true;
 }
+
 
 int32_t MatchOffsets::getStoredSize() {
 	return m_numMatches * 5 

@@ -30,6 +30,7 @@
 #include "Sections.h"
 //#include "Msg0.h" // g_termlistCache
 #include "Msg13.h"
+#include "Msg3.h"
 
 bool printNumAbbr ( SafeBuf &p, int64_t vvv ) {
 	float val = (float)vvv;
@@ -175,9 +176,17 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 			      "<tr class=poo><td><b>current allocations</b>"
 			      "</td>"
 			      "<td>%"INT32"</td></tr>\n" 
+
+
+			      "<tr class=poo><td><b>max allocations</b>"
+			      "</td>"
+			      "<td>%"INT32"</td></tr>\n" 
+
+
 			      "<tr class=poo><td><b>total allocations</b></td>"
 			      "<td>%"INT64"</td></tr>\n" ,
 			      g_mem.getNumAllocated() ,
+			      g_mem.m_memtablesize ,
 			      (int64_t)g_mem.getNumTotalAllocated() );
 
 	}
@@ -252,18 +261,18 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 			  &secs,
 			  &msecs);
 
-	int64_t avgTier0Time = 0;
-	int64_t avgTier1Time = 0;
-	int64_t avgTier2Time = 0;
-	if ( g_stats.m_tierHits[0] > 0 )
-		avgTier0Time = g_stats.m_tierTimes[0] /
-			(int64_t)g_stats.m_tierHits[0];
-	if ( g_stats.m_tierHits[1] > 0 )
-		avgTier1Time = g_stats.m_tierTimes[1] /
-			(int64_t)g_stats.m_tierHits[1];
-	if ( g_stats.m_tierHits[2] > 0 )
-		avgTier2Time = g_stats.m_tierTimes[2] /
-			(int64_t)g_stats.m_tierHits[2];
+	// int64_t avgTier0Time = 0;
+	// int64_t avgTier1Time = 0;
+	// int64_t avgTier2Time = 0;
+	// if ( g_stats.m_tierHits[0] > 0 )
+	// 	avgTier0Time = g_stats.m_tierTimes[0] /
+	// 		(int64_t)g_stats.m_tierHits[0];
+	// if ( g_stats.m_tierHits[1] > 0 )
+	// 	avgTier1Time = g_stats.m_tierTimes[1] /
+	// 		(int64_t)g_stats.m_tierHits[1];
+	// if ( g_stats.m_tierHits[2] > 0 )
+	// 	avgTier2Time = g_stats.m_tierTimes[2] /
+	// 		(int64_t)g_stats.m_tierHits[2];
 
 	if ( format == FORMAT_HTML )
 		p.safePrintf ( 
@@ -580,6 +589,7 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 	caches[2] = g_dns.getCache();
 	caches[3] = g_dns.getCacheLocal();
 	caches[4] = resultsCache;
+	caches[5] = &g_spiderLoop.m_winnerListCache;
 	//caches[5] = &g_termListCache;
 	//caches[6] = &g_genericCache[SEORESULTS_CACHEID];
 	//caches[5] = &g_qtable;
@@ -590,7 +600,7 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 	//caches[6] = &g_forcedCache;
 	//caches[9] = &g_msg20Cache;
 	//caches[10] = &g_tagdb.m_listCache;
-	int32_t numCaches = 5;
+	int32_t numCaches = 6;
 
 	if ( format == FORMAT_HTML )
 		p.safePrintf (
@@ -724,6 +734,18 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 		p.safePrintf("<td>%"INT64"</td>",a);
 	}
 
+	p.safePrintf ("</tr>\n<tr class=poo><td><b><nobr>dropped recs</td>" );
+	for ( int32_t i = 0 ; i < numCaches ; i++ ) {
+		int64_t a = caches[i]->m_deletes;
+		p.safePrintf("<td>%"INT64"</td>",a);
+	}
+
+	p.safePrintf ("</tr>\n<tr class=poo><td><b><nobr>added recs</td>" );
+	for ( int32_t i = 0 ; i < numCaches ; i++ ) {
+		int64_t a = caches[i]->m_adds;
+		p.safePrintf("<td>%"INT64"</td>",a);
+	}
+
 	//p.safePrintf ("</tr>\n<tr class=poo><td><b><nobr>max age</td>" );
 	//for ( int32_t i = 0 ; i < numCaches ; i++ ) {
 	//	int64_t a = caches[i]->getMaxMem();
@@ -832,6 +854,8 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 
 			      "<tr class=poo><td><b>SIGCHLDS</b></td><td>%"INT32"</td></tr>\n"
 			      "<tr class=poo><td><b>SIGQUEUES</b></td><td>%"INT32"</td></tr>\n"
+			      "<tr class=poo><td><b>SIGPIPES</b></td><td>%"INT32"</td></tr>\n"
+			      "<tr class=poo><td><b>SIGIOS</b></td><td>%"INT32"</td></tr>\n"
 			      "<tr class=poo><td><b>SIGOTHERS</b></td><td>%"INT32"</td></tr>\n"
 
 			      //"<tr class=poo><td><b>read signals</b></td><td>%"INT64"</td></tr>\n"
@@ -842,6 +866,12 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 			      
 			      //"<tr class=poo><td><b>Gigablast Version</b></td><td>%s %s</td></tr>\n"
 			      "<tr class=poo><td><b>Parsing Inconsistencies</b></td><td>%"INT32"</td>\n"
+
+			      // overflows. when we have too many unindexed 
+			      // spiderrequests for a particular firstip, we 
+			      // start dropping so we don't spam spiderdb
+			      "<tr class=poo><td><b>Dropped Spider Requests</b></td><td>%"INT32"</td>\n"
+
 			      "<tr class=poo><td><b>Index Shards</b></td><td>%"INT32"</td>\n"
 			      "<tr class=poo><td><b>Hosts per Shard</b></td><td>%"INT32"</td>\n"
 			      //"<tr class=poo><td><b>Fully Split</b></td><td>%"INT32"</td>\n"
@@ -859,6 +889,8 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 
 			      g_numSigChlds,
 			      g_numSigQueues,
+			      g_numSigPipes,
+			      g_numSigIOs,
 			      g_numSigOthers,
 
 			      //g_stats.m_readSignals,
@@ -869,6 +901,7 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 			      //GBPROJECTNAME,
 			      //GBVersion ,
 			      g_stats.m_parsingInconsistencies ,
+			      g_stats.m_totalOverflows,
 			      (int32_t)g_hostdb.getNumShards(),//g_hostdb.m_indexSplits,
 			      (int32_t)g_hostdb.getNumHostsPerShard(),
 			      g_spiderLoop.m_lockTable.m_numSlotsUsed,
@@ -1818,9 +1851,9 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 		g_tagdb.getRdb(),
 		g_clusterdb.getRdb(),
 		g_linkdb.getRdb(),
-		g_cachedb.getRdb(),
-		g_serpdb.getRdb(),
-		g_monitordb.getRdb(),
+		//g_cachedb.getRdb(),
+		//g_serpdb.getRdb(),
+		//g_monitordb.getRdb(),
 		g_statsdb.getRdb(),
 		g_catdb.getRdb()
 		//g_placedb.getRdb() ,
@@ -2056,64 +2089,72 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 	*/
 
 
-	p.safePrintf("<tr class=poo><td><b>page cache hits %%</b></td>");
+	p.safePrintf("<tr class=poo><td><b>file cache hits %%</b></td>");
 	totalf = 0.0;
 	for ( int32_t i = 0 ; i < nr ; i++ ) {
-		if ( ! rdbs[i]->m_pc ) {
+		Rdb *rdb = rdbs[i];
+		RdbCache *rpc = getDiskPageCache ( rdb->m_rdbId );
+		if ( ! rpc ) {
 			p.safePrintf("<td>--</td>");
 			continue;
 		}
-		int64_t hits   = rdbs[i]->m_pc->getNumHits();
-		int64_t misses = rdbs[i]->m_pc->getNumMisses();
+		int64_t hits   = rpc->getNumHits();
+		int64_t misses = rpc->getNumMisses();
 		int64_t sum    = hits + misses;
 		float val = 0.0;
 		if ( sum > 0.0 ) val = ((float)hits * 100.0) / (float)sum;
-		totalf += val;
-		p.safePrintf("<td>%.1f</td>",val);
+		//totalf += val;
+		p.safePrintf("<td>%.1f%%</td>",val);
 	}
-	p.safePrintf("<td>%.1f</td></tr>\n",totalf);
+	p.safePrintf("<td>--</td></tr>\n");
 
 
 
 
 
-	p.safePrintf("<tr class=poo><td><b>page cache hits</b></td>");
+	p.safePrintf("<tr class=poo><td><b>file cache hits</b></td>");
 	total = 0;
 	for ( int32_t i = 0 ; i < nr ; i++ ) {
-		if ( ! rdbs[i]->m_pc ) {
+		Rdb *rdb = rdbs[i];
+		RdbCache *rpc = getDiskPageCache ( rdb->m_rdbId );
+		if ( ! rpc ) {
 			p.safePrintf("<td>--</td>");
 			continue;
 		}
-		int64_t val = rdbs[i]->m_pc->getNumHits();
+		int64_t val = rpc->getNumHits();
 		total += val;
 		p.safePrintf("<td>%"UINT64"</td>",val);
 	}
 	p.safePrintf("<td>%"UINT64"</td></tr>\n",total);
 
 
-	p.safePrintf("<tr class=poo><td><b>page cache misses</b></td>");
+	p.safePrintf("<tr class=poo><td><b>file cache misses</b></td>");
 	total = 0;
 	for ( int32_t i = 0 ; i < nr ; i++ ) {
-		if ( ! rdbs[i]->m_pc ) {
+		Rdb *rdb = rdbs[i];
+		RdbCache *rpc = getDiskPageCache ( rdb->m_rdbId );
+		if ( ! rpc ) {
 			p.safePrintf("<td>--</td>");
 			continue;
 		}
-		int64_t val = rdbs[i]->m_pc->getNumMisses();
+		int64_t val = rpc->getNumMisses();
 		total += val;
 		p.safePrintf("<td>%"UINT64"</td>",val);
 	}
 	p.safePrintf("<td>%"UINT64"</td></tr>\n",total);
 
 
-	p.safePrintf("<tr class=poo><td><b>page cache tries</b></td>");
+	p.safePrintf("<tr class=poo><td><b>file cache tries</b></td>");
 	total = 0;
 	for ( int32_t i = 0 ; i < nr ; i++ ) {
-		if ( ! rdbs[i]->m_pc ) {
+		Rdb *rdb = rdbs[i];
+		RdbCache *rpc = getDiskPageCache ( rdb->m_rdbId );
+		if ( ! rpc ) {
 			p.safePrintf("<td>--</td>");
 			continue;
 		}
-		int64_t hits   = rdbs[i]->m_pc->getNumHits();
-		int64_t misses = rdbs[i]->m_pc->getNumMisses();
+		int64_t hits   = rpc->getNumHits();
+		int64_t misses = rpc->getNumMisses();
 		int64_t val    = hits + misses;
 		total += val;
 		p.safePrintf("<td>%"UINT64"</td>",val);
@@ -2121,28 +2162,60 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 	p.safePrintf("<td>%"UINT64"</td></tr>\n",total);
 
 
-	p.safePrintf("<tr class=poo><td><b>page cache used</b></td>");
+	p.safePrintf("<tr class=poo><td><b>file cache adds</b></td>");
 	total = 0;
 	for ( int32_t i = 0 ; i < nr ; i++ ) {
-		if ( ! rdbs[i]->m_pc ) {
+		Rdb *rdb = rdbs[i];
+		RdbCache *rpc = getDiskPageCache ( rdb->m_rdbId );
+		if ( ! rpc ) {
 			p.safePrintf("<td>--</td>");
 			continue;
 		}
-		int64_t val = rdbs[i]->m_pc->getMemUsed();
+		p.safePrintf("<td>%"UINT64"</td>",rpc->m_adds);
+	}
+	p.safePrintf("<td>%"UINT64"</td></tr>\n",total);
+
+
+	p.safePrintf("<tr class=poo><td><b>file cache drops</b></td>");
+	total = 0;
+	for ( int32_t i = 0 ; i < nr ; i++ ) {
+		Rdb *rdb = rdbs[i];
+		RdbCache *rpc = getDiskPageCache ( rdb->m_rdbId );
+		if ( ! rpc ) {
+			p.safePrintf("<td>--</td>");
+			continue;
+		}
+		p.safePrintf("<td>%"UINT64"</td>",rpc->m_deletes);
+	}
+	p.safePrintf("<td>%"UINT64"</td></tr>\n",total);
+
+
+	p.safePrintf("<tr class=poo><td><b>file cache used</b></td>");
+	total = 0;
+	for ( int32_t i = 0 ; i < nr ; i++ ) {
+		Rdb *rdb = rdbs[i];
+		RdbCache *rpc = getDiskPageCache ( rdb->m_rdbId );
+		if ( ! rpc ) {
+			p.safePrintf("<td>--</td>");
+			continue;
+		}
+		int64_t val = rpc->getMemOccupied();
 		total += val;
 		printNumAbbr ( p , val );
 	}
 	p.safePrintf("<td>%"UINT64"</td></tr>\n",total);
 
 
-	p.safePrintf("<tr class=poo><td><b><nobr>page cache allocated</nobr></b></td>");
+	p.safePrintf("<tr class=poo><td><b><nobr>file cache allocated</nobr></b></td>");
 	total = 0;
 	for ( int32_t i = 0 ; i < nr ; i++ ) {
-		if ( ! rdbs[i]->m_pc ) {
+		Rdb *rdb = rdbs[i];
+		RdbCache *rpc = getDiskPageCache ( rdb->m_rdbId );
+		if ( ! rpc ) {
 			p.safePrintf("<td>--</td>");
 			continue;
 		}
-		int64_t val = rdbs[i]->m_pc->getMemAlloced();
+		int64_t val = rpc->getMemAlloced();
 		total += val;
 		printNumAbbr ( p , val );
 	}
@@ -2288,8 +2361,8 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 		  "<br><i>Note: twins may differ in rec counts but still have "
 		  "the same data because they dump at different times which "
 		  "leads to different reactions. To see if truly equal, "
-		  "do a 'gb ddump' then when that finishes, a, 'gb imerge'"
-		  "and a 'gb tmerge'\n");
+		  "do a 'gb ddump' then when that finishes, a, 'gb pmerge'"
+		  "for posdb or a 'gb tmerge' for titledb.\n");
 
 	// print the final tail
 	//p += g_httpServer.printTail ( p , pend - p );

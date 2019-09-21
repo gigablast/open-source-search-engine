@@ -156,13 +156,13 @@ skipReplaceHost:
 			       //"<font size=+1>"
 			       "<b>Hosts "
 			       "(<a href=\"/admin/hosts?c=%s&sort=%"INT32"&resetstats=1\">"
-			       "reset)</b>"
+			       "reset)</a></b>"
 			       //"</font>"
 			       "</td></tr>" 
 			       "<tr bgcolor=#%s>"
 			       "<td><a href=\"/admin/hosts?c=%s&sort=0\">"
 
-			       "<b>hostId</b></td>"
+			       "<b>hostId</b></a></td>"
 			       "<td><b>host ip</b></td>"
 			       "<td><b>shard</b></td>"
 			       "<td><b>mirror</b></td>" // mirror # within the shard
@@ -179,7 +179,7 @@ skipReplaceHost:
 			       //"<td><b>priority udp port</td>"
 
 			       //"<td><b>dns client port</td>"
-			       "<td><b>http port</td>"
+			       "<td><b>http port</b></td>"
 
 			       // this is now obsolete since ide channel is. it was used
 			       // so that only the guy with the token could merge,
@@ -200,10 +200,10 @@ skipReplaceHost:
 
 			       //"<td><b>resends sent</td>"
 			       //"<td><b>errors recvd</td>"
-			       "<td><b>try agains recvd</td>"
+			       "<td><b>try agains sent</b></td>"
 
 			       "<td><a href=\"/admin/hosts?c=%s&sort=3\">"
-			       "<b>dgrams resent</a></td>"
+			       "<b>dgrams resent</b></a></td>"
 
 			       /*
 
@@ -233,15 +233,15 @@ skipReplaceHost:
 
 
 			       "<td><a href=\"/admin/hosts?c=%s&sort=13\">"
-			       "<b>avg split time</a></td>"
+			       "<b>avg split time</b></a></td>"
 
-			       "<td><b>splits done</a></td>"
+			       "<td><b>splits done</b></a></td>"
 
 			       "<td><a href=\"/admin/hosts?c=%s&sort=12\">"
-			       "<b>status</a></td>"
+			       "<b>status</b></a></td>"
 
 			       "<td><a href=\"/admin/hosts?c=%s&sort=15\">"
-			       "<b>slow reads</a></td>"
+			       "<b>slow reads</b></a></td>"
 
 			       "<td><b>docs indexed</a></td>"
 
@@ -249,26 +249,26 @@ skipReplaceHost:
 			       "<b>mem used</a></td>"
 
 			       "<td><a href=\"/admin/hosts?c=%s&sort=10\">"
-			       "<b>cpu used</a></td>"
+			       "<b>cpu used</b></a></td>"
 
 			       "<td><a href=\"/admin/hosts?c=%s&sort=17\">"
-			       "<b>disk used</a></td>"
+			       "<b>disk used</b></a></td>"
 
 			       "<td><a href=\"/admin/hosts?c=%s&sort=14\">"
-			       "<b>max ping1</a></td>"
+			       "<b>max ping1</b></a></td>"
 
 			       "<td><a href=\"/admin/hosts?c=%s&sort=11\">"
-			       "<b>ping1 age</a></td>"
+			       "<b>ping1 age</b></a></td>"
 
 			       //"<td><b>ip1</td>"
 			       "<td><a href=\"/admin/hosts?c=%s&sort=1\">"
-			       "<b>ping1</a></td>"
+			       "<b>ping1</b></a></td>"
 
 			       "%s"// "<td><b>ip2</td>"
 			       //"<td><b>inSync</td>",
 			       //"<td>avg roundtrip</td>"
 			       //"<td>std. dev.</td></tr>"
-			       "<td><b>note</td>",
+			       "<td><b>note</b></td>",
 			       TABLE_STYLE ,
 			       colspan    ,
 
@@ -521,9 +521,18 @@ skipReplaceHost:
 		}
 
 		// recovery mode? reocvered from coring?
-		if ((flags & PFLAG_RECOVERYMODE)&& format == FORMAT_HTML )
+		if ((flags & PFLAG_RECOVERYMODE)&& format == FORMAT_HTML ) {
 			fb.safePrintf("<b title=\"Recovered from core"
 				      "\">x</b>");
+			// this is only 8-bits at the moment so it's capped
+			// at 255. this level is 1 the first time we core
+			// and are restarted.
+			if ( h->m_pingInfo.m_recoveryLevel > 1 )
+			fb.safePrintf("<sup>%"INT32"</sup>",
+				      (int32_t)
+				      h->m_pingInfo.m_recoveryLevel);
+		}
+
 		if ((flags & PFLAG_RECOVERYMODE)&& format != FORMAT_HTML )
 			fb.safePrintf("Recovered from core");
 
@@ -553,14 +562,16 @@ skipReplaceHost:
 					,h->m_pingInfo.m_currentSpiders
 					);
 
-		if ( format == FORMAT_HTML ) {
+		if ( format == FORMAT_HTML && 
+		     h->m_pingInfo.m_udpSlotsInUseIncoming ) {
 			char *f1 = "";
 			char *f2 = "";
-			if ( h->m_pingInfo.m_udpSlotsInUse >= 200 ) {
+			// MAXUDPSLOTS in Spider.cpp is 300 right now
+			if ( h->m_pingInfo.m_udpSlotsInUseIncoming >= 300 ) {
 				f1 = "<b>";
 				f2 = "</b>";
 			}
-			if ( h->m_pingInfo.m_udpSlotsInUse >= 400 ) {
+			if ( h->m_pingInfo.m_udpSlotsInUseIncoming >= 400 ) {
 				f1 = "<b><font color=red>";
 				f2 = "</font></b>";
 			}
@@ -571,7 +582,30 @@ skipReplaceHost:
 				      "%s"
 				      "</span>"
 				      ,f1
-				      ,h->m_pingInfo.m_udpSlotsInUse
+				      ,h->m_pingInfo.m_udpSlotsInUseIncoming
+				      ,f2
+				      );
+		}
+
+		if ( format == FORMAT_HTML && h->m_pingInfo.m_tcpSocketsInUse){
+			char *f1 = "";
+			char *f2 = "";
+			if ( h->m_pingInfo.m_tcpSocketsInUse >= 100 ) {
+				f1 = "<b>";
+				f2 = "</b>";
+			}
+			if ( h->m_pingInfo.m_tcpSocketsInUse >= 200 ) {
+				f1 = "<b><font color=red>";
+				f2 = "</font></b>";
+			}
+			fb.safePrintf("<span title=\"tcpSocketsInUse\">"
+				      "%s"
+				      "T"
+				      "<sup>%"INT32"</sup>"
+				      "%s"
+				      "</span>"
+				      ,f1
+				      ,h->m_pingInfo.m_tcpSocketsInUse
 				      ,f2
 				      );
 		}
@@ -595,6 +629,15 @@ skipReplaceHost:
 		// say "y" if doing the daily merge
 		if (  !(flags & PFLAG_MERGEMODE0) )
 			fb.safePrintf ( "y");
+
+
+		if ( format == FORMAT_HTML && !h->m_spiderEnabled) {
+			fb.safePrintf("<span title=\"Spider Disabled\" style=\"text-decoration:line-through;\">S</span>");
+		}
+		if ( format == FORMAT_HTML && !h->m_queryEnabled) {
+			fb.safePrintf("<span title=\"Query Disabled\" style=\"text-decoration:line-through;\">Q</span>");
+		}
+
 
 		// clear it if it is us, this is invalid
 		if ( ! h->m_gotPingReply ) {
@@ -656,7 +699,11 @@ skipReplaceHost:
 
 			sb.safePrintf("\t\t<udpSlotsInUse>%"INT32""
 				      "</udpSlotsInUse>\n",
-				      h->m_pingInfo.m_udpSlotsInUse);
+				      h->m_pingInfo.m_udpSlotsInUseIncoming);
+
+			sb.safePrintf("\t\t<tcpSocketsInUse>%"INT32""
+				      "</tcpSocketsInUse>\n",
+				      h->m_pingInfo.m_tcpSocketsInUse);
 
 			/*
 			sb.safePrintf("\t\t<dgramsTo>%"INT64"</dgramsTo>\n",
@@ -720,6 +767,13 @@ skipReplaceHost:
 			sb.safePrintf("\t\t<note>%s</note>\n",
 				      h->m_note );
 
+			sb.safePrintf("\t\t<spider>%"INT32"</spider>\n",
+						  (int32_t)h->m_spiderEnabled );
+
+
+			sb.safePrintf("\t\t<query>%"INT32"</query>\n",
+						  (int32_t)h->m_queryEnabled );
+
 			sb.safePrintf("\t</host>\n");
 
 			continue;
@@ -764,7 +818,9 @@ skipReplaceHost:
 			sb.safePrintf("\t\t\"errorTryAgains\":%"INT32",\n",
 				      h->m_pingInfo.m_etryagains);
 			sb.safePrintf("\t\t\"udpSlotsInUse\":%"INT32",\n",
-				      h->m_pingInfo.m_udpSlotsInUse);
+				      h->m_pingInfo.m_udpSlotsInUseIncoming);
+			sb.safePrintf("\t\t\"tcpSocketsInUse\":%"INT32",\n",
+				      h->m_pingInfo.m_tcpSocketsInUse);
 
 			/*
 			sb.safePrintf("\t\t\"dgramsTo\":%"INT64",\n",
@@ -819,6 +875,14 @@ skipReplaceHost:
 			sb.safePrintf("\t\t\"note\":\"%s\"\n",
 				      h->m_note );
 
+			sb.safePrintf("\t\t\"spider\":\"%"INT32"\"\n",
+						  (int32_t)h->m_spiderEnabled );
+
+			sb.safePrintf("\t\t\"query\":\"%"INT32"\"\n",
+						  (int32_t)h->m_queryEnabled );
+
+
+            
 			sb.safePrintf("\t},\n");
 
 			continue;
@@ -991,72 +1055,75 @@ skipReplaceHost:
 	sb.safePrintf ( "</table><br>\n" );
 
 	
-	/*
-	// print spare hosts table
-	sb.safePrintf ( 
-		  "<table %s>"
-		  "<tr class=hdrow><td colspan=10><center>"
-		  //"<font size=+1>"
-		  "<b>Spares</b>"
-		  //"</font>"
-		  "</td></tr>" 
-		  "<tr bgcolor=#%s>"
-		  "<td><b>spareId</td>"
-		  "<td><b>host name</td>"
-		  "<td><b>ip1</td>"
-		  "<td><b>ip2</td>"
-		  //"<td><b>udp port</td>"
-		  //"<td><b>priority udp port</td>"
-		  //"<td><b>dns client port</td>"
-		  "<td><b>http port</td>"
-		  //"<td><b>switch id</td>"
 
-		  // this is now fairly obsolete
-		  //"<td><b>ide channel</td>"
+	if( g_hostdb.m_numSpareHosts ) {
+		// print spare hosts table
+		sb.safePrintf ( 
+					   "<table %s>"
+					   "<tr class=hdrow><td colspan=10><center>"
+					   //"<font size=+1>"
+					   "<b>Spares</b>"
+					   //"</font>"
+					   "</td></tr>" 
+					   "<tr bgcolor=#%s>"
+					   "<td><b>spareId</td>"
+					   "<td><b>host name</td>"
+					   "<td><b>ip1</td>"
+					   "<td><b>ip2</td>"
+					   //"<td><b>udp port</td>"
+					   //"<td><b>priority udp port</td>"
+					   //"<td><b>dns client port</td>"
+					   "<td><b>http port</td>"
+					   //"<td><b>switch id</td>"
 
-		  "<td><b>note</td>",
-		  TABLE_STYLE,
-		  DARK_BLUE  );
+					   // this is now fairly obsolete
+					   //"<td><b>ide channel</td>"
 
-	for ( int32_t i = 0; i < g_hostdb.m_numSpareHosts; i++ ) {
-		// get the ith host (hostId)
-		Host *h = g_hostdb.getSpare ( i );
+					   "<td><b>note</td>",
+					   TABLE_STYLE,
+					   DARK_BLUE  );
 
-		char ipbuf1[64];
-		char ipbuf2[64];
-		strcpy(ipbuf1,iptoa(h->m_ip));
-		strcpy(ipbuf2,iptoa(h->m_ipShotgun));
+		for ( int32_t i = 0; i < g_hostdb.m_numSpareHosts; i++ ) {
+			// get the ith host (hostId)
+			Host *h = g_hostdb.getSpare ( i );
 
-		// print it
-		sb.safePrintf (
-			  "<tr bgcolor=#%s>"
-			  "<td>%"INT32"</td>"
-			  "<td>%s</td>"
-			  "<td>%s</td>"
-			  "<td>%s</td>"
-			  //"<td>%hi</td>"
-			  //"<td>%hi</td>" // priority udp port
-			  //"<td>%hi</td>"
-			  "<td>%hi</td>"
-			  //"<td>%i</td>" // switch id
-			  //"<td>%"INT32"</td>" // ide channel
-			  "<td>%s</td>"
-			  "</tr>" , 
-			  LIGHT_BLUE,
-			  i , 
-			  h->m_hostname,
-			  ipbuf1,
-			  ipbuf2,
-			  //h->m_port , 
-			  //h->m_port2 , 
-			  //h->m_dnsClientPort ,
-			  h->m_httpPort ,
-			  //h->m_switchId,
-			  //h->m_ideChannel ,
-			  h->m_note );
+			char ipbuf1[64];
+			char ipbuf2[64];
+			strcpy(ipbuf1,iptoa(h->m_ip));
+			strcpy(ipbuf2,iptoa(h->m_ipShotgun));
+
+			// print it
+			sb.safePrintf (
+						   "<tr bgcolor=#%s>"
+						   "<td>%"INT32"</td>"
+						   "<td>%s</td>"
+						   "<td>%s</td>"
+						   "<td>%s</td>"
+						   //"<td>%hi</td>"
+						   //"<td>%hi</td>" // priority udp port
+						   //"<td>%hi</td>"
+						   "<td>%hi</td>"
+						   //"<td>%i</td>" // switch id
+						   //"<td>%"INT32"</td>" // ide channel
+						   "<td>%s</td>"
+						   "</tr>" , 
+						   LIGHT_BLUE,
+						   i , 
+						   h->m_hostname,
+						   ipbuf1,
+						   ipbuf2,
+						   //h->m_port , 
+						   //h->m_port2 , 
+						   //h->m_dnsClientPort ,
+						   h->m_httpPort ,
+						   //h->m_switchId,
+						   //h->m_ideChannel ,
+						   h->m_note );
+		}
+		sb.safePrintf ( "</table><br>" );
 	}
-	sb.safePrintf ( "</table><br>" );
-	*/
+
+
 
 	/*
 	// print proxy hosts table
@@ -1270,12 +1337,14 @@ skipReplaceHost:
 		  */
 
 		  "<tr class=poo>"
-		  "<td>try agains recvd</td>"
+		  "<td>try agains sent</td>"
 		  "<td>How many ETRYAGAIN errors "
-		  "were received in response to a "
+		  "has this host sent out? they are sent out some times "
+		  "in response to a "
 		  "request to add data. Usually because the host's memory "
 		  "is full and it is dumping its data to disk. This number "
-		  "can be high if the host if failing to dump the data "
+		  "can be relatively high if the host if failing to dump "
+		  "the data "
 		  "to disk because of some malfunction, and it can therefore "
 		  "bottleneck the entire cluster."
 		  "</td>"
@@ -1434,7 +1503,8 @@ skipReplaceHost:
 		  "<td>x (status flag)</td>"
 		  "<td>Indicates host has abruptly exited due to a fatal "
 		  "error (cored) and "
-		  "restarted itself."
+		  "restarted itself. The exponent is how many times it has "
+		  "done this. If no exponent, it only did it once."
 		  "</td>"
 		  "</tr>\n"
 
@@ -1469,7 +1539,15 @@ skipReplaceHost:
 		  "<tr class=poo>"
 		  "<td><nobr>U (status flag)</nobr></td>"
 		  "<td>Indicates the number of active UDP transactions "
-		  "which are either intiating or receiving."
+		  "which are incoming requests. These will pile up if a "
+		  "host can't handle them fast enough."
+		  "</td>"
+		  "</tr>\n"
+
+		  "<tr class=poo>"
+		  "<td><nobr>T (status flag)</nobr></td>"
+		  "<td>Indicates the number of active TCP transactions "
+		  "which are either outgoing or incoming requests."
 		  "</td>"
 		  "</tr>\n"
 

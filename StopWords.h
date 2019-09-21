@@ -22,7 +22,7 @@ bool isStopWord32 ( int32_t h ) ;
 // . damn i forgot to include these above
 // . i need these so m_bitScores in IndexTable.cpp doesn't have to require
 //   them! Otherwise, it's like all queries have quotes around them again...
-bool isQueryStopWord ( char *s , int32_t len , int64_t h ) ;
+bool isQueryStopWord ( char *s , int32_t len , int64_t h , int32_t langId ) ;
 //bool isQueryStopWord ( UChar *s , int32_t len , int64_t h ) ;
 
 // is it a COMMON word?
@@ -30,7 +30,8 @@ int32_t isCommonWord ( int64_t h ) ;
 
 int32_t isCommonQueryWordInEnglish ( int64_t h ) ;
 
-bool initWordTable(class HashTableX *table, char* words[], int32_t size ,
+bool initWordTable(class HashTableX *table, char* words[], 
+		   //int32_t size ,
 		   char *label);
 
 bool isVerb ( int64_t *hp ) ;

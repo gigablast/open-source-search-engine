@@ -148,6 +148,7 @@ bool RdbScan::setRead ( BigFile  *file         ,
 	// ensure we don't mess around
 	m_fstate.m_allocBuf = NULL;
 	m_fstate.m_buf      = NULL;
+	//m_fstate.m_usePartFiles = true;
 	// debug msg
 	//log("diskOff=%"INT64" nb=%"INT32"",offset,bytesToRead);
 	//if ( offset == 16386 && bytesToRead == 16386 )
@@ -203,6 +204,7 @@ void gotListWrapper ( void *state ) {
 
 void RdbScan::gotList ( ) {
 	char *allocBuf  = m_fstate.m_allocBuf;
+	int32_t  allocOff  = m_fstate.m_allocOff; //buf=allocBuf+allocOff
 	int32_t  allocSize = m_fstate.m_allocSize;
 	// do not free the allocated buf for when the actual thread
 	// does the read and finally completes in this case. we free it
@@ -226,7 +228,6 @@ void RdbScan::gotList ( ) {
 	if ( m_fstate.m_allocBuf ) {
 		// get the buffer info for setting the list
 		//char *allocBuf  = m_fstate.m_allocBuf;
-		int32_t  allocOff  = m_fstate.m_allocOff; //buf=allocBuf+allocOff
 		//int32_t  allocSize = m_fstate.m_allocSize;
 		int32_t  bytesDone = m_fstate.m_bytesDone;
 		// sanity checks
@@ -248,16 +249,22 @@ void RdbScan::gotList ( ) {
 			      m_useHalfKeys   , 
 			      m_ks            );
 	}
+
 	// this was bitching a lot when running on a multinode cluster,
 	// so i effectively disabled it by changing to _GBSANITYCHECK2_
-#ifdef GBSANITYCHECK2
+//#ifdef GBSANITYCHECK2
 	// this first test, tests to make sure the read from cache worked
+	/*
 	DiskPageCache *pc = m_file->getDiskPageCache();
-	if ( pc && ! g_errno ) {
+	if ( pc && 
+	     ! g_errno && 
+	     g_conf.m_logDebugDiskPageCache && 
+	     // if we got it from the page cache, verify with disk
+	     m_fstate.m_inPageCache ) {
 		// ensure threads disabled
 		bool on = ! g_threads.areThreadsDisabled();
 		if ( on ) g_threads.disableThreads();
-		pc->disableCache();
+		//pc->disableCache();
 		FileState fstate;
 		// ensure we don't mess around
 		fstate.m_allocBuf = NULL;
@@ -274,7 +281,7 @@ void RdbScan::gotList ( ) {
 			       NULL             , // callback state
 			       gotListWrapper   , // FAKE callback
 			       MAX_NICENESS     , // niceness
-			       false, // m_allowPageCache ,
+			       false, // m_allowPageCache ,... not for test!
 			       m_hitDisk  ,
 			       16 + m_off );
 		//char *allocBuf  = fstate.m_allocBuf;
@@ -289,16 +296,22 @@ void RdbScan::gotList ( ) {
 			if ( m_bytesToRead != m_list->getListSize() ) {
 				char *xx = NULL; *xx = 0; }
 		}
+		// compare
+		if ( memcmp ( allocBuf+allocOff, bb , m_bytesToRead ) ) {
+			log("db: failed diskpagecache verify");
+			char *xx=NULL;*xx=0; 
+		}
 		//mfree ( allocBuf , allocSize , "RS" );
 		mfree ( bb , m_bytesToRead , "RS" );
 		if ( on ) g_threads.enableThreads();
-		pc->enableCache();
+		//pc->enableCache();
 		// . this test tests to make sure the page stores worked
 		// . go through each page in page cache and verify on disk
-		pc->verifyData ( m_file );
+		//pc->verifyData ( m_file );
 	}
- skip:
-#endif
+	*/
+	// skip:
+//#endif
 	// assume we did not shift it
 	m_shifted = 0;//false;
 	// if we were doing a cache only read, and got nothing, bail now
@@ -309,7 +322,7 @@ void RdbScan::gotList ( ) {
 	// . i think a read overflow might be causing a segv in malloc
 	// . NOTE: BigFile's call to DiskPageCache alters these values
 	if ( m_fstate.m_bytesDone != m_fstate.m_bytesToGo && m_hitDisk )
-		log(LOG_INFO,"disk: Read %"INT32" bytes but needed %"INT32".",
+		log(LOG_INFO,"disk: Read %"INT64" bytes but needed %"INT64".",
 		     m_fstate.m_bytesDone , m_fstate.m_bytesToGo );
 	// adjust the list size for biased page cache if necessary
 	//if ( m_file->m_pc && m_allowPageCache &&

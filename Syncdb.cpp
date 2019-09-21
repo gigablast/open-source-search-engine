@@ -122,7 +122,7 @@ bool Syncdb::gotMetaListRequest ( char *req , int32_t reqSize , uint32_t sid ) {
 		int32_t     dn = m_qt.getNode ( 0, (char *)&ck ) ;
 		// hey, we annihilated with the positive key. i guess our
 		// twin is ahead of us!
-		if ( dn >= 0 ) m_qt.deleteNode( dn , false );
+		if ( dn >= 0 ) m_qt.deleteNode3 ( dn , false );
 		// . ADD the B KEY
 		// . we did not annihilate with a negative key
 		else if ( m_qt.addKey ( &k5 ) < 0 ) { char *xx=NULL;*xx=0; }
@@ -329,7 +329,7 @@ bool Syncdb::loop2 ( ) {
 		m_qt.deleteNode ( 0 , (char *)&k , true );
 		// . and delete that node (freeData = true)
 		// . no! not until we got all the checkoff requests in!
-		// stree->deleteNode ( n , true );
+		// stree->deleteNode3 ( n , true );
 		// advance on success
 		m_ia++;
 		// go back for more
@@ -459,7 +459,7 @@ void Syncdb::loop3 ( ) {
 		// must be there!
 		if ( ! dn ) { char *xx=NULL;*xx=0; }
 		// nuke it
-		m_qt.deleteNode ( dn , true );
+		m_qt.deleteNode3 ( dn , true );
 	}
 	// . success
 	// . do not recall until big loop completes a round
@@ -814,7 +814,7 @@ void handleRequest5d ( UdpSlot *slot , int32_t netnice ) {
 		int32_t nn = g_syncdb.m_qt.getNode ( 0 , (char *)&pk );
 		// if yes, nuke it. they annihilate.
 		if ( nn >= 0 ) {
-			g_syncdb.m_qt.deleteNode ( nn , true );
+			g_syncdb.m_qt.deleteNode3 ( nn , true );
 			continue;
 		}
 		// . otherwise, add right to the tree
@@ -1349,10 +1349,10 @@ void Syncdb::syncStart_r ( bool amThread ) {
 	for ( int32_t m = 0 ; m < f->m_numParts ; m++ ) {
 
 	// get part file
-	File *p = f->m_files[m];
+	File *p = f->getFile2(m);//m_files[m];
 	// copy that
 	sprintf ( cmd , "rcp %s %s:%scoll.%s.%"INT32"/'",
-		  p->m_filename,ips,dir,coll,collnum);
+		  p->getFilename(),ips,dir,coll,collnum);
 	// excecute
 	log ( LOG_INFO, "sync: %s", cmd );
 	// MDW: take out for now

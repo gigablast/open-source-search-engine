@@ -32,7 +32,7 @@
 #include "Url.h"
 #include "Conf.h"
 #include "Titledb.h"
-#include "DiskPageCache.h"
+//#include "DiskPageCache.h"
 
 // these are now just TitleRec keys
 #define CLUSTER_REC_SIZE (sizeof(key_t))
@@ -162,14 +162,14 @@ class Clusterdb {
 	//char getGigabitSimilarity ( char *vec0 , char *vec1 ,
 	//			    int32_t *qtable , int32_t numSlots ) ;
 
-	DiskPageCache *getDiskPageCache() { return &m_pc; };
+	//DiskPageCache *getDiskPageCache() { return &m_pc; };
 
   private:
 
 	// this rdb holds urls waiting to be spidered or being spidered
 	Rdb m_rdb;
 
-	DiskPageCache m_pc;
+	//DiskPageCache m_pc;
 };
 
 extern class Clusterdb g_clusterdb;

@@ -1,3 +1,15 @@
+<!--<html>
+<head>
+<title>FAQ</title>
+<meta http-equiv="Content-Type" content="text/html;charset=utf8" />
+</head>
+<body text=#000000 bgcolor=#ffffff link=#000000 vlink=#000000 alink=#000000 >
+<style>body,td,p,.h{font-family:arial,sans-serif; font-size: 15px;} </style>
+<center>
+<img border=0 width=500 height=122 src=/logo-med.jpg>
+<br><br>
+</center>
+-->
 
 <div style=max-width:700px;>
 
@@ -105,7 +117,7 @@ A work-in-progress <a href=/compare.html>comparison to SOLR</a>.
 
 <br><br><a name=quickstart></a>
 <h1>Quick Start</h1>
-&lt;<i>Last Updated January 2015</i>&gt;
+&lt;<i>Last Updated February 2015</i>&gt;
 <br>
 <br>
 
@@ -118,17 +130,19 @@ You will need an Intel or AMD system with at least 4GB of RAM for every gigablas
 
 <br><br>
 
-<b><font color=red>For Linux:</font></b>
+
+<br>
+<b><font color=red>For Debian/Ubuntu Linux:</font></b>
 <br><br>
 
-1. Download the <a href=http://www.gigablast.com/gb-1.17-2.x86_64.rpm>64-bit Gigablast package for <b>RedHat</b> Linux</a> or the <a href=http://www.gigablast.com/gb_1.17-1_amd64.deb>64-bit Gigablast package for <b>Ubuntu</b>/Debian Linux</a>. 
+1. Download a package: <a href=http://www.gigablast.com/gb_1.19-1_amd64.deb>Debian/Ubuntu 64-bit</a> &nbsp; ( <a href=http://www.gigablast.com/gb_1.19-1_i386.deb>Debian/Ubuntu 32-bit</a> )
 
 <br><br>
 
-2. After downloading, install the package by entering <b>sudo dpkg -i <i>&lt;filename&gt;</i></b> where filename is the file you just downloaded.
+2. Install the package by entering: <b>sudo dpkg -i <i>&lt;filename&gt;</i></b> where filename is the file you just downloaded.
 
 <br><br>
-3. Type <b>sudo gb -d</b> to run it in the background as a daemon. It will log to /var/gigablast/data0/log000 initially.
+3. Type <b>sudo gb -d</b> to run Gigablast in the background as a daemon.
 
 <br><br>
 4. If running for the first time, it could take up to 20 seconds to build some preliminary files.
@@ -145,6 +159,44 @@ You will need an Intel or AMD system with at least 4GB of RAM for every gigablas
 <br><br>
 
 
+
+
+
+
+
+
+
+<br>
+<b><font color=red>For RedHat/Fedora Linux:</font></b>
+<br><br>
+
+1. Download a package: <a href=http://www.gigablast.com/gb-1.19-2.x86_64.rpm>RedHat 64-bit</a> ( <a href=http://www.gigablast.com/gb-1.19-2.i386.rpm>RedHat 32-bit</a> )
+
+<br><br>
+
+2. Install the package by entering: <b>rpm -i --force --nodeps <i>&lt;filename&gt;</i></b> where filename is the file you just downloaded.
+
+<br><br>
+3. Type <b>sudo gb -d</b> to run Gigablast in the background as a daemon.
+
+<br><br>
+4. If running for the first time, it could take up to 20 seconds to build some preliminary files.
+
+<br><br>
+5. Once running, visit <a href=http://127.0.0.1:8000/>port 8000</a> with your browser to access the Gigablast controls.
+
+
+<br><br>
+
+
+
+
+
+
+
+
+
+<br>
 <b><font color=red>For Microsoft Windows:</font></b>
 <br><br>
 1. If you are running Microsoft Windows, then you will need to install Oracle's <a href=http://www.virtualbox.org/wiki/Downloads><b>VirtualBox for Windows hosts</b></a> software. That will allow you to run Linux in its own window on your Microsoft Windows desktop.
@@ -205,7 +257,7 @@ You will need the following packages installed<br>
 <ul>
 <li>For Ubuntu do a <b>apt-get install make g++ gcc-multilib</b>
 <br>
-For RedHat do a <b>yum install gcc-c++</b>
+For RedHat do a <b>yum install gcc-c++ glibc-static libstdc++-static openssl-static</b>
 -->
 <!--<li>apt-get install g++
 <li>apt-get install gcc-multilib <i>(for 32-bit compilation support)</i>
@@ -218,7 +270,7 @@ For RedHat do a <b>yum install gcc-c++</b>
 </ul>
 -->
 
-<b>1.0</b> For <u>Ubuntu 12.02 or 14.04</u>: do <b>sudo apt-get update ; apt-get install make g++ libssl-dev</b>
+<b>1.0</b> For <u>Ubuntu 12.02 or 14.04</u>: do <b>sudo apt-get update ; sudo apt-get install make g++ libssl-dev binutils</b>
 
 <br><br>
 
@@ -233,6 +285,7 @@ For RedHat do a <b>yum install gcc-c++</b>
 <b>1.3</b> For <u>32-bit Ubuntu 12.02</u>: do <b>sudo apt-get update ; apt-get install make g++ gcc-multilib </b>
 <br><br>
 -->
+
 
 <b>1.1.</b> For <u>RedHat</u> do <b>sudo yum install gcc-c++</b>
 <br><br>
@@ -313,7 +366,7 @@ run <b>make clean ; make gb32</b>.
 <li> Sort and constrain by numeric fields in JSON or XML.
 <li> Built-in real-time profiler.
 <li> Built-in QA tester.
-<li> Can inject WARC files.
+<li> Can inject WARC and ARC archive files.
 <li> Spellchecker will be renabled shortly.
 </ul>
 
@@ -924,11 +977,11 @@ Now if you are <a href=#input>interfacing to Gigablast</a> from another program 
 <table cellpadding=1 border=0 width=100% bgcolor=#0079ba>
 <tr><td><center><b><font color=#ffffff size=+1>Building a DMOZ Based Directory</td></tr></table>
 <br>
-&lt;<i>Last Updated Nov 18, 2014</i>&gt; 
+&lt;<i>Last Updated Jan 23, 2016</i>&gt; 
 <br>
 &lt;<i>Procedure tested on 32-bit Gigablast on Ubuntu 14.04 on Nov 18, 2014</i>&gt;
 <br>
-&lt;<i>Procedure tested on 64-bit Gigablast on Ubuntu 14.04 on Nov 18, 2014</i>&gt;
+&lt;<i>Procedure tested on 64-bit Gigablast on Ubuntu 14.04 on Jan 23, 2016</i>&gt;
 
 <br>
 <br>
@@ -966,7 +1019,7 @@ Now if you are <a href=#input>interfacing to Gigablast</a> from another program 
 
 
 <br><b>Testing DMOZ:</b>
-<ul> Go to the <a href=/admin/catdb>catdb</a> page and enter a url into the <i>Lookup Category Url</a> box and hit enter to see the associated DMOZ records for that url. So if you enter <a href=/admin/catdb?caturl=http%3A%2F%2Fwww.ibm.com%2F>http://www.ibm.com/</a></i> you should see a few entries.
+<ul> Go to the <a href=/admin/catdb>catdb</a> page and enter a url into the <i>Lookup Category Url</a> box and hit enter to see the associated DMOZ records for that url. So if you enter <a href=/admin/catdb?caturl=https%3A%2F%2Fwww.ibm.com%2F>https://www.ibm.com/</a></i> you should see a few entries. It treats http as different from https, so be careful with that because http://www.ibm.com/ is not in it.
 </ul>
 
 

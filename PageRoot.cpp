@@ -666,8 +666,9 @@ bool printLeftColumnRocketAndTabs ( SafeBuf *sb ,
 		{"SYNTAX","/syntax.html"},
 		{"USERS","/users.html"},
 		{"ABOUT","/about.html"},
-		{"NEWS","/news.html"},
-		{"FEED","/searchfeed.html"},
+		{"BLOG","/blog.html"},
+		// take this out for now
+		//{"FEED","/searchfeed.html"},
 		{"FAQ","/faq.html"},
 		{"API","/api.html"}
 	};
@@ -725,11 +726,13 @@ bool printLeftColumnRocketAndTabs ( SafeBuf *sb ,
 
 	for ( int32_t i = 0 ; i < n ; i++ ) {
 
-		if ( isSearchResultsPage && i >= 5 ) break;
+		// just show search, directort and advanced tab in serps
+		if ( isSearchResultsPage && i >= 3 ) break;
 
-		if ( i >= 1 && i <= 4 &&
-		     cr->m_diffbotApiUrl.length()<= 0 )
-			continue;
+		// what was this for?
+		// if ( i >= 1 && i <= 4 &&
+		//      cr->m_diffbotApiUrl.length() >= 0 )
+		// 	continue;
 
 		char delim = '?';
 		if ( strstr ( mi[i].m_url,"?") ) delim = '&';
@@ -1122,6 +1125,8 @@ bool printWebHomePage ( SafeBuf &sb , HttpRequest *r , TcpSocket *sock ) {
 	}
 
 
+	// take this out for now
+	/*
 	// always the option to add event guru to their list of
 	// search engine in their browser
 	sb.safePrintf("<br>"
@@ -1190,17 +1195,14 @@ bool printWebHomePage ( SafeBuf &sb , HttpRequest *r , TcpSocket *sock ) {
 		       ,0xbc
 
 		      );
+	*/
 
 
 	// print any red boxes we might need to
 	if ( printRedBox2 ( &sb , sock , r ) ) // true ) )
 		sb.safePrintf("<br>\n");
 
-	/*
-
-	  do not show table for open source installs
-
-	sb.safePrintf("<table cellpadding=3>\n");
+	sb.safePrintf("<br><center><table cellpadding=3>\n");
 	sb.safePrintf("\n");
 
 	char *root = "";
@@ -1210,16 +1212,42 @@ bool printWebHomePage ( SafeBuf &sb , HttpRequest *r , TcpSocket *sock ) {
 	sb.safePrintf("<tr valign=top>\n");
 
 	//sb.safePrintf("<td align=center><div style=width:50px;height:50px;display:inline-block;background-color:red;></div></td>\n");
-	sb.safePrintf("<td align=center><img height=71px width=50px "
+	sb.safePrintf("<td width=10%% "
+		      "align=center><img style=padding-right:10px; "
+		      "height=71px width=50px "
 		      "src=%s/opensource.png></td>\n"
 		      , root );
 
-	sb.safePrintf("<td><font size=+1><b>Open Source!</b>"
-	"</font><br>\n");
-	sb.brify2("Gigablast is now available as an <a href=https://github.com/gigablast/open-source-search-engine>open source search engine</a> on github.com. Download it today. Finally a robust, scalable search solution in C/C++ that has been in development and used commercially since 2000. <a href=http://www.gigablast.com/faq.html#features>Features</a>. Limited support available for free."
-		  ,80);
+	sb.safePrintf("<td width=45%%><font size=+1><b>Open Source!</b>"
+	"</font><br><br>\n");
+	sb.brify2("Gigablast is now available as an <a href=https://github.com/gigablast/open-source-search-engine>open source search engine</a> on github.com. Download it today. Finally a robust, scalable search solution in C/C++ that has been in development and used commercially since 2000. <a href=http://www.gigablast.com/faq.html#features>Features</a>."
+		  ,40);
+	//sb.safePrintf("<br><br>");
+	sb.safePrintf("</td>");
+
+	sb.safePrintf("<td><font size=+1><b>ScreenShots</b>"
+	"</font><br><br>\n");
+
+	sb.safePrintf("<a href=/ss_settings.png><img width=150 height=81 src=ss_settings_thumb.png></a>");
+
 	sb.safePrintf("<br><br>");
-	sb.safePrintf("</td></tr>\n");
+
+	sb.safePrintf("<a href=/ss_hosts.png><img width=150 height=81 src=ss_hosts_thumb.png></a>");
+
+	sb.safePrintf("<br><br>");
+
+	sb.safePrintf("<a href=/ss_filters.png><img width=150 height=81 src=ss_filters_thumb.png></a>");
+
+	sb.safePrintf("</td>");
+
+
+	sb.safePrintf("</tr>\n");
+
+	sb.safePrintf("</table></center>\n");
+
+	/*
+
+	  do not show table for open source installs
 
 
 	// donate with paypal
@@ -1830,11 +1858,11 @@ bool printDirHomePage ( SafeBuf &sb , HttpRequest *r ) {
 // . call g_httpServer.sendDynamicPage() to send it
 bool sendPageRoot ( TcpSocket *s , HttpRequest *r, char *cookie ) {
 	// don't allow pages bigger than 128k in cache
-	char  buf [ 10*1024 + MAX_QUERY_LEN ];
+	char  buf [ 10*1024 ];//+ MAX_QUERY_LEN ];
 	// a ptr into "buf"
 	//char *p    = buf;
 	//char *pend = buf + 10*1024 + MAX_QUERY_LEN - 100 ;
-	SafeBuf sb(buf, 10*1024 + MAX_QUERY_LEN);
+	SafeBuf sb(buf, 10*1024 );//+ MAX_QUERY_LEN);
 	// print bgcolors, set focus, set font style
 	//p = g_httpServer.printFocus  ( p , pend );
 	//p = g_httpServer.printColors ( p , pend );
@@ -2218,10 +2246,10 @@ public:
 	//SpiderRequest m_sreq;
 };
 
-static void doneInjectingWrapper3 ( void *st1 ) ;
-
 // only allow up to 1 Msg10's to be in progress at a time
 static bool s_inprogress = false;
+
+void doneInjectingWrapper3 ( void *st ) ;
 
 // . returns false if blocked, true otherwise
 // . sets g_errno on error
@@ -2483,17 +2511,48 @@ bool sendPageAddUrl ( TcpSocket *sock , HttpRequest *hr ) {
 	}
 	*/
 
+	Msg7 *msg7 = &st1->m_msg7;
+	// set this.
+	InjectionRequest *ir = &msg7->m_injectionRequest;
 
-	// set this. also sets gr->m_hr
-	GigablastRequest *gr = &st1->m_msg7.m_gr;
+	// default to zero
+	memset ( ir , 0 , sizeof(InjectionRequest) );
+
 	// this will fill in GigablastRequest so all the parms we need are set
-	g_parms.setGigablastRequest ( sock , hr , gr );
+	//setInjectionRequestFromParms ( sock , hr , cr , ir );
+
+	int32_t  collLen = 0;
+	char *coll = hr->getString( "c" , &collLen ,NULL );
+	if ( ! coll || ! coll[0] ) {
+		coll = g_conf.getDefaultColl( hr->getHost(), hr->getHostLen());
+		collLen = gbstrlen(coll);
+	}
+	ir->m_collnum = g_collectiondb.getCollnum ( coll );
+
+	ir->ptr_url = hr->getString("u",NULL);
+	if ( ! ir->ptr_url ) ir->ptr_url = hr->getString("url",NULL);
+	if ( ! ir->ptr_url ) ir->ptr_url = hr->getString("urls",NULL);
+
+	if ( ! ir->ptr_url ) {
+		g_errno = EBADURL;
+		doneInjectingWrapper3  ( st1 );
+		return true;
+	}
+
+	// include \0 in size
+	ir->size_url = gbstrlen(ir->ptr_url)+1;
+
+	// get back a short reply so we can show the status code easily
+	ir->m_shortReply = 1;
+
+	ir->m_spiderLinks = st1->m_spiderLinks;
 
 	// this is really an injection, not add url, so make
 	// GigablastRequest::m_url point to Gigablast::m_urlsBuf because
 	// the PAGE_ADDURLS2 parms in Parms.cpp fill in the m_urlsBuf.
 	// HACK!
-	gr->m_url = gr->m_urlsBuf;
+	//gr->m_url = gr->m_urlsBuf;
+	//ir->ptr_url = gr->m_urlsBuf;
 
 	//
 	// inject using msg7
@@ -2501,16 +2560,25 @@ bool sendPageAddUrl ( TcpSocket *sock , HttpRequest *hr ) {
 
 	// . pass in the cleaned url
 	// . returns false if blocked, true otherwise
-	if ( ! st1->m_msg7.inject ( //s ,
-				    //r ,
-				    st1 ,
-				    doneInjectingWrapper3 ) )
-		return false;
+	
+	if ( ! msg7->sendInjectionRequestToHost ( ir, st1 , 
+						  doneInjectingWrapper3 ) ) {
+		// there was an error
+		log("http: error sending injection request: %s"
+		    ,mstrerror(g_errno));
+		// we did not block, but had an error
+		return true;
+	}
+
+	//log("http: injection did not block");
 
 	// some kinda error, g_errno should be set i guess
-	doneInjectingWrapper3  ( st1 );
+	//doneInjectingWrapper3  ( st1 );
 	// we did not block
-	return true;
+	//return true;
+	// wait for the reply, this 'blocked'
+	return false;
+
 }
 
 
@@ -2523,10 +2591,14 @@ void doneInjectingWrapper3 ( void *st ) {
 	// in order to see what sites are being added log it, then we can
 	// more easily remove sites from sitesearch.gigablast.com that are
 	// being added but not being searched
-	char *url = st1->m_msg7.m_xd.m_firstUrl.m_url;
+	//char *url = st1->m_msg7.m_xd.m_firstUrl.m_url;
+	Msg7 *msg7 = &st1->m_msg7;
+	InjectionRequest *ir = &msg7->m_injectionRequest;
+	char *url = ir->ptr_url;
 	log(LOG_INFO,"http: add url %s (%s)",url ,mstrerror(g_errno));
 	// extract info from state
 	TcpSocket *sock    = st1->m_socket;
+	
 	//bool       isAdmin = st1->m_isMasterAdmin;
 	//char      *url     = NULL;
 	//if ( st1->m_urlLen ) url = st1->m_url;
@@ -2626,11 +2698,12 @@ void doneInjectingWrapper3 ( void *st ) {
 			//	      " is enabled.");
 			sb.safePrintf("%s",pm);
 		}
-		else if ( st1->m_msg7.m_xd.m_indexCodeValid &&
-			  st1->m_msg7.m_xd.m_indexCode ) {
-			int32_t ic = st1->m_msg7.m_xd.m_indexCode;
+		else if ( msg7->m_replyIndexCode ) { 
+			//st1->m_msg7.m_xd.m_indexCodeValid &&
+			//  st1->m_msg7.m_xd.m_indexCode ) {
+			//int32_t ic = st1->m_msg7.m_xd.m_indexCode;
 			sb.safePrintf("<b>Had error injecting url: %s</b>",
-				      mstrerror(ic));
+				      mstrerror(msg7->m_replyIndexCode));
 		}
 		/*
 		if ( url && ! st1->m_ufu[0] && url[0] && printUrl ) {

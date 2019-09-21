@@ -11,7 +11,7 @@
 
 #include "SafeBuf.h"
 #include "UdpProtocol.h" // MAX_MSG_TYPES
-#include "IndexReadInfo.h"
+//#include "IndexReadInfo.h"
 
 class StatPoint {
  public:
@@ -143,8 +143,8 @@ class Stats {
 	// when we just request more docids from the same tier
 	int32_t m_msg3aFastRecalls;
 	// how many resolutions did we get on each tier
-	int32_t      m_tierHits [MAX_TIERS];
-	int64_t m_tierTimes[MAX_TIERS];
+	//int32_t      m_tierHits [MAX_TIERS];
+	//int64_t m_tierTimes[MAX_TIERS];
 	// how many searches did not get enough results?
 	int32_t m_tier2Misses;
 	// one count for each CR_* defined in Msg51.h
@@ -160,8 +160,8 @@ class Stats {
 	//int32_t m_errored;
 	int32_t m_msg3aRecalls[6];
 	SafeBuf m_keyCols;
-	int32_t m_numTermsVsTier[14][MAX_TIERS];
-	int32_t m_termsVsTierExp[14][MAX_TIERS][7];
+	//int32_t m_numTermsVsTier[14][MAX_TIERS];
+	//int32_t m_termsVsTierExp[14][MAX_TIERS][7];
 
 	// use m_start so we know what msg stats to clear with memset
 	char      m_start;
@@ -195,6 +195,8 @@ class Stats {
 	int32_t m_cancelRead [MAX_MSG_TYPES][2]; // dropped dgram
 
 	int32_t m_parsingInconsistencies;
+
+	int32_t m_totalOverflows;
 
 	// count ip and domain hammer for Msg13.cpp here
 	//int32_t m_numBackoffs;

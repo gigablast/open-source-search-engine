@@ -5,6 +5,7 @@
 #include "sort.h"
 #include "XmlDoc.h" // score32to8()
 #include "Rebalance.h"
+#include "Process.h"
 
 Linkdb g_linkdb;
 Linkdb g_linkdb2;
@@ -101,7 +102,7 @@ bool Linkdb::init ( ) {
 	*/
 
 	// we use the same disk page size as indexdb (for rdbmap.cpp)
-	int32_t pageSize = GB_INDEXDB_PAGE_SIZE;
+	//int32_t pageSize = GB_INDEXDB_PAGE_SIZE;
 	// set this for debugging
 	//int64_t maxTreeMem = 1000000;
 	int64_t maxTreeMem = 40000000; // 40MB
@@ -110,20 +111,18 @@ bool Linkdb::init ( ) {
 	// . 32 bytes per record when in the tree
 	int32_t maxTreeNodes = maxTreeMem /(sizeof(key224_t)+16);
 	// disk page cache mem, 100MB on gk0 now
-	int32_t pcmem = 0; // g_conf.m_linkdbMaxDiskPageCacheMem;
+	//int32_t pcmem = 0; // g_conf.m_linkdbMaxDiskPageCacheMem;
 	// give it a little
-	pcmem = 10000000; // 10MB
+	//pcmem = 10000000; // 10MB
 	// keep this low if we are the tmp cluster
 	//if ( g_hostdb.m_useTmpCluster ) pcmem = 0;
 	// TODO: would be nice to just do page caching on the satellite files;
 	//       look into "minimizeDiskSeeks" at some point...
-	if ( ! m_pc.init ( "linkdb" ,
-			   RDB_LINKDB,
-			   pcmem    ,
-			   pageSize ,
-			   true     ,  // use shared mem?
-			   false    )) // minimizeDiskSeeks?
-		return log("db: Linkdb init failed.");
+	// if ( ! m_pc.init ( "linkdb" ,
+	// 		   RDB_LINKDB,
+	// 		   pcmem    ,
+	// 		   pageSize ))
+	// 	return log("db: Linkdb init failed.");
 	// init the rdb
 	return m_rdb.init ( g_hostdb.m_dir ,
 			    "linkdb" ,
@@ -143,7 +142,7 @@ bool Linkdb::init ( ) {
 			    0        , // cache nodes
 			    false, // true     , // use half keys
 			    false    , // load cache from disk
-			    &m_pc    ,
+			    NULL,//&m_pc    ,
 			    false    , // false
 			    false    , // preload page cache
 			    sizeof(key224_t) ,
@@ -339,12 +338,18 @@ key224_t Linkdb::makeKey_uk ( uint32_t  linkeeSiteHash32       ,
 
 	// sanity checks
 	//if(discoveryDate && discoveryDate < 1025376000){char *xx=NULL;*xx=0;}
-	if ( lostDate && lostDate < LINKDBEPOCH){char *xx=NULL;*xx=0;}
+	if ( lostDate && lostDate < LINKDBEPOCH){
+        lostDate = LINKDBEPOCH;
+        //char *xx=NULL;*xx=0;
+    }
 
 	// . convert discovery date from utc into days since jan 2008 epoch
 	// . the number is for jan 2012, so subtract 4 years to do 2008
 	uint32_t epoch = LINKDBEPOCH;
-	if ( discoveryDate && discoveryDate < epoch ) { char *xx=NULL;*xx=0; }
+	if ( discoveryDate && discoveryDate < epoch ) {
+        discoveryDate = epoch;
+        //char *xx=NULL;*xx=0;
+    }
 	uint32_t nd = (discoveryDate - epoch) / 86400;
 	if ( discoveryDate == 0 ) nd = 0;
 	// makeEndKey_uk() maxes this out!
@@ -598,6 +603,10 @@ bool getLinkInfo ( SafeBuf   *reqBuf              ,
 	Host *hosts = g_hostdb.getShard ( shardNum); // Group ( groupId );
 	if ( hostNum >= numHosts ) { char *xx = NULL; *xx = 0; }
 	int32_t hostId = hosts [ hostNum ].m_hostId ;
+	if( !hosts [ hostNum ].m_spiderEnabled) {
+		hostId = g_hostdb.getHostIdWithSpideringEnabled ( shardNum );
+	}
+
 
 	// . serialize the string buffers
 	// . use Msg25Request::m_buf[MAX_NEEDED]
@@ -660,7 +669,16 @@ static void sendReplyWrapper ( void *state ) {
 	// sanity
 	if ( req->m_udpSlot != slot2 ) { char *xx=NULL;*xx=0;}
 	// if in table, nuke it
-	g_lineTable.removeKey ( &req->m_siteHash64 );
+	// but only if it was in SITE mode, not PAGE. we've lost our
+	// table entry like this before.
+	// TODO: if this still doesn't work then ensure the stored 'req'
+	// is the same!
+	if ( req->m_mode == MODE_SITELINKINFO ) {
+		g_lineTable.removeKey ( &req->m_siteHash64 );
+		if ( g_conf.m_logDebugLinkInfo )
+			log("linkdb: removing sitehash64=%"INT64"",
+			    req->m_siteHash64);
+	}
 
  nextLink:
 
@@ -710,6 +728,14 @@ void  handleRequest25 ( UdpSlot *slot , int32_t netnice ) {
 	// used by sendReply()
 	req->m_udpSlot = slot;
 
+	if ( g_conf.m_logDebugLinkInfo && req->m_mode == MODE_SITELINKINFO ) {
+		log("linkdb: got msg25 request sitehash64=%"INT64" "
+		    "site=%s "
+		    ,req->m_siteHash64
+		    ,req->ptr_site
+		    );
+	}
+
 	// set up the hashtable if our first time
 	if ( ! g_lineTable.isInitialized() )
 		g_lineTable.set ( 8,sizeof(Msg25Request *),256,
@@ -733,13 +759,17 @@ void  handleRequest25 ( UdpSlot *slot , int32_t netnice ) {
 		if ( head->m_next ) 
 			req->m_next = head->m_next;
 		head->m_next = req;
+		req->m_waitingInLine = 1;
 		// note it for debugging
-		log("build: msg25 request waiting in line for %s slot=0x%"PTRFMT"",
+		log("build: msg25 request waiting in line for %s "
+		    "udpslot=0x%"PTRFMT"",
 		    req->ptr_url,(PTRTYPE)slot);
 		// we will send a reply back for this guy when done
 		// getting the reply for the head msg25request
 		return;
 	}
+
+	req->m_waitingInLine = 0;
 
 	// make a new Msg25
 	Msg25 *m25;
@@ -799,8 +829,21 @@ void  handleRequest25 ( UdpSlot *slot , int32_t netnice ) {
 
 	if ( g_errno == ETRYAGAIN ) { char *xx=NULL;*xx=0; }
 
+	// wait for msg5 to be done reading list. this happens somehow,
+	// i'm not 100% sure how. code has too many indirections.
+	if ( m25->m_gettingList ) {
+		log("linkdb: avoiding core");
+		return;
+	}
+
+	// sanity
+	if ( m25->m_msg5.m_msg3.m_numScansCompleted < 
+	     m25->m_msg5.m_msg3.m_numScansStarted ) { char *xx=NULL;*xx=0; }
+
 	if ( g_errno )
 		log("linkdb: error getting linkinfo: %s",mstrerror(g_errno));
+	// else
+	// 	log("linkdb: got link info without blocking");
 
 	// it did not block... g_errno will be set on error so sendReply()
 	// should in that case send an error reply.
@@ -1099,9 +1142,15 @@ bool Msg25::doReadLoop ( ) {
 	if ( g_conf.m_logDebugLinkInfo ) {
 		char *ms = "page";
 		if ( m_mode == MODE_SITELINKINFO ) ms = "site";
-		log("msg25: getting full linkinfo mode=%s site=%s url=%s "
-		    "docid=%"INT64"",
-		    ms,m_site,m_url,m_docId);
+		log("msg25: reading linkdb list mode=%s site=%s url=%s "
+		    "docid=%"INT64" linkdbstartkey=%s",
+		    ms,m_site,m_url,m_docId,KEYSTR(&startKey,LDBKS));
+	}
+
+        if ( g_process.m_mode == EXIT_MODE ) {
+		log("linkdb: shutting down. exiting link text loop.");
+		g_errno = ESHUTTINGDOWN;
+		return false;
 	}
 
 	m_gettingList = true;
@@ -1146,7 +1195,12 @@ bool Msg25::doReadLoop ( ) {
 	m_gettingList = false;
 	// debug log
 	if ( g_conf.m_logDebugBuild )
-		log("build: msg25 call to msg0 did not block");
+		log("build: msg25 call to msg5 did not block");
+
+	// sanity
+	if ( m_msg5.m_msg3.m_numScansCompleted < 
+	     m_msg5.m_msg3.m_numScansStarted ) { char *xx=NULL;*xx=0; }
+
 	// return true on error
 	if ( g_errno ) {
 		log("build: Had error getting linkers to url %s : %s.",
@@ -1202,6 +1256,10 @@ bool Msg25::gotList() {
 	m_gettingList = false;
 	// reset # of docIds linking to us
 	//m_numDocIds = 0;
+
+	// sanity
+	if ( m_msg5.m_msg3.m_numScansCompleted < 
+	     m_msg5.m_msg3.m_numScansStarted ) { char *xx=NULL;*xx=0; }
 
 	//log("debug: entering gotlist this=%"XINT32"",(int32_t)this);
 
@@ -1980,6 +2038,10 @@ bool Msg25::gotLinkText ( Msg20Request *req ) { // LinkTextReply *linkText ) {
 		     g_errno == ENOSLOTS    ) {
 			m_errors++;
 			if ( m_numReplies < m_numRequests ) return false;
+			if ( m_gettingList ) {
+				log("linkdb: gotLinkText: gettinglist1");
+				return false;
+			}
 			return true;
 		}
 		// otherwise, keep going, but this reply can not vote
@@ -2249,6 +2311,11 @@ bool Msg25::gotLinkText ( Msg20Request *req ) { // LinkTextReply *linkText ) {
 	// wait for all replies to come in
 	if ( m_numReplies < m_numRequests ) return false;
 
+	if ( m_gettingList ) {
+		log("linkdb: gotLinkText: gettinglist2");
+		return false;
+	}
+
 	//
 	//
 	// READ MORE FROM LINKDB to avoid truncation
@@ -2273,8 +2340,9 @@ bool Msg25::gotLinkText ( Msg20Request *req ) { // LinkTextReply *linkText ) {
 		}
 		// debug
 		if ( g_conf.m_logDebugLinkInfo ) {
-			log("linkdb: recalling round=%"INT32" for %s=%s",
-			    m_round,ms,m_site);
+			log("linkdb: recalling round=%"INT32" for %s=%s "
+			    "req=0x%"PTRFMT" numlinkerreplies=%"INT32,
+			    m_round,ms,m_site,(PTRTYPE)m_req25,m_numReplyPtrs);
 		}
 		// and re-call. returns true if did not block.
 		// returns true with g_errno set on error.
@@ -4924,7 +4992,9 @@ bool Links::set ( bool useRelNoFollow ,
 		  //char *coll ,
 		  bool parentIsPermalink ,
 		  Links *oldLinks ,
-		  bool doQuickSet ) {
+		  bool doQuickSet ,
+		  // some json from diffbot:
+		  SafeBuf *diffbotReply ) {
 
 	reset();
 
@@ -4995,6 +5065,39 @@ bool Links::set ( bool useRelNoFollow ,
 	//	break;
 	//}
 
+
+	// get list of links from diffbot json reply
+	char *p = NULL;
+	if ( diffbotReply && diffbotReply->length() > 10 ) 
+		p = strstr ( diffbotReply->getBufStart() , "\"links\":[\"" );
+	// skip over the heading stuff
+	if ( p ) p += 10;
+	// parse out the links from diffbot reply
+	for ( ; p ; ) {
+		// must not be json mark up
+		if ( ! *p || *p == ']' || *p == '\"' ) break;
+		// save p
+		char *start = p;
+		// get length of the link
+		for ( ; *p && *p != '\"' ; p++ );
+		// set end of link
+		char *end = p;
+		// add the link
+		if ( ! addLink ( start ,  // linkStr
+				 end - start ,  // linkStrLen
+				 -1, // i 
+				 setLinkHash , 
+				 TITLEREC_CURRENT_VERSION ,
+				 niceness , 
+				 false , // isRSS?
+				 TAG_LINK , // node id -> LF_LINKTAG flag
+				 0 )) // flags
+			return false;
+		// now advance to next link if any.
+		for ( ; *p == '\"' || *p == ',' || is_wspace_a(*p) ; p++ );
+	}
+	
+
 	// visit each node in the xml tree. a node can be a tag or a non-tag.
 	char *urlattr = NULL;
 	for ( int32_t i=0; i < m_numNodes ; i++ ) {
@@ -5002,27 +5105,51 @@ bool Links::set ( bool useRelNoFollow ,
 		// . continue if this tag ain't an <a href> tag
 		// . atom feeds have a <link href=""> field in them
 		int32_t id = xml->getNodeId ( i );
+
+		int32_t  slen;
+		char *s ;
+		// reset
+		linkflags_t flags = 0;
+
+		/*
+		  MDW: now we set m_nodeId properly to TAG_LINK even in
+		  pure xml docs
+		if ( xml->m_pureXml ) {
+			// if it's a back tag continue
+			if ( xml->isBackTag ( i ) ) continue;
+			// must be a <> tag not innerhtml of tag
+			if ( xml->m_nodes[i].m_nodeId != TAG_XMLTAG ) continue;
+			// must be <link> i guess
+			if ( xml->m_nodes[i].m_tagNameLen != 4 ) continue;
+			if ( strncmp ( xml->m_nodes[i].m_tagName , "link" , 4))
+				continue;
+			// pure xml does not have ids like this so force it
+			id = TAG_LINK;
+			goto gotOne;
+		}
+		*/
+
 		if ( id != TAG_A         &&
-		     id != TAG_LINK      &&
+		     id != TAG_LINK      && // rss feed url
+		     id != TAG_LOC       && // sitemap.xml url
 		     id != TAG_AREA      &&
 		     id != TAG_ENCLOSURE &&
 		     id != TAG_WEBLOG    &&
 		     id != TAG_URLFROM   && //  <UrlFrom> for ahrefs.com
 		     id != TAG_FBORIGLINK )
 			continue;
+
+		//gotOne:
+
 		urlattr = "href";
 		if ( id == TAG_WEBLOG     ) urlattr ="url";
 		if ( id == TAG_FBORIGLINK ) m_isFeedBurner = true;
 
 		// if it's a back tag continue
 		if ( xml->isBackTag ( i ) ) continue;
-		// reset
-		linkflags_t flags = 0;
 		// . if it has rel=nofollow then ignore it
 		// . for old titleRecs we should skip this part so that the
 		//   link: terms are indexed/hashed the same way in XmlDoc.cpp
-		int32_t  slen;
-		char *s ;
 		if ( useRelNoFollow ) s = xml->getString ( i , "rel", &slen ) ;
 		if ( useRelNoFollow &&
 		     slen==8 &&   // ASCII
@@ -5046,6 +5173,7 @@ bool Links::set ( bool useRelNoFollow ,
 		// follow, like in an rss feed.
 		if ( linkLen==0 && 
 		     (id == TAG_LINK || 
+		      id == TAG_LOC || // sitemap.xml urls
 		      id == TAG_URLFROM ||
 		      id == TAG_FBORIGLINK) ) {
 			// the the <link> node
@@ -5274,6 +5402,30 @@ bool Links::set ( char *buf ,  int32_t niceness ) { //char *coll,int32_t nicenes
 	}
 	// assume none are flagged as old, LF_OLDLINK
 	m_flagged = true;
+	return true;
+}
+
+bool Links::print ( SafeBuf *sb ) {
+	sb->safePrintf(
+		       "<table cellpadding=3 border=1>\n"
+		       "<tr>"
+		       "<td>#</td>"
+		       "<td colspan=40>"
+		       // table header row
+		       "Outlink"
+		       "</td>"
+		       "</tr>"
+		       );
+	// find the link point to our url
+	int32_t i;
+	for ( i = 0 ; i < m_numLinks ; i++ ) {
+		char *link    = getLinkPtr(i);
+		int32_t  linkLen = getLinkLen(i);
+		sb->safePrintf("<tr><td>%"INT32"</td><td>",i);
+		sb->safeMemcpy(link,linkLen);
+		sb->safePrintf("</td></tr>\n");
+	}
+	sb->safePrintf("</table>\n<br>\n");
 	return true;
 }
 
@@ -5644,6 +5796,50 @@ bool Links::addLink ( char *link , int32_t linkLen , int32_t nodeNum ,
 	// we now use everything has is for sites like file.org
 	bool addWWW = false;
 
+	/////
+	//
+	// hack fix. if link has spaces in it convert to +'s
+	// will fix urls like those in anchor tags on
+	// http://www.birmingham-boxes.co.uk/catagory.asp
+	//
+	/////
+	bool hasSpaces = false;
+	char tmp[MAX_URL_LEN+2];
+	for ( int32_t k = 0 ; k < linkLen ; k++ ) {
+		if ( link[k] == ' ' ) hasSpaces = true;
+		// watch out for unterminated quotes
+		if ( link[k] == '>' ) { hasSpaces = false; break; }
+	}
+	bool hitQuestionMark = false;
+	int32_t src = 0;
+	int32_t dst = 0;
+	for ( ;hasSpaces && linkLen<MAX_URL_LEN && src<linkLen ; src++ ){
+		// if not enough buffer then we couldn't do the conversion.
+		if ( dst+3 >= MAX_URL_LEN ) { hasSpaces = false; break; }
+		if ( link[src] == '?' ) 
+			hitQuestionMark = true;
+		if ( link[src] != ' ' ) {
+			tmp[dst++] = link[src];
+			continue;
+		}
+		// if we are part of the cgi stuff, use +
+		if ( hitQuestionMark ) { 
+			tmp[dst++] = '+'; 
+			continue;
+		}
+		// if before the '?' then use %20
+		tmp[dst++] = '%';
+		tmp[dst++] = '2';
+		tmp[dst++] = '0';
+	}
+	if ( hasSpaces ) {
+		link = tmp;
+		linkLen = dst;
+		tmp[dst] = '\0';
+	}
+		
+
+
 	url.set ( m_baseUrl       ,
 		  link            ,
 		  linkLen         ,
@@ -5669,7 +5865,7 @@ bool Links::addLink ( char *link , int32_t linkLen , int32_t nodeNum ,
 
 	// stop http://0x0017.0000000000000000000000000000000000000024521276/
 	// which somehow make it through without this!!
-	if ( url.getTLDLen() <= 0 ) return true;
+	if ( ! url.isIp() && url.getTLDLen() <= 0 ) return true;
 
 	// count dirty links
 	//if ( url.isDirty() ) m_numDirtyLinks++;

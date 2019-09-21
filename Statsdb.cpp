@@ -65,19 +65,19 @@ static Label s_labels[] = {
 	// . 300MB/s is max read rate regardless to stop graph shrinkage
 	// . use 1KB as the min resolution per pixel
 	// . stored in Bps so use 1/1000 as scalar to get into KBps
-	{ GRAPH_QUANTITY,200,"disk_read",1,"%.0f MBps",1.0/(1000.0*1000.0),0x000000,
-	"disk read"},
+	{ GRAPH_QUANTITY,200,"disk_read",1,"%.0f MBps",1.0/(1000.0*1000.0),0x000000,"disk read"},
 
 	// . 300MB/s is max write rate regardless to stop graph shrinkage
 	// . use 1KB as the min resolution per pixel
 	// . stored in Bps so use 1/1000 as scalar to get into KBps
-	{GRAPH_QUANTITY,200,"disk_write",1,"%.0f Mbps",1.0/(1000.0*1000.0), 0xff0000,
-	"disk write"},
+	{GRAPH_QUANTITY,200,"disk_write",1,"%.0f Mbps",1.0/(1000.0*1000.0), 0xff0000,	"disk write"},
 
 	// . 20 is the max dps regardless to stop graph shrinkage
 	// . use .03 qps as the min resolution per pixel
-	{GRAPH_OPS,10,"parse_doc", .005,"%.1f dps" , 1.0 , 0x00fea915,"parsed doc" },
+	{GRAPH_OPS,20,"parse_doc", .005,"%.1f dps" , 1.0 , 0x00fea915,"parsed doc" },
 
+
+	{GRAPH_QUANTITY_PER_OP,-1,"docs_per_second", .1,"%.1f docs per second" , -1 , 0x1F2F5C,"*successfully* indexed docs per second" },
 
 	// . use .1 * 1000 docs as the min resolution per pixel
 	// . max = -1, means dynamic size the ymax!
@@ -86,7 +86,7 @@ static Label s_labels[] = {
 	// . make it 2M now not 50M. seems like it is per pixel and theres
 	//   like 1000 pixels vertically. but we need to autoscale it 
 	//   eventually
-	{GRAPH_QUANTITY,2000000.0,"docs_indexed", .1,"%.0fK docs" , .001 , 0x00cc0099,"docs indexed" }
+	{GRAPH_QUANTITY,-1,"docs_indexed", .1,"%.0f docs" , -1,  0x00cc0099,"docs indexed" }
 
 
 	//{ "termlist_intersect",0x0000ff00},
@@ -119,6 +119,7 @@ Label *Statsdb::getLabel ( int32_t labelHash ) {
 	if ( ! label ) return NULL;
 	return *label;
 }
+
 
 Statsdb::Statsdb ( ) {
 	m_init = false;
@@ -244,11 +245,17 @@ void flushStatsWrapper ( int fd , void *state ) {
 void Statsdb::addDocsIndexed ( ) {
 
 	if ( ! isClockInSync() ) return;
+	if ( g_hostdb.hasDeadHost() ) return;
+
+
+	// only host #0 needs this
+	if ( g_hostdb.m_hostId != 0 ) return;
 
 	// only once per five seconds
 	int32_t now = getTimeLocal();
 	static int32_t s_lastTime = 0;
 	if ( now - s_lastTime < 5 ) return;
+	int32_t interval = now - s_lastTime;
 	s_lastTime = now;
 
 	int64_t total = 0LL;
@@ -257,20 +264,30 @@ void Statsdb::addDocsIndexed ( ) {
 	for ( int32_t i = 0 ; i < g_hostdb.m_numHosts ; i++ ) {
 		Host *h = &g_hostdb.m_hosts[i];
 		// must have something
-		if ( h->m_pingInfo.m_totalDocsIndexed <= 0 ) return;
+		if ( h->m_pingInfo.m_totalDocsIndexed <= 0 ) continue;
 		// add it up
 		total += h->m_pingInfo.m_totalDocsIndexed;
 	}
 	// divide by # of groups
-	total /= g_hostdb.getNumShards();
+	total /= g_hostdb.getNumHostsPerShard();
 	// skip if no change
+
 	if ( total == s_lastTotal ) return;
 
-	s_lastTotal = total;
+    int32_t docsIndexedInInterval = total - s_lastTotal;
+    float docsPerSecond = docsIndexedInInterval / (float)interval;
+
+	log("build: total docs indexed: %f. docs per second %f %i %i", (float)total, docsPerSecond, docsIndexedInInterval, interval);
 
 	// add it if changed though
 	int64_t nowms = gettimeofdayInMillisecondsGlobal();
 	addStat ( MAX_NICENESS,"docs_indexed", nowms, nowms, (float)total );
+    // Prevent a datapoint which adds all of the docs indexed to date.
+    if( s_lastTotal != 0 ) {
+        addStat ( MAX_NICENESS,"docs_per_second", nowms, nowms, docsPerSecond );
+    }
+
+	s_lastTotal = total;
 }
 
 // . m_key bitmap in statsdb:
@@ -290,14 +307,14 @@ void Statsdb::addDocsIndexed ( ) {
 // . oldVal, newVal are reflect a state change, like maybe changing the
 //   value of a parm. typically for such things t1 equals t2
 bool Statsdb::addStat ( int32_t        niceness ,
-			char       *label    ,
+			char      *label    ,
 			int64_t   t1Arg    ,
 			int64_t   t2Arg    ,
-			float       value    , // y-value really, "numBytes"
-			int32_t        parmHash ,
-			float       oldVal   ,
-			float       newVal   ,
-			int32_t        userId32 ) {
+			float     value    , // y-value really, "numBytes"
+			int32_t   parmHash ,
+			float     oldVal   ,
+			float     newVal   ,
+			int32_t   userId32 ) {
 
 	if ( ! g_conf.m_useStatsdb ) return true;
 
@@ -630,23 +647,23 @@ bool Statsdb::gifLoop ( ) {
 	// main graphing window
 	//
 	m_gw.safePrintf("<div style=\"position:relative;"
-		      "background-color:#c0c0c0;"
-		      //"overflow-y:hidden;"
-		      "overflow-x:hidden;"
-			"z-index:0;"
-		      // the tick marks we print below are based on it
-		      // being a window of the last 20 seconds... and using
-		      // DX2 pixels
-		      "min-width:%"INT32"px;"
-		      "min-height:%"INT32"px;"
-		      //"width:100%%;"
-		      //"min-height:600px;"
-		      "margin-top:10px;"
-		      "margin-bottom:10px;"
-		      "margin-right:10px;"
-		      "margin-left:10px;\">"
-		      ,(int32_t)DX2 + 2 *m_bx
-			,(int32_t)DY2 + 2*m_by);
+					"background-color:#c0c0c0;"
+					//"overflow-y:hidden;"
+					"overflow-x:hidden;"
+					"z-index:0;"
+					// the tick marks we print below are based on it
+					// being a window of the last 20 seconds... and using
+					// DX2 pixels
+					"min-width:%"INT32"px;"
+					"min-height:%"INT32"px;"
+					//"width:100%%;"
+					//"min-height:600px;"
+					"margin-top:10px;"
+					"margin-bottom:10px;"
+					"margin-right:10px;"
+					"margin-left:10px;\">"
+					,(int32_t)DX2 + 2 *m_bx
+					,(int32_t)DY2 + 2*m_by);
 
 
 	// draw the x-axis
@@ -724,10 +741,14 @@ bool Statsdb::gifLoop ( ) {
 		if ( col == 0 )
 			m_sb2->safePrintf("<tr>");
 
-		m_sb2->safePrintf("<td bgcolor=#%06"XINT32">&nbsp; &nbsp;</td>"
-				 "<td>%s</td>\n",
-				 bb->m_color ,
-				 bb->m_keyDesc );
+		m_sb2->safePrintf("<td bgcolor=#%06"XINT32"><label>"
+						  "<input class=\"graph-toggles\" "
+						  "type=\"checkbox\" "
+						  "value=\"%06"XINT32"\"/></label></td>"
+						  "<td>%s</td>\n",
+						  bb->m_color ,
+						  bb->m_color ,
+						  bb->m_keyDesc );
 
 		if ( col == 1 )
 			m_sb2->safePrintf("</tr>\n");
@@ -874,19 +895,20 @@ char *Statsdb::plotGraph ( char *pstart ,
 	Label *label = getLabel ( graphHash );
 	if ( ! label ) { char *xx=NULL;*xx=0; }
 
-	log("stats: plotting %s",label->m_keyDesc) ;
+	//log("stats: plotting %s",label->m_keyDesc) ;
 
 	// let's first scan m_sb1 to normalize the y values
 	bool needMin = true;
 	bool needMax = true;
 	float ymin = 0.0;
 	float ymax = 0.0;
-
+	float yscalar = label->m_yscalar;
 	char *p = pstart;
 
 	for ( ; p < pend ; p += 12 ) {
 		// breathe
 		QUICKPOLL ( m_niceness );
+		if ( m_gw.getLength() > 10000000 ) break;
 		// get the y
 		float y2 = *(float *)(p+4);
 		// get color of this point
@@ -894,7 +916,8 @@ char *Statsdb::plotGraph ( char *pstart ,
 		// stop if not us
 		if ( gh != graphHash ) continue;
 		// put into scaled space right away
-		y2 = y2 * label->m_yscalar;
+		if (label->m_yscalar >= 0)
+			y2 = y2 * label->m_yscalar;
 		// . limit y to absolute max
 		// . these units should be scaled as well!
 		if ( y2 > label->m_absYMax && label->m_absYMax > 0.0 )
@@ -907,13 +930,21 @@ char *Statsdb::plotGraph ( char *pstart ,
 	}
 
 	// force to zero for now
-	ymin = 0.0;
+	//ymin = 0.0;
 	// . and force to ymax for now as well
 	// . -1 indicates dynamic though!
 	if ( label->m_absYMax > 0.0 ) ymax = label->m_absYMax;
 	// add a 20% ceiling
-	else                          ymax *= 1.20;
+	//	else                          ymax *= 1.20;
 
+	
+	if( label->m_yscalar <= 0 ) {
+        if(ymax == ymin) {
+            yscalar = 0;
+        } else {
+            yscalar = (float)DY2 / (ymax - ymin);
+        }
+	}
 	// return that!
 	char *retp = p;
 
@@ -936,7 +967,7 @@ char *Statsdb::plotGraph ( char *pstart ,
 
 	// . pad y range if total range is small
 	// . only do this for certain types of stats, like qps and disk i/o
-	if ( ourDiff < minDiff ) {
+	if ( label->m_yscalar >=0 && ourDiff < minDiff ) {
 		float pad = (minDiff - ourDiff) / 2;
 		// pad it out
 		ymin -= pad ;
@@ -966,16 +997,23 @@ char *Statsdb::plotGraph ( char *pstart ,
 	for ( ; p < pend ; ) {
 		// breathe
 		QUICKPOLL ( m_niceness );
+		if ( m_gw.getLength() > 10000000 ) break;
 		// first is x pixel pos
 		int32_t  x2 = *(int32_t *)p; p += 4;
 		// then y pos
 		float y2 = *(float *)p; p += 4;
 
 		// scale it right away
-		y2 *= label->m_yscalar;
+		if(label->m_yscalar < 0) {
+			y2 = (y2 - ymin) * yscalar;
+		}
+		else {
+			y2 *= yscalar;
 
+		}
 		// adjust
 		if ( y2 > ymax ) y2 = ymax;
+		if ( y2 < 0 ) y2 = 0;
 
 		// then graphHash
 		int32_t  gh = *(int32_t *)p; p += 4;
@@ -988,8 +1026,10 @@ char *Statsdb::plotGraph ( char *pstart ,
 		float y1 = lasty;
 
 		// normalize y into pixel space
-		y2 = ((float)DY2 * (y2 - ymin)) / (ymax-ymin);
-
+		if(label->m_yscalar >= 0 && ymax != ymin) {
+			y2 = ((float)DY2 * (y2 - ymin)) / (ymax-ymin);
+		}
+		
 		// set lasts for next iteration of this loop
 		lastx = x2;
 		lasty = y2;
@@ -1058,12 +1098,19 @@ char *Statsdb::plotGraph ( char *pstart ,
 	}
 
 
+	float lastZ = -1;
 	for ( float z = ymin ; z < ymax ; z += deltaz ) {
 		// breathe
 		QUICKPOLL ( m_niceness );
 		// draw it
 		drawHR ( z , ymin , ymax , m_gw , label , zoff , color );
+		if(z == lastZ) break;
+		lastZ = z;
+		//if ( m_gw.getLength() > 10000000 ) break;
 	}
+
+	if ( m_gw.getLength() > 10000000 )
+		log("statsdb: graph too big");
 
 	return retp;
 	//#endif
@@ -1136,17 +1183,20 @@ void Statsdb::drawHR ( float z ,
 
 	// LABEL
 	gw.safePrintf("<div style=\"position:absolute;"
-		      "left:%"INT32";"
-		      "bottom:%"INT32";"
-		      "color:#%"XINT32";"
-		      "z-index:110;"
-		      "font-size:14px;"
-		      "min-height:20px;"
-		      "min-width:3px;\">%s</div>\n"
+				  "left:%"INT32";"
+				  "bottom:%"INT32";"
+				  "color:#%"XINT32";"
+				  "z-index:110;"
+				  "font-size:14px;"
+				  "min-height:20px;"
+				  "min-width:3px;\""
+                  " class=\"color-%"XINT32"\""
+				  ">%s</div>\n"
 		      , (int32_t)(m_bx)
 		      , (int32_t)z2 +m_by
 		      , color
 		      // the label:
+		      , color
 		      , tmp
 		      );
 	
@@ -1174,6 +1224,13 @@ bool Statsdb::processList ( ) {
 		// done if wrapped
 		if ( m_startKey.n0 == 0LL && m_startKey.n1 == 0 )
 			m_done = true;
+	}
+
+	// HACK: the user can request all of the events, it can
+	// become quite large. so limit to 100 mb right now.
+	if( m_sb3.length() > 100000000) {
+		log("statsdb: truncating statsdb results.");
+		m_done = true;
 	}
 
 
@@ -1566,16 +1623,20 @@ void Statsdb::drawLine3 ( SafeBuf &sb ,
 	m_dupTable.addKey(&key32);
 
 	sb.safePrintf("<div style=\"position:absolute;"
-		      "left:%"INT32";"
-		      "bottom:%"INT32";"
-		      "background-color:#%"XINT32";"
-		      "z-index:-5;"
-		      "min-height:%"INT32"px;"
-		      "min-width:%"INT32"px;\"></div>\n"
+				  "left:%"INT32";"
+				  "bottom:%"INT32";"
+				  "background-color:#%"XINT32";"
+				  "z-index:-5;"
+				  "min-height:%"INT32"px;"
+				  "min-width:%"INT32"px;\""
+				  " class=\"color-%"XINT32"\"></div>\n"
 		      , x1 + m_bx
 		      , (fy1 - width/2) + m_by
 		      , color
 		      , width
 		      , x2 - x1
+		      , color
 		      );
 }
+
+

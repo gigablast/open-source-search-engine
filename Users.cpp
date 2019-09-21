@@ -114,6 +114,7 @@ Users::~Users(){
 }
 
 bool Users::save(){
+	return true;
 	if ( ! m_needsSave ) return true;
 	if ( ! m_loginTable.save(g_hostdb.m_dir,"userlogin.dat",NULL,0) )
 		return log("users: userlogin.dat save failed");

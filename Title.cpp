@@ -901,7 +901,12 @@ bool Title::setTitle4 ( XmlDoc   *xd            ,
 	char *rootTitles[20];
 	int32_t  rootTitleLens[20];
 	// loop over each root title segment
-	for ( ; pr && pr < rootTitleBufEnd ; pr += gbstrlen(pr) + 1 ) {
+	for ( ; pr && pr < rootTitleBufEnd ; 
+	      // sometimes roottitlebuf is missing terminating \0 for some
+	      // reason. could be related to corruption in tagdb from
+	      // corruption bug fixed a week ago, but handle it here.
+	      // thanks to isj.
+	      pr += strnlen(pr,(size_t)(rootTitleBufEnd-pr)) + 1 ) {
 		// if we had a query...
 		if ( q ) {
 			// reset it
@@ -1114,7 +1119,7 @@ bool Title::setTitle4 ( XmlDoc   *xd            ,
 		// scan the words in this title candidate
 		for ( int32_t j = a ; j < b ; j++ ) {
 			// skip stop words
-			if ( w->isQueryStopWord(j) ) continue;
+			if ( w->isQueryStopWord(j,xd->m_langId) ) continue;
 			// punish if uncapitalized non-stopword
 			if ( ! w->isCapitalized(j) ) uncapped = true;
 			// skip if no query

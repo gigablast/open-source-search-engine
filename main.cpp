@@ -77,7 +77,7 @@
 #include "Msg9b.h"
 #include "Msg17.h"
 //#include "Msg34.h"
-#include "Msg35.h"
+//#include "Msg35.h"
 //#include "Msg24.h"
 //#include "Msg28.h"
 //#include "Msg30.h"
@@ -165,8 +165,16 @@ static int32_t dumpSpiderdb ( char *coll,int32_t sfn,int32_t numFiles,bool inclu
 			   char printStats , int32_t firstIp );
 static void dumpSectiondb( char *coll,int32_t sfn,int32_t numFiles,bool includeTree);
 static void dumpRevdb    ( char *coll,int32_t sfn,int32_t numFiles,bool includeTree);
-static void dumpTagdb   ( char *coll,int32_t sfn,int32_t numFiles,bool includeTree,
-			   int32_t c, char rec=0, int32_t rdbId = RDB_TAGDB );
+
+static void dumpTagdb   ( char *coll,
+			  int32_t sfn,
+			  int32_t numFiles,
+			  bool includeTree,
+			  int32_t c, 
+			  char rec=0, 
+			  int32_t rdbId = RDB_TAGDB ,
+			  char *site = NULL );
+
 static void dumpIndexdb  ( char *coll,int32_t sfn,int32_t numFiles,bool includeTree, 
 			   int64_t termId ) ;
 void dumpPosdb  ( char *coll,int32_t sfn,int32_t numFiles,bool includeTree, 
@@ -187,6 +195,8 @@ void dumpLinkdb          ( char *coll,int32_t sfn,int32_t numFiles,bool includeT
 void exitWrapper ( void *state ) { exit(0); };
 
 bool g_recoveryMode = false;
+
+int32_t g_recoveryLevel = 0;
 	
 bool isRecoveryFutile ( ) ;
 
@@ -279,7 +289,7 @@ bool summaryTest1   ( char *rec, int32_t listSize, char *coll , int64_t docId ,
 // time a big write, read and then seeks
 bool thrutest ( char *testdir , int64_t fileSize ) ;
 void seektest ( char *testdir , int32_t numThreads , int32_t maxReadSize ,
-		char *filename );
+		char *filename , bool doSeqWriteThread );
 
 bool pingTest ( int32_t hid , uint16_t clientPort );
 bool memTest();
@@ -363,6 +373,7 @@ extern void resetQuery         ( );
 extern void resetStopWords     ( );
 extern void resetUnicode       ( );
 
+extern void tryToSyncWrapper ( int fd , void *state ) ;
 
 #if 0
 void stack_test();
@@ -378,13 +389,22 @@ void stack_test(){
 
 int main2 ( int argc , char *argv[] ) ;
 
+// SafeBuf g_pidFileName;
+// bool g_createdPidFile = false;
+
 int main ( int argc , char *argv[] ) {
 
 	//fprintf(stderr,"Starting gb.\n");
 
 	int ret = main2 ( argc , argv );
 
-	if ( ret ) fprintf(stderr,"Failed to start gb. Exiting.\n");
+	// returns 1 if failed, 0 on successful/graceful exit
+	if ( ret )
+		fprintf(stderr,"Failed to start gb. Exiting.\n");
+
+	// remove pid file if we created it
+	// if ( g_createdPidFile && ret == 0 && g_pidFileName.length() )
+	// 	::unlink ( g_pidFileName.getBufStart() );
 }
 
 int main2 ( int argc , char *argv[] ) {
@@ -448,8 +468,8 @@ int main2 ( int argc , char *argv[] ) {
 		sb.safePrintf(
 			"[CMD] can have the following values:\n\n"
 
-			"-h\tprint this help.\n\n"
-			"-v\tprint version and exit.\n\n"
+			"-h\tPrint this help.\n\n"
+			"-v\tPrint version and exit.\n\n"
 
 			//"<hostId>\n"
 			//"\tstart the gb process for this <hostId> locally."
@@ -458,7 +478,7 @@ int main2 ( int argc , char *argv[] ) {
 
 
 			//"<hostId> -d\n\trun as daemon.\n\n"
-			"-d\trun as daemon.\n\n"
+			"-d\tRun as daemon.\n\n"
 
 			//"-o\tprint the overview documentation in HTML. "
 			//"Contains the format of hosts.conf.\n\n"
@@ -471,13 +491,17 @@ int main2 ( int argc , char *argv[] ) {
 			// "specified in Conf.h upon startup.\n\n"
 
 			"start [hostId]\n"
-			"\tstart the gb process on all hosts or just on "
+			"\tStart the gb process on all hosts or just on "
 			"[hostId], if specified, using an ssh command. Runs "
 			"each gb process in a keepalive loop under bash.\n\n"
 
 			"start <hostId1-hostId2>\n"
 			"\tLike above but just start gb on the supplied "
 			"range of hostIds.\n\n"
+
+			"dstart [hostId]\n"
+			"\tLike above but do not use a keepalive loop. So "
+			"if gb crashes it will not auto-resstart.\n\n"
 
 			/*
 			"kstart [hostId]\n"
@@ -488,15 +512,15 @@ int main2 ( int argc , char *argv[] ) {
 			*/
 
 			"stop [hostId]\n"
-			"\tsaves and exits for all gb hosts or "
+			"\tSaves and exits for all gb hosts or "
 			"just on [hostId], if specified.\n\n"
 
 			"stop <hostId1-hostId2>\n"
-			"\ttell gb to save and exit on the given range of "
+			"\tTell gb to save and exit on the given range of "
 			"hostIds.\n\n"
 
 			"save [hostId]\n"
-			"\tjust saves for all gb hosts or "
+			"\tJust saves for all gb hosts or "
 			"just on [hostId], if specified.\n\n"
 
 
@@ -520,11 +544,11 @@ int main2 ( int argc , char *argv[] ) {
 			*/
 
 			"spidersoff [hostId]\n"
-			"\tdisables spidering for all gb hosts or "
+			"\tDisables spidering for all gb hosts or "
 			"just on [hostId], if specified.\n\n"
 
 			"spiderson [hostId]\n"
-			"\tensables spidering for all gb hosts or "
+			"\tEnables spidering for all gb hosts or "
 			"just on [hostId], if specified.\n\n"
 
 			/*
@@ -564,7 +588,7 @@ int main2 ( int argc , char *argv[] ) {
 			*/
 
 			"dsh <CMD>\n"
-			"\trun this command on the primary IPs of "
+			"\tRun this command on the primary IPs of "
 			"all active hosts in hosts.conf. It will be "
 			"executed in the gigablast working directory on "
 			"each host. Example: "
@@ -578,7 +602,7 @@ int main2 ( int argc , char *argv[] ) {
 			*/
 
 			"install [hostId]\n"
-			"\tinstall all required files for gb from "
+			"\tInstall all required files for gb from "
 			"current working directory of the gb binary "
 			"to [hostId]. If no [hostId] is specified, install "
 			"to ALL hosts.\n\n"
@@ -590,10 +614,10 @@ int main2 ( int argc , char *argv[] ) {
 			*/
 
 			"installgb [hostId]\n"
-			"\tlike above, but install just the gb executable.\n\n"
+			"\tLike above, but install just the gb executable.\n\n"
 
 			"installgbrcp [hostId]\n"
-			"\tlike above, but install just the gb executable "
+			"\tLike above, but install just the gb executable "
 			"and using rcp.\n\n"
 
 			/*
@@ -604,10 +628,10 @@ int main2 ( int argc , char *argv[] ) {
 			"installtmpgb [hostId]\n"
 			"\tlike above, but install just the gb executable "
 			"as tmpgb (for tmpstart).\n\n"
-
+			*/
 			"installconf [hostId]\n"
-			"\tlike above, but install hosts.conf and gbN.conf\n\n"
-
+			"\tlike above, but install hosts.conf and gb.conf\n\n"
+			/*
 			"installconf2 [hostId]\n"
 			"\tlike above, but install hosts.conf and gbN.conf "
 			"to the secondary IPs.\n\n"
@@ -712,7 +736,8 @@ int main2 ( int argc , char *argv[] ) {
 			"inject <filename> "
 			"<ip:port> [collection]\n"
 			"\tInject all documents in <filename> into the gb "
-			"host at ip:port. File must be in WARC format. "
+			"host at ip:port. File can be in WARC format to "
+			"inject multiple documents. "
 			"Uses collection of 'main' if not specified. If "
 			"ip:port is a hosts.conf file then a round-robin "
 			"approach will be used."
@@ -795,17 +820,21 @@ int main2 ( int argc , char *argv[] ) {
 			"parser speed tests\n\n"
 			*/
 
-			/*
-			"thrutest [dir] [fileSize]\n\tdisk write/read speed "
-			"test\n\n"
+			"thrutest [dir] [fileSize]\n\tdisk sequential "
+			"write then read speed tests.\n\n"
 
 			"seektest [dir] [numThreads] [maxReadSize] "
 			"[filename]\n"
-			"\tdisk seek speed test\n\n"
+			"\tdisk access speed test. (IOps)\n\n"
+
+			"rwtest [dir] [numThreads] [maxReadSize] "
+			"[filename]\n"
+			"\tdisk read access speed test while sequentially "
+			"writing. Simulates Gigablast while spidering and "
+			"querying nicely.\n\n"
 			
 			"memtest\n"
 			"\t Test how much memory we can use\n\n"
-			*/
 
 			/*
 			// Quality Tests
@@ -1104,8 +1133,15 @@ int main2 ( int argc , char *argv[] ) {
 	//send an email on startup for -r, like if we are recovering from an
 	//unclean shutdown.
 	g_recoveryMode = false;
-	if ( strcmp ( cmd , "-r" ) == 0 ) g_recoveryMode = true;
-	if ( strcmp ( cmd2 , "-r" ) == 0 ) g_recoveryMode = true;
+	char *cc = NULL;
+	if ( strncmp ( cmd , "-r" ,2 ) == 0 ) cc = cmd;
+	if ( strncmp ( cmd2 , "-r",2 ) == 0 ) cc = cmd2;
+	if ( cc ) {
+		g_recoveryMode = true;
+		g_recoveryLevel = 1;
+		if ( cc[2] ) g_recoveryLevel = atoi(cc+2);
+		if ( g_recoveryLevel < 0 ) g_recoveryLevel = 0;
+	}
 
 	// run as daemon? then we have to fork
 	if ( strcmp ( cmd , "-d" ) == 0 ) g_conf.m_runAsDaemon = true;
@@ -1336,6 +1372,18 @@ int main2 ( int argc , char *argv[] ) {
 	}
 	*/
 
+	if ( strcmp ( cmd ,"isportinuse") == 0 ) {
+		if ( cmdarg+1 >= argc ) goto printHelp;
+		int port = atol ( argv[cmdarg+1] );
+		// make sure port is available. returns false if in use.
+		if ( ! g_httpServer.m_tcp.testBind(port,false) )
+			// and we should return with 1 so the keep alive
+			// script will exit
+			exit (1);
+		// port is not in use, return 0
+		exit(0);
+	}
+
 	// need threads here for tests?
 
 	// gb thrutest <testDir> <fileSize>
@@ -1356,7 +1404,20 @@ int main2 ( int argc , char *argv[] ) {
 		if ( cmdarg+2 < argc ) numThreads  = atol(argv[cmdarg+2]);
 		if ( cmdarg+3 < argc ) maxReadSize = atoll1(argv[cmdarg+3]);
 		if ( cmdarg+4 < argc ) filename    = argv[cmdarg+4];
-		seektest ( testdir , numThreads , maxReadSize , filename );
+		seektest ( testdir , numThreads , maxReadSize ,filename,false);
+		return 0;
+	}
+	// gb rwtest <testdir> <numThreads> <maxReadSize>
+	if ( strcmp ( cmd , "rwtest" ) == 0 ) {
+		char     *testdir         = "/tmp/";
+		int32_t      numThreads      = 20; //30;
+		int64_t maxReadSize     = 20000;
+		char     *filename        = NULL;
+		if ( cmdarg+1 < argc ) testdir     = argv[cmdarg+1];
+		if ( cmdarg+2 < argc ) numThreads  = atol(argv[cmdarg+2]);
+		if ( cmdarg+3 < argc ) maxReadSize = atoll1(argv[cmdarg+3]);
+		if ( cmdarg+4 < argc ) filename    = argv[cmdarg+4];
+		seektest ( testdir , numThreads , maxReadSize,filename,true);
 		return 0;
 	}
 
@@ -1422,6 +1483,27 @@ int main2 ( int argc , char *argv[] ) {
 	struct rlimit rl;
 	getrlimit(RLIMIT_STACK, &rl);
 	log(LOG_INFO,"db: Stack size is %"INT64".", (int64_t)rl.rlim_cur);
+
+
+	// let's ensure our core file can dump
+	struct rlimit lim;
+	lim.rlim_cur = lim.rlim_max = RLIM_INFINITY;
+	if ( setrlimit(RLIMIT_CORE,&lim) )
+		log("db: setrlimit: %s.", mstrerror(errno) );
+	// limit fds
+	// try to prevent core from systems where it is above 1024
+	// because our FD_ISSET() libc function will core! (it's older)
+	int32_t NOFILE = 1024;
+	lim.rlim_cur = lim.rlim_max = NOFILE;
+	if ( setrlimit(RLIMIT_NOFILE,&lim))
+		log("db: setrlimit RLIMIT_NOFILE %"INT32": %s.",
+		    NOFILE,mstrerror(errno) );
+	struct rlimit rlim;
+	getrlimit ( RLIMIT_NOFILE,&rlim);
+	if ( (int32_t)rlim.rlim_max > NOFILE || (int32_t)rlim.rlim_cur > NOFILE ) {
+		log("db: setrlimit RLIMIT_NOFILE failed!");
+		char *xx=NULL;*xx=0;
+	}
 
 	// set the s_pages array for print admin pages
 	g_pages.init ( );
@@ -1763,7 +1845,7 @@ int main2 ( int argc , char *argv[] ) {
 		// Load categories and generate country table
 		char structureFile[256];
 		g_conf.m_maxMem = 1000000000LL; // 1G
-		g_mem.m_maxMem  = 1000000000LL; // 1G
+		//g_mem.m_maxMem  = 1000000000LL; // 1G
 		sprintf(structureFile, "%scatdb/gbdmoz.structure.dat", g_hostdb.m_dir);
 		g_categories = &g_categories1;
 		if (g_categories->loadCategories(structureFile) != 0) {
@@ -2354,7 +2436,7 @@ int main2 ( int argc , char *argv[] ) {
 	if ( strcmp ( cmd , "freecache" ) == 0 ) {	
 		int32_t max = 7000000;
 		if ( cmdarg + 1 < argc ) max = atoi ( argv[cmdarg+1] );
-		freeAllSharedMem( max );
+		//freeAllSharedMem( max );
 		return true;
 	}
 
@@ -2515,6 +2597,13 @@ int main2 ( int argc , char *argv[] ) {
 		return doCmd ( syncCmd, g_hostdb.m_hostId, "admin/hosts" ,
 		true, //sendToHosts
 		false );// sendtoproxies
+	}
+
+	if ( strcmp ( cmd , "unittest" ) == 0 ) {
+		if ( cmdarg + 1 >= argc ) exit(1);
+		if(strcmp("url", argv[cmdarg+1]) == 0) {
+			exit(Url::unitTests());
+		}
 	}
 
 	// gb startclassifier coll ruleset [hostId]
@@ -2833,11 +2922,24 @@ int main2 ( int argc , char *argv[] ) {
 		       dumpSectiondb(coll,startFileNum,numFiles,includeTree);
 		else if ( argv[cmdarg+1][0] == 'V' )
 		       dumpRevdb(coll,startFileNum,numFiles,includeTree);
-		else if ( argv[cmdarg+1][0] == 'S' )
-			dumpTagdb  (coll,startFileNum,numFiles,includeTree,0);
-		else if ( argv[cmdarg+1][0] == 'z' )
+		else if ( argv[cmdarg+1][0] == 'S' ) {
+			char *site = NULL;
+			if ( cmdarg+6 < argc ) site = argv[cmdarg+6];
+			dumpTagdb(coll,
+				  startFileNum,
+				  numFiles,
+				  includeTree,
+				  0,
+				  0,
+				  RDB_TAGDB,
+				  site);
+		}
+		else if ( argv[cmdarg+1][0] == 'z' ) {
+			char *site = NULL;
+			if ( cmdarg+6 < argc ) site = argv[cmdarg+6];
 			dumpTagdb  (coll,startFileNum,numFiles,includeTree,0,
-				    'z');
+				    'z',RDB_TAGDB,site);
+		}
 		else if ( argv[cmdarg+1][0] == 'A' )
 			dumpTagdb  (coll,startFileNum,numFiles,includeTree,0,
 				     'A');
@@ -2932,25 +3034,6 @@ int main2 ( int argc , char *argv[] ) {
 		return 0;
 	}
 
-	// let's ensure our core file can dump
-	struct rlimit lim;
-	lim.rlim_cur = lim.rlim_max = RLIM_INFINITY;
-	if ( setrlimit(RLIMIT_CORE,&lim) )
-		log("db: setrlimit: %s.", mstrerror(errno) );
-	// limit fds
-	// try to prevent core from systems where it is above 1024
-	// because our FD_ISSET() libc function will core! (it's older)
-	int32_t NOFILE = 1024;
-	lim.rlim_cur = lim.rlim_max = NOFILE;
-	if ( setrlimit(RLIMIT_NOFILE,&lim))
-		log("db: setrlimit RLIMIT_NOFILE %"INT32": %s.",
-		    NOFILE,mstrerror(errno) );
-	struct rlimit rlim;
-	getrlimit ( RLIMIT_NOFILE,&rlim);
-	if ( (int32_t)rlim.rlim_max > NOFILE || (int32_t)rlim.rlim_cur > NOFILE ) {
-		log("db: setrlimit RLIMIT_NOFILE failed!");
-		char *xx=NULL;*xx=0;
-	}
 	//log("db: RLIMIT_NOFILE = %"INT32"",(int32_t)rlim.rlim_max);
 	//exit(0);
 	// . disable o/s's and hard drive's read ahead 
@@ -3011,10 +3094,17 @@ int main2 ( int argc , char *argv[] ) {
 	// make sure port is available, no use loading everything up then
 	// failing because another process is already running using this port
 	//if ( ! g_udpServer.testBind ( g_hostdb.getMyPort() ) )
-	if ( ! g_httpServer.m_tcp.testBind(g_hostdb.getMyHost()->m_httpPort))
-		return 1;
+	if ( ! g_httpServer.m_tcp.testBind(g_hostdb.getMyHost()->m_httpPort,
+					   true)) {// printmsg? 
+		// return 0 so keep alive bash loop exits
+		exit(0);
+	}
 
 	int32_t *ips;
+	// char tmp[64];
+	// SafeBuf pidFile(tmp,64);
+	char tmp[128];
+	SafeBuf cleanFileName(tmp,128);
 
 	//if ( strcmp ( cmd , "gendbs"       ) == 0 ) goto jump;
 	//if ( strcmp ( cmd , "gentfndb"     ) == 0 ) goto jump;
@@ -3022,6 +3112,48 @@ int main2 ( int argc , char *argv[] ) {
 	//if ( strcmp ( cmd , "genclusterdb" ) == 0 ) goto jump;
 	//	if ( cmd && ! is_digit(cmd[0]) ) goto printHelp;
 
+
+	// if pid file is there then do not start up
+	// g_pidFileName.safePrintf("%spidfile",g_hostdb.m_dir );
+	// if ( doesFileExist ( g_pidFileName.getBufStart() ) ) {
+	// 	fprintf(stderr,"pidfile %s exists. Either another gb "
+	// 		"is already running in this directory or "
+	// 		"it exited uncleanly. Can not start up if that "
+	// 		"file exists.",
+	// 		g_pidFileName.getBufStart() );
+	// 	// if we return 0 then main() should not delete the pidfile
+	// 	return 0;
+	// }
+	// // make a new pidfile
+	// pidFile.safePrintf("%i\n",getpid());
+	// if ( ! pidFile.save ( g_pidFileName.getBufStart() ) ) {
+	// 	log("db: could not save %s",g_pidFileName.getBufStart());
+	// 	return 1;
+	// }
+	// // ok, now if we exit SUCCESSFULLY then delete it. we return an
+	// // exit status of 0
+	// g_createdPidFile = true;
+
+
+	// remove the file called 'cleanexit' so if we get killed suddenly
+	// the bashloop will know we did not exit cleanly
+	cleanFileName.safePrintf("%s/cleanexit",g_hostdb.m_dir);
+	::unlink ( cleanFileName.getBufStart() );
+
+	// move the log file name logxxx to logxxx-2016_03_16-14:59:24
+	// we did the test bind so no gb process is bound on the port yet
+	// TODO: probably should bind on the port before doing this
+	if ( doesFileExist ( g_hostdb.m_logFilename ) ) {
+	     char tmp2[128];
+	     SafeBuf newName(tmp2,128);
+	     time_t ts = getTimeLocal();
+	     struct tm *timeStruct = localtime ( &ts );
+	     //struct tm *timeStruct = gmtime ( &ts );
+	     char ppp[100];
+	     strftime(ppp,100,"%Y-%m-%d-%H-%M-%S",timeStruct);
+	     newName.safePrintf("%s-%s",g_hostdb.m_logFilename, ppp );
+	     ::rename ( g_hostdb.m_logFilename, newName.getBufStart() );
+	}
 
 	log("db: Logging to file %s.",
 	    g_hostdb.m_logFilename );
@@ -3065,6 +3197,10 @@ int main2 ( int argc , char *argv[] ) {
 		pid_t pid, sid;
 		pid = fork();
 		if ( pid < 0 ) exit(EXIT_FAILURE);
+		// seems like we core unless parent sets this to NULL.
+		// it does not affect the child.
+		//if ( pid > 0 ) g_hostdb.m_myHost = NULL;
+		// child gets a 0, parent gets the child's pid, so exit
 		if ( pid > 0 ) exit(EXIT_SUCCESS);
 		// change file mode mask
 		umask(0);
@@ -3280,6 +3416,12 @@ int main2 ( int argc , char *argv[] ) {
 	if ( ! g_users.init()  ){
 		log("db: Users init failed. "); return 1;}
 
+	// int64_t uu = gettimeofdayInMilliseconds();
+	// for ( int i = 0 ; i < 10000000 ; i++ )
+	// 	bool x = g_threads.amThread();
+	// int64_t uu2 = gettimeofdayInMilliseconds();
+	// log("tod: took %"INT64,uu2-uu);
+
 	//if ( ! g_syncdb.init() ) {
 	//	log("db: Syncdb init failed." ); return 1; }
 
@@ -3337,12 +3479,12 @@ int main2 ( int argc , char *argv[] ) {
 	// linkdb
 	if ( ! g_linkdb.init()     ) {
 		log("db: Linkdb init failed."   ); return 1; }
-	if ( ! g_cachedb.init()     ) {
-		log("db: Cachedb init failed."   ); return 1; }
-	if ( ! g_serpdb.init()     ) {
-		log("db: Serpdb init failed."   ); return 1; }
-	if ( ! g_monitordb.init()     ) {
-		log("db: Monitordb init failed."   ); return 1; }
+	// if ( ! g_cachedb.init()     ) {
+	// 	log("db: Cachedb init failed."   ); return 1; }
+	// if ( ! g_serpdb.init()     ) {
+	// 	log("db: Serpdb init failed."   ); return 1; }
+	// if ( ! g_monitordb.init()     ) {
+	// 	log("db: Monitordb init failed."   ); return 1; }
 	// use sectiondb again for its immense voting power for detecting and
 	// removing web page chrome, categories, etc. only use if 
 	// CollectionRec::m_isCustomCrawl perhaps to save space.
@@ -3407,9 +3549,15 @@ int main2 ( int argc , char *argv[] ) {
 	//}
 
 	// test all collection dirs for write permission -- metalincs' request
+	int32_t pcount = 0;
 	for ( int32_t i = 0 ; i < g_collectiondb.m_numRecs ; i++ ) {
 		CollectionRec *cr = g_collectiondb.m_recs[i];
 		if ( ! cr ) continue;
+		if ( ++pcount >= 100 ) {
+			log("rdb: not checking directory permission for "
+			    "more than first 100 collections to save time.");
+			break;
+		}
 		char tt[1024 + MAX_COLL_LEN ];
 		sprintf ( tt , "%scoll.%s.%"INT32"",
 			  g_hostdb.m_dir, cr->m_coll , (int32_t)cr->m_collnum );
@@ -3792,7 +3940,8 @@ int main2 ( int argc , char *argv[] ) {
 	// . put this in here instead of Rdb.cpp because we don't want
 	//   generator commands merging on us
 	// . the (void *)1 prevents gb from logging merge info every 2 seconds
-	if ( ! g_loop.registerSleepCallback(2000,(void *)1,attemptMergeAll))
+	// . niceness is 1
+	if ( ! g_loop.registerSleepCallback(2000,(void *)1,attemptMergeAll,1))
 		log("db: Failed to init merge sleep callback.");
 
 	// SEO MODULE
@@ -3802,7 +3951,9 @@ int main2 ( int argc , char *argv[] ) {
 	     ! g_loop.registerSleepCallback(2000,(void *)1,runSEOQueryLoop))
 		log("db: Failed to register seo query loop");
 
-
+	// try to sync parms (and collection recs) with host 0
+	if ( ! g_loop.registerSleepCallback(1000,NULL,tryToSyncWrapper,0))
+		return false;
 
 	//if( !g_loop.registerSleepCallback(2000,(void *)1,controlDumpTopDocs) )
 	//	log("db: Failed to init dump TopDocs sleep callback.");
@@ -3820,11 +3971,11 @@ int main2 ( int argc , char *argv[] ) {
 	//msg3e.checkForNewParms();
 
 	// this stuff is similar to alden's msg3e but will sync collections
-	// that were added/deleted
-	if ( ! g_parms.syncParmsWithHost0() ) {
-		log("parms: error syncing parms: %s",mstrerror(g_errno));
-		return 0;
-	}
+	// that were added/deletede
+	//if ( ! g_parms.syncParmsWithHost0() ) {
+	//	log("parms: error syncing parms: %s",mstrerror(g_errno));
+	//	return 0;
+	//}
 
 
 	if(g_recoveryMode) {
@@ -3850,6 +4001,7 @@ int main2 ( int argc , char *argv[] ) {
 
 	Json json;
 	json.test();
+	json.reset();
 
 	// . start the spiderloop
 	// . comment out when testing SpiderCache
@@ -4070,6 +4222,9 @@ bool doCmd ( const char *cmd , int32_t hostId , char *filename ,
 	// doCmdAll()'s call to convertHttpRequestToParmList
 	sock.m_ip = atoip("127.0.0.1");
 	s_r.set ( s_buffer , gbstrlen ( s_buffer ) , &sock );
+	// do not do sig alarms! for now just set this to null so 
+	// the sigalarmhandler doesn't core
+	//g_hostdb.m_myHost = NULL;
 	// run the loop
 	if ( ! g_loop.runLoop() ) 
 		return log("INJECT: loop run failed.");
@@ -4856,10 +5011,17 @@ int install ( install_flag_konst_t installFlag , int32_t hostId , char *dir ,
 			fileListBuf.safePrintf(" %shosts.conf",srcDir);
 			fileListBuf.safePrintf(" %sgb.conf",srcDir);
 
+			char *ipStr = iptoa(h2->m_ip);
 
 			SafeBuf tmpBuf;
 			tmpBuf.safePrintf(
-					  "scp -r %s %s:%s"
+					  // ensure directory is there, if
+					  // not then make it
+					  "ssh %s 'mkdir %s' ; "
+					  "scp -p -r %s %s:%s"
+					  , ipStr
+					  , h2->m_dir
+
 					  , fileListBuf.getBufStart()
 					  , iptoa(h2->m_ip)
 					  , h2->m_dir
@@ -4942,7 +5104,7 @@ int install ( install_flag_konst_t installFlag , int32_t hostId , char *dir ,
 			if ( ! f.doesExist() ) target = "gb";
 
 			sprintf(tmp,
-				"scp -c blowfish " // blowfish is faster
+				"scp -p " // blowfish is faster
 				"%s%s "
 				"%s:%s/gb.installed%s",
 				dir,
@@ -4978,7 +5140,7 @@ int install ( install_flag_konst_t installFlag , int32_t hostId , char *dir ,
 			// don't copy to ourselves
 			//if ( h2->m_hostId == h->m_hostId ) continue;
 			sprintf(tmp,
-				"scp "
+				"scp -p "
 				"%sgb.new "
 				"%s:%s/tmpgb.installed &",
 				dir,
@@ -4991,7 +5153,7 @@ int install ( install_flag_konst_t installFlag , int32_t hostId , char *dir ,
 			// don't copy to ourselves
 			//if ( h2->m_hostId == h->m_hostId ) continue;
 			sprintf(tmp,
-				"scp %sgb.conf %shosts.conf %s:%s %s",
+				"scp -p %sgb.conf %shosts.conf %s:%s %s",
 				dir ,
 				dir ,
 				//h->m_hostId ,
@@ -5108,7 +5270,11 @@ int install ( install_flag_konst_t installFlag , int32_t hostId , char *dir ,
 			// execute it
 			system ( tmp );
 		}
-		else if ( installFlag == ifk_kstart ) {
+		else if ( installFlag == ifk_kstart ||
+			  installFlag == ifk_dstart ) {
+			char *extraBreak = "";
+			if ( installFlag == ifk_dstart )
+				extraBreak = "break;";
 			//keepalive
 			// . save old log now, too
 			//char tmp2[1024];
@@ -5130,16 +5296,41 @@ int install ( install_flag_konst_t installFlag , int32_t hostId , char *dir ,
 				"export MALLOC_CHECK_=0;"
 				"cp -f gb gb.oldsave ; "
 				"ADDARGS='' "
-				"EXITSTATUS=1 ; "
-				 "while [ \\$EXITSTATUS != 0 ]; do "
- 				 "{ "
+				"INC=1 "
+				//"EXITSTATUS=1 "
+				" ; "
+				 "while true; do "
+				//"{ "
+
+				// if gb still running, then do not try to
+				// run it again. we
+				// probably double-called './gb start'.
+				// so see if the port is bound to. 
+				// "./gb isportinuse %i ; "
+				// "if [ \\$? -eq 1 ] ; then "
+				// "echo \"gb or something else "
+				// "is already running on "
+				// "port %i. Not starting.\" ; "
+				// "exit 0; "
+				// "fi ; "
+
+				// ok, the port is available
+				//"echo \"Starting gb\"; "
+
+				//"exit 0; "
+
+				// if pidfile exists then gb is already
+				// running so do not move its log file!
+				// "if [ -f \"./pidfile\" ]; then  "
+				// "echo \"./pidfile exists. can not start "
+				// "gb\" >& /dev/stdout; break; fi;"
 
 				// in case gb was updated...
 				"mv -f gb.installed gb ; "
 
 				// move the log file
-				"mv ./log%03"INT32" ./log%03"INT32"-\\`date '+"
-				"%%Y_%%m_%%d-%%H:%%M:%%S'\\` ; " 
+				// "mv ./log%03"INT32" ./log%03"INT32"-\\`date '+"
+				// "%%Y_%%m_%%d-%%H:%%M:%%S'\\` ; " 
 
 				// indicate -l so we log to a logfile
 				"./gb -l "//%"INT32" "
@@ -5150,20 +5341,46 @@ int install ( install_flag_konst_t installFlag , int32_t hostId , char *dir ,
 				//" >& ./log%03"INT32""
 				" ;"
 
+				// this doesn't always work so use
+				// the cleanexit file approach.
+				// but if we run a second gb accidentally
+				// it would write a ./cleanexit file 
+				// to get out of its loop and it wouldn't
+				// be deleted! crap. so try this again
+				// for this short cases when we exit right
+				// away.
 				"EXITSTATUS=\\$? ; "
-				"ADDARGS='-r' ; "
-				"} " 
+				// if gb does exit(0) then stop
+				"if [ \\$EXITSTATUS = 0 ]; then break; fi;"
+
+				// also stop if ./cleanexit is there
+				// because the above exit(0) does not always
+				// work for some strange reasons
+				"if [ -f \"./cleanexit\" ]; then  break; fi;"
+				"%s"
+				"ADDARGS='-r'\\$INC ; "
+				"INC=\\$((INC+1));"
+				//"} " 
  				"done >& /dev/null & \" %s",
+ 				//"done & \" %s",
+ 				//"done & \" %s",
+
+
+ 				//"done & \" %s",
 				//"\" %s",
 				iptoa(h2->m_ip),
 				h2->m_dir      ,
 
+				// for ./gb isportinuse %i
+				// h2->m_httpPort ,
+				// h2->m_httpPort ,
+
 				// for moving log file
-				 h2->m_hostId   ,
-				 h2->m_hostId   ,
+				 // h2->m_hostId   ,
+				 // h2->m_hostId   ,
 
 				//h2->m_dir      ,
-
+				extraBreak ,
 				// hostid is now inferred from path
 				//h2->m_hostId   ,
 				amp );
@@ -5174,6 +5391,7 @@ int install ( install_flag_konst_t installFlag , int32_t hostId , char *dir ,
 			// execute it
 			system ( tmp );
 		}
+		/*
 		else if ( installFlag == ifk_dstart ) {
 			//keepalive
 			// . save old log now, too
@@ -5190,7 +5408,8 @@ int install ( install_flag_konst_t installFlag , int32_t hostId , char *dir ,
 			//	h2->m_hostId   );
 			// . assume conf file name gbHID.conf
 			// . assume working dir ends in a '/'
-		  amp = "&";
+			amp = "&";
+			//if ( i > 0 && (i%5) == 0 ) amp = "";
 			//to test add: ulimit -t 10; to the ssh cmd
 			sprintf(tmp,
 				"ssh %s \"cd %s ; ulimit -c unlimited; "
@@ -5235,6 +5454,7 @@ int install ( install_flag_konst_t installFlag , int32_t hostId , char *dir ,
 			// execute it
 			system ( tmp );
 		}
+		*/
 		/*
 		else if ( installFlag == ifk_gendbs ) {
 			// . save old log now, too
@@ -5348,7 +5568,7 @@ int install ( install_flag_konst_t installFlag , int32_t hostId , char *dir ,
 			}
 			*/
 			sprintf(tmp,
-				"scp "
+				"scp -p "
 				"%scatdb/content.rdf.u8 "
 				"%s:%scatdb/content.rdf.u8",
 				dir,
@@ -5357,7 +5577,7 @@ int install ( install_flag_konst_t installFlag , int32_t hostId , char *dir ,
 			log(LOG_INIT,"admin: %s", tmp);
 			system ( tmp );
 			sprintf(tmp,
-				"scp "
+				"scp -p "
 				"%scatdb/structure.rdf.u8 "
 				"%s:%scatdb/structure.rdf.u8",
 				dir,
@@ -5366,7 +5586,7 @@ int install ( install_flag_konst_t installFlag , int32_t hostId , char *dir ,
 			log(LOG_INIT,"admin: %s", tmp);
 			system ( tmp );
 			sprintf(tmp,
-				"scp "
+				"scp -p "
 				"%scatdb/gbdmoz.structure.dat "
 				"%s:%scatdb/gbdmoz.structure.dat",
 				dir,
@@ -5375,7 +5595,7 @@ int install ( install_flag_konst_t installFlag , int32_t hostId , char *dir ,
 			log(LOG_INIT,"admin: %s", tmp);
 			system ( tmp );
 			sprintf(tmp,
-				"scp "
+				"scp -p "
 				"%scatdb/gbdmoz.content.dat "
 				"%s:%scatdb/gbdmoz.content.dat",
 				dir,
@@ -5398,7 +5618,7 @@ int install ( install_flag_konst_t installFlag , int32_t hostId , char *dir ,
 			// don't copy to ourselves
 			if ( h2->m_hostId == 0 ) continue;
 			sprintf(tmp,
-				"scp "
+				"scp -p "
 				"%scatdb/content.rdf.u8.new "
 				"%s:%scatdb/content.rdf.u8.new",
 				dir,
@@ -5407,7 +5627,7 @@ int install ( install_flag_konst_t installFlag , int32_t hostId , char *dir ,
 			log(LOG_INIT,"admin: %s", tmp);
 			system ( tmp );
 			sprintf(tmp,
-				"scp "
+				"scp -p "
 				"%scatdb/structure.rdf.u8.new "
 				"%s:%scatdb/structure.rdf.u8.new",
 				dir,
@@ -5416,7 +5636,7 @@ int install ( install_flag_konst_t installFlag , int32_t hostId , char *dir ,
 			log(LOG_INIT,"admin: %s", tmp);
 			system ( tmp );
 			sprintf(tmp,
-				"scp "
+				"scp -p "
 				"%scatdb/gbdmoz.structure.dat.new "
 				"%s:%scatdb/gbdmoz.structure.dat.new",
 				dir,
@@ -5425,7 +5645,7 @@ int install ( install_flag_konst_t installFlag , int32_t hostId , char *dir ,
 			log(LOG_INIT,"admin: %s", tmp);
 			system ( tmp );
 			sprintf(tmp,
-				"scp "
+				"scp -p "
 				"%scatdb/gbdmoz.content.dat.new "
 				"%s:%scatdb/gbdmoz.content.dat.new",
 				dir,
@@ -5434,7 +5654,7 @@ int install ( install_flag_konst_t installFlag , int32_t hostId , char *dir ,
 			log(LOG_INIT,"admin: %s", tmp);
 			system ( tmp );
 			sprintf(tmp,
-				"scp "
+				"scp -p "
 				"%scatdb/gbdmoz.content.dat.new.diff "
 				"%s:%scatdb/gbdmoz.content.dat.new.diff",
 				dir,
@@ -5781,7 +6001,7 @@ bool registerMsgHandlers2(){
 bool registerMsgHandlers3(){
 	Msg17 msg17;    if ( ! msg17.registerHandler () ) return false;
 	//Msg34 msg34;    if ( ! msg34.registerHandler () ) return false;
-	Msg35 msg35;    if ( ! msg35.registerHandler () ) return false;
+	//Msg35 msg35;    if ( ! msg35.registerHandler () ) return false;
 	//Msg24 msg24;    if ( ! msg24.registerHandler () ) return false;
 	//Msg40 msg40;    if ( ! msg40.registerHandler () ) return false;
 	//MsgB  msgb;     if ( ! msgb.registerHandler  () ) return false;
@@ -6279,6 +6499,7 @@ void dumpTitledb (char *coll,int32_t startFileNum,int32_t numFiles,bool includeT
 		  bool justPrintSentences, 
 		  bool justPrintWords ) {
 
+	g_isDumpingRdbFromMain = 1;
 	if (!ucInit(g_hostdb.m_dir, true)) {
 		log("Unicode initialization failed!");
 		return;
@@ -6289,7 +6510,7 @@ void dumpTitledb (char *coll,int32_t startFileNum,int32_t numFiles,bool includeT
 	//g_conf.m_spiderdbMaxTreeMem = 1024*1024*30;
 	//g_conf.m_checksumdbMaxDiskPageCacheMem = 0;
 	//g_conf.m_spiderdbMaxDiskPageCacheMem   = 0;
-	g_conf.m_tfndbMaxDiskPageCacheMem = 0;
+	//g_conf.m_tfndbMaxDiskPageCacheMem = 0;
 	g_titledb.init ();
 	//g_collectiondb.init(true);
 	g_titledb.getRdb()->addRdbBase1(coll);
@@ -6434,6 +6655,7 @@ void dumpTitledb (char *coll,int32_t startFileNum,int32_t numFiles,bool includeT
 					"cs=%04d "
 					"lang=%02d "
 					"sni=%03"INT32" "
+					"usetimeaxis=%i "
 					//"cats=%"INT32" "
 					"lastspidered=%s "
 					"ip=%s "
@@ -6459,6 +6681,7 @@ void dumpTitledb (char *coll,int32_t startFileNum,int32_t numFiles,bool includeT
 					xd->m_charset,//tr.getCharset(),
 					xd->m_langId,//tr.getLanguage(),
 					(int32_t)xd->m_siteNumInlinks,//tr.getDo
+					xd->m_useTimeAxis,
 					//nc,
 					ppp, 
 					iptoa(xd->m_ip),//ipbuf , 
@@ -6559,8 +6782,10 @@ void dumpTitledb (char *coll,int32_t startFileNum,int32_t numFiles,bool includeT
 			"ch32=%010"UINT32" "
 			"clen=%07"INT32" "
 			"cs=%04d "
+			"ctype=%s "
 			"lang=%02d "
 			"sni=%03"INT32" "
+			"usetimeaxis=%i "
 			//"cats=%"INT32" "
 			"lastspidered=%s "
 			"ip=%s "
@@ -6570,6 +6795,7 @@ void dumpTitledb (char *coll,int32_t startFileNum,int32_t numFiles,bool includeT
 			//"maxLinkTextWeight=%06"UINT32"%% "
 			"hc=%"INT32" "
 			"shard=%"INT32" "
+			"metadatasize=%"INT32" "
 			//"diffbot=%"INT32" "
 			"redir=%s "
 			"url=%s\n", 
@@ -6583,8 +6809,10 @@ void dumpTitledb (char *coll,int32_t startFileNum,int32_t numFiles,bool includeT
 			xd->m_contentHash32,
 			xd->size_utf8Content,//tr.getContentLen() ,
 			xd->m_charset,//tr.getCharset(),
+			g_contentTypeStrings[xd->m_contentType],
 			xd->m_langId,//tr.getLanguage(),
 			(int32_t)xd->m_siteNumInlinks,//tr.getDocQuality(),
+			xd->m_useTimeAxis,
 			//nc,
 			ppp, 
 			iptoa(xd->m_ip),//ipbuf , 
@@ -6594,6 +6822,7 @@ void dumpTitledb (char *coll,int32_t startFileNum,int32_t numFiles,bool includeT
 			//ms,
 			(int32_t)xd->m_hopCount,
 			shard,
+			xd->size_metadata,
 			//(int32_t)xd->m_isDiffbotJSONObject,
 			ru,
 			u->getUrl() );
@@ -6794,6 +7023,8 @@ void dumpDoledb (char *coll,int32_t startFileNum,int32_t numFiles,bool includeTr
 		printf("\n");
 		// must be a request -- for now, for stats
 		if ( ! g_spiderdb.isSpiderRequest((key128_t *)srec) ) {
+			// error!
+			continue;
 			char *xx=NULL;*xx=0; }
 		// cast it
 		SpiderRequest *sreq = (SpiderRequest *)srec;
@@ -6919,7 +7150,7 @@ int32_t dumpSpiderdb ( char *coll,
 	//g_conf.m_spiderdbMaxTreeMem = 1024*1024*30;
 	//g_conf.m_checksumdbMaxDiskPageCacheMem = 0;
 	//g_conf.m_spiderdbMaxDiskPageCacheMem   = 0;
-	g_conf.m_tfndbMaxDiskPageCacheMem = 0;
+	//g_conf.m_tfndbMaxDiskPageCacheMem = 0;
 	g_spiderdb.init ();
 	//g_collectiondb.init(true);
 	g_spiderdb.getRdb()->addRdbBase1(coll );
@@ -8528,8 +8759,8 @@ if ( ! tr.set ( rec , listSize , false ) ) { // own data?
 void dumpMissing ( char *coll ) {
 	// load tfndb, assume it is a perfect reflection of titledb
 	//g_conf.m_spiderdbMaxTreeMem = 1024*1024*30;
-	g_conf.m_tfndbMaxDiskPageCacheMem = 0;
-	g_conf.m_indexdbMaxCacheMem = 0;
+	//g_conf.m_tfndbMaxDiskPageCacheMem = 0;
+	//g_conf.m_indexdbMaxCacheMem = 0;
 	//g_conf.m_clusterdbMaxDiskPageCacheMem = 0;
 
 	//g_tfndb.init ();
@@ -8746,7 +8977,7 @@ void dumpMissing ( char *coll ) {
 void dumpDups ( char *coll ) {
 	// load tfndb, assume it is a perfect reflection of titledb
 	//g_conf.m_spiderdbMaxTreeMem = 1024*1024*30;
-	g_conf.m_indexdbMaxCacheMem = 0;
+	//g_conf.m_indexdbMaxCacheMem = 0;
 
 	//g_conf.m_spiderdbMaxTreeMem = 1024*1024*30;
 	g_indexdb.init ();
@@ -9298,10 +9529,10 @@ void removeDocIds  ( char *coll , char *filename ) {
 	//	g_conf.m_checksumdbMinFilesToMerge = 100;
 	if ( g_conf.m_clusterdbMinFilesToMerge < 100 )
 		g_conf.m_clusterdbMinFilesToMerge = 100;
-	g_conf.m_tfndbMaxDiskPageCacheMem = 0;
+	//g_conf.m_tfndbMaxDiskPageCacheMem = 0;
 	//g_conf.m_checksumdbMaxDiskPageCacheMem = 0;
 	//g_conf.m_clusterdbMaxDiskPageCacheMem = 0;
-	g_conf.m_indexdbMaxCacheMem = 0;
+	//g_conf.m_indexdbMaxCacheMem = 0;
 	//g_conf.m_checksumdbMaxCacheMem = 0;
 	//g_conf.m_clusterdbMaxCacheMem = 0;
 
@@ -10663,7 +10894,7 @@ bool gbgunzip (char *filename) {
 // time speed of inserts into RdbTree for indexdb
 bool bucketstest ( char* dbname ) {
 	g_conf.m_maxMem = 2000000000LL; // 2G
-	g_mem.m_maxMem  = 2000000000LL; // 2G
+	//g_mem.m_maxMem  = 2000000000LL; // 2G
 
 
 	if ( dbname ) {
@@ -10731,7 +10962,7 @@ bool bucketstest ( char* dbname ) {
 			keySize) ) // own data?
 		return log("speedTest: tree init failed.");
 	// add to regular tree
-	int64_t t = gettimeofdayInMilliseconds();
+	int64_t t = gettimeofdayInMilliseconds_force();
 	for ( int32_t i = 0 ; i < numKeys * keySize; i += keySize ) {
 		char* key = k+i;
 		KEYSET(oppKey,key,keySize);
@@ -10739,14 +10970,14 @@ bool bucketstest ( char* dbname ) {
 		int32_t n;
 		n = rt.getNode ( 0, oppKey );
 		if ( n >= 0 ) {
-			rt.deleteNode ( n , true );
+			rt.deleteNode3 ( n , true );
 		}
 		if ( rt.addNode ( 0, key , NULL , 0 ) < 0 )
 			return log("speedTest: rdb tree addNode "
 				   "failed");
 	}
 	// print time it took
-	int64_t e = gettimeofdayInMilliseconds();
+	int64_t e = gettimeofdayInMilliseconds_force();
 	log("db: added %"INT32" keys to rdb tree in %"INT64" ms, "
 	    "now have %"INT32" keys",numKeys,e - t, rt.getNumUsedNodes());
 
@@ -10760,7 +10991,7 @@ bool bucketstest ( char* dbname ) {
 	}
 
 	rdbb.testAndRepair();
-	t = gettimeofdayInMilliseconds();
+	t = gettimeofdayInMilliseconds_force();
 	log("db: added %"INT32" keys to rdb buckets in %"INT64" ms, "
 	    "now have %"INT32" keys, mem used: %"INT32"",
 	    numKeys,t - e, rdbb.getNumKeys(),rdbb.getMemOccupied());
@@ -10769,22 +11000,22 @@ bool bucketstest ( char* dbname ) {
 
 	log("db: saving and loading buckets.");
 	    
-	e = gettimeofdayInMilliseconds();
+	e = gettimeofdayInMilliseconds_force();
 
  	rdbb.fastSave ( ".",
  			false,
  			NULL, NULL);
 
-	t = gettimeofdayInMilliseconds();
+	t = gettimeofdayInMilliseconds_force();
 	log("db: saved rdbbuckets in %"INT64" ms",t - e);
 
 	//rdbb.setNeedsSave(false);
 	rdbb.clear();
-	e = gettimeofdayInMilliseconds();
+	e = gettimeofdayInMilliseconds_force();
 
  	rdbb.loadBuckets ( "TestBuckets" );
 
-	t = gettimeofdayInMilliseconds();
+	t = gettimeofdayInMilliseconds_force();
 	log("db: loaded rdbbuckets in %"INT64" ms", t - e);
 	
 	rdbb.selfTest(true, true);
@@ -10815,14 +11046,14 @@ bool bucketstest ( char* dbname ) {
 	int32_t found = 0;
 	for ( int32_t i = 0 ; i < 0; i++ ) {
 		int32_t j = (rand() % numKeys) * keySize;
-		e = gettimeofdayInMilliseconds();
+		e = gettimeofdayInMilliseconds_force();
 		int32_t nodeNum = rt.getNode ( 0 , (char*)&k[j]);
-		t = gettimeofdayInMilliseconds();
+		t = gettimeofdayInMilliseconds_force();
 		ttook += t - e;
 		
-		e = gettimeofdayInMilliseconds();
+		e = gettimeofdayInMilliseconds_force();
 		char* foundKey = rdbb.getKeyVal ( 0 , (char*)&k[j], NULL, NULL);
-		t = gettimeofdayInMilliseconds();
+		t = gettimeofdayInMilliseconds_force();
 		btook += t - e;
 
 
@@ -10858,10 +11089,10 @@ bool bucketstest ( char* dbname ) {
 
 
 	// sort the list of keys
-	t = gettimeofdayInMilliseconds();
+	t = gettimeofdayInMilliseconds_force();
 	gbsort ( k , numKeys , sizeof(key_t) , keycmp );
 	// print time it took
-	e = gettimeofdayInMilliseconds();
+	e = gettimeofdayInMilliseconds_force();
 	log("db: sorted %"INT32" in %"INT64" ms",numKeys,e - t);
 
 
@@ -10898,7 +11129,7 @@ bool bucketstest ( char* dbname ) {
 			ekey = key1;
 		}
 		
-		e = gettimeofdayInMilliseconds();
+		e = gettimeofdayInMilliseconds_force();
 		rt.getList ( (collnum_t)0 , 
 			     skey, 
 			     ekey, 
@@ -10907,7 +11138,7 @@ bool bucketstest ( char* dbname ) {
 			     &numPosRecs,
 			     &numNegRecs,
 			     true ); //use half keys
-		t = gettimeofdayInMilliseconds();
+		t = gettimeofdayInMilliseconds_force();
 		ttook += t - e;
 		tgot += treelist.getNumRecs();
 
@@ -10928,7 +11159,7 @@ bool bucketstest ( char* dbname ) {
 		    t - e  );
 		*/
 
-		e = gettimeofdayInMilliseconds();
+		e = gettimeofdayInMilliseconds_force();
 		rdbb.getList ( (collnum_t)0 , 
 			       skey, 
 			       ekey, 
@@ -10937,7 +11168,7 @@ bool bucketstest ( char* dbname ) {
 			       &numPosRecs,
 			       &numNegRecs,
 			       true ); //use half keys
-		t = gettimeofdayInMilliseconds();
+		t = gettimeofdayInMilliseconds_force();
 		btook += t - e;
 		bgot += bucketlist.getNumRecs();
 
@@ -11068,7 +11299,7 @@ bool bucketstest ( char* dbname ) {
 
 	for ( int32_t i = 0 ; i < numKeys ; i++ ) {
 
-		e = gettimeofdayInMilliseconds();
+		e = gettimeofdayInMilliseconds_force();
 
 		char* key = &k[i*keySize];
 		KEYSET(oppKey,key,keySize);
@@ -11077,19 +11308,19 @@ bool bucketstest ( char* dbname ) {
 		collnum_t collnum = rand() % 10;
 
 		n = rt.getNode ( collnum , oppKey );
-		if ( n >= 0 ) rt.deleteNode ( n , true );
+		if ( n >= 0 ) rt.deleteNode3 ( n , true );
 
 		if ( rt.addNode (collnum, key, NULL , 0 ) < 0 )
 			return log("speedTest: rdb tree addNode "
 				   "failed");
-		t = gettimeofdayInMilliseconds();
+		t = gettimeofdayInMilliseconds_force();
 		tAddTook += t - e;
 
-		e = gettimeofdayInMilliseconds();
+		e = gettimeofdayInMilliseconds_force();
 		if ( rdbb.addNode(collnum, key, NULL, 0 ) < 0 )
 			return log("speedTest: rdb buckets addNode "
 				   "failed");
-		t = gettimeofdayInMilliseconds();
+		t = gettimeofdayInMilliseconds_force();
 		bAddTook += t - e;
 
 		if(i % 100 != 0) continue;
@@ -11122,7 +11353,7 @@ bool bucketstest ( char* dbname ) {
 		}
 
 		
-		e = gettimeofdayInMilliseconds();
+		e = gettimeofdayInMilliseconds_force();
 		rt.getList ( collnum, 
 			     skey, 
 			     ekey, 
@@ -11131,7 +11362,7 @@ bool bucketstest ( char* dbname ) {
 			     &numPosRecs,
 			     &numNegRecs,
 			     true ); //use half keys
-		t = gettimeofdayInMilliseconds();
+		t = gettimeofdayInMilliseconds_force();
 		tgetListTook += t - e;
 		tgot += treelist.getNumRecs();
 
@@ -11158,7 +11389,7 @@ bool bucketstest ( char* dbname ) {
 			    t - e ,tgetListTook );
 		}
 
-		e = gettimeofdayInMilliseconds();
+		e = gettimeofdayInMilliseconds_force();
 		rdbb.getList ( collnum, 
 			       skey, 
 			       ekey, 
@@ -11167,7 +11398,7 @@ bool bucketstest ( char* dbname ) {
 			       &numPosRecs,
 			       &numNegRecs,
 			       true ); //use half keys
-		t = gettimeofdayInMilliseconds();
+		t = gettimeofdayInMilliseconds_force();
 		bgetListTook += t - e;
 		bgot += bucketlist.getNumRecs();
 
@@ -11246,10 +11477,10 @@ bool bucketstest ( char* dbname ) {
 		log("db: removing %"INT32" nodes from tree.  "
 		"tree currently has %"INT32" keys",
 		treelist.getNumRecs(), rt.getNumUsedNodes  ( ));
-		e = gettimeofdayInMilliseconds();
+		e = gettimeofdayInMilliseconds_force();
 
 		rt.deleteList(collnum, &treelist, true);
-		t = gettimeofdayInMilliseconds();
+		t = gettimeofdayInMilliseconds_force();
 		tdelListTook += t - e;
 
 		log("db: Now tree has %"INT32" keys", rt.getNumUsedNodes());
@@ -11257,9 +11488,9 @@ bool bucketstest ( char* dbname ) {
 		log("db: removing %"INT32" nodes from buckets. "
 		"buckets currently has %"INT32" keys", 
 		bucketlist.getNumRecs(), rdbb.getNumKeys(0));
-		e = gettimeofdayInMilliseconds();
+		e = gettimeofdayInMilliseconds_force();
 		rdbb.deleteList(collnum, &bucketlist);
-		t = gettimeofdayInMilliseconds();
+		t = gettimeofdayInMilliseconds_force();
 		bdelListTook += t - e;
 
 		log("db: Now buckets has %"INT32" keys",  rdbb.getNumKeys(0));
@@ -11286,13 +11517,13 @@ bool bucketstest ( char* dbname ) {
 	//int32_t n = rt.getNextNode ( (collnum_t)0, (char *)&kk );
 	int32_t n = rt.getFirstNode();
 	// loop it
-	t = gettimeofdayInMilliseconds();
+	t = gettimeofdayInMilliseconds_force();
 	int32_t count = 0;
 	while ( n >= 0 ) {
 		n = rt.getNextNode ( n );
 		count++;
 	}
-	e = gettimeofdayInMilliseconds();
+	e = gettimeofdayInMilliseconds_force();
 	log("db: getList for %"INT32" nodes in %"INT64" ms",count,e - t);
 #endif
 	rt.m_needsSave = false;
@@ -11305,7 +11536,7 @@ bool treetest ( ) {
 	int32_t numKeys = 500000;
 	log("db: speedtest: generating %"INT32" random keys.",numKeys);
 	// seed randomizer
-	srand ( (int32_t)gettimeofdayInMilliseconds() );
+	srand ( (int32_t)gettimeofdayInMilliseconds_force() );
 	// make list of one million random keys
 	key_t *k = (key_t *)mmalloc ( sizeof(key_t) * numKeys , "main" );
 	if ( ! k ) return log("speedtest: malloc failed");
@@ -11330,7 +11561,7 @@ bool treetest ( ) {
 			"tree-test"    ) )
 		return log("speedTest: tree init failed.");
 	// add to regular tree
-	int64_t t = gettimeofdayInMilliseconds();
+	int64_t t = gettimeofdayInMilliseconds_force();
 	for ( int32_t i = 0 ; i < numKeys ; i++ ) {
 		//if ( k[i].n1 == 1234567 )
 		//	fprintf(stderr,"i=%"INT32"\n",i);
@@ -11339,14 +11570,14 @@ bool treetest ( ) {
 				   "failed");
 	}
 	// print time it took
-	int64_t e = gettimeofdayInMilliseconds();
+	int64_t e = gettimeofdayInMilliseconds_force();
 	log("db: added %"INT32" keys to rdb tree in %"INT64" ms",numKeys,e - t);
 
 	// sort the list of keys
-	t = gettimeofdayInMilliseconds();
+	t = gettimeofdayInMilliseconds_force();
 	gbsort ( k , numKeys , sizeof(key_t) , keycmp );
 	// print time it took
-	e = gettimeofdayInMilliseconds();
+	e = gettimeofdayInMilliseconds_force();
 	log("db: sorted %"INT32" in %"INT64" ms",numKeys,e - t);
 
 	// get the list
@@ -11356,13 +11587,13 @@ bool treetest ( ) {
 	kk.n1 = 1234567;
 	int32_t n = rt.getNextNode ( (collnum_t)0, (char *)&kk );
 	// loop it
-	t = gettimeofdayInMilliseconds();
+	t = gettimeofdayInMilliseconds_force();
 	int32_t count = 0;
 	while ( n >= 0 && --first >= 0 ) {
 		n = rt.getNextNode ( n );
 		count++;
 	}
-	e = gettimeofdayInMilliseconds();
+	e = gettimeofdayInMilliseconds_force();
 	log("db: getList for %"INT32" nodes in %"INT64" ms",count,e - t);
 	return true;
 }
@@ -11374,7 +11605,7 @@ bool hashtest ( ) {
 	int32_t numKeys = 1000000;
 	log("db: speedtest: generating %"INT32" random keys.",numKeys);
 	// seed randomizer
-	srand ( (int32_t)gettimeofdayInMilliseconds() );
+	srand ( (int32_t)gettimeofdayInMilliseconds_force() );
 	// make list of one million random keys
 	key_t *k = (key_t *)mmalloc ( sizeof(key_t) * numKeys , "main" );
 	if ( ! k ) return log("speedtest: malloc failed");
@@ -11385,22 +11616,22 @@ bool hashtest ( ) {
 	HashTable ht;
 	ht.set ( (int32_t)(1.1 * numKeys) );
 	// add to regular tree
-	int64_t t = gettimeofdayInMilliseconds();
+	int64_t t = gettimeofdayInMilliseconds_force();
 	for ( int32_t i = 0 ; i < numKeys ; i++ ) 
 		if ( ! ht.addKey ( r[i] , 1 ) )
 			return log("hashtest: add key failed.");
 	// print time it took
-	int64_t e = gettimeofdayInMilliseconds();
+	int64_t e = gettimeofdayInMilliseconds_force();
 	// add times
 	log("db: added %"INT32" keys in %"INT64" ms",numKeys,e - t);
 
 	// do the delete test
-	t = gettimeofdayInMilliseconds();
+	t = gettimeofdayInMilliseconds_force();
 	for ( int32_t i = 0 ; i < numKeys ; i++ ) 
 		if ( ! ht.removeKey ( r[i] ) )
 			return log("hashtest: add key failed.");
 	// print time it took
-	e = gettimeofdayInMilliseconds();
+	e = gettimeofdayInMilliseconds_force();
 	// add times
 	log("db: deleted %"INT32" keys in %"INT64" ms",numKeys,e - t);
 
@@ -11462,7 +11693,7 @@ bool thrutest ( char *testdir , int64_t fileSize ) {
 
 	// write  2 gigs to the file, 1M at a time
 	{
-	int64_t t1 = gettimeofdayInMilliseconds();
+	int64_t t1 = gettimeofdayInMilliseconds_force();
 	int32_t numLoops = fileSize / bufSize;
 	int64_t off = 0LL;
 	int32_t next = 0;
@@ -11475,7 +11706,7 @@ bool thrutest ( char *testdir , int64_t fileSize ) {
 		if ( i + 1 < numLoops && next < 100000000 ) continue;
 		next = 0;
 		// print speed every X seconds
-		int64_t t2 = gettimeofdayInMilliseconds();
+		int64_t t2 = gettimeofdayInMilliseconds_force();
 		float mBps = (float)off / (float)(t2-t1) / 1000.0 ;
 		fprintf(stderr,"wrote %"INT64" bytes in %"INT64" ms (%.1f MB/s)\n",
 			off,t2-t1,mBps);
@@ -11485,7 +11716,7 @@ bool thrutest ( char *testdir , int64_t fileSize ) {
  doreadtest:
 
 	{
-	int64_t t1 = gettimeofdayInMilliseconds();
+	int64_t t1 = gettimeofdayInMilliseconds_force();
 	int32_t numLoops = fileSize / bufSize;
 	int64_t off = 0LL;
 	int32_t next = 0;
@@ -11498,7 +11729,7 @@ bool thrutest ( char *testdir , int64_t fileSize ) {
 		if ( i + 1 < numLoops && next < 100000000 ) continue;
 		next = 0;
 		// print speed every X seconds
-		int64_t t2 = gettimeofdayInMilliseconds();
+		int64_t t2 = gettimeofdayInMilliseconds_force();
 		float mBps = (float)off / (float)(t2-t1) / 1000.0 ;
 		fprintf(stderr,"read %"INT64" bytes in %"INT64" ms (%.1f MB/s)\n",
 			off,t2-t1,mBps);
@@ -11533,17 +11764,19 @@ static BigFile s_f;
 static int32_t s_numThreads = 0;
 static int64_t s_maxReadSize = 1;
 static int64_t s_startTime = 0;
+static bool s_doSeqWriteThread;
 //#define MAX_READ_SIZE (2000000)
 #include <sys/types.h>
 #include <sys/wait.h>
 
 void seektest ( char *testdir, int32_t numThreads, int32_t maxReadSize , 
-		char *filename ) {
+		char *filename , bool doSeqWriteThread ) {
 
 	g_loop.init();
 	g_threads.init();
 	s_numThreads = numThreads;
 	s_maxReadSize = maxReadSize;
+	s_doSeqWriteThread = doSeqWriteThread;
 	if ( s_maxReadSize <= 0 ) s_maxReadSize = 1;
 	//if ( s_maxReadSize > MAX_READ_SIZE ) s_maxReadSize = MAX_READ_SIZE;
 
@@ -11580,7 +11813,7 @@ void seektest ( char *testdir, int32_t numThreads, int32_t maxReadSize ,
 	    "exist. Use ./gb thrutest ... to create speedtest* files.");
 	return;
 skip:
-	s_f.open ( O_RDONLY );
+	s_f.open ( O_RDWR );
 	s_filesize = s_f.getFileSize();
 	log ( LOG_INIT, "admin: file size = %"INT64".",s_filesize);
 	// always block
@@ -11610,8 +11843,32 @@ skip:
 	//s_lock = 1;
 	//pthread_t tid1 ; //, tid2;
 
+	//g_conf.m_logDebugThread = 1;
+
+	// garbage collection on ssds seems to be triggered by writes so
+	// that they do not hurt read times, do this:
+	g_conf.m_flushWrites = 1;
+
+	// disable linux file cache
+  	// system("echo 1 > /proc/sys/vm/drop_caches");
+
+	// -o sync TOTAL WORKS!!!!!!!
+	// mount with -o sync to disable write page caching on linux
+
+	// disable on-disk write cache
+	// system("sudo hdparm -W 0 /dev/sda2");
+	// system("sudo hdparm -W 0 /dev/sdb1");
+	// system("sudo hdparm -W 0 /dev/sdc1");
+	// system("sudo hdparm -W 0 /dev/sdd1");
+
+	// disable read-ahead
+	// system("sudo hdparm -A 0 /dev/sda2");
+	// system("sudo hdparm -A 0 /dev/sdb1");
+	// system("sudo hdparm -A 0 /dev/sdc1");
+	// system("sudo hdparm -A 0 /dev/sdd1");
+
 	// set time
-	s_startTime = gettimeofdayInMilliseconds();
+	s_startTime = gettimeofdayInMilliseconds_force();
 
 	int32_t stksize = 1000000 ;
 	int32_t bufsize = stksize * s_numThreads ;
@@ -11662,6 +11919,7 @@ void *startUp ( void *state , ThreadEntry *t ) {
 	//	fprintf(stderr,"Threads::startUp: setpriority: failed\n");
 	//	exit(-1);
 	//}
+
 	// read buf
 	//char buf [ MAX_READ_SIZE ];
 #undef malloc
@@ -11673,13 +11931,25 @@ void *startUp ( void *state , ThreadEntry *t ) {
 	}
 	// we got ourselves
 	s_launched++;
+
+	char *s = "reads";
+	if ( id == 0 && s_doSeqWriteThread )
+		s = "writes";
 	// msg
-	fprintf(stderr,"id=%"INT32" launched. Performing 100000 reads.\n",id);
+	fprintf(stderr,"threadid=%"INT32" launched. "
+		"Performing 100000 %s.\n",id,s);
+
+// #undef sleep
+// 	if (  id == 0 ) sleep(1000);
+// #define sleep(a) { char *xx=NULL;*xx=0; }
+
+
 	// wait for lock to be unleashed
 	//while ( s_launched != s_numThreads ) usleep(10);
 	// now do a stupid loop
 	//int32_t j, off , size;
 	int64_t off , size;
+	int64_t seqOff = 0;
 	for ( int32_t i = 0 ; i < 100000 ; i++ ) {
 		uint64_t r = rand();
 		r <<= 32 ;
@@ -11690,25 +11960,43 @@ void *startUp ( void *state , ThreadEntry *t ) {
 		size = s_maxReadSize;
 		//if ( size < 32*1024 ) size = 32*1024;
 		// time it
-		int64_t start = gettimeofdayInMilliseconds();
+		int64_t start = gettimeofdayInMilliseconds_force();
 		//fprintf(stderr,"%"INT32") i=%"INT32" start\n",id,i );
 		//pread ( s_fd1 , buf , size , off );
-		s_f.read ( buf , size , off );
+		if ( id == 0 && s_doSeqWriteThread )
+			s_f.write ( buf , size , seqOff );
+		else
+			s_f.read ( buf , size , off );
+		seqOff += size;
+		if ( seqOff + size > s_filesize )
+			seqOff = 0;
 		//fprintf(stderr,"%"INT32") i=%"INT32" done\n",id,i );
-		int64_t now = gettimeofdayInMilliseconds();
+		int64_t now = gettimeofdayInMilliseconds_force();
 #undef usleep
 		usleep(0);
 #define usleep(a) { char *xx=NULL;*xx=0; }
 		s_count++;
 		float sps = (float)((float)s_count * 1000.0) / 
 			(float)(now - s_startTime);
-		fprintf(stderr,"count=%"INT32" off=%012"INT64" size=%"INT32" time=%"INT32"ms "
-			"(%.2f seeks/sec)\n",
+		int64_t poff = off;
+		char *str = "seeks";
+		if ( id == 0 && s_doSeqWriteThread ) {
+			poff = seqOff;
+			str = "writes";
+		}
+		fprintf(stderr,"threadid=%i "
+			"count=%"INT32" "
+			"off=%012"INT64" "
+			"size=%"INT32" "
+			"time=%"INT32"ms "
+			"(%.2f %s/sec)\n",
+			(int)id,
 			(int32_t)s_count,
-			(int64_t)off,
+			(int64_t)poff,
 			(int32_t)size,
 			(int32_t)(now - start) , 
-			sps );
+			sps ,
+			str );
 	}
 		
 
@@ -11936,7 +12224,8 @@ void dumpRevdb(char *coll,int32_t startFileNum,int32_t numFiles, bool includeTre
 
 void dumpTagdb (char *coll,int32_t startFileNum,int32_t numFiles,
 		bool includeTree, 
-		 int32_t c , char req, int32_t rdbId ) {
+		int32_t c , char req, int32_t rdbId ,
+		char *siteArg ) {
 	//g_conf.m_spiderdbMaxTreeMem = 1024*1024*30;
 	g_tagdb.init ();
 	//g_collectiondb.init(true);
@@ -11946,6 +12235,11 @@ void dumpTagdb (char *coll,int32_t startFileNum,int32_t numFiles,
 	key128_t endKey   ;
 	startKey.setMin();
 	endKey.setMax();
+	if ( siteArg ) {
+		startKey = g_tagdb.makeStartKey ( siteArg );
+		endKey = g_tagdb.makeEndKey ( siteArg );
+		log("gb: using site %s for start key",siteArg );
+	}
 	// turn off threads
 	g_threads.disableThreads();
 	// get a meg at a time
@@ -12154,10 +12448,10 @@ void dumpTagdb (char *coll,int32_t startFileNum,int32_t numFiles,
 
 bool parseTest ( char *coll , int64_t docId , char *query ) {
 	g_conf.m_maxMem = 2000000000LL; // 2G
-	g_mem.m_maxMem  = 2000000000LL; // 2G
+	//g_mem.m_maxMem  = 2000000000LL; // 2G
 	//g_conf.m_checksumdbMaxDiskPageCacheMem = 0;
 	//g_conf.m_spiderdbMaxDiskPageCacheMem   = 0;
-	g_conf.m_tfndbMaxDiskPageCacheMem = 0;
+	//g_conf.m_tfndbMaxDiskPageCacheMem = 0;
 	//g_conf.m_titledbMaxTreeMem = 1024*1024*10;
 	g_titledb.init ();
 	//g_collectiondb.init(true);
@@ -12235,20 +12529,20 @@ bool parseTest ( char *coll , int64_t docId , char *query ) {
 	// 0.35 ms to getText()
 
 	// speed test
-	int64_t t = gettimeofdayInMilliseconds();
+	int64_t t = gettimeofdayInMilliseconds_force();
 	for ( int32_t k = 0 ; k < 100 ; k++ )
 		xd.set2 (rec, listSize, coll , NULL , 0 );
-	int64_t e = gettimeofdayInMilliseconds();
+	int64_t e = gettimeofdayInMilliseconds_force();
 	logf(LOG_DEBUG,"build: Took %.3f ms to set title rec.",
 	     (float)(e-t)/100.0);
 
 	// speed test
-	t = gettimeofdayInMilliseconds();
+	t = gettimeofdayInMilliseconds_force();
 	for ( int32_t k = 0 ; k < 100 ; k++ ) {
 		char *mm = (char *)mmalloc ( 300*1024 , "ztest");
 		mfree ( mm , 300*1024 ,"ztest");
 	}
-	e = gettimeofdayInMilliseconds();
+	e = gettimeofdayInMilliseconds_force();
 	logf(LOG_DEBUG,"build: Took %.3f ms to do mallocs.",
 	     (float)(e-t)/100.0);
 
@@ -12258,7 +12552,7 @@ bool parseTest ( char *coll , int64_t docId , char *query ) {
 
 	// loop parse
 	Xml xml;
-	t = gettimeofdayInMilliseconds();
+	t = gettimeofdayInMilliseconds_force();
 	for ( int32_t i = 0 ; i < 100 ; i++ ) 
 		if ( ! xml.set ( content , contentLen , 
 				 false, 0, false, xd.m_version ,
@@ -12268,7 +12562,7 @@ bool parseTest ( char *coll , int64_t docId , char *query ) {
 			return log("build: speedtestxml: xml set: %s",
 				   mstrerror(g_errno));
 	// print time it took
-	e = gettimeofdayInMilliseconds();
+	e = gettimeofdayInMilliseconds_force();
 	log("build: Xml::set() took %.3f ms to parse docId %"INT64".", 
 	    (double)(e - t)/100.0,docId);
 	double bpms = contentLen/((double)(e-t)/100.0);
@@ -12277,7 +12571,7 @@ bool parseTest ( char *coll , int64_t docId , char *query ) {
 	xml.reset();
 
 	// loop parse
-	t = gettimeofdayInMilliseconds();
+	t = gettimeofdayInMilliseconds_force();
 	for ( int32_t i = 0 ; i < 100 ; i++ ) 
 		if ( ! xml.set ( content , contentLen , 
 				 false, 0, false, xd.m_version , false ,
@@ -12285,7 +12579,7 @@ bool parseTest ( char *coll , int64_t docId , char *query ) {
 			return log("build: xml(setparents=false): %s",
 				   mstrerror(g_errno));
 	// print time it took
-	e = gettimeofdayInMilliseconds();
+	e = gettimeofdayInMilliseconds_force();
 	log("build: Xml::set(setparents=false) took %.3f ms to "
 	    "parse docId %"INT64".", (double)(e - t)/100.0,docId);
 
@@ -12296,44 +12590,44 @@ bool parseTest ( char *coll , int64_t docId , char *query ) {
 	}
 	Words words;
 
-	t = gettimeofdayInMilliseconds();
+	t = gettimeofdayInMilliseconds_force();
 	for ( int32_t i = 0 ; i < 100 ; i++ ) 
 		if ( ! words.set ( &xml , true , true ) )
 			return log("build: speedtestxml: words set: %s",
 				   mstrerror(g_errno));
 	// print time it took
-	e = gettimeofdayInMilliseconds();
+	e = gettimeofdayInMilliseconds_force();
 	log("build: Words::set(xml,computeIds=true) took %.3f ms for %"INT32" words"
 	    " (precount=%"INT32") for docId %"INT64".", 
 	    (double)(e - t)/100.0,words.m_numWords,words.m_preCount,docId);
 
-	t = gettimeofdayInMilliseconds();
+	t = gettimeofdayInMilliseconds_force();
 	for ( int32_t i = 0 ; i < 100 ; i++ ) 
 		if ( ! words.set2 ( &xml , true , true ) )
 			return log("build: speedtestxml: words set: %s",
 				   mstrerror(g_errno));
 	// print time it took
-	e = gettimeofdayInMilliseconds();
+	e = gettimeofdayInMilliseconds_force();
 	log("build: Words::set2(xml,computeIds=true) took %.3f ms for %"INT32" "\
 	    "words (precount=%"INT32") for docId %"INT64".", 
 	    (double)(e - t)/100.0,words.m_numWords,words.m_preCount,docId);
 
 
 
-	t = gettimeofdayInMilliseconds();
+	t = gettimeofdayInMilliseconds_force();
 	for ( int32_t i = 0 ; i < 100 ; i++ ) 
 		if ( ! words.set ( &xml , true , false ) )
 			return log("build: speedtestxml: words set: %s",
 				   mstrerror(g_errno));
 	// print time it took
-	e = gettimeofdayInMilliseconds();
+	e = gettimeofdayInMilliseconds_force();
 	log("build: Words::set(xml,computeIds=false) "
 	    "took %.3f ms for %"INT32" words"
 	    " (precount=%"INT32") for docId %"INT64".", 
 	    (double)(e - t)/100.0,words.m_numWords,words.m_preCount,docId);
 
 
-	t = gettimeofdayInMilliseconds();
+	t = gettimeofdayInMilliseconds_force();
 	for ( int32_t i = 0 ; i < 100 ; i++ ) 
 		//if ( ! words.set ( &xml , true , true ) )
 		if ( ! words.set ( content , TITLEREC_CURRENT_VERSION,
@@ -12341,7 +12635,7 @@ bool parseTest ( char *coll , int64_t docId , char *query ) {
 			return log("build: speedtestxml: words set: %s",
 				   mstrerror(g_errno));
 	// print time it took
-	e = gettimeofdayInMilliseconds();
+	e = gettimeofdayInMilliseconds_force();
 	log("build: Words::set(content,computeIds=true) "
 	    "took %.3f ms for %"INT32" words "
 	    "for docId %"INT64".", 
@@ -12351,14 +12645,14 @@ bool parseTest ( char *coll , int64_t docId , char *query ) {
 	Pos pos;
 	// computeWordIds from xml
 	words.set ( &xml , true , true ) ;
-	t = gettimeofdayInMilliseconds();
+	t = gettimeofdayInMilliseconds_force();
 	for ( int32_t i = 0 ; i < 100 ; i++ ) 
 		//if ( ! words.set ( &xml , true , true ) )
 		if ( ! pos.set ( &words , NULL ) )
 			return log("build: speedtestxml: pos set: %s",
 				   mstrerror(g_errno));
 	// print time it took
-	e = gettimeofdayInMilliseconds();
+	e = gettimeofdayInMilliseconds_force();
 	log("build: Pos::set() "
 	    "took %.3f ms for %"INT32" words "
 	    "for docId %"INT64".", 
@@ -12368,14 +12662,14 @@ bool parseTest ( char *coll , int64_t docId , char *query ) {
 	Bits bits;
 	// computeWordIds from xml
 	words.set ( &xml , true , true ) ;
-	t = gettimeofdayInMilliseconds();
+	t = gettimeofdayInMilliseconds_force();
 	for ( int32_t i = 0 ; i < 100 ; i++ ) 
 		//if ( ! words.set ( &xml , true , true ) )
 		if ( ! bits.setForSummary ( &words ) )
 			return log("build: speedtestxml: Bits set: %s",
 				   mstrerror(g_errno));
 	// print time it took
-	e = gettimeofdayInMilliseconds();
+	e = gettimeofdayInMilliseconds_force();
 	log("build: Bits::setForSummary() "
 	    "took %.3f ms for %"INT32" words "
 	    "for docId %"INT64".", 
@@ -12393,7 +12687,7 @@ bool parseTest ( char *coll , int64_t docId , char *query ) {
 	bits.set ( &words ,TITLEREC_CURRENT_VERSION, 0);
 	Phrases phrases;
 	phrases.set ( &words,&bits,true,true,TITLEREC_CURRENT_VERSION,0);
-	t = gettimeofdayInMilliseconds();
+	t = gettimeofdayInMilliseconds_force();
 	for ( int32_t i = 0 ; i < 100 ; i++ ) 
 		//if ( ! words.set ( &xml , true , true ) )
 		// do not supply xd so it will be set from scratch
@@ -12411,7 +12705,7 @@ bool parseTest ( char *coll , int64_t docId , char *query ) {
 				   mstrerror(g_errno));
 
 	// print time it took
-	e = gettimeofdayInMilliseconds();
+	e = gettimeofdayInMilliseconds_force();
 	log("build: Scores::set() "
 	    "took %.3f ms for %"INT32" words "
 	    "for docId %"INT64".", 
@@ -12420,7 +12714,7 @@ bool parseTest ( char *coll , int64_t docId , char *query ) {
 	
 
 	//Phrases phrases;
-	t = gettimeofdayInMilliseconds();
+	t = gettimeofdayInMilliseconds_force();
 	for ( int32_t i = 0 ; i < 100 ; i++ ) 
 		if ( ! phrases.set ( &words ,
 				     &bits  ,
@@ -12431,7 +12725,7 @@ bool parseTest ( char *coll , int64_t docId , char *query ) {
 			return log("build: speedtestxml: Phrases set: %s",
 				   mstrerror(g_errno));
 	// print time it took
-	e = gettimeofdayInMilliseconds();
+	e = gettimeofdayInMilliseconds_force();
 	log("build: Phrases::set() "
 	    "took %.3f ms for %"INT32" words "
 	    "for docId %"INT64".", 
@@ -12449,7 +12743,7 @@ bool parseTest ( char *coll , int64_t docId , char *query ) {
 	//LinkInfo info1;
 	//LinkInfo info2;
 	// computeWordIds from xml
-	t = gettimeofdayInMilliseconds();
+	t = gettimeofdayInMilliseconds_force();
 	for ( int32_t i = 0 ; i < 100 ; i++ ) 
 		//if ( ! words.set ( &xml , true , true ) )
 		if ( ! weights.set (&words                   , 
@@ -12470,7 +12764,7 @@ bool parseTest ( char *coll , int64_t docId , char *query ) {
 			return log("build: speedtestxml: Weights set: %s",
 				   mstrerror(g_errno));
 	// print time it took
-	e = gettimeofdayInMilliseconds();
+	e = gettimeofdayInMilliseconds_force();
 	log("build: Weights::set() "
 	    "took %.3f ms for %"INT32" words "
 	    "for docId %"INT64".", 
@@ -12482,31 +12776,31 @@ bool parseTest ( char *coll , int64_t docId , char *query ) {
 		log("Unicode initialization failed!");
 		return 1;
 	}
-	t = gettimeofdayInMilliseconds();
+	t = gettimeofdayInMilliseconds_force();
 	for ( int32_t i = 0 ; i < 100 ; i++ ) 
 		if ( ! words.set ( &xml , true , true ) )
 			return log("build: speedtestxml: words set: %s",
 				   mstrerror(g_errno));
 	// print time it took
-	e = gettimeofdayInMilliseconds();
+	e = gettimeofdayInMilliseconds_force();
 	log("build: Words::set(computeIds=true) took %.3f ms for %"INT32" words "
 	    "for docId %"INT64".", 
 	    (double)(e - t)/100.0,words.m_numWords,docId);
 
-	t = gettimeofdayInMilliseconds();
+	t = gettimeofdayInMilliseconds_force();
 	for ( int32_t i = 0 ; i < 100 ; i++ ) 
 		if ( ! words.set ( &xml , false , true ) )
 			return log("build: speedtestxml: words set: %s",
 				   mstrerror(g_errno));
 	// print time it took
-	e = gettimeofdayInMilliseconds();
+	e = gettimeofdayInMilliseconds_force();
 	log("build: Words::set(computeIds=false) took %.3f ms for docId %"INT64".",
 	    (double)(e - t)/100.0,docId);
 	*/
 
 
 	char *buf = (char *)mmalloc(contentLen*2+1,"main");
-	t = gettimeofdayInMilliseconds();
+	t = gettimeofdayInMilliseconds_force();
 	for ( int32_t i = 0 ; i < 100 ; i++ ) 
 		if ( ! xml.getText ( buf , contentLen*2+1 ,
 				     0         ,  // startNode
@@ -12519,13 +12813,13 @@ bool parseTest ( char *coll , int64_t docId , char *query ) {
 			return log("build: speedtestxml: getText: %s",
 				   mstrerror(g_errno));
 	// print time it took
-	e = gettimeofdayInMilliseconds();
+	e = gettimeofdayInMilliseconds_force();
 	log("build: Xml::getText(computeIds=false) took %.3f ms for docId "
 	    "%"INT64".",(double)(e - t)/100.0,docId);
 
 
 
-	t = gettimeofdayInMilliseconds();
+	t = gettimeofdayInMilliseconds_force();
 	for ( int32_t i = 0 ; i < 100 ; i++ ) {
 		int32_t bufLen = xml.getText ( buf , contentLen*2+1 ,
 				     0         ,  // startNode
@@ -12543,7 +12837,7 @@ bool parseTest ( char *coll , int64_t docId , char *query ) {
 	}
 
 	// print time it took
-	e = gettimeofdayInMilliseconds();
+	e = gettimeofdayInMilliseconds_force();
 	log("build: Xml::getText(computeIds=false) w/ word::set() "
 	    "took %.3f ms for docId "
 	    "%"INT64".",(double)(e - t)/100.0,docId);
@@ -12556,7 +12850,7 @@ bool parseTest ( char *coll , int64_t docId , char *query ) {
 	q.set2 ( query , langUnknown , false );
 	matches.setQuery ( &q );
 	words.set ( &xml , true , 0 ) ;
-	t = gettimeofdayInMilliseconds();
+	t = gettimeofdayInMilliseconds_force();
 	for ( int32_t i = 0 ; i < 100 ; i++ ) {
 		matches.reset();
 		if ( ! matches.addMatches ( &words ) )
@@ -12564,7 +12858,7 @@ bool parseTest ( char *coll , int64_t docId , char *query ) {
 				   mstrerror(g_errno));
 	}
 	// print time it took
-	e = gettimeofdayInMilliseconds();
+	e = gettimeofdayInMilliseconds_force();
 	log("build: Matches::set() took %.3f ms for %"INT32" words"
 	    " (precount=%"INT32") for docId %"INT64".", 
 	    (double)(e - t)/100.0,words.m_numWords,words.m_preCount,docId);
@@ -12612,7 +12906,7 @@ bool summaryTest1   ( char *rec , int32_t listSize, char *coll , int64_t docId ,
 	// CollectionRec *cr = g_collectiondb.getRec ( coll );
 
 	// start the timer
-	int64_t t = gettimeofdayInMilliseconds();
+	int64_t t = gettimeofdayInMilliseconds_force();
 
 	//int32_t titleMaxLen               = cr->m_titleMaxLen;
 	//bool considerTitlesFromBody    = false;
@@ -12668,7 +12962,7 @@ bool summaryTest1   ( char *rec , int32_t listSize, char *coll , int64_t docId ,
 	}
 
 	// print time it took
-	int64_t e = gettimeofdayInMilliseconds();
+	int64_t e = gettimeofdayInMilliseconds_force();
 	log("build: V1  Summary/Title/Gigabits generation took %.3f ms for docId "
 	    "%"INT64".", 
 	    (double)(e - t)/100.0,docId);
@@ -12686,7 +12980,7 @@ bool summaryTest2   ( char *rec , int32_t listSize, char *coll , int64_t docId ,
 	CollectionRec *cr = g_collectiondb.getRec ( coll );
 
 	// start the timer
-	int64_t t = gettimeofdayInMilliseconds();
+	int64_t t = gettimeofdayInMilliseconds_force();
 
 	int32_t titleMaxLen               = cr->m_titleMaxLen;
 	int32_t summaryMaxLen             = cr->m_summaryMaxLen;
@@ -12792,7 +13086,7 @@ bool summaryTest2   ( char *rec , int32_t listSize, char *coll , int64_t docId ,
 	}
 
 	// print time it took
-	int64_t e = gettimeofdayInMilliseconds();
+	int64_t e = gettimeofdayInMilliseconds_force();
 	log("build: V2  Summary/Title/Gigabits generation took %.3f ms for "
 	    "docId %"INT64".",
 	    (double)(e - t)/100.0,docId);
@@ -12811,7 +13105,7 @@ bool summaryTest3   ( char *rec , int32_t listSize, char *coll , int64_t docId ,
 	CollectionRec *cr = g_collectiondb.getRec ( coll );
 
 	// start the timer
-	int64_t t = gettimeofdayInMilliseconds();
+	int64_t t = gettimeofdayInMilliseconds_force();
 
 	int32_t titleMaxLen               = cr->m_titleMaxLen;
 	int32_t summaryMaxLen             = cr->m_summaryMaxLen;
@@ -12949,7 +13243,7 @@ bool summaryTest3   ( char *rec , int32_t listSize, char *coll , int64_t docId ,
 	}
 
 	// print time it took
-	int64_t e = gettimeofdayInMilliseconds();
+	int64_t e = gettimeofdayInMilliseconds_force();
 	log("build: V3  Summary/Title/Gigabits generation took %.3f ms for "
 	    "docId %"INT64".",
 	    (double)(e - t)/100.0,docId);
@@ -14217,7 +14511,7 @@ bool pingTest ( int32_t hid , uint16_t clientPort ) {
 	int32_t ip = h->m_ip;
 	ip = atoip("127.0.0.1",9);
 
-	startTime = gettimeofdayInMilliseconds();
+	startTime = gettimeofdayInMilliseconds_force();
 	to.sin_family      = AF_INET;
 	to.sin_addr.s_addr = h->m_ip;
 	to.sin_port        = ntohs(h->m_port);
@@ -14243,7 +14537,7 @@ bool pingTest ( int32_t hid , uint16_t clientPort ) {
 	int32_t msgSize = 3; // indicates a debug ping packet to PingServer.cpp
 	up->setHeader ( dgram, msgSize, 0x11, dnum, transId, true, false , 0 );
 	int32_t size = up->getHeaderSize(0) + msgSize;
-	int64_t start = gettimeofdayInMilliseconds();
+	int64_t start = gettimeofdayInMilliseconds_force();
 	// debug
 	//log("db: sending %"INT32" bytes",size);
 	n = sendto(sock,dgram,size,0,(struct sockaddr *)&to,sizeof(to));
@@ -14254,7 +14548,7 @@ bool pingTest ( int32_t hid , uint16_t clientPort ) {
  readLoop2:
 	// loop until we read something
 	n = recvfrom (sock,dgram,DGRAM_SIZE,0,(sockaddr *)&from, &fromLen);
-	if (gettimeofdayInMilliseconds() - start>2000) {lost++; goto sendLoop;}
+	if (gettimeofdayInMilliseconds_force() - start>2000) {lost++; goto sendLoop;}
 	if ( n <= 0 ) goto readLoop2; // { sched_yield(); goto readLoop2; }
 	// for what transId?
 	int32_t tid = up->getTransId ( dgram , n );
@@ -14277,7 +14571,7 @@ bool pingTest ( int32_t hid , uint16_t clientPort ) {
 	// debug
 	//log("db: read %"INT32" bytes",n);
 	// mark the time
-	int64_t took = gettimeofdayInMilliseconds()-start;
+	int64_t took = gettimeofdayInMilliseconds_force()-start;
 	if ( took > 1 ) log("net: pingtest: got reply #%"INT32" (tid=%"INT32") "
 			    "in %"INT64" ms",replies,transId,took);
 	// make average
@@ -14369,6 +14663,7 @@ int injectFileTest ( int32_t reqLen , int32_t hid ) {
 //#define MAX_INJECT_SOCKETS 1
 static void doInject ( int fd , void *state ) ;
 static void doInjectWarc ( int64_t fsize );
+static void doInjectArc ( int64_t fsize );
 static void injectedWrapper ( void *state , TcpSocket *s ) ;
 static TcpServer s_tcp;
 static File      s_file;
@@ -14383,6 +14678,7 @@ static int32_t      s_outstanding = 0;
 static bool s_isDelete;
 static int32_t s_injectTitledb;
 static int32_t s_injectWarc;
+static int32_t s_injectArc;
 static char *s_coll = NULL;
 static key_t s_titledbKey;
 static char *s_req  [MAX_INJECT_SOCKETS];
@@ -14415,15 +14711,19 @@ int injectFile ( char *filename , char *ips ,
 		for (  ; p && p < pend ; p = nextLine ) {
 			nextLine = strstr(p,"\n");
 			if ( nextLine ) nextLine++;
-			if ( count >= 20 ) count = 0;
+			// this is how many hosts we are using!!
+			// TODO: make this get from hosts.conf!!!
+			if ( count >= 40 ) count = 0;
 			if ( count++ != split ) continue;
 			// get line
 			char *archiveDirName = p;
 			if ( nextLine ) nextLine[-1] = '\0';
 			// download the archive
 			SafeBuf cmd;
-			cmd.safePrintf("./ia-0.7.8-python2.7.pex download "
-				       "--format=\"Web ARChive GZ\" %s"
+			cmd.safePrintf("./ia download "
+				       //"--format=\"Web ARChive GZ\" "
+				       "--glob='*arc.gz' "
+				       "%s"
 				       ,archiveDirName);
 			gbsystem(cmd.getBufStart());
 			// now inject the warc gz files in there
@@ -14432,9 +14732,9 @@ int injectFile ( char *filename , char *ips ,
 			dir.open();
 			log("setting dir to %s",p);
 		subloop:
-			char *warcFileName = dir.getNextFilename("*.warc.gz");
+			char *xarcFilename = dir.getNextFilename("*arc.gz");
 			// get next archive
-			if ( ! warcFileName ) {
+			if ( ! xarcFilename ) {
 				cmd.reset();
 				// remove the archive dir when done if
 				// no more warc.gz files in it
@@ -14443,15 +14743,20 @@ int injectFile ( char *filename , char *ips ,
 				// download the next archive using 'ia'
 				continue;
 			}
+			int32_t flen = gbstrlen(xarcFilename);
+			char *ext = xarcFilename + flen -7;
+			// gunzip to foo.warc or foo.arc depending!
+			char *es = "";
+			if ( ext[0] == 'w' ) es = "w";
 			// inject the warc.gz files
 			cmd.reset();
-			cmd.safePrintf("gunzip -c %s/%s > ./foo%i.warc"
-				       ,archiveDirName,warcFileName,split);
+			cmd.safePrintf("gunzip -c %s/%s > ./foo%i.%sarc"
+				       ,archiveDirName,xarcFilename,split,es);
 			gbsystem(cmd.getBufStart());
 			// now inject it
 			cmd.reset();
-			cmd.safePrintf("./gb inject ./foo%i.warc hosts.conf"
-				       ,split);
+			cmd.safePrintf("./gbi inject ./foo%i.%sarc hosts.conf"
+				       ,split,es);
 			gbsystem(cmd.getBufStart());
 			goto subloop;
 		}
@@ -14466,7 +14771,8 @@ int injectFile ( char *filename , char *ips ,
 	int64_t startDocId = 0LL;
 	int64_t endDocId = MAX_DOCID;
 
-	g_mem.init ( 4000000000LL );
+	g_conf.m_maxMem = 4000000000LL;
+	g_mem.init ( );//4000000000LL );
 
 	// set up the loop
 	if ( ! g_loop.init() ) return log("build: inject: Loop init "
@@ -14650,13 +14956,19 @@ int injectFile ( char *filename , char *ips ,
 
 	// this might be a compressed warc like .warc.gz
 	s_injectWarc = false;
+	s_injectArc  = false;
 	int flen = gbstrlen(filename);
 	if ( flen>5 && strcasecmp(filename+flen-5,".warc")==0 ) {
 		s_injectWarc = true;
 	}
+	if ( flen>5 && strcasecmp(filename+flen-4,".arc")==0 ) {
+		s_injectArc = true;
+	}
 
 	
 	s_coll = coll;
+
+	if ( ! s_coll ) s_coll = "main";
 
 	// register sleep callback to get started
 	if ( ! g_loop.registerSleepCallback(1, NULL, doInject) )
@@ -14669,6 +14981,7 @@ int injectFile ( char *filename , char *ips ,
 }
 
 void doInject ( int fd , void *state ) {
+
 	if ( s_registered ) {
 		s_registered = 0;
 		g_loop.unregisterSleepCallback ( NULL, doInject );
@@ -14685,6 +14998,11 @@ void doInject ( int fd , void *state ) {
 	// should probably phase out the ++++URL: format thing.
 	if ( s_injectWarc ) {
 		doInjectWarc ( fsize );
+		return;
+	}
+
+	if ( s_injectArc ) {
+		doInjectArc ( fsize );
 		return;
 	}
 
@@ -15152,7 +15470,9 @@ void doInjectWarc ( int64_t fsize ) {
 
 		// are we done?
 		if ( s_off >= fsize ) { 
-			log("inject: done parsing file");
+			log("inject: done parsing warc file");
+			if ( s_outstanding ) {
+				log("inject: waiting for socks");return;}
 			g_loop.reset();  
 			exit(0); 
 		}
@@ -15187,6 +15507,8 @@ void doInjectWarc ( int64_t fsize ) {
 		// if not enough to constitute a WARC record probably just new lines
 		if( toRead < 20 ) {
 			log("inject: done processing file");
+			if ( s_outstanding ) {
+				log("inject: waiting for socks");return;}
 			exit(0);
 		}
 
@@ -15213,7 +15535,10 @@ void doInjectWarc ( int64_t fsize ) {
 	for ( ; *whp && strncmp(whp,"WARC/",5) ; whp++ );
 	// none?
 	if ( ! *whp ) {
-		log("inject: could not find WARC/1 header start");
+		log("inject: could not find WARC/1 header start for file=%s",
+		    s_file.getFilename());
+		if ( s_outstanding ) {
+			log("inject: waiting for socks");return;}
 		exit(0);
 	}
 
@@ -15222,7 +15547,10 @@ void doInjectWarc ( int64_t fsize ) {
 	// find end of warc mime HEADER not the content
 	char *warcHeaderEnd = strstr(warcHeader,"\r\n\r\n");
 	if ( ! warcHeaderEnd ) {
-		log("inject: could not find end of WARC header.");
+		log("inject: could not find end of WARC header for file=%s.",
+		    s_file.getFilename());
+		if ( s_outstanding ) {
+			log("inject: waiting for socks");return;}
 		exit(0);
 	}
 	// \0 term for strstrs below
@@ -15240,6 +15568,8 @@ void doInjectWarc ( int64_t fsize ) {
 	char *warcType = strstr(warcHeader,"WARC-Type:");
 	if ( ! warcType ) {
 		log("inject: could not find WARC-Type:");
+		if ( s_outstanding ) {
+			log("inject: waiting for socks");return;}
 		exit(0);
 	}
 	warcType += 10;
@@ -15252,6 +15582,8 @@ void doInjectWarc ( int64_t fsize ) {
 	char *warcConType = strstr(warcHeader,"Content-Type:");
 	if ( ! warcConType ) {
 		log("inject: could not find Content-Type:");
+		if ( s_outstanding ) {
+			log("inject: waiting for socks");return;}
 		exit(0);
 	}
 	warcConType += 13;
@@ -15263,6 +15595,8 @@ void doInjectWarc ( int64_t fsize ) {
 	if ( ! warcContentLenStr ) {
 		log("inject: could not find WARC "
 		    "Content-Length:");
+		if ( s_outstanding ) {
+			log("inject: waiting for socks");return;}
 		exit(0);
 	}
 	warcContentLenStr += 15;
@@ -15284,6 +15618,8 @@ void doInjectWarc ( int64_t fsize ) {
 	if ( s_pbuf > s_pbufEnd ) {
 		if ( ! s_hasMoreToRead ) {
 			log("inject: warc file exceeded file length.");
+			if ( s_outstanding ) {
+				log("inject: waiting for socks");return;}
 			exit(0);
 		}
 		if ( recSize > MAXWARCRECSIZE ) {
@@ -15327,6 +15663,8 @@ void doInjectWarc ( int64_t fsize ) {
 	for ( ; url && is_wspace_a(*url) ; url++ );
 	if ( ! url ) {
 		log("inject: could not find WARC-Target-URI:");
+		if ( s_outstanding ) {
+			log("inject: waiting for socks");return;}
 		exit(0);
 	}
 	// find end of it
@@ -15399,6 +15737,9 @@ void doInjectWarc ( int64_t fsize ) {
 		       "spiderlinks=0&"
 		       "quick=1&" // quick reply
 		       "dontlog=0&"
+
+		       // do not do re-injects. should save a TON of time
+		       "newonly=1&"
 			      
 		       "lastspidered=%"INT64"&"
 		       "firstindexed=%"INT64"&"
@@ -15463,13 +15804,374 @@ void doInjectWarc ( int64_t fsize ) {
 				      req.length(),
 				      NULL   ,
 				      injectedWrapper ,
-				      9999*60*1000      , // timeout, 60days
+				      // because it seems some sockets get stuck and
+				      // they have no reply but the host they are
+				      // connected to no longer has the connection
+				      // open. and the readbuf is empty, but the send
+				      // buf has been sent and it appears the inject
+				      // when through. just the reply was never
+				      // sent back for some reason.
+				      5*60*1000     , // timeout, 5 mins
 				      -1              , // maxTextDocLen
 				      -1              );// maxOtherDocLen
 
 	int realMax = 10;
 	if ( s_hosts2.getNumHosts() > 1 )
-	  realMax = s_hosts2.getNumHosts() * 5;
+		realMax = s_hosts2.getNumHosts() * 2;
+
+	// launch another if blocked
+	if ( ! status ) {
+		// let injectedWrapper() below free it
+		req.detachBuf();
+		//int32_t nh = g_hostdb.getNumHosts();
+		//nh = (nh * 15) / 10;
+		//if ( nh > MAX_INJECT_SOCKETS - 10 ) 
+		//	nh = MAX_INJECT_SOCKETS - 10;
+		//if ( nh < 5 ) nh = 5;
+		// limit to one socket right now
+		//if ( ++s_outstanding < 1 ) goto loop;
+		s_outstanding++;
+		if ( s_outstanding < MAX_INJECT_SOCKETS &&
+		     s_outstanding < realMax ) 
+		  goto loop;
+		return;
+	}
+		
+	if ( g_errno ) {
+		// let tcpserver.cpp free it
+		req.detachBuf();
+		log("build: inject had error: %s.",mstrerror(g_errno));
+	}
+	// loop if not
+	goto loop;
+}
+
+
+void doInjectArc ( int64_t fsize ) {
+
+	static char *s_buf = NULL;
+
+	static bool s_hasMoreToRead;
+
+	static char *s_pbuf = NULL;
+	static char *s_pbufEnd = NULL;
+
+	bool needReadMore = false;
+	if ( ! s_pbuf ) needReadMore = true;
+
+
+ readMore:
+
+	if ( needReadMore ) {
+
+		log("inject: reading %"INT64" bytes more of arc file"
+		    ,(int64_t)MAXWARCRECSIZE);
+
+		// are we done?
+		if ( s_off >= fsize ) { 
+			log("inject: done parsing arc file");
+			if ( s_outstanding ) {
+				log("inject: waiting for socks");return;}
+			g_loop.reset();  
+			exit(0); 
+		}
+
+		// read 1MB of data into this buf to get the first WARC record
+		// it must be < 1MB or we faulter.
+		if ( ! s_buf ) {
+			int64_t need = MAXWARCRECSIZE + 1;
+			s_buf = (char *)mmalloc ( need ,"sibuf");
+		}
+		if ( ! s_buf ) {
+			log("inject: failed to alloc buf");
+			exit(0);
+		}
+
+		int32_t maxToRead = MAXWARCRECSIZE;
+		int32_t toRead = maxToRead;
+		s_hasMoreToRead = true;
+		if ( s_off + toRead > fsize ) {
+			toRead = fsize - s_off;
+			s_hasMoreToRead = false;
+		}
+		int32_t bytesRead = s_file.read ( s_buf , toRead , s_off ) ;
+		if ( bytesRead != toRead ) {
+			log("inject: read of %s failed at offset "
+			    "%"INT64"", s_file.getFilename(), s_off);
+			exit(0);
+		}
+		// null term what we read
+		s_buf[bytesRead] = '\0';
+
+		// if not enough to constitute a ARC record probably just new 
+		// lines
+		if( toRead < 20 ) {
+			log("inject: done processing file");
+			if ( s_outstanding ) {
+				log("inject: waiting for socks");return;}
+			exit(0);
+		}
+
+		// mark the end of what we read
+		//char *fend = buf + toRead;
+
+		// point to what we read
+		s_pbuf = s_buf;
+		s_pbufEnd = s_buf + bytesRead;
+	}
+
+ loop:
+
+	char *realStart = s_pbuf;
+
+	// need at least say 100k for arc header
+	if ( s_pbuf + 100000 > s_pbufEnd && s_hasMoreToRead )  {
+		needReadMore = true;
+		goto readMore;
+	}
+
+	// find \n\nhttp://
+	char *whp = s_pbuf;
+	for ( ; *whp ; whp++ ) {
+		if ( whp[0] != '\n' ) continue;
+		if ( strncmp(whp+1,"http://",7) ) continue;
+		break;
+	}
+	// none?
+	if ( ! *whp ) {
+		log("inject: could not find next \\nhttp:// in arc file");
+		if ( s_outstanding ) {log("inject: waiting for socks");return;}
+		exit(0);
+	}
+
+	char *arcHeader = whp;
+
+	// find end of arc header not the content
+	char *arcHeaderEnd = strstr(arcHeader+1,"\n");
+	if ( ! arcHeaderEnd ) {
+		log("inject: could not find end of ARC header.");
+		exit(0);
+	}
+	// \0 term for strstrs below
+	*arcHeaderEnd = '\0';
+
+	char *arcContent = arcHeaderEnd + 1;
+
+	// parse arc header line
+	char *url = arcHeader + 1;
+	char *hp = url;
+
+	for ( ; *hp && *hp != ' ' ; hp++ );
+	if ( ! *hp ) {log("inject: bad arc header 1.");exit(0);}
+	*hp++ = '\0';
+	char *ipStr = hp;
+
+
+	for ( ; *hp && *hp != ' ' ; hp++ );
+	if ( ! *hp ) {log("inject: bad arc header 2.");exit(0);}
+	*hp++ = '\0';
+	char *timeStr = hp;
+
+
+	for ( ; *hp && *hp != ' ' ; hp++ );
+	if ( ! *hp ) {log("inject: bad arc header 3.");exit(0);}
+	*hp++ = '\0'; // null term timeStr
+	char *arcConType = hp;
+
+	for ( ; *hp && *hp != ' ' ; hp++ );
+	if ( ! *hp ) {log("inject: bad arc header 4.");exit(0);}
+	*hp++ = '\0'; // null term arcContentType
+
+	char *arcContentLenStr = hp;
+	// this is already \0 terminated from above!
+	//for ( ; *hp && *hp != '\n' ; hp++ );
+	//if ( ! *hp ) {log("inject: bad arc header 5.");exit(0);}
+	//*hp++ = '\0'; // null term lenStr
+
+	
+
+	// get arc content len
+	int64_t arcContentLen = atoll(arcContentLenStr);
+
+	char *arcContentEnd = arcContent + arcContentLen;
+
+	//uint64_t oldOff = s_off;
+
+	uint64_t recSize = (arcContentEnd - realStart); 
+
+	// point to end of this arc record
+	s_pbuf += recSize;
+
+	// if we fall outside of the current read buf then re-read
+	if ( s_pbuf > s_pbufEnd ) {
+		if ( ! s_hasMoreToRead ) {
+			log("inject: arc file exceeded file length.");
+			if ( s_outstanding ) {
+				log("inject: waiting for socks");return;}
+			exit(0);
+		}
+		if ( recSize > MAXWARCRECSIZE ) {
+			log("inject: skipping arc file of %"INT64" "
+			    "bytes which is too big",recSize);
+			s_off += recSize;
+		}
+		needReadMore = true;
+		goto readMore;
+	}
+
+	// advance this for next read from the file
+	s_off += recSize;
+
+
+	// arcConType needs to indexable
+	int32_t ct = getContentTypeFromStr ( arcConType );
+	if ( ct != CT_HTML &&
+	     ct != CT_TEXT &&
+	     ct != CT_XML &&
+	     ct != CT_JSON ) {
+		// read another arc record
+		goto loop;
+	}
+
+	// convert to timestamp
+	int64_t arcTime = 0;
+	// this time structure, once filled, will help yield a time_t
+	struct tm t;
+	// DAY OF MONTH
+	t.tm_mday = atol2 ( timeStr + 6 , 2 );
+	// MONTH
+	t.tm_mon = atol2 ( timeStr + 4  , 2 );
+	// YEAR
+	t.tm_year = atol2 ( timeStr     , 4 ) - 1900 ; // # of years since 1900
+	// TIME
+	t.tm_hour = atol2 ( timeStr +  8 , 2 );
+	t.tm_min  = atol2 ( timeStr + 10 , 2 );
+	t.tm_sec  = atol2 ( timeStr + 12 , 2 );
+	// unknown if we're in  daylight savings time
+	t.tm_isdst = -1;
+	// translate using mktime
+	arcTime = timegm ( &t );
+
+
+	char *httpReply = arcContent;
+	int64_t httpReplySize = arcContentLen;
+
+	// sanity check
+	if ( httpReply + httpReplySize >= s_pbufEnd ) {
+		int needMore = httpReply + httpReplySize - s_pbufEnd;
+		log("inject: not reading enough content to inject "
+		    "url %s . increase MAXWARCRECSIZE by %"INT32" more",url,
+		    needMore);
+		exit(0);
+	}
+
+
+	SafeBuf req;
+
+	// a different format?
+	//char *ipStr = "1.2.3.4";
+	req.safePrintf(
+		       "POST /admin/inject HTTP/1.0\r\n"
+		       "Content-Length: 000000000\r\n"//bookmrk
+		       "Content-Type: text/html\r\n"
+		       "Connection: Close\r\n"
+		       "\r\n"
+		       // we need this ?
+		       "?"
+		       "c=%s&"
+		       // do parsing consistency testing (slower!)
+		       //"dct=1&"
+		       "hasmime=1&"
+		       // prevent looking up firstips
+		       // on all outlinks for speed:
+		       "spiderlinks=0&"
+		       "quick=1&" // quick reply
+		       "dontlog=0&"
+
+		       // do not do re-injects. should save a TON of time
+		       "newonly=1&"
+			      
+		       "lastspidered=%"INT64"&"
+		       "firstindexed=%"INT64"&"
+
+		       "deleteurl=0&"
+		       "ip=%s&"
+		       //"recycle=%"INT32"&"
+		       //"delete=%"INT32"&"
+		       "u="
+		       ,s_coll
+
+		       ,arcTime
+		       ,arcTime
+		       
+		       ,ipStr
+		       //recycle,
+		       );
+
+	// url encode the url
+	req.urlEncode ( url );
+	// finish it up
+	req.safePrintf("&content=");
+	// store the content after the &ucontent
+	req.urlEncode ( httpReply , httpReplySize );
+	req.nullTerm();
+
+
+	// replace 00000 with the REAL content length
+	char *start = strstr(req.getBufStart(),"c=");
+	int32_t realContentLen = gbstrlen(start);
+	char *ptr = req.getBufStart() ;
+	// find start of the 9 zeroes
+	while ( *ptr != '0' || ptr[1] !='0' ) ptr++;
+	// store length there
+	sprintf ( ptr , "%09"UINT32"" , realContentLen );
+	// remove the \0
+	ptr += strlen(ptr); *ptr = '\r';
+
+
+	int32_t ip = s_ip;
+	int32_t port = s_port;
+
+	// try hosts.conf
+	if ( ip == 0 ) {
+		// round robin over hosts in s_hosts2
+		if ( s_rrn >= s_hosts2.getNumHosts() ) s_rrn = 0;
+		Host *h = s_hosts2.getHost ( s_rrn );
+		ip = h->m_ip;
+		port = h->m_httpPort;
+		s_rrn++;
+	}
+
+	// log it
+	log("inject: injecting ARC %s to %s:%i contentLen=%"INT64""
+	    ,url
+	    ,iptoa(ip)
+	    ,(int)port
+	    ,arcContentLen);
+
+	// now inject it
+	bool status = s_tcp.sendMsg ( ip   ,
+				      port ,
+				      req.getBufStart()    ,
+				      req.getCapacity(),
+				      req.length(),
+				      req.length(),
+				      NULL   ,
+				      injectedWrapper ,
+				      // because it seems some sockets get stuck and
+				      // they have no reply but the host they are
+				      // connected to no longer has the connection
+				      // open. and the readbuf is empty, but the send
+				      // buf has been sent and it appears the inject
+				      // when through. just the reply was never
+				      // sent back for some reason.
+				      5*60*1000     , // timeout, 5 mins
+				      -1              , // maxTextDocLen
+				      -1              );// maxOtherDocLen
+
+	int realMax = 10;
+	if ( s_hosts2.getNumHosts() > 1 )
+		realMax = s_hosts2.getNumHosts() * 3;
 
 	// launch another if blocked
 	if ( ! status ) {
@@ -15501,6 +16203,16 @@ void doInjectWarc ( int64_t fsize ) {
 
 void injectedWrapper ( void *state , TcpSocket *s ) {
 	s_outstanding--;
+
+	// wtf is this? s_tcp is counting THIS socket so say "== 1"
+	if ( s_tcp.m_numUsed == 1 && s_outstanding > 0 ) {
+		log("inject: resetting s_outstanding to 0");
+		s_outstanding = 0;
+	}
+
+	// debug note
+	logf(LOG_DEBUG,"inject: out=%i used=%i",(int)s_outstanding,(int)s_tcp.m_numUsed);
+
 	// errno?
 	if ( g_errno ) {
 		log("inject: Got server error: %s.",
@@ -15559,7 +16271,7 @@ void injectedWrapper ( void *state , TcpSocket *s ) {
 }
 
 void saveRdbs ( int fd , void *state ) {
-	int64_t now = gettimeofdayInMilliseconds();
+	int64_t now = gettimeofdayInMilliseconds_force();
 	int64_t last;
 	Rdb *rdb ;
 	// . try saving every 10 minutes from time of last write to disk
@@ -15838,8 +16550,8 @@ bool memTest() {
 	// if ( ! g_log.init( "./memlog" ) ) {//g_hostdb.m_logFilename )        ) {
 	// 	fprintf (stderr,"db: Log file init failed.\n" ); return 1; }
 	//g_mem.init(0xffffffff);
-	g_mem.m_maxMem = 0xffffffffLL;
-	g_mem.init( g_mem.m_maxMem );
+	g_conf.m_maxMem = 0xffffffffLL;
+	g_mem.init( );//g_mem.m_maxMem );
 	
 
 	fprintf(stderr, "memtest: Testing memory bus bandwidth.\n");
@@ -15857,7 +16569,7 @@ bool memTest() {
 	membustest ( 8000 , 100000 , true );
 
 	fprintf(stderr, "memtest: Allocating up to %"INT64" bytes\n",
-		g_mem.m_maxMem);
+		g_conf.m_maxMem);
 	for (i=0;i<4096;i++) {
 		ptrs[numPtrs] = mmalloc(1024*1024, "memtest");
 		if (!ptrs[numPtrs]) break;
@@ -15867,7 +16579,7 @@ bool memTest() {
 	fprintf(stderr, "memtest: Was able to allocate %"INT64" bytes of a "
 		"total of "
 	    "%"INT64" bytes of memory attempted.\n",
-	    g_mem.m_used,g_mem.m_maxMem);
+	    g_mem.m_used,g_conf.m_maxMem);
 
 	return true;
 
@@ -15918,7 +16630,7 @@ void membustest ( int32_t nb , int32_t loops , bool readf ) {
 	g_clockNeedsUpdate = true;
 
 	// time stamp
-	int64_t t = gettimeofdayInMilliseconds();
+	int64_t t = gettimeofdayInMilliseconds_force();
 
 	fprintf(stderr,"memtest: start = %"INT64"\n",t);
 
@@ -15975,7 +16687,7 @@ void membustest ( int32_t nb , int32_t loops , bool readf ) {
 
 	g_clockNeedsUpdate = true;
 	// completed
-	int64_t now = gettimeofdayInMilliseconds();
+	int64_t now = gettimeofdayInMilliseconds_force();
 	fprintf(stderr,"memtest: now = %"INT64"\n",t);
 	// multiply by 4 since these are int32_ts
 	char *op = "read";
@@ -15997,7 +16709,7 @@ void membustest ( int32_t nb , int32_t loops , bool readf ) {
 bool cacheTest() {
 
 	g_conf.m_maxMem = 2000000000LL; // 2G
-	g_mem.m_maxMem  = 2000000000LL; // 2G
+	//g_mem.m_maxMem  = 2000000000LL; // 2G
 
 	hashinit();
 
@@ -16316,7 +17028,7 @@ void dumpCachedRecs (char *coll,int32_t startFileNum,int32_t numFiles,bool inclu
 	int32_t filenum = 0;
 	char filename[64];
 	sprintf(filename, "%s-%"INT32".ddmp", coll, filenum);
-	int FD = open(filename, O_CREAT|O_WRONLY, S_IROTH);
+	//int FD = open(filename, O_CREAT|O_WRONLY, S_IROTH);
 	int32_t numDumped = 0;
 	uint32_t bytesDumped = 0;
  loop:
@@ -16483,7 +17195,7 @@ void dumpCachedRecs (char *coll,int32_t startFileNum,int32_t numFiles,bool inclu
 		filenum++;
 		sprintf(filename, "%s-%"INT32".ddmp", coll, filenum);
 		close(FD);
-		FD = open(filename, O_CREAT|O_WRONLY, S_IROTH);
+		//FD = open(filename, O_CREAT|O_WRONLY, S_IROTH);
 		bytesDumped = 0;
 		fprintf(stderr, "Started new file: %s. starts at docId: %"INT64".\n",filename, lastDocId);
 	}
@@ -16556,7 +17268,7 @@ void countdomains( char* coll, int32_t numRecs, int32_t verbosity, int32_t outpu
 	g_titledb.getRdb()->addRdbBase1(coll );
 
 	log( LOG_INFO, "cntDm: parms: %s, %"INT32"", coll, numRecs );
-	int64_t time_start = gettimeofdayInMilliseconds();
+	int64_t time_start = gettimeofdayInMilliseconds_force();
 
 	// turn off threads
 	g_threads.disableThreads();
@@ -17297,7 +18009,7 @@ void countdomains( char* coll, int32_t numRecs, int32_t verbosity, int32_t outpu
 					
 		mfree( dom_table, numRecs * sizeof(struct dom_info *), "main-dcfdt" );
 
-		int64_t time_end = gettimeofdayInMilliseconds();
+		int64_t time_end = gettimeofdayInMilliseconds_force();
 		log( LOG_INFO, "cntDm: Took %"INT64"ms to count domains in %"INT32" recs.",
 		     time_end-time_start, countDocs );
 		log( LOG_INFO, "cntDm: %"INT32" bytes of Total Memory Used.", 
@@ -18218,7 +18930,7 @@ void rmTest() {
 
 	// now delete
 	fprintf(stderr,"Deleting files\n");
-	int64_t now = gettimeofdayInMillisecondsLocal();
+	int64_t now = gettimeofdayInMilliseconds_force();
 
 	for ( int32_t i = 0 ; i < max ; i++ ) {
 		SafeBuf fn;
@@ -18228,7 +18940,7 @@ void rmTest() {
 		f.unlink();
 	}
 
-	int64_t took = gettimeofdayInMillisecondsLocal() - now;
+	int64_t took = gettimeofdayInMilliseconds_force() - now;
 
 	fprintf(stderr,"Deleting files took %"INT64" ms\n",took);
 

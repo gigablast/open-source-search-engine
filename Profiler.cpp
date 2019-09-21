@@ -1451,9 +1451,16 @@ Profiler::getStackFrame(int sig) {
 	// profile once every 5ms, not every 1ms
 	static int32_t s_count = 0;
 
+	// turn off after 60 seconds of profiling
+	if ( m_totalFrames++ >= 60000 ) {
+		stopRealTimeProfiler(false);
+		return;
+	}
+
 	if ( ++s_count != 5 ) return;
 
 	s_count = 0;
+
 
 	// prevent cores.
 	// TODO: hack this to a function somehow...
@@ -1462,6 +1469,9 @@ Profiler::getStackFrame(int sig) {
 	// those in the profiler unfortunately unless we put a hack in here
 	// somewhere. but for now just ignore.
 	if ( g_inMemcpy ) return;
+
+	// likewise, not if in system malloc since backtrace() mallocs
+	if ( g_inMemFunction ) return;
 
 	//void *trace[32];
 
@@ -1584,6 +1594,7 @@ Profiler::startRealTimeProfiler() {
 	// }
 	init();
 	m_realTimeProfilerRunning = true;
+	m_totalFrames = 0;
 	// now Loop.cpp will call g_profiler.getStackFrame()
 	return;
 
@@ -1810,10 +1821,16 @@ Profiler::printRealTimeInfo(SafeBuf *sb,
 		       //,coll,
 		       // rtall, showMessage);
 		       );
-	sb->safePrintf("<a href=\"/admin/profiler?c=%s&rtstop=1\">"
-		       "(Stop)</a> [Click refresh to get latest profile "
-		       "stats]</b></td></tr>\n",
-		       coll);
+	sb->safePrintf(
+		       // "<a href=\"/admin/profiler?c=%s&rtstop=1\">"
+		       // "(Stop)</a> [Click refresh to get latest profile "
+		       // "stats][Don't forget to click STOP when done so you "
+		       // "don't leave the profiler running which can slow "
+		       //"things down.]"
+		       "</b>"
+		       "</td></tr>\n"
+		       //,coll
+		       );
 	/*
 	rtall = !rtall;
 
@@ -1849,10 +1866,10 @@ Profiler::printRealTimeInfo(SafeBuf *sb,
 	ff.safePrintf("%strash/profile.txt",g_hostdb.m_dir);
 	char *filename = ff.getBufStart();
 	unlink ( filename );
-	int fd = open ( filename , O_RDWR | O_CREAT , S_IRWXU );
+	int fd = open ( filename , O_RDWR | O_CREAT , getFileCreationFlags() );
 	if ( fd < 0 ) {
 		sb->safePrintf("FAILED TO OPEN %s for writing: %s"
-			       ,ff.getBufStart(),strerror(errno));
+			       ,ff.getBufStart(),mstrerror(errno));
 		return false;
 	}
 	for ( ; ip < ipEnd ; ip += sizeof(uint64_t) ) {
@@ -1879,6 +1896,13 @@ Profiler::printRealTimeInfo(SafeBuf *sb,
 
 	// restrict to top 100 lines
 	char *x = out.getBufStart();
+
+	if ( ! x ) {
+		sb->safePrintf("FAILED TO READ trash/output.txt: %s"
+			       ,mstrerror(g_errno));
+		return false;
+	}
+
 	int lineCount = 0;
 	for ( ; *x ; x++ ) {
 		if ( *x != '\n' ) continue;
@@ -2070,7 +2094,7 @@ Profiler::printRealTimeInfo(SafeBuf *sb,
 	ff.reset();
 	ff.safePrintf("%strash/qp.txt",g_hostdb.m_dir);
 	filename = ff.getBufStart();
-	fd = open ( filename , O_RDWR | O_CREAT , S_IRWXU );
+	//fd = open ( filename , O_RDWR | O_CREAT , S_IRWXU );
 	if ( fd < 0 ) {
 		sb->safePrintf("FAILED TO OPEN %s for writing: %s"
 			       ,ff.getBufStart(),strerror(errno));
@@ -2118,8 +2142,10 @@ Profiler::printRealTimeInfo(SafeBuf *sb,
 	*/
 
 
-
-	g_profiler.startRealTimeProfiler();	
+	// just leave it off if we printed something. but if we just
+	// turn the profiler on then m_ipBuf will be empty so start it
+	if ( m_ipBuf.length() == 0 )
+		g_profiler.startRealTimeProfiler();	
 
 	return true;
 		/*

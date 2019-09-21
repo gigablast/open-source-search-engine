@@ -393,14 +393,17 @@ class Posdb {
 
 	Rdb m_rdb;
 
-	DiskPageCache *getDiskPageCache ( ) { return &m_pc; };
+	//DiskPageCache *getDiskPageCache ( ) { return &m_pc; };
 
-	DiskPageCache m_pc;
+	//DiskPageCache m_pc;
 };
 
 class FacetEntry {
  public:
+	// # of search results that have this value:
 	int32_t m_count;
+	// # of docs that have this value:
+	int32_t m_outsideSearchResultsCount;
 	int64_t m_docId;
 
 	// cast as double/floats for floats:
@@ -601,6 +604,8 @@ class PosdbTable {
 	float m_finalScore;
 	float m_preFinalScore;
 
+	float m_siteRankMultiplier;
+
 	// how long to add the last batch of lists
 	int64_t       m_addListsTime;
 	int64_t       m_t1 ;
@@ -651,10 +656,13 @@ class PosdbTable {
 	SafeBuf m_pairScoreBuf;
 	SafeBuf m_singleScoreBuf;
 
+	SafeBuf m_stackBuf;
+
 	//SafeBuf m_mergeBuf;
 
 	// a reference to the query
 	Query          *m_q;
+	int32_t m_nqt;
 
 	// these are NOT in imap space, but in query term space, 1-1 with 
 	// Query::m_qterms[]
@@ -710,6 +718,8 @@ class PosdbTable {
 	bool setQueryTermInfo ( );
 
 	void shrinkSubLists ( class QueryTermInfo *qti );
+
+	int64_t countUniqueDocids( QueryTermInfo *qti ) ;
 
 	// for intersecting docids
 	void addDocIdVotes ( class QueryTermInfo *qti , int32_t listGroupNum );

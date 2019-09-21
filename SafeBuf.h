@@ -5,6 +5,14 @@
 //#include "Unicode.h"
 #include "gb-include.h"
 
+/**
+ * Safe Char Buffer, or mutable Strings.
+ * (for java programmers, very similar to the StringBuffer class, with all the speed that c++ allows).
+ * Most of strings in Gigablast are handled by those.
+ */
+
+#include "iana_charset.h"
+
 class SafeBuf {
 public:
 	//*TRUCTORS
@@ -12,10 +20,11 @@ public:
 	SafeBuf(int32_t initSize, char *label = NULL);
 
 	void constructor();
+	void destructor ();
 
 	//be careful with passing in a stackBuf! it could go out
 	//of scope independently of the safebuf.
-	SafeBuf(char* stackBuf, int32_t cap);
+	SafeBuf(char* stackBuf, int32_t cap, char* label = NULL);
 	SafeBuf(char *heapBuf, int32_t bufMax, int32_t bytesInUse, bool ownData);
 	~SafeBuf();
 
@@ -28,8 +37,11 @@ public:
 	// want SafeBuf to free the data for you. Keep in mind, all
 	// previous content in SafeBuf will be cleared when you pass it
 	// a new buffer.
-	bool setBuf(char *newBuf, int32_t bufMax, int32_t bytesInUse, bool ownData,
-		    int16_t encoding );
+	bool setBuf(char *newBuf, 
+		    int32_t bufMax, 
+		    int32_t bytesInUse, 
+		    bool ownData,
+		    int16_t encoding = csUTF8 );
 	// yieldBuf() allows you to take over the buffer in SafeBuf. 
 	// You may only free the data if it was originally owned by
 	// the SafeBuf.
@@ -42,6 +54,8 @@ public:
 
 	//ACCESSORS
 	char *getBuf() { return m_buf + m_length; }
+	char *getBufPtr() { return m_buf + m_length; }
+	char *getBufCursor() { return m_buf + m_length; }
 	char *getBufStart() { return m_buf; }
 	char *getBufEnd() { return m_buf + m_capacity; }
 	int32_t getCapacity() { return m_capacity; }
@@ -62,8 +76,9 @@ public:
 	int32_t safeSave (char *filename );
 
 	int32_t  fillFromFile(char *filename);
-	int32_t  fillFromFile(char *dir,char *filename);
-	int32_t  load(char *dir,char *fname) { return fillFromFile(dir,fname);};
+	int32_t  fillFromFile(char *dir,char *filename, char *label=NULL);
+	int32_t  load(char *dir,char *fname,char *label = NULL) { 
+		return fillFromFile(dir,fname,label);};
 	int32_t  load(char *fname) { return fillFromFile(fname);};
 
 	void filterTags();
@@ -121,6 +136,8 @@ public:
 
 	bool  base64Encode ( char *s , int32_t len , int32_t niceness = 0 );
 	bool  base64Decode ( char *src , int32_t srcLen , int32_t niceness = 0 ) ;
+
+	bool base64Encode( char *s ) ;
 
 	//bool  pushLong ( int32_t val ) { return safeMemcpy((char *)&val,4); }
 	bool  cat(SafeBuf& c);
@@ -180,6 +197,7 @@ public:
 
 	void zeroOut() { memset ( m_buf , 0 , m_capacity ); }
 
+	// insert <br>'s to make 's' no more than 'cols' chars per line
 	bool brify2 ( char *s , int32_t cols , char *sep = "<br>" ,
 		      bool isHtml = true ) ;
 
@@ -241,6 +259,7 @@ public:
 			 int32_t niceness=0);
 	bool  latin1Encode(char *s, int32_t len, bool htmlEncode=false,
 			   int32_t niceness=0);
+    bool utf32Encode(UChar32* codePoints, int32_t cpLen);
 	//bool  utf16Encode(UChar *s, int32_t len, bool htmlEncode=false);
 	//bool  utf16Encode(char *s, int32_t len, bool htmlEncode=false) {
 	//	return utf16Encode((UChar*)s, len>>1, htmlEncode); };
@@ -309,6 +328,7 @@ public:
 		return true;
 	};
 
+	int32_t indexOf(char c);
 
 	bool  safeCdataMemcpy(char *s, int32_t len);
 	bool  pushChar (char i) {
@@ -328,6 +348,7 @@ public:
 	// hack off trailing 0's
 	bool printFloatPretty ( float f ) ;
 
+	char* pushStr  (char* str, uint32_t len);
 	bool  pushPtr  ( void *ptr );
 	bool  pushLong (int32_t i);
 	bool  pushLongLong (int64_t i);
@@ -384,6 +405,14 @@ public:
 	// . only Words.cpp looks at this flag
 	char  m_renderHtml;
 };
+
+#define XSTRMACRO(s) STRMACRO(s)
+#define STRMACRO(s) #s
+#define TOKENPASTE(x, y) x ## y
+#define TOKENPASTE2(x, y) TOKENPASTE(x, y)
+
+#define StackBuf(name) char TOKENPASTE2(tmpsafebuf, __LINE__)[1024];	\
+	SafeBuf name(TOKENPASTE2(tmpsafebuf, __LINE__), 1024, STRMACRO(TOKENPASTE2(__FILE__, __LINE__)))
 
 
 #endif

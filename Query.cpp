@@ -1,5 +1,7 @@
 #include "gb-include.h"
 
+#include <limits>
+
 #include "Query.h"
 //#include "Indexdb.h" // g_indexdb.getTruncationLimit() g_indexdb.getTermId()
 #include "Words.h"
@@ -26,12 +28,18 @@ void Query::constructor ( ) {
 	//m_bmap      = NULL;
 	m_bitScores = NULL;
 	m_qwords      = NULL;
+	m_numWords = 0;
 	//m_expressions = NULL;
 	m_qwordsAllocSize      = 0;
 	//m_expressionsAllocSize = 0;
 	m_qwords               = NULL;
 	m_numTerms = 0;
 	m_containingParent = NULL;
+	m_st0Ptr = NULL;
+	// we have to manually call this because Query::constructor()
+	// might have been called explicitly
+	//for ( int32_t i = 0 ; i < MAX_QUERY_TERMS ; i++ )
+	//	m_qterms[i].constructor();
 	//m_expressions          = NULL;
 	reset ( );
 }
@@ -48,17 +56,32 @@ void Query::reset ( ) {
 
 	// if Query::constructor() was called explicitly then we have to
 	// call destructors explicitly as well...
+	// essentially call QueryTerm::reset() on each query term
 	for ( long i = 0 ; i < m_numTerms ; i++ ) {
 	 	// get it
 		QueryTerm *qt = &m_qterms[i];
 		HashTableX *ht = &qt->m_facetHashTable;
+		// debug note
+		// log("results: free fhtqt of %"PTRFMT" for q=%"PTRFMT 
+		//     " st0=%"PTRFMT,
+		//     (PTRTYPE)ht->m_buf,(PTRTYPE)this,(PTRTYPE)m_st0Ptr);
 		ht->reset();
 		qt->m_facetIndexBuf.purge();
 	}
 
+	for ( int32_t i = 0 ; i < m_numWords ; i++ ) {
+		QueryWord *qw = &m_qwords[i];
+		qw->destructor();
+	}
+
+	m_stackBuf.purge();
+	m_qterms = NULL;
+
+	m_sb.purge();
+	m_osb.purge();
 	m_docIdRestriction = 0LL;
 	m_groupThatHasDocId = NULL;
-	m_bufLen      = 0;
+	//m_bufLen      = 0;
 	m_origLen     = 0;
 	m_numWords    = 0;
 	//m_numOperands = 0;
@@ -72,6 +95,7 @@ void Query::reset ( ) {
 	//if ( m_bitScores && m_bitScoresSize ) //  != m_bsbuf )
 	//	mfree ( m_bitScores , m_bitScoresSize , "Query2" );
 	//m_bmap = NULL;
+
 	m_bitScores = NULL;
 	//m_bmapSize      = 0;
 	m_bitScoresSize = 0;
@@ -119,13 +143,15 @@ bool Query::set2 ( char *query        ,
 		   // need language for doing synonyms
 		   uint8_t  langId ,
 		   char     queryExpansion ,
-		   bool     useQueryStopWords ) {
-		  //int32_t  maxQueryTerms  ) {
+		   bool     useQueryStopWords ,
+		   int32_t  maxQueryTerms  ) {
 
 	m_langId = langId;
 	m_useQueryStopWords = useQueryStopWords;
 	// fix summary rerank and highlighting.
 	bool keepAllSingles = true;
+
+	m_maxQueryTerms = maxQueryTerms;
 
 	// assume  boolean auto-detect.
 	char boolFlag = 2;
@@ -138,7 +164,7 @@ bool Query::set2 ( char *query        ,
 	if ( ! query ) return true;
 
 	// set to 256 for synonyms?
-	m_maxQueryTerms = 256;
+	//m_maxQueryTerms = 256;
 	m_queryExpansion = queryExpansion;
 
 	int32_t queryLen = gbstrlen(query);
@@ -148,17 +174,26 @@ bool Query::set2 ( char *query        ,
 	//m_coll    = coll;
 	//m_collLen = collLen;
 	// truncate query if too big
-	if ( queryLen >= MAX_QUERY_LEN ) {
-		log("query: Query length of %"INT32" must be less than %"INT32". "
-		    "Truncating.",queryLen,(int32_t)MAX_QUERY_LEN);
-		queryLen = MAX_QUERY_LEN - 1;
+	if ( queryLen >= ABS_MAX_QUERY_LEN ) {
+		log("query: Query length of %"INT32" must be "
+		    "less than %"INT32". "
+		    "Truncating.",queryLen,(int32_t)ABS_MAX_QUERY_LEN);
+		queryLen = ABS_MAX_QUERY_LEN - 1;
 		m_truncated = true;
 	}
 	// save original query
+	m_osb.setBuf ( m_otmpBuf , 128 , 0 , false );
+	m_osb.setLabel ("oqbuf" );
+	m_osb.reserve ( queryLen + 1 );
+	m_osb.safeMemcpy ( query , queryLen );
+	m_osb.nullTerm ();
 	
-	m_origLen = queryLen;
-	gbmemcpy ( m_orig , query , queryLen );
-	m_orig [ m_origLen ] = '\0';
+	//m_origLen = queryLen;
+	//gbmemcpy ( m_orig , query , queryLen );
+	//m_orig [ m_origLen ] = '\0';
+
+	m_orig = m_osb.getBufStart();
+	m_origLen = m_osb.getLength();
 
 	log(LOG_DEBUG, "query: set called = %s", m_orig);
 
@@ -192,9 +227,16 @@ bool Query::set2 ( char *query        ,
 	// that were set somewhere above!!! i moved top: label above!
 	//reset();
 
+	// reserve some space, guessing how much we'd need
+	m_sb.setBuf(m_tmpBuf3,128,0,false);
+	m_sb.setLabel("qrystk");
+	int32_t need = queryLen * 2 + 32;
+	if ( ! m_sb.reserve ( need ) ) 
+		return false;
+
 	// convenience ptr
-	char *p    = m_buf;
-	char *pend = m_buf + MAX_QUERY_LEN;
+	//char *p    = m_buf;
+	//char *pend = m_buf + MAX_QUERY_LEN;
 	bool inQuotesFlag = false;
 	// . copy query into m_buf
 	// . translate ( and ) to special query operators so Words class
@@ -207,27 +249,31 @@ bool Query::set2 ( char *query        ,
 		if ( query[i] == '\"' ) inQuotesFlag = !inQuotesFlag;
 
 		if ( inQuotesFlag ) {
-			*p = query [i];
-			p++;
+			//*p = query [i];
+			//p++;
+			m_sb.pushChar(query[i]);
 			continue;
 		}
 
 		// dst buf must be big enough
-		if ( p + 8 >= pend ) {
-			g_errno = EBUFTOOSMALL;
-			return log(LOG_LOGIC,"query: query: query too big.");
-		}
+		// if ( p + 8 >= pend ) {
+		// 	g_errno = EBUFTOOSMALL;
+		// 	return log(LOG_LOGIC,"query: query: query too big.");
+		// }
 		// translate ( and )
 		if ( boolFlag == 1 && query[i] == '(' ) {
-			gbmemcpy ( p , " LeFtP " , 7 ); p += 7;
+			//gbmemcpy ( p , " LeFtP " , 7 ); p += 7;
+			m_sb.safeMemcpy ( " LeFtP " , 7 );
 			continue;
 		}
 		if ( boolFlag == 1 && query[i] == ')' ) {
-			gbmemcpy ( p , " RiGhP " , 7 ); p += 7;
+			//gbmemcpy ( p , " RiGhP " , 7 ); p += 7;
+			m_sb.safeMemcpy ( " RiGhP " , 7 );
 			continue;
 		}
 		if ( query[i] == '|' ) {
-			gbmemcpy ( p , " PiiPE " , 7 ); p += 7;
+			//gbmemcpy ( p , " PiiPE " , 7 ); p += 7;
+			m_sb.safeMemcpy ( " PiiPE " , 7 );
 			continue;
 		}
 		// translate [#a] [#r] [#ap] [#rp] [] [p] to operators
@@ -237,28 +283,34 @@ bool Query::set2 ( char *query        ,
 			while ( is_digit(query[j]) ) j++;
 			char c = query[j];
 			if ( (c == 'a' || c == 'r') && query[j+1]==']' ) {
-				sprintf ( p , " LeFtB %"INT32" %c RiGhB ",val,c);
-				p += gbstrlen(p);
+				//sprintf ( p , " LeFtB %"INT32" %c RiGhB ",
+				m_sb.safePrintf(" LeFtB %"INT32" %c RiGhB ",
+					  val,c);
+				//p += gbstrlen(p);
 				i = j + 1;
 				continue;
 			}
 			else if ( (c == 'a' || c == 'r') && 
 				  query[j+1]=='p' && query[j+2]==']') {
-				sprintf ( p , " LeFtB %"INT32" %cp RiGhB ",val,c);
-				p += gbstrlen(p);
+				//sprintf ( p , " LeFtB %"INT32" %cp RiGhB ",
+				m_sb.safePrintf(" LeFtB %"INT32" %cp RiGhB ",
+				val,c);
+				//p += gbstrlen(p);
 				i = j + 2;
 				continue;
 			}
 		}
 		if ( query[i] == '[' && query[i+1] == ']' ) {
-			sprintf ( p , " LeFtB RiGhB ");
-			p += gbstrlen(p);
+			//sprintf ( p , " LeFtB RiGhB ");
+			//p += gbstrlen(p);
+			m_sb.safePrintf ( " LeFtB RiGhB ");
 			i = i + 1;
 			continue;
 		}
 		if ( query[i] == '[' && query[i+1] == 'p' && query[i+2]==']') {
-			sprintf ( p , " LeFtB RiGhB ");
-			p += gbstrlen(p);
+			//sprintf ( p , " LeFtB RiGhB ");
+			//p += gbstrlen(p);
+			m_sb.safePrintf ( " LeFtB RiGhB ");
 			i = i + 2;
 			continue;
 		}
@@ -294,17 +346,22 @@ bool Query::set2 ( char *query        ,
  
 		// TODO: copy altavista's operators here? & | !
 		// otherwise, just a plain copy
-		*p = query [i];
-		p++;
+		// *p = query [i];
+		// p++;
+		m_sb.pushChar ( query[i] );
 	}
 	// NULL terminate
-	*p = '\0';
+	//*p = '\0';
+	m_sb.nullTerm();
 	// debug statement
 	//log(LOG_DEBUG,"Query: Got new query=%s",tempBuf);
 	//printf("query: query: Got new query=%s\n",tempBuf);
 
 	// set length
-	m_bufLen = p - m_buf;
+	//m_bufLen = p - m_buf;
+
+	//m_buf = m_sb.getBufStart();
+	//m_bufLen = m_sb.length();
 
 	Words words;
 	Phrases phrases;
@@ -548,8 +605,108 @@ bool Query::setQTerms ( Words &words , Phrases &phrases ) {
 	// what is the max value for "shift"?
 	int32_t max = (int32_t)MAX_EXPLICIT_BITS;
 	if ( max > m_maxQueryTerms ) max = m_maxQueryTerms;
-	//char u8Buf[256]; 
-	for ( int32_t i = 0 ; i < m_numWords && n < MAX_QUERY_TERMS ; i++ ) {
+
+	// count phrases first for allocating
+	int32_t nqt = 0;
+	for ( int32_t i = 0 ; i < m_numWords ; i++ ) {
+		QueryWord *qw  = &m_qwords[i];
+		// skip if ignored... mdw...
+		if ( ! qw->m_phraseId ) continue;
+		if (   qw->m_ignorePhrase ) continue; // could be a repeat
+		// none if weight is absolute zero
+		if ( qw->m_userWeightPhrase == 0   && 
+		     qw->m_userTypePhrase   == 'a'  ) continue;
+		nqt++;
+	}
+	// count single terms
+	for ( int32_t i = 0 ; i < m_numWords; i++ ) {
+		QueryWord *qw  = &m_qwords[i];
+ 		if ( qw->m_ignoreWord && 
+ 		     qw->m_ignoreWord != IGNORE_QSTOP) continue;
+		// ignore if in quotes and part of phrase, watch out
+		// for things like "word", a single word in quotes.
+		if ( qw->m_quoteStart >= 0 && qw->m_phraseId ) continue;
+		// if we are not start of quote and NOT in a phrase we
+		// must be the tailing word i guess.
+		// fixes '"john smith" -"bob dole"' from having
+		// smith and dole as query terms.
+		if ( qw->m_quoteStart >= 0 && qw->m_quoteStart != i )
+			continue;
+		// ignore if weight is absolute zero
+		if ( qw->m_userWeight == 0   && 
+		     qw->m_userType   == 'a'  ) continue;
+		nqt++;
+	}
+	// thirdly, count synonyms
+	Synonyms syn;
+	int32_t sn = 0;
+	if ( m_queryExpansion ) sn = m_numWords;
+	int64_t to = hash64n("to",0LL);
+	for ( int32_t i = 0 ; i < sn ; i++ ) {
+		// get query word
+		QueryWord *qw  = &m_qwords[i];
+		// skip if in quotes, we will not get synonyms for it
+		if ( qw->m_inQuotes ) continue;
+		// skip if has plus sign in front
+		if ( qw->m_wordSign == '+' ) continue;
+		// not '-' either i guess
+		if ( qw->m_wordSign == '-' ) continue;
+		// no url: stuff, maybe only title
+		if ( qw->m_fieldCode &&
+		     qw->m_fieldCode != FIELD_TITLE &&
+		     qw->m_fieldCode != FIELD_GENERIC )
+			continue;
+		// skip if ignored like a stopword (stop to->too)
+		//if ( qw->m_ignoreWord ) continue;
+		// ignore title: etc. words, they are field names
+		if ( qw->m_ignoreWord == IGNORE_FIELDNAME ) continue;
+		// ignore boolean operators
+		if ( qw->m_ignoreWord ) continue;// IGNORE_BOOLOP
+		// no, hurts 'Greencastle IN economic development'
+		if ( qw->m_wordId == to ) continue;
+		// single letters...
+		if ( qw->m_wordLen == 1 ) continue;
+		// set the synonyms for this word
+		char tmpBuf [ TMPSYNBUFSIZE ];
+		int32_t naids = syn.getSynonyms ( &words ,
+					       i ,
+						  // language of the query.
+						  // 0 means unknown. if this
+						  // is 0 we sample synonyms
+						  // from all languages.
+						  m_langId , 
+					       tmpBuf ,
+					       0 ); // m_niceness );
+		// if no synonyms, all done
+		if ( naids <= 0 ) continue;
+		nqt += naids;
+	}
+
+	m_numTermsUntruncated = nqt;
+
+	if ( nqt > m_maxQueryTerms ) nqt = m_maxQueryTerms;
+
+	// allocate the stack buf
+	if ( nqt ) {
+		int32_t need = nqt * sizeof(QueryTerm) ;
+		if ( ! m_stackBuf.reserve ( need ) )
+			return false;
+		m_stackBuf.setLabel("stkbuf3");
+		char *pp = m_stackBuf.getBufStart();
+		m_qterms = (QueryTerm *)pp;
+		pp += sizeof(QueryTerm);
+		if ( pp > m_stackBuf.getBufEnd() ) { char *xx=NULL;*xx=0; }
+	}
+
+	// call constructor on each one here
+	for ( int32_t i = 0 ; i < nqt ; i++ ) {
+		QueryTerm *qt = &m_qterms[i];
+		qt->constructor();
+	}
+
+
+	// count phrase terms
+	for ( int32_t i = 0 ; i < m_numWords ; i++ ) {
 		// break out if no more explicit bits!
 		/*
 		if ( shift >= max ) {
@@ -568,9 +725,14 @@ bool Query::setQTerms ( Words &words , Phrases &phrases ) {
 		     qw->m_userTypePhrase   == 'a'  ) continue;
 
 		// stop breach
-		if ( n >= MAX_QUERY_TERMS ) {
+		if ( n >= ABS_MAX_QUERY_TERMS ) {
 			log("query: lost query phrase terms to max term "
-			    "limit of %"INT32"",(int32_t)MAX_QUERY_TERMS );
+			    "limit of %"INT32"",(int32_t)ABS_MAX_QUERY_TERMS );
+			break;
+		}
+		if ( n >= m_maxQueryTerms ) {
+			log("query: lost query phrase terms to max term cr "
+			    "limit of %"INT32"",(int32_t)m_maxQueryTerms);
 			break;
 		}
 
@@ -592,7 +754,7 @@ bool Query::setQTerms ( Words &words , Phrases &phrases ) {
 		qt->m_isQueryStopWord = false;
 		// change in both places
 		qt->m_termId    = qw->m_phraseId & TERMID_MASK;
-		m_termIds[n]    = qw->m_phraseId & TERMID_MASK;
+		//m_termIds[n]    = qw->m_phraseId & TERMID_MASK;
 		//log(LOG_DEBUG, "Setting query phrase term id %d: %lld", n, m_termIds[n]);
 		qt->m_rawTermId = qw->m_rawPhraseId;
 		// assume explicit bit is 0
@@ -603,12 +765,12 @@ bool Query::setQTerms ( Words &words , Phrases &phrases ) {
 		// phrases like: "cat dog" AND pig
 		if ( m_isBoolean && qw->m_phraseSign != '*' ) {
 			qt->m_termSign = '\0';
-			m_termSigns[n] = '\0';
+			//m_termSigns[n] = '\0';
 		}
 		// if not boolean, ensure to change signs in both places
 		else {
 			qt->m_termSign  = qw->m_phraseSign;
-			m_termSigns[n]  = qw->m_phraseSign;
+			//m_termSigns[n]  = qw->m_phraseSign;
 		}
 		//
 		// INSERT UOR LOGIC HERE
@@ -691,7 +853,7 @@ bool Query::setQTerms ( Words &words , Phrases &phrases ) {
 	}
 
 	// now if we have enough room, do the singles
-	for ( int32_t i = 0 ; i < m_numWords && n < MAX_QUERY_TERMS ; i++ ) {
+	for ( int32_t i = 0 ; i < m_numWords ; i++ ) {
 		// break out if no more explicit bits!
 		/*
 		if ( shift >= max ) {
@@ -726,9 +888,14 @@ bool Query::setQTerms ( Words &words , Phrases &phrases ) {
 		     qw->m_userType   == 'a'  ) continue;
 
 		// stop breach
-		if ( n >= MAX_QUERY_TERMS ) {
+		if ( n >= ABS_MAX_QUERY_TERMS ) {
 			log("query: lost query terms to max term "
-			    "limit of %"INT32"",(int32_t)MAX_QUERY_TERMS );
+			    "limit of %"INT32"",(int32_t)ABS_MAX_QUERY_TERMS );
+			break;
+		}
+		if ( n >= m_maxQueryTerms ) {
+			log("query: lost query terms to max term cr "
+			    "limit of %"INT32"",(int32_t)m_maxQueryTerms);
 			break;
 		}
 
@@ -748,7 +915,7 @@ bool Query::setQTerms ( Words &words , Phrases &phrases ) {
 		qt->m_isQueryStopWord = qw->m_isQueryStopWord;
 		// change in both places
 		qt->m_termId    = qw->m_wordId & TERMID_MASK;
-		m_termIds[n]    = qw->m_wordId & TERMID_MASK;
+		//m_termIds[n]    = qw->m_wordId & TERMID_MASK;
 		qt->m_rawTermId = qw->m_rawWordId;
 		// assume explicit bit is 0
 		qt->m_explicitBit = 0;
@@ -757,18 +924,18 @@ bool Query::setQTerms ( Words &words , Phrases &phrases ) {
 		// boolean queries are not allowed term signs
 		if ( m_isBoolean ) {
 			qt->m_termSign = '\0';
-			m_termSigns[n] = '\0';
+			//m_termSigns[n] = '\0';
 			// boolean fix for "health OR +sports" because
 			// the + there means exact word match, no synonyms.
 			if ( qw->m_wordSign == '+' ) {
 				qt->m_termSign  = qw->m_wordSign;
-				m_termSigns[n]  = qw->m_wordSign;
+				//m_termSigns[n]  = qw->m_wordSign;
 			}
 		}
 		// if not boolean, ensure to change signs in both places
 		else {
 			qt->m_termSign  = qw->m_wordSign;
-			m_termSigns[n]  = qw->m_wordSign;
+			//m_termSigns[n]  = qw->m_wordSign;
 		}
 		// get previous text word
 		//int32_t pw = i - 2;
@@ -852,6 +1019,13 @@ bool Query::setQTerms ( Words &words , Phrases &phrases ) {
 		if (fieldLen > 0) {
 			qt->m_term    = m_qwords[fieldStart].m_word;
 			qt->m_termLen = fieldLen;
+			// fix for query
+			// text:""  foo bar   ""
+			if ( pw-1 < i ) {
+				log("query: bad query %s",m_orig);
+				g_errno = EMALFORMEDQUERY;
+				return false;
+			}
 			// skip past the end of the field value
 			i = pw-1;
 		}
@@ -1218,16 +1392,14 @@ bool Query::setQTerms ( Words &words , Phrases &phrases ) {
 	// . skip this part if language is unknown i guess
 	//
 	////////////
-	int32_t sn = 0;
-	Synonyms syn;
 	// loop over all words in query and process its synonyms list
 	//if ( m_langId != langUnknown && m_queryExpansion ) 
 	// if lang is "xx" unknown we still do synonyms it just does
 	// a loop over all languages starting with english
-	if ( m_queryExpansion ) 
-		sn = m_numWords;
+	// if ( m_queryExpansion ) 
+	// 	sn = m_numWords;
 
-	int64_t to = hash64n("to",0LL);
+	//int64_t to = hash64n("to",0LL);
 
 	for ( int32_t i = 0 ; i < sn ; i++ ) {
 		// get query word
@@ -1245,6 +1417,10 @@ bool Query::setQTerms ( Words &words , Phrases &phrases ) {
 			continue;
 		// skip if ignored like a stopword (stop to->too)
 		//if ( qw->m_ignoreWord ) continue;
+		// ignore title: etc. words, they are field names
+		if ( qw->m_ignoreWord == IGNORE_FIELDNAME ) continue;
+		// ignore boolean operators
+		if ( qw->m_ignoreWord ) continue;// IGNORE_BOOLOP
 		// no, hurts 'Greencastle IN economic development'
 		if ( qw->m_wordId == to ) continue;
 		// single letters...
@@ -1265,19 +1441,29 @@ bool Query::setQTerms ( Words &words , Phrases &phrases ) {
 		// sanity
 		if ( naids > MAX_SYNS ) { char *xx=NULL;*xx=0; }
 		// now make the buffer to hold them for us
+		qw->m_synWordBuf.setLabel("qswbuf");
 		qw->m_synWordBuf.safeMemcpy ( &syn.m_synWordBuf );
 		// get the term for this word
 		QueryTerm *origTerm = qw->m_queryWordTerm;
 		// loop over synonyms for word #i now
 		for ( int32_t j = 0 ; j < naids ; j++ ) {
 			// stop breach
-			if ( n >= MAX_QUERY_TERMS ) {
+			if ( n >= ABS_MAX_QUERY_TERMS ) {
 				log("query: lost synonyms due to max term "
-				    "limit of %"INT32"",(int32_t)MAX_QUERY_TERMS );
+				    "limit of %"INT32"",
+				    (int32_t)ABS_MAX_QUERY_TERMS );
 				break;
 			}
 			// this happens for 'da da da'
 			if ( ! origTerm ) continue;
+
+			if ( n >= m_maxQueryTerms ) {
+				log("query: lost synonyms due to max cr term "
+				    "limit of %"INT32"",
+				    (int32_t)m_maxQueryTerms);
+				break;
+			}
+
 			// add that query term
 			QueryTerm *qt   = &m_qterms[n];
 			qt->m_qword     = qw; // NULL;
@@ -1285,6 +1471,7 @@ bool Query::setQTerms ( Words &words , Phrases &phrases ) {
 			qt->m_isPhrase  = false ;
 			qt->m_isUORed   = false;
 			qt->m_UORedTerm = NULL;
+			qt->m_langIdBits = 0;
 			// synonym of this term...
 			qt->m_synonymOf = origTerm;
 			// nuke this crap since it was done above and we
@@ -1333,7 +1520,7 @@ bool Query::setQTerms ( Words &words , Phrases &phrases ) {
 				wid= hash64h(wid,ph);
 			}
 			qt->m_termId    = wid & TERMID_MASK;
-			m_termIds[n]    = wid & TERMID_MASK;
+			//m_termIds[n]    = wid & TERMID_MASK;
 			qt->m_rawTermId = syn.m_aids[j];
 			// assume explicit bit is 0
 			qt->m_explicitBit = 0;
@@ -1341,18 +1528,18 @@ bool Query::setQTerms ( Words &words , Phrases &phrases ) {
 			// boolean queries are not allowed term signs
 			if ( m_isBoolean ) {
 				qt->m_termSign = '\0';
-				m_termSigns[n] = '\0';
+				//m_termSigns[n] = '\0';
 				// boolean fix for "health OR +sports" because
 				// the + there means exact word match, no syns
 				if ( qw->m_wordSign == '+' ) {
 					qt->m_termSign  = qw->m_wordSign;
-					m_termSigns[n]  = qw->m_wordSign;
+					//m_termSigns[n]  = qw->m_wordSign;
 				}
 			}
 			// if not bool, ensure to change signs in both places
 			else {
 				qt->m_termSign  = qw->m_wordSign;
-				m_termSigns[n]  = qw->m_wordSign;
+				//m_termSigns[n]  = qw->m_wordSign;
 			}
 			// do not use an explicit bit up if we got a hard count
 			qt->m_hardCount = qw->m_hardCount;
@@ -1400,7 +1587,7 @@ bool Query::setQTerms ( Words &words , Phrases &phrases ) {
 
 	m_numTerms = n;
 	
-	if ( n > MAX_QUERY_TERMS ) { char *xx=NULL;*xx=0; }
+	if ( n > ABS_MAX_QUERY_TERMS ) { char *xx=NULL;*xx=0; }
 
 
 	// count them for doing number of combos
@@ -1480,7 +1667,7 @@ bool Query::setQTerms ( Words &words , Phrases &phrases ) {
 	// . don't forget to set m_termSigns too!
 	if ( n == 1 && m_qterms[0].m_isPhrase && ! m_qterms[0].m_termSign ) {
 		m_qterms[0].m_termSign = '*';
-		m_termSigns[0]         = '*';
+		//m_termSigns[0]         = '*';
 	}
 
 	// . or bits into the m_implicitBits member of phrase QueryTerms that
@@ -1511,7 +1698,11 @@ bool Query::setQTerms ( Words &words , Phrases &phrases ) {
 	// . see Msg2.cpp for more info on componentCodes
 	// . -2 means unset, neither a compound term nor a component term at
 	//   this time
-	for ( int32_t i = 0 ; i < m_numTerms ; i++ ) m_componentCodes[i] = -2;
+	//for( int32_t i = 0 ; i < m_numTerms ; i++ ) m_componentCodes[i] = -2;
+	for ( int32_t i = 0 ; i < m_numTerms ; i++ ) {
+		QueryTerm *qt = &m_qterms[i];
+		qt->m_componentCode = -2;
+	}
 	m_numComponents = 0;
 
 	// . now set m_phrasePart for Summary.cpp's hackfix filter
@@ -1866,7 +2057,10 @@ void Query::addCompoundTerms ( ) {
 
 // -1 means compound, -2 means unset, >= 0 means component
 bool Query::isCompoundTerm ( int32_t i ) {
-	return ( m_componentCodes[i] == -1 );
+	//return ( m_componentCodes[i] == -1 );
+	if ( i >= m_numTerms ) return false;
+	QueryTerm *qt = &m_qterms[i];
+	return ( qt->m_componentCode == -1 );
 }
 
 bool Query::setQWords ( char boolFlag , 
@@ -1878,16 +2072,17 @@ bool Query::setQWords ( char boolFlag ,
 	// . because we now deal with boolean queries, we make parentheses
 	//   their own separate Word, so tell "words" we're setting a query
 	//Words words;
-	if ( ! words.set ( m_buf , m_bufLen,
+	if ( ! words.set ( m_sb.getBufStart() , m_sb.length() ,
+			   //buf , m_bufLen,
 			    TITLEREC_CURRENT_VERSION, true, true ) )
 		return log("query: Had error parsing query: %s.",
 			   mstrerror(g_errno));
 	int32_t numWords = words.getNumWords();
 	// truncate it
-	if ( numWords > MAX_QUERY_WORDS ) {
+	if ( numWords > ABS_MAX_QUERY_WORDS ) {
 		log("query: Had %"INT32" words. Max is %"INT32". Truncating.",
-		    numWords,(int32_t)MAX_QUERY_WORDS);
-		numWords = MAX_QUERY_WORDS;
+		    numWords,(int32_t)ABS_MAX_QUERY_WORDS);
+		numWords = ABS_MAX_QUERY_WORDS;
 		m_truncated = true;
 	}
 	m_numWords = numWords;
@@ -1910,11 +2105,14 @@ bool Query::setQWords ( char boolFlag ,
 			return log("query: Could not allocate mem for query.");
 		m_qwordsAllocSize = need;
 	}
+	// reset safebuf in there
+	for ( int32_t i = 0 ; i < m_numWords ; i++ )
+		m_qwords[i].constructor();
 
 	// is all alpha chars in query in upper case? caps lock on?
 	bool allUpper = true;
-	char *p    = m_buf;
-	char *pend = m_buf + m_bufLen;
+	char *p    = m_sb.getBufStart();//m_buf;
+	char *pend = m_sb.getBuf(); // m_buf + m_bufLen;
 	for ( ; p < pend ; p += getUtf8CharSize(p) )
 		if ( is_alpha_utf8 ( p ) && ! is_upper_utf8 ( p ) ) {
 			allUpper = false; break; }
@@ -2014,7 +2212,7 @@ bool Query::setQWords ( char boolFlag ,
 	char *ignoreTill = NULL;
 
 	// loop over all words, these QueryWords are 1-1 with "words"
-	for ( int32_t i = 0 ; i < numWords && i < MAX_QUERY_WORDS ; i++ ) {
+	for ( int32_t i = 0 ; i < numWords && i < ABS_MAX_QUERY_WORDS ; i++ ) {
 		// convenience var, these are 1-1 with "words"
 		QueryWord *qw = &m_qwords[i];
 		// set to defaults?
@@ -2185,6 +2383,15 @@ bool Query::setQWords ( char boolFlag ,
 		// is not in the title: field
 		if ( words.hasSpace(i) && inQuotes && nq>= 2 ) 
 			cancelField = true;
+
+		// likewise for gbsortby operators watch out for boolean
+		// operators at the end of the field. we also check for 
+		// parens below when computing the hash of the value.
+		if ( (fieldCode == FIELD_GBSORTBYINT ||
+		      fieldCode == FIELD_GBSORTBYFLOAT ) &&
+		     ( w[0] == '(' || w[0] == ')' ) )
+			cancelField = true;
+
 		// BUT if we have a quote, and they just got turned off,
 		// and the space is not after the quote, do not cancel field!
 		if ( nq == 1 && cancelField ) {
@@ -2316,12 +2523,14 @@ bool Query::setQWords ( char boolFlag ,
 		// in quotes which is silly, so undo it. But we should
 		// still inherit any quoteSign, however. Be sure to also
 		// set m_inQuotes to false so Matches.cpp::matchWord() works.
-		if ( i == quoteStart ) { // + 1 ) {
-			if ( i + 1 >= numWords || words.getNumQuotes(i+1)>0 ) {
-				qw->m_quoteStart = -1;
-				qw->m_inQuotes   = false;
-			}
-		}
+		// MDW: don't undo it because we do not want to get synonyms
+		// of terms in quotes. 7/15/2015
+		// if ( i == quoteStart ) { // + 1 ) {
+		// 	if ( i + 1 >= numWords || words.getNumQuotes(i+1)>0 ) {
+		// 		qw->m_quoteStart = -1;
+		// 		qw->m_inQuotes   = false;
+		// 	}
+		// }
 		// . get prefix hash of collection name and field
 		// . but first convert field to lower case
 		uint64_t ph;
@@ -2429,8 +2638,10 @@ bool Query::setQWords ( char boolFlag ,
 			int32_t firstComma = -1;
 			// are we a facet term?
 			bool isFacetNumTerm = false;
-			if ( fieldCode == FIELD_GBFACETINT   ) isFacetNumTerm = true;
-			if ( fieldCode == FIELD_GBFACETFLOAT ) isFacetNumTerm = true;
+			if ( fieldCode == FIELD_GBFACETINT   ) 
+				isFacetNumTerm = true;
+			if ( fieldCode == FIELD_GBFACETFLOAT ) 
+				isFacetNumTerm = true;
 			// "w" points to the first alnumword after the field,
 			// so for site:xyz.com "w" points to the 'x' and wlen 
 			// would be 3 in that case sinze xyz is a word of 3 
@@ -2446,10 +2657,18 @@ bool Query::setQWords ( char boolFlag ,
 						firstColonLen = wlen;
 					colonCount++;
 				}
-
+				// fix "gbsortbyint:date)"
+				// these are used as boolean operators
+				// so do not include them in the value.
+				// we also did this above to set cancelField
+				// to true.
+				if ( w[wlen] == '(' || w[wlen] == ')' )
+					break;
 				// hit a comma in something like
 				// gbfacetfloat:price,0-1,1-2.5,2.5-10
-				if ( w[wlen]==',' && isFacetNumTerm && firstComma == -1 )
+				if ( w[wlen]==',' && 
+				     isFacetNumTerm && 
+				     firstComma == -1 )
 					firstComma = wlen;
 
 				wlen++;
@@ -2457,8 +2676,8 @@ bool Query::setQWords ( char boolFlag ,
 			// ignore following words until we hit a space
 			ignoreTilSpace = true;
 			// the hash. keep it case insensitive. only
-			// the fieldmatch stuff should be case-sensitive. this may change
-			// later.
+			// the fieldmatch stuff should be case-sensitive. 
+			// this may change later.
 			uint64_t wid = hash64Lower_utf8 ( w , wlen, 0LL );
 
 			//
@@ -2470,8 +2689,8 @@ bool Query::setQWords ( char boolFlag ,
 			     ( fieldCode == FIELD_GBFACETINT ||
 			       fieldCode == FIELD_GBFACETFLOAT ) )
 				// hash the "price" not the following range lst
-				// crap, since this uses the gbsortby: termlists it is
-				// NOT case-sensitive
+				// crap, since this uses the gbsortby: 
+				// termlists it is NOT case-sensitive
 				wid = hash64Lower_utf8 ( w , firstComma );
 			// now store the range list so we can 
 			// fill up the buckets below
@@ -2479,28 +2698,52 @@ bool Query::setQWords ( char boolFlag ,
 			char *send = w + wlen;
 			int32_t nr = 0;
 			for ( ; s <send && fieldCode == FIELD_GBFACETINT;){
-				// must be a digit or . or -
+				// must be a digit or . or - or *
 				if ( ! is_digit(s[0]) &&
 				     s[0] != '.' &&
-				     s[0] != '-' )
+				     s[0] != '-' &&
+                                     s[0] != '*')
 					break;
 				char *sav = s;
 				// skip to hyphen
 				for ( ; s < send && *s != '-' ; s++ );
 				// stop if not hyphen
 				if ( *s != '-' ) break;
+
+                                // If the first character is a hyphen, check
+                                // if its part of a negative number. If it is,
+                                // don't consider it a hyphen
+                                if ( sav == s && is_digit(s[1]) ) {
+                                  // Read the entire negative number
+                                  char *s2 = s + 1;
+                                  for ( ; s2 < send && is_digit(s2[0]); s2++);
+                                  // If there's a hyphen after the negative
+                                  // number, use that as the hyphen separator
+                                  if ( *s2 == '-' ) s = s2;
+                                }
+
 				// skip hyphen
 				s++;
-				// must be a digit or . or -
+				// must be a digit or . or - or *
 				if ( ! is_digit(s[0]) &&
 				     s[0] != '.' &&
-				     s[0] != '-' )
+				     s[0] != '-' &&
+                                     s[0] != '*')
 					break;
 				// if under max, add it
 				if ( nr < MAX_FACET_RANGES ) {
-					qw->m_facetRangeIntA [nr] = atoll(sav);
-					qw->m_facetRangeIntB [nr] = atoll(s);
-					qw->m_numFacetRanges = ++nr;
+				     if (sav[0] == '*')
+                                       qw->m_facetRangeIntA [nr] =
+                                         std::numeric_limits<int>::min();
+                                     else
+				       qw->m_facetRangeIntA [nr] = atoll(sav);
+
+                                     if (s[0] == '*')
+                                       qw->m_facetRangeIntB [nr] =
+                                         std::numeric_limits<int>::max();
+                                     else
+				       qw->m_facetRangeIntB [nr] = atoll(s);
+				     qw->m_numFacetRanges = ++nr;
 				}
 				// skip to comma or end
 				for ( ; s < send && *s != ',' ; s++ );
@@ -2512,24 +2755,43 @@ bool Query::setQWords ( char boolFlag ,
 				ignoreTill = s;
 			}
 			for ( ; s <send && fieldCode==FIELD_GBFACETFLOAT;){
-				// must be a digit or . or -
+				// must be a digit or . or - or *
 				if ( ! is_digit(s[0]) &&
 				     s[0] != '.' &&
-				     s[0] != '-' )
+				     s[0] != '-' &&
+                                     s[0] != '*')
 					break;
 				char *sav = s;
 				// skip to hyphen
 				for ( ; s < send && *s != '-' ; s++ );
 				// stop if not hyphen
 				if ( *s != '-' ) break;
+
+                                // If the first character is a hyphen, check
+                                // if its part of a negative number. If it is,
+                                // don't consider it a hyphen
+                                if ( sav == s && (is_digit(s[1]) ||
+						  (s[1] == '.' &&
+						   s + 2 < send &&
+						   is_digit(s[2]))) ) {
+                                  // Read the entire negative number
+                                  char *s2 = s + 1;
+                                  for ( ; s2 < send &&
+					  (is_digit(s2[0]) || s2[0] == '.'); s2++);
+                                  // If there's a hyphen after the negative
+                                  // number, use that as the hyphen separator
+                                  if ( *s2 == '-' ) s = s2;
+                                }
+ 
 				// save that
 				char *cma = s;
 				// skip hyphen
 				s++;
-				// must be a digit or . or -
+				// must be a digit or . or - or *
 				if ( ! is_digit(s[0]) &&
 				     s[0] != '.' &&
-				     s[0] != '-' )
+				     s[0] != '-' &&
+                                     s[0] != '*')
 					break;
 				// save that
 				char *sav2 = s;
@@ -2538,9 +2800,20 @@ bool Query::setQWords ( char boolFlag ,
 				char *cma2 = s;
 				// if under max, add it
 				if ( nr < MAX_FACET_RANGES ) {
-					qw->m_facetRangeFloatA [nr] =atof2(sav,cma-sav);
-					qw->m_facetRangeFloatB [nr] =atof2(sav2,cma2-sav2);
-					qw->m_numFacetRanges = ++nr;
+				  if (sav[0] == '*')
+                                    // min() is min positive value for float, so
+				    // we want -max() instead
+                                    qw->m_facetRangeFloatA [nr] =
+                                      -std::numeric_limits<float>::max();
+                                  else
+				    qw->m_facetRangeFloatA [nr] =atof2(sav,cma-sav);
+
+                                  if (sav2[0] == '*')
+                                    qw->m_facetRangeFloatB [nr] =
+                                      std::numeric_limits<float>::max();
+                                  else
+				    qw->m_facetRangeFloatB [nr] =atof2(sav2,cma2-sav2);
+				  qw->m_numFacetRanges = ++nr;
 				}
 				// skip that
 				if ( *s != ',' ) break;
@@ -2568,6 +2841,11 @@ bool Query::setQWords ( char boolFlag ,
 				// Expression::isTruth() will ignore it and we
 				// fix '(A OR B) gbsortby:offperice' query
 				qw->m_ignoreWordInBoolQuery = true;
+			}
+
+			// this seems case sensitive now, gbfacetstr:humanLang
+			if ( fieldCode == FIELD_GBFACETSTR ) {
+				wid = hash64 ( w , wlen , 0LL );
 			}
 
 			if ( fieldCode == FIELD_GBFIELDMATCH ) {
@@ -2798,7 +3076,8 @@ bool Query::setQWords ( char boolFlag ,
 			qw->m_isStopWord      = false;
 		}
 		else {
-			qw->m_isQueryStopWord =::isQueryStopWord (w,wlen,wid);
+			qw->m_isQueryStopWord =::isQueryStopWord (w,wlen,wid,
+								  m_langId);
 			// . BUT, if it is a single letter contraction thing
 			// . ninad: make this == 1 if in utf8! TODO!! it is!
 			if ( wlen == 1 && w[-1] == '\'' )
@@ -2933,7 +3212,7 @@ bool Query::setQWords ( char boolFlag ,
 		// no punct, alnum only
 		if ( words.isPunct(i) ) continue;
 		// skip if not a stop word
-		if ( ! bits.m_bits[i] & D_IS_STOPWORD ) continue;
+		if ( ! (bits.m_bits[i] & D_IS_STOPWORD) ) continue;
 		// continue if you can still pair across prev punct word
 		if ( bits.m_bits[i-1] & D_CAN_PAIR_ACROSS ) continue;
 		// otherwise, we can now start a phrase
@@ -3166,7 +3445,8 @@ bool Query::setQWords ( char boolFlag ,
 			// search up to this far
 			int32_t maxj = i + nw;
 			// but not past our truncated limit
-			if ( maxj > MAX_QUERY_WORDS ) maxj = MAX_QUERY_WORDS;
+			if ( maxj > ABS_MAX_QUERY_WORDS ) 
+				maxj = ABS_MAX_QUERY_WORDS;
 
 			for ( j = i ; j < maxj ; j++ ) {
 				// skip punct
@@ -3323,7 +3603,7 @@ bool Query::setQWords ( char boolFlag ,
 		// count non-ignored words
 		if ( qw->m_ignoreWord ) continue;
 		// if under limit, continue
-		if ( count++ < MAX_QUERY_TERMS ) continue;
+		if ( count++ < ABS_MAX_QUERY_TERMS ) continue;
 		// . otherwise, ignore
 		// . if we set this for our UOR'ed terms from SearchInput.cpp's
 		//   UOR'ed facebook interests then it causes us to get no results!
@@ -4104,8 +4384,10 @@ struct QueryField g_fields[] = {
 	 false,
 	 "gbdocspiderdate:1400081479",
 	 "Matches documents that have "
-	 "that spider date timestamp (UTC). Does not include the "
-	 "special spider status documents. This is the time the document "
+	 "that spider date timestamp (UTC). "
+	 //"Does not include the "
+	 //"special spider status documents. "
+	 "This is the time the document "
 	 "completed downloading.",
 	 "Date Related Query Operators",
 	 QTF_BEGINNEWTABLE},
@@ -4115,7 +4397,8 @@ struct QueryField g_fields[] = {
 	 FIELD_GENERIC,
 	 false,
 	 "gbspiderdate:1400081479",
-	 "Like above, but DOES include the special spider status documents.",
+	 "Like above.",
+	 //, but DOES include the special spider status documents.",
 	 NULL,
 	 0},
 
@@ -4125,8 +4408,8 @@ struct QueryField g_fields[] = {
 	 "gbdocindexdate:1400081479",
 	 "Like above, but is the time the document was last indexed. "
 	 "This time is "
-	 "slightly greater than or equal to the spider date. Does not "
-	 "include the special spider status documents.",
+	 "slightly greater than or equal to the spider date.",//Does not "
+	 //"include the special spider status documents.",
 	 NULL,
 	 0},
 
@@ -4135,8 +4418,8 @@ struct QueryField g_fields[] = {
 	 FIELD_GENERIC,
 	 false,
 	 "gbindexdate:1400081479",
-	 "Like above, but it does include the special spider status "
-	 "documents.",
+	 "Like above.",//, but it does include the special spider status "
+	 //"documents.",
 	 NULL,
 	 0},
 
@@ -4250,6 +4533,394 @@ struct QueryField g_fields[] = {
 	//
 	// spider status docs queries
 	//
+
+	{"gbssUrl",
+	 FIELD_GENERIC,
+	 false,
+	 "gbssUrl:com",
+	 "Query the url of a spider status document.",
+	 "Spider Status Documents", // title
+	 QTF_BEGINNEWTABLE},
+
+
+	{"gbssFinalRedirectUrl",
+	 FIELD_GENERIC,
+	 false,
+	 "gbssFinalRedirectUrl:abc.com/page2.html",
+	 "Query on the last url redirect to, if any.",
+	 NULL, // title
+	 0},
+
+	{"gbssStatusCode",
+	 FIELD_GENERIC,
+	 false,
+	 "gbssStatusCode:0",
+	 "Query on the status code of the index attempt. 0 means no error.",
+	 NULL,
+	 0},
+
+	{"gbssStatusMsg",
+	 FIELD_GENERIC,
+	 false,
+	 "gbssStatusMsg:\"Tcp timed\"",
+	 "Like gbssStatusCode but a textual representation.",
+	 NULL,
+	 0},
+
+	{"gbssHttpStatus",
+	 FIELD_GENERIC,
+	 false,
+	 "gbssHttpStatus:200",
+	 "Query on the HTTP status returned from the web server.",
+	 NULL,
+	 0},
+
+	{"gbssWasIndexed",
+	 FIELD_GENERIC,
+	 false,
+	 "gbssWasIndexed:0",
+	 "Was the document in the index before attempting to index? Use 0 "
+	 " or 1 to find all documents that were not or were, respectively.",
+	 NULL,
+	 0},
+
+	{"gbssIsDiffbotObject",
+	 FIELD_GENERIC,
+	 false,
+	 "gbssIsDiffbotObject:1",
+	 "This field is only present if the document was an object from "
+	 "a diffbot reply. Use gbssIsDiffbotObject:0 to find the non-diffbot "
+	 "objects.",
+	 NULL,
+	 0},
+
+	{"gbssAgeInIndex",
+	 FIELD_GENERIC,
+	 false,
+	 "gbsortby:gbssAgeInIndex",
+	 "If the document was in the index at the time we attempted to "
+	 "reindex it, how long has it been since it was last indexed?",
+	 NULL,
+	 0},
+
+	{"gbssDomain",
+	 FIELD_GENERIC,
+	 false,
+	 "gbssDomain:yahoo.com",
+	 "Query on the domain of the url.",
+	 NULL,
+	 0},
+
+	{"gbssSubdomain",
+	 FIELD_GENERIC,
+	 false,
+	 "gbssSubdomain:www.yahoo.com",
+	 "Query on the subdomain of the url.",
+	 NULL,
+	 0},
+
+	{"gbssNumRedirects",
+	 FIELD_GENERIC,
+	 false,
+	 "gbfacetint:gbssNumRedirects",
+	 "Query on the number of times the url redirect when attempting to "
+	 "index it.",
+	 NULL,
+	 0},
+
+	{"gbssDocId",
+	 FIELD_GENERIC,
+	 false,
+	 "gbssDocId:1234567",
+	 "Show all the spider status docs for the document with this docId.",
+	 NULL,
+	 0},
+
+	{"gbssHopCount",
+	 FIELD_GENERIC,
+	 false,
+	 "gbfacetint:gbssHopCount",
+	 "Query on the hop count of the document.",
+	 NULL,
+	 0},
+
+	{"gbssCrawlRound",
+	 FIELD_GENERIC,
+	 false,
+	 "gbfacetint:gbssCrawlRound",
+	 "Query on the crawl round number.",
+	 NULL,
+	 0},
+
+	{"gbssDupOfDocId",
+	 FIELD_GENERIC,
+	 false,
+	 "gbssDupOfDocId:123456",
+	 "Show all the documents that were considered dups of this docId.",
+	 NULL,
+	 0},
+
+	{"gbssPrevTotalNumIndexAttempts",
+	 FIELD_GENERIC,
+	 false,
+	 "gbssPrevTotalNumIndexAttempts:1",
+	 "Before this index attempt, how many attempts were there?",
+	 NULL,
+	 0},
+
+	{"gbssPrevTotalNumIndexSuccesses",
+	 FIELD_GENERIC,
+	 false,
+	 "gbssPrevTotalNumIndexSuccesses:1",
+	 "Before this index attempt, how many successful attempts were there?",
+	 NULL,
+	 0},
+
+	{"gbssPrevTotalNumIndexFailures",
+	 FIELD_GENERIC,
+	 false,
+	 "gbssPrevTotalNumIndexFailures:1",
+	 "Before this index attempt, how many failed attempts were there?",
+	 NULL,
+	 0},
+
+	{"gbssFirstIndexed",
+	 FIELD_GENERIC,
+	 false,
+	 "gbrevsortbyint:gbssFirsIndexed",
+	 "The date in utc that the document was first indexed.",
+	 NULL,
+	 0},
+
+	{"gbssContentHash32",
+	 FIELD_GENERIC,
+	 false,
+	 "gbfacetint:gbssContentHash32",
+	 "The hash of the document content, excluding dates and times. Used "
+	 "internally for deduping.",
+	 NULL,
+	 0},
+
+	{"gbssDownloadDurationMS",
+	 FIELD_GENERIC,
+	 false,
+	 "gbsortbyint:gbssDownloadDurationMS",
+	 "How long it took in millisecons to download the document.",
+	 NULL,
+	 0},
+
+	{"gbssDownloadStartTime",
+	 FIELD_GENERIC,
+	 false,
+	 "gbsortbyint:gbssDownloadStartTime",
+	 "When the download started, in seconds since the epoch, UTC.",
+	 NULL,
+	 0},
+
+	{"gbssDownloadEndTime",
+	 FIELD_GENERIC,
+	 false,
+	 "gbsortbyint:gbssDownloadEndTime",
+	 "When the download ended, in seconds since the epoch, UTC.",
+	 NULL,
+	 0},
+
+	{"gbssUsedRobotsTxt",
+	 FIELD_GENERIC,
+	 false,
+	 "gbfacetint:gbssUsedRobotsTxt",
+	 "This is 0 or 1 depending on if robots.txt was not obeyed or obeyed, "
+	 "respectively.",
+	 NULL,
+	 0},
+
+	{"gbssConsecutiveErrors",
+	 FIELD_GENERIC,
+	 false,
+	 "gbfacetint:gbssConsecutiveErrors",
+	 "For the last set of indexing attempts how many were errors?",
+	 NULL,
+	 0},
+
+	{"gbssIp",
+	 FIELD_GENERIC,
+	 false,
+	 "gbssIp:1.2.3.4",
+	 "The IP address of the document being indexed. Is 0.0.0.0 "
+	 "if unknown.",
+	 NULL,
+	 0},
+
+	{"gbssIpLookupTimeMS",
+	 FIELD_GENERIC,
+	 false,
+	 "gbsortby:gbssIpLookupTimeMS",
+	 "How long it took to lookup the IP of the document. Might have been "
+	 "in the cache.",
+	 NULL,
+	 0},
+
+	{"gbssSiteNumInlinks",
+	 FIELD_GENERIC,
+	 false,
+	 "gbsortby:gbssSiteNumInlinks",
+	 "How many good inlinks the document's site had.",
+	 NULL,
+	 0},
+
+	{"gbssSiteRank",
+	 FIELD_GENERIC,
+	 false,
+	 "gbsortby:gbssSiteRank",
+	 "The site rank of the document. Based directly "
+	 "on the number of inlinks the site had.",
+	 NULL,
+	 0},
+
+	{"gbssContentInjected",
+	 FIELD_GENERIC,
+	 false,
+	 "gbfacetint:gbssContentInjected",
+	 "This is 0 or 1 if the content was not injected or injected, "
+	 "respectively.",
+	 NULL,
+	 0},
+
+	{"gbssPercentContentChanged",
+	 FIELD_GENERIC,
+	 false,
+	 "gbfacetfloat:gbssPercentContentChanged",
+	 "A float between 0 and 100, inclusive. Represents how much "
+	 "the document has changed since the last time we indexed it. This is "
+	 "only valid if the document was successfully indexed this time."
+	 "respectively.",
+	 NULL,
+	 0},
+
+	{"gbssSpiderPriority",
+	 FIELD_GENERIC,
+	 false,
+	 "gbfacetint:gbssSpiderPriority",
+	 "The spider priority, from 0 to 127, inclusive, of the document "
+	 "according to the url filters table.",
+	 NULL,
+	 0},
+
+	{"gbssMatchingUrlFilter",
+	 FIELD_GENERIC,
+	 false,
+	 "gbfacetstr:gbssMatchingUrlFilter",
+	 "The url filter expression the document matched.",
+	 NULL,
+	 0},
+
+	{"gbssLanguage",
+	 FIELD_GENERIC,
+	 false,
+	 "gbfacetstr:gbssLanguage",
+	 "The language of the document. If document was empty or not "
+	 "downloaded then this will not be present. Uses xx to mean "
+	 "unknown language. Uses the language abbreviations found at the "
+	 "bottom of the url filters page.",
+	 NULL,
+	 0},
+
+	{"gbssContentType",
+	 FIELD_GENERIC,
+	 false,
+	 "gbfacetstr:gbssContentType",
+	 "The content type of the document. Like html, xml, json, pdf, etc. "
+	 "This field is not present if unknown.",
+	 NULL,
+	 0},
+
+	{"gbssContentLen",
+	 FIELD_GENERIC,
+	 false,
+	 "gbsortbyint:gbssContentLen",
+	 "The content length of the document. 0 if empty or not downloaded.",
+	 NULL,
+	 0},
+
+	{"gbssCrawlDelayMS",
+	 FIELD_GENERIC,
+	 false,
+	 "gbfacetint:gbssCrawlDelay",
+	 "The crawl delay according to the robots.txt of the document. "
+	 "This is -1 if not specified in the robots.txt or not found.",
+	 NULL,
+	 0},
+
+	{"gbssSentToDiffbotThisTime",
+	 FIELD_GENERIC,
+	 false,
+	 "gbssSentToDiffbotThisTime:1",
+	 "Was the document's url sent to diffbot for processing this time "
+	 "of spidering the url?",
+	 NULL,
+	 0},
+
+	{"gbssSentToDiffbotAtSomeTime",
+	 FIELD_GENERIC,
+	 false,
+	 "gbssSentToDiffbotAtSomeTime:1",
+	 "Was the document's url sent to diffbot for processing, either this "
+	 "time or some time before?",
+	 NULL,
+	 0},
+
+	{"gbssDiffbotReplyCode",
+	 FIELD_GENERIC,
+	 false,
+	 "gbssDiffbotReplyCode:0",
+	 "The reply received from diffbot. 0 means success, otherwise, it "
+	 "indicates an error code.",
+	 NULL,
+	 0},
+
+	{"gbssDiffbotReplyMsg",
+	 FIELD_GENERIC,
+	 false,
+	 "gbfacetstr:gbssDiffbotReplyMsg:0",
+	 "The reply received from diffbot represented in text.",
+	 NULL,
+	 0},
+
+	{"gbssDiffbotReplyLen",
+	 FIELD_GENERIC,
+	 false,
+	 "gbsortbyint:gbssDiffbotReplyLen",
+	 "The length of the reply received from diffbot.",
+	 NULL,
+	 0},
+
+	{"gbssDiffbotReplyResponseTimeMS",
+	 FIELD_GENERIC,
+	 false,
+	 "gbsortbyint:gbssDiffbotReplyResponseTimeMS",
+	 "The time in milliseconds it took to get a reply from diffbot.",
+	 NULL,
+	 0},
+
+	{"gbssDiffbotReplyRetries",
+	 FIELD_GENERIC,
+	 false,
+	 "gbfacetint:gbssDiffbotReplyRetries",
+	 "The number of times we had to resend the request to diffbot "
+	 "because diffbot returned a 504 gateway timed out error.",
+	 NULL,
+	 0},
+
+	{"gbssDiffbotReplyNumObjects",
+	 FIELD_GENERIC,
+	 false,
+	 "gbfacetint:gbssDiffbotReplyNumObjects",
+	 "The number of JSON objects diffbot excavated from the provided url.",
+	 NULL,
+	 0},
+
+
+	/*
 	{"gbstatus",
 	 FIELD_GENERIC,
 	 false,
@@ -4361,7 +5032,7 @@ struct QueryField g_fields[] = {
 	 "spider status documents.",
 	 NULL,
 	 0},
-
+	*/
 
 
 	// they don't need to know about this
@@ -4515,7 +5186,7 @@ void Query::printQueryTerms(){
 		     (int64_t)m_qterms[i].m_explicitBit  ,
 		     (int64_t)m_qterms[i].m_implicitBits ,
 		     (int32_t) m_qterms[i].m_hardCount ,
-		     m_componentCodes[i],
+		     m_qterms[i].m_componentCode,
 		     getTermLen(i),
 		     tt                        );
 	}
@@ -4931,6 +5602,9 @@ bool Expression::isTruth ( unsigned char *bitVec ,int32_t vecSize ) {
 			// fix title:"notre dame" AND NOT irish
 			if ( ! qt ) qt = qw->m_queryPhraseTerm;
 			if ( ! qt ) continue;
+			// phrase terms are not required and therefore
+			// do not have a v alid qt->m_bitNum set, so dont core
+			if ( ! qt->m_isRequired ) continue;
 			// . m_bitNum is set in Posdb.cpp when it sets its
 			//   QueryTermInfo array
 			// . it is basically the query term #
@@ -5037,6 +5711,14 @@ bool Query::isSplit() {
 	return false;
 }
 
+void QueryTerm::constructor ( ) {
+	m_facetHashTable.constructor(); // hashtablex
+	m_facetIndexBuf.constructor(); // safebuf
+	m_langIdBits = 0;
+	m_langIdBitsValid = false;
+	m_numDocsThatHaveFacet = 0;
+}
+
 bool QueryTerm::isSplit() {
 	if(!m_fieldCode) return true;
 	if(m_fieldCode == FIELD_QUOTA)           return false;
@@ -5053,7 +5735,17 @@ bool QueryTerm::isSplit() {
 // hash of all the query terms
 int64_t Query::getQueryHash() {
 	int64_t qh = 0LL;
-	for ( int32_t i = 0 ; i < m_numTerms ; i++ ) 
-		qh = hash64 ( m_termIds[i] , qh );
+	for ( int32_t i = 0 ; i < m_numTerms ; i++ )  {
+		QueryTerm *qt = &m_qterms[i];
+		qh = hash64 ( qt->m_termId , qh );
+	}
 	return qh;
+}
+
+void QueryWord::constructor () {
+	m_synWordBuf.constructor();
+}
+
+void QueryWord::destructor () {
+	m_synWordBuf.purge();
 }

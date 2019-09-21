@@ -156,11 +156,19 @@ bool sendBackDump ( TcpSocket *sock, HttpRequest *hr ) {
 	bool downloadJSON = false;
 	int32_t fmt;
 	char *xx;
+	int32_t dt = CT_JSON;
 
 	if ( ( xx = strstr ( path , "_data.json" ) ) ) {
 		rdbId = RDB_TITLEDB;
 		fmt = FORMAT_JSON;
 		downloadJSON = true;
+		dt = CT_JSON;
+	}
+	else if ( ( xx = strstr ( path , "_html.json" ) ) ) {
+		rdbId = RDB_TITLEDB;
+		fmt = FORMAT_JSON;
+		downloadJSON = true;
+		dt = CT_HTML;
 	}
 	else if ( ( xx = strstr ( path , "_data.csv" ) ) ) {
 		rdbId = RDB_TITLEDB;
@@ -244,6 +252,7 @@ bool sendBackDump ( TcpSocket *sock, HttpRequest *hr ) {
 			       , dr
 			       , cr->m_coll
 			       );
+		log("crawlbot: %s",sb2.getBufStart());
 		HttpRequest hr2;
 		hr2.set ( sb2.getBufStart() , sb2.length() , sock );
 		return sendPageResults ( sock , &hr2 );
@@ -251,6 +260,45 @@ bool sendBackDump ( TcpSocket *sock, HttpRequest *hr ) {
 
 	// . if doing download of json, make it search results now!
 	// . make an httprequest on stack and call it
+	if ( fmt == FORMAT_JSON && rdbId == RDB_TITLEDB && dt == CT_HTML ) {
+		char tmp2[5000];
+		SafeBuf sb2(tmp2,5000);
+		int32_t dr = 1;
+		// do not dedup bulk jobs
+		if ( cr->m_isCustomCrawl == 2 ) dr = 0;
+		// do not dedup for crawls either it is too confusing!!!!
+		// ppl wonder where the results are!
+		dr = 0;
+		sb2.safePrintf("GET /search.csv?icc=1&format=json&sc=0&"
+			       // dedup. since stream=1 and pss=0 below
+			       // this will dedup on page content hash only
+			       // which is super fast.
+			       "dr=%"INT32"&"
+			       "c=%s&n=1000000&"
+			       // we can stream this because unlink csv it
+			       // has no header row that needs to be 
+			       // computed from all results.
+			       "stream=1&"
+			       // no summary similarity dedup, only exact
+			       // doc content hash. otherwise too slow!!
+			       "pss=0&"
+			       // no gigabits
+			       "dsrt=0&"
+			       // do not compute summary. 0 lines.
+			       "ns=0&"
+			       //"q=gbsortby%%3Agbspiderdate&"
+			       //"prepend=type%%3A%s"
+			       "q=type%%3Ahtml"
+			      "\r\n\r\n"
+			       , dr 
+			       , cr->m_coll
+			       );
+		log("crawlbot: %s",sb2.getBufStart());
+		HttpRequest hr2;
+		hr2.set ( sb2.getBufStart() , sb2.length() , sock );
+		return sendPageResults ( sock , &hr2 );
+	}
+
 	if ( fmt == FORMAT_JSON && rdbId == RDB_TITLEDB ) {
 		char tmp2[5000];
 		SafeBuf sb2(tmp2,5000);
@@ -277,12 +325,65 @@ bool sendBackDump ( TcpSocket *sock, HttpRequest *hr ) {
 			       "dsrt=0&"
 			       // do not compute summary. 0 lines.
 			       "ns=0&"
-			      "q=gbsortby%%3Agbspiderdate&"
-			      "prepend=type%%3Ajson"
-			      "\r\n\r\n"
+			       "q=gbsortby%%3Agbspiderdate&"
+			       "prepend=type%%3Ajson"
+			       "\r\n\r\n"
 			       , dr 
 			       , cr->m_coll
 			       );
+		log("crawlbot: %s",sb2.getBufStart());
+		HttpRequest hr2;
+		hr2.set ( sb2.getBufStart() , sb2.length() , sock );
+		return sendPageResults ( sock , &hr2 );
+	}
+
+	// . now the urls.csv is also a query on gbss files
+	// . make an httprequest on stack and call it
+	// . only do this for version 3 
+	//   i.e. GET /v3/crawl/download/token-collectionname_urls.csv
+	if ( fmt == FORMAT_CSV && 
+	     rdbId == RDB_SPIDERDB &&
+	     path[0] == '/' &&
+	     path[1] == 'v' &&
+	     path[2] == '3' ) {
+		char tmp2[5000];
+		SafeBuf sb2(tmp2,5000);
+		// never dedup
+		int32_t dr = 0;
+		// do not dedup for crawls either it is too confusing!!!!
+		// ppl wonder where the results are!
+		dr = 0;
+		sb2.safePrintf("GET /search?"
+			       // this is not necessary
+			       //"icc=1&"
+			       "format=csv&"
+			       // no site clustering
+			       "sc=0&"
+			       // never dedup.
+			       "dr=0&"
+			       "c=%s&"
+			       "n=10000000&"
+			       // stream it now
+			       // can't stream until we fix headers be printed
+			       // in Msg40.cpp. so gbssUrl->Url etc.
+			       // mdw: ok should work now
+			       "stream=1&"
+			       //"stream=0&"
+			       // no summary similarity dedup, only exact
+			       // doc content hash. otherwise too slow!!
+			       "pss=0&"
+			       // no gigabits
+			       "dsrt=0&"
+			       // do not compute summary. 0 lines.
+			       //"ns=0&"
+			       "q=gbrevsortbyint%%3AgbssSpiderTime+"
+			       "gbssIsDiffbotObject%%3A0"
+			       "&"
+			       //"prepend=type%%3Ajson"
+			       "\r\n\r\n"
+			       , cr->m_coll
+			       );
+		log("crawlbot: %s",sb2.getBufStart());
 		HttpRequest hr2;
 		hr2.set ( sb2.getBufStart() , sb2.length() , sock );
 		return sendPageResults ( sock , &hr2 );
@@ -768,7 +869,7 @@ void StateCD::printSpiderdbList ( RdbList *list,SafeBuf *sb,char **lastKeyPtr){
 			lastSpidered = 0;
 
 		bool isProcessed = false;
-		if ( srep ) isProcessed = srep->m_sentToDiffbot;
+		if ( srep ) isProcessed = srep->m_sentToDiffbotThisTime;
 
 		if ( srep && srep->m_hadDiffbotError )
 			isProcessed = false;
@@ -829,7 +930,8 @@ void StateCD::printSpiderdbList ( RdbList *list,SafeBuf *sb,char **lastKeyPtr){
 					MAX_NICENESS,
 					cr,
 					false, // isoutlink?
-					NULL);
+					NULL,
+					-1); // langIdArg
 		char *expression = NULL;
 		int32_t  priority = -4;
 		// sanity check
@@ -847,8 +949,10 @@ void StateCD::printSpiderdbList ( RdbList *list,SafeBuf *sb,char **lastKeyPtr){
 		// lastspidertime>={roundstart} --> spiders disabled rule
 		// so that we do not spider a url twice in the same round
 		if ( ufn >= 0 && //! cr->m_spidersEnabled[ufn] ) {
+		     cr->m_regExs[ufn].length() &&
 		     // we set this to 0 instead of using the checkbox
-		     cr->m_maxSpidersPerRule[ufn] <= 0 ) {
+		     strstr(cr->m_regExs[ufn].getBufStart(),"round") ) {
+			//cr->m_maxSpidersPerRule[ufn] <= 0 ) {
 			priority = -5;
 		}
 
@@ -934,10 +1038,12 @@ void StateCD::printSpiderdbList ( RdbList *list,SafeBuf *sb,char **lastKeyPtr){
 				       //, iptoa(sreq->m_firstIp)
 				       );
 			// print priority
-			if ( priority == SPIDER_PRIORITY_FILTERED )
+			//if ( priority == SPIDER_PRIORITY_FILTERED )
+			// we just turn off the spiders now
+			if ( ufn >= 0 && cr->m_maxSpidersPerRule[ufn] <= 0 )
 				sb->safePrintf("url ignored");
-			else if ( priority == SPIDER_PRIORITY_BANNED )
-				sb->safePrintf("url banned");
+			//else if ( priority == SPIDER_PRIORITY_BANNED )
+			//	sb->safePrintf("url banned");
 			else if ( priority == -4 )
 				sb->safePrintf("error");
 			else if ( priority == -5 )
@@ -1719,6 +1825,12 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 		fmt = FORMAT_HTML;
 	}
 
+	if (token){
+			for ( int32_t i = 0 ; i < gbstrlen(token) ; i++ ){
+				token[i]=tolower(token[i]);
+			}
+		}
+
 
 	char *fs = hr->getString("format",NULL,NULL);
 	// give john a json api
@@ -1977,11 +2089,11 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 		SafeBuf em;
 		if ( status1 ) {
 			log("xmldoc: regcomp %s failed.",rx1);
-			em.safePrintf("Invalid regular expresion: %s",rx1);
+			em.safePrintf("Invalid regular expression: %s",rx1);
 		}
 		else if ( status2 ) {
 			log("xmldoc: regcomp %s failed.",rx2);
-			em.safePrintf("Invalid regular expresion: %s",rx2);
+			em.safePrintf("Invalid regular expression: %s",rx2);
 		}
 		if ( status1 || status2 ) {
 			mdelete ( st , sizeof(StateCD) , "stcd" );
@@ -3235,7 +3347,7 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			      "</tr>"
 
 			      "<tr>"
-			      "<td><b>Crawl Completion Time:</td>"
+			      "<td><b>Last Crawl Completion Time:</td>"
 			      "<td>%"UINT32"</td>"
 			      "</tr>"
 
@@ -3250,6 +3362,47 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			      "<td>%"INT32"</td>"
 			      "</tr>"
 
+			      , cr->m_diffbotCrawlName.getBufStart()
+			      
+			      , (int32_t)cr->m_isCustomCrawl
+
+			      , cr->m_diffbotToken.getBufStart()
+
+			      , seedStr
+
+			      , crawlStatus
+			      , tmp.getBufStart()
+
+			      , cr->m_diffbotCrawlStartTime
+			      // this is 0 if not over yet
+			      , cr->m_diffbotCrawlEndTime
+
+			      , cr->m_spiderRoundNum
+			      , cr->m_globalCrawlInfo.m_hasUrlsReadyToSpider
+
+			      );
+
+		// show crawlinfo crap
+		CrawlInfo *cis = (CrawlInfo *)cr->m_crawlInfoBuf.getBufStart();
+		sb.safePrintf("<tr><td><b>Ready Hosts</b></td><td>");
+		for ( int32_t i = 0 ; i < g_hostdb.getNumHosts() ; i++ ) {
+			CrawlInfo *ci = &cis[i];
+			if ( ! ci ) continue;
+			if ( ! ci->m_hasUrlsReadyToSpider ) continue;
+			Host *h = g_hostdb.getHost ( i );
+			if ( ! h ) continue;
+			sb.safePrintf("<a href=http://%s:%i/crawlbot?c=%s>"
+				      "%i</a> "
+				      , iptoa(h->m_ip)
+				      , (int)h->m_httpPort
+				      , cr->m_coll
+				      , (int)i
+				      );
+		}
+		sb.safePrintf("</tr>\n");
+
+
+		sb.safePrintf(
 
 			      // this will  have to be in crawlinfo too!
 			      //"<tr>"
@@ -3304,24 +3457,6 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			      "</tr>"
 
 			      
-			      , cr->m_diffbotCrawlName.getBufStart()
-			      
-			      , (int32_t)cr->m_isCustomCrawl
-
-			      , cr->m_diffbotToken.getBufStart()
-
-			      , seedStr
-
-			      , crawlStatus
-			      , tmp.getBufStart()
-
-			      , cr->m_diffbotCrawlStartTime
-			      // this is 0 if not over yet
-			      , cr->m_diffbotCrawlEndTime
-
-			      , cr->m_spiderRoundNum
-			      , cr->m_globalCrawlInfo.m_hasUrlsReadyToSpider
-
 			      , cr->m_globalCrawlInfo.m_objectsAdded -
 			        cr->m_globalCrawlInfo.m_objectsDeleted
 			      , cr->m_globalCrawlInfo.m_urlsHarvested
@@ -3433,6 +3568,14 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			      "</td><td>"
 			      "<a href=/crawlbot/download/%s_urls.csv>"
 			      "csv</a>"
+
+			      " <a href=/v3/crawl/download/%s_urls.csv>"
+			      "new csv format</a>"
+
+			      " <a href=/search?q=gbsortby"
+			      "int%%3AgbssSpiderTime&n=50&c=%s>"
+			      "last 50 download attempts</a>"
+			      
 			      "</td>"
 			      "</tr>"
 
@@ -3501,6 +3644,14 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			      //, cr->m_coll
 			      //, cr->m_coll
 
+			      // urls.csv old
+			      , cr->m_coll
+
+			      // urls.csv new format v3
+			      , cr->m_coll
+
+
+			      // last 50 downloaded urls
 			      , cr->m_coll
 
 			      // latest objects in html
@@ -3510,7 +3661,6 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			      // latest objects in csv
 			      , cr->m_coll
 			      , rand64
-
 
 			      // latest products in html
 			      , cr->m_coll
@@ -4253,7 +4403,7 @@ bool getSpiderRequestMetaList ( char *doc ,
 		sreq.m_hostHash32 = url.getHostHash32();
 		sreq.m_domHash32  = url.getDomainHash32();
 		sreq.m_siteHash32 = url.getHostHash32();
-		sreq.m_probDocId  = probDocId;
+		//sreq.m_probDocId  = probDocId;
 		sreq.m_hopCount   = 0; // we're a seed
 		sreq.m_hopCountValid = true;
 		sreq.m_addedTime = now;

@@ -27,6 +27,9 @@ bool sendPageSEO(TcpSocket *s, HttpRequest *hr) {return true;}
 //SafeBuf g_qbuf;
 
 bool g_recoveryMode;
+int32_t g_recoveryLevel;
+
+int g_inMemcpy;
 
 #define RDFBUFFER_SIZE    (1024*1024*10)
 #define RDFSTRUCTURE_FILE "structure.rdf.u8"

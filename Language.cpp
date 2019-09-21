@@ -145,7 +145,7 @@ bool Language::convertLatin1DictToUTF8( char *infile ){
 	// then open a new one for appending
 	int fdw = open ( ff , 
 			 O_CREAT | O_RDWR | O_APPEND ,
-			 S_IRUSR |S_IWUSR |S_IRGRP |S_IWGRP| S_IROTH);
+//			 S_IRUSR |S_IWUSR |S_IRGRP |S_IWGRP| S_IROTH);
 	if ( fdw < 0 ){
 		return log("lang: Could not open for %s "
 			   "writing: %s.",ff, strerror(errno));
@@ -2763,7 +2763,7 @@ bool Language::makeWordFiles ( int32_t numWordsToDump , int32_t numWordsPerPhras
 		// then open a new one for appending
 		fds[i] = open ( ff , 
 				O_CREAT | O_RDWR | O_APPEND ,
-				S_IRUSR |S_IWUSR |S_IRGRP |S_IWGRP| S_IROTH);
+//				S_IRUSR |S_IWUSR |S_IRGRP |S_IWGRP| S_IROTH);
 		if ( fds[i] < 0 )
 			return log("lang: Could not open %s for writing: "
 				   "%s.",ff, strerror(errno));
@@ -3146,7 +3146,7 @@ bool Language::makePopFiles ( int32_t numWordsToDump , int32_t numWordsPerPhrase
 		// then open a new one for appending
 		fds[i] = open ( ff , 
 				O_CREAT | O_RDWR | O_APPEND ,
-				S_IRUSR |S_IWUSR |S_IRGRP |S_IWGRP| S_IROTH);
+//				S_IRUSR |S_IWUSR |S_IRGRP |S_IWGRP| S_IROTH);
 		if ( fds[i] < 0 )
 			return log("lang: Could not open %s for writing: "
 				   "%s.",ff, strerror(errno));
@@ -3683,7 +3683,7 @@ bool Language::makeQueryFiles ( ) {
 		// then open a new one for appending
 		int fdw = open ( ff , 
 				 O_CREAT | O_RDWR | O_APPEND ,
-				 S_IRUSR |S_IWUSR |S_IRGRP |S_IWGRP| S_IROTH);
+//				 S_IRUSR |S_IWUSR |S_IRGRP |S_IWGRP| S_IROTH);
 		if ( fdw < 0 ){
 			return log("lang: Could not open for %s "
 				   "writing: %s.",ff, strerror(errno));
@@ -3874,7 +3874,7 @@ bool Language::makeWikiFiles( ) {
 	// then open a new one for appending
 	int fdw = open ( ff , 
 		     O_CREAT | O_RDWR | O_APPEND ,
-		     S_IRUSR |S_IWUSR |S_IRGRP |S_IWGRP| S_IROTH);
+//		     S_IRUSR |S_IWUSR |S_IRGRP |S_IWGRP| S_IROTH);
 	if ( fdw < 0 ){
 		log("lang: Could not open for %s "
 		    "writing: %s.",ff, strerror(errno));
@@ -4250,7 +4250,7 @@ bool Language::gotTermFreqs( StateDict *st ){
 	// then open a new one for appending
 	fd = open ( ff , 
 		    O_CREAT | O_RDWR | O_APPEND ,
-		    S_IRUSR |S_IWUSR |S_IRGRP |S_IWGRP| S_IROTH);
+//		    S_IRUSR |S_IWUSR |S_IRGRP |S_IWGRP| S_IROTH);
 	if ( fd < 0 ){
 		log("lang: Could not open %s for writing: "
 			   "%s.",ff, strerror(errno));
@@ -4338,7 +4338,7 @@ bool StateAff::openAffinityFile( ){
 	unlink ( ff );
 	// then open a new one for appending
 	m_fdw = open ( ff , O_CREAT | O_RDWR | O_APPEND ,
-			   S_IRUSR |S_IWUSR |S_IRGRP |S_IWGRP| S_IROTH);
+//			   S_IRUSR |S_IWUSR |S_IRGRP |S_IWGRP| S_IROTH);
 	if ( m_fdw < 0 ){
 		log("lang: Could not open for %s "
 		    "writing: %s.",ff, strerror(errno));
@@ -4537,7 +4537,7 @@ bool Language::cleanDictFile ( ) {
 	// then open a new one for appending
 	int fdw = open ( ff , 
 			 O_CREAT | O_RDWR | O_APPEND ,
-			 S_IRUSR |S_IWUSR |S_IRGRP |S_IWGRP| S_IROTH);
+//			 S_IRUSR |S_IWUSR |S_IRGRP |S_IWGRP| S_IROTH);
 	if ( fdw < 0 ){
 		return log("lang: Could not open for %s "
 			   "writing: %s.",ff, strerror(errno));
@@ -4590,7 +4590,7 @@ bool Language::makePhonet( char *infile){
 	// then open a new one for appending
 	fdw = open ( outfile , 
 		     O_CREAT | O_RDWR | O_APPEND ,
-		     S_IRUSR |S_IWUSR |S_IRGRP |S_IWGRP| S_IROTH);
+//		     S_IRUSR |S_IWUSR |S_IRGRP |S_IWGRP| S_IROTH);
 	if ( fdw < 0 )
 		return log("lang: Could not open %s for writing: "
 			   "%s.", outfile, strerror(errno));
@@ -4711,7 +4711,7 @@ bool Language::genTopPopFile ( char *infile ){
 	// then open a new one for appending
 	fdw = open ( outfile , 
 		     O_CREAT | O_RDWR | O_APPEND ,
-		     S_IRUSR |S_IWUSR |S_IRGRP |S_IWGRP| S_IROTH);
+//		     S_IRUSR |S_IWUSR |S_IRGRP |S_IWGRP| S_IROTH);
 	if ( fdw < 0 )
 		return log("lang: Could not open %s for writing: "
 			   "%s.", outfile, strerror(errno));
@@ -4761,7 +4761,8 @@ bool Language::genDistributedPopFile ( char *infile, uint32_t myHash ){
 	// then open a new one for appending
 	fdw = open ( outfile , 
 		     O_CREAT | O_RDWR | O_APPEND ,
-		     S_IRUSR |S_IWUSR |S_IRGRP |S_IWGRP| S_IROTH);
+		     getFileCreationFlags() );
+		     // S_IRUSR |S_IWUSR |S_IRGRP |S_IWGRP| S_IROTH);
 	if ( fdw < 0 )
 		return log("lang: Could not open %s for writing: "
 			   "%s.", outfile, strerror(errno));
@@ -4848,7 +4849,8 @@ int32_t Language::spellcheckDict(){
 	// then open a new one for appending
 	fdw = open ( outfile , 
 		     O_CREAT | O_RDWR | O_APPEND ,
-		     S_IRUSR |S_IWUSR |S_IRGRP |S_IWGRP| S_IROTH);
+		     getFileCreationFlags() );
+		     // S_IRUSR |S_IWUSR |S_IRGRP |S_IWGRP| S_IROTH);
 	if ( fdw < 0 )
 		return log("lang: Could not open %s for writing: "
 			   "%s.", outfile, strerror(errno));

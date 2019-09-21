@@ -111,7 +111,7 @@ class RdbMap {
 	// . this is totally MTUnsafe
 	// . don't be calling addRecord with this is dumping
 	// . flushes when done
-	bool writeMap  ( );
+	bool writeMap  ( bool allDone );
 	bool writeMap2 ( );
 	int64_t writeSegment ( int32_t segment , int64_t offset );
 
@@ -135,6 +135,8 @@ class RdbMap {
 						    m_numNegativeRecs; };
 	// get the size of the file we are mapping
 	int64_t getFileSize () { return m_offset; };
+
+	int64_t findNextFullPosdbKeyOffset ( char *buf, int32_t bufSize ) ;
 
 	// . gets total size of all recs in this page range
 	// . if subtract is true we subtract the sizes of pages that begin
@@ -342,7 +344,7 @@ class RdbMap {
 	int16_t         **m_offsets;
 	int32_t            m_numSegmentOffs;
 
-
+	bool m_reducedMem;
 
 	// number of valid pages in the map.
 	int32_t          m_numPages;     

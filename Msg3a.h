@@ -12,9 +12,9 @@
 #define DEFAULT_POSDB_READSIZE 90000000
 
 void setTermFreqWeights ( collnum_t collnum, // char *coll,
-			  class Query *q , 
-			  int64_t *termFreqs, 
-			  float *termFreqWeights ) ;
+			  class Query *q );
+			  //int64_t *termFreqs, 
+			  //float *termFreqWeights ) ;
 
 //#define MSG3A_TMP_BUFSIZE (MAX_RESULTS*18)
 
@@ -131,8 +131,8 @@ public:
 
 	// use msg37 to get TermFreqs
 	//Msg37      m_msg37;
-	int64_t  m_termFreqs      [MAX_QUERY_TERMS];
-	float      m_termFreqWeights[MAX_QUERY_TERMS];
+	//int64_t  m_termFreqs      [MAX_QUERY_TERMS];
+	//float      m_termFreqWeights[MAX_QUERY_TERMS];
 
 	// a multicast class to send the request, one for each split
 	Multicast  m_mcast[MAX_SHARDS];
@@ -143,6 +143,8 @@ public:
 	// this buffer should be big enough to hold all requests
 	//char       m_request [MAX_MSG39_REQUEST_SIZE * MAX_SHARDS];
 	int32_t       m_numReplies;
+
+	int32_t m_skippedShards;
 
 	// . # estimated total hits
 	int64_t  m_numTotalEstimatedHits;

@@ -249,6 +249,8 @@ public:
 
 #define MAX_XML_DOCS 4
 
+#define MAXMSG7S 50
+
 class XmlDoc {
 
  public:
@@ -278,8 +280,10 @@ class XmlDoc {
 	// this is a hash of all adjacent tag pairs for templated identificatn
 	uint32_t  m_tagPairHash32;
 	int32_t      m_siteNumInlinks;
-	int32_t      m_siteNumInlinksUniqueIp; // m_siteNumInlinksFresh
-	int32_t      m_siteNumInlinksUniqueCBlock; // m_sitePop;
+	//int32_t      m_siteNumInlinksUniqueIp; // m_siteNumInlinksFresh
+	//int32_t      m_siteNumInlinksUniqueCBlock; // m_sitePop;
+	int32_t    m_reserved1;
+	int32_t    m_reserved2;
 	uint32_t   m_spideredTime; // time_t
 	// just don't throw away any relevant SpiderRequests and we have
 	// the data that m_minPubDate and m_maxPubDate provided
@@ -295,7 +299,8 @@ class XmlDoc {
 	uint16_t  m_countryId;
 	//uint16_t  m_reserved1;//titleWeight;
 	//uint16_t  m_reserved2;//headerWeight;
-	int32_t      m_siteNumInlinksTotal;
+	//int32_t      m_siteNumInlinksTotal;
+	int32_t      m_reserved3;
 	//uint16_t  m_reserved3;//urlPathWeight;
 	uint8_t   m_metaListCheckSum8; // bring it back!!
 	char      m_reserved3b;
@@ -339,8 +344,8 @@ class XmlDoc {
 	uint16_t  m_isDiffbotJSONObject:1;
 	uint16_t  m_sentToDiffbot:1;
 	uint16_t  m_gotDiffbotSuccessfulReply:1;
-	uint16_t  m_reserved804:1;
-	uint16_t  m_reserved805:1;
+	uint16_t  m_useTimeAxis:1; // m_reserved804:1;
+	uint16_t  m_hasMetadata:1;
 	uint16_t  m_reserved806:1;
 	uint16_t  m_reserved807:1;
 	uint16_t  m_reserved808:1;
@@ -373,7 +378,8 @@ class XmlDoc {
 	//char    *ptr_sectionsReply; // votes read from sectiondb - m_osvt
 	//char    *ptr_sectionsVotes; // our local votes - m_nsvt
 	//char    *ptr_addressReply;
-	char      *ptr_clockCandidatesData;
+	//char      *ptr_clockCandidatesData;
+	char      *ptr_metadata;
 	// . serialization of the sectiondb and placedb lists
 	// . that way we can store just these and not have to store the content
 	//   of the entire page if we do not need to
@@ -386,6 +392,7 @@ class XmlDoc {
 	char      *ptr_sectiondbData;
 	char      *ptr_tagRecData;
 	LinkInfo  *ptr_linkInfo2;
+
 
 	int32_t       size_firstUrl;
 	int32_t       size_redirUrl;
@@ -406,7 +413,8 @@ class XmlDoc {
 	//int32_t     size_sectionsReply;
 	//int32_t     size_sectionsVotes;
 	//int32_t     size_addressReply;
-	int32_t       size_clockCandidatesData;
+	//int32_t       size_clockCandidatesData;
+	int32_t       size_metadata;
 	//int32_t     size_sectiondbData;
 	//int32_t     size_placedbData;
 	int32_t       size_site;
@@ -467,13 +475,19 @@ class XmlDoc {
 		    key_t           *doledbKey ,
 		    char            *coll      , 
 		    class SafeBuf   *pbuf      , 
-		    int32_t             niceness  ,
+		    int32_t          niceness  ,
 		    char            *utf8Content = NULL ,
 		    bool             deleteFromIndex = false ,
 		    int32_t             forcedIp = 0 ,
 		    uint8_t          contentType = CT_HTML ,
 		    uint32_t           spideredTime = 0 , // time_t
-		    bool             contentHasMime = false ) ;
+		    bool             contentHasMime = false ,
+		    // for container docs, what is the separator of subdocs?
+		    char            *contentDelim = NULL,
+			char *metadata = NULL,
+			uint32_t metadataLen = 0,
+			// for injected docs we have the recv, buffer size don't exceed that
+			int32_t payloadLen = -1) ;
 
 	// we now call this right away rather than at download time!
 	int32_t getSpideredTime();
@@ -499,6 +513,11 @@ class XmlDoc {
 	void getRebuiltSpiderRequest ( class SpiderRequest *sreq ) ;
 	bool indexDoc ( );
 	bool indexDoc2 ( );
+	bool isContainerDoc ( );
+	bool indexContainerDoc ( );
+
+	bool readMoreWarc();
+	bool indexWarcOrArc ( ) ;
 	key_t *getTitleRecKey() ;
 	//char *getSkipIndexing ( );
 	char *prepareToMakeTitleRec ( ) ;
@@ -506,8 +525,11 @@ class XmlDoc {
 	bool setTitleRecBuf ( SafeBuf *buf , int64_t docId, int64_t uh48 );
 	// sets m_titleRecBuf/m_titleRecBufValid/m_titleRecKey[Valid]
 	SafeBuf *getTitleRecBuf ( );
-	SafeBuf *getSpiderStatusDocMetaList ( class SpiderReply *reply ) ;
+	bool appendNewMetaInfo ( SafeBuf *metaList , bool forDelete ) ;
+	SafeBuf *getSpiderStatusDocMetaList ( class SpiderReply *reply ,
+					      bool forDelete ) ;
 	SafeBuf *getSpiderStatusDocMetaList2 ( class SpiderReply *reply ) ;
+	bool setSpiderStatusDocMetaList ( SafeBuf *jd , int64_t ssDocId ) ;
 	SafeBuf m_spiderStatusDocMetaList;
 	char *getIsAdult ( ) ;
 	int32_t **getIndCatIds ( ) ;
@@ -526,12 +548,13 @@ class XmlDoc {
 	//class DateParse2 *getDateParse2 ( ) ;
 	class Dates *getSimpleDates();
 	class Dates *getDates();
-	class HashTableX *getClockCandidatesTable();
+	//class HashTableX *getClockCandidatesTable();
 	int32_t getUrlPubDate ( ) ;
 	int32_t getOutlinkAge ( int32_t outlinkNum ) ;
 	char *getIsPermalink ( ) ;
 	char *getIsUrlPermalinkFormat ( ) ;
 	char *getIsRSS ( ) ;
+	char *getIsSiteMap ( ) ;
 	class Xml *getXml ( ) ;
 	uint8_t *getLangVector ( ) ;	
 	uint8_t *getLangId ( ) ;
@@ -585,6 +608,7 @@ class XmlDoc {
 	char *getMetaDescription( int32_t *mdlen ) ;
 	char *getMetaSummary ( int32_t *mslen ) ;
 	char *getMetaKeywords( int32_t *mklen ) ;
+	char *getMetadata(int32_t* retlen);
 	bool addGigabits ( char *s , int64_t docId , uint8_t langId ) ;
 	bool addGigabits2 ( char *s,int32_t slen,int64_t docId,uint8_t langId);
 	bool addGigabits ( class Words *ww , 
@@ -598,6 +622,7 @@ class XmlDoc {
 	class Url *getFirstUrl() ;
 	int64_t getFirstUrlHash48();
 	int64_t getFirstUrlHash64();
+	class Url **getLastRedirUrl() ;
 	class Url **getRedirUrl() ;
 	class Url **getMetaRedirUrl() ;
 	class Url **getCanonicalRedirUrl ( ) ;
@@ -606,7 +631,7 @@ class XmlDoc {
 	//int32_t *getNumBannedOutlinks ( ) ;
 	uint16_t *getCountryId ( ) ;
 	class XmlDoc **getOldXmlDoc ( ) ;
-	bool isRobotsTxtFile ( char *url , int32_t urlLen ) ;
+	//bool isRobotsTxtFile ( char *url , int32_t urlLen ) ;
 	class XmlDoc **getExtraDoc ( char *url , int32_t maxCacheAge = 0 ) ;
 	bool getIsPageParser ( ) ;
 	class XmlDoc **getRootXmlDoc ( int32_t maxCacheAge = 0 ) ;
@@ -684,6 +709,8 @@ class XmlDoc {
 	char **getRawUtf8Content ( ) ;
 	char **getExpandedUtf8Content ( ) ;
 	char **getUtf8Content ( ) ;
+	// we download large files to a file on disk, like warcs and arcs
+	FILE *getUtf8ContentInFile ( );
 	int32_t *getContentHash32 ( ) ;
 	int32_t *getContentHashJson32 ( ) ;
 	//int32_t *getTagHash32 ( ) ;
@@ -734,6 +761,20 @@ class XmlDoc {
 
 	char *getDiffbotParentUrl( char *myUrl );
 
+	int64_t m_diffbotReplyEndTime;
+	int64_t m_diffbotReplyStartTime;
+	int32_t m_diffbotReplyRetries;
+
+	bool m_sentToDiffbotThisTime;
+
+	uint64_t m_downloadStartTime;
+	//uint64_t m_downloadEndTime;
+
+	uint64_t m_ipStartTime;
+	uint64_t m_ipEndTime;
+
+	bool m_updatedMetaData;
+
 	void copyFromOldDoc ( class XmlDoc *od ) ;
 
 	class SpiderReply *getFakeSpiderReply ( );
@@ -779,14 +820,17 @@ class XmlDoc {
 	int32_t getBoostFromSiteNumInlinks ( int32_t inlinks ) ;
 	bool hashSpiderReply (class SpiderReply *reply ,class HashTableX *tt) ;
 	bool hashMetaTags ( class HashTableX *table ) ;
+	bool hashMetaData ( class HashTableX *table ) ;
 	bool hashIsClean ( class HashTableX *table ) ;
 	bool hashZipCodes ( class HashTableX *table ) ;
 	bool hashMetaZip ( class HashTableX *table ) ;
 	bool hashContentType ( class HashTableX *table ) ;
 	bool hashDMOZCategories ( class HashTableX *table ) ;
 	bool hashLinks ( class HashTableX *table ) ;
-	bool hashUrl ( class HashTableX *table , bool isStatusDoc = false ) ;
-	bool hashDateNumbers ( class HashTableX *tt , bool isStatusDoc=false) ;
+	bool getUseTimeAxis ( ) ;
+	SafeBuf *getTimeAxisUrl ( );
+	bool hashUrl ( class HashTableX *table );
+	bool hashDateNumbers ( class HashTableX *tt );
 	bool hashSections ( class HashTableX *table ) ;
 	bool hashIncomingLinkText ( class HashTableX *table            ,
 				    bool       hashAnomalies    ,
@@ -927,7 +971,8 @@ class XmlDoc {
 	bool storeFacetValuesXml      ( char *qs , class SafeBuf *sb ,
 					FacetValHash_t fvh ) ;
 	bool storeFacetValuesJSON     ( char *qs , class SafeBuf *sb ,
-					FacetValHash_t fvh ) ;
+                                    FacetValHash_t fvh,
+                                    Json* jp ) ;
 
 	// print out for PageTitledb.cpp and PageParser.cpp
 	bool printDoc ( class SafeBuf *pbuf );
@@ -972,6 +1017,10 @@ class XmlDoc {
 
 	// we we started spidering it, in milliseconds since the epoch
 	int64_t    m_startTime;
+	int64_t    m_injectStartTime;
+
+	class XmlDoc *m_prevInject;
+	class XmlDoc *m_nextInject;
 
 	// when set() was called by Msg20.cpp so we can time how long it took
 	// to generate the summary
@@ -995,6 +1044,7 @@ class XmlDoc {
 
 	Url        m_redirUrl;
 	Url       *m_redirUrlPtr;
+	Url       *m_lastRedirUrlPtr;
 	SafeBuf    m_redirCookieBuf;
 	Url        m_metaRedirUrl;
 	Url       *m_metaRedirUrlPtr;
@@ -1025,10 +1075,44 @@ class XmlDoc {
 	int32_t m_addedSpiderRequestSize;
 	int32_t m_addedSpiderReplySize;
 	int32_t m_addedStatusDocSize;
+	int64_t m_addedStatusDocId;
 
 	SafeBuf  m_metaList2;
 	SafeBuf  m_zbuf;
 	SafeBuf  m_kbuf;
+
+	// warc parsing member vars
+	class Msg7 *m_msg7;
+	class Msg7 *m_msg7s[MAXMSG7S];
+	char *m_warcContentPtr;
+	char *m_arcContentPtr;
+	char *m_anyContentPtr;
+	char *m_contentDelim;
+	SafeBuf m_injectUrlBuf;
+	bool m_subDocsHaveMime;
+	int32_t m_warcError ;
+	int32_t m_arcError ;
+	bool m_doneInjectingWarc ;
+
+	int64_t m_bytesStreamed;
+	char *m_fileBuf ;
+	int32_t m_fileBufAllocSize;
+	bool    m_registeredWgetReadCallback;
+	char *m_fptr ;
+	char *m_fptrEnd ;
+
+	FILE* m_pipe;
+	
+	BigFile m_file;
+	int64_t m_fileSize;
+	FileState m_fileState;
+	bool m_readThreadOut;
+	bool m_hasMoreToRead;
+	int32_t m_numInjectionsOut;
+	bool m_calledWgetThread;
+
+	// used by msg7 to store udp slot
+	class UdpSlot *m_injectionSlot;
 
 	// . same thing, a little more complicated
 	// . these classes are only set on demand
@@ -1100,6 +1184,8 @@ class XmlDoc {
 	//bool  m_storedVoteCache;
 	//SafeBuf m_cacheRecBuf;
 
+	SafeBuf m_timeAxisUrl;
+
 	HashTableX m_turkVotingTable;
 	HashTableX m_turkBitsTable;
 	uint32_t m_confirmedTitleContentHash ;
@@ -1117,6 +1203,9 @@ class XmlDoc {
 	// used for displaying turk votes...
 	HashTableX m_vctab;
 	HashTableX m_vcduptab;
+
+	bool isFirstUrlRobotsTxt();
+	bool m_isRobotsTxtUrl;
 
 	Images     m_images;
 	HashTableX m_countTable;
@@ -1140,6 +1229,8 @@ class XmlDoc {
 	class SafeBuf     *m_savedSb;
 	class HttpRequest *m_savedHr;
 
+	char m_savedChar;
+
 
 	// validity flags. on reset() all these are set to false.
 	char     m_VALIDSTART;
@@ -1148,10 +1239,15 @@ class XmlDoc {
 	char     m_addedSpiderRequestSizeValid;
 	char     m_addedSpiderReplySizeValid;
 	char     m_addedStatusDocSizeValid;
+	char     m_downloadStartTimeValid;
+	char     m_contentDelimValid;
+	char     m_fileValid;
 	//char   m_docQualityValid;
 	char     m_siteValid;
 	char     m_startTimeValid;
 	char     m_currentUrlValid;
+	char     m_useTimeAxisValid;
+	char     m_timeAxisUrlValid;
 	char     m_firstUrlValid;
 	char     m_firstUrlHash48Valid;
 	char     m_firstUrlHash64Valid;
@@ -1167,6 +1263,7 @@ class XmlDoc {
 	char     m_filteredRootTitleBufValid;
 	char     m_titleBufValid;
 	char     m_fragBufValid;
+	char     m_isRobotsTxtUrlValid;
 	char     m_inlineSectionVotingBufValid;
 	char     m_wordSpamBufValid;
 	char     m_finalSummaryBufValid;
@@ -1215,6 +1312,7 @@ class XmlDoc {
 	char     m_rootLangIdValid;
 	char     m_datedbDateValid;
 	char     m_isRSSValid;
+	char     m_isSiteMapValid;
 	char     m_spiderLinksArgValid;
 	char     m_isContentTruncatedValid;
 	char     m_xmlValid;
@@ -1359,9 +1457,9 @@ class XmlDoc {
 	//bool m_aboutUsLinkValid;
 	//bool m_contactLinksValid;
 	bool m_siteNumInlinksValid;
-	bool m_siteNumInlinksUniqueIpValid;//FreshValid;
-	bool m_siteNumInlinksUniqueCBlockValid;//sitePopValid
-	bool m_siteNumInlinksTotalValid;
+	//bool m_siteNumInlinksUniqueIpValid;//FreshValid;
+	//bool m_siteNumInlinksUniqueCBlockValid;//sitePopValid
+	//bool m_siteNumInlinksTotalValid;
 	bool m_siteNumInlinks8Valid;
 	bool m_siteLinkInfoValid;
 	bool m_isWWWDupValid;
@@ -1410,6 +1508,7 @@ class XmlDoc {
 	bool m_imageUrl2Valid;
 	bool m_matchOffsetsValid;
 	bool m_queryValid;
+	bool m_diffbotProxyReplyValid;
 	bool m_matchesValid;
 	bool m_dbufValid;
 	bool m_titleValid;
@@ -1425,8 +1524,8 @@ class XmlDoc {
 	bool m_isCompromisedValid;
 	bool m_isNoArchiveValid;
 	//bool m_isVisibleValid;
-	bool m_clockCandidatesTableValid;
-	bool m_clockCandidatesDataValid;
+	//bool m_clockCandidatesTableValid;
+	//bool m_clockCandidatesDataValid;
 	bool m_titleRecBufValid;
 	bool m_isLinkSpamValid;
 	bool m_isErrorPageValid;
@@ -1435,6 +1534,8 @@ class XmlDoc {
 	bool m_exactContentHash64Valid;
 	bool m_looseContentHash64Valid;
 	bool m_jpValid;
+
+	char m_isSiteMap;
 
 	// shadows
 	char m_isRSS2;
@@ -1463,8 +1564,8 @@ class XmlDoc {
 	//DateParse2 m_dateParse2;
 	bool m_printedMenu;
 	Dates m_dates;
-	HashTableX m_clockCandidatesTable;
-	SafeBuf m_cctbuf;
+	//HashTableX m_clockCandidatesTable;
+	//SafeBuf m_cctbuf;
 	float m_ageInDays;
 	int32_t m_urlPubDate;
 	//int32_t m_urlAge;
@@ -1546,6 +1647,8 @@ class XmlDoc {
 	char m_isInIndex;
 	char m_wasInIndex;
 
+	bool m_oldDocExistedButHadError;
+
 	Msg8a   m_msg8a;
 	char   *m_tagdbColl;
 	int32_t    m_tagdbCollLen;
@@ -1607,8 +1710,11 @@ class XmlDoc {
 	bool m_isAllowed;
 	bool m_forwardDownloadRequest;
 	bool m_isChildDoc;
+	class XmlDoc *m_parentDocPtr;
 	Msg13 m_msg13;
 	Msg13Request m_msg13Request;
+	Msg13Request m_diffbotProxyRequest;
+	ProxyReply *m_diffbotProxyReply;
 	bool m_isSpiderProxy;
 	// for limiting # of iframe tag expansions
 	int32_t m_numExpansions;
@@ -1634,7 +1740,7 @@ class XmlDoc {
 	//class LinkInfo *m_linkInfo1Ptr;
 	char     *m_linkInfoColl;
 	//char m_injectedReply;
-	int32_t m_minInlinkerHopCount;
+	//int32_t m_minInlinkerHopCount;
 	//class LinkInfo *m_linkInfo2Ptr;
 	SiteGetter m_siteGetter;
 	int64_t  m_siteHash64;
@@ -1712,6 +1818,9 @@ class XmlDoc {
 	bool doesPageContentMatchDiffbotProcessPattern() ;
 	int32_t *getDiffbotTitleHashes ( int32_t *numHashes ) ;
 	char *hashJSONFields ( HashTableX *table );
+	char *hashJSONFields2 ( HashTableX *table , HashInfo *hi , Json *jp ,
+				bool hashWithoutFieldNames ) ;
+
 	char *hashXMLFields ( HashTableX *table );
 	int32_t *reindexJSONObjects ( int32_t *newTitleHashes , 
 				      int32_t numNewHashes ) ;
@@ -2041,6 +2150,8 @@ class XmlDoc {
 	Msg20Reply m_reply;
 	Msg20Request *m_req;
 	//char *m_gsbuf;
+	SafeBuf m_surroundingTextBuf;
+	SafeBuf m_rssItemBuf;
 	SafeBuf m_gsbuf;
 	//int32_t  m_gsbufSize;
 	//int32_t  m_gsbufAllocSize;
@@ -2312,7 +2423,6 @@ class XmlDoc {
 	bool          m_setFromDocId;
 	bool          m_freeLinkInfo1;
 	bool          m_freeLinkInfo2;
-
 	bool          m_contentInjected;
 
 	bool          m_recycleContent;
@@ -2370,13 +2480,19 @@ class XmlDoc {
 			 //char contentType, // CT_HTML, CT_XML
 			 char *contentTypeStr, // text/html, text/xml etc.
 			 bool spiderLinks ,
-			 bool newOnly, // index iff new
+			 char newOnly, // index iff new
 
 			 void *state,
 			 void (*callback)(void *state) ,
 
 			 uint32_t firstIndexedTime = 0,
-			 uint32_t lastSpideredDate = 0 );
+			 uint32_t lastSpideredDate = 0 ,
+			 int32_t  injectDocIp = 0 ,
+			 // for container docs consisting of subdocs to inject
+			 char *contentDelim = NULL,
+			 char* metadata = NULL,
+             uint32_t metadataLen = 0,
+             int32_t  payloadLen = -1);
 
 
 	bool injectLinks  ( HashTableX *linkDedupTable ,

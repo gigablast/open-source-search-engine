@@ -438,6 +438,25 @@ bool Msg1c::gotList ( ) {
 		// use only 64k values so we don't stress doledb/waittrees/etc.
 		// for large #'s of docids
 		int32_t firstIp = (docId & 0x0000ffff);
+
+		// bits 6-13 of the docid are the domain hash so use those
+		// when doing a REINDEX (not delete!) to ensure that requests
+		// on the same domain go to the same shard, at least when
+		// we have up to 256 shards. if we have more than 256 shards
+		// at this point some shards will not participate in the
+		// query reindex/delete process because of this, so 
+		// we'll want to allow more bits in in that case perhaps.
+		// check out Hostdb::getShardNum(RDB_SPIDERDB) in Hostdb.cpp
+		// to see what shard is responsible for storing and indexing 
+		// this SpiderRequest based on the firstIp.
+		if ( ! m_forceDel ) { 
+			// if we are a REINDEX not a delete because 
+			// deletes don't need to spider/redownload the doc
+			// so the distribution can be more random
+			firstIp >>= 6;
+			firstIp &= 0xff;
+		}
+
 		// 0 is not a legit val. it'll core below.
 		if ( firstIp == 0 ) firstIp = 1;
 		// use a fake ip
@@ -449,9 +468,10 @@ bool Msg1c::gotList ( ) {
 		sr.m_urlIsDocId     =  1;
 		sr.m_fakeFirstIp    =  1;
 		// for msg12 locking
-		sr.m_probDocId      = docId;
+		//sr.m_probDocId      = docId;
 		// use test-parser not test-spider
-		sr.m_useTestSpiderDir = 0;
+		//sr.m_useTestSpiderDir = 0;
+		sr.m_parentIsSiteMap = 0;
 		// now you can recycle content instead of re-downloading it
 		// for every docid
 		sr.m_recycleContent = gr->m_recycleContent;

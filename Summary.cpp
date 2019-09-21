@@ -12,6 +12,8 @@ Summary::Summary()
 	//m_buf = NULL;
 	m_bitScoresBuf = NULL;
 	m_bitScoresBufSize = 0;
+	m_wordWeights = NULL;
+	m_buf4 = NULL;
 	reset();
 }
 
@@ -36,6 +38,15 @@ void Summary::reset() {
 	m_numExcerpts = 0;
 	m_summaryLocs.reset();
 	m_summaryLocsPops.reset();
+	if ( m_wordWeights && m_wordWeights != (float *)m_tmpBuf ) {
+		mfree ( m_wordWeights , m_wordWeightSize , "sumww");
+		m_wordWeights = NULL;
+	}
+	m_wordWeights = NULL;
+	if ( m_buf4 && m_buf4 != m_tmpBuf4 ) {
+		mfree ( m_buf4 , m_buf4Size , "ssstkb" );
+		m_buf4 = NULL;
+	}
 }
 
 
@@ -151,6 +162,15 @@ bool Summary::set2 ( Xml      *xml                ,
 		      end - start );
 		      start = gettimeofdayInMilliseconds();*/
 	//
+	int32_t need1 = q->m_numWords * sizeof(float);
+	m_wordWeightSize = need1;
+	if ( need1 < 128 )
+		m_wordWeights = (float *)m_tmpBuf;
+	else
+		m_wordWeights = (float *)mmalloc ( need1 , "wwsum" );
+	if ( ! m_wordWeights ) return false;
+
+
 
 	// zero out all word weights
 	for ( int32_t i = 0 ; i < q->m_numWords; i++ )
@@ -229,11 +249,25 @@ bool Summary::set2 ( Xml      *xml                ,
 	pend = m_summary + maxSummaryLen;
 	m_numExcerpts = 0;
 
+	int32_t need2 = (1+1+1) * m_q->m_numWords;
+	m_buf4Size = need2;
+	if ( need2 < 128 )
+		m_buf4 = m_tmpBuf4;
+	else
+		m_buf4 = (char *)mmalloc ( need2 , "stkbuf" );
+	if ( ! m_buf4 ) return false;
+	char *x = m_buf4;
+	char *retired = x;
+	x += m_q->m_numWords;
+	char *maxGotIt = x;
+	x += m_q->m_numWords;
+	char *gotIt = x;
+
 	// . the "maxGotIt" count vector accumulates into "retired"
 	// . that is how we keep track of what query words we used for previous
 	//   summary excerpts so we try to get diversified excerpts with 
 	//   different query terms/words in them
-	char retired  [ MAX_QUERY_WORDS ];
+	//char retired  [ MAX_QUERY_WORDS ];
 	memset ( retired, 0, m_q->m_numWords * sizeof(char) );
 
 	// some query words are already matched in the title
@@ -260,7 +294,7 @@ bool Summary::set2 ( Xml      *xml                ,
 		int32_t       maxb = 0;
 		int32_t       maxi  = -1;
 		int32_t       lasta = -1;
-		char       maxGotIt [ MAX_QUERY_WORDS ];
+		//char       maxGotIt [ MAX_QUERY_WORDS ];
 
 		if(lastNumFinal == numFinal) {
 			if(maxLoops-- <= 0) {
@@ -296,7 +330,7 @@ bool Summary::set2 ( Xml      *xml                ,
 			if ( skip ) continue;
 
 			// ask him for the query words he matched
-			char gotIt [ MAX_QUERY_WORDS ];
+			//char gotIt [ MAX_QUERY_WORDS ];
 			// clear it for him
 			memset ( gotIt, 0, m_q->m_numWords * sizeof(char) );
 
@@ -558,6 +592,12 @@ bool Summary::set2 ( Xml      *xml                ,
 			m_displayLen = p - m_summary;
 	}
 
+	// free the mem we used if we allocated it
+	if ( m_buf4 && m_buf4 != m_tmpBuf4 ) {
+		mfree ( m_buf4 , m_buf4Size , "ssstkb" );
+		m_buf4 = NULL;
+	}
+
 
 	// If we still didn't find a summary, get the default summary
 	if ( p == m_summary ) {
@@ -570,6 +610,7 @@ bool Summary::set2 ( Xml      *xml                ,
 						  maxSummaryLen );
 		if ( m_numDisplayLines > 0 )
 			m_displayLen = m_summaryLen;
+		
 		return status;
 	}
 
@@ -799,7 +840,7 @@ int64_t Summary::getBestWindow ( Matches *matches       ,
 	// . the match at the center of the window is match #"mm", so that
 	//   matches->m_matches[mm] is the Match class
 	// . set "mi" to it and back up "mi" as int32_t as >= a
-	for ( mi = mm ; mi >= 0 && ms[mi-1].m_wordNum >=a ; mi-- ) ;
+	for ( mi = mm ; mi > 0 && ms[mi-1].m_wordNum >=a ; mi-- ) ;
 
 	// now get the score of this excerpt. Also mark all the represented 
 	// query words. Mark the represented query words in the array that
@@ -1211,7 +1252,7 @@ bool Summary::set1 ( char      *doc                ,
 	int32_t numTerms = q->getNumTerms();
 	// . now assign scores based on term frequencies
 	// . highest score is 10000, then 9900, 9800, 9700, ...
-	int32_t ptrs [ MAX_QUERY_TERMS ];
+	int32_t ptrs [ ABS_MAX_QUERY_TERMS ];
 	for ( int32_t i = 0 ; i < numTerms ; i++ ) ptrs[i] = i;
 	// convenience var
 	int64_t *freqs = termFreqs; // q->getTermFreqs();
@@ -1232,7 +1273,7 @@ bool Summary::set1 ( char      *doc                ,
 		}
 	}
 	// assign scores, give rarest terms highest score
-	int32_t scores [ MAX_QUERY_TERMS ];
+	int32_t scores [ ABS_MAX_QUERY_TERMS ];
 	for ( int32_t i = 0 ; i < numTerms ; i++ ) 
 		scores[ptrs[i]] = 10000000 - (i*100);
 	// force QUERY stop words to have much lower scores at most 10000
@@ -1441,7 +1482,7 @@ bool Summary::set1 ( char      *doc                ,
 	int32_t  maxi = -1;
 	int32_t  maxa = 0;
 	int32_t  maxb = 0;
-	char  gotIt [ MAX_QUERY_TERMS ];
+	char  gotIt [ ABS_MAX_QUERY_TERMS ];
 	char *maxleft  = NULL;
 	char *maxright = NULL;
 	for ( int32_t i = 0 ; i < numMatches ; i++ ) {

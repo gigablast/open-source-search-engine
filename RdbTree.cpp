@@ -162,7 +162,9 @@ void RdbTree::reset ( ) {
 	     strcmp(m_dbname,"accessdb") &&
 	     strcmp(m_dbname,"statsdb") ) {
 	     //strcmp(m_dbname,"doledb") ) {
-		log("rdb: Resetting unsaved tree %s.",m_dbname);
+		log("rdb: RESETTING UNSAVED TREE %s.",m_dbname);
+		log("rdb: RESETTING UNSAVED TREE %s.",m_dbname);
+		log("rdb: RESETTING UNSAVED TREE %s.",m_dbname);
 		// when DELETING a collection from pagecrawlbot.cpp
 		// it calls Collectiondb::deleteRec() which calls
 		// SpiderColl::reset() which calls m_waitingTree.reset()
@@ -713,7 +715,7 @@ int32_t RdbTree::deleteNode  ( collnum_t collnum , char *key , bool freeData ) {
 	//log("db: deleting n1=%"XINT64" n0=%"XINT64" node=%"INT32".",
 	//    *(int64_t *)(key+8), *(int64_t *)(key+0),node);
 	if ( node == -1 ) return -1;
-	deleteNode(node,freeData); 
+	deleteNode3(node,freeData); 
 	return node;
 }
 
@@ -739,7 +741,7 @@ void RdbTree::deleteNodes ( collnum_t collnum ,
 		if ( m_collnums[node] != collnum ) break;
 		//if ( m_keys    [node] > endKey   ) return;
 		if ( KEYCMP(m_keys,node,endKey,0,m_ks) > 0 ) break;
-		deleteNode ( node , freeData );
+		deleteNode3 ( node , freeData );
 		// rotation in setDepths() will cause him to be replaced
 		// with one of his kids, unless he's a leaf node
 		//node = next;
@@ -753,7 +755,7 @@ void RdbTree::deleteNodes ( collnum_t collnum ,
 // . deletes node i from the tree
 // . i's parent should point to i's left or right kid
 // . if i has no parent then his left or right kid becomes the new top node
-void RdbTree::deleteNode ( int32_t i , bool freeData ) {
+void RdbTree::deleteNode3 ( int32_t i , bool freeData ) {
 	// sanity check
 	if ( ! m_isWritable ) {
 		log("db: Can not delete record from tree because "
@@ -1107,7 +1109,7 @@ void RdbTree::deleteOrderedList ( collnum_t collnum ,
 	//if ( m_keys [ node ] == key && m_collnums [ node ] == collnum ) {
 	if ( KEYCMP(m_keys,node,key,0,m_ks)==0 && m_collnums[node] == collnum){
 		// trim the node from the tree
-		deleteNode ( node , true /*freeData?*/ );
+		deleteNode3 ( node , true /*freeData?*/ );
 		// get next node in tree
 		node = getNextNode ( node ) ;
 		// . point to next key in list to delete
@@ -1143,6 +1145,8 @@ void RdbTree::deleteOrderedList ( collnum_t collnum ,
 	if ( m_useProtection ) protect ( );
 }
 
+#include "Spider.h"
+
 // . this fixes the tree
 // returns false if could not fix tree and sets g_errno, otherwise true
 
@@ -1168,6 +1172,12 @@ bool RdbTree::fixTree ( ) {
 	//CollectionRec *recs = g_collectiondb.m_recs;
 	int32_t           max  = g_collectiondb.m_numRecs;
 	log("db: Valid collection numbers range from 0 to %"INT32".",max);
+
+	bool isTitledb = false;
+	if ( !strcmp(m_dbname,"titledb" ) ) isTitledb = true;
+	bool isSpiderdb = false;
+	if ( !strcmp(m_dbname,"spiderdb" ) ) isSpiderdb = true;
+
 	// now re-add the old nods to the tree, they should not be overwritten
 	// by addNode()
 	for ( int32_t i = 0 ; i < n ; i++ ) {
@@ -1176,6 +1186,35 @@ bool RdbTree::fixTree ( ) {
 			log("db: Fixing node #%"INT32" of %"INT32".",i,n);
 		// skip if empty
 		if ( m_parents[i] <= -2 ) continue;
+
+		char *key = &m_keys[i*m_ks];
+		if ( isTitledb && m_data[i] ) {
+			char *data = m_data[i];
+			int32_t ucompSize = *(int32_t *)data;
+			if ( ucompSize < 0 || ucompSize > 100000000 ) {
+				log("db: removing titlerec with uncompressed "
+				     "size of %i from tree (docid=%"INT64"",
+				    (int)ucompSize,
+				    g_titledb.getDocIdFromKey((key_t *)key));
+				continue;
+			}
+		}
+
+		if ( isSpiderdb && m_data[i] &&
+		     g_spiderdb.isSpiderRequest ( (SPIDERDBKEY *)key ) ) {
+			char *data = m_data[i];
+			data -= sizeof(SPIDERDBKEY);
+			data -= 4;
+			SpiderRequest *sreq ;
+			sreq =(SpiderRequest *)data;
+			if ( strncmp(sreq->m_url,"http",4) ) {
+				log("db: removing spiderrequest bad url "
+				    "%s from tree",sreq->m_url);
+				//return false;
+				continue;
+			}
+		}
+
 		collnum_t cn = m_collnums[i];
 		// verify collnum
 		if ( cn <  0   ) continue;
@@ -1183,6 +1222,7 @@ bool RdbTree::fixTree ( ) {
 		// collnum of non-existent coll
 		if ( m_rdbId>=0 && ! g_collectiondb.m_recs[cn] )
 			continue;
+
 		// now add just to set m_right/m_left/m_parent
 		if ( m_fixedDataSize == 0 )
 			addNode(cn,&m_keys[i*m_ks], NULL, 0 );
@@ -1231,6 +1271,12 @@ bool RdbTree::checkTree2 ( bool printMsgs , bool doChainTest ) {
 	if ( !strcmp(m_dbname,"datedb" ) ) useHalfKeys = true;
 	if ( !strcmp(m_dbname,"tfndb"  ) ) useHalfKeys = true;
 	if ( !strcmp(m_dbname,"linkdb" ) ) useHalfKeys = true;
+
+	bool isTitledb = false;
+	if ( !strcmp(m_dbname,"titledb" ) ) isTitledb = true;
+	bool isSpiderdb = false;
+	if ( !strcmp(m_dbname,"spiderdb" ) ) isSpiderdb = true;
+
 	// now check parent kid correlations
 	for ( int32_t i = 0 ; i < m_minUnusedNode ; i++ ) {
 		// this thing blocks for 1.5 secs for indexdb
@@ -1247,6 +1293,31 @@ bool RdbTree::checkTree2 ( bool printMsgs , bool doChainTest ) {
 		// for posdb
 		if ( m_ks == 18 &&(m_keys[i*m_ks] & 0x06) ) {
 			char *xx=NULL;*xx=0; }
+
+		if ( isTitledb && m_data[i] ) {
+			char *data = m_data[i];
+			int32_t ucompSize = *(int32_t *)data;
+			if ( ucompSize < 0 || ucompSize > 100000000 ) {
+				log("db: found titlerec with uncompressed "
+				    "size of %i from tree",(int)ucompSize);
+				return false;
+			}
+		}
+
+		char *key = &m_keys[i*m_ks];
+		if ( isSpiderdb && m_data[i] &&
+		     g_spiderdb.isSpiderRequest ( (SPIDERDBKEY *)key ) ) {
+			char *data = m_data[i];
+			data -= sizeof(SPIDERDBKEY);
+			data -= 4;
+			SpiderRequest *sreq ;
+			sreq =(SpiderRequest *)data;
+			if ( strncmp(sreq->m_url,"http",4) ) {
+				log("db: spiderrequest bad url "
+				    "%s",sreq->m_url);
+				return false;
+			}
+		}
 
 		// bad collnum?
 		if ( doCollRecCheck ) {
@@ -1281,19 +1352,26 @@ bool RdbTree::checkTree2 ( bool printMsgs , bool doChainTest ) {
 		if ( m_right[i] >= 0 && m_parents[m_right[i]] != i ) 
 			return log(
 				   "db: Tree right kid and parent disagree.");
-		/*
+		// MDW: why did i comment out the order checking?
 		// check order
-		if ( m_left[i] >= 0 ) {
+		if ( m_left[i] >= 0 &&
+		     m_collnums[i] == m_collnums[m_left[i]] ) {
 			char *key = &m_keys[i*m_ks];
 			char *left = &m_keys[m_left[i]*m_ks];
-			if ( KEYCMP(key,left,m_ks)<0) {char *xx=NULL;*xx=0;}
+			if ( KEYCMP(key,left,m_ks)<0) 
+				return log("db: Tree left kid > parent %i",i);
+			
 		}
-		if ( m_right[i] >= 0 ) {
+		if ( m_right[i] >= 0 &&
+		     m_collnums[i] == m_collnums[m_right[i]] ) {
 			char *key = &m_keys[i*m_ks];
 			char *right = &m_keys[m_right[i]*m_ks];
-			if ( KEYCMP(key,right,m_ks)>0) {char *xx=NULL;*xx=0;}
+			if ( KEYCMP(key,right,m_ks)>0) 
+				return log("db: Tree right kid < parent %i "
+					   "%s < %s",i,
+					   KEYSTR(right,m_ks),
+					   KEYSTR(key,m_ks) );
 		}
-		*/
 		//g_loop.quickPoll(1, __PRETTY_FUNCTION__, __LINE__);
 	}
 	if ( hkp > 0 ) 
@@ -1718,7 +1796,7 @@ bool RdbTree::getList ( collnum_t collnum ,
 	// don't core, but i think i fixed it here.
 	m_gettingList++;
 
-	// stop when we've hit or jsut exceed minRecSizes
+	// stop when we've hit or just exceed minRecSizes
 	// or we're out of nodes
 	for ( ; node >= 0 && list->getListSize() < minRecSizes ;
 	      node = getNextNode ( node ) ) {
@@ -2458,8 +2536,8 @@ void threadDoneWrapper ( void *state , ThreadEntry *t ) {
 		    THIS->m_dbname,mstrerror(g_errno));
 	else
 		// log it
-		log("db: Done saving %s/%s-saved.dat",
-		    THIS->m_dir,THIS->m_dbname);
+		log("db: Done saving %s/%s-saved.dat (wrote %"INT64" bytes)",
+		    THIS->m_dir,THIS->m_dbname,THIS->m_bytesWritten);
 	// . call callback
 	if ( THIS->m_callback ) THIS->m_callback ( THIS->m_state );
 }
@@ -2479,13 +2557,29 @@ bool RdbTree::fastSave_r() {
 	char s[1024];
 	sprintf ( s , "%s/%s-saving.dat", m_dir , m_dbname );
 	int fd = ::open ( s , 
-			  O_RDWR | O_CREAT | O_TRUNC , S_IRUSR | S_IWUSR | 
-			  S_IRGRP | S_IWGRP | S_IROTH);
+			  O_RDWR | O_CREAT | O_TRUNC ,
+			  getFileCreationFlags() );
+			  // S_IRUSR | S_IWUSR | 
+			  // S_IRGRP | S_IWGRP | S_IROTH);
 	if ( fd < 0 ) {
 		m_saveErrno = errno;
 		return log("db: Could not open %s for writing: %s.",
 			   s,mstrerror(errno));
 	}
+
+ redo:
+	// verify the tree
+	if ( g_conf.m_verifyWrites ) {
+		log("db: verify writes is enabled, checking tree before "
+		    "saving.");
+		if ( ! checkTree( false , true ) ) {
+			log("db: fixing tree and re-checking");
+			fixTree ( );
+			goto redo;
+		}
+	}
+
+
 	// clear our own errno
 	errno = 0;
 	// . save the header
@@ -2765,7 +2859,7 @@ bool RdbTree::fastLoad ( BigFile *f , RdbMem *stack ) {
 			log("got one");
 			// make it negative
 			m_keys[i].n0 &= 0xfffffffffffffffeLL;
-			//deleteNode ( i , true ); // freeData?
+			//deleteNode3 ( i , true ); // freeData?
 			//goto again;
 		}
 		log("REMOVED %"INT32"",count);
@@ -3115,13 +3209,13 @@ void RdbTree::cleanTree ( ) { // char **bases ) {
 		     m_collnums[i] <  max &&
 		     g_collectiondb.m_recs[m_collnums[i]] ) continue;
 		// if it is negtiave, remove it, that is wierd corruption
-		if ( m_collnums[i] < 0 ) 
-			deleteNode ( i , true );
+		// if ( m_collnums[i] < 0 ) 
+		// 	deleteNode3 ( i , true );
 		// remove it otherwise
 		// don't actually remove it!!!! in case collection gets
 		// moved accidentally.
 		// no... otherwise it can clog up the tree forever!!!!
-		deleteNode ( i , true );
+		deleteNode3 ( i , true );
 		count++;
 		// save it
 		collnum = m_collnums[i];

@@ -29,16 +29,17 @@ void handleRequest3f ( UdpSlot *slot , int32_t niceness ) ;
 
 // special priorities for the priority drop down 
 // in the url filters table
-enum {
-	SPIDER_PRIORITY_FILTERED  = -3 ,
-	SPIDER_PRIORITY_BANNED    = -2 ,
-	SPIDER_PRIORITY_UNDEFINED = -1 };
+//enum {
+//	SPIDER_PRIORITY_FILTERED  = -3 ,
+//	SPIDER_PRIORITY_BANNED    = -2 ,
+//	SPIDER_PRIORITY_UNDEFINED = -1 };
 
 enum {
 	OBJ_CONF    = 1 ,
 	OBJ_COLL        ,
 	OBJ_SI          , // SearchInput class
 	OBJ_GBREQUEST   , // for GigablastRequest class of parms
+	OBJ_IR          , // InjectionRequest class from PageInject.h
 	OBJ_NONE
 };
 
@@ -121,28 +122,32 @@ class GigablastRequest {
 	////////////
 	// these all reference into m_hr or into the Parm::m_def string!
 	char *m_url; // also for /get
-	char *m_queryToScrape;
-	char *m_contentDelim;
-	char *m_contentTypeStr;
-	char *m_contentFile;
-	char *m_content;
-	char *m_diffbotReply; // secret thing from dan
-	char  m_injectLinks;
-	char  m_spiderLinks;
-	char  m_shortReply;
-	char  m_newOnly;
-	char  m_deleteUrl;
-	char  m_recycle;
-	char  m_dedup;
-	char  m_hasMime;
-	char  m_doConsistencyTesting;
-	char  m_getSections;
-	char  m_gotSections;
-	int32_t  m_charset;
-	int32_t  m_hopCount; // hopcount
+	//char *m_queryToScrape;
+	//char *m_contentDelim;
+	//char  m_containerContentType; // CT_UNKNOWN, CT_WARC, CT_ARC
+	//int32_t m_injectDocIp;
+	//char *m_contentTypeStr;
+	//char *m_contentFile;
+	//char *m_content;
+	//char *m_diffbotReply; // secret thing from dan
+	//char  m_injectLinks;
+	//char  m_spiderLinks;
+	//char  m_shortReply;
+	//char  m_newOnly;
+	//char  m_deleteUrl;
+	//char  m_recycle;
+	//char  m_dedup;
+	//char  m_hasMime;
+	//char  m_doConsistencyTesting;
+	//char  m_getSections;
+	//char  m_gotSections;
+	//int32_t  m_charset;
+	//int32_t  m_hopCount; // hopcount
+	//collnum_t m_collnum; // more reliable than m_coll
 	// older ones
-	uint32_t m_firstIndexed; // firstimdexed
-	uint32_t m_lastSpidered; // lastspidered;
+	//uint32_t m_firstIndexed; // firstimdexed
+	//uint32_t m_lastSpidered; // lastspidered;
+	//SafeBuf  m_contentBuf; // for holding a warc/arc file
 
 
 
@@ -234,6 +239,7 @@ class GigablastRequest {
 #define PF_CLONE       0x20000
 #define PF_PRIVATE     0x40000 // for password to not show in api
 #define PF_SMALLTEXTAREA 0x80000
+#define PF_REBUILDACTIVELIST 0x100000
 
 class Parm {
  public:
@@ -510,6 +516,7 @@ class Parms {
 	//
 
 	bool m_inSyncWithHost0;
+	bool m_triedToSync;
 
 	bool m_isDefaultLoaded;
 

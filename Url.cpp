@@ -5,6 +5,8 @@
 #include "Errno.h"
 #include "HashTable.h"
 #include "Speller.h"
+#include "Punycode.h"
+#include "Unicode.h"
 
 static void print_string ( char *s , int32_t len );
 
@@ -32,6 +34,8 @@ void Url::reset() {
 	//m_siteLen   = 0;
 	// ip related stuff
 	m_ip          = 0;
+	// m_isWarcValid = false;
+	// m_isArcValid  = false;
 }
 
 // set from another Url, does a copy
@@ -135,7 +139,7 @@ void Url::set (Url *baseUrl,char *s,int32_t len,bool addWWW,bool stripSessionId,
 // . i know sun.com has urls like "http://sun.com/;$sessionid=123ABC$"
 // . url should be ENCODED PROPERLY for this to work properly
 void Url::set ( char *t , int32_t tlen , bool addWWW , bool stripSessionId ,
-		bool stripPound , bool stripCommonFile , 
+                bool stripPound , bool stripCommonFile , 
 		int32_t titleRecVersion ) {
 	reset();
 	// debug
@@ -155,11 +159,163 @@ void Url::set ( char *t , int32_t tlen , bool addWWW , bool stripSessionId ,
 	while ( tlen > 0 && !is_alnum_a(*t) && *t!='-' && *t!='/'){t++;tlen--;}
 	// . stop t at first space or binary char
 	// . url should be in encoded form!
-	int32_t i ;
+	int32_t i = 0;
+	int32_t nonAsciiPos = -1;
 	for ( i = 0 ; i < tlen ; i++ )	{
-		if ( ! is_ascii(t[i]) ) break; // no non-ascii chars allowed
 		if ( is_wspace_a(t[i])   ) break; // no spaces allowed
+
+		if ( ! is_ascii(t[i]) ) {
+			// Sometimes the length with the null is passed in, 
+			// so ignore nulls FIXME?
+			if( t[i] ) nonAsciiPos = i;
+			break; // no non-ascii chars allowed
+		}
 	}
+
+	
+	if(nonAsciiPos != -1) { 
+		// Try turning utf8 and latin1 encodings into punycode.
+		// All labels(between dots) in the domain are encoded 
+		// separately.  We don't support encoded tlds, but they are 
+		// not widespread yet.
+		// If it is a non ascii domain it needs to take the form 
+		// xn--<punycoded label>.xn--<punycoded label>.../
+		char tmp = t[tlen];
+		if(t[tlen]) t[tlen] = 0;
+		log(LOG_DEBUG, "build: attempting to decode unicode url %s pos at %"INT32, t, nonAsciiPos);
+		if(tmp) t[tlen] = tmp;
+		char encoded [ MAX_URL_LEN ];
+		size_t encodedLen = MAX_URL_LEN;
+		char *encodedDomStart = encoded;
+		char *p = t;
+		char *pend = t+tlen;
+		
+		// Find the start of the domain
+		if(tlen > 7 && strncmp(p, "http://", 7) == 0) p += 7;
+		else if(tlen > 8 && strncmp(p, "https://", 8) == 0) p += 8;
+ 
+		gbmemcpy(encodedDomStart, t, p-t);
+		encodedDomStart += p-t;
+
+		while(p < pend && *p != '/') {
+			char *labelStart = p;
+			uint32_t tmpBuf[MAX_URL_LEN];
+			int32_t tmpLen = 0;
+		
+			while(p < pend && *p != '.' && *p != '/') p++;
+			int32_t	labelLen = p - labelStart;
+
+			bool tryLatin1 = false;
+			// For utf8 urls
+			p = labelStart;
+			bool labelIsAscii = true;
+
+			// Convert the domain to code points and copy it to 
+			// tmpbuf to be punycoded
+			for(;p-labelStart<labelLen;
+				p += utf8Size(tmpBuf[tmpLen]), tmpLen++) {
+
+				labelIsAscii &= is_ascii(*p);
+				tmpBuf[tmpLen] = utf8Decode(p);
+				if(!tmpBuf[tmpLen]) { // invalid char?
+					tryLatin1 = true;
+					break;
+				}
+			}
+			if(labelIsAscii) {
+				if(labelStart[labelLen] == '.') {
+					labelLen++;
+					p++;
+				}
+				gbmemcpy(encodedDomStart, labelStart, labelLen);
+				encodedDomStart += labelLen;
+				continue;
+			}
+
+			if( tryLatin1 ) {
+				// For latin1 urls
+				tmpLen = 0;
+				for(;tmpLen<labelLen;tmpLen++) {
+					tmpBuf[tmpLen] = labelStart[tmpLen];
+				}
+			}
+
+			gbmemcpy(encodedDomStart, "xn--", 4);
+			encodedDomStart += 4;
+
+			punycode_status status ;
+			status = punycode_encode(tmpLen, 
+						 tmpBuf,
+						 NULL, 
+						 &encodedLen,
+						 encodedDomStart);
+			if ( status != 0 ) {
+				// Give up? try again?
+				log("build: Bad Engineer, failed to "
+				    "punycode international url %s", t);
+				return;
+			}
+			// We should check if what we encoded were valid url 
+			// characters, no spaces, etc
+			// FIXME: should we exclude just the bad chars? I've 
+			// seen plenty of urls with
+			// a newline in the middle.  Just discard the whole 
+			// chunk for now
+			bool badUrlChars = false;
+			for(uint32_t i=0;i<encodedLen;i++) {
+				if(is_wspace_a(encodedDomStart[i])){
+					badUrlChars = true;
+					break;
+				}
+			}
+
+			if(encodedLen == 0 || badUrlChars) {
+				encodedDomStart -= 4; //don't need the xn--
+				p++;
+			} else {
+				encodedDomStart += encodedLen;
+				*encodedDomStart++ = *p++; // Copy in the . or the /
+
+			}
+		}
+		
+		// p now points to the end of the domain
+		// encodedDomStart now points to the first free space in encoded string
+
+		// Now copy the rest of the url in.  Watch out for non-ascii chars 
+		// truncate the url, and keep it under max url length
+		uint32_t newUrlLen = encodedDomStart - encoded;
+
+		while(p < pend) {
+			if ( ! *p ) break; // null?
+			if(!is_ascii(*p)) {
+				//break;
+				// url encode utf8 characters now
+				char cs = getUtf8CharSize(p);
+				// bad utf8 char?
+				if ( cs <= 1 ) break;
+				// too long?
+				if ( newUrlLen + 12 >= MAX_URL_LEN )
+					break;
+				char stored = urlEncode ( &encoded[newUrlLen], 
+							  12 ,
+							  p ,
+							  cs );
+				p += cs;
+				newUrlLen += stored;
+				continue;
+			}
+			if(is_wspace_a(*p)) break;
+			if(newUrlLen >= MAX_URL_LEN) break;
+			encoded[newUrlLen++] = *p++;
+		}
+
+
+		//gbmemcpy(encodedDomStart, p, restOfUrlLen);
+		encoded[newUrlLen] = '\0';
+		return this->set(encoded, newUrlLen, addWWW, stripSessionId, 
+				 stripPound, stripCommonFile, titleRecVersion);
+    }
 	// truncate length to the first occurence of an unacceptable char
 	tlen = i;
 	// . decode characters that should not have been encoded
@@ -180,6 +336,9 @@ void Url::set ( char *t , int32_t tlen , bool addWWW , bool stripSessionId ,
 	int32_t anchorLen = 0;
 	for ( int32_t i = 0 ; i < tlen ; i++ ) {
 		if ( t[i] != '#' ) continue;
+		// ignore anchor if a ! follows it. 'google hash bang hack'
+		// which breaks the web and is now deprecated, but, there it is
+		if ( i+1<tlen && t[i+1] == '!' ) continue;
 		anchorPos = i;
 		anchorLen = tlen - i;
 		if ( stripPound )
@@ -569,7 +728,13 @@ void Url::set ( char *t , int32_t tlen , bool addWWW , bool stripSessionId ,
 	// . j,i should point to start of path slash '/'
 	// . scan so it points to end or a ? or # 
 	j = i;
-	while ( s[j] && s[j]!='?' && s[j]!='#' ) j++;
+	// now we include # as part of the path if it is a hash bang '#!'
+	// which was the web-breaking google hack that is now deprecated
+	while ( s[j] && s[j]!='?' ) {
+		if ( s[j] == '#' && s[j+1] != '!' )
+			break;
+		j++;
+	}
 	// point the path inside m_url even though we haven't written it yet
 	m_path = m_url + m_ulen;
 	m_plen = m_ulen; 
@@ -952,6 +1117,10 @@ char *Url::getPathComponent ( int32_t num , int32_t *clen ) {
 //	// return the end of it
 //	return pc + pclen;
 //}
+
+
+
+
 
 bool Url::isHostWWW ( ) {
 	if ( m_hlen < 4 ) return false;
@@ -1426,13 +1595,79 @@ bool Url::isBadExtension ( int32_t version ) {
 		s_badExtInitialized = true;
 	}
 
-	
+
 	int myKey = hash64Lower_a(m_extension,m_elen);
 	//zero unless we have a bad extention, otherwise
 	//we return TR version in which it was banned
 	int32_t badVersion = s_badExtTable.getValue(myKey);
 	if (badVersion == 0) return false;
-	if(badVersion <= version) return true;
+	//if(badVersion <= version) return true;
+	if ( badVersion > version ) return false;
+	// exceptions for .warc.gz .warc .arc .argc.gz
+	if ( isWarc() || isArc() ) return false;
+	return true;
+}
+
+bool Url::isWarc ( ) {
+
+	// if ( ulen>8 && strncmp(uend-8,".warc.gz",8)==0 )
+	// 	m_isWarc = true;
+	// if ( ulen>8 && strncmp(uend-5,".warc"   ,5)==0 )
+	// 	m_isWarc = true;
+
+	// if ( ulen>8 && strncmp(uend-7,".arc.gz",7)==0 )
+	// 	m_isArc = true;
+	// if ( ulen>8 && strncmp(uend-4,".arc"   ,4)==0 )
+	// 	m_isArc = true;
+
+	if ( m_elen == 4 &&
+	     m_extension[0] == 'w' &&
+	     m_extension[1] == 'a' &&
+	     m_extension[2] == 'r' &&
+	     m_extension[3] == 'c' )
+		return true;
+
+	if ( m_elen == 2 && 
+	     m_extension[0] == 'g' &&
+	     m_extension[1] == 'z' &&
+	     m_ulen > 10 &&
+	     m_extension[-1] == '.' &&
+	     m_extension[-2] == 'c' &&
+	     m_extension[-3] == 'r' &&
+	     m_extension[-4] == 'a' &&
+	     m_extension[-5] == 'w' &&
+	     m_extension[-6] == '.' ) {
+		// m_isWarc = true;
+		// m_isWarcValid = true;
+		return true;
+	}
+
+	return false;
+}
+
+bool Url::isArc ( ) {
+
+	if ( m_elen == 3 &&
+	     m_extension[0] == 'a' &&
+	     m_extension[1] == 'r' &&
+	     m_extension[2] == 'c' )
+		return true;
+	     
+	// hack to allow for .gz if it is .warc.gz or .arc.gz
+	if ( m_elen == 2 && 
+	     m_extension[0] == 'g' &&
+	     m_extension[1] == 'z' &&
+	     m_ulen > 10 &&
+	     m_extension[-1] == '.' &&
+	     m_extension[-2] == 'c' &&
+	     m_extension[-3] == 'r' &&
+	     m_extension[-4] == 'a' &&
+	     m_extension[-5] == '.' ) {
+		// m_isArc = true;
+		// m_isArcValid = true;
+		return true;
+	}
+
 	return false;
 }
 
@@ -2230,4 +2465,174 @@ bool isHijackerFormat ( char *url ) {
 	if ( p[2] != 'm' ) return false;
 	if ( p[3] != 0   ) return false;
 	return true;
+}
+
+bool Url::hasMediaExtension ( ) {
+
+	if ( ! m_extension || ! m_elen ) return false;
+
+	char *ext = m_extension;
+
+	if ( to_lower_a(ext[0]) == 'c' &&
+	     to_lower_a(ext[1]) == 's' &&
+	     to_lower_a(ext[2]) == 's' )
+		return true;
+
+	if ( to_lower_a(ext[0]) == 'm' &&
+	     to_lower_a(ext[1]) == 'p' &&
+	     to_lower_a(ext[2]) == 'g' )
+		return true;
+
+	if ( to_lower_a(ext[0]) == 'p' &&
+	     to_lower_a(ext[1]) == 'n' &&
+	     to_lower_a(ext[2]) == 'g' )
+		return true;
+
+	if ( to_lower_a(ext[0]) == 'w' &&
+	     to_lower_a(ext[1]) == 'm' &&
+	     to_lower_a(ext[2]) == 'v' )
+		return true;
+
+	if ( to_lower_a(ext[0]) == 'w' &&
+	     to_lower_a(ext[1]) == 'a' &&
+	     to_lower_a(ext[2]) == 'v' )
+		return true;
+
+	if ( to_lower_a(ext[0]) == 'j' &&
+	     to_lower_a(ext[1]) == 'p' &&
+	     to_lower_a(ext[2]) == 'g' )
+		return true;
+
+	if ( to_lower_a(ext[0]) == 'g' &&
+	     to_lower_a(ext[1]) == 'i' &&
+	     to_lower_a(ext[2]) == 'f' )
+		return true;
+
+	if ( to_lower_a(ext[0]) == 'i' &&
+	     to_lower_a(ext[1]) == 'c' &&
+	     to_lower_a(ext[2]) == 'o' )
+		return true;
+
+	if ( to_lower_a(ext[0]) == 'm' &&
+	     to_lower_a(ext[1]) == 'p' &&
+	     to_lower_a(ext[2]) == '3' )
+		return true;
+
+	if ( to_lower_a(ext[0]) == 'm' &&
+	     to_lower_a(ext[1]) == 'p' &&
+	     to_lower_a(ext[2]) == '4' )
+		return true;
+
+	if ( to_lower_a(ext[0]) == 'm' &&
+	     to_lower_a(ext[1]) == 'o' &&
+	     to_lower_a(ext[2]) == 'v' )
+		return true;
+
+	if ( to_lower_a(ext[0]) == 'a' &&
+	     to_lower_a(ext[1]) == 'v' &&
+	     to_lower_a(ext[2]) == 'i' )
+		return true;
+
+	if ( to_lower_a(ext[0]) == 'm' &&
+	     to_lower_a(ext[1]) == 'p' &&
+	     to_lower_a(ext[2]) == 'e' &&
+	     to_lower_a(ext[3]) == 'g' )
+		return true;
+
+	if ( to_lower_a(ext[0]) == 'j' &&
+	     to_lower_a(ext[1]) == 'p' &&
+	     to_lower_a(ext[2]) == 'e' &&
+	     to_lower_a(ext[3]) == 'g' )
+		return true;
+
+	return false;
+}
+
+uint32_t Url::unitTests() {
+	char* urls[] = {
+		"http://сацминэнерго.рф/robots.txt",
+		"http://www.fas.org/blog/ssp/2009/08/securing-venezuela\032s-arsenals.php",
+		"http://topbeskæring.dk/velkommen",
+		"www.Alliancefrançaise.nu",
+		"française.Alliance.nu",
+		"française.Alliance.nu/asdf",
+		"http://française.Alliance.nu/asdf",
+		"http://française.Alliance.nu/",
+		"幸运.龍.com",
+		"幸运.龍.com/asdf/运/abc",
+		"幸运.龍.com/asdf",
+		"http://幸运.龍.com/asdf",
+		"http://Беларуская.org/Акадэмічная",
+		"https://hi.Български.com",
+		"https://fakedomain.中文.org/asdf",
+		"https://gigablast.com/abc/文/efg",
+		"https://gigablast.com/?q=文",
+		"http://www.example.сайт",
+		"http://genocidearchiverwanda.org.rw/index.php/Category:Official_Communiqués",
+		"http://www.example.com/xn--fooled-you-into-trying-to-decode-this",
+		"http://www.example.сайт/xn--fooled-you-into-trying-to-decode-this",
+		"http://腕時計通販.jp/",
+		// Lets check some bad urls too:
+		"https://pypi.python\n\n\t\t\t\t.org/packages/source/p/pyramid/pyramid-1.5.tar.gz#md5=8747658dcbab709a9c491e43d3b0d58b"
+	};
+
+	StackBuf(sb);
+	uint32_t len = sizeof(urls) / sizeof(char*);
+	for(uint32_t i = 0; i < len; i++) {
+		Url u;
+		u.set(urls[i], strlen(urls[i]));
+		log("build:%s normalized to %s, printed to %s ", 
+		    urls[i], u.getUrl(), Url::getDisplayUrl(u.getUrl(), &sb));
+		sb.reset();
+	}
+	//FIXME: need to return an error if there is a problem
+	return 0;
+}
+
+
+char* Url::getDisplayUrl(char* url, SafeBuf* sb) {
+	char* found;
+	char* labelCursor = url;
+	if((found = strstr(labelCursor, "xn--"))) {
+		sb->safeMemcpy(url, found - url);
+
+		char* p = url;
+		char* pend = url + gbstrlen(url);
+		if(strncmp(p, "http://", 7) == 0) p += 7;
+		else if(strncmp(p, "https://", 8) == 0) p += 8;
+
+		while(p < pend && *p != '/') p++;
+		char* domEnd = p;
+
+		do {
+			if(found > domEnd) {
+				// Dont even look if it is past the domain
+				break;
+			}
+
+			char* encodedStart = found + 4;
+			uint32_t decoded [ MAX_URL_LEN];
+			size_t decodedLen = MAX_URL_LEN - 1 ;
+			char* labelEnd = encodedStart;
+			while( labelEnd < domEnd && *labelEnd != '/' &&  *labelEnd != '.' ) 
+				labelEnd++;
+
+			punycode_status status = punycode_decode(labelEnd - encodedStart,
+													 encodedStart, 
+													 &decodedLen, 
+													 decoded, NULL);
+			if(status != 0) {
+				log("build: Bad Engineer, failed to depunycode international url %s", url);
+				sb->safePrintf("%s", url);
+				return url;
+			}
+			sb->utf32Encode(decoded, decodedLen);
+			if(*labelEnd == '.') sb->pushChar(*labelEnd++);
+			labelCursor = labelEnd;
+		} while((found = strstr(labelCursor, "xn--")));
+	}
+    // Copy in the rest
+    sb->safePrintf("%s", labelCursor);
+    sb->nullTerm();
+    return sb->getBufStart();
 }

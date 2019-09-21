@@ -287,10 +287,19 @@ bool Xml::set ( char  *s             ,
 		return true;
 	}
 
-	// override
+	// override. no don't it hurts when parsing CT_XML docs!!
+	// we need XmlNode.cpp's setNodeInfo() to identify xml tags in 
+	// an rss feed. No, this was here for XmlDoc::hashXml() i think
+	// so let's just fix Links.cpp to get links from pure xml.
+	// we can't do this any more. it's easier to fix xmldoc::hashxml()
+	// some other way... because Links.cpp and Xml::isRSSFeed() 
+	// depend on having regular tagids. but without this here
+	// then XmlDoc::hashXml() breaks.
 	if ( contentType == CT_XML )
-		pureXml = true;
+	  	pureXml = true;
 
+	// is it an xml conf file?
+	m_pureXml = pureXml;
 
 	QUICKPOLL((niceness));
 	int32_t i;
@@ -369,10 +378,20 @@ bool Xml::set ( char  *s             ,
 		// set his parent xml node if is xml
 		xi->m_parent = parent;
 
+		bool endsInSlash = false;
+		if ( xi->m_node[xi->m_nodeLen-2] == '/' ) endsInSlash = true;
+		if ( xi->m_node[xi->m_nodeLen-2] == '?' ) endsInSlash = true;
+		// disregard </> in the conf files
+		if ( xi->m_nodeLen==3 && endsInSlash    ) endsInSlash = false;
+
 		// if not text node then he's the new parent
+		// if we don't do this for xhtml then we don't pop the parent
+		// and run out of parent stack space very quickly.
 		if ( pureXml &&
 		     xi->m_nodeId && 
-		     xi->m_nodeId != TAG_COMMENT ) {
+		     xi->m_nodeId != TAG_COMMENT &&
+		     xi->m_nodeId != TAG_CDATA &&
+		     ! endsInSlash ) {
 
 			// if we are a back tag pop the stack
 			if ( ! xi->isFrontTag() ) {
@@ -408,14 +427,152 @@ bool Xml::set ( char  *s             ,
 		}
 		// ok, we got a <script> tag now
 		m_numNodes++;
+
+		// use this for parsing consistency when deleting records
+		// so they equal what we added.
+		bool newVersion = true;
+		if ( version <= 120 ) newVersion = false;
+		//newVersion = false;
+
+		//	retry:
 		// scan for </script>
 		char *pstart = &m_xml[i];
 		char *p      = pstart;
 		char *pend   = &m_xml[0] + m_xmlLen;
+		bool inDoubles = false;
+		bool inSingles = false;
+		bool inComment1 = false;
+		bool inComment2 = false;
+		bool inComment3 = false;
+		bool inComment4 = false;
+		bool escaped    = false;
+		//bool newLine    = false;
+		// bool foo = false;
+		// if ( m_xmlLen == 13257 ) { //pstart - m_xml == 88881 ) {
+		// 	foo = true;
+		// }
 		// scan -- 5 continues -- node 1570 is text of script
 		for ( ; p < pend ; p++ ) {
 			// breathe
 			QUICKPOLL(m_niceness);
+			//
+			// adding these new quote checks may cause a few
+			// parsing inconsistencies for pages a hanful of pages
+			//
+			// windows-based html pages use 13 sometimes and no
+			// \n at all...
+			if ( p[0] =='\n' || p[0] == 13 )  { // ^m = 13 = CR
+				//newLine = true;
+				inComment1 = false;
+			}
+			if ( p[0] == '\\' ) {
+				escaped = ! escaped;
+				continue;
+			}
+			//if ( newLine && is_wspace_a(p[0]) )
+			//	continue;
+			if ( p[0] == '<' && p[1] == '!' && 
+			     p[2] == '-' && p[2] == '-' &&
+			     ! inSingles && ! inDoubles &&
+			     ! inComment1 &&
+			     ! inComment2 &&
+			     ! inComment4 ) 
+				inComment3 = true;
+			if ( p[0] == '-' && p[1] == '-' && 
+			     p[2] == '>' && 
+			     inComment3 ) 
+				inComment3 = false;
+			// no. i saw <script>//</script> and </script> was
+			// not considered to be in a comment
+			if ( p[0] == '/' && p[1]=='/'&& 
+			     ! inSingles && ! inDoubles &&
+			     ! inComment2 && 
+			     ! inComment3 &&
+			     // allow for "//<![CDATA[..." to end in
+			     // "//]]>" so ignore if inComment4 is true.
+			     // i'd say these are the weaker of all 4 
+			     // comment types in that regard.
+			     ! inComment4 )
+				inComment1 = true;
+			// handle /* */ comments
+			if ( p[0] == '/' && p[1]=='*' &&
+			     ! inSingles && ! inDoubles &&
+			     ! inComment1 && 
+			     ! inComment3 &&
+			     ! inComment4 )
+				inComment2 = true;
+			// <![CDATA[...]]> "comments" in <script> tags
+			// are common. CDATA tags seem to prevail even if
+			// within another comment tag, like i am seeing
+			// "//<![CDATA[..." a lot.
+			if ( p[0] == '<' &&
+			     p[1] == '!' &&
+			     p[2] == '[' &&
+			     p[3] == 'C' &&
+			     p[4] == 'D' &&
+			     p[5] == 'A' &&
+			     p[6] == 'T' &&
+			     p[7] == 'A' &&
+			     p[8] == '[' 
+			     //! inComment1 &&
+			     //! inComment2 && 
+			     //! inComment3 )
+			     )
+				inComment4 = true;
+			if ( p[0] == ']' &&
+			     p[1] == ']' &&
+			     p[2] == '>' )
+				inComment4 = false;
+			if ( p[0] == '*' && 
+			     p[1]=='/' &&
+			     ! inComment4 )
+				inComment2 = false;
+			// no longer the start of a newLine
+			//newLine = false;
+			// don't check for quotes or </script> if in comment
+			// no, if've seen <script>//</script> on ibm.com pages,
+			// so just ignore ' and " for // comments
+			if ( inComment1 && newVersion ) {
+				escaped = false;
+				//continue;
+			}
+			if ( inComment2 && newVersion ) {
+				escaped = false;
+				continue;
+			}
+			if ( inComment3 && newVersion ) {
+				escaped = false;
+				continue;
+			}
+			if ( inComment4 && newVersion ) {
+				escaped = false;
+				continue;
+			}
+			// if an unescaped double quote
+			if ( p[0] == '\"' && ! escaped && ! inSingles &&
+			     // i've seen <script>//</script> on ibm.com pages,
+			     // so just ignore ' and " for // comments
+			     ! inComment1 ) 
+				inDoubles = ! inDoubles;
+			// if an unescaped single quote. 
+			if ( p[0] == '\'' && ! escaped && ! inDoubles &&
+			     // i've seen <script>//</script> on ibm.com pages,
+			     // so just ignore ' and " for // comments
+			     ! inComment1 ) 
+				inSingles = ! inSingles;
+			// no longer escaped
+			escaped = false;
+			// if ( foo ) {
+			// 	fprintf(stderr,"%c [%lu](inDoubles=%i,"
+			// 		"inSingles=%i)\n",*p,
+			// 		(unsigned long)(uint8_t)*p,
+			// 		(int)inDoubles,
+			// 		(int)inSingles);
+			// }
+			// if ( inSingles ) 
+			// 	continue;
+			// if ( inDoubles ) 
+			// 	continue;
 			// keep going if not a tag
 			if ( p[0]  != '<' ) continue;
 			// </script> or </gbframe> stops it
@@ -425,8 +582,11 @@ bool Xml::set ( char  *s             ,
 				     to_lower_a(p[4]) == 'r' &&
 				     to_lower_a(p[5]) == 'i' &&
 				     to_lower_a(p[6]) == 'p' &&
-				     to_lower_a(p[7]) == 't' ) 
+				     to_lower_a(p[7]) == 't' ) {
+					if((inDoubles||inSingles)&& newVersion)
+						continue;
 					break;
+				}
 				if ( to_lower_a(p[2]) == 'g' &&
 				     to_lower_a(p[3]) == 'b' &&
 				     to_lower_a(p[4]) == 'f' &&
@@ -441,14 +601,29 @@ bool Xml::set ( char  *s             ,
 			     to_lower_a(p[3]) == 'r' &&
 			     to_lower_a(p[4]) == 'i' &&
 			     to_lower_a(p[5]) == 'p' &&
-			     to_lower_a(p[6]) == 't' ) 
+			     to_lower_a(p[6]) == 't' ) {
+				if ( (inDoubles || inSingles) && newVersion )
+					continue;
 				break;
+			}
 		}
+		// if ( foo )
+		// 	log("done");
 		// make sure we do not breach! i saw this happen once!
 		if ( m_numNodes >= m_maxNumNodes ) break;
 		// was it like <script></script> then no scripttext tag?
 		if ( p - pstart == 0 )
 			continue;
+
+		// none found? allow for </script> in quotes then, maybe
+		// they were unbalanced quotes. also allow for </script>
+		// in a comment. do we need to do this? just enable it if
+		// we find a page that needs it.
+		// if ( p == pend && newVersion ) {
+		// 	newVersion = false;
+		// 	goto retry;
+		// }
+
 		XmlNode *xn      = &m_nodes[m_numNodes++];
 		xn->m_nodeId     = TAG_SCRIPTTEXT;//0; // TEXT NODE
 		xn->m_node       =     pstart;

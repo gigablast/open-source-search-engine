@@ -200,6 +200,17 @@ inline uint64_t hash64Lower_utf8 ( char *p, int32_t len, uint64_t startHash ) {
 		char ncs = utf8Encode ( y , tmp );
 		// sanity check
 		if ( ncs > 4 ) { char *xx=NULL;*xx=0; }
+		// i've seen this happen for 4 byte char =
+		// -16,-112,-51,-125  which has x=66371 and y=66371
+		// but utf8Encode() returned 0!
+		if ( ncs == 0 ) {
+			// let's just hash it as-is then
+			tmp[0] = p[0];
+			if ( cs >= 1 ) tmp[1] = p[1];
+			if ( cs >= 2 ) tmp[2] = p[2];
+			if ( cs >= 3 ) tmp[3] = p[3];
+			ncs = cs;
+		}
 		// hash it up
 		h ^= g_hashtab [i++][(uint8_t)tmp[0]];
 		if ( ncs == 1 ) continue;
@@ -239,6 +250,17 @@ inline uint64_t hash64Lower_utf8_nospaces ( char *p, int32_t len  ) {
 		char ncs = utf8Encode ( y , tmp );
 		// sanity check
 		if ( ncs > 4 ) { char *xx=NULL;*xx=0; }
+		// i've seen this happen for 4 byte char =
+		// -16,-112,-51,-125  which has x=66371 and y=66371
+		// but utf8Encode() returned 0!
+		if ( ncs == 0 ) {
+			// let's just hash it as-is then
+			tmp[0] = p[0];
+			if ( cs >= 1 ) tmp[1] = p[1];
+			if ( cs >= 2 ) tmp[2] = p[2];
+			if ( cs >= 3 ) tmp[3] = p[3];
+			ncs = cs;
+		}
 		// hash it up
 		h ^= g_hashtab [i++][(uint8_t)tmp[0]];
 		if ( ncs == 1 ) continue;
@@ -290,6 +312,17 @@ inline uint64_t hash64Lower_utf8_cont ( char *p,
 		char ncs = utf8Encode ( y , tmp );
 		// sanity check
 		if ( ncs > 4 ) { char *xx=NULL;*xx=0; }
+		// i've seen this happen for 4 byte char =
+		// -16,-112,-51,-125  which has x=66371 and y=66371
+		// but utf8Encode() returned 0!
+		if ( ncs == 0 ) {
+			// let's just hash it as-is then
+			tmp[0] = p[0];
+			if ( cs >= 1 ) tmp[1] = p[1];
+			if ( cs >= 2 ) tmp[2] = p[2];
+			if ( cs >= 3 ) tmp[3] = p[3];
+			ncs = cs;
+		}
 		// hash it up
 		h ^= g_hashtab [i++][(uint8_t)tmp[0]];
 		if ( ncs == 1 ) continue;
@@ -365,6 +398,17 @@ inline uint64_t hash64Lower_utf8 ( char *p ) {
 		char ncs = utf8Encode ( y , (char *)tmp );
 		// sanity check
 		if ( ncs > 4 ) { char *xx=NULL;*xx=0; }
+		// i've seen this happen for 4 byte char =
+		// -16,-112,-51,-125  which has x=66371 and y=66371
+		// but utf8Encode() returned 0!
+		if ( ncs == 0 ) {
+			// let's just hash it as-is then
+			tmp[0] = p[0];
+			if ( cs >= 1 ) tmp[1] = p[1];
+			if ( cs >= 2 ) tmp[2] = p[2];
+			if ( cs >= 3 ) tmp[3] = p[3];
+			ncs = cs;
+		}
 		// hash it up
 		h ^= g_hashtab [i++][(uint8_t)tmp[0]];
 		if ( ncs == 1 ) continue;

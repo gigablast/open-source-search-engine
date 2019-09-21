@@ -10,11 +10,13 @@
 #define _MSG13_H_
 
 #include "Url.h" // MAX_URL_LEN
+#include "SpiderProxy.h" // MAXUSERNAMEPWD
 
 // max crawl delay form proxy backoff of 1 minute (60 seconds)
 #define MAX_PROXYCRAWLDELAYMS 60000
 
 void resetMsg13Caches ( ) ;
+bool printHammerQueueTable ( SafeBuf *sb ) ;
 
 extern char *g_fakeReply;
 
@@ -29,11 +31,13 @@ public:
 	int32_t  m_lbId; // loadbucket id
 	// the http proxy to use to download
 	int32_t  m_proxyIp;
-	int16_t m_proxyPort;
+	uint16_t m_proxyPort;
 	int32_t  m_banProxyIp;
-	int16_t m_banProxyPort;
+	uint16_t m_banProxyPort;
 	char  m_opCode;
 	char  m_lastHack;
+
+	collnum_t m_collnum;
 
 	// not part of the proxy request, but set from ProxyReply:
 	int32_t  m_numBannedProxies;
@@ -52,6 +56,9 @@ public:
 	int64_t m_urlHash48;
 	int32_t  m_firstIp;
 
+	// when it was stored in the hammer queue
+	int64_t m_stored;
+
 	// a tmp hack var referencing into m_url[] below
 	char *m_proxiedUrl;
 	int32_t  m_proxiedUrlLen;
@@ -67,6 +74,9 @@ public:
 	int32_t  m_crawlDelayMS;
 	// for linked list, this is the hammer queue
 	class Msg13Request *m_nextLink;
+
+	char m_proxyUsernamePwdAuth[MAXUSERNAMEPWD];
+
 	// if doing spider compression, compute contentHash32 of document
 	// downloaded, and if it matches this then send back EDOCUNCHANGED
 	int32_t  m_contentHash32;
@@ -103,6 +113,9 @@ public:
 
 	int32_t  m_foundInCache:1;
 	int32_t  m_forceUseFloaters:1;
+
+	int32_t  m_wasInTableBeforeStarting:1;
+	int32_t  m_isRootSeedUrl:1;
 
 	//int32_t  m_testParserEnabled:1;
 	//int32_t  m_testSpiderEnabled:1;
@@ -149,6 +162,7 @@ public:
 		m_maxTextDocLen  = -1; // no limit
 		m_maxOtherDocLen = -1; // no limit
 		m_crawlDelayMS   = -1; // unknown or none
+		m_collnum = (collnum_t)-1;
 	};
 };
 

@@ -27,6 +27,7 @@ public:
 	char *m_parmEnd;
 	class UdpSlot *m_slot;
 	bool m_doRebuilds;
+	bool m_rebuildActiveList;
 	bool m_doProxyRebuild;
 	bool m_updatedRound;
 	collnum_t m_collnum;
@@ -173,6 +174,7 @@ class Collectiondb  {
 
 	int32_t m_numCollsSwappedOut;
 
+	bool m_initializing;
 	//int64_t            m_lastUpdateTime;
 };
 
@@ -309,6 +311,9 @@ class CollectionRec {
 
  public:
 
+	// active linked list of collectionrecs used by spider.cpp
+	class CollectionRec *m_nextActive;
+
 	// these just set m_xml to NULL
 	CollectionRec();
 	virtual ~CollectionRec();
@@ -387,8 +392,11 @@ class CollectionRec {
 	// for regular crawls
 	bool rebuildUrlFilters2();
   
-  // for diffbot crawl or bulk jobs
-  bool rebuildUrlFiltersDiffbot();
+	// for diffbot crawl or bulk jobs
+	bool rebuildUrlFiltersDiffbot();
+
+	// rebuild the regexes related to diffbot, such as the one for the URL pattern
+	bool rebuildDiffbotRegexes();
 
 	bool rebuildLangRules( char *lang , char *tld );
 
@@ -413,6 +421,9 @@ class CollectionRec {
 	int32_t m_dailyMergeStarted; // time_t
 	int32_t m_dailyMergeTrigger;
 
+	class CollectionRec *m_nextLink;
+	class CollectionRec *m_prevLink;
+
 	char m_dailyMergeDOWList[48];
 
 	int32_t m_treeCount;
@@ -421,6 +432,10 @@ class CollectionRec {
 	bool m_swappedOut;
 
 	int64_t m_spiderCorruptCount;
+
+	// holds ips that have been detected as being throttled and we need
+	// to backoff and use proxies on
+	HashTableX m_twitchyTable;
 
 	//
 	// CLOUD SEARCH ENGINE SUPPORT
@@ -438,6 +453,9 @@ class CollectionRec {
 	//char  m_restrictTitledbForQuery ; // obsoleted
 	//char  m_recycleVotes            ;
 	int32_t  m_spiderDelayInMilliseconds;
+
+	// is in active list in spider.cpp?
+	bool m_isActive;
 
 	// . at what time did the spiders start?
 	// . this is incremented when all urls have been spidered and
@@ -475,6 +493,8 @@ class CollectionRec {
 	char  m_detectCustomErrorPages  ;
 	char  m_useSimplifiedRedirects  ;
 	char  m_useIfModifiedSince      ;
+	char  m_useTimeAxis             ;
+	char  m_indexWarcs;
 	char  m_buildVecFromCont        ;
 	int32_t  m_maxPercentSimilarPublishDate;
 	char  m_useSimilarityPublishDate;
@@ -506,7 +526,10 @@ class CollectionRec {
 	char  m_enforceNewQuotas        ;
 	char  m_doIpLookups             ; // considered iff using proxy
 	char  m_useRobotsTxt            ;
+	char  m_obeyRelNoFollowLinks    ;
 	char  m_forceUseFloaters        ;
+	char  m_automaticallyUseProxies ;
+	char  m_automaticallyBackOff    ;
 	//char  m_restrictDomain          ; // say on same domain as seeds?
 	char  m_doTuringTest            ; // for addurl
 	char  m_applyFilterToText       ; // speeds us up
@@ -514,6 +537,7 @@ class CollectionRec {
 	char  m_recycleContent          ;
 	char  m_recycleCatdb            ;
 	char  m_getLinkInfo             ; // turn off to save seeks
+	char  m_computeSiteNumInlinks   ;
 	//char  m_recycleLinkInfo2        ; // ALWAYS recycle linkInfo2?
 	//char  m_useLinkInfo2ForQuality  ;
 	char  m_indexInlinkNeighborhoods;
@@ -604,6 +628,7 @@ class CollectionRec {
 	int32_t m_adWidth; // how wide the ad Column is in pixels
 
 	char  m_dedupResultsByDefault   ;
+	char  m_doTagdbLookups        ;
 	char  m_clusterByTopicDefault    ;
 	char  m_restrictTitledbForQuery ; // move this down here
 	char  m_useOldIps               ;
@@ -744,7 +769,7 @@ class CollectionRec {
 
 	// last time we computed global crawl info
 	//time_t m_globalCrawlInfoUpdateTime;
-	EmailInfo m_emailInfo;
+	//EmailInfo m_emailInfo;
 	// for counting replies
 	//int32_t m_replies;
 	//int32_t m_requests;
@@ -809,6 +834,9 @@ class CollectionRec {
 
 	int32_t      m_numRegExs8;
 	char      m_harvestLinks     [ MAX_FILTERS ];
+
+	int32_t      m_numRegExs7;
+	char      m_forceDelete  [ MAX_FILTERS ];
 
 	// dummy?
 	int32_t      m_numRegExs9;
@@ -949,6 +977,8 @@ class CollectionRec {
 	// NARROW SEARCH
 	char  m_doNarrowSearch;
 
+	char m_sendingAlertInProgress;
+
         // Allow Links: searches on the collection
 	//char  m_allowLinksSearch;
 	// . reference pages parameters
@@ -1037,13 +1067,13 @@ class CollectionRec {
 
 	// . max content length of text/html or text/plain document
 	// . we will not download, index or store more than this many bytes
-	//int32_t  m_maxTextDocLen;
+	int32_t  m_maxTextDocLen;
 	// . max content length of other (pdf, word, xls, ppt, ps)
 	// . we will not download, index or store more than this many bytes
 	// . if content would be truncated, we will not even download at all
 	//   because the html converter needs 100% of the doc otherwise it
 	//   will have an error
-	//int32_t  m_maxOtherDocLen;
+	int32_t  m_maxOtherDocLen;
 
 	// the proxy ip, 0 if none
 	//int32_t  m_proxyIp;

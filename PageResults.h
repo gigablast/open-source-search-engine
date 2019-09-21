@@ -13,6 +13,14 @@
 #define PADDING 8
 #define SCROLLBAR_WIDTH 20
 
+bool printCSVHeaderRow2 ( class SafeBuf *sb ,
+			  int32_t ct ,
+			  class CollectionRec *cr ,
+			  class SafeBuf *nameBuf ,
+			  class HashTableX *columnTable ,
+			  class Msg20 **msg20s ,
+			  int32_t numMsg20s ,
+			  int32_t *numPtrsArg ) ;
 
 class State0 {
 public:
@@ -44,7 +52,8 @@ public:
 	int64_t    m_took; // how long it took to get the results
 	HttpRequest  m_hr;
 	bool         m_printedHeaderRow;
-	char         m_qe[MAX_QUERY_LEN+1];
+	//char         m_qe[MAX_QUERY_LEN+1];
+	SafeBuf m_qesb;
 
 	// for printing our search result json items in csv:
 	HashTableX   m_columnTable;
@@ -54,6 +63,7 @@ public:
 	bool    m_didRedownload;
 	XmlDoc *m_xd;
 	int32_t    m_oldContentHash32;
+	int64_t m_socketStartTimeHack;
 };
 
 

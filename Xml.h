@@ -230,6 +230,8 @@ class Xml {
 	int32_t       m_numNodes;
 	int32_t       m_maxNumNodes;
 
+	bool m_pureXml;
+
 	char      *m_xml;
 	int32_t       m_xmlLen;
 

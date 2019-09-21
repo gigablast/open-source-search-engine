@@ -274,20 +274,20 @@ bool Clusterdb::init ( ) {
 	// RdbCache has a 4 byte ptr to each rec in the cache
 	//int32_t maxCacheNodes = maxCacheMem / ( 4 + CLUSTER_REC_SIZE );
 	//int32_t nodeSize      = sizeof(key_t) + sizeof(collnum_t);
-	int32_t pageSize      = GB_TFNDB_PAGE_SIZE;
+	//int32_t pageSize      = GB_TFNDB_PAGE_SIZE;
 	//int32_t nodeSize      = (pageSize + 12) + sizeof(collnum_t) + 20;
 	//int32_t maxCacheNodes = maxCacheMem / nodeSize ;
 	// init the page cache
-	if ( ! m_pc.init ( "clusterdb",
-			   RDB_CLUSTERDB,
-			   pcmem      ,
-			   pageSize ) )
-			   //g_conf.m_clusterdbMaxDiskPageCacheMem,
-			   //clusterGetPages,
-			   //clusterAddPages,
-			   //clusterGetVfd,
-			   //clusterRmVfd ))
-		return log("db: Clusterdb init failed.");
+	// if ( ! m_pc.init ( "clusterdb",
+	// 		   RDB_CLUSTERDB,
+	// 		   pcmem      ,
+	// 		   pageSize ) )
+	// 		   //g_conf.m_clusterdbMaxDiskPageCacheMem,
+	// 		   //clusterGetPages,
+	// 		   //clusterAddPages,
+	// 		   //clusterGetVfd,
+	// 		   //clusterRmVfd ))
+	// 	return log("db: Clusterdb init failed.");
 	//bool bias = true;
 	//if ( g_conf.m_fullSplit ) bias = false;
 	bool bias = false;
@@ -305,7 +305,7 @@ bool Clusterdb::init ( ) {
 			    0,//maxCacheNodes ,
 			    true          , // half keys?
 			    g_conf.m_clusterdbSaveCache,
-			    &m_pc ,
+			    NULL,//&m_pc ,
 			    false,  // is titledb
 			    true ,  // preload disk page cache
 			    12,     // key size

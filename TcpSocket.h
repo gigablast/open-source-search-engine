@@ -26,6 +26,7 @@
 #define ST_CLOSE_CALLED     7
 #define ST_SSL_ACCEPT       8
 #define ST_SSL_SHUTDOWN     9
+#define ST_SSL_HANDSHAKE    10
 // hack to repopulate the socket's send buf when its done sending
 // it's current sendbuf in order to transmit large amounts of data that
 // can't all fit in memory at the same time:
@@ -122,6 +123,8 @@ class TcpSocket {
 
 	char        m_niceness;
 	char        m_streamingMode;
+
+	bool m_writeRegistered;
 
 	int32_t m_shutdownStart;
 

@@ -170,6 +170,8 @@ class UdpServer {
 	// an estimation as well
 	//int32_t getNumUsedSlots  () { return m_topUsedSlot + 1; };
 	int32_t getNumUsedSlots  () { return m_numUsedSlots; };
+
+	int32_t getNumUsedSlotsIncoming  () { return m_numUsedSlotsIncoming; };
 	
 
 	// . when a request/msg of type "msgType" is received we call the
@@ -278,7 +280,14 @@ class UdpServer {
 	// on receiving a fd-ready-for-writing signal for this UdpServer
 	bool m_needToSend;
 
+	bool m_writeRegistered;
+
 	UdpSlot *getActiveHead ( ) { return m_head2; };
+
+	// callback linked list functions (m_head3)
+	void addToCallbackLinkedList ( UdpSlot *slot ) ;
+	bool isInCallbackLinkedList ( UdpSlot *slot );
+	void removeFromCallbackLinkedList ( UdpSlot *slot ) ;
 
 	// cancel a transaction
 	void cancel ( void *state , unsigned char msgType ) ;
@@ -381,6 +390,7 @@ class UdpServer {
 	int32_t   m_requestsInWaiting;
 
 	// like m_requestsInWaiting but requests which spawn other requests
+	int32_t   m_msg07sInWaiting;
 	int32_t   m_msg10sInWaiting;
 	int32_t   m_msgc1sInWaiting;
 	//int32_t   m_msgDsInWaiting;
@@ -407,7 +417,7 @@ class UdpServer {
 	int32_t     m_maxSlots;
 
 	// routines
-	UdpSlot *getEmptyUdpSlot_ass ( key_t k );
+	UdpSlot *getEmptyUdpSlot_ass ( key_t k , bool incoming );
 	void     freeUdpSlot_ass     ( UdpSlot *slot );
 
 	void addKey ( key_t key , UdpSlot *ptr ) ;
@@ -432,9 +442,11 @@ class UdpServer {
 	UdpSlot        *m_head2;
 	UdpSlot        *m_tail2;
 	// linked list of callback candidates
-	//UdpSlot        *m_head3;
+	UdpSlot        *m_head3;
+	UdpSlot        *m_tail3;
 
 	int32_t            m_numUsedSlots;
+	int32_t            m_numUsedSlotsIncoming;
 
 	// stats
  public:

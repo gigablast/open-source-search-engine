@@ -38,6 +38,7 @@ uint32_t  g_listIps   [ MAX_HOSTS * 4 ];
 uint16_t  g_listPorts [ MAX_HOSTS * 4 ];
 int32_t      g_listNumTotal = 0;
 
+bool isMyIp ( int32_t ip ) ;
 
 void Hostdb::resetPortTables () {
 	g_hostTableUdp.reset();
@@ -65,6 +66,7 @@ Hostdb::Hostdb ( ) {
 	m_crcValid = false;
 	m_crc = 0;
 	m_created = false;
+	m_myHost = NULL;
 }
 
 Hostdb::~Hostdb () {
@@ -107,6 +109,7 @@ bool Hostdb::init ( int32_t hostIdArg , char *netName ,
 	m_myIp             = 0;
 	m_myIpShotgun      = 0;
 	m_myPort           = 0;
+	m_myHost           = NULL;
 	//m_myPort2          = 0;
 	m_numHosts         = 0;
 	m_numHostsPerShard = 0;
@@ -688,16 +691,26 @@ bool Hostdb::init ( int32_t hostIdArg , char *netName ,
 		
 		//skip:
 
+		h->m_queryEnabled = true;
+		h->m_spiderEnabled = true;
 		// check for something after the working dir
 		h->m_note[0] = '\0';
 		if ( *p != '\n' ) {
 			// save the note
 			char *n = p;
 			while ( *n && *n != '\n' && n < pend ) n++;
+
 			int32_t noteSize = n - p;
 			if ( noteSize > 127 ) noteSize = 127;
 			gbmemcpy(h->m_note, p, noteSize);
 			*p++ = '\0'; // NULL terminate for atoip
+
+			if(strstr(h->m_note, "noquery")) {
+				h->m_queryEnabled = false;
+			}
+			if(strstr(h->m_note, "nospider")) {
+				h->m_spiderEnabled = false;
+			}
 		}
 		else
 			*p   = '\0';
@@ -780,15 +793,19 @@ bool Hostdb::init ( int32_t hostIdArg , char *netName ,
 		if ( wdir[wdirlen-1]=='/' ) wdir[--wdirlen]='\0';
 
 		// get real path (no symlinks symbolic links)
-		char tmp[256];
-		int32_t tlen = readlink ( wdir , tmp , 250 );
-		// if we got the actual path, copy that over
-		if ( tlen != -1 ) {
-			// wdir currently references into the hosts.conf buf
-			// so don't store the expanded directory into there
-			wdir = tmp;
-			//strncpy(wdir,tmp,tlen);
-			wdirlen = tlen;
+		// only if on same IP!!!!
+		if ( isMyIp ( h->m_ip ) ) {
+			char tmp[256];
+			int32_t tlen = readlink ( wdir , tmp , 250 );
+			// if we got the actual path, copy that over
+			if ( tlen != -1 ) {
+				// wdir currently references into the 
+				// hosts.conf buf so don't store the expanded
+				// directory into there
+				wdir = tmp;
+				//strncpy(wdir,tmp,tlen);
+				wdirlen = tlen;
+			}
 		}
 
 		// add slash if none there
@@ -1595,6 +1612,30 @@ uint32_t Hostdb::makeGroupMask ( int32_t numGroups ) {
 }
 */
 
+#include "Stats.h"
+
+bool Hostdb::isShardDead ( int32_t shardNum ) {
+	// how many seconds since our main process was started?
+	// i guess all nodes initially appear dead, so
+	// compensate for that.
+	long long now = gettimeofdayInMilliseconds();
+	long elapsed = (now - g_stats.m_startTime) ;/// 1000;
+	if ( elapsed < 60*1000 ) return false; // try 60 secs now
+
+	Host *shard = getShard ( shardNum );
+	//Host *live = NULL;
+	for ( int32_t i = 0 ; i < m_numHostsPerShard ; i++ ) {
+		// get it
+		Host *h = &shard[i];
+		// skip if dead
+		if ( isDead(h->m_hostId) ) continue;
+		// return it if alive
+		return false;
+	}
+	return true;
+}
+
+
 // return first alive host in a shard
 Host *Hostdb::getLiveHostInShard ( int32_t shardNum ) {
 	Host *shard = getShard ( shardNum );
@@ -1610,6 +1651,56 @@ Host *Hostdb::getLiveHostInShard ( int32_t shardNum ) {
 	// return first one if all dead
 	return &shard[0];
 }
+
+int32_t Hostdb::getHostIdWithSpideringEnabled ( uint32_t shardNum ) {
+	Host *hosts = g_hostdb.getShard ( shardNum);
+	int32_t numHosts = g_hostdb.getNumHostsPerShard();
+
+	int32_t hostNum = 0;
+	int32_t numTried = 0;
+	while( !hosts [ hostNum ].m_spiderEnabled && numTried < numHosts ) {
+		hostNum = (hostNum+1) % numHosts;
+		numTried++;
+	}
+	if( !hosts [ hostNum ].m_spiderEnabled) {
+		log("build: cannot spider when entire shard has nospider enabled");
+		char *xx = NULL; *xx = 0;
+	}
+	return hosts [ hostNum ].m_hostId ;
+}
+
+// if niceness 0 can't pick noquery host.
+// if niceness 1 can't pick nospider host.
+Host *Hostdb::getLeastLoadedInShard ( uint32_t shardNum , char niceness ) {
+	int32_t minOutstandingRequests = 0x7fffffff;
+	int32_t minOutstandingRequestsIndex = -1;
+	Host *shard = getShard ( shardNum );
+	Host *bestDead = NULL;
+	for(int32_t i = 0; i < m_numHostsPerShard; i++) {
+		Host *hh = &shard[i];
+		// don't pick a 'no spider' host if niceness is 1
+		if ( niceness >  0 && ! hh->m_spiderEnabled ) continue;
+		// don't pick a 'no query' host if niceness is 0
+		if ( niceness == 0 && ! hh->m_queryEnabled  ) continue;
+		if ( ! bestDead ) bestDead = hh;
+		if(isDead(hh)) continue;
+		// log("host %"INT32 " numOutstanding is %"INT32, hh->m_hostId, 
+		// 	hh->m_pingInfo.m_udpSlotsInUseIncoming);
+		if ( hh->m_pingInfo.m_udpSlotsInUseIncoming > 
+		     minOutstandingRequests )
+			continue;
+
+		minOutstandingRequests =hh->m_pingInfo.m_udpSlotsInUseIncoming;
+		minOutstandingRequestsIndex = i;
+	}
+	// we should never return a nospider/noquery host depending on
+	// the niceness, so return bestDead
+	if(minOutstandingRequestsIndex == -1) return bestDead;//shard;
+	return &shard[minOutstandingRequestsIndex];
+}
+
+
+
 
 // if all are dead just return host #0
 Host *Hostdb::getFirstAliveHost ( ) {
@@ -1804,7 +1895,7 @@ bool Hostdb::replaceHost ( int32_t origHostId, int32_t spareHostId ) {
 	oldHost->m_emailCode           = 0;
 	oldHost->m_wasAlive            = false;
 	oldHost->m_pingInfo.m_etryagains          = 0;
-	oldHost->m_pingInfo.m_udpSlotsInUse = 0;
+	oldHost->m_pingInfo.m_udpSlotsInUseIncoming = 0;
 	oldHost->m_pingInfo.m_totalResends        = 0;
 	oldHost->m_errorReplies        = 0;
 	oldHost->m_dgramsTo            = 0;
@@ -1959,8 +2050,9 @@ bool Hostdb::saveHostsConf ( ) {
 	sprintf ( filename, "%shosts.conf", m_dir );
 	log ( LOG_INFO, "conf: Writing hosts.conf file to: %s",
 			filename );
-	int32_t fd = open ( filename, O_CREAT|O_WRONLY|O_TRUNC,
-			 S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP|S_IROTH );
+	int32_t fd = open ( filename, O_CREAT|O_WRONLY|O_TRUNC ,
+			    getFileCreationFlags() );
+			 // S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP|S_IROTH );
 	if ( !fd ) {
 		log ( "conf: Failed to open %s for writing.", filename );
 		return false;
@@ -2602,6 +2694,7 @@ bool Hostdb::createHostsConf( char *cwd ) {
 	sb.safePrintf("# List of hosts. Limited to 512 from MAX_HOSTS in Hostdb.h. Increase that\n");
 	sb.safePrintf("# if you want more.\n");
 	sb.safePrintf("#\n");
+
 	sb.safePrintf("# Format:\n");
 	sb.safePrintf("#\n");
 	sb.safePrintf("# first   column: hostID (starts at 0 and increments from there)\n");
@@ -2610,9 +2703,12 @@ bool Hostdb::createHostsConf( char *cwd ) {
 	sb.safePrintf("# fourth  column: port that HTTP  listens on\n");
 	sb.safePrintf("# fifth   column: port that udp server listens on\n");
 	sb.safePrintf("# sixth   column: IP address or hostname that has an IP address in /etc/hosts\n");
-	sb.safePrintf("# seventh column: like sixth column but for secondary ethernet port. (optional)\n");
+	sb.safePrintf("# seventh column: like sixth column but for secondary ethernet port. Can be the same as the sixth column.\n");
+	sb.safePrintf("# eigth column: An optional text note that will "
+		      "display in the hosts table for this host.\n");
 	sb.safePrintf("\n");
 	sb.safePrintf("\n");
+	/*
 	sb.safePrintf("# This file consists of a list of lines like this:\n");
 	sb.safePrintf("#\n");
 	sb.safePrintf("# <ClientDnsPort> <HttpsPort> <HttpPort> <UdpPort> <IP1> <IP2> <Path>\n");
@@ -2641,6 +2737,7 @@ bool Hostdb::createHostsConf( char *cwd ) {
 	sb.safePrintf("# The working directory is the last string on each line. That is where the\n");
 	sb.safePrintf("# 'gb' binary resides.\n");
 	sb.safePrintf("#\n");
+	*/
 
 	sb.safePrintf("#\n");
 	sb.safePrintf("# Example of a four-node distributed search index running on a single\n");
@@ -2649,7 +2746,7 @@ bool Hostdb::createHostsConf( char *cwd ) {
 	sb.safePrintf("# different ports for each gb instance since they are all on the same\n");
 	sb.safePrintf("# server.\n");
 	sb.safePrintf("#\n");
-	sb.safePrintf("# Use './gb 2' to run as the host on IP 1.2.3.8 for example.\n");
+	//sb.safePrintf("# Use './gb 2' to run as the host on IP 1.2.3.8 for example.\n");
 	sb.safePrintf("#\n");
 	sb.safePrintf("#0 5998 7000 8000 9000 1.2.3.4 1.2.3.5 /home/mwells/host0/\n");
 	sb.safePrintf("#1 5997 7001 8001 9001 1.2.3.4 1.2.3.5 /home/mwells/host1/\n");
@@ -2676,6 +2773,7 @@ bool Hostdb::createHostsConf( char *cwd ) {
 	sb.safePrintf("#5 5998 7000 8000 9000 se5 se5b /home/mwells/gigablast/\n");
 	sb.safePrintf("#6 5998 7000 8000 9000 se6 se6b /home/mwells/gigablast/\n");
 	sb.safePrintf("#7 5998 7000 8000 9000 se7 se7b /home/mwells/gigablast/\n");
+	/*
 	sb.safePrintf("\n");
 	sb.safePrintf("\n");
 	sb.safePrintf("# Proxies\n");
@@ -2701,6 +2799,7 @@ bool Hostdb::createHostsConf( char *cwd ) {
 	sb.safePrintf("# Example:\n");
 	sb.safePrintf("# A proxy will be running on 10.5.66.18:\n");
 	sb.safePrintf("#proxy 6001 7001 8001 9001 10.5.66.18\n");
+	*/
 
 	log("%shosts.conf does not exist, creating.",cwd);
 	sb.save ( cwd , "hosts.conf" );
@@ -2759,6 +2858,15 @@ int32_t *getLocalIps ( ) {
 	// return the static buffer
 	return s_localIps;
 }
+
+bool isMyIp ( int32_t ip ) {
+	int32_t *localIp = getLocalIps();
+	for ( ; *localIp ; localIp++ ) {
+		if ( ip == *localIp ) return true;
+	}
+	return false;
+}
+
 
 Host *Hostdb::getHost2 ( char *cwd , int32_t *localIps ) {
 	for ( int32_t i = 0 ; i < m_numHosts ; i++ ) {

@@ -1421,7 +1421,7 @@ int32_t Speller::getPhrasePopularity ( char *str, uint64_t h,
 	// common word like "and"?
 	if ( isCommonWord(h) ) return MAX_PHRASE_POP;
 	// another common word check
-	if ( isQueryStopWord(NULL,0,h) ) return MAX_PHRASE_POP;
+	if ( isQueryStopWord(NULL,0,h,langId) ) return MAX_PHRASE_POP;
 	// single letter?
 	if ( str && str[0] && str[1] == '\0' ) return MAX_PHRASE_POP;
 	// 0-99 only
@@ -1805,7 +1805,8 @@ bool Speller::createUnifiedDict (){
 	// then open a new one for appending
 	int fdw = open ( ff , 
 			 O_CREAT | O_RDWR | O_APPEND ,
-			 S_IRUSR |S_IWUSR |S_IRGRP |S_IWGRP| S_IROTH);
+			 getFileCreationFlags());
+			 // S_IRUSR |S_IWUSR |S_IRGRP |S_IWGRP| S_IROTH);
 	if ( fdw < 0 ){
 		return log("lang: Could not open for %s "
 			   "writing: %s.",ff, strerror(errno));

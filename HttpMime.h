@@ -9,6 +9,8 @@
 // convert application/json to CT_JSON for instance
 int32_t getContentTypeFromStr ( char *s ) ;
 
+const char *extensionToContentTypeStr2 ( char *ext , int32_t elen ) ;
+
 #include <time.h>
 
 void   getTime    ( char *s , int *sec , int *min , int *hour ) ;
@@ -42,6 +44,9 @@ time_t atotime5   ( char *s ) ;
 #define CT_JSON   16
 #define CT_IMAGE  17
 #define CT_STATUS 18 // an internal type indicating spider reply
+#define CT_GZ     19
+#define CT_ARC    20
+#define CT_WARC   21
 
 #define ET_IDENTITY 0
 #define ET_GZIP 1
@@ -116,6 +121,8 @@ class HttpMime {
 	// make a redirect mime
 	void makeRedirMime ( char *redirUrl , int32_t redirUrlLen );
 
+	bool addCookiesIntoBuffer ( class SafeBuf *sb ) ;
+
 	char *getMime    ( ) { return m_buf; };
 	// does this include the last \r\n\r\n? yes!
 	int32_t  getMimeLen ( ) { return m_bufLen; };
@@ -127,6 +134,7 @@ class HttpMime {
 	int32_t  getContentEncoding () {return m_contentEncoding;}
 	char *getContentEncodingPos() {return m_contentEncodingPos;}
 	char *getContentLengthPos()      {return m_contentLengthPos;}
+	char *getContentTypePos()      {return m_contentTypePos;}
 
 
 	// private:
@@ -157,7 +165,8 @@ class HttpMime {
 	char *m_locationField    ;
 	int32_t  m_locationFieldLen ;
 
-	
+	char *m_mimeStartPtr;
+
 	// buf used to hold a mime we create
 	char m_buf[1024];
 	int32_t m_bufLen;
@@ -166,6 +175,7 @@ class HttpMime {
 	int32_t    m_contentEncoding;
 	char   *m_contentEncodingPos;
 	char   *m_contentLengthPos;
+	char   *m_contentTypePos;
 
 	// the size of the terminating boundary, either 1 or 2 bytes.
 	// just the last \n in the case of a \n\n or \r in the case
@@ -176,6 +186,8 @@ class HttpMime {
 	// Content-Type: text/html;charset=gb2312  // chinese (gb2312)
 	char *m_charset;
 	int32_t  m_charsetLen;
+
+	char *m_firstCookie;
 
 	char *m_cookie;
 	int32_t  m_cookieLen;

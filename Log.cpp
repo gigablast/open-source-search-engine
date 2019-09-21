@@ -124,11 +124,17 @@ bool Log::init ( char *filename ) {
 	// get size of current file. getFileSize() is defined in File.h.
 	m_logFileSize = getFileSize ( m_filename );
 
+	if ( strcmp(m_filename,"/dev/stderr") == 0 ) {
+		m_fd = STDERR_FILENO; // 2; // stderr
+		return true;
+	}
+
 	// open it for appending.
 	// create with -rw-rw-r-- permissions if it's not there.
 	m_fd = open ( m_filename , 
-		      O_APPEND | O_CREAT | O_RDWR , 
-		      S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH );
+		      O_APPEND | O_CREAT | O_RDWR ,
+		      getFileCreationFlags() );
+		      // S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH );
 	if ( m_fd >= 0 ) return true;
 	// bitch to stderr and return false on error
 	fprintf(stderr,"could not open log file %s for appending\n",
@@ -217,6 +223,8 @@ bool Log::shouldLog ( int32_t type , char *msg ) {
 	return true;
 }
 
+bool g_loggingEnabled = true;
+
 // 1GB max log file size
 #define MAXLOGFILESIZE 1000000000
 // for testing:
@@ -228,6 +236,8 @@ bool Log::logR ( int64_t now , int32_t type , char *msg , bool asterisk ,
 	// filter if we should
 	//if ( forced ) goto skipfilter;
 
+	if ( ! g_loggingEnabled )
+		return true;
 	// return true if we should not log this
 	if ( ! forced && ! shouldLog ( type , msg ) ) return true;
 	// skipfilter:
@@ -362,7 +372,7 @@ bool Log::logR ( int64_t now , int32_t type , char *msg , bool asterisk ,
 
 	// . if filesize would be too big then make a new log file
 	// . should make a new m_fd
-	if ( m_logFileSize + tlen+1 > MAXLOGFILESIZE )
+	if ( m_logFileSize + tlen+1 > MAXLOGFILESIZE && g_conf.m_runAsDaemon )
 		makeNewLogFile();
 
 	if ( m_fd >= 0 ) {
@@ -393,9 +403,17 @@ bool Log::logR ( int64_t now , int32_t type , char *msg , bool asterisk ,
 }
 
 bool Log::makeNewLogFile ( ) {
+
+	// prevent deadlock. don't log since we are in the middle of logging.
+	// otherwise, safebuf, which is used when renaming files, might
+	// call logR().
+	g_loggingEnabled = false;
 	// . rename old log file like log000 to log000-2013_11_04-18:19:32
 	// . returns false on error
-	if ( ! renameCurrentLogFile() ) return false;
+	bool status = renameCurrentLogFile();
+	// re-enable logging since nothing below should call logR() indirectly
+	g_loggingEnabled = true;
+	if ( ! status ) return false;
 	// close old fd
 	if ( m_fd >= 0 ) ::close ( m_fd );
 	// invalidate
@@ -405,8 +423,9 @@ bool Log::makeNewLogFile ( ) {
 	// open it for appending.
 	// create with -rw-rw-r-- permissions if it's not there.
 	m_fd = open ( m_filename , 
-		      O_APPEND | O_CREAT | O_RDWR , 
-		      S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH );
+		      O_APPEND | O_CREAT | O_RDWR ,
+		      getFileCreationFlags() );
+		      // S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH );
 	if ( m_fd >= 0 ) return true;
 	// bitch to stderr and return false on error
 	fprintf(stderr,"could not open new log file %s for appending\n",

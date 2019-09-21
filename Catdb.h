@@ -21,7 +21,7 @@
 #include "Rdb.h"
 #include "Url.h"
 #include "Loop.h"
-#include "DiskPageCache.h"
+//#include "DiskPageCache.h"
 //#include "CollectionRec.h"
 
 class Catdb  {
@@ -74,7 +74,7 @@ class Catdb  {
 	void getKeyRange ( bool useIp , Url *url , 
 			   key_t *startKey , key_t *endKey );
 
-	DiskPageCache *getDiskPageCache() { return &m_pc; };
+	//DiskPageCache *getDiskPageCache() { return &m_pc; };
 
 	// normalize a url, no www.
 	void normalizeUrl ( Url *srcUrl, Url *dstUrl );
@@ -93,7 +93,7 @@ class Catdb  {
 	//   and "not-founds" stored remotely (net cache)
 	Rdb   m_rdb;
 
-	DiskPageCache m_pc;
+	//DiskPageCache m_pc;
 
 };
 

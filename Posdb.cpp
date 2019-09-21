@@ -125,19 +125,19 @@ bool Posdb::init ( ) {
 	int32_t nodeSize      = (sizeof(key144_t)+12+4) + sizeof(collnum_t);
 	int32_t maxTreeNodes = maxTreeMem  / nodeSize ;
 
-	int32_t pageSize = GB_INDEXDB_PAGE_SIZE;
+	//int32_t pageSize = GB_INDEXDB_PAGE_SIZE;
 	// we now use a disk page cache as opposed to the
 	// old rec cache. i am trying to do away with the Rdb::m_cache rec
 	// cache in favor of cleverly used disk page caches, because
 	// the rec caches are not real-time and get stale. 
-	int32_t pcmem    = 30000000; // 30MB
+	//int32_t pcmem    = 30000000; // 30MB
 	// make sure at least 30MB
 	//if ( pcmem < 30000000 ) pcmem = 30000000;
 	// keep this low if we are the tmp cluster, 30MB
-	if ( g_hostdb.m_useTmpCluster && pcmem > 30000000 ) pcmem = 30000000;
+	//if ( g_hostdb.m_useTmpCluster && pcmem > 30000000 ) pcmem = 30000000;
 	// do not use any page cache if doing tmp cluster in order to
 	// prevent swapping
-	if ( g_hostdb.m_useTmpCluster ) pcmem = 0;
+	//if ( g_hostdb.m_useTmpCluster ) pcmem = 0;
 	// save more mem!!! allow os to cache it i guess...
 	// let's go back to using it
 	//pcmem = 0;
@@ -145,13 +145,11 @@ bool Posdb::init ( ) {
 	//pcmem = 0;
 	// . init the page cache
 	// . MDW: "minimize disk seeks" not working otherwise i'd enable it!
-	if ( ! m_pc.init ( "posdb",
-			   RDB_POSDB,
-			   pcmem    ,
-			   pageSize , 
-			   true     ,  // use RAM disk?
-			   false    )) // minimize disk seeks?
-		return log("db: Posdb init failed.");
+	// if ( ! m_pc.init ( "posdb",
+	// 		   RDB_POSDB,
+	// 		   pcmem    ,
+	// 		   pageSize ))
+	// 	return log("db: Posdb init failed.");
 
 	// . set our own internal rdb
 	// . max disk space for bin tree is same as maxTreeMem so that we
@@ -176,7 +174,7 @@ bool Posdb::init ( ) {
 			   // newer systems have tons of ram to use
 			   // for their disk page cache. it is slower than
 			   // ours but the new engine has much slower things
-			   &m_pc                       ,
+			   NULL,//&m_pc                       ,
 			   false , // istitledb?
 			   false , // preloaddiskpagecache?
 			   sizeof(key144_t)
@@ -454,6 +452,11 @@ void Posdb::makeKey ( void              *vkp            ,
 	if ( ! isDelKey ) kp->n0 |= 0x01;
 
 	if ( shardedByTermId ) setShardedByTermIdBit ( kp );
+
+	// get the one we lost
+	// char *kstr = KEYSTR ( kp , sizeof(POSDBKEY) );
+	// if (!strcmp(kstr,"0x0ca3417544e400000000000032b96bf8aa01"))
+	// 	log("got lost key");
 }
 
 RdbCache g_termFreqCache;
@@ -686,8 +689,10 @@ PosdbTable::~PosdbTable() {
 }
 
 void PosdbTable::reset() {
+	// we can't reset this because we don't recall allocTopTree()
+	// again when computing search results in docid ranges.
+	//m_hasFacetTerm = false;
 	// has init() been called?
-	m_hasFacetTerm = false;
 	m_initialized          = false;
 	m_estimatedTotalHits   = -1;
 	m_errno                   = 0;
@@ -752,18 +757,21 @@ void PosdbTable::init ( Query     *q               ,
 	// set this now
 	//m_collnum = cr->m_collnum;
 
-
 	// save it
 	m_topTree = topTree;
 	// a ptr for debugging i guess
 	g_topTree = topTree;
 	// remember the query class, it has all the info about the termIds
 	m_q = q;
+	m_nqt = q->getNumTerms();
 	// for debug msgs
 	m_logstate = logstate;
 
 	m_realMaxTop = r->m_realMaxTop;
 	if ( m_realMaxTop > MAX_TOP ) m_realMaxTop = MAX_TOP;
+
+	m_siteRankMultiplier = SITERANKMULTIPLIER;
+	if ( m_q->m_isBoolean ) m_siteRankMultiplier = 0.0;
 
 	// seo.cpp supplies a NULL msg2 because it already sets
 	// QueryTerm::m_posdbListPtrs
@@ -858,12 +866,17 @@ bool PosdbTable::allocTopTree ( ) {
 		nn2 *= m_r->m_numDocIdSplits;
 		// just in case one split is not as big
 		nn2 *= 2;
+
+		// boost this guy too since we compare it to nn2
+		if ( nn1 < 100 ) nn1 = 100;
+		nn1 *= m_r->m_numDocIdSplits;
+		nn1 *= 2;
 	}
 		
 	// do not go OOM just because client asked for 10B results and we
 	// only have like 100 results.
-	int64_t nn = nn1;
-	if ( nn2 < nn1 ) nn = nn2;
+	int64_t nn = nn2;
+	if ( nn1 < nn2 ) nn = nn1;
 
 	
 
@@ -896,7 +909,7 @@ bool PosdbTable::allocTopTree ( ) {
 	if ( m_debug )
 		log("toptree: toptree: initializing %"INT64" nodes",nn);
 
-	if ( nn < m_r->m_docsToGet )
+	if ( nn < m_r->m_docsToGet && m_debug )
 		log("query: warning only getting up to %"INT64" docids "
 		    "even though %"INT32" requested because termlist "
 		    "sizes are so small!! splits=%"INT32""
@@ -904,6 +917,10 @@ bool PosdbTable::allocTopTree ( ) {
 		    , m_r->m_docsToGet 
 		    , (int32_t)m_r->m_numDocIdSplits
 		    );
+
+	// keep it sane
+	if ( nn > m_r->m_docsToGet * 2 && nn > 60 )
+		nn = m_r->m_docsToGet * 2;
 
 	// this actually sets the # of nodes to MORE than nn!!!
 	if ( ! m_topTree->setNumNodes(nn,m_r->m_doSiteClustering)) {
@@ -994,8 +1011,9 @@ bool PosdbTable::allocTopTree ( ) {
 			continue;
 		// how big?
 		int64_t total = m_msg2->m_lists[i].getListSize();
-		// skip if empty
-		if ( total == 0 ) {
+		// skip if empty. no we could be doing a split that is
+		// empty but other splits are full
+		if ( total == 0 && m_r->m_numDocIdSplits <= 1 ) {
 			log("query: empty facets for term #%i",i);
 			continue;
 		}
@@ -1048,6 +1066,26 @@ bool PosdbTable::allocTopTree ( ) {
 		// make it nongrowable because we'll be in a thread
 		qt->m_facetHashTable.setNonGrow();
 	}
+
+	// m_stackBuf
+	int32_t   nqt = m_q->m_numTerms;
+	int32_t need  = 0;
+	need += 4 * nqt;
+	need += 4 * nqt;
+	need += 4 * nqt;
+	need += 4 * nqt;
+	need += sizeof(float ) * nqt;
+	need += sizeof(char *) * nqt;
+	need += sizeof(char *) * nqt;
+	need += sizeof(char *) * nqt;
+	need += sizeof(char *) * nqt;
+	need += sizeof(char *) * nqt;
+	need += sizeof(char  ) * nqt;
+	need += sizeof(float ) * nqt * nqt; // square matrix
+	m_stackBuf.setLabel("stkbuf1");
+	if ( ! m_stackBuf.reserve( need ) )
+		return false;
+
 	return true;
 }
 
@@ -1366,8 +1404,8 @@ void PosdbTable::evalSlidingWindow ( char **ptrs ,
 		max *= m_freqWeights[i] * m_freqWeights[j];
 
 		// use score from scoreMatrix if bigger
-		if ( scoreMatrix[MAX_QUERY_TERMS*i+j] > max ) {
-			max = scoreMatrix[MAX_QUERY_TERMS*i+j];
+		if ( scoreMatrix[m_nqt*i+j] > max ) {
+			max = scoreMatrix[m_nqt*i+j];
 			//if ( m_ds ) {
 			//	winners1[i*MAX_QUERY_TERMS+j] = NULL;
 			//	winners2[i*MAX_QUERY_TERMS+j] = NULL;
@@ -4360,6 +4398,9 @@ bool PosdbTable::setQueryTermInfo ( ) {
 		qti->m_qtermNum      = i;
 		// and vice versa
 		qt->m_queryTermInfoNum = nrg;
+		// now we count the total # of docs that have a facet
+		// for doing tf/idf type things
+		//qti->m_numDocsThatHaveFacet = 0;
 		// this is not good enough, we need to count 
 		// non-whitespace punct as 2 units not 1 unit
 		// otherwise qdist gets thrown off and our phrasing fails.
@@ -4800,6 +4841,8 @@ bool PosdbTable::setQueryTermInfo ( ) {
 	// below when trying to grow it. they could all be OR'd together
 	// so alloc the most!
 	int32_t maxSlots = (grand/12) * 2;
+	// try to speed up. this doesn't *seem* to matter, so i took out:
+	//maxSlots *= 2;
 	// get total operands we used
 	//int32_t numOperands = m_q->m_numWords;//Operands;
 	// a quoted phrase counts as a single operand
@@ -4811,15 +4854,15 @@ bool PosdbTable::setQueryTermInfo ( ) {
 	// allow an extra byte for remainders
 	if ( m_numQueryTermInfos % 8 ) m_vecSize++;
 	// now preallocate the hashtable. 0 niceness.
-	if ( m_q->m_isBoolean && 
-	     ! m_bt.set (8,m_vecSize,maxSlots,NULL,0,false,0,"booltbl"))
+	if ( m_q->m_isBoolean &&  // true = useKeyMagic
+	     ! m_bt.set (8,m_vecSize,maxSlots,NULL,0,false,0,"booltbl",true))
 		return false;
 	// . m_ct maps a boolean "bit vector" to a true/false value
 	// . each "bit" in the "bit vector" indicates if docid has that 
 	//   particular query term
-	if ( m_q->m_isBoolean && 
+	if ( m_q->m_isBoolean && // true = useKeyMagic
 	     ! m_ct.set (8,1,maxSlots,NULL,0,false,0,
-			 "booltbl"))
+			 "booltbl",true))
 		return false;
 
 	return true;
@@ -4858,10 +4901,10 @@ void PosdbTable::rmDocIdVotes ( QueryTermInfo *qti ) {
 				continue;
 			// top 4 bytes are equal. check lower single byte then.
 			if ( *(unsigned char *)(dp) >
-			     (*(unsigned char *)(recPtr+7) ) ) // & 0xfc ) )
+			     (*(unsigned char *)(recPtr+7) & 0xfc ) )
 				break;
 			if ( *(unsigned char *)(dp) <
-			     (*(unsigned char *)(recPtr+7) ) ) // & 0xfc ) )
+			     (*(unsigned char *)(recPtr+7) & 0xfc ) )
 				continue;
 			// . equal! mark it as nuked!
 			dp[5] = -1;//listGroupNum;
@@ -4955,10 +4998,49 @@ inline bool isInRange2 ( char *recPtr , char *subListEnd, QueryTerm *qt ) {
 	return false;
 }
 
+// for a facet
+int64_t PosdbTable::countUniqueDocids( QueryTermInfo *qti ) {
+
+	QueryTerm *qt = qti->m_qt;
+	HashTableX *ft = &qt->m_facetHashTable;
+
+	// get that sublist. facets should only have one sublist since
+	// they have no synonyms.
+	char *start = qti->m_subLists[0]->getList();
+	register char *recPtr     = start;
+	register char *subListEnd = qti->m_subLists[0]->getListEnd();
+	int64_t count = 0;
+ loop:
+	if ( recPtr >= subListEnd ) {
+		if ( m_debug )
+			log(LOG_DEBUG,"posdb: term list size of %"
+			    INT32" has %"INT64" unique docids"
+			    , (int32_t)(subListEnd-start),count);
+		return count;
+	}
+
+	// this is a facet term so get the value bits. they can represent
+	// a float32, int32 or stringhash32
+	int32_t val32 = g_posdb.getFacetVal32 ( recPtr );
+	// now just accumulate in our hash table of vals
+	FacetEntry *fe = (FacetEntry *)ft->getValue(&val32);
+	// inc the TOTAL val count
+	if ( fe ) fe->m_outsideSearchResultsCount++;
+
+	// Increment ptr to the next record
+        int32_t recSize = qti->m_subLists[0]->getRecSize(recPtr);
+        recPtr += recSize;
+
+        // Records that are 6 bytes share the same doc id, so only increment
+        // 'count' if it refers to a record with a new (unique) docId
+        if (recSize > 6) count++;
+	goto loop;
+}
+
 // . add a QueryTermInfo for a term (synonym lists,etc) to the docid vote buf
 //   "m_docIdVoteBuf"
 // . this is how we intersect all the docids to end up with the winners
-void PosdbTable::addDocIdVotes ( QueryTermInfo *qti , int32_t   listGroupNum ) {
+void PosdbTable::addDocIdVotes ( QueryTermInfo *qti , int32_t   listGroupNum) {
 
 	// sanity check, we store this in a single byte below for voting
 	if ( listGroupNum >= 256 ) { char *xx=NULL;*xx=0; }
@@ -5001,7 +5083,7 @@ void PosdbTable::addDocIdVotes ( QueryTermInfo *qti , int32_t   listGroupNum ) {
 	//   the docid vote buf. that is, if the query is "jump car" we
 	//   just add all the docids for "jump" and then intersect with the
 	//   docids for "car".
-	for ( int32_t i = 0 ; i < qti->m_numSubLists && listGroupNum > 0 ; i++ ) {
+	for ( int32_t i = 0 ; i < qti->m_numSubLists && listGroupNum > 0; i++){
 		// get that sublist
 		recPtr     = qti->m_subLists[i]->getList();
 		subListEnd = qti->m_subLists[i]->getListEnd();
@@ -5024,10 +5106,10 @@ void PosdbTable::addDocIdVotes ( QueryTermInfo *qti , int32_t   listGroupNum ) {
 				continue;
 			// top 4 bytes are equal. check lower single byte then.
 			if ( *(unsigned char *)(dp) >
-			     (*(unsigned char *)(recPtr+7) ) ) // & 0xfc ) )
+			     (*(unsigned char *)(recPtr+7) & 0xfc ) )
 				break;
 			if ( *(unsigned char *)(dp) <
-			     (*(unsigned char *)(recPtr+7) ) ) // & 0xfc ) )
+			     (*(unsigned char *)(recPtr+7) & 0xfc ) )
 				continue;
 
 			// if we are a range term, does this subtermlist
@@ -5044,6 +5126,7 @@ void PosdbTable::addDocIdVotes ( QueryTermInfo *qti , int32_t   listGroupNum ) {
 			dp[5] = listGroupNum;
 			// skip it
 			dp += 6;
+
 			// advance recPtr now
 			break;
 		}
@@ -5116,7 +5199,7 @@ void PosdbTable::addDocIdVotes ( QueryTermInfo *qti , int32_t   listGroupNum ) {
 	for ( int32_t i = 0 ; i < qti->m_numSubLists ; i++ ) {
 		// skip if exhausted
 		if ( ! cursor[i] ) continue;
-		// int16_tcut
+		// shortcut
 		recPtr = cursor[i];
 		// get the min docid
 		if ( ! minRecPtr ) {
@@ -5136,12 +5219,12 @@ void PosdbTable::addDocIdVotes ( QueryTermInfo *qti , int32_t   listGroupNum ) {
 			continue;
 		}
 		// check lowest byte
-		if ( *(unsigned char *)(recPtr   +7) >
-		     *(unsigned char *)(minRecPtr+7) )
+		if ( (*(unsigned char *)(recPtr   +7) & 0xfc ) >
+		     (*(unsigned char *)(minRecPtr+7) & 0xfc ) )
 			continue;
 		// a new min
-		if ( *(unsigned char *)(recPtr   +7) <
-		     *(unsigned char *)(minRecPtr+7) ) {
+		if ( (*(unsigned char *)(recPtr   +7) & 0xfc ) <
+		     (*(unsigned char *)(minRecPtr+7) & 0xfc ) ) {
 			minRecPtr = recPtr;
 			mini = i;
 			continue;
@@ -5197,8 +5280,8 @@ void PosdbTable::addDocIdVotes ( QueryTermInfo *qti , int32_t   listGroupNum ) {
 	if(lastMinRecPtr &&
 	   *(uint32_t *)(lastMinRecPtr+8)==
 	   *(uint32_t *)(minRecPtr+8)&&
-	   *(unsigned char *)(lastMinRecPtr+7)==
-	   *(unsigned char *)(minRecPtr+7))
+	   (*(unsigned char *)(lastMinRecPtr+7)&0xfc)==
+	   (*(unsigned char *)(minRecPtr+7)&0xfc))
 		goto getMin;
 
 	// . do not store the docid if not in the whitelist
@@ -5225,7 +5308,7 @@ void PosdbTable::addDocIdVotes ( QueryTermInfo *qti , int32_t   listGroupNum ) {
 	// docid is only 5 bytes for now
 	*(int32_t  *)(dp+1) = *(int32_t  *)(minRecPtr+8);
 	// the single lower byte
-	dp[0] = minRecPtr[7] ; // & 0xfc;
+	dp[0] = minRecPtr[7] & 0xfc;
 	// 0 vote count
 	dp[5] = 0;
 
@@ -5286,10 +5369,10 @@ void PosdbTable::shrinkSubLists ( QueryTermInfo *qti ) {
 				continue;
 			// check lower byte if equal
 			if ( *(unsigned char *)(dp) >
-			     *(unsigned char *)(recPtr+7) ) // & 0xfc )
+			     (*(unsigned char *)(recPtr+7) & 0xfc ) )
 				break;
 			if ( *(unsigned char *)(dp) <
-			     *(unsigned char *)(recPtr+7) ) // & 0xfc )
+			     (*(unsigned char *)(recPtr+7) & 0xfc ) )
 				continue;
 			// copy over the 12 byte key
 			*(int64_t *)dst = *(int64_t *)recPtr;
@@ -5623,6 +5706,23 @@ void PosdbTable::intersectLists10_r ( ) {
 	//if ( s_special == 2836 )
 	//	log("hey");
 
+	// point to our array of query term infos set in setQueryTermInfos()
+	QueryTermInfo *qip = (QueryTermInfo *)m_qiBuf.getBufStart();
+
+	// if a query term is for a facet (ie gbfacetstr:gbtagsite)
+	// then count how many unique docids are in it. we were trying to 
+	// do this in addDocIdVotes() but it wasn't in the right place i guess.
+	// for ( int32_t i = 0 ; i < m_numQueryTermInfos ; i++ ) {
+	// 	QueryTermInfo *qti = &qip[i];
+	// 	QueryTerm *qt = qti->m_qt;
+	// 	bool isFacetTerm = false;
+	// 	if ( qt->m_fieldCode == FIELD_GBFACETSTR ) isFacetTerm = true;
+	// 	if ( qt->m_fieldCode == FIELD_GBFACETINT ) isFacetTerm = true;
+	// 	if ( qt->m_fieldCode == FIELD_GBFACETFLOAT ) isFacetTerm =true;
+	// 	if ( ! isFacetTerm ) continue;
+	// 	qt->m_numDocsThatHaveFacet += countUniqueDocids ( qti );
+	// }
+
 
 	// setQueryTermInfos() should have set how many we have
 	if ( m_numQueryTermInfos == 0 ) {
@@ -5657,8 +5757,6 @@ void PosdbTable::intersectLists10_r ( ) {
 
 	int32_t listGroupNum = 0;
 
-	// point to our array of query term infos set in setQueryTermInfos()
-	QueryTermInfo *qip = (QueryTermInfo *)m_qiBuf.getBufStart();
 
 	// if all non-negative query terms are in the same wikiphrase then
 	// we can apply the WIKI_WEIGHT in getMaxPossibleScore() which
@@ -5699,8 +5797,6 @@ void PosdbTable::intersectLists10_r ( ) {
 		makeDocIdVoteBufForBoolQuery_r();
 		goto skip3;
 	}
-
-
 
 	// . create "m_docIdVoteBuf" filled with just the docids from the
 	//   smallest group of sublists 
@@ -5744,6 +5840,8 @@ void PosdbTable::intersectLists10_r ( ) {
 		if ( qti->m_bigramFlags[0] & BF_NEGATIVE ) continue;
 		// inc this
 		listGroupNum++;
+		// if it hits 256 then wrap back down to 1
+		if ( listGroupNum >= 256 ) listGroupNum = 1;
 		// add it
 		addDocIdVotes ( qti , listGroupNum );
 	}
@@ -5828,11 +5926,28 @@ void PosdbTable::intersectLists10_r ( ) {
 	//
 	// TRANSFORM QueryTermInfo::m_* vars into old style arrays
 	//
-	int32_t  wikiPhraseIds  [MAX_QUERY_TERMS];
-	int32_t  quotedStartIds[MAX_QUERY_TERMS];
-	int32_t  qpos           [MAX_QUERY_TERMS];
-	int32_t  qtermNums      [MAX_QUERY_TERMS];
-	float freqWeights    [MAX_QUERY_TERMS];
+	// int32_t  wikiPhraseIds  [MAX_QUERY_TERMS];
+	// int32_t  quotedStartIds[MAX_QUERY_TERMS];
+	// int32_t  qpos           [MAX_QUERY_TERMS];
+	// int32_t  qtermNums      [MAX_QUERY_TERMS];
+	// float freqWeights    [MAX_QUERY_TERMS];
+	// now dynamically allocate to avoid stack smashing
+	char     *pp  = m_stackBuf.getBufStart();
+	int32_t   nqt = m_q->m_numTerms;
+	int32_t  *wikiPhraseIds  = (int32_t *)pp; pp += 4 * nqt;
+	int32_t  *quotedStartIds = (int32_t *)pp; pp += 4 * nqt;
+	int32_t  *qpos           = (int32_t *)pp; pp += 4 * nqt;
+	int32_t  *qtermNums      = (int32_t *)pp; pp += 4 * nqt;
+	float    *freqWeights    = (float   *)pp; pp += sizeof(float) * nqt;
+	char    **miniMergedList = (char   **)pp; pp += sizeof(char *) * nqt;
+	char    **miniMergedEnd  = (char   **)pp; pp += sizeof(char *) * nqt;
+	char    **bestPos        = (char   **)pp; pp += sizeof(char *) * nqt;
+	char    **winnerStack    = (char   **)pp; pp += sizeof(char *) * nqt;
+	char    **xpos           = (char   **)pp; pp += sizeof(char *) * nqt;
+	char     *bflags         = (char    *)pp; pp += sizeof(char) * nqt;
+	float    *scoreMatrix    = (float   *)pp; pp += sizeof(float) *nqt*nqt;
+	if ( pp > m_stackBuf.getBufEnd() ) {char *xx=NULL;*xx=0; }
+
 	for ( int32_t i = 0 ; i < m_numQueryTermInfos ; i++ ) {
 		// get it
 		QueryTermInfo *qti = &qip[i];
@@ -5874,17 +5989,11 @@ void PosdbTable::intersectLists10_r ( ) {
 	float minPairScore;
 	float minSingleScore;
 	//int64_t docId;
-	char *miniMergedList [MAX_QUERY_TERMS];
-	char *miniMergedEnd  [MAX_QUERY_TERMS];
-	char  bflags         [MAX_QUERY_TERMS];
 	m_bflags = bflags;
 	int32_t qdist;
 	float wts;
 	float pss;
-	float scoreMatrix[MAX_QUERY_TERMS*MAX_QUERY_TERMS];
-	char *bestPos[MAX_QUERY_TERMS];
 	float maxNonBodyScore;
-	char *winnerStack[MAX_QUERY_TERMS];
 	// new vars for removing supplanted docid score infos and
 	// corresponding pair and single score infos
 	char *sx;
@@ -5910,7 +6019,6 @@ void PosdbTable::intersectLists10_r ( ) {
 #define RINGBUFSIZE 4096
 //#define RINGBUFSIZE 1024
 	unsigned char ringBuf[RINGBUFSIZE+10];
-	unsigned char *ringBufEnd = ringBuf + RINGBUFSIZE;
 	// for overflow conditions in loops below
 	ringBuf[RINGBUFSIZE+0] = 0xff;
 	ringBuf[RINGBUFSIZE+1] = 0xff;
@@ -6156,7 +6264,8 @@ void PosdbTable::intersectLists10_r ( ) {
 			// must match docid
 			if ( xc >= xcEnd ||
 			     *(int32_t *)(xc+8) != *(int32_t *)(docIdPtr+1) ||
-			     *(char *)(xc+7) != *(char *)(docIdPtr  ) ) {
+			     (*(char *)(xc+7)&0xfc) != 
+			     (*(char *)(docIdPtr)&0xfc) ) {
 				// flag it as not having the docid
 				qti->m_savedCursor[j] = NULL;
 				// skip this sublist if does not have our docid
@@ -6201,12 +6310,7 @@ void PosdbTable::intersectLists10_r ( ) {
 	}
 
 	if ( m_q->m_isBoolean ) {
-		minScore = 1.0;
-		// since we are jumping, we need to set m_docId here
-		//m_docId = *(uint32_t *)(docIdPtr+1);
-		//m_docId <<= 8;
-		//m_docId |= (unsigned char)docIdPtr[0];
-		//m_docId >>= 2;
+		//minScore = 1.0;
 		// we can't jump over setting of miniMergeList. do that.
 		goto boolJump1;
 	}
@@ -6258,18 +6362,7 @@ void PosdbTable::intersectLists10_r ( ) {
 	// for 'search engine'. it might save time!
 
 	// reset ring buf. make all slots 0xff. should be 1000 cycles or so.
-	for ( int32_t *rb = (int32_t *)ringBuf ; ; ) {
-		rb[0] = 0xffffffff;
-		rb[1] = 0xffffffff;
-		rb[2] = 0xffffffff;
-		rb[3] = 0xffffffff;
-		rb[4] = 0xffffffff;
-		rb[5] = 0xffffffff;
-		rb[6] = 0xffffffff;
-		rb[7] = 0xffffffff;
-		rb += 8;
-		if ( rb >= (int32_t *)ringBufEnd ) break;
-	}
+	memset ( ringBuf, 0xff, RINGBUFSIZE );
 
 	// now to speed up 'time enough for love' query which does not
 	// have many super high scoring guys on top we need a more restrictive
@@ -6418,6 +6511,30 @@ void PosdbTable::intersectLists10_r ( ) {
 
  boolJump1:
 
+	if ( m_q->m_isBoolean ) {
+		//minScore = 1.0;
+		// this is somewhat wasteful since it is set below again
+		m_docId = *(uint32_t *)(docIdPtr+1);
+		m_docId <<= 8;
+		m_docId |= (unsigned char)docIdPtr[0];
+		m_docId >>= 2;
+		// add one point for each term matched in the bool query
+		// this is really just for when the terms are from different
+		// fields. if we have unfielded boolean terms we should
+		// do proximity matching.
+		int32_t slot = m_bt.getSlot ( &m_docId );
+		if ( slot >= 0 ) {
+			uint8_t *bv = (uint8_t *)m_bt.getValueFromSlot(slot);
+			// then a score based on the # of terms that matched
+			int16_t bitsOn = getNumBitsOnX ( bv , m_vecSize );
+			// but store in hashtable now
+			minScore = (float)bitsOn;
+		}
+		else {
+			minScore = 1.0;
+		}
+	}
+
 	// we need to do this for seo hacks to merge the synonyms together
 	// into one list
  seoHackSkip2:
@@ -6515,7 +6632,12 @@ void PosdbTable::intersectLists10_r ( ) {
 		// synbits on it, below!!! or a half stop wiki bigram like
 		// the term "enough for" in the wiki phrase 
 		// "time enough for love" because we wanna reward that more!
+		// this halfstopwikibigram bit is set in the indivial keys
+		// so we'd have to at least do a key cleansing, so we can't
+		// do this shortcut right now... mdw oct 10 2015
 		if ( nsub == 1 && 
+		     // need it for gbfacet termlists though it seems
+		     (nwpFlags[0] & (BF_FACET|BF_NUMBER)) &&		     
 		     !(nwpFlags[0] & BF_SYNONYM) &&
 		     !(nwpFlags[0] & BF_HALFSTOPWIKIBIGRAM) ) {
 			miniMergedList [j] = nwp     [0];
@@ -6651,6 +6773,8 @@ void PosdbTable::intersectLists10_r ( ) {
 			nwp[mink] = NULL;
 		// avoid breach of core below now
 		if ( mptr < mptrEnd ) goto mergeMore;
+		// wrap it up here since done merging
+		miniMergedEnd[j] = mptr;		
 	}
 
 	// breach?
@@ -6783,7 +6907,7 @@ void PosdbTable::intersectLists10_r ( ) {
 						   &pss);
 		// it's -1 if one term is in the body/header/menu/etc.
 		if ( pss < 0 ) {
-			scoreMatrix[i*MAX_QUERY_TERMS+j] = -1.00;
+			scoreMatrix[i*nqt+j] = -1.00;
 			wts = -1.0;
 		}
 		else {
@@ -6792,7 +6916,7 @@ void PosdbTable::intersectLists10_r ( ) {
 			wts *= m_freqWeights[j];//sfw[j];
 			// store in matrix for "sub out" algo below
 			// when doing sliding window
-			scoreMatrix[i*MAX_QUERY_TERMS+j] = wts;
+			scoreMatrix[i*nqt+j] = wts;
 			// if terms is a special wiki half stop bigram
 			//if ( bflags[i] == 1 ) wts *= WIKI_BIGRAM_WEIGHT;
 			//if ( bflags[j] == 1 ) wts *= WIKI_BIGRAM_WEIGHT;
@@ -6858,13 +6982,20 @@ void PosdbTable::intersectLists10_r ( ) {
 	// . miniMergedList[0] list can be null if it does not have 'street' 
 	//   but has 'streetlight' for the query 'street light'
 	//
-	if ( miniMergedList[0] ) {
+	if ( miniMergedList[0] && 
+	     // siterank/langid is always 0 in facet/numeric 
+	     // termlists so they sort by their number correctly
+	     ! (qip[0].m_bigramFlags[0] & (BF_NUMBER|BF_FACET) ) ) {
 		siteRank = g_posdb.getSiteRank ( miniMergedList[0] );
 		docLang  = g_posdb.getLangId   ( miniMergedList[0] );
 	}
 	else {
 		for ( int32_t k = 1 ; k < m_numQueryTermInfos ; k++ ) {
 			if ( ! miniMergedList[k] ) continue;
+			// siterank/langid is always 0 in facet/numeric 
+			// termlists so they sort by their number correctly
+			if ( qip[k].m_bigramFlags[0] & (BF_NUMBER|BF_FACET) )
+				continue;
 			siteRank = g_posdb.getSiteRank ( miniMergedList[k] );
 			docLang  = g_posdb.getLangId   ( miniMergedList[k] );
 			break;
@@ -6907,7 +7038,7 @@ void PosdbTable::intersectLists10_r ( ) {
 
 	// use special ptrs for the windows so we do not mangle 
 	// miniMergedList[] array because we use that below!
-	char *xpos[MAX_QUERY_TERMS];
+	//char *xpos[MAX_QUERY_TERMS];
 	for ( int32_t i = 0 ; i < m_numQueryTermInfos ; i++ ) 
 		xpos[i] = miniMergedList[i];
 
@@ -7116,7 +7247,7 @@ void PosdbTable::intersectLists10_r ( ) {
  boolJump2:
 
 	// try dividing it by 3! (or multiply by .33333 faster)
-	score = minScore * (((float)siteRank)*SITERANKMULTIPLIER+1.0);
+	score = minScore * (((float)siteRank)*m_siteRankMultiplier+1.0);
 
 	// . not foreign language? give a huge boost
 	// . use "qlang" parm to set the language. i.e. "&qlang=fr"
@@ -7432,6 +7563,7 @@ void PosdbTable::intersectLists10_r ( ) {
 		dcs.m_docLang = docLang;
 		// ensure enough room we can't allocate in a thread!
 		if ( m_scoreInfoBuf.getAvail()<(int32_t)sizeof(DocIdScore)+1){
+			goto advance;
 			char *xx=NULL;*xx=0; }
 		// if same as last docid, overwrite it since we have a higher
 		// siterank or langid i guess
@@ -7541,7 +7673,9 @@ void PosdbTable::intersectLists10_r ( ) {
 		t->m_score = score;
 		t->m_docId = m_docId;
 		// sanity
-		if ( m_docId == 0 ) { char *xx=NULL;*xx=0; }
+		// take this out i've seen this core here before, no idea
+		// why, but why core?
+		//if ( m_docId == 0 ) { char *xx=NULL;*xx=0; }
 		// use an integer score like lastSpidered timestamp?
 		if ( m_sortByTermNumInt >= 0 ) {
 			t->m_intScore = intScore;
@@ -7643,6 +7777,25 @@ void PosdbTable::intersectLists10_r ( ) {
 		log("posdb: # fail = %"INT32" ", fail );
 		log("posdb: # pass = %"INT32" ", pass );
 	}
+
+
+	// if a query term is for a facet (ie gbfacetstr:gbtagsite)
+	// then count how many unique docids are in it. we were trying to 
+	// do this in addDocIdVotes() but it wasn't in the right place i guess.
+	for ( int32_t i = 0 ; i < m_numQueryTermInfos ; i++ ) {
+		QueryTermInfo *qti = &qip[i];
+		QueryTerm *qt = qti->m_qt;
+		bool isFacetTerm = false;
+		if ( qt->m_fieldCode == FIELD_GBFACETSTR ) isFacetTerm = true;
+		if ( qt->m_fieldCode == FIELD_GBFACETINT ) isFacetTerm = true;
+		if ( qt->m_fieldCode == FIELD_GBFACETFLOAT ) isFacetTerm =true;
+		if ( ! isFacetTerm ) continue;
+		// this should also now use the facettable we built up
+		// as we accumulated the facet counts above.
+		qt->m_numDocsThatHaveFacet += countUniqueDocids ( qti );
+	}
+
+
 
 	// get time now
 	now = gettimeofdayInMilliseconds();
@@ -7767,7 +7920,7 @@ float PosdbTable::getMaxPossibleScore ( QueryTermInfo *qti ,
 		score *= WIKI_BIGRAM_WEIGHT;
 	}
 	//score *= perfectWordSpamWeight * perfectWordSpamWeight;
-	score *= (((float)siteRank)*SITERANKMULTIPLIER+1.0);
+	score *= (((float)siteRank)*m_siteRankMultiplier+1.0);
 
 	// language boost if same language (or no lang specified)
 	if ( m_r->m_language == docLang ||
@@ -8000,6 +8153,10 @@ bool PosdbTable::makeDocIdVoteBufForBoolQuery_r ( ) {
 	}
 
 
+	// debug info
+	// int32_t nc = m_bt.getLongestString();
+	// log("posdb: string of %"INT32" filled slots!",nc);
+
 	char *dst = m_docIdVoteBuf.getBufStart();
 
 	// . now our hash table is filled with all the docids
@@ -8058,13 +8215,15 @@ bool PosdbTable::makeDocIdVoteBufForBoolQuery_r ( ) {
 			// a 6 byte key means you pass
 			gbmemcpy ( dst , &docId , 6 );
 			// test it
-			int64_t d2;
-			d2 = *(uint32_t *)(dst+1);
-			d2 <<= 8;
-			d2 |= (unsigned char)dst[0];
-			d2 >>= 2;
-			docId >>= 2;
-			if ( d2 != docId ) { char *xx=NULL;*xx=0; }
+			if ( m_debug ) {
+				int64_t d2;
+				d2 = *(uint32_t *)(dst+1);
+				d2 <<= 8;
+				d2 |= (unsigned char)dst[0];
+				d2 >>= 2;
+				docId >>= 2;
+				if ( d2 != docId ) { char *xx=NULL;*xx=0; }
+			}
 			// end test
 			dst += 6;
 		}

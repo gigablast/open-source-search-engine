@@ -50,7 +50,10 @@ bool Dir::open ( ) {
 	close ( );
 	if ( ! m_dirname ) return false;
  retry8:
+	// opendir() calls malloc
+	g_inMemFunction = true;
 	m_dir = opendir ( m_dirname );
+	g_inMemFunction = false;
 	// interrupted system call
 	if ( ! m_dir && errno == EINTR ) goto retry8;
 
@@ -93,6 +96,11 @@ void Dir::rewind ( ) {
 }
 
 char *Dir::getNextFilename ( char *pattern ) {
+
+	if ( ! m_dir ) {
+		log("dir: m_dir is NULL so can't find pattern %s",pattern);
+		return NULL;
+	}
 
 	struct dirent *ent;
 	int32_t plen = gbstrlen ( pattern );

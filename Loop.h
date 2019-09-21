@@ -18,7 +18,9 @@
 #define QUERYPRIORITYWEIGHT 16
 #define QUICKPOLL_INTERVAL 10
 
-int gbsystem(char *cmd ) ;
+int gbsystem(char *cmd);
+FILE* gbpopen(char* cmd);
+
 
 #define sleep(a) { char *xx=NULL;*xx=0; }
 //#define sleep(a) logf(LOG_INFO,"sleep: sleep"); 
@@ -96,6 +98,8 @@ extern int32_t g_numQuickPolls;
 
 extern int32_t g_numSigChlds;
 extern int32_t g_numSigQueues;
+extern int32_t g_numSigPipes;
+extern int32_t g_numSigIOs;
 extern int32_t g_numSigOthers;
 
 
@@ -201,7 +205,8 @@ class Loop {
 
 	void unregisterCallback ( Slot **slots , int fd , void *state ,
 				  void (* callback)(int fd,void *state) ,
-				  bool silent = false );
+				  bool silent , // = false );
+				  bool forReading );
 
 	bool addSlot ( bool forReading , int fd , void *state , 
 		       void (* callback)(int fd , void *state ) ,
