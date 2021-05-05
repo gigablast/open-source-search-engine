@@ -113,24 +113,25 @@ LIBS = ./libz.a ./libssl.a ./libcrypto.a ./libiconv.a ./libm.a
 # are we a 32-bit architecture? use different libraries then
 else ifeq ($(ARCH), i686)
 CPPFLAGS= -m32 -g -Wall -pipe -fno-stack-protector -Wno-write-strings -Wstrict-aliasing=0 -Wno-uninitialized -DPTHREADS -Wno-unused-but-set-variable $(STATIC)
-#LIBS= -L. ./libz.a ./libssl.a ./libcrypto.a ./libiconv.a ./libm.a ./libstdc++.a -lpthread
-LIBS=  -lm -lpthread -lssl -lcrypto ./libiconv.a ./libz.a
+#LIBS= -L. ./libssl.a ./libcrypto.a ./libiconv.a ./libm.a ./libstdc++.a -lpthread
+LIBS=  -lm -lpthread -lssl -lcrypto ./libiconv.a
 
 else ifeq ($(ARCH), i386)
 CPPFLAGS= -m32 -g -Wall -pipe -fno-stack-protector -Wno-write-strings -Wstrict-aliasing=0 -Wno-uninitialized -DPTHREADS -Wno-unused-but-set-variable $(STATIC)
-#LIBS= -L. ./libz.a ./libssl.a ./libcrypto.a ./libiconv.a ./libm.a ./libstdc++.a -lpthread
-LIBS=  -lm -lpthread -lssl -lcrypto ./libiconv.a ./libz.a
+#LIBS= -L. ./libssl.a ./libcrypto.a ./libiconv.a ./libm.a ./libstdc++.a -lpthread
+LIBS=  -lm -lpthread -lssl -lcrypto ./libiconv.a
 
 else
 #
 # Use -Wpadded flag to indicate padded structures.
 #
-CPPFLAGS = -g -Wall -pipe -fno-stack-protector -Wno-write-strings -Wstrict-aliasing=0 -Wno-uninitialized -DPTHREADS -Wno-unused-but-set-variable $(STATIC)
-#LIBS= -L. ./libz.a ./libssl.a ./libcrypto.a ./libiconv.a ./libm.a ./libstdc++.a -lpthread
+## FIXME: update standards to "-std=c++11", see #164.
+CPPFLAGS = -g -Wall -pipe -fno-stack-protector -Wno-write-strings -Wstrict-aliasing=0 -Wno-uninitialized -DPTHREADS -Wno-unused-but-set-variable -std=c++98 $(STATIC)
+#LIBS= -L. ./libssl.a ./libcrypto.a ./libiconv.a ./libm.a ./libstdc++.a -lpthread
 # apt-get install libssl-dev (to provide libssl and libcrypto)
 # to build static libiconv.a do a './configure --enable$(STATIC)' then 'make'
 # in the iconv directory
-LIBS=  -lm -lpthread -lssl -lcrypto ./libiconv64.a ./libz64.a
+LIBS=  -lm -lpthread -lssl -lcrypto -lz
 
 endif
 
@@ -145,7 +146,7 @@ endif
 # let's keep the libraries in the repo for easier bug reporting and debugging
 # in general if we can. the includes are still in /usr/include/ however...
 # which is kinda strange but seems to work so far.
-#LIBS= -L. ./libz.a ./libssl.a ./libcrypto.a ./libiconv.a ./libm.a ./libgcc.a ./libpthread.a ./libc.a ./libstdc++.a 
+#LIBS= -L. ./libssl.a ./libcrypto.a ./libiconv.a ./libm.a ./libgcc.a ./libpthread.a ./libc.a ./libstdc++.a 
 
 
 
@@ -177,7 +178,7 @@ vclean:
 	@echo ""
 	@echo "If make fails on Ubuntu then first run:"
 	@echo ""
-	@echo "sudo apt-get update ; sudo apt-get install make g++ libssl-dev"
+	@echo "sudo apt-get update ; sudo apt-get install make g++ libssl-dev zlib1g-dev"
 	@echo ""
 	@echo ""
 	@echo "If make fails on RedHat then first run:"
@@ -221,7 +222,7 @@ cygwin:
 
 
 gb32:
-	make CPPFLAGS="-m32 -g -Wall -pipe -fno-stack-protector -Wno-write-strings -Wstrict-aliasing=0 -Wno-uninitialized -DPTHREADS -Wno-unused-but-set-variable $(STATIC)" LIBS=" -L. ./libz.a ./libssl.a ./libcrypto.a ./libiconv.a ./libm.a ./libstdc++.a -lpthread " gb
+	make CPPFLAGS="-m32 -g -Wall -pipe -fno-stack-protector -Wno-write-strings -Wstrict-aliasing=0 -Wno-uninitialized -DPTHREADS -Wno-unused-but-set-variable $(STATIC)" LIBS=" -L. ./libssl.a ./libcrypto.a ./libiconv.a ./libm.a ./libstdc++.a -lpthread " gb
 
 #iana_charset.cpp: parse_iana_charsets.pl character-sets supported_charsets.txt
 #	./parse_iana_charsets.pl < character-sets
