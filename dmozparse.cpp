@@ -1039,7 +1039,7 @@ fileEnd:
 	//rdfStream.clear();
 	//rdfStream.seekg(0, ios::beg);
 	if ( lseek(rdfStream, 0, SEEK_SET) < 0 ) {
-		printf ( "Error Reseting RDF File\n" );
+		printf ( "Error Resetting RDF File\n" );
 		goto errExit1;
 	}
 	// reset the buffer to the first block
@@ -1316,7 +1316,7 @@ contentParse:
 	t = 0;
 	m = 0;
 	
-	// creat the url buffer
+	// create the url buffer
 	urlBufferSize = URL_BUFFER_SIZE;
 	urlBuffer = (char*)malloc(sizeof(char)*urlBufferSize);
 	if (!urlBuffer) {
@@ -1889,7 +1889,7 @@ fileEnd2:
 	printf("  Total Links:              %"INT32"\n", numUrlInfos);
 	printf("  Duplicated Links:         %"INT32"\n", m);
 	printf("  Max Link Duplicated:      %"INT32"\n", t);
-	printf("  Nonexistant Categories:   %"INT32"\n", totalNEC );
+	printf("  Nonexistent Categories:   %"INT32"\n", totalNEC );
 	//printf("    ");
 	//for (int32_t i = 0; i < urlInfos[ti].m_urlLen; i++)
 	//	printf("%c", urlBuffer[urlInfos[ti].m_urlOffset + i]);

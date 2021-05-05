@@ -72,7 +72,7 @@ void Weights::reset() {
 // RULE #6 (in content section)
 // if word is in a section with lots of plain text words that are not
 // in hyperlinks, boost it. If section is skimpy demote each word, but only 
-// demote a word if NOT the first occurence of that word in that section.
+// demote a word if NOT the first occurrence of that word in that section.
 // That way we allow for headers in their own section, like a table row, <tr>.
 // Sections are delimited by "breaking tags" defined in XmlNode.cpp, g_nodes[].
 
@@ -90,7 +90,7 @@ void Weights::reset() {
 
 // RULE #10 (comma-separated list)
 // multiply score by .3 if in a comma-separated list. only 
-// count one occurence in all such lists.
+// count one occurrence in all such lists.
 
 // RULE #11 (capitalized words)
 // multiply score by 1.3 if the word is capitalized and is NOT immediately
@@ -984,7 +984,7 @@ void getWordToPhraseRatioWeights ( int64_t   pid1 , // pre phrase
 			//   by (x). however, x could go all the way to 1.0 
 			//   even when i = 2, so we need to restrict x.
 			// . x is actually "ratio"
-			// . when we have 8 or less word occurences, do not
+			// . when we have 8 or less word occurrences, do not
 			//   remove more than 80% of its score, a 1/5 penalty
 			//   is good enough for now. but for words that occur
 			//   a lot in the link text or pwids, go to town...
@@ -1138,7 +1138,7 @@ void getWordToPhraseRatioWeights ( int64_t   pid1 , // pre phrase
 	//   by choosing the lowest word count possible
 	// . NO LONGER AFFECT phrase weights because just because the
 	//   words occur a lot in the document and this may be the only
-	//   occurence of this phrase, does not mean we should punish
+	//   occurrence of this phrase, does not mean we should punish
 	//   the phrase.  -- MDW
 	if ( titleRecVersion >= 88 ) {
 		*pw = 1.0;
@@ -1239,12 +1239,12 @@ bool Weights::set1 ( Words    *words              ,
 	//      demoted, likewise, such phrase scores will be promoted. Now
 	//      we also hash the wordids into here so we can look at the 
 	//      phrase count to word count ratio. (tt1)
-	// . 2. discounting multiple occurences of a word in the same 
+	// . 2. discounting multiple occurrences of a word in the same 
 	//      section. (tt2)
 	// . 3. for seeing in what section a word last occurred in, because
 	//      we boost the words score when it is spread out over many 
 	//      different sections (tt3)
-	// . 4. discounting multiple occurences of a word in the same 
+	// . 4. discounting multiple occurrences of a word in the same 
 	//      sentence/fragment. (tt4)
 	//TermTable *tt1 = m_countTablePtr;
 	HashTableX  tt2;
@@ -1391,9 +1391,9 @@ bool Weights::set1 ( Words    *words              ,
 			// hash the word and phrase ids with the section num
 			int64_t hw = wids[j] * (int64_t)section;
 			int64_t hp = pids[j] * (int64_t)section;
-			// . do not demote first occurence of word in a 
+			// . do not demote first occurrence of word in a 
 			//   low-scoring section, but only  demote successive 
-			//   occurences in low-scoring sections. 
+			//   occurrences in low-scoring sections. 
 			//   This allows for headers in separate sections.
 			// . get the special hash
 			if ( tt2.getScore(&hw) > 1 || sw >= DW ) {
@@ -1582,7 +1582,7 @@ bool Weights::set1 ( Words    *words              ,
 	// . in a header tag?
 	// . only boost first 40 words, though
 
-	// support version 85 and below for backwards compatability
+	// support version 85 and below for backwards compatibility
 	/*
 	if ( inHeader && m_version <= 85 && hcount++ < 40 ) {	
                 // <h1> tag
@@ -1637,7 +1637,7 @@ bool Weights::set1 ( Words    *words              ,
 	// . titleWeight is a percentage
 	if ( inTitle ) {
 
-		// support old rule for backwards compatability
+		// support old rule for backwards compatibility
 		//if ( m_version <= 85 && tcount++ < 20 ) 
 		//	m_ww[i] = ( m_ww[i] * m_titleWeight ) / 100;
 
@@ -1732,11 +1732,11 @@ bool Weights::set1 ( Words    *words              ,
 
 
 	// . RULE #13
-	// . is previous occurence in a different section?
-	// . this is -1 if no previous occurence
+	// . is previous occurrence in a different section?
+	// . this is -1 if no previous occurrence
 	int32_t lastSection = tt3.getScore ( &wids[i] );
-	// . if this is the first occurence ever, boost it
-	// . if the last occurence was not this section, boost it
+	// . if this is the first occurrence ever, boost it
+	// . if the last occurrence was not this section, boost it
 	// . this rewards uniformly distributed words.
 	if ( lastSection != section ) {
 		m_ww[i] = (int32_t)(m_ww[i]*1.3);
@@ -1868,7 +1868,7 @@ bool Weights::set1 ( Words    *words              ,
 	// . if phrase is not all in caps, and not after a quote, and does
 	//   not contain a hyphen after the first word, demote it
 	else if ( ! afterQuote && ! rightHyphen ) {
-		// only demote if phrase occured only once or twice
+		// only demote if phrase occurred only once or twice
 		int32_t count = m_countTablePtr->getScore ( &pids[i] );
 		if      ( count <= 1 ) {
 			m_pw[i] = (int32_t)(m_pw[i] * 0.1);
@@ -1977,7 +1977,7 @@ int32_t Weights::getPunctPhraseWeight ( int32_t i , char *s , int32_t len ) {
 		case ']': return 1;  // parens
 		case '{': return 1;  // parens
 		case '}': return 1;  // parens
-		case ',': return DW/3; // ususally bad, but could be "Abq, NM"
+		case ',': return DW/3; // usually bad, but could be "Abq, NM"
 		default : return DW/8;
 		}
 	}
@@ -2563,7 +2563,7 @@ bool Weights::set4 ( ) {
 			bucketWordPos[j] = i;
 			//}
 		}
-		// otherwise, we have a new occurence of this word
+		// otherwise, we have a new occurrence of this word
 		else { 
 			bucketHash  [j] = h;
 			// if Words class contain tags as words, do this
@@ -2574,7 +2574,7 @@ bool Weights::set4 ( ) {
 			//else {
 			// store our position # (i) in bucket
 			bucketWordPos[j] = i;
-			// no next occurence of the ith word yet
+			// no next occurrence of the ith word yet
 			next[i] = -1;
 			//}
 		}
@@ -2595,12 +2595,12 @@ bool Weights::set4 ( ) {
 		int32_t j = bucketWordPos[i];  
 		// . cruise down the linked list for this word
 		while ( j!=-1) {
-			// store position of occurence of this word in profile
+			// store position of occurrence of this word in profile
 			profile [ np++ ] = j;
-			// get the position of next occurence of this word
+			// get the position of next occurrence of this word
 			j = next[ j ];  
 		}
-		// if 2 or less occurences of this word, don't check for spam
+		// if 2 or less occurrences of this word, don't check for spam
 		if ( np < 3 ) { goodWords++; continue; }
 
 		//
@@ -2668,7 +2668,7 @@ bool Weights::set4 ( ) {
 		// . sets "spam" member of each word in this profile
 		// . don't check if word occurred 2 or less times
 		// . TODO: what about TORA! TORA! TORA!
-		// . returns true if 1+ occurences were considered spam
+		// . returns true if 1+ occurrences were considered spam
 		QUICKPOLL(m_niceness);
 		bool isSpam = setSpam ( profile , np , numWords , spam );
 		// don't count stop words or numbers towards this threshold
@@ -2677,7 +2677,7 @@ bool Weights::set4 ( ) {
 		if ( isSpam ) spamWords++;
 		else          goodWords++;
 	}
-	// what percent of distinct cadidate words were spammed?
+	// what percent of distinct candidate words were spammed?
 	int32_t totalWords = spamWords + goodWords;
 	// if no or ver few words return true
 	int32_t percent;
@@ -2724,11 +2724,11 @@ bool Weights::set4 ( ) {
 // . return true if one word was spammed w/ probability > 20%
 bool Weights::setSpam ( int32_t *profile, int32_t plen , int32_t numWords ,
 			unsigned char *spam ) {
-	// don't bother detecting spam if 2 or less occurences of the word
+	// don't bother detecting spam if 2 or less occurrences of the word
 	if ( plen < 3 ) return false;
 	int32_t i;
 	// if we have more than 10 words and this word is 20% or more of 
-	// them then all but the first occurence is spammed
+	// them then all but the first occurrence is spammed
 	//log(LOG_INFO,"setSpam numRepeatSpam = %f", m_numRepeatSpam);
 	if (numWords > 10 && (plen*100)/numWords >= m_numRepeatSpam) {
 		for (i=1; i<plen; i++) spam[profile[i]] = 100;
@@ -2751,7 +2751,7 @@ bool Weights::setSpam ( int32_t *profile, int32_t plen , int32_t numWords ,
 		// . set all but the last 50 to a spam of 100%
 		// . the last 50 actually occur as the first 50 in the doc
 		for (i=0; i<plen-50;i++) spam[profile[i]] = 100;
-		// we now have only 50 occurences
+		// we now have only 50 occurrences
 		plen = 50;
 		// we want to skip the first plen-50 because they actually
 		// occur at the END of the document
@@ -2800,7 +2800,7 @@ bool Weights::setSpam ( int32_t *profile, int32_t plen , int32_t numWords ,
 				// set the spammed words spam to "prob"
 				// only if it's bigger than their current spam
 				for (i=window; i<window+wlen;i++) {
-					// first occurences can have immunity 
+					// first occurrences can have immunity 
 					// due to doc quality being high
 					if ( i >= plen - off ) break;
 					if (spam[profile[i]] < prob)

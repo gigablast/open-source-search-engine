@@ -199,7 +199,7 @@ public:
 	// all the facet hash lists for each gbfacet: query term we had
 	// and the query "Msg3a::m_q.m_qterms[].m_dt" is the hash table
 	// where each key is a facethash for that gbfacet:xxxx term and
-	// the value if the # of occurences.
+	// the value if the # of occurrences.
 	//SectionStats    m_sectionStats;
 };
 

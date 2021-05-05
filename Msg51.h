@@ -3,7 +3,7 @@
 // . gets the clusterRecs for a list of docIds
 // . list of docids can be from an IndexList if provided, or a straightup array
 // . meant as a replacement for some of Msg38
-// . see Clusterdb.h for fomat of clusterRec
+// . see Clusterdb.h for format of clusterRec
 // . actually only stores the lower 64 bits of each cluster rec, that is all
 //   that is interesting
 

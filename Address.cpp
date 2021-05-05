@@ -2348,7 +2348,7 @@ bool Addresses::updateAddresses ( ) {
 		// scan m_siteTitleBuf for either p1 or p2
 		char *d    = m_siteTitleBuf;
 		char *dend = m_siteTitleBuf + m_siteTitleBufSize;
-		// loop over the \0 delimeted list of titles
+		// loop over the \0 delimited list of titles
 		for ( ; d < dend ; d += gbstrlen(d) + 1 ) {
 			// skip "the"
 			if ( strncasecmp(d,"the ",4) == 0 ) d += 4;
@@ -2898,7 +2898,7 @@ bool Addresses::updateAddresses ( ) {
 		//   here to 888 or 999 or whatever
 		// . but we need this in case there is ambiguity as to
 		//   which lat/lon pair is the real deal when there are 
-		//   mutiple ones in the same vicinity...
+		//   multiple ones in the same vicinity...
 		// . so we have to nuke the address somehow if its lat/lon
 		//   only
 		if ( *ptr != dval && fabs(*ptr - dval) > .010 ) {
@@ -4570,7 +4570,7 @@ bool Addresses::set2 ( ) {
 		//if ( wids[i] == h_at ) { atPreceeds = true; continue; }
 		// count the number of numbers
 		int32_t nums = 0;
-		// are we delimeted on the left end?
+		// are we delimited on the left end?
 		//bool leftEnd  = false;
 		// keep an accumulative hash of all the wids in the phrase
 		bool firstWasDir    =  false; // 1st word is a direction?
@@ -4609,10 +4609,10 @@ bool Addresses::set2 ( ) {
 		//if ( i-1 >= 0 && tids[i-1] ) leftEnd = true;
 		//if ( i-2 >= 0 && tids[i-2] ) leftEnd = true;
 		// if we are cap'd and word before us is not let that be a 
-		// delimeter as well
+		// delimiter as well
 		//if (i-2>= 0 && isCap && wids[i-2] &&!ww->isCapitalized(i-2)) 
 		//	leftEnd = true;
-		// need a delimeter on the left
+		// need a delimiter on the left
 		//if ( ! leftEnd ) { atPreceeds = false; continue; }
 		// save it
 		int32_t ns_stack = m_sm.getNumPtrs();//m_ns;
@@ -4645,7 +4645,7 @@ bool Addresses::set2 ( ) {
 				// skip if non-breaking tag
 				if ( ! isBreakingTagId(tids[j]) ) 
 					continue;
-				// . allow br tags since microsofot front page
+				// . allow br tags since microsoft front page
 				// . no! this is causing the zip code from
 				//   a previous address to be used as the
 				//   street address for the name of a business
@@ -5569,7 +5569,7 @@ bool Addresses::set2 ( ) {
 			// assume not an indicator tag
 			inCityIndicator = false;
 			inStateIndicator = false;
-			// mus tbe xml
+			// must be xml
 			if ( m_tids[i] != TAG_XMLTAG ) continue;
 			// it can inidcate things
 			char *tagName = m_wptrs[i]+1;
@@ -5743,7 +5743,7 @@ bool Addresses::set2 ( ) {
 
 	//
 	// make a list of occupation names for avoid false positive 
-	// identifcation of a place because it is after the word "at" but 
+	// identification of a place because it is after the word "at" but 
 	// really it is something like "john, an engineer at HP, ..." referring
 	// to where that person works. fixes 
 	// www.aliconferences.com/conf/social_media_govt1209/pre.htm which has
@@ -5928,7 +5928,7 @@ bool Addresses::set2 ( ) {
 		"integrator",
 		"machinist",
 		"monkey", // grease monkey code monkey
-		"liason",
+		"liaison",
 		"fabricator",
 		"wholesaler",
 		"baker",
@@ -6264,7 +6264,7 @@ bool Addresses::set2 ( ) {
 			lastWasBreak = 1; 
 			continue;
 		}
-		// does it have some kind of delimeter before it?
+		// does it have some kind of delimiter before it?
 		else if ( is_lower_utf8(wptrs[i])){lastWasBreak = 0; continue;}
 		// each candidate needs somekind of "break" before them
 		if ( ! lastWasBreak ) continue;
@@ -6742,7 +6742,7 @@ bool Addresses::set2 ( ) {
 	// topologically speaking. we need to telescope it out and
 	// tether it to the first street we hit. including afterats and
 	// fake street names? it might be tethered to a place venue name
-	// that we never recognize. and intead we tether it to a brother
+	// that we never recognize. and instead we tether it to a brother
 	// brother city/state when we shouldn't.
 	//Place *latlon  [MAX_LATLONS];
 	//Place *pctry   [10]; int32_t ny = 0;
@@ -6795,7 +6795,7 @@ bool Addresses::set2 ( ) {
 	// . "bn" = baseNum
 	// . TODO: make sure state we select is not in a street!
 	int32_t bn = 0;
-	// alway have a NULL
+	// always have a NULL
 	padm1 [ bn++ ] = NULL;
 	// then
 	for ( int32_t i = 0 ; i < m_npSaved ; i++ ) {
@@ -6806,7 +6806,7 @@ bool Addresses::set2 ( ) {
 		// . allow state to come from anywhere in the document
 		// . TODO: later add meta description to get christinesaari.com
 		if ( p->m_type != PT_STATE ) continue;
-		// skip if interesects a street, like "ohio street"
+		// skip if intersects a street, like "ohio street"
 		if ( p->m_a >= 0 && bits && (bits[p->m_a] & D_IS_IN_STREET) ) 
 			continue;
 		// make the key for deduping
@@ -6956,7 +6956,7 @@ bool Addresses::set2 ( ) {
 			//pp->m_crid     = 0;
 			pp->m_bits    = 0;
 			pp->m_flags2  = 0;
-			// thats a suite
+			// that's a suite
 			psuite[nu++] = pp;
 			// now just use this
 			setHashes(pp,m_words,m_niceness);
@@ -7084,7 +7084,7 @@ bool Addresses::set2 ( ) {
 			//pp->m_crid     = 0;
 			pp->m_bits    = 0;
 			pp->m_flags2  = 0;
-			// thats a suite
+			// that's a suite
 			psuite[nu++] = pp;
 			// now just use this
 			setHashes(pp,m_words,m_niceness);
@@ -7298,7 +7298,7 @@ bool Addresses::set2 ( ) {
 		//   that we have no place name!
 		// . fixes http://obits.abqjournal.com/obits/2004/04/13
 		if ( i >= 0 && i < nw && bits && ( bits[i] & D_IS_IN_DATE ) &&
-		     // incase place name ends in midnight or noon
+		     // in case place name ends in midnight or noon
 		     wids[i] != h_daily && 
 		     wids[i] != h_noon && 
 		     wids[i] != h_midnight ) 
@@ -7522,7 +7522,7 @@ bool Addresses::set2 ( ) {
 				if ( isLower && //_lower_utf8(wptrs[i]) &&
 				     // must not be an allowable lowercase word
 				     ! s_lc.isInTable(&wids[i]) 
-				     // for smoe reason 's' is not a query
+				     // for some reason 's' is not a query
 				     // stop word, and we had a bar named
 				     // "Slim's" that we needed to get
 				     // ... this is in s_lc table now
@@ -7711,7 +7711,7 @@ bool Addresses::set2 ( ) {
 					if ( ampCount >      0 ) break;
 					continue;
 				}
-				// . this is a good delimeter for place names
+				// . this is a good delimiter for place names
 				//   usually, but of course if someone has
 				//   "Gigablast, \nInc." then this will hurt!
 				// . i was only allow inc. or llc. to follow
@@ -8057,7 +8057,7 @@ bool Addresses::set2 ( ) {
 		//   "map" or "reviews" which may be in lower case
 		if ( (street->m_bits & PLF_HAS_UPPER) && hadLower ) {
 			//lasti = -1;
-			// EXPERIEMENT:
+			// EXPERIMENT:
 			// skip back to a tag like we do for
 			// "Write a Review" skipping logic below
 			//i = lasti - 1;
@@ -8070,7 +8070,7 @@ bool Addresses::set2 ( ) {
 		// . add the place name if we found something
 		// . if we broke out of the loop because of the alnumCount then
 		//   that is NOT good because we want something that has a
-		//   delimeter on the left!
+		//   delimiter on the left!
 		if ( lasti >= 0 && lasti<=righti && alphaCount > 0 && 
 		     // this is restricted above!
 		     //alnumCount <10 && 
@@ -8159,7 +8159,7 @@ bool Addresses::set2 ( ) {
 			     isCityState3 (prev1->m_hash,prev2->m_hash)==1) {
 				// wipe out previous name
 				nn = savednn;
-				// wipe out prevous place
+				// wipe out previous place
 				//m_np = savednp;
 				m_pm.setNumPtrs ( savednp );
 				// reset this too!
@@ -8209,7 +8209,7 @@ bool Addresses::set2 ( ) {
 				// xor it in
 				h ^= *hw; // wids[k];
 			}
-			// only consumate it if not the single word "the"
+			// only consummate it if not the single word "the"
 			if ( h ) {
 				// set it
 				pp->m_hash = h;
@@ -10270,7 +10270,7 @@ void Addresses::print ( SafeBuf *pbuf , int64_t uh64 ) {
 }
 
 // . looks up each word/phrase in our table of known places
-// . table incudes cities, countries, states (adm1), counties, zipcodes
+// . table includes cities, countries, states (adm1), counties, zipcodes
 /*
 int32_t Addresses::addProperPlaces ( int32_t    a             ,
 				  int32_t    b             , 
@@ -10808,7 +10808,7 @@ bool Addresses::addAddress ( Place   *name1   ,
 			// unless in parens!
 			if ( c ) continue;
 			// crap... Msg13.cpp when it sets the dates does not
-			// filter out html entites for speed, so watch
+			// filter out html entities for speed, so watch
 			// out for crap after an ampersand or &#. this
 			// was causing some americantowns.com urls to
 			// not get their address inlined!
@@ -10987,7 +10987,7 @@ bool Addresses::addAddress ( Place   *name1   ,
 	// and then if all else is equal, having a zip is better than just
 	// a city because it is more specific
 	if ( zip ) score += 1000;
-	// having a valid adm1 is good (might not have one explicity if city
+	// having a valid adm1 is good (might not have one explicitly if city
 	// is unique to a particular state)
 	if ( adm1 ) score += 100;
 	// prefer city over no city
@@ -12370,7 +12370,7 @@ int32_t Address::serialize ( char *buf , int32_t bufSize , char *origUrl ,
 	// sanity check. these should be filtered out
 	//if ( m_score <= 0.0 ) { char *xx=NULL;*xx=0; }
 
-	// also truncate at semicolon in urls since that is our delimeter
+	// also truncate at semicolon in urls since that is our delimiter
 	char *o = origUrl;
 	for ( ; o && *o && *o !=';' ; o++ );
 	// truncate this if we should
@@ -12386,7 +12386,7 @@ int32_t Address::serialize ( char *buf , int32_t bufSize , char *origUrl ,
 	// how much buffer space do we need?
 	int32_t need = getStoredSize( olen + extra , includeHash );
 
-	// silenty ignore overflow errors
+	// silently ignore overflow errors
 	if ( need > bufSize ) return -1;
 
 	PlaceDesc *pd = NULL;
@@ -12932,7 +12932,7 @@ void Address::printEssentials ( SafeBuf *pbuf , bool forEvents ,
 			 uh64);
 		//char *p = pbuf->getBuf();
 		//
-		// map utf8 characters into &#xxxx entites because
+		// map utf8 characters into &#xxxx entities because
 		// the senddiv() function maps all utuf8 chars to 
 		// crap like "%u2019" for the apostrophe for instance
 		// 
@@ -13785,7 +13785,7 @@ bool initPlaceDescTable ( ) {
 	//loadedIndicators = true;
 
 	// keep these separate so we do not have to recompute any time we
-	// add or substract to/from this list
+	// add or subtract to/from this list
 	addIndicator ( "airport"       , IND_NAME , 1.0 );	
 	addIndicator ( "airstrip"       , IND_NAME , 1.0 );	
 	addIndicator ( "area"       , IND_NAME , 1.0 );	
@@ -14682,7 +14682,7 @@ pd=(PlaceDesc *)g_cities.getValueFromSlot(pd->getSlot());
 	// . go through the places in allCountries.txt
 	// . format described in /gb/geo/geonames/readme.txt
 	char buf[10000];
-	// for debuging
+	// for debugging
 	char *dbuf = buf;
 
 	//char  topBuf[1000000];
@@ -14753,7 +14753,7 @@ pd=(PlaceDesc *)g_cities.getValueFromSlot(pd->getSlot());
 		//if ( strncmp(buf,"3856157\t", 8) ==0 ) 
 		//	log("gotit");
 
-		// parse out the tab delimeted things from the line
+		// parse out the tab delimited things from the line
 		for ( ; *p ; p++ ) {
 			// skip if no tab
 			if ( *p != '\t' ) continue;
@@ -15255,7 +15255,7 @@ pd=(PlaceDesc *)g_cities.getValueFromSlot(pd->getSlot());
 		char *a1name    = NULL;
 		char *a2name    = NULL;
 		//char *zipEnd = NULL;
-		// parse out the tab delimeted things from the line
+		// parse out the tab delimited things from the line
 		for ( ; *p ; p++ ) {
 			// a temp var
 			char *s = p;
@@ -15987,7 +15987,7 @@ key128_t Address::makePlacedbKey (int64_t docId,bool useName1,bool useName2){
 	uint64_t cid64 = (uint64_t)getCityId32 ( cityHash , adm1Str );
 	// incorporate that into "h"
 	h = hash64 ( cid64 , h );
-	// store that in most signficant int64_t
+	// store that in most significant int64_t
 	k.n1 = h;
 
 	// street hash
@@ -19713,7 +19713,7 @@ void PlaceMem::setNumPtrs ( int32_t newNumPtrs ) {
 			break;
 		}
 	}
-	// this is wierd
+	// this is weird
 	if ( m_cursorPoolNum < 0 ) { char *xx=NULL;*xx=0; }
 	// reset final
 	m_numPlacePtrs = newNumPtrs;
@@ -19781,7 +19781,7 @@ bool loadPlaces ( ) {
 	g_nameTable.set ( 8 , // 64 bit key hash
 			  4 , // placedec ptr
 			  0 , // no initial slots
-			  NULL , // no intiial buf
+			  NULL , // no initial buf
 			  0 ,  // zero initial buf size
 			  true , // allow dups?
 			  0 , // niceness

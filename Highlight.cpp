@@ -94,7 +94,7 @@ int32_t Highlight::set ( SafeBuf *sb,
 			   contentLen   , 
 			   TITLEREC_CURRENT_VERSION,
 			   true         , // computeId
-			   true         ) ) // has html entites?
+			   true         ) ) // has html entities?
 		return -1;
 
 	int32_t version = TITLEREC_CURRENT_VERSION;
@@ -288,7 +288,7 @@ bool Highlight::highlightWords ( Words *words , Matches *m, Query *q ) {
 			}
 			else {
 				// now each match is the entire quote, so write the
-				// fron tag right now
+				// from tag right now
 				const char *frontTag;
 				if ( m_frontTag ) frontTag    = m_frontTag;
 				//else frontTag = s_frontTags [ p[i] % 10];

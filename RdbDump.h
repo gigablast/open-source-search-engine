@@ -72,7 +72,7 @@ class RdbDump {
 	// . used for saved table recovery
 	// . table must be empty/unused otherwise false will be returned 
 	// . returns true if "filename" does not exist
-	// . overriden in LdbDumper to pass an LdbFile casted as an RdbFile
+	// . overridden in LdbDumper to pass an LdbFile casted as an RdbFile
 	// . this override makes the file's getSlot() return LdbSlots
 	//   which can be appropriately added to an RdbTable or LdbTable
 	bool load ( class Rdb *rdb , int32_t fixedDataSize , BigFile *file ,

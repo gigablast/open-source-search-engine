@@ -726,7 +726,7 @@ bool printLeftColumnRocketAndTabs ( SafeBuf *sb ,
 
 	for ( int32_t i = 0 ; i < n ; i++ ) {
 
-		// just show search, directort and advanced tab in serps
+		// just show search, directory and advanced tab in serps
 		if ( isSearchResultsPage && i >= 3 ) break;
 
 		// what was this for?

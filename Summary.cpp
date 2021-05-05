@@ -537,7 +537,7 @@ bool Summary::set2 ( Xml      *xml                ,
 			p += 4;
 		}
 
-		// try to put in a small summary excerpt if we have atleast
+		// try to put in a small summary excerpt if we have at least
 		// half of the normal excerpt length left
 		if ( maxExcerptLen == m_maxNumCharsPerLine && 
 		     //pos->m_pos[maxb] - pos->m_pos[maxa] 
@@ -572,7 +572,7 @@ bool Summary::set2 ( Xml      *xml                ,
 		      matches.m_numMatches, maxNumLines, f->m_url );
 		      start = gettimeofdayInMilliseconds();*/
 
-	// If we still didn't find a summary, directly use whats given in the
+	// If we still didn't find a summary, directly use what's given in the
 	// meta summary or description.
 	if ( p == m_summary ){
 		Words    *wp;
@@ -802,7 +802,7 @@ int64_t Summary::getBestWindow ( Matches *matches       ,
 		if ( tids && ( tids[b] == (BACKBIT|TAG_LI) ||
 			       tids[b] == (BACKBIT|TAG_TR) ) ){
 			numTagsCrossed++;
-			// try to have atleast 10 words in the summary
+			// try to have at least 10 words in the summary
 			if ( wordCount > 10 )
 				break;
 		}
@@ -812,7 +812,7 @@ int64_t Summary::getBestWindow ( Matches *matches       ,
 		if ( tids && ( tids[b] == (BACKBIT|TAG_P)  ||
 			       tids[b] == (BACKBIT|TAG_DIV) )){
 			numTagsCrossed++;
-			// try to have atleast 10 words in the summary
+			// try to have at least 10 words in the summary
 			if ( wordCount > 10 && words->m_words[b-1][0] != ':' )
 				break;
 		}
@@ -1322,7 +1322,7 @@ bool Summary::set1 ( char      *doc                ,
 		else {
 			m[(unsigned char)t0]      = 1;
 		}
-		// if we convert all chars to ascii beforing hashing, watch out
+		// if we convert all chars to ascii before hashing, watch out
 		if ( tlen <= 2 ) { m2[0]=1; continue; }
 		char t1 = t[1];
 		// c++ et al are special cases
@@ -1562,7 +1562,7 @@ bool Summary::set1 ( char      *doc                ,
 		// add in our right neighbors
 		b = i ;
 		while ( ++b < numMatches ) {
-			// get distnace from center
+			// get distance from center
 			int32_t dist = wordPtrs[b] - wordPtrs[i] ;
 			// break out if too far away
 			//if ( dist > radius ) break;

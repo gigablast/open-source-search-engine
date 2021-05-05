@@ -9,7 +9,7 @@ int main(int argc, char **argv){
 	iconv_t conv = iconv_open("UTF-8", "UTF-8");
 	char *dummy = NULL;
 	size_t dummy2 = 0;
-	// reset convertor
+	// reset converter
 	iconv(conv,NULL,NULL,&dummy,&dummy2);
 	size_t inCursor = 0;
 

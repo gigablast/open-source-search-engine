@@ -577,13 +577,13 @@ bool RdbBuckets::set ( int32_t fixedDataSize , int32_t maxMem,
 		+ BUCKET_SIZE * m_recSize;
 	int32_t overhead = m_sortBufSize +
 		BUCKET_SIZE * m_recSize + //swapbuf
-		sizeof(RdbBuckets); //thats us, silly
+		sizeof(RdbBuckets); //that's us, silly
 	int32_t avail = m_maxMem - overhead;
 
 	m_maxBucketsCapacity = avail / perBucket;
 	if(m_maxBucketsCapacity <= 0) {
 		log("db: max memory for %s's buckets is way too small to"
-		    " accomodate even 1 bucket, reduce bucket size(%"INT32") "
+		    " accommodate even 1 bucket, reduce bucket size(%"INT32") "
 		    "or increase max mem(%"INT32")",
 		    m_dbname, (int32_t)BUCKET_SIZE, m_maxMem);
 		char *xx = NULL; *xx = 0;

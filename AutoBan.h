@@ -77,7 +77,7 @@ class AutoBan {
 	void cleanHouse();
 	void setFromConf();
 
-	// . each client is now limited to a max oustanding requests
+	// . each client is now limited to a max outstanding requests
 	// . Proxy.cpp performs this limitation calculation
 	bool incRequestCount ( int32_t h , int32_t bytesRead );
 	void decRequestCount ( int32_t h , int32_t bytesSent );

@@ -205,7 +205,7 @@ static: vclean $(OBJS) main.o $(LIBFILES)
 # you have to install the packages that have these libs.
 # you have to get these packages from cygwin:
 # 1. LIBS  > zlib-devel: Gzip de/compression library (development)
-# 2. LIBS  > libiconv: GNU character set conversion library and utlities
+# 2. LIBS  > libiconv: GNU character set conversion library and utilities
 
 # 3. DEVEL > openssl: cygwin32-openssl: OpenSSL for Cygwin 32bit toolchain
 

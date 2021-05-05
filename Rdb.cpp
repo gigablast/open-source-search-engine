@@ -146,7 +146,7 @@ bool Rdb::init ( char          *dir                  ,
 	reset();
 	// sanity
 	if ( ! dir ) { char *xx=NULL;*xx=0; }
-	// this is the working dir, all collection repositiories are subdirs
+	// this is the working dir, all collection repositories are subdirs
 	//m_dir.set ( dir );
 	// catdb, statsdb, accessdb, facebookdb, syncdb
 	m_isCollectionLess = isCollectionLess;
@@ -1366,7 +1366,7 @@ bool Rdb::dumpTree ( int32_t niceness ) {
 	// . returns true and sets g_errno on error
 	// . returns true if we always have the token (just one host in group)
 	// . returns false if blocks (the usual case)
-	// . higher priority requests always supercede lower ones
+	// . higher priority requests always supersede lower ones
 	// . ensure we only call this once per dump we need otherwise, 
 	//   gotTokenForDumpWrapper() may be called multiple times
 	if ( ! g_msg35.getToken ( this , gotTokenForDumpWrapper,1) ) //priority
@@ -2223,7 +2223,7 @@ bool Rdb::addList ( collnum_t collnum , RdbList *list,
 	//if ( ulen > 0 && st->m_url[st->m_ulen] ) { char*xx=NULL;*xx=0; }
 	// Tfndb::makeExtQuick masks the host hash with TFNDB_EXTMASK
 	uint32_t mask1 = (uint32_t)TFNDB_EXTMASK;
-	// but use the smalles of these
+	// but use the smallest of these
 	uint32_t mask2 = (uint32_t)TITLEDB_HOSTHASHMASK;
 	// pick the min
 	uint32_t min ;

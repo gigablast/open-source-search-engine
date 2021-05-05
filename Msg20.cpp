@@ -31,7 +31,7 @@ void Msg20::freeReply() {
 	//    (PTRTYPE)this,(PTRTYPE)m_r);
 
 	if ( ! m_r ) return;
-	// sometimes the msg20 reply carries an merged bffer from
+	// sometimes the msg20 reply carries an merged buffer from
 	// msg40 that is a constructed ptr_eventSummaryLines from a
 	// merge operation in msg40. this fixes the "merge20buf1" memory
 	// leak from Msg40.cpp
@@ -173,7 +173,7 @@ bool Msg20::getSummary ( Msg20Request *req ) {
 	}
 
 	// we might be getting inlinks for a spider request
-	// so make sure timeout is inifinite for that...
+	// so make sure timeout is infinite for that...
 	int32_t timeout = 9999999; // 10 million seconds, basically inf.
 	if ( req->m_niceness == 0 ) timeout = 20;
 
@@ -213,7 +213,7 @@ bool Msg20::getSummary ( Msg20Request *req ) {
 
 	if ( nc == 0 ) {
 		log("msg20: error sending mcast: no queryable hosts "
-		    "availble to handle summary generation");
+		    "available to handle summary generation");
 		g_errno = EBADENGINEER;
 		m_gotReply = true;
 		return true;

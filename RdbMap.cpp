@@ -90,7 +90,7 @@ void RdbMap::reset ( ) {
 	//m_lastKey.n0      = 0LL;
 	KEYMIN(m_lastKey,MAX_KEY_BYTES); // m_ks);
 	// close up shop
-	// m_file.close ( ); this casues an error in Rdb.cpp:317 (new RdbMap)
+	// m_file.close ( ); this causes an error in Rdb.cpp:317 (new RdbMap)
 	m_lastLogTime = 0;
 	m_badKeys     = 0;
 	m_needVerify  = false;
@@ -613,7 +613,7 @@ bool RdbMap::addRecord ( char *key, char *rec , int32_t recSize ) {
 	// . reset all pages above pageNum that we touch
 	// . store -1 in offset to indicate it's continuation of key which
 	//   started on another page
-	// . store -1 on lastPageNum PLUS 1 incase we just take up lastPageNum
+	// . store -1 on lastPageNum PLUS 1 in case we just take up lastPageNum
 	//   ourselves and the next key will start on lastPageNum+1 at offset 0
 	// . also by storing -1 for offset this page becomes available for
 	//   keys/recs to follow
@@ -1665,7 +1665,7 @@ bool RdbMap::generateMap ( BigFile *f ) {
 					   "offset=%"UINT64".",
 					   mstrerror(g_errno),oldOffset);
 		}
-		// read agin starting at the adjusted offset
+		// read again starting at the adjusted offset
 		goto readLoop;
 
 	}

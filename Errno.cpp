@@ -191,7 +191,7 @@ case EREADONLYMODE: return "In read only mode. Failed.";
 case ENOTITLEREC: return "No title rec found when recycling content";
 case EQUERYINGDISABLED: return "Querying is disabled in the master controls";
 case EJSONMISSINGLASTCURLY: return "JSON was missing last curly bracket";
-case EADMININTERFERENCE: return "Adminstrative interference";
+case EADMININTERFERENCE: return "Administrative interference";
 case	EDNSERROR        : return "DNS lookup error";
 case ETHREADSDISABLED:return "Threads Disabled";
 case EMALFORMEDQUERY: return "Malformed query";

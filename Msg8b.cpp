@@ -695,7 +695,7 @@ bool Msg8b::checkQueueForList ( uint32_t domainHash ) {
 void Msg8b::processSlaves() {
 	// if a queue master, call the slaves
 	if ( !m_queueMaster ) return;
-	// . could this grow durring the call? *it could reattach to itself
+	// . could this grow during the call? *it could reattach to itself
 	//   be careful, close the slot
 	Msg8bListQueue *slot = &g_msg8bQueue[m_queueSlot];
 	slot->m_isOpen = 0;

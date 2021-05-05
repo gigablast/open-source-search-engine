@@ -525,7 +525,7 @@ bool getPage ( char *host , uint16_t port , char *path ) {
 		return false;
 	}
 
-	// try to fix core in Mem.cpp from trying to freee in thread
+	// try to fix core in Mem.cpp from trying to free in thread
 	g_mem.setPid(); // s_pid = getpid();
 	// crazy?
 	if ( g_mem.getPid() == -1 ) {

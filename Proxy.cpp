@@ -188,7 +188,7 @@ bool Proxy::initProxy ( int32_t proxyId, uint16_t udpPort,
  	//if ( ! g_conf.init ( "./" ) ) { // , h->m_hostId ) ) {
 	//	log("db: Conf init failed." ); return 1; }
 
-	//We log the http requests, althogh this is directly done by us
+	//We log the http requests, although this is directly done by us
 	g_conf.m_logHttpRequests = true;
 
 	//Don't send email alerts, the machines on the cluster can do that
@@ -196,7 +196,7 @@ bool Proxy::initProxy ( int32_t proxyId, uint16_t udpPort,
 
 	// my new email
 	
-	// if proxy, always have autosave on so we can save user accouting
+	// if proxy, always have autosave on so we can save user accounting
 	// info regularly for billing feed access. save every 5 minutes.
 	g_conf.m_autoSaveFrequency = 5;
 
@@ -668,7 +668,7 @@ bool Proxy::handleRequest (TcpSocket *s){
 			if ( now - s_last < 5 ) 
 				s_count++;
 			else {
-				log("query: Too many oustanding yippy search "
+				log("query: Too many outstanding yippy search "
 				    "requests, %"INT32". closing socket on %s. "
 				    "(repeats=%"INT32")",
 				    ymax,
@@ -906,7 +906,7 @@ bool Proxy::handleRequest (TcpSocket *s){
 	stC->m_hostId = -1;
 	stC->m_slot = NULL;
 
-	// store the code for decementing the oustanding request count below
+	// store the code for decementing the outstanding request count below
 	stC->m_ch = ch3;
 
 	// support &xml=1 or &raw=9 or &raw=8 to indicate xml output is wanted
@@ -1388,11 +1388,11 @@ void Proxy::gotReplyPage ( void *state, UdpSlot *slot ) {
 
 	char *req = slot->m_sendBufAlloc;
 
-	// . AND this is what we forwaded to a host in the flock
+	// . AND this is what we forwarded to a host in the flock
 	// . we can free this because it reference the tcp buffer
 	slot->m_sendBufAlloc = NULL;
 
-	// decrement the oustanding request count
+	// decrement the outstanding request count
 	g_autoBan.decRequestCount ( stC->m_ch , slot->m_readBufSize );
 
 	// . try another host if this one times out
@@ -1778,7 +1778,7 @@ void uncountStripe ( StateControl *stC ) {
 
 
 // . now do stripe balancing
-// . this prevents one machine from receving all the Msg39 requests while its
+// . this prevents one machine from receiving all the Msg39 requests while its
 //   twin gets none
 Host *Proxy::pickBestHost( StateControl *stC ) {
 
@@ -1829,7 +1829,7 @@ Host *Proxy::pickBestHost( StateControl *stC ) {
 	// sanity check
 	if ( minns == -1 ) { char *xx=NULL;*xx=0; }
 
-	// rotate the prefered next stripe
+	// rotate the preferred next stripe
 	if ( ++m_nextStripe >= numStripes ) m_nextStripe = 0;
 
 	// find the next host in line for stripe #minns
@@ -3276,7 +3276,7 @@ bool sendPageAccount ( TcpSocket *s , HttpRequest *hr2 ) {
 	su->m_country     = "";
 	su->m_zip         = "";
 
-	// remove trailing spaces from all. include max bytes too includng \0
+	// remove trailing spaces from all. include max bytes too including \0
 	removeSpaceTrails ( su->m_user , 32 );
 	removeSpaceTrails ( su->m_pwd , 32 );
 	removeSpaceTrails ( su->m_pwd2 , 32 );
@@ -4502,7 +4502,7 @@ bool Proxy::printAccountingInfoPage ( StateUser *su , SafeBuf *errmsg ) {
 			, "*******"
 			, ui->m_email
 			, ui->m_phone
-			// only disply last 4 digits
+			// only display last 4 digits
 			, ccnum
 			, ui->m_userId32
 			, ui->m_xmlFeedCode

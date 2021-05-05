@@ -89,7 +89,7 @@ key_t SearchInput::makeKey ( ) {
 	//if ( m_gblang )
 	//	k.n0 = hash64 ( m_gblang , k.n0 );
 	// . now include the hash of the search parameters
-	// . nnot incuding m_docsToScanForTopics since since we got TopicGroups
+	// . nnot including m_docsToScanForTopics since since we got TopicGroups
 	char *a = ((char *)&m_START) + 4 ; // msg40->m_dpf;
 	char *b =  (char *)&m_END_HASH   ; // msg40->m_topicGroups;
 	int32_t size = b - a; 
@@ -472,7 +472,7 @@ bool SearchInput::set ( TcpSocket *sock , HttpRequest *r ) { //, Query *q ) {
 
 	int32_t maxQueryTerms = cr->m_maxQueryTerms;
 
-	// . the query to use for highlighting... can be overriden with "hq"
+	// . the query to use for highlighting... can be overridden with "hq"
 	// . we need the language id for doing synonyms
 	if ( m_prepend && m_prepend[0] )
 		m_hqq.set2 ( m_prepend , m_queryLangId , true ,maxQueryTerms);

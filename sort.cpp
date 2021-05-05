@@ -535,7 +535,7 @@ COPY:	    			b = t;
  * when THRESHOLD/2 pairs compare with same sense.  (Only used when NATURAL
  * is defined.  Otherwise simple pairwise merging is used.)
  */
-// JAB: avoid namespace polution...
+// JAB: avoid namespace pollution...
 //void
 static void
 setup(u_char *list1, u_char *list2, size_t n, size_t size,

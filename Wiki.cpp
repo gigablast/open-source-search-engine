@@ -283,7 +283,7 @@ bool Wiki::loadText ( int32_t fileSize ) {
 		if ( count != 2 ) continue;
 		// skip if too big
 		if ( count > 250 ) continue;
-		// conert
+		// convert
 		uint32_t h32 = h64 & 0xffffffff;
 		// the compound form must be in the table from the first scan,
 		// if not, skip it

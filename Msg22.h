@@ -72,7 +72,7 @@ class Msg22 {
 	// this is a hack so Msg38 can store his this ptr here
 	//void *m_parent; // used by Msg38
 	//int32_t  m_slot;   // for resending on same Msg22 slot in array
-	//void *m_dataPtr;// for holding recepient record ptr of TopNode ptr
+	//void *m_dataPtr;// for holding recipient record ptr of TopNode ptr
 
 	char **m_titleRecPtrPtr;
 	int32_t  *m_titleRecSizePtr;

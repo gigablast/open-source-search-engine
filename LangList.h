@@ -22,7 +22,7 @@ public:
 	// . returns false and sets errno on error
 	// . loads language lists into memory
 	// . looks under the langlist/ directory for langlist.# files
-	//   each number corrisponds to a language
+	//   each number corresponds to a language
 	bool loadLists ( );
 
 	// . lookup word in language lists

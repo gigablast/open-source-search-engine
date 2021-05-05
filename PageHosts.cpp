@@ -1282,7 +1282,7 @@ skipReplaceHost:
 
 		  "<tr class=poo>"
 		  "<td>udp port</td>"
-		  "<td>The UDP port the host uses to send and recieve "
+		  "<td>The UDP port the host uses to send and receive "
 		  "datagrams."
 		  "</td>"
 		  "</tr>\n"
@@ -1302,7 +1302,7 @@ skipReplaceHost:
 		  "<tr class=poo>"
 		  "<td>best switch id</td>"
 		  "<td>The host prefers to be on this switch because it "
-		  "needs to send a lot of data to other hosts on this swtich. "
+		  "needs to send a lot of data to other hosts on this switch. "
 		  "Therefore, ideally, the best switch id should match the "
 		  "actual switch id for optimal performance."
 		  "</td>"

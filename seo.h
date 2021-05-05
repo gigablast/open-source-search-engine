@@ -543,7 +543,7 @@ public:
 	// score of this docid from gbdocid:xxx|querystr
 	float m_serpScore;
 
-	// . individial score for this QueryLink.
+	// . individual score for this QueryLink.
 	// . different algo used to compute this for m_matchingQueryBuf 
 	//   compared to m_relatedQueryBuf
 	float m_queryImportance;

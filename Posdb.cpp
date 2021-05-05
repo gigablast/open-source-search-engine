@@ -465,7 +465,7 @@ static bool s_cacheInit = false;
 // . accesses RdbMap to estimate size of the indexList for this termId
 // . returns an UPPER BOUND
 // . because this is over POSDB now and not indexdb, a document is counted
-//   once for every occurence of term "termId" it has... :{
+//   once for every occurrence of term "termId" it has... :{
 int64_t Posdb::getTermFreq ( collnum_t collnum, int64_t termId ) {
 
 	// establish the list boundary keys
@@ -1136,7 +1136,7 @@ void initWeights ( ) {
 	for ( int32_t i = 0 ; i <= MAXWORDSPAMRANK ; i++ )
 		s_linkerWeights[i] = sqrt(1.0 + i);
 	
-	// if two hashgroups are comaptible they can be paired
+	// if two hashgroups are compatible they can be paired
 	for ( int32_t i = 0 ; i < HASHGROUP_END ; i++ ) {
 		// set this
 		s_inBody[i] = 0;
@@ -1356,8 +1356,8 @@ void PosdbTable::evalSlidingWindow ( char **ptrs ,
 		// this will be -1 if wpi or wpj is NULL
 		float max = getTermPairScoreForWindow ( i,j,wpi, wpj, 0 );
 
-		// try sub-ing in the best title occurence or best
-		// inlink text occurence. cuz if the term is in the title
+		// try sub-ing in the best title occurrence or best
+		// inlink text occurrence. cuz if the term is in the title
 		// but these two terms are really far apart, we should
 		// get a better score
 		float score = getTermPairScoreForWindow ( i,j,bestPos[i], 
@@ -2427,7 +2427,7 @@ void PosdbTable::intersectLists9_r ( ) {
 	if ( docId == prevDocId ) 
 		goto docIdLoop;
 
-	// udpate this
+	// update this
 	prevDocId = docId;
 
 
@@ -2688,7 +2688,7 @@ void PosdbTable::intersectLists9_r ( ) {
 		}
 		pss = 0.0;
 		//
-		// get score for term pair from non-body occuring terms
+		// get score for term pair from non-body occurring terms
 		//
 		if ( ptrs[i] && ptrs[j] )
 			getTermPairScoreForNonBody(i,
@@ -2803,7 +2803,7 @@ void PosdbTable::intersectLists9_r ( ) {
 	//   other terms.
 	// . compute the score the same way getTermPairScore() works so
 	//   we are on the same playing field
-	// . sub-out each term with its best scoring occurence in the title
+	// . sub-out each term with its best scoring occurrence in the title
 	//   or link text or meta tag, etc. but it gets a distance penalty
 	//   of like 100 units or so.
 	// . if term does not occur in the body, the sub-out approach should
@@ -2950,7 +2950,7 @@ void PosdbTable::intersectLists9_r ( ) {
 		if ( bflags[j] & (BF_PIPED|BF_NEGATIVE) ) continue;
 
 		//
-		// get score for term pair from non-body occuring terms
+		// get score for term pair from non-body occurring terms
 		//
 		if ( ! ptrs[i] ) continue;
 		if ( ! ptrs[j] ) continue;
@@ -3268,7 +3268,7 @@ float PosdbTable::getSingleTermScore ( int32_t i,
 
 	// set each of the top scoring terms individiually
 	for ( int32_t k = 0 ; k < numTop ; k++ , sx++ ) {
-		// udpate count
+		// update count
 		pdcs->m_numSingles++;
 		char *maxp = bestwpi[k];
 		sx->m_isSynonym      = g_posdb.getIsSynonym(maxp);
@@ -4819,7 +4819,7 @@ bool PosdbTable::setQueryTermInfo ( ) {
 	// . all keys are of same termid, so they are 12 or 6 bytes compressed
 	// . assume 12 if each is a different docid
 	int32_t maxDocIds = m_minListSize / 12;
-	// store all interesected docids in here for new algo plus 1 byte vote
+	// store all intersected docids in here for new algo plus 1 byte vote
 	int32_t need = maxDocIds * 6;
 
 	// they could all be OR'd together!
@@ -6479,7 +6479,7 @@ void PosdbTable::intersectLists10_r ( ) {
 			x++;
 			continue;
 		}
-		// compare last occurence of query term #x with our first occ.
+		// compare last occurrence of query term #x with our first occ.
 		// since this is a RING buffer
 		int32_t wrapDist = ourFirstPos + ((int32_t)RINGBUFSIZE-hisLastPos);
 		if ( wrapDist < bestDist ) bestDist = wrapDist;
@@ -6894,7 +6894,7 @@ void PosdbTable::intersectLists10_r ( ) {
 		}
 		pss = 0.0;
 		//
-		// get score for term pair from non-body occuring terms
+		// get score for term pair from non-body occurring terms
 		//
 		if ( miniMergedList[i] && miniMergedList[j] )
 			getTermPairScoreForNonBody(i,
@@ -6958,7 +6958,7 @@ void PosdbTable::intersectLists10_r ( ) {
 		// assume all word positions are in body
 		//bestPos[i] = NULL;
 		// . this scans all word positions for this term
-		// . this should ignore occurences in the body and only
+		// . this should ignore occurrences in the body and only
 		//   focus on inlink text, etc.
 		// . sets "bestPos" to point to the winning word 
 		//   position which does NOT occur in the body
@@ -7027,7 +7027,7 @@ void PosdbTable::intersectLists10_r ( ) {
 	//   other terms.
 	// . compute the score the same way getTermPairScore() works so
 	//   we are on the same playing field
-	// . sub-out each term with its best scoring occurence in the title
+	// . sub-out each term with its best scoring occurrence in the title
 	//   or link text or meta tag, etc. but it gets a distance penalty
 	//   of like 100 units or so.
 	// . if term does not occur in the body, the sub-out approach should
@@ -7193,7 +7193,7 @@ void PosdbTable::intersectLists10_r ( ) {
 		// 	continue;
 
 		//
-		// get score for term pair from non-body occuring terms
+		// get score for term pair from non-body occurring terms
 		//
 		if ( ! miniMergedList[i] ) continue;
 		if ( ! miniMergedList[j] ) continue;
@@ -7383,7 +7383,7 @@ void PosdbTable::intersectLists10_r ( ) {
 		// just grab the first value i guess...
 		//
 		//int32_t val32 = g_posdb.getFacetVal32 ( p );
-		// add it. count occurences of it per docid
+		// add it. count occurrences of it per docid
 		//qt->m_facetHashTable.addTerm32 ( &val32 );
 		// it might have multiple sections that have
 		// the same gbxpathsitehash...

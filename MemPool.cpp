@@ -12,7 +12,7 @@ MemPool::MemPool() {
 }
 
 MemPool::~MemPool ( ) {
-	log("MemPool::~MemPool: mem alloced now: %"INT32"\n", m_memUsedByData );
+	log("MemPool::~MemPool: mem allocated now: %"INT32"\n", m_memUsedByData );
 	reset();
 }
 
@@ -121,7 +121,7 @@ void *MemPool::gbmalloc ( int32_t need ) {
 	int32_t extra = 4 - m_tree.getNumEmptyNodesAboveFloor ();
 	// if size just right that's nice
 	//if ( size == need ) goto exactFit;
-	// lower it to accomodate up to 4 new MemNodes if we're maxed out now
+	// lower it to accommodate up to 4 new MemNodes if we're maxed out now
 	if ( extra > 0 ) floor -= sizeof(MemNode) * extra ;
 	// if another node has data in this region, bail
 	if ( m_top > floor ) { 

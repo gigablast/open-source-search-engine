@@ -1236,7 +1236,7 @@ bool  SafeBuf::htmlEncode(char *s, int32_t lenArg, bool encodePoundSign ,
 			*t++ = ';';
 			continue;
 		}
-		// our own specially decoded entites!
+		// our own specially decoded entities!
 		if ( *s == '+' && s[1]=='!' && s[2]=='-' ) {
 			*t++ = '&';
 			*t++ = 'l';
@@ -1245,7 +1245,7 @@ bool  SafeBuf::htmlEncode(char *s, int32_t lenArg, bool encodePoundSign ,
 			s += 2;
 			continue;
 		}
-		// our own specially decoded entites!
+		// our own specially decoded entities!
 		if ( *s == '-' && s[1]=='!' && s[2]=='+' ) {
 			*t++ = '&';
 			*t++ = 'g';
@@ -1335,7 +1335,7 @@ bool  SafeBuf::javascriptEncode(char *s, int32_t len ) {
 			continue;
 		}
 
-		// our own specially decoded entites!
+		// our own specially decoded entities!
 		if ( *s == '+' && s[1]=='!' && s[2]=='-' ) {
 			*t++ = '&';
 			*t++ = 'l';
@@ -1344,7 +1344,7 @@ bool  SafeBuf::javascriptEncode(char *s, int32_t len ) {
 			s += 2;
 			continue;
 		}
-		// our own specially decoded entites!
+		// our own specially decoded entities!
 		if ( *s == '-' && s[1]=='!' && s[2]=='+' ) {
 			*t++ = '&';
 			*t++ = 'g';

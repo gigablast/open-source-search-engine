@@ -377,7 +377,7 @@ bool Msg4::storeList ( RdbList *list , char rdbId , collnum_t collnum ) {
 	if ( s_msg4Head || s_msg4Tail ) { char *xx=NULL; *xx=0; }
 
 	// . wait in line
-	// . when the s_hostBufs[hostId] is able to accomodate our
+	// . when the s_hostBufs[hostId] is able to accommodate our
 	//   record this loop will be resumed and the caller's callback
 	//   will be called once we are able to successfully queue up
 	//   all recs in the list
@@ -563,7 +563,7 @@ bool Msg4::addMetaList ( char      *metaList                 ,
 	//   fail, assuming s_msg4Head got set, BUT it SHOULD be OK because
 	//   being interrupted at the one QUICKPOLL() in addMetaList2()
 	//   doesn't seem like it would hurt.
-	// . FURTHEMORE the multicast seems to always be called with
+	// . FURTHERMORE the multicast seems to always be called with
 	//   MAX_NICENESS so i'm not sure how niceness 0 will really help
 	//   with any of this stuff.
 	//if ( s_msg4Head || s_msg4Tail ) { char *xx=NULL; *xx=0; }
@@ -581,7 +581,7 @@ bool Msg4::addMetaList ( char      *metaList                 ,
 	m_inUse = true;
 
 	// . wait in line
-	// . when the s_hostBufs[hostId] is able to accomodate our
+	// . when the s_hostBufs[hostId] is able to accommodate our
 	//   record this loop will be resumed and the caller's callback
 	//   will be called once we are able to successfully queue up
 	//   all recs in the list
@@ -765,7 +765,7 @@ bool storeRec ( collnum_t      collnum ,
 	if ( ! buf  || s_hostBufSizes[hostId] < needForBuf ) {
 		// how big to make it
 		int32_t size = MAXHOSTBUFSIZE;
-		// must accomodate rec at all costs
+		// must accommodate rec at all costs
 		if ( size < needForBuf ) size = needForBuf;
 		// make them all the same size
 		buf = (char *)mmalloc ( size , "Msg4a" );
@@ -791,7 +791,7 @@ bool storeRec ( collnum_t      collnum ,
 	// . first int32_t is how much of "buf" is used
 	// . includes everything even itself
 	int32_t  used = *(int32_t *)buf;
-	// sanity chec. "used" must include the 4 bytes of itself
+	// sanity check. "used" must include the 4 bytes of itself
 	if ( used < 12 ) { char *xx = NULL; *xx = 0; }
 	// how much total buf space do we have, used or unused?
 	int32_t  maxSize = s_hostBufSizes[hostId];
@@ -1287,7 +1287,7 @@ bool addMetaList ( char *p , UdpSlot *slot ) {
 		//	return true;
 		//}
 		// an uninitialized secondary rdb? it will have a keysize
-		// of 0 if its never been intialized from the repair page.
+		// of 0 if its never been initialized from the repair page.
 		// don't core any more, we probably restarted this shard
 		// and it needs to wait for host #0 to syncs its
 		// g_conf.m_repairingEnabled to '1' so it can start its

@@ -15,7 +15,7 @@ public:
 	~SiteGetter();
 
 	// . returns false if blocked, true otherwise
-	// . sets g_errno on erorr
+	// . sets g_errno on error
 	bool getSite ( char         *url      ,
 		       class TagRec *gr       ,
 		       int32_t          timestamp,

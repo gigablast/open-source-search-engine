@@ -269,7 +269,7 @@ void Phrases::setPhrase ( int32_t i, int32_t niceness ) {
 
 			int32_t conti = pos;
 
-			// . get the punctuation mark separting two numbers
+			// . get the punctuation mark separating two numbers
 			// . use space if can't find one
 			// . 1/234 1,234 1.234 10/11 "1 234" 1-5
 			//if (isNum && j==i + 2 && is_digit(m_wptrs[j][0]) ) {
@@ -353,7 +353,7 @@ void Phrases::setPhrase ( int32_t i, int32_t niceness ) {
 	//if ( j >= nw ) j = nw - 1;
 	// sanity check
 	if ( lastWordj == -1 ) { char *xx = NULL; *xx = 0; }
-	// set the phrase length (from word #i upto & including word #j)
+	// set the phrase length (from word #i up to & including word #j)
 	//m_numWordsTotal[i] = j - i + 1;
 	//m_numWordsTotal [i] = lastWordj - i + 1;
 	// sanity check
@@ -426,7 +426,7 @@ char *Phrases::getPhrase ( int32_t i , int32_t *phrLen , int32_t npw ) {
 			// skip spaces for now since we has altogether now
 			*s++ = ' ';
 			/*
-			// . get the punctuation mark separting two numbers
+			// . get the punctuation mark separating two numbers
 			// . use space if can't find one
 			// . 1/234 1,234 1.234 10/11 "1 234" 1-5
 			if ( is_digit(m_wptrs[i][0]) && w == i + 1 && 

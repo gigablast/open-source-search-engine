@@ -604,7 +604,7 @@ bool sendHttpReply ( void *state ) {
 				mstrerror(g_errno) , g_errno);
 	else if ( (ir->ptr_url && ir->ptr_url[0]) ||
 		  (ir->ptr_queryToScrape&&ir->ptr_queryToScrape[0]) )
-		sb.safePrintf ( "<center><b>Sucessfully injected %s"
+		sb.safePrintf ( "<center><b>Successfully injected %s"
 				"</center><br>"
 				, ir->ptr_url
 				//, xd->m_firstUrl.m_url
@@ -1073,7 +1073,7 @@ void doneInjectingLinksWrapper ( void *state ) {
 				       sb->getBufStart(),
 				       sb->length(),
 				       -1/*cachetime*/);
-	// hopefully sb buffer is copied becaues this will free it:
+	// hopefully sb buffer is copied because this will free it:
 	mdelete ( msg7, sizeof(Msg7) , "PageInject" );
 	delete (msg7);
 }
@@ -1308,7 +1308,7 @@ bool resumeImports ( ) {
 		if ( ! cr ) continue;
 		if ( ! cr->m_importEnabled ) continue;
 		// each import has its own state
-		// it contains a sequence of msg7s to do simulataneous
+		// it contains a sequence of msg7s to do simultaneous
 		// injections
 		ImportState *is;
 		try { is = new (ImportState); }

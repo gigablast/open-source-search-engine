@@ -206,7 +206,7 @@ bool PostQueryRerank::preRerank ( ) {
 					  "PQRPosList" );
 	if( ! m_positionList ) {
 		log( LOG_INFO, "pqr: Could not allocate PostQueryRerank "
-		     "postion list memory.\n" );
+		     "position list memory.\n" );
 		g_errno = ENOMEM;
 		return(false);
 	}
@@ -250,7 +250,7 @@ bool PostQueryRerank::preRerank ( ) {
 		//int32_t bitScore = m_msg40->getBitScore( x );
 		//if ( bitScore == 0x00 ) continue;
 
-		// . save postion of this result so we can fill it in later
+		// . save position of this result so we can fill it in later
 		//   with (possibly) a higher ranking result
 		m_positionList[y] = x;
 
@@ -761,7 +761,7 @@ rscore_t PostQueryRerank::rerankLanguageAndCountry ( rscore_t score,
 	// if lsort is off, skip
 	if ( ! m_si->m_enableLanguageSorting ) return score;
 
-	// . use query lanaguage (si->m_langHint) or restricted search 
+	// . use query language (si->m_langHint) or restricted search 
 	//   language (si->m_language)
 	// . if both are 0, don't rerank by language
 	uint8_t langWanted = m_si->m_langHint;
@@ -779,7 +779,7 @@ rscore_t PostQueryRerank::rerankLanguageAndCountry ( rscore_t score,
 					   "it's language is unknown" );
 	}
 
-	// . if computed lanaguage is unknown, don't penalize
+	// . if computed language is unknown, don't penalize
 	// . no, what if from a different country?
 	if ( summaryLang == langUnknown ) return score;
 		
@@ -809,7 +809,7 @@ rscore_t PostQueryRerank::rerankLanguageAndCountry ( rscore_t score,
 	uint8_t countryWanted = m_si->m_countryHint;
 	// SearchInput sets m_country based on the IP address of the incoming
 	// query, which is often wrong, especially for internal 10.x.y.z ips.
-	// so just fallback to countryHint for now bcause that uses teh default
+	// so just fallback to countryHint for now because that uses the default
 	// country... right now set to "us" in search controls page.
 	if ( countryWanted == 0 ) countryWanted = m_si->m_country;
 	if ( country == 0 || countryWanted == 0 ||
@@ -1882,7 +1882,7 @@ bool PostQueryRerank::preRerankCommonTopicsInDmoz( Msg20Reply *mr ) {
 		//     (int32_t)i+1, (int32_t)msg20->m_numCatids, 
 		//     key, slot );
 		if ( slot == -1 ) {
-			// first occurance
+			// first occurrence
 			// cnt is 0, no other common topics
 			// demotion factor is the parm
 			ComTopInDmozRec rec;
@@ -1890,15 +1890,15 @@ bool PostQueryRerank::preRerankCommonTopicsInDmoz( Msg20Reply *mr ) {
 			rec.demFact =
 				m_si->m_cr->m_pqr_demFactComTopicInDmoz;
 			m_dmozTable.addKey( key, rec );
-			//log(LOG_DEBUG, "query:  qdmoz pre occurance 1 AWL");
+			//log(LOG_DEBUG, "query:  qdmoz pre occurrence 1 AWL");
 		}
 		else {
-			// nth occurance
+			// nth occurrence
 			ComTopInDmozRec *rec =
 				m_dmozTable.getValuePointerFromSlot( slot );
 			rec->cnt++;
 			//log( LOG_DEBUG, "query:  qdmoz pre key:%"INT32" "
-			//     "occurance %"INT32" AWL", 
+			//     "occurrence %"INT32" AWL", 
 			//     key, rec->cnt );
 		}
 	}

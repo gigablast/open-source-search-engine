@@ -1239,7 +1239,7 @@ int32_t htmlDecode ( char *dst , char *src , int32_t srcLen , bool doSpecial ,
 		//	
 		// store decoded entity char into dst[j]
 		uint32_t c;
-		// "skip" is how many bytes the entites was in "src"
+		// "skip" is how many bytes the entities was in "src"
 		int32_t skip = getEntity_a (src, srcEnd-src, &c );
 		// ignore the "entity" if it was invalid
 		if ( skip == 0 ) { *dst++ = *src++ ; continue; }
@@ -1474,12 +1474,12 @@ bool htmlEncode ( SafeBuf* s , char *t , char *tend , bool pound ,
 			s->safeMemcpy("&#035;", 6);
 			continue;
 		}
-		// our own specially decoded entites!
+		// our own specially decoded entities!
 		if ( *t == '+' && t[1]=='!' && t[2]=='-' ) {
 			s->safeMemcpy("&lt;",4);
 			continue;
 		}
-		// our own specially decoded entites!
+		// our own specially decoded entities!
 		if ( *t == '-' && t[1]=='!' && t[2]=='+' ) {
 			s->safeMemcpy("&gt;",4);
 			continue;
@@ -1637,7 +1637,7 @@ int32_t urlDecodeNoZeroes ( char *dest , char *s , int32_t slen ) {
 // . like above, but only decodes chars that should not have been encoded
 // . will also encode binary chars
 int32_t urlNormCode ( char *d , int32_t dlen , char *s , int32_t slen ) {
-	// save start of detination buffer for returning the length
+	// save start of destination buffer for returning the length
 	char *dstart = d;
 	// subtract 1 for NULL termination
 	char *dend = d + dlen - 1;
@@ -2337,7 +2337,7 @@ int32_t cleanInput(char *outbuf, int32_t outbufSize, char *inbuf, int32_t inbufL
 
 //
 // get rid of the virtual Msg class because it screws up how we
-// serialize/deserialize everytime we compile gb it seems
+// serialize/deserialize every time we compile gb it seems
 //
 
 int32_t getMsgStoredSize ( int32_t baseSize, 

@@ -1,6 +1,6 @@
 // Copyright Apr 2005 Matt Wells
 
-// . parameters from CollectionRec that can be overriden on a per query basis
+// . parameters from CollectionRec that can be overridden on a per query basis
 
 // . use m_qbuf1 for the query. it has all the min/plus/quote1/quote2 advanced
 //   search cgi parms appended to it. it is the complete query, which is 
@@ -249,7 +249,7 @@ class SearchInput {
 	// intersection speed up int16_tcut? "&fi=1", defaults to on
 	char   m_fastIntersection;
 
-	// stream results back on socket in streaming mode, usefule when 
+	// stream results back on socket in streaming mode, useful when 
 	// thousands of results are requested
 	char   m_streamResults;
 
@@ -397,7 +397,7 @@ class SearchInput {
 
 	//////
 	//
-	// STUFF NOT REALLY USED NWO
+	// STUFF NOT REALLY USED NOW
 	//
 	//////
 

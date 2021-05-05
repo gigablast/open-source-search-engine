@@ -832,7 +832,7 @@ bool Wiktionary::generateHashTableFromWiktionaryTxt ( int32_t sizen ) {
 		     ! strncasecmp(p ,"lural of [[",11) ) 
 			name = p + 11;
 
-		// substitue form for case
+		// substitute form for case
 		// "objective case of" ... treat like form
 		// should fix page for "us" which is "objective case of we"
 		bool mangled = false;
@@ -1331,7 +1331,7 @@ bool Wiktionary::generateHashTableFromWiktionaryTxt ( int32_t sizen ) {
 	if ( *wp != '{' ) goto lineLoop;
 	wp++;
 	
-	// somtimes we got something like
+	// sometimes we got something like
 	// # {{education}} {{initialism of|Artium Magister}}
 	// so go to next {{'s
 	// so skip spaces
@@ -2101,7 +2101,7 @@ bool Wiktionary::integrateUnifiedDict ( ) {
 		if ( ! ud->m_flags[i] ) continue;
 		// get ptrs
 		int32_t off = *(int32_t *)ud->getDataFromSlot(i);
-		// refernce
+		// reference
 		char *p = g_speller.m_unifiedBuf + off;
 		// just one lang?
 		if ( ! justOneLang ) continue;

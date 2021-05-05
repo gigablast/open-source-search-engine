@@ -67,7 +67,7 @@ static bool gotSummaryWrapper            ( void *state );
 // gigabit phrase scoring params
 //#define SPARSE_MARK          0.34
 //#define SPARSE_PENALTY       1000
-#define FWC_PENALTY          500   // penalty for begining with common word
+#define FWC_PENALTY          500   // penalty for beginning with common word
 #define POP_ZONE_0           10 // 0.00001
 #define POP_ZONE_1           30 //0.0001
 #define POP_ZONE_2           80 // 0.001
@@ -289,7 +289,7 @@ bool Msg40::getResults ( SearchInput *si      ,
 	//	get = m_si->m_docsToScanForReranking;
 	// for zak's reference pages
 	// if(get<m_si->m_refs_numToGenerate ) get=m_si->m_refs_numToGenerate;
-	// limit to this ceiling though for peformance reasons
+	// limit to this ceiling though for performance reasons
 	//if ( get > m_maxDocIdsToCompute ) get = m_maxDocIdsToCompute;
 	// ok, need some sane limit though to prevent malloc from 
 	// trying to get 7800003 docids and going ENOMEM
@@ -337,7 +337,7 @@ bool Msg40::getResults ( SearchInput *si      ,
 	//      screw things up...
 	//if ( cr->m_numDocsMultiplier > 1.0 && ! g_conf.m_fullSplit ) 
 	//	get = (int32_t) ((float)get * cr->m_numDocsMultiplier);
-	// limit to this ceiling though for peformance reasons
+	// limit to this ceiling though for performance reasons
 	//if ( get > m_maxDocIdsToCompute ) get = m_maxDocIdsToCompute;
 	// . ALWAYS get at least this many
 	// . this allows Msg3a to allow higher scoring docids in tier #1 to
@@ -1347,7 +1347,7 @@ bool Msg40::launchMsg20s ( bool recalled ) {
 	}
 	// how many total good?
 	int32_t allGood = good + goodAfterGaps;
-	// get the visiblity ratio from the replies we did get back
+	// get the visibility ratio from the replies we did get back
 	float ratio ;
 	if ( allGood > 0 ) ratio = (float)sample / (float)allGood;
 	else               ratio = (float)sample / 1.0        ;
@@ -1866,7 +1866,7 @@ bool Msg40::gotSummary ( ) {
 	/*
 	int32_t now2 = getTimeLocal();
 	if ( now2 - m_lastHeartbeat >= 10 && ! m_si->m_streamResults &&
-	     // incase socket is closed and recycled for another connection
+	     // in case socket is closed and recycled for another connection
 	     st->m_socket->m_numDestroys == st->m_numDestroys ) {
 		m_lastHeartbeat = now2;
 		int n = ::send ( st->m_socket->m_sd , " " , 1 , 0 );
@@ -2449,10 +2449,10 @@ bool Msg40::gotSummary ( ) {
 	}
 
 	// . assume no dups removed
-	// . we print "click here to show ommitted results" if this is true
+	// . we print "click here to show omitted results" if this is true
 	m_removedDupContent = false;
 
-	// what is the deduping threshhold? 0 means do not do deuping
+	// what is the deduping threshold? 0 means do not do deuping
 	int32_t dedupPercent = 0;
 	if ( m_si->m_doDupContentRemoval && m_si->m_percentSimilarSummary )
 		dedupPercent = m_si->m_percentSimilarSummary;
@@ -2541,7 +2541,7 @@ bool Msg40::gotSummary ( ) {
 			int32_t  ulen = mr->size_ubuf - 1;
 			
 			// since the redirect url is a more accurate 
-			// representation of the conent do that if it exists.
+			// representation of the content do that if it exists.
 			if ( mr->ptr_rubuf ) {
 				url  = mr-> ptr_rubuf;
 				ulen = mr->size_rubuf - 1;
@@ -2615,7 +2615,7 @@ bool Msg40::gotSummary ( ) {
 		char *level = &m_msg3a.m_clusterLevels[i];
 		// on CR_OK
 		if ( *level == CR_OK ) visible++;
-		// otherwise count as ommitted
+		// otherwise count as omitted
 		else m_omitCount++;
 	}
 
@@ -3029,7 +3029,7 @@ bool Msg40::gotSummary ( ) {
 	for ( int32_t i = 0 ; i < m_msg3a.m_numDocIds ; i++ ) {
 		// assume we got a valid docid
 		bool skip = false;
-		// must ahve a cluster level of CR_OK (visible)
+		// must have a cluster level of CR_OK (visible)
 		if ( m_msg3a.m_clusterLevels[i] != CR_OK ) skip = true;
 		// v is the visible count
 		else if ( v++ < m_si->m_firstResultNum )
@@ -3219,7 +3219,7 @@ int32_t Msg40::getStoredSize ( ) {
 		// getting rid of this makes it take up less room
 		m_msg20[i]->clearLinks();
 		m_msg20[i]->clearVectors();
-		// if not visisble, do not store!
+		// if not visible, do not store!
 		if ( m_msg3a.m_clusterLevels[i] != CR_OK ) continue;
 		// otherwise, store it
 		size += m_msg20[i]->getStoredSize();
@@ -3273,7 +3273,7 @@ int32_t Msg40::serialize ( char *buf , int32_t bufLen ) {
 		// getting rid of this makes it take up less room
 		m_msg20[i]->clearLinks();
 		m_msg20[i]->clearVectors();
-		// if not visisble, do not store!
+		// if not visible, do not store!
 		if ( m_msg3a.m_clusterLevels[i] != CR_OK ) continue;
 		// return -1 on error, g_errno should be set
 		int32_t nb = m_msg20[i]->serialize ( p , pend - p ) ;
@@ -3547,7 +3547,7 @@ bool Msg40::computeGigabits( TopicGroup *tg ) {
 			// buffer is \0 separated text snippets
 			int32_t plen = gbstrlen       (p);
 			sampleWords += countWords( p,plen);
-			// advance to next exerpt
+			// advance to next excerpt
 			p += plen + 1;
 			//if ( debug ) numExcerpts++;
 		};
@@ -3958,7 +3958,7 @@ bool Msg40::computeGigabits( TopicGroup *tg ) {
 			//   alnum must follow period
 			if ( (s[k] == '.' || s[k] == ':' ) &&
 			     ( is_alnum_a(s[k+1])  ||
-			       // accept single intial before the period, too
+			       // accept single initial before the period, too
 			       (s[k+1] ==' ' && is_alnum_a(s[k+2]) 
 				&& k>=2 && s[k-2]==' ')))
 				continue;
@@ -4357,7 +4357,7 @@ void hashExcerpt ( Query *q ,
 	// . now all the data is in buf/bufLen
 	// . parse it up into Words
 	// . now XmlDoc::getGigabitVector() calls us and it already has the
-	//   Words pased up, so it will use a NULL buf
+	//   Words passed up, so it will use a NULL buf
 	int32_t nw = words.getNumWords();
 	// don't breech our arrays man
 	//if ( nw > 10000 ) nw = 10000;
@@ -4496,7 +4496,7 @@ void hashExcerpt ( Query *q ,
 			if ( wids[i] != qt->m_hash64d ) continue;
 			// get vector for query word #j
 			PosInfo *pi = &pis[j];
-			// skip if already have 1000 occurences of this term
+			// skip if already have 1000 occurrences of this term
 			if ( pi->m_posLen >= 1000  ) continue;
 			// add this query term # into our m_pos vector
 			pi->m_pos[pi->m_posLen] = i;
@@ -4595,7 +4595,7 @@ void hashExcerpt ( Query *q ,
 			// excerpt, flip the sign
 			if ( d1 < 0   ) d1 = d1 * -1;
 			//
-			// if the matching word is the last that occurence
+			// if the matching word is the last that occurrence
 			// of that word...
 			//
 			if ( pe->m_posPtr + 1 >= pe->m_posLen ) {
@@ -4636,7 +4636,7 @@ void hashExcerpt ( Query *q ,
 			// look at the following match
 			//
 			//int32_t d2 = pos[ 1000 * j + posPtr[j] + 1 ] - i ;
-			// look at the next occurence of query term #j
+			// look at the next occurrence of query term #j
 			// in the excerpt and get dist from us to it
 			int32_t d2 = pe->m_pos[pe->m_posPtr + 1] - i;
 			// make it positive
@@ -4682,7 +4682,7 @@ void hashExcerpt ( Query *q ,
 
 			//
 			//
-			// otherwise, we are closer to the next occurence!!
+			// otherwise, we are closer to the next occurrence!!
 			// be sure to ince its posPtr cursor then
 			//
 			//
@@ -4952,7 +4952,7 @@ void hashExcerpt ( Query *q ,
 				//   string of punct below, and filter out 
 				//   those gigabits above with hasPunct.
 				// . i'd really like to NOT have this here
-				//   becase we get much better gigabits, but
+				//   because we get much better gigabits, but
 				//   we need it as a speed saver...
 				if (wlen[j-1]>tg->m_topicMaxPunctLen) break;
 				// no phrasing across commas, etc.
@@ -5138,7 +5138,7 @@ void hashExcerpt ( Query *q ,
 			//ww[wwlen]=c;
 			// include any ending or starting ( or )
 			if ( i > 0 && ww[-1] == '(' ) { 
-				// ensure we got a ')' somwhere before adding (
+				// ensure we got a ')' somewhere before adding (
 				for ( int32_t r = 0 ; r <= wwlen ; r++ )
 					if ( ww[r]==')' ) {
 						ww--; wwlen++; break; }
@@ -5433,7 +5433,7 @@ static int factCmp ( const void *a, const void *b ) {
 	float sa = fa->m_maxGigabitModScore * fa->m_queryScore;
 	float sb = fb->m_maxGigabitModScore * fb->m_queryScore;
 	// punish if more than one gigabit! just try to get all
-	// query terms and ONE gigabit to keep things more targetted.
+	// query terms and ONE gigabit to keep things more targeted.
 	sa /= fa->m_numGigabits;
 	sb /= fb->m_numGigabits;
 	if ( sa < sb ) return  1; // swap!
@@ -5526,7 +5526,7 @@ bool Msg40::computeFastFacts ( ) {
 		// if m_si->m_showErrors is true then reply can be NULL
 		// if titleRec was not found
 		if ( ! reply ) return true;
-		// get sample. sample uses \0 as delimeters between excerpts
+		// get sample. sample uses \0 as delimiters between excerpts
 		char *p    =     reply-> ptr_gigabitSample;
 		char *pend = p + reply->size_gigabitSample; // includes \0
 		// skip if empty
@@ -5655,7 +5655,7 @@ bool Msg40::addFacts ( HashTableX *queryTable,
 	fact.m_maxGigabitModScore = 0;
 
 	// . sentences end in periods.
-	// . all sections delimeted by **'s
+	// . all sections delimited by **'s
 	for ( int32_t i = 0 ; i < nw ; i++ ) {
 		// skip punct words in the sentence/section
 		if ( ! wids[i] ) continue;
@@ -6155,7 +6155,7 @@ bool Msg40::printJsonItemInCSV ( State0 *st , int32_t ix ) {
 
 	// now print out what we got
 	for ( int32_t i = 0 ; i < numCSVColumns ; i++ ) {
-		// , delimeted
+		// , delimited
 		if ( i > 0 ) sb->pushChar(',');
 		// get it
 		ji = ptrs[i];

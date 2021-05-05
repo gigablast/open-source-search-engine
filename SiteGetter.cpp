@@ -603,7 +603,7 @@ bool SiteGetter::setRecognizedSite ( ) {
 	// . these are applied to all domains uniformly
 	// . if it is xyz.com/users/  use xyz.com/users/fred/ as the site
 
-	// a lot of times these were not indivual blogs, but the blog subsite
+	// a lot of times these were not individual blogs, but the blog subsite
 	// of a site... http://dccc.org/blog/P4575/
 	//if ( strncasecmp(p,"/blogs/"       , 7) == 0 ) len = 7;
 	//if ( strncasecmp(p,"/blog/"        , 6) == 0 ) len = 6;

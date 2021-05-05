@@ -71,7 +71,7 @@ bool Syncdb::gotMetaListRequest ( char *req , int32_t reqSize , uint32_t sid ) {
 
 	// . add the record (which contains a list)
 	// . it starts with the syncdb key
-	// . see below for the defition of the bits in the key
+	// . see below for the definition of the bits in the key
 	// . might set g_errno to ETRYAGAIN
 	if ( ! m_rdb.addRecord ((collnum_t)0,(char *)&k , req , reqSize , 
 				MAX_NICENESS ) )
@@ -1321,7 +1321,7 @@ void Syncdb::syncStart_r ( bool amThread ) {
 	// make the dir
 	sprintf ( cmd , "ssh %s 'mkdir %scoll.%s.%"INT32"'",
 		  ips,dir,coll,collnum);
-	// excecute
+	// execute
 	log ( LOG_INFO, "sync: %s", cmd );
 	//int err = my_system_r ( cmd, 3600*24 );
 	//if ( err != 0 ) goto hadError;
@@ -1353,7 +1353,7 @@ void Syncdb::syncStart_r ( bool amThread ) {
 	// copy that
 	sprintf ( cmd , "rcp %s %s:%scoll.%s.%"INT32"/'",
 		  p->getFilename(),ips,dir,coll,collnum);
-	// excecute
+	// execute
 	log ( LOG_INFO, "sync: %s", cmd );
 	// MDW: take out for now
 	//if ( ( err = my_system_r ( cmd, 3600*24 ) ) ) goto hadError;
@@ -1376,7 +1376,7 @@ void Syncdb::syncStart_r ( bool amThread ) {
 		  dir,
 		  dir
 		  );
-	// excecute
+	// execute
 	log ( LOG_INFO, "sync: %s", cmd );
 	// MDW: take out for now
 	//if ( ( err = my_system_r ( cmd, 3600*24 ) ) ) goto hadError;
@@ -1388,7 +1388,7 @@ void Syncdb::syncStart_r ( bool amThread ) {
 		if ( ! g_files[i] ) break;
 		sprintf ( cmd , "rcp %s%s %s:%s",
 			  mydir,g_files[i],ips,dir);
-		// excecute
+		// execute
 		log ( LOG_INFO, "sync: %s", cmd );
 		// MDW: take out for now
 		//if ( ( err = my_system_r ( cmd, 3600*24 ) ) ) goto hadError;
@@ -1396,7 +1396,7 @@ void Syncdb::syncStart_r ( bool amThread ) {
 
 	// new guy is NOT in sync
 	sprintf ( cmd , "ssh %s 'echo 0 > %sinsync.dat", ips,dir);
-	// excecute
+	// execute
 	log ( LOG_INFO, "sync: %s", cmd );
 	// MDW: take out for now
 	//if ( ( err = my_system_r ( cmd, 3600*24 ) ) ) goto hadError;
@@ -1404,7 +1404,7 @@ void Syncdb::syncStart_r ( bool amThread ) {
 	// saved files
 	sprintf ( cmd , "rcp %s*-saved.dat %s:%sinsync.dat", 
 		  mydir,ips,dir);
-	// excecute
+	// execute
 	log ( LOG_INFO, "sync: %s", cmd );
 	// MDW: take out for now
 	//if ( ( err = my_system_r ( cmd, 3600*24 ) ) ) goto hadError;

@@ -604,7 +604,7 @@ bool Language::loadSpellerDict( char *spellerBuf, int32_t spellerBufSize,
 	numTuples--;
 	m_numTuples--;
 
-	// sort the wordsPtrs accoding to their phonetics
+	// sort the wordsPtrs according to their phonetics
 	gbsort( m_tuplePtr, m_numTuples, sizeof(char*), cmpPhonet );
 
 	char *tuple;
@@ -1085,7 +1085,7 @@ bool Language::loadWikipediaWords(){
 
 	FILE *fdr = fopen ( ff, "r" );
 	if ( ! fdr ) {
-		return log("lang: Could not open for mispelled words"
+		return log("lang: Could not open for misspelled words"
 			   "reading: %s.",strerror(errno));
 	}
 
@@ -1118,7 +1118,7 @@ bool Language::loadMispelledWords(){
 		  getLanguageAbbr(m_lang), getLanguageAbbr(m_lang));
 	FILE *fdr = fopen ( ff, "r" );
 	if ( ! fdr ) {
-		return log("lang: Could not open for mispelled words"
+		return log("lang: Could not open for misspelled words"
 			   "reading: %s.",strerror(errno));
 	}
 
@@ -1515,7 +1515,7 @@ bool Language::getRecommendation( char *origWord, int32_t origWordLen,
 		for ( int32_t j = 0; j < MAX_CHARS; j++ ){
 			if ( !m_ruleChars[j] ) continue;
 			char *p = possiblePhonet;
-			// cannot substitue if both chars are the same
+			// cannot substitute if both chars are the same
 			if ( j == *( origPhonet + i ) ) continue;
 			// put the chars that come before the substituted char
 			gbmemcpy ( p, origPhonet, i ); p += i;
@@ -2235,7 +2235,7 @@ int16_t Language::editDistance( char *a0, char *b0 ){
 
 // reduces score for substitutions that are close on the key board
 // eg. we want "hakt" --> "halt", but it used to give "hakt"->"hat"
-// string 'a' is the mispelling, string 'b' is the recommendation
+// string 'a' is the misspelling, string 'b' is the recommendation
 int16_t Language::reduceScore ( char *a, char *b ){
 	// reduce score only for substitutions and for 1 edit hop away
 	// so essentially both strings should be of the same length
@@ -2582,7 +2582,7 @@ bool Language::hasMispelling(char *phrase, int32_t phraseLen){
 		uint32_t key = hash32d(p, pend - p);
 		int32_t slot = m_misp.getSlot(key);
 		if ( slot != -1 ){
-			log(LOG_WARN,"lang: found mispelling in %s", word);
+			log(LOG_WARN,"lang: found misspelling in %s", word);
  			return true;
 		}
 		pend++;
@@ -2639,7 +2639,7 @@ bool Language::generateDicts ( int32_t numWordsToDump , char *coll ) {
 	
 	// load the mispellings file first
 	//if ( !loadMispelledWords() )
-	//  log (LOG_WARN,"lang: mispelled file could not be loaded");
+	//  log (LOG_WARN,"lang: misspelled file could not be loaded");
 	
 	//log(LOG_DEBUG, "lang: making query files");
 	//if( !makeQueryFiles ( ) )
@@ -3821,7 +3821,7 @@ bool Language::makeQueryFiles ( ) {
 					fragLen += cs;
 				}
 
-				// if any part of the phrase has a mispelling,
+				// if any part of the phrase has a misspelling,
 				// discard the query
 				if ( hasMispelling( &frag[flen], 
 						    fragLen - flen) ){
@@ -3846,10 +3846,10 @@ bool Language::makeQueryFiles ( ) {
 		// each ip can only vote once for a particular query. 
 		// Each ip vote counts as one popular vote
 		//char cmd[2048];
-		// sort, the uniquify so that each ip can have only 1 occurance
+		// sort, the uniquify so that each ip can have only 1 occurrence
 		// of each phrase. Then awk to get just the phrase.
 		// Then sort again and uniquify with count and remove single
-		// occurance phrases. Then sort on the count to get the most
+		// occurrence phrases. Then sort on the count to get the most
 		// common phrases on top.
 		//sprintf( cmd, "sort -f %s | uniq -i | "
 		//"awk -F \'\\t\' \'{print $2}\' "
@@ -4362,7 +4362,7 @@ bool Language::launchAffinity(StateAff *st){
 		if ( wlen <= 0 )
 			return launchAffinity(st);
 		m_buf[wlen-1]='\0';
-		// skip to the phrase. titlerec dict have space as a seperator
+		// skip to the phrase. titlerec dict have space as a separator
 		char *p = m_buf;
 		while ( *p != ' ' )
 			p++;
@@ -4514,7 +4514,7 @@ bool StateAff::doneAffinities(StateAff *st){
 
 // Clean query dict file of mispelleings
 // NOTE: This function shall only compare each word to see if the phrase
-// is present in the most commonly mispelled words list, that is present
+// is present in the most commonly misspelled words list, that is present
 // in the file mispelled_words. For spellchecking, use spellcheckDict()
 // NOTE: Whenever you use these functions, please check the infile, outfile
 // and the text format is correct

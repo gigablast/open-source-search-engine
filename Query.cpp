@@ -128,7 +128,7 @@ void Query::reset ( ) {
 // . returns false and sets g_errno on error
 // . "query" must be NULL terminated
 // . if boolFlag is 0 we ignore all boolean operators
-// . if boolFlag is 1  we assume query is boolen
+// . if boolFlag is 1  we assume query is boolean
 // . if boolFlag is 2  we attempt to detect if query is boolean or not
 // . if "keepAllSingles" is true we do not ignore any single word UNLESS
 //   it is a boolean operator (IGNORE_BOOLOP), fieldname (IGNORE_FIELDNAME)
@@ -420,7 +420,7 @@ bool Query::set2 ( char *query        ,
 	//   when routing this query to the host that can use the least
 	//   amount of bandwidth to download/get the termlists. if the compound
 	//   termlist is not in the cache then it will not be on disk or
-	//   in the tree since it is a vitual termlist, BUT we will still
+	//   in the tree since it is a virtual termlist, BUT we will still
 	//   create it and store it in the cache, so assume it is in a cache,
 	//   because the act of storing it in the cache may require sending
 	//   it to another machine.
@@ -1051,7 +1051,7 @@ bool Query::setQTerms ( Words &words , Phrases &phrases ) {
 // 		if ( pn >= 0 ) tt = m_qwords[pn].m_queryPhraseTerm;
 // 		if ( tt      ) tt->m_implicitBits |= qt->m_explicitBit;
 // 		// . there might be some phrase term that actually contains
-// 		//   the same word as we are, but a different occurence
+// 		//   the same word as we are, but a different occurrence
 // 		// . like '"knowledge management" AND NOT management' query
 // 		for ( int32_t j = 0 ; j < i ; j++ ) {
 // 			// must be our same wordId (same word, different occ.)
@@ -1212,7 +1212,7 @@ bool Query::setQTerms ( Words &words , Phrases &phrases ) {
 // 		if ( pn >= 0 ) tt = m_qwords[pn].m_queryPhraseTerm;
 // 		if ( tt      ) tt->m_implicitBits |= qt->m_explicitBit;
 // 		// . there might be some phrase term that actually contains
-// 		//   the same word as we are, but a different occurence
+// 		//   the same word as we are, but a different occurrence
 // 		// . like '"knowledge management" AND NOT management' query
 // 		for ( int32_t j = 0 ; j < i ; j++ ) {
 // 			// must be our same wordId (same word, different occ.)
@@ -1252,7 +1252,7 @@ bool Query::setQTerms ( Words &words , Phrases &phrases ) {
  		}
 		QueryTerm *qt = &m_qterms[i];
 		if (qt->m_UORedTerm) continue;
-		// sometims UORedTerm is NULL i guess because of IGNORE_BREECH
+		// sometimes UORedTerm is NULL i guess because of IGNORE_BREECH
 		if ( qt->m_isUORed && qt->m_qword && qt->m_qword->m_ignoreWord ) 
 			continue;
 		// Skip duplicate terms before we waste an explicit bit
@@ -1324,7 +1324,7 @@ bool Query::setQTerms ( Words &words , Phrases &phrases ) {
 			qt->m_leftPhraseTerm    = tt;
 		}
 		// . there might be some phrase term that actually contains
-		//   the same word as we are, but a different occurence
+		//   the same word as we are, but a different occurrence
 		// . like '"knowledge management" AND NOT management' query
 		// . made it from "j < i" into "j < m_numWords" because
 		//   'test "test bed"' was not working but '"test bed" test'
@@ -5245,7 +5245,7 @@ bool Query::setBooleanOperands ( ) {
 
 	// alloc the mem if we need to (mdw left off here) 
 	//int32_t need = (m_numWords/3) * sizeof(Expression);
-	// illegitmate bool expressions breech the buffer
+	// illegitimate bool expressions breech the buffer
 	int32_t need = (m_numWords) * sizeof(Expression);
 	// sanity check
 	if ( m_expressions || m_expressionsAllocSize ) { 

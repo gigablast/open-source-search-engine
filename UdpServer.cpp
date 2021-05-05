@@ -61,7 +61,7 @@ UdpServer g_udpServer2;
 // . how many dgrams constitute a big msg that should use the token system?
 // . if msg use this or more dgrams, use the token system
 // . i've effectively disabled the token scheme by setting this to 1000
-// . seems like performace is better w/o tokens!!! damn it!!!!!!!!
+// . seems like performance is better w/o tokens!!! damn it!!!!!!!!
 //#define LARGE_MSG 4
 //#define LARGE_MSG 6
 //#define LARGE_MSG 100000
@@ -1520,7 +1520,7 @@ int32_t UdpServer::readSock_ass ( UdpSlot **slotPtr , int64_t now ) {
 		// . but only drop spider's msg39s
 		if ( msgType == 0x39 && m_msg39sInWaiting >= 10 && niceness )
 			getSlot = false;
-		// try to prevent another lockup condition of msg20 spawing
+		// try to prevent another lockup condition of msg20 spawning
 		// a msg22 request to self but failing...
 		if ( msgType == 0x20 && m_msg20sInWaiting >= 50 && niceness )
 			getSlot = false;
@@ -1593,7 +1593,7 @@ int32_t UdpServer::readSock_ass ( UdpSlot **slotPtr , int64_t now ) {
 		// requests out on. do this regardless of msg23 or not.
 		//if ( m_numUsedSlots >= (m_maxSlots>>1) ) getSlot = false;
 		//int32_t niceness = m_proto->isNice ( peek , peekSize );
-		// lower priorty slots are dropped first
+		// lower priority slots are dropped first
 		if ( m_numUsedSlots >= 1300 && niceness > 0 && ! isProxy &&
 		     // we dealt with special tagdb msg00's above so
 		     // do not deal with them here
@@ -1964,7 +1964,7 @@ bool UdpServer::makeCallbacks_ass ( int32_t niceness ) {
 	//	if ( niceness == -1 ) niceness = 0;
 	//}
 
-	// assume noone called
+	// assume no one called
 	int32_t numCalled = 0;
 	if(niceness > 0) m_needBottom = false;
 
@@ -3248,7 +3248,7 @@ bool UdpServer::shutdown ( bool urgent ) {
 	// close our socket descriptor, may block to finish sending
 	int s = m_sock;
 	// . make it -1 so thread exits
-	// . g_process.shutdown2() will wait untill all threads exit before
+	// . g_process.shutdown2() will wait until all threads exit before
 	//   exiting the main process
 	// . the timepollwrapper should kick our udp thread out of its 
 	//   lock on recvfrom so that it will see that m_sock is -1 and

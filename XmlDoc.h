@@ -147,7 +147,7 @@ float computeSimilarity ( int32_t   *vec0 ,
 			  // sets this to true right now. if set to true
 			  // we essentially dedup each vector, although
 			  // the score is compounded into the remaining 
-			  // occurence. i'm not sure if that is the right
+			  // occurrence. i'm not sure if that is the right
 			  // behavior though.
 			  bool dedupVecs = false );
 

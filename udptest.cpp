@@ -61,7 +61,7 @@ int main ( int argc , char *argv[] ) {
 		fprintf(stderr,
 			"udptest <filename>\n"
 			"\tThis will set up a server on udp port 2000 which\n"
-			"\twill serve the sepcified filename to all incoming\n"
+			"\twill serve the specified filename to all incoming\n"
 			"\trequests. The first char of the filename must NOT\n"
 			"\tbe a number.\n\n"
 			"udptest <ip>\n"

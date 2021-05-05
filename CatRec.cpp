@@ -210,7 +210,7 @@ bool CatRec::set ( Url *url , char *data , int32_t dataSize , bool gotByIp ) {
 	//   this url itself and delete it from tfndb
 	m_hadRec = true;
 	// if rec was in tagdb, data will be non-null.. did we get the rec
-	// from tagdb by matching an IP? (as oppossed to canonical name)
+	// from tagdb by matching an IP? (as opposed to canonical name)
 	m_gotByIp = gotByIp;
 	// get the xml for this filenum
 	//m_xml = g_tagdb.getSiteXml ( m_filenum , coll , collLen );

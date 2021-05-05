@@ -1006,7 +1006,7 @@ void processLoop24 ( void *state ) {
 				sb->pushChar(*x);
 				continue;
 			}
-			// substitue
+			// substitute
 			sb->safePrintf(" value=\"");
 			sb->safeMemcpy(val,vlen);
 			sb->safePrintf("\"");

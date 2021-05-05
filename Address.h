@@ -232,7 +232,7 @@ class Place {
 	char *m_siteTitleBuf;
 	int32_t  m_siteTitleBufSize;
 
-	// uesd by Events.cpp as a temporary storage
+	// used by Events.cpp as a temporary storage
 	int32_t m_eventDescOff;
 
 	// . what city is the place in
@@ -739,7 +739,7 @@ class Addresses {
 	void          (* m_callback) (void *state );
 	uint8_t         m_contentType;
 
-	// address verification table (set by msg2c intially)
+	// address verification table (set by msg2c initially)
 	//HashTableX      m_avt;
 	// table serialize into this buffer which we alloc
 	char *m_buf;

@@ -272,7 +272,7 @@ bool Conf::isConnectIp ( uint32_t ip ) {
 	// 	if ( m_connectIps[i] == (int32_t)ip )
 	// 		return true;
 	// 	// . 1.2.3.0 ips mean the whole block 
-	// 	// . the high byte in the int32_t is the Least Signficant Byte
+	// 	// . the high byte in the int32_t is the Least Significant Byte
 	// 	if ( (m_connectIps[i] >> 24) == 0 &&
 	// 	     (m_connectIps[i] & 0x00ffffff) == 
 	// 	     ((int32_t)ip        & 0x00ffffff)    )

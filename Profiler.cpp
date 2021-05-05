@@ -704,7 +704,7 @@ bool Profiler::endTimer(int32_t address,
 		if((diffTime<1000)&&(m_fnTime[i]!=0)){
 			//Add this function. Don't add the function name,
 			//shall get that from m_fn
-			//log(LOG_WARN,"Profiler: adding funtion to existing "
+			//log(LOG_WARN,"Profiler: adding function to existing "
 			//"hashtable i=%"INT32",now=%"INT64","
 			// "m_fnTime=%"INT64", diffTime=%"INT64"",i,now,
 			// m_fnTime[i],diffTime);

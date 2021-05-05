@@ -102,7 +102,7 @@ class XmlNode {
 inline bool isTagStart ( char *s ) { // , int32_t i, int32_t version ) {
 	// it must start with < to be a tag
 	if ( *s != '<' ) return false;
-	// a <gb is a fake tag because we now decode all html entites
+	// a <gb is a fake tag because we now decode all html entities
 	// so in htmlDecode() in fctypes.cpp we decode &lt; to
 	// "<gb"
 	//if ( s[i+1]=='g' && s[i+2]=='b') return false;

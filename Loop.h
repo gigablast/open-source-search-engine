@@ -30,7 +30,7 @@ class Slot {
  public:
 	void   *m_state;
 	void  (* m_callback)(int fd, void *state);
-	// the next Slot thats registerd on this fd
+	// the next Slot that's registerd on this fd
 	Slot   *m_next;
 	// save niceness level for doPoll() to segregate
 	int32_t    m_niceness;
@@ -113,7 +113,7 @@ class Loop {
 
  public:
 
-	// contructor and stuff
+	// constructor and stuff
 	Loop();
 	~Loop();
 
@@ -123,7 +123,7 @@ class Loop {
 	// set up the signal handlers or block the signals for queueing
 	bool init();
 	
-	// . call this to begin polling/selecting of all registed fds
+	// . call this to begin polling/selecting of all registered fds
 	// . returns false on error
 	bool runLoop();
 
@@ -212,7 +212,7 @@ class Loop {
 		       void (* callback)(int fd , void *state ) ,
 		       int32_t niceness , int32_t tick = 0x7fffffff ) ;
 
-	// set how long to pause waiting for singals (in milliseconds)
+	// set how long to pause waiting for signals (in milliseconds)
 	void setSigWaitTime ( int32_t ms ) ;
 
 	// now we use a linked list of pre-allocated slots to avoid a malloc

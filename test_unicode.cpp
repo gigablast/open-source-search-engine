@@ -82,7 +82,7 @@ int main(int argc, char**argv)
 					   false);
 #define NUM_RUNS 1
 		///////////////////////////////////////
-		// Parse buffer the old way first for baseline comparision
+		// Parse buffer the old way first for baseline comparison
 		Words words;
 		gettimeofday(&tv1, &tz1);
 		// just tokenize words

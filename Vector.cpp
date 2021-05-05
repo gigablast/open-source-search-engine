@@ -213,7 +213,7 @@ bool Vector::setPairHashes ( Words *words, int32_t linkWordNum, int32_t niceness
 			//if ( id == 102 ) break; 
 			// <a>, </a> is ok. but if it is <a>, break
 			if ( tids[i] == 2 ) break;
-			// if we did not match a swtich, ignore the tag
+			// if we did not match a switch, ignore the tag
 			continue;
 		}
 		
@@ -488,7 +488,7 @@ int32_t Vector::getLinkBrotherProbability ( Vector *v , bool removeMatches ) {
 	// . "every driver" --> 2,731 / 150,000,000
 	// . "same time" --> 268,000
 	// . "give people" --> 34,000
-	// . "entrepeneurs build" --> 2,730
+	// . "entrepreneurs build" --> 2,730
 	// . "view ourselves" -->2,730
 
 	// convert # of matched word pairs to probability of link-spam brothers

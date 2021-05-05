@@ -52,7 +52,7 @@ public:
 	char  m_pwd[32];
 	HttpRequest m_r;
 	int32_t m_old;
-	// recyle the link info from the title rec?
+	// recycle the link info from the title rec?
 	int32_t m_recycle;
 	// recycle the link info that was imported from another coll?
 	int32_t m_recycle2;

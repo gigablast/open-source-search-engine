@@ -1,4 +1,4 @@
-// diffbot api implementaion
+// diffbot api implementation
 
 //
 // WHAT APIs are here?
@@ -48,7 +48,7 @@ bool setSpiderParmsFromHtmlRequest ( TcpSocket *socket ,
 // SUPPORT FOR DOWNLOADING an RDB DUMP
 //
 // We ask each shard for 10MB of Spiderdb records. If 10MB was returned
-// then we repeat. Everytime we get 10MB from each shard we print the
+// then we repeat. Every time we get 10MB from each shard we print the
 // Spiderdb records out into "safebuf" and transmit it to the user. once
 // the buffer has been transmitted then we ask the shards for another 10MB
 // worth of spider records.
@@ -603,7 +603,7 @@ bool StateCD::readDataFromRdb ( ) {
 	// all done? return if still waiting on more msg0s to get their data
 	if ( m_numReplies < m_numRequests ) return false;
 	// i guess did not block, empty single shard? no, must have been
-	// error becaues sendList() would have sent back on the tcp
+	// error because sendList() would have sent back on the tcp
 	// socket and blocked and returned false if not error sending
 	return true;
 }
@@ -612,7 +612,7 @@ bool StateCD::sendList ( ) {
 	// get the Crawler dump State
 	// inc it
 	//m_numReplies++;
-	// sohw it
+	// show it
 	log("crawlbot: got list from shard. req=%"INT32" rep=%"INT32"",
 	    m_numRequests,m_numReplies);
 	// return if still awaiting more replies
@@ -4968,7 +4968,7 @@ bool setSpiderParmsFromHtmlRequest ( TcpSocket *socket ,
 		if ( ! action ) continue;
 		// no! the /v2/bulk api just has a single action
 		if ( isBulkApi ) expression = "*";
-		// action before expresion???? set action to NULL then?
+		// action before expression???? set action to NULL then?
 		if ( ! expression ) continue;
 		//else continue;// { action = NULL; continue; }
 		// skip whitespace

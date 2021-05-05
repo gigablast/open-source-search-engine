@@ -6,7 +6,7 @@
 // . returns false if blocked, true otherwise
 // . sets g_errno on error
 // . numCatids is an array of int32_ts, each the number of catids for
-//   the corrisponding url, length equal to number of urls
+//   the corresponding url, length equal to number of urls
 // . catids is an array of int32_ts with the catids for the urls
 bool Msg9b::addCatRecs ( char *urls        ,
 			 char *coll        , 

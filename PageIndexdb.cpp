@@ -104,7 +104,7 @@ bool sendPageIndexdb ( TcpSocket *s , HttpRequest *r ) {
 	if ( pwdLen > 31 ) pwdLen = 31;
 	if ( pwdLen > 0 ) strncpy ( st->m_pwd , pwd , pwdLen );
 	st->m_pwd[pwdLen]='\0';
-	// get # of records to retreive from IndexList
+	// get # of records to retrieve from IndexList
 	st->m_numRecs  = r->getLong ( "numRecs" , 100 );
 	// use disk, tree, or cache?
 	st->m_useDisk  = r->getLong ("ud" , 0 );

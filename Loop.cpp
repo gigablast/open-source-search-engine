@@ -425,7 +425,7 @@ bool Loop::setNonBlocking ( int fd , int32_t niceness ) {
 		return log("loop: fcntl(F_SETOWN): %s.",strerror(errno));
 	}
 
-	// . tell kernel what signal we'd like to recieve when this happens
+	// . tell kernel what signal we'd like to receive when this happens
 	// . additional signal info (including fd) should be available
 #ifdef _POLLONLY_
 	return true;
@@ -1717,7 +1717,7 @@ bool Loop::runLoop ( ) {
 		}
 		// otherwise, thread did not save, so we must do it
 		log ( "loop: Saving and shutting down urgently.");
-		// sleep forver now so we can call findPtr() function
+		// sleep forever now so we can call findPtr() function
 		// after calling g_mem.printBreeches(0)
 		log("loop: sleeping forever.");
 		sleep(1000000);
@@ -1737,7 +1737,7 @@ bool Loop::runLoop ( ) {
 	g_now = gettimeofdayInMilliseconds();
 	// clear any g_errno before possibly calling sendPoll_ass()
 	g_errno = 0;
-	// occasionaly call to sendto() will not send a dgram and since we
+	// occasionally call to sendto() will not send a dgram and since we
 	// don't count on receiving ready-to-write signals on our 
 	// UdpServer's fds we check them here... it sucks, but hopefully it 
 	// fixes the problem of requests not getting fully transmitted 
@@ -1800,7 +1800,7 @@ bool Loop::runLoop ( ) {
 	// print log msgs we accumulated while in a signal handler
 	//if ( g_log.needsPrinting() ) g_log.printBuf();
 	// . poll if we need to
-	// . make it a while loop incase a hot sig handler resets m_needToPoll
+	// . make it a while loop in case a hot sig handler resets m_needToPoll
 	// . CAUTION: WE CAN LOOP IN HERE FOR ~ A MINUTE! I've seen it happen
 	//   when RdbDump was going...
 	while ( m_needToPoll ) doPoll();
@@ -1881,7 +1881,7 @@ bool Loop::runLoop ( ) {
 
 //--- TODO: flush the signal queue after polling until done
 //--- are we getting stale signals resolved by flush so we get
-//--- read event on a socket that isnt in read mode???
+//--- read event on a socket that isn't in read mode???
 // TODO: set signal handler to SIG_DFL to prevent signals from queuing up now
 // . this handles high priority fds first (lowest niceness)
 void Loop::doPoll ( ) {

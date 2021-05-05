@@ -4,7 +4,7 @@
 //   tttttttt tttttttt tttttttt tttttttt  t = termId (48bits)
 //   tttttttt tttttttt dddddddd dddddddd  d = docId (38 bits)
 //   dddddddd dddddddd dddddd0r rrrggggg  r = siterank, g = langid
-//   wwwwwwww wwwwwwww wwGGGGss ssvvvvFF  w = word postion , s = wordspamrank
+//   wwwwwwww wwwwwwww wwGGGGss ssvvvvFF  w = word position , s = wordspamrank
 //   pppppb1N MMMMLZZD                    v = diversityrank, p = densityrank
 //                                        M = multiplier, b = in outlink text
 //                                        L = langIdShiftBit (upper bit)

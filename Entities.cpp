@@ -31,7 +31,7 @@ int32_t getEntity_a ( char *s , int32_t maxLen , uint32_t *c ) {
 	//	s[len]=d;
 	// we don't have entities longer than "&curren;"
 	if ( len > 10 ) return 0;
-	// all entites are 3 or more chars (&gt)
+	// all entities are 3 or more chars (&gt)
 	if ( len < 3 ) return 0;
 	// . if it's a numeric entity like &#123 use this routine
 	// . pass in the whole she-bang: "&#12...;" or "&acute...;

@@ -33,7 +33,7 @@
 // . try to make sure PAGE_SIZE matches your "multiple sector count"
 // . use hdparm to configure (hdparm -m16 /dev/hda) will set it to 8k since
 //   each sector is 512bytes
-// . hdparm -u1 -X66 -d1 -c3 -m16 /dev/hda   is pretty agressive
+// . hdparm -u1 -X66 -d1 -c3 -m16 /dev/hda   is pretty aggressive
 // . actually "block size" in context of the file system can be 1024,... 4096
 //   on ext2fs ... set it as high as possible since we have very large files
 //   and want to avoid external fragmentation for the fastest reading/writing
@@ -105,7 +105,7 @@ class RdbMap {
 
 	// . this is called automatically when close() is called
 	// . however, we may wish to call it externally to ensure no data loss
-	// . return false if any write failes
+	// . return false if any write fails
 	// . returns true when done dumping m_keys and m_offsets to file
 	// . write out the m_keys and m_offsets arrays
 	// . this is totally MTUnsafe
@@ -284,7 +284,7 @@ class RdbMap {
 
 	// . call this before calling addList() or addRecord()
 	// . returns false if realloc had problems
-	// . sets m_maxNumPages to maxNumPages if successfull
+	// . sets m_maxNumPages to maxNumPages if successful
 	// . used to grow the map, too
 	//bool setMapSize ( int32_t maxNumPages );
 

@@ -829,7 +829,7 @@ void handleRequest54 ( UdpSlot *udpSlot , int32_t niceness ) {
 	// overload the first proxy
 	int32_t start = ((uint32_t)urlIp) % s_iptab.getNumSlots();
 	int32_t slotCount = s_iptab.getNumSlots();
-	// . now find the best proxy wih the minCount
+	// . now find the best proxy with the minCount
 	for ( int32_t i = start ; ; i++ ) {
 		QUICKPOLL(niceness);
 		// scan all slots in hash table, then stop

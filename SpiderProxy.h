@@ -42,7 +42,7 @@ public:
 	// to download their url with.
 	int32_t m_numDownloadRequests;
 
-	// how many are outstanding? everytime a host requests a proxyip
+	// how many are outstanding? every time a host requests a proxyip
 	// it also tells us its outstanding counts for each proxy ip
 	// so we can ensure this is accurate even though a host may die
 	// and come back up.
