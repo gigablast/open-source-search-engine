@@ -131,7 +131,7 @@ CPPFLAGS = -g -Wall -pipe -fno-stack-protector -Wno-write-strings -Wstrict-alias
 # apt-get install libssl-dev (to provide libssl and libcrypto)
 # to build static libiconv.a do a './configure --enable$(STATIC)' then 'make'
 # in the iconv directory
-LIBS=  -lm -lpthread -lssl -lcrypto -lz ./libiconv64.a
+LIBS=  -lm -lpthread -lssl -lcrypto -lz
 
 endif
 
