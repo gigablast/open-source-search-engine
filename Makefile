@@ -784,6 +784,18 @@ install-pkgs-local:
 # DEBIAN PACKAGE SECTION END
 
 
+gb.pem:
+	openssl req -x509 -nodes -days 365 \
+            -subj '/C=US/ST=New Mexico/L=Albuquerque/O=Gigablast/CN=www.gigablast.com/emailAddress=jolivares@gigablast.com' \
+            -newkey rsa:2048 -keyout $@ -out $@ \
+        ;
+
+check_cert: gb.pem
+	openssl verify -CAfile gb.pem gb.pem
+
+check: check_cert
+
+
 # You may need:
 # sudo apt-get install libffi-dev libssl-dev
 warcinjector: 
