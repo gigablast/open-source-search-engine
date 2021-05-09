@@ -283,7 +283,7 @@ class Msg0 {
 	// this is a hack so Msg51 can store his this ptr here
 	void *m_parent;  // used by Msg51 and by Msg2.cpp
 	int32_t  m_slot51;  // for resending on same Msg0 slot in array
-	void *m_dataPtr; // for holding recepient record ptr of TopNode ptr
+	void *m_dataPtr; // for holding recipient record ptr of TopNode ptr
 	char  m_inUse;
 };
 

@@ -1,6 +1,6 @@
 // Matt Wells, copyright Sep 2000
 
-// . used exculsively by RdbGet
+// . used exclusively by RdbGet
 // . used for scanning a key-range of records
 // . does non-blocking disk reads
 // . set loop to NULL to do blocking disk reads

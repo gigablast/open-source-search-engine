@@ -124,7 +124,7 @@ bool sendPageThesaurus( TcpSocket *s, HttpRequest *r ) {
 				manualFile.write(&newl, 1, manualAddLen);
 			p.safePrintf(
 			  "<center><b><font color=#ff0000>"
-			  "updated manual add file sucessfully"
+			  "updated manual add file successfully"
 			  "</font></b></center>");
 		} else {
 			p.safePrintf(
@@ -161,7 +161,7 @@ bool sendPageThesaurus( TcpSocket *s, HttpRequest *r ) {
 				affinityFile.write(&newl, 1, affinityAddLen);
 			p.safePrintf(
 			  "<center><b><font color=#ff0000>"
-			  "updated affinity add file sucessfully"
+			  "updated affinity add file successfully"
 			  "</font></b></center>");
 		} else {
 			p.safePrintf(
@@ -401,7 +401,7 @@ bool sendPageThesaurus( TcpSocket *s, HttpRequest *r ) {
 	p.safePrintf(
 		  "<b>manually added pairs</b><br>\n"
 		  "<font size=1>place word pairs here that should be linked "
-		  "as synonyms, one pair per line, seperated by a pipe '|' "
+		  "as synonyms, one pair per line, separated by a pipe '|' "
 		  "character, optionally followed by another pipe and a type "
 		  "designation; any badly formatted lines will be silently "
 		  "ignored</font><br>\n"

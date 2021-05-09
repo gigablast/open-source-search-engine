@@ -313,7 +313,7 @@ class UdpServer {
 	// private:
 
 	// . we maintain a sequential list of transaction ids to guarantee
-	//   uniquness to a point
+	//   uniqueness to a point
 	// . if server is restarted this will go back to 0 though 
 	// . the key of a UdpSlot is based on this, the endpoint ip/port and
 	//   whether it's a request/reply by/from us

@@ -40,7 +40,7 @@ void IndexTable::reset() {
 // . unfortunately, it may not always work too well
 // . the max score any doc can have (w/o date) is about 16,000
 // . so when we weight the date by DATE_WEIGHT and add to the doc's score
-//   just a 1 second difference will supercede any difference in term scores
+//   just a 1 second difference will supersede any difference in term scores
 #define DATE_WEIGHT  (2 * MAX_QUERY_TERMS * MAX_SCORE_WEIGHT)
 
 // . returns false on error and sets errno
@@ -281,7 +281,7 @@ void IndexTable::addList ( IndexList *list, int32_t scoreWeight, char termSign ,
 		score = 255 - *(k+5);
 		// . if delbit is set make the score negative
 		// . i.e. make negative if this key is a delete
-		// . this is dependent on endianess of machine
+		// . this is dependent on endianness of machine
 		// . we're small endian, and the lower int64_t comes first
 		//   and IT stores the least significant int32_t first
 		if ( *k & (unsigned char)0x01 == 0 ) score = -score;
@@ -314,7 +314,7 @@ void IndexTable::addList ( IndexList *list, int32_t scoreWeight, char termSign ,
 }
 
 // this is almost an exact dup of addList() above, but it's for terms with
-// a minus term in front of them (exlcude from search results)
+// a minus term in front of them (exclude from search results)
 void IndexTable::addList2 ( IndexList *list, uint16_t termBitMask ) {
 	// records are data-less, just keys
 	int64_t     docIdBits;

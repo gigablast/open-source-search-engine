@@ -39,7 +39,7 @@ loop:
 	// read the tmp file
 	int fd = open ( "gbtitletest.out.tmp", O_RDONLY );
 	if ( fd < 0 ) {
-		printf ( "ERROR: Had error openning tmp file: "
+		printf ( "ERROR: Had error opening tmp file: "
 			 "gbtitletest.out.tmp\n" );
 		exit(1);
 	}

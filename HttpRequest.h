@@ -94,7 +94,7 @@ class HttpRequest {
 	// hr->m_usingStack to true so it won't free its buffer
 	bool stealBuf ( class HttpRequest *hr ) {return copy ( hr , true ); }
 
-	// . the url being reuqested
+	// . the url being requested
 	// . removes &code= facebook cruft
 	bool getCurrentUrl ( SafeBuf &cu );
 	bool getCurrentUrlPath ( SafeBuf &cup );

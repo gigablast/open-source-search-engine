@@ -222,7 +222,7 @@ int main ( int argc , char *argv[] ) {
 	else
 		s_append[0] = '\0';
 
-	// get min time bewteen each spider in milliseconds
+	// get min time between each spider in milliseconds
 	s_wait = atoi( argv[3] );
 
 	// # of threads

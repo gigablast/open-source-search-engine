@@ -213,7 +213,7 @@ Host *Msg35::getTokenManager ( ) {
 	Host *h = hosts[0];
 	*/
 	Host *h = NULL;
-	// now perfer the guy that shares his ide if he has lower hostid
+	// now prefer the guy that shares his ide if he has lower hostid
 	//Host *s = g_hostdb.getSharer ( h );
 	//if ( s && s->m_hostId < h->m_hostId ) return s;
 	// otherwise, we are the one

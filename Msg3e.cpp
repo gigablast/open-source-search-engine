@@ -22,7 +22,7 @@ bool Msg3e::registerHandler ( ) {
         return true;
 }
 
-// sleep callback that trys host 0 up to 5 times
+// sleep callback that tries host 0 up to 5 times
 void trySyncConf ( int fd, void *state ) {
 	Msg3e *THIS = (Msg3e *)state;
 

@@ -1015,7 +1015,7 @@ bool RdbCache::deleteRec ( ) {
 		char *xx = NULL; *xx = 0;}
 
 	// don't do anything if we're empty
-	// ...fix...we ned to make sure the head doesn't eat the tail, so
+	// ...fix...we need to make sure the head doesn't eat the tail, so
 	// don't ever skip this stuff
 	//if ( m_numPtrsUsed <= 0 ) return;
 	//if ( b == 36887 )
@@ -1236,7 +1236,7 @@ void RdbCache::removeKey ( collnum_t collnum , char *key , char *rec ) {
 				continue;
 			// got a match
 			log(LOG_LOGIC,"db: cache: removeKey. Found key in "
-			    "linear scan. Wierd.");
+			    "linear scan. Weird.");
 			n = i;
 			break;
 		}
@@ -1473,7 +1473,7 @@ void *saveWrapper ( void *state , ThreadEntry *te ) {
 	return NULL;
 }
 
-// returns false withe rrno set on error
+// returns false with errno set on error
 bool RdbCache::save_r ( ) {
 	// append .cache to "dbname" to get cache filename
 	char filename [ 64 ];

@@ -984,7 +984,7 @@ void Parms::detachSafeBufs ( CollectionRec *cr ) {
 		if ( m->m_off < 0 ) continue;
 		int32_t max = 1;
 		// this will be zero if not an array.
-		// othewise it is the # of elements in the array
+		// otherwise it is the # of elements in the array
 		if ( m->m_size > max ) max = m->m_size;
 		// an array of safebufs? m->m_size will be > 1 then.
 		for ( int32_t j = 0 ; j < max ; j++ ) {
@@ -2268,7 +2268,7 @@ bool Parms::printParm ( SafeBuf* sb,
 		sb->safePrintf ( "<td width=%"INT32"%%>" , 100/nc/2 );
 	}
 
-	// if parm value is not defaut, use orange!
+	// if parm value is not default, use orange!
 	char rr[1024];
 	SafeBuf val1(rr,1024);
 	if ( m->m_type != TYPE_FILEUPLOADBUTTON )
@@ -3309,7 +3309,7 @@ void Parms::setParm ( char *THIS , Parm *m , int32_t mm , int32_t j , char *s ,
 	// on default.conf
 	//if ( m->m_obj == OBJ_COLL ) ((CollectionRec *)THIS)->m_orig[mm] = 2;
 
-	// we do not recognize timezones corectly when this is serialized
+	// we do not recognize timezones correctly when this is serialized
 	// into coll.conf, it says UTC, which is ignored in HttpMime.cpp's
 	// atotime() function. and when we submit it i think we use the
 	// local time zone, so the values end up changing every time we 
@@ -3670,7 +3670,7 @@ bool Parms::setFromFile ( void *THIS        ,
 			// bitch that it was not found
 			//if ( ! m->m_def[0] ) 
 			//	log("conf: %s does not have <%s> tag. "
-			//	    "Ommitting.",filename,m->m_xml);
+			//	    "Omitting.",filename,m->m_xml);
 			//else 
 			/*
 			if ( ! m->m_def ) //m->m_def[0] )
@@ -6509,7 +6509,7 @@ void Parms::init ( ) {
 
 
 	m->m_title = "fast results";
-	m->m_desc  = "Use &fast=1 to obtain seach results from the much "
+	m->m_desc  = "Use &fast=1 to obtain search results from the much "
 		"faster Gigablast index, although the results are not "
 		"searched as thoroughly.";
 	m->m_obj   = OBJ_SI;
@@ -6685,7 +6685,7 @@ void Parms::init ( ) {
 	m->m_desc  = "If enabled while using the XML feed, "
 		"when Gigablast finds a spelling recommendation it will be "
 		"included in the XML <spell> tag. Default is 0 if using an "
-		"XML feed, 1 otherwise. Will be availble again soon.";
+		"XML feed, 1 otherwise. Will be available again soon.";
 	m->m_cgi   = "spell";
 	m->m_off   = (char *)&si.m_spellCheck - y;
 	m->m_type  = TYPE_BOOL;
@@ -6951,9 +6951,9 @@ void Parms::init ( ) {
 	// m++;
 
 	m->m_title = "language weight";
-	m->m_desc  = "Defalt language weight if document matches quer "
+	m->m_desc  = "Default language weight if document matches quer "
 		"language. Use this to give results that match the specified "
-		"the speicified &qlang higher ranking, or docs whose language "
+		"the specified &qlang higher ranking, or docs whose language "
 		"is unnknown. Can be override with "
 		"&langw in the query url.";
 	m->m_cgi   = "langweight";
@@ -7184,7 +7184,7 @@ void Parms::init ( ) {
 		"in the page's url. "
 		"Generally, a page may not be demoted more than this "
 		"factor as a percent. Also, how it is demoted is "
-		"dependant on the max value. For example, "
+		"dependent on the max value. For example, "
 		"a factor of 0.2 will demote the page 20% if it has no "
 		"query terms or gigabits in its url. And if the max value is "
 		"10, then a page with 5 query terms or gigabits in its "
@@ -8115,7 +8115,7 @@ void Parms::init ( ) {
 	m->m_obj   = OBJ_COLL;
 	m++;
 
-	m->m_title = "add or multipy quality times link density";
+	m->m_title = "add or multiply quality times link density";
 	m->m_desc  = "[+|*] in A * numLinks + B * quality [+|*]"
 		" C * numLinks/totalLinks.";
 	m->m_cgi   = "mrs";
@@ -8384,7 +8384,7 @@ void Parms::init ( ) {
 	m->m_title = "number of characters to display in title before "
 		"truncating";
 	m->m_desc  = "Truncates a related page title after this many "
-		"charaters and adds ...";
+		"characters and adds ...";
 	m->m_cgi   = "ttl";
 	m->m_off   = (char *)&cr.m_rp_titleTruncateLimit - x;
 	//m->m_soff  = (char *)&si.m_rp_titleTruncateLimit - y;
@@ -9166,7 +9166,7 @@ void Parms::init ( ) {
 	m->m_page  = PAGE_RESULTS;
 	m->m_obj   = OBJ_SI;
 	m->m_cgi   = "format";
-	m->m_flags = PF_NOAPI; // alread in the api, so don't repeat
+	m->m_flags = PF_NOAPI; // already in the api, so don't repeat
 	m++;
 
 	m->m_title = "family filter";
@@ -9879,7 +9879,7 @@ void Parms::init ( ) {
 
 	// Process.cpp calls Msg28::massConfig with &haspower=[0|1] to 
 	// indicate power loss or coming back on from a power loss
-	m->m_title = "power on status notificiation";
+	m->m_title = "power on status notification";
 	m->m_desc  = "Indicates power is back on.";
 	m->m_cgi   = "poweron";
 	m->m_type  = TYPE_CMD;
@@ -9889,7 +9889,7 @@ void Parms::init ( ) {
 	m->m_obj   = OBJ_CONF;
 	m++;
 
-	m->m_title = "power off status notificiation";
+	m->m_title = "power off status notification";
 	m->m_desc  = "Indicates power is off.";
 	m->m_cgi   = "poweroff";
 	m->m_type  = TYPE_CMD;
@@ -10835,7 +10835,7 @@ void Parms::init ( ) {
 	m++;
 
 	//m->m_title = "max query time";
-	//m->m_desc  = "When computing the avgerage query latency "
+	//m->m_desc  = "When computing the average query latency "
 	//	"truncate query latency times to this so that "
 	//	"a single insanely int32_t query latency time does "
 	//	"not trigger the alarm. This is in seconds.";
@@ -11703,7 +11703,7 @@ void Parms::init ( ) {
 
 	m->m_title = "allow bypass of db validation";
 	m->m_desc  = "Allows bypass of db validation so gigablast will not "
-		"halt if a corrupt db is discovered durring load.  Use this "
+		"halt if a corrupt db is discovered during load.  Use this "
 		"when attempting to load with a collection that has known "
 		"corruption.";
 	m->m_cgi   = "abov";
@@ -12451,7 +12451,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "0";
 	m->m_group = 0;
-	m->m_flags = 0;//PF_HIDDEN | PF_NOSAVE;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m->m_page  = PAGE_MASTER;
 	m->m_obj   = OBJ_CONF;
 	m->m_group = 0;
@@ -12800,7 +12800,7 @@ void Parms::init ( ) {
 	m->m_title = "minimum profiling threshold";
 	m->m_desc  = "Profiler will not show functions which take less "
 		"than this many milliseconds "
-		"in the log or  on the perfomance graph.";
+		"in the log or  on the performance graph.";
 	m->m_cgi   = "mpt";
 	m->m_off   = (char *)&g_conf.m_minProfThreshold - g;
 	m->m_type  = TYPE_LONG;
@@ -12985,7 +12985,7 @@ void Parms::init ( ) {
 	m->m_title = "Only These IPs can Search this Collection";
 	m->m_desc  = "Only these IPs are allowed to search the collection and "
 		"use the add url facilities. If you'd like to make your "
-		"collection publically searchable then do not add any IPs "
+		"collection publicly searchable then do not add any IPs "
 		"here.Use zero for the "
 		"last number of the IP to restrict to an entire "
 		"IP domain, i.e. 1.2.3.0.";
@@ -13027,7 +13027,7 @@ void Parms::init ( ) {
 	m->m_title = "Admin IPs";
 	m->m_desc  = "If someone connects from one of these IPs and provides "
 		"a password from the table above then they will have full "
-		"administrative priviledges for this collection. If you "
+		"administrative privileges for this collection. If you "
 		"specified no Admin Passwords above then they need only "
 		"connect from an IP in this table to get the privledges. ";
 	m->m_cgi   = "adminip";
@@ -13058,7 +13058,7 @@ void Parms::init ( ) {
 		"allows you to make custom changes to the table. "
 		"Selecting <i>web</i> configures the table for spidering "
 		"the web in general. "
-		"Selcting <i>news</i> configures the table for spidering "
+		"Selecting <i>news</i> configures the table for spidering "
 		"new sites. "
 		"Selecting <i>chinese</i> makes the spider prioritize the "
 		"spidering of chinese pages, etc. "
@@ -14309,7 +14309,7 @@ void Parms::init ( ) {
 	m->m_def   = "30";
 	m++;
 
-	m->m_title = "ban quality theshold";
+	m->m_title = "ban quality threshold";
 	m->m_desc  = "If the site has a spam score greater than this parm, it will"
 		" be inserted into the above ruleset.";
 	m->m_cgi   = "tttsb";
@@ -14320,7 +14320,7 @@ void Parms::init ( ) {
 	m->m_def   = "-100";
 	m++;
 
-	m->m_title = "theshold to trigger site reindex";
+	m->m_title = "threshold to trigger site reindex";
 	m->m_desc  = "If the site has a quality less than this parm, it will"
 		" be added to the spider queue for reindexing";
 	m->m_cgi   = "tttsr";
@@ -15193,7 +15193,7 @@ void Parms::init ( ) {
 	m->m_desc  = "If the content of the url is provided below, then "
 		"it consist of multiple documents separated by this "
 		"delimeter. Each such item will be injected as an "
-		"independent document. Some possible delimeters: "
+		"independent document. Some possible delimiters: "
 		"<i>========</i> or <i>&lt;doc&gt;</i>. If you set "
 		"<i>hasmime</i> above to true then Gigablast will check "
 		"for a url after the delimeter and use that url as the "
@@ -16367,7 +16367,7 @@ void Parms::init ( ) {
 		"</table>\n"
 		// %H prints the hidden for vars. Print them *after* the input 
 		// text boxes, radio buttons, etc. so these hidden vars can be 
-		// overriden as they should be.
+		// overridden as they should be.
 		"%H"); 
 	s_tmpBuf2.safePrintf("</i>");
 	m->m_desc  = s_tmpBuf2.getBufStart();
@@ -16736,7 +16736,7 @@ void Parms::init ( ) {
 	m->m_title = "daily merge days";
 	m->m_desc  = "Comma separated list of days to merge on. Use "
 		"0 for Sunday, 1 for Monday, ... 6 for Saturday. Leaving "
-		"this parmaeter empty or without any numbers will make the "
+		"this parameter empty or without any numbers will make the "
 		"daily merge happen every day";
 	m->m_cgi   = "dmdl";
 	m->m_off   = (char *)&cr.m_dailyMergeDOWList - x;
@@ -17741,7 +17741,7 @@ void Parms::init ( ) {
 	m->m_title = "allow adult docs";
 	m->m_desc  = "If this is disabled the spider "
 		"will not allow any docs which contain adult content "
-		"into the index (overides tagdb).";
+		"into the index (overrides tagdb).";
 	m->m_cgi   = "aprnd";
 	m->m_off   = (char *)&cr.m_allowAdultDocs - x;
 	m->m_type  = TYPE_BOOL;
@@ -17767,7 +17767,7 @@ void Parms::init ( ) {
 	m++;
 
 	m->m_title = "do serp detection";
-	m->m_desc  = "If this is eabled the spider "
+	m->m_desc  = "If this is enabled the spider "
 		"will not allow any docs which are determined to "
 		"be serps.";
 	m->m_cgi   = "dsd";
@@ -18032,7 +18032,7 @@ void Parms::init ( ) {
 	m->m_title = "max thumbnail width or height";
 	m->m_desc  = "This is in pixels and limits the size of the thumbnail. "
 		"Gigablast tries to make at least the width or the height "
-		"equal to this maximum, but, unless the thumbnail is sqaure, "
+		"equal to this maximum, but, unless the thumbnail is square, "
 		"one side will be longer than the other.";
 	m->m_cgi   = "mtwh";
 	m->m_off   = (char *)&cr.m_thumbnailMaxWidthHeight - x;
@@ -18582,7 +18582,7 @@ void Parms::init ( ) {
 
 	m->m_title = "turk tags to display";
 	m->m_desc  = "Tell pageturk to display the tag questions "
-	             "for the comma seperated tag names."
+	             "for the comma separated tag names."
 		     " no space allowed.";
         m->m_cgi   = "ttags";
 	m->m_xml   = "turkTags";
@@ -19314,7 +19314,7 @@ void Parms::init ( ) {
 	m->m_title = "Master IPs";
 	m->m_desc  = "If someone connects from one of these IPs "
 		"then they will have full "
-		"master administrator priviledges. "
+		"master administrator privileges. "
 		"If no IPs are specified, then master administrators can "
 		"get access for any IP. "
 		"Connecting from 127.0.0.1 always grants master privledges. "
@@ -19333,7 +19333,7 @@ void Parms::init ( ) {
 	m->m_desc  = "Whitespace separated list of passwords. "
 		"Any matching password will have administrative access "
 		"to the controls for just this collection. The master "
-		"password and IPs are controled through the "
+		"password and IPs are controlled through the "
 		"<i>master passwords</i> link under the ADVANCED controls "
 		"tab. The master passwords or IPs have administrative "
 		"access to all collections.";
@@ -21093,7 +21093,7 @@ bool Parms::convertHttpRequestToParmList (HttpRequest *hr, SafeBuf *parmList,
 		// get value of the cgi field
 		char *val  = hr->getValue   (i);
 
-		// get the occurence # if its regex. this is the row #
+		// get the occurrence # if its regex. this is the row #
 		// in the url filters table, since those parms repeat names.
 		// url filter expression.
 		//if ( strcmp(field,"fe") == 0 ) occNum++;
@@ -21235,7 +21235,7 @@ Parm *Parms::getParmFast2 ( int32_t cgiHash32 ) {
 
 Parm *Parms::getParmFast1 ( char *cgi , int32_t *occNum ) {
 	// strip off the %"INT32" for things like 'fe3' for example
-	// because that is the occurence # for parm arrays.
+	// because that is the occurrence # for parm arrays.
 	int32_t clen = gbstrlen(cgi);
 
 	char *d = NULL;
@@ -21573,7 +21573,7 @@ bool Parms::doParmSendingLoop ( ) {
 		// . if in progress, gotta wait for that to complete
 		// . 0 is not a legit parmid, it starts at 1
 		if ( h->m_currentParmIdInProgress ) continue;
-		// if his last completed parmid is the current he is uptodate
+		// if his last completed parmid is the current he is up-to-date
 		if ( h->m_lastParmIdCompleted == s_parmId ) continue;
 		// if last try had an error, wait 10 secs i guess
 		if ( h->m_lastTryError &&
@@ -21648,7 +21648,7 @@ bool Parms::doParmSendingLoop ( ) {
 						 NULL , // replybuf
 						 0 , // replybufmaxsize
 						 0 ) ) { // niceness
-			log("parms: faild to send: %s",mstrerror(g_errno));
+			log("parms: failed to send: %s",mstrerror(g_errno));
 			continue;
 		}
 		// flag this
@@ -22720,7 +22720,7 @@ bool printUrlExpressionExamples ( SafeBuf *sb ) {
 
 			  "<tr class=poo><td>doc:quality&lt;40 && tag:ruleset==22</td>"
 			  "<td>Matches if document quality less than 40 and "
-			  "belongs to ruleset 22. Only for assinging to "
+			  "belongs to ruleset 22. Only for assigning to "
 			  "spider priority.</td></tr>"
 
 			  "<tr class=poo><td><nobr>"
@@ -22778,7 +22778,7 @@ bool printUrlExpressionExamples ( SafeBuf *sb ) {
 
 			  "<tr class=poo><td>siteadds</td>"
 			  "<td>The number URLs manually added to the "
-			  "subdomain of the URL. Used to guage a subdomain's "
+			  "subdomain of the URL. Used to gauge a subdomain's "
 			  "popularity."
 			  "</td></tr>"
 
@@ -22786,7 +22786,7 @@ bool printUrlExpressionExamples ( SafeBuf *sb ) {
 			  // above was taken out. see expanation up there.
 			  // "<tr class=poo><td>domainadds</td>"
 			  // "<td>The number URLs manually added to the "
-			  // "domain of the URL. Used to guage a domain's "
+			  // "domain of the URL. Used to gauge a domain's "
 			  // "popularity."
 			  // "</td></tr>"
 
@@ -22884,7 +22884,7 @@ bool printUrlExpressionExamples ( SafeBuf *sb ) {
 
 			  "<tr class=poo><td>age</td>"
 			  "<td>"
-			  "How old is the doucment <b>in seconds</b>. "
+			  "How old is the document <b>in seconds</b>. "
 			  "The age is based on the publication date of "
 			  "the document, which could also be the "
 			  "time that the document was last significantly "
@@ -22922,7 +22922,7 @@ bool printUrlExpressionExamples ( SafeBuf *sb ) {
 			  "the list of sites on the <a href=/admin/sites>"
 			  "site list</a> page. That site list is useful for "
 			  "adding a large number of sites that can not be "
-			  "accomodated by the url fitlers table. Plus "
+			  "accommodated by the url filters table. Plus "
 			  "it is higher performance and easier to use, but "
 			  "lacks the url filter table's "
 			  "fine level of control."

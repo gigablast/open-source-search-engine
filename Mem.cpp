@@ -197,7 +197,7 @@ void Mem::addnew ( void *ptr , int32_t size , const char *note ) {
 void Mem::delnew ( void *ptr , int32_t size , const char *note ) {
 	// we don't need to use mdelete() if checking for leaks is enabled
 	// because the size of the allocated mem is in the hash table under
-	// s_sizes[]. and the delete() operator is overriden below to
+	// s_sizes[]. and the delete() operator is overridden below to
 	// catch this.
 	return;
 	/*
@@ -1136,7 +1136,7 @@ bool Mem::rmMem  ( void *mem , int32_t size , const char *note ) {
 
 int32_t Mem::validate ( ) {
 	if ( ! s_mptrs ) return 1;
-	// stock up "p" and compute total bytes alloced
+	// stock up "p" and compute total bytes allocated
 	int64_t total = 0;
 	int32_t count = 0;
 	for ( int32_t i = 0 ; i < (int32_t)m_memtablesize ; i++ ) {
@@ -1338,7 +1338,7 @@ int Mem::printMem ( ) {
 	// print table entries sorted by most mem first
 	int32_t *p = (int32_t *)sysmalloc ( m_memtablesize * 4 );
 	if ( ! p ) return 0;
-	// stock up "p" and compute total bytes alloced
+	// stock up "p" and compute total bytes allocated
 	int64_t total = 0;
 	int32_t np    = 0;
 	for ( int32_t i = 0 ; i < (int32_t)m_memtablesize ; i++ ) {
@@ -1376,8 +1376,8 @@ int Mem::printMem ( ) {
 	}
 	sysfree ( p );
 	log(LOG_INFO,"mem: # current objects allocated now = %"INT32"", np );
-	log(LOG_INFO,"mem: totalMem alloced now = %"INT64"", total );
-	//log("mem: max alloced at one time = %"INT32"", (int32_t)(m_maxAlloced));
+	log(LOG_INFO,"mem: totalMem allocated now = %"INT64"", total );
+	//log("mem: max allocated at one time = %"INT32"", (int32_t)(m_maxAlloced));
 	log(LOG_INFO,"mem: Memory allocated now: %"INT64".\n", getUsedMem() );
 	log(LOG_INFO,"mem: Num allocs %"INT32".\n", m_numAllocated );
 	return 1;
@@ -1660,7 +1660,7 @@ void *Mem::gbrealloc ( void *ptr , int oldSize , int newSize ,
 	mem = (char *)sysrealloc ( (char *)ptr - UNDERPAD , 
 				   newSize + UNDERPAD + OVERPAD);
 
-	// remove old guy on sucess
+	// remove old guy on success
 	if ( mem ) {
 		addMem ( (char *)mem + UNDERPAD , newSize , note , 0 );
 		char *returnMem = mem + UNDERPAD;
@@ -2170,7 +2170,7 @@ void *getElecMem ( int32_t size ) {
 
 #ifdef CHECKUNDERFLOW
 	// how much to alloc
-	// . assume sysmalloc returs one byte above a page, so we need
+	// . assume sysmalloc returns one byte above a page, so we need
 	//   MEMPAGESIZE-1 bytes to move p up to page boundary, another
 	//   MEMPAGESIZE bytes for protected page, then the actual mem,
 	//   THEN possibly another MEMPAGESIZE-1 bytes to hit the next page
@@ -2380,7 +2380,7 @@ void freeElecMem ( void *fakeMem ) {
 	}
 
 
-	// now free begining at s_freeCursor 
+	// now free beginning at s_freeCursor 
 	for ( ; s_freeCursor != s_cursor && s_totalInRing > 150000000 ; ) {
 		// free it
 		g_mem.rmMem ( s_freeCursor->m_fakeMem,

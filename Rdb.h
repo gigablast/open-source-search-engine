@@ -213,7 +213,7 @@ class Rdb {
 	void addBase ( collnum_t collnum , class RdbBase *base ) ;
 
 
-	// how much mem is alloced for our maps?
+	// how much mem is allocated for our maps?
 	int64_t getMapMemAlloced ();
 
 	int32_t       getNumFiles ( ) ;

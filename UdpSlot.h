@@ -44,7 +44,7 @@
 
 // i'd like to have less dgram to decrease interrupts and
 // to decrease the MAX_DGRAMS define which decrease UdpSlot size
-// BUT it may result in extra copying inthe kernel's IP layer...?
+// BUT it may result in extra copying in the kernel's IP layer...?
 //#define DGRAM_SIZE (64*1024-256)
 // . that was too big, so Msg0x21 wasn't called that much!
 // . just make it 10k in anticipation of jumbo frames for gigabit nets
@@ -306,7 +306,7 @@ class UdpSlot {
 	void fixSlot ( ) ;
 
 	void printState() ;
-	// call this callback on timout,error or transaction completion.
+	// call this callback on timeout,error or transaction completion.
 	// pass it a ptr to ourselves. It returns true if WE should delete
 	// the UdpSlot. Otherwise, it must deleted later by a callback that
 	// records all the slots in a list so no one forgets them.

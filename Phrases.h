@@ -67,7 +67,7 @@ class Phrases {
 	//int64_t getLeftStripPhraseId  ( int32_t i ) ;
 	//int32_t      getLeftPhraseIndex    ( int32_t i ) ;
 
-	// . each non-spammy occurence of phrase adds "baseScore" to it's score
+	// . each non-spammy occurrence of phrase adds "baseScore" to it's score
 	/*
 	bool hash ( TermTable      *table       ,
 		    Weights        *weightsPtr  ,

@@ -114,7 +114,7 @@ char *getTagStrFromType ( int32_t tagType ) ;
 // . includes the 4 bytes used for size and # of tags
 //#define MAX_TAGREC_SIZE 1024
 
-// max "oustanding" msg0 requests sent by TagRec::lookup()
+// max "outstanding" msg0 requests sent by TagRec::lookup()
 #define MAX_TAGDB_REQUESTS 3
 
 // . the latest version of the TagRec

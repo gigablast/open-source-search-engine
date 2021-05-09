@@ -101,7 +101,7 @@ char *Hostdb::getNetName ( ) {
 }
 
 // . gets filename that contains the hosts from the Conf file
-// . return false on errro
+// . return false on error
 // . g_errno may NOT be set
 bool Hostdb::init ( int32_t hostIdArg , char *netName ,
 		    bool proxyHost , char useTmpCluster , char *cwd ) {
@@ -1065,7 +1065,7 @@ bool Hostdb::init ( int32_t hostIdArg , char *netName ,
 			continue;
 		}
 		// otherwise, a new one
-		// put this back to the bootom!!!!!!!!!!!!!!!!
+		// put this back to the bottom!!!!!!!!!!!!!!!!
 		// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 		m_hostPtrs[i]->m_machineNum = next++;
 		continue;

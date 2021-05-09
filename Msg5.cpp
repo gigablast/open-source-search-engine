@@ -1165,7 +1165,7 @@ bool Msg5::gotList2 ( ) {
 		//}
 		// only mess with m_minEndKey if our list was NOT limited
 		// by it. if we were not limited by it, our endKey should
-		// really be virtual inifinite. because the most our endKey
+		// really be virtual infinite. because the most our endKey
 		// will ever be is g_tfndb.makeMaxKey ( docIdMAX ) as can
 		// be seen above.
 		if ( m_tfndbList.m_listSize >= TFNDBMINRECSIZES ) {
@@ -1498,7 +1498,7 @@ void *mergeListsWrapper_r ( void *state , ThreadEntry *t ) {
 	// we're in a thread now!
 	Msg5 *THIS = (Msg5 *)state;
 	// debug msg
-	//log("Msg5::mergeListsWrapper: begining threaded merge!");
+	//log("Msg5::mergeListsWrapper: beginning threaded merge!");
 	// repair any corruption
 	THIS->repairLists_r();
 	// do the merge
@@ -2027,13 +2027,13 @@ bool Msg5::getRemoteList ( ) {
 	if ( m_rdbId == RDB_TFNDB ) {
 		g_errno = EBADENGINEER;
 		log("net: Cannot patch tfndb data from twin because it is "
-		    "not interchangable. Tfndb must be regenerated.");
+		    "not interchangeable. Tfndb must be regenerated.");
 		return true;
 	}
 	if ( m_rdbId == RDB_STATSDB ) {
 		g_errno = EBADENGINEER;
 		log("net: Cannot patch statsdb data from twin because it is "
-		    "not interchangable.");
+		    "not interchangeable.");
 		return true;
 	}
 	// tell them about

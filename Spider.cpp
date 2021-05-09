@@ -1101,9 +1101,9 @@ bool tryToDeleteSpiderColl ( SpiderColl *sc , char *msg ) {
 	// 	    (int32_t)sc,(int32_t)sc->m_collnum);
 	// 	return true;
 	// }
-	// there's still a core of someone trying to write to someting
+	// there's still a core of someone trying to write to something
 	// in "sc" so we have to try to fix that. somewhere in xmldoc.cpp
-	// or spider.cpp. everyone should get sc from cr everytime i'd think
+	// or spider.cpp. everyone should get sc from cr every time i'd think
 	log("spider: deleting sc=0x%"PTRFMT" for collnum=%"INT32" (msg=%s)",
 	    (PTRTYPE)sc,(int32_t)sc->m_collnum,msg);
 	// . make sure nobody has it
@@ -1169,7 +1169,7 @@ SpiderColl *SpiderCache::getSpiderColl ( collnum_t collnum ) {
 	// set first doledb scan key
 	sc->m_nextDoledbKey.setMin();
 
-	// turn off quickpolling while loading incase a parm update comes in
+	// turn off quickpolling while loading in case a parm update comes in
 	bool saved = g_conf.m_useQuickpoll;
 	g_conf.m_useQuickpoll = false;
 
@@ -2290,7 +2290,7 @@ bool SpiderColl::addSpiderRequest ( SpiderRequest *sreq ,
 	// . we can't do this because we do not have the spiderReply!!!???
 	// . MDW: no, we have to do it because tradesy.com has links to twitter
 	//   on every page and twitter is not allowed so we continually
-	//   re-scan a big spiderdblist for twitter's firstip. major performace
+	//   re-scan a big spiderdblist for twitter's firstip. major performance
 	//   degradation. so try to get ufn without reply. if we need
 	//   a reply to get the ufn then this function should return -1 which
 	//   means an unknown ufn and we'll add to waiting tree.
@@ -2552,7 +2552,7 @@ bool SpiderColl::addToWaitingTree ( uint64_t spiderTimeMS , int32_t firstIp ,
 	}
 
 	// sanity check
-	// i think this trigged on gk209 during an auto-save!!! FIX!
+	// i think this triggered on gk209 during an auto-save!!! FIX!
 	if ( ! m_waitingTree.m_isWritable ) { char *xx=NULL; *xx=0; }
 
 	/*
@@ -2698,7 +2698,7 @@ bool SpiderColl::addToWaitingTree ( uint64_t spiderTimeMS , int32_t firstIp ,
 	//   but usually it won't, so rather than wait for its sleepwrapper
 	//   to be called we force it here for speed.
 	// . re-entry is false because we are entering for the first time
-	// . calling this everytime msg4 adds a spider request is super slow!!!
+	// . calling this every time msg4 adds a spider request is super slow!!!
 	//   SO TAKE THIS OUT FOR NOW
 	// . no that was not it. mdw. put it back.
 	if ( callForScan ) populateDoledbFromWaitingTree ( );
@@ -2761,7 +2761,7 @@ int32_t SpiderColl::getNextIpFromWaitingTree ( ) {
 		//if ( hp->m_numPingRequests > 0 )
 	removeFromTree:
 		// these operations should fail if writes have been disabled
-		// and becase the trees/tables for spidercache are saving
+		// and because the trees/tables for spidercache are saving
 		// in Process.cpp's g_spiderCache::save() call
 		m_waitingTree.deleteNode3 ( node , true );
 		//log("spdr: 8 del node node %"INT32" for %s",node,iptoa(firstIp));
@@ -2997,7 +2997,7 @@ void SpiderColl::populateWaitingTreeFromSpiderdb ( bool reentry ) {
 		if ( m_waitingTable.isInTable ( &firstIp ) ) continue;
 		// skip if only our twin should add it to waitingtree/doledb
 		if ( ! isAssignedToUs ( firstIp ) ) continue;
-		// skip if ip already represented in doledb i guess otehrwise
+		// skip if ip already represented in doledb i guess otherwise
 		// the populatedoledb scan will nuke it!!
 		if ( m_doleIpTable.isInTable ( &firstIp ) ) continue;
 		// not currently spidering either. when they got their
@@ -3280,7 +3280,7 @@ void SpiderColl::populateDoledbFromWaitingTree ( ) { // bool reentry ) {
 	// a million spiderrequests in spiderdb to find the best one.
 	//
 
-	// if we have a specific uh48 targetted in s_ufnTree then that
+	// if we have a specific uh48 targeted in s_ufnTree then that
 	// saves a ton of time!
 	// key format for s_ufnTree:
 	// iiiiiiii iiiiiiii iiiiiii iiiiiii  i = firstip
@@ -5695,7 +5695,7 @@ bool SpiderColl::addDoleBufIntoDoledb ( SafeBuf *doleBuf, bool isFromCache ) {
 
 	// add it to doledb ip table now so that waiting tree does not
 	// immediately get another spider request from this same ip added
-	// to it while the msg4 is out. but if add failes we totally bail
+	// to it while the msg4 is out. but if add fails we totally bail
 	// with g_errno set
 	//
 	// crap, i think this could be slowing us down when spidering
@@ -6464,7 +6464,7 @@ void doneSleepingWrapperSL ( int fd , void *state ) {
 		// reset this as well. if there are no spiderRequests
 		// available on any priority level for this collection,
 		// then it will remain true. but if we attempt to spider
-		// a url, or can't spider a url b/c of a max oustanding
+		// a url, or can't spider a url b/c of a max outstanding
 		// constraint, we set this to false. this is used to
 		// send notifications when a crawl is basically in hiatus.
 		//sc->m_encounteredDoledbRecs = false;
@@ -6673,7 +6673,7 @@ bool sendNotificationForCollRec ( CollectionRec *cr )  {
 	    //,(int32_t)cr->m_localCrawlInfo.m_sentCrawlDoneAlert);
 	    );
 
-	// if we already sent it return now. we set this to false everytime
+	// if we already sent it return now. we set this to false every time
 	// we spider a url, which resets it. use local crawlinfo for this
 	// since we reset global.
 	//if ( cr->m_localCrawlInfo.m_sentCrawlDoneAlert ) return true;
@@ -6845,7 +6845,7 @@ void SpiderLoop::spiderDoledUrls ( ) {
 	// don't spider if not all hosts are up, or they do not all
 	// have the same hosts.conf.
 	if ( ! g_pingServer.m_hostsConfInAgreement ) return;
-	// if nothin in the active list then return as well
+	// if nothing in the active list then return as well
 	if ( ! m_activeList ) return;
 
 	// if we hit the end of the list, wrap it around
@@ -7946,7 +7946,7 @@ bool SpiderLoop::gotDoledbList2 ( ) {
 	// trying to get the lock in spiderUrl9() so let's use collnum
 	collnum_t collnum = m_sc->getCollectionRec()->m_collnum;
 
-	// . spider that. we don't care wheter it blocks or not
+	// . spider that. we don't care whether it blocks or not
 	// . crap, it will need to block to get the locks!
 	// . so at least wait for that!!!
 	// . but if we end up launching the spider then this should NOT
@@ -9726,7 +9726,7 @@ bool printList ( State11 *st ) {
 	else                   nowGlobal = getTimeLocal();
 	// print the spider recs we got
 	SafeBuf *sbTable = &st->m_safeBuf;
-	// shorcuts
+	// shortcuts
 	RdbList *list = &st->m_list;
 	// row count
 	int32_t j = 0;
@@ -13045,7 +13045,7 @@ int32_t getUrlFilterNum2 ( SpiderRequest *sreq       ,
 
 			}
 			// get the age of the spider_request. 
-			// (substraction of uint with int, hope
+			// (subtraction of uint with int, hope
 			// every thing goes well there)
 			int32_t sreq_age = 0;
 
@@ -13750,7 +13750,7 @@ void dedupSpiderdbList ( RdbList *list , int32_t niceness , bool removeNegRecs )
 		     // we want to make sure not to delete that request that
 		     // has m_parentPrevSpiderTime
 		     // no no, we prefer the most recent spider request
-		     // from thsi site in the logic above, so this is not
+		     // from this site in the logic above, so this is not
 		     // necessary. mdw commented out.
 		     //oldReq->m_wasParentIndexed != sreq->m_wasParentIndexed||
 		     oldReq->m_isInjecting   != sreq->m_isInjecting   ||
@@ -14853,7 +14853,7 @@ bool doesStringContainPattern ( char *content , char *pattern ) {
 
 		// . is this substring anywhere in the document
 		// . check the rawest content before converting to utf8 i guess
-		// . suuport the ^ operator
+		// . support the ^ operator
 		char *foundPtr = NULL;
 		if ( matchFront ) {
 			// if we match the front, set to bogus 0x01

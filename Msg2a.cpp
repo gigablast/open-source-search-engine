@@ -65,7 +65,7 @@ bool Msg2a::makeCatdb( char  *coll,
 	m_inStream = open(inFile, O_RDONLY);
 	//if (!m_inStream.is_open()) {
 	if ( m_inStream < 0 ) {
-		log("db: Error openning content file: %s", inFile);
+		log("db: Error opening content file: %s", inFile);
 		return true;
 	}
 	// read in the number of urls
@@ -124,7 +124,7 @@ bool Msg2a::makeCatdb( char  *coll,
 		diffInStream = open(inFile, O_RDONLY);
 		//if (!diffInStream.is_open()) {
 		if ( diffInStream < 0 ) {
-			log("db: Error openning content file: %s", inFile);
+			log("db: Error opening content file: %s", inFile);
 			return gotAllReplies();
 		}
 

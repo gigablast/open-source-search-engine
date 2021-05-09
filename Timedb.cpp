@@ -574,7 +574,7 @@ bool addTimedbKey ( key128_t *kp , uint32_t nowGlobal , HashTableX *ht ) {
 	//else {
 	//	key32 ^= (uint32_t)g_hashtab[eventId][0];
 	//}
-	// are we a negativ/delete key?
+	// are we a negative/delete key?
 	bool isDelete = (((char *)kp)[0] & 0x01) == 0x00;
 	// lookup in hashtable to see if we got one already
 	TimeSlot *old = (TimeSlot *)ht->getValue(&key64);

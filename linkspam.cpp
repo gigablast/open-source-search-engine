@@ -574,7 +574,7 @@ bool setLinkSpam ( int32_t       ip                 ,
 	for ( int32_t i=0; i < nn ; i++ ) {
 		// <textarea> tags are bad... but only if we have not
 		// matched "track" or whatever from above... check for that
-		// if you uncommment this... otherwise you disable all blogs!
+		// if you uncomment this... otherwise you disable all blogs!
 		// Only do this check if we did match a comment related phrase
 		// in s_needles1[] BUT it was BEFORE our outlink. That 
 		// basically means that we do *not* recognize the format of 
@@ -1054,7 +1054,7 @@ bool isLinkSpam ( Url *linker,
 	for ( int32_t i=0; i < nn ; i++ ) {
 		// <textarea> tags are bad... but only if we have not
 		// matched "track" or whatever from above... check for that
-		// if you uncommment this... otherwise you disable all blogs!
+		// if you uncomment this... otherwise you disable all blogs!
 		// Only do this check if we did match a comment related phrase
 		// in s_needles1[] BUT it was BEFORE our outlink. That 
 		// basically means that we do *not* recognize the format of 

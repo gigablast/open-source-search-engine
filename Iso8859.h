@@ -16,7 +16,7 @@ extern const unsigned char map_8859_1[256];
 extern const unsigned char map_8859_2[256];
 // Latin-3 (South European)
 // Adapted from Wikipedia:
-// Turkish (superceded by 8859-9), Maltese, Esperanto
+// Turkish (superseded by 8859-9), Maltese, Esperanto
 extern const unsigned char map_8859_3[256];
 // Latin-4 (North European)
 // Adapted from Wikipedia:

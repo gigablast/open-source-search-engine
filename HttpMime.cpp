@@ -491,7 +491,7 @@ int32_t getMonth ( char *s ) {
 	case 'a':
 		if ( b == 'p' ) return 3; // april
 		if ( b == 'u' ) return 7; // august
-	case 'f': return  1; // feburary
+	case 'f': return  1; // february
 	case 's': return  8; // september
 	case 'o': return  9; // october
 	case 'n': return 10; // november

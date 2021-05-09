@@ -66,7 +66,7 @@ Ads::~Ads() {
 //   *s=<start number>
 //   *raw=<what format, should always be 11>
 // . Fromatted Response:
-//   <reponse>
+//   <response>
 //   	<hits>LONG LONG</hits>
 //	<result>
 //		<title><![CDATA[STRING]]></title>
@@ -125,7 +125,7 @@ Ads::~Ads() {
 //    r=<num results>
 //    filter=<adult filter on(yes)/off(no)>
 //   *ip_address=<querying IP>
-//   *st=<search type, our querys are "typein", can do "link">
+//   *st=<search type, our queries are "typein", can do "link">
 //   *rid=<full URL where search came from>
 // . Formatted Response:
 // <?xml version="1.0" encoding="ISO-8859-1" standalone="yes"?>

@@ -18,7 +18,7 @@
  * have an overloaded '=' operator. It stores a copy of the data
  * at the reference you provide. If you do not wish the data to be
  * duplicated, you may pass in a pointer/offset rather than the
- * object itself. This is adviseable for very large objects. 
+ * object itself. This is advisable for very large objects. 
  *
  * TODO:
  * . Create two mutator functions that take arguments
@@ -132,7 +132,7 @@ template<typename Type> class SafeList {
 	// Create a new empty node, and add it to the head of the list.
 	// If Type is a class you must call its constructor manually.
 	// TODO:
-	// . Impliment this function
+	// . Implement this function
 	//bool newNode( SLIterator<Type> &iter );
 
 	// We don't sort
@@ -196,7 +196,7 @@ template<typename Type> class SafeList {
 	}
 
 	// purge() completely resets the list, freeing all used
-	// memory, and reseting all variables.
+	// memory, and resetting all variables.
 	void purge() {
 		m_usedNodes.m_head = 0;
 		m_usedNodes.m_tail = 0; 
@@ -400,7 +400,7 @@ template<typename Type> class SafeList {
 		}
 
 		oldUsedOff = m_usedNodes.m_head;
-		// If are nodes in the used list, upate its old head node.
+		// If are nodes in the used list, update its old head node.
 		if ( oldUsedOff ) {
 			oldUsedHead = getP( oldUsedOff );
 			oldUsedHead->m_prev = tempNodeOff;
@@ -467,7 +467,7 @@ template<typename Type> class SafeList {
 		}
 
 		oldUsedOff = m_usedNodes.m_tail;
-		// If are nodes in the used list, upate its old head node.
+		// If are nodes in the used list, update its old head node.
 		if ( oldUsedOff ) {
 			oldUsedTail = getP( oldUsedOff );
 			oldUsedTail->m_next = tempNodeOff;

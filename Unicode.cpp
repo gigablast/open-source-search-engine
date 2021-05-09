@@ -84,7 +84,7 @@ void gbiconv_reset(){
 		iconv_t iconv = *pconv;
 		//logf(LOG_DEBUG, "iconv: freeing iconv: 0x%x", (int)iconv);
 		g_mem.rmMem((void*)iconv, 52, "iconv");
-		libiconv_close(iconv);
+		iconv_close(iconv);
 	}
 	s_convTable.reset();
 }

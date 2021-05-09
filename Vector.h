@@ -81,7 +81,7 @@ class Vector {
 	// the table we hash into
 	//TermTable     m_table;
 
-	// . store top word pair hases in here
+	// . store top word pair hashes in here
 	// . these can also be link hashes now, too
 	//uint32_t m_pairHashes [ MAX_PAIR_HASHES ];
 	int32_t           m_numPairHashes ;

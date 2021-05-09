@@ -61,9 +61,9 @@ extern int g_inMemcpy;
 #include <string.h>	// commonly included in include files
 #include <unistd.h>	// commonly included in include files
 
-#include "types.h"	// commonly included in includ files
-#include "fctypes.h"	// commonly included in includ files
-#include "hash.h"	// commonly included in includ files
+#include "types.h"	// commonly included in include files
+#include "fctypes.h"	// commonly included in include files
+#include "hash.h"	// commonly included in include files
 
 #include "Errno.h"	// commonly included in include files
 #include "Log.h"	// commonly included in include files

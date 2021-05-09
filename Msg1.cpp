@@ -131,7 +131,7 @@ bool Msg1::addList ( RdbList      *list              ,
 		char *xx=NULL;*xx=0; }
 	// start at the beginning
 	list->resetListPtr();
-	// if caller does not want reply try to accomodate him
+	// if caller does not want reply try to accommodate him
 	if ( ! waitForReply && list != &m_ourList ) {
 		Msg1 *Y = getMsg1();
 		if ( ! Y ) { 
@@ -874,7 +874,7 @@ void tryAgainWrapper ( int fd , void *state ) {
 	return;
 }
 
-//if split is true, it can still be overrriden by the parm in g_conf
+//if split is true, it can still be overridden by the parm in g_conf
 //if false, we don't split index and date lists, other dbs are unaffected
 /*
 uint32_t getGroupId ( char rdbId , char *key, bool split ) {

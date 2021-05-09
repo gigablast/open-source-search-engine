@@ -716,7 +716,7 @@ bool RdbBase::setFiles ( ) {
 }
 
 // return the fileNum we added it to in the array
-// reutrn -1 and set g_errno on error
+// return -1 and set g_errno on error
 int32_t RdbBase::addFile ( int32_t id , bool isNew , int32_t mergeNum , 
 			   int32_t id2 , bool converting ) {
 
@@ -913,7 +913,7 @@ int32_t RdbBase::addFile ( int32_t id , bool isNew , int32_t mergeNum ,
 	// cannot collide here
 	if ( i < m_numFiles && m_fileIds[i] == id ) { 
 		log(LOG_LOGIC,"db: addFile: fileId collided."); return -1; }
-	// shift everyone up if we need to fit this file in the middle somewher
+	// shift everyone up if we need to fit this file in the middle somewhere
 	if ( i < m_numFiles ) {
 		int nn = m_numFiles-i;
 		memmove ( &m_files  [i+1] , &m_files[i],nn*sizeof(BigFile *));
@@ -1117,7 +1117,7 @@ bool RdbBase::incorporateMerge ( ) {
 
 	// on success unlink the files we merged and free them
 	for ( int32_t i = a ; i < b ; i++ ) {
-		// incase we are starting with just the
+		// in case we are starting with just the
 		// linkdb0001.003.dat file and not the stuff we merged
 		if ( ! m_files[i] ) continue;
 		// debug msg
@@ -1354,7 +1354,7 @@ void RdbBase::doneWrapper4 ( ) {
 }
 
 void RdbBase::buryFiles ( int32_t a , int32_t b ) {
-	// on succes unlink the files we merged and free them
+	// on success unlink the files we merged and free them
 	for ( int32_t i = a ; i < b ; i++ ) {
 		mdelete ( m_files[i] , sizeof(BigFile),"RdbBase");
 		delete (m_files[i]);
@@ -1413,7 +1413,7 @@ bool RdbBase::attemptMerge ( int32_t niceness, bool forceMergeAll, bool doLog ,
 
 	// sanity checks
 	if (   g_loop.m_inQuickPoll ) { 
-		log("rdb: cant attempt merge in quickpoll");
+		log("rdb: can't attempt merge in quickpoll");
 		return false;
 	}
 
@@ -1751,7 +1751,7 @@ bool RdbBase::attemptMerge ( int32_t niceness, bool forceMergeAll, bool doLog ,
 	// . returns true and sets g_errno on error
 	// . returns true if we always have the token (just one host in group)
 	// . returns false if blocks (the usual case)
-	// . higher priority requests always supercede lower ones
+	// . higher priority requests always supersede lower ones
 	// . ensure we only call this once per dump we need otherwise, 
 	//   gotTokenForMergeWrapper() may be called multiple times
 	// . if a host is always in urgent mode he may starve another host
@@ -2462,7 +2462,7 @@ int64_t RdbBase::getNumTotalRecs ( ) {
 	return numPositiveRecs - numNegativeRecs;
 }
 
-// . how much mem is alloced for all of our maps?
+// . how much mem is allocated for all of our maps?
 // . we have one map per file
 int64_t RdbBase::getMapMemAlloced () {
 	int64_t alloced = 0;

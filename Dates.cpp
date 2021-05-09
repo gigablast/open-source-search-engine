@@ -80,7 +80,7 @@
 //   it can telescope to Saturday because we allow telescoping to a list
 //   of headers for the new MULTIPLE HEADER algo, but then the Saturday
 //   can't telescope to a non-contained or brother list of tods
-// - do not consider veritcal lists the same date types, and do not allow
+// - do not consider vertical lists the same date types, and do not allow
 //   any other dates to telescope to them or past such vertical lists, also
 //   the vertical list must be side-by-side with another vertical list for
 //   this algo to really work. so quite a few contstraints for something
@@ -493,7 +493,7 @@
 // - bad implied sections for TIcket Price header etc. but we still get the
 //   correct dates though
 // . later we should probably consider doing a larger partition first
-//   then paritioning those larger sections further. like looking 
+//   then partitioning those larger sections further. like looking 
 //   ahead a move in a chess game. should better partition 
 //   santafeplayhouse.org methinks this way.
 // - give bonus points if implied section ends on a double <br> br tag?
@@ -677,7 +677,7 @@
 
 // http://www.newmexico.org/calendar/events/index.php?com=detail&eID=9694&year=2009&month=11
 // - title of "Cost:" is bad because it preceeds colon -70%
-// - best title is "Beginnin Square Dance Lessons, Albuquerque"
+// - best title is "Beginning Square Dance Lessons, Albuquerque"
 // - "disclaimer & use" and "Contact New Mexico TOurism Dept" should be
 //   part of a menu! wtf? sentence flip flop?
 // - we leave out the dollar sign '$' in one of the description sections for
@@ -725,7 +725,7 @@
 
 // reverbnation.com:
 //              this is a toughy!!! we got a lower case title. we have
-//              mutliple bands which is ok, but we are getting categories
+//              multiple bands which is ok, but we are getting categories
 //              like "Latin" and "Bogota, CO" as a title. maybe discount
 //              place names ...
 //            - for every repeated section tag hash, compute a global
@@ -819,7 +819,7 @@ apply to renegade links as well?
 //                            SEC_CRUFT list)
 
 // http://www.salsapower.com/cities/us/newmexico.htm
-//              one title is "$5.00" withouth the $. maybe stop that.
+//              one title is "$5.00" without the $. maybe stop that.
 //              skip titles that are just a price.
 //              allow dates in titles if in same sentence as would be title.
 //              that should change "with Darrin..." title to 
@@ -1282,7 +1282,7 @@ the virtual sections would fix
 http://www.dailylobo.com/calendar/ = 
 http://10.5.1.203:8000/test/doc.18080536074677915848.html
 
-hmmm what about using delimters for events then???
+hmmm what about using delimiters for events then???
 
 can we make delimter based sections??? in Sections.cpp??
 yeah, then we could use it for events.
@@ -1403,7 +1403,7 @@ sections. -- todo -- might be an alignment issue... check out later
 #define HD_CHRISTMAS_DAY  43
 #define HD_NEW_YEARS_EVE  44
 
-// a delimeter used below -- these are certain types of holidays
+// a delimiter used below -- these are certain types of holidays
 //#define HD_SPECIFIC_HOLIDAY_MAX 44
 
 #define HD_EVERY_DAY      45
@@ -2374,7 +2374,7 @@ void Date::addPtr ( Date *ptr , int32_t i , class Dates *parent ) {
 	m_timestamp = mktime(&ts1);
 }
 
-// . returns false and sets g_errno on erro
+// . returns false and sets g_errno on error
 // . returns true on success
 // . siteHash must be saved in TitleRec and used again when deleting this
 //   from indexdb, so pass in the siteHash that Msg16 uses when it calls
@@ -3226,7 +3226,7 @@ bool Dates::setPart1 ( //char       *u        ,
 		if ( ! di ) continue;
 		// skip if not in body - no tag hash then
 		if ( ! ( di->m_flags & DF_FROM_BODY ) ) continue;
-		// look in the occurence table
+		// look in the occurrence table
 		int32_t slot = tht.getSlot ( &di->m_tagHash );
 		// must be there
 		if ( slot < 0 ) { char *xx=NULL;*xx=0; }
@@ -3423,7 +3423,7 @@ bool Dates::setPart1 ( //char       *u        ,
 		return true;
 	}
 
-	// unset the ambigous flags now
+	// unset the ambiguous flags now
 	for ( int32_t i = 0 ; i < m_numDatePtrs && m_dateFormat ; i++ ) {
 		// breathe
 		QUICKPOLL(m_niceness);
@@ -4760,7 +4760,7 @@ bool Dates::parseDates ( Words *w , dateflags_t defFlags , Bits *bits ,
 			int32_t tod = hour * 3600 + minute * 60;
 			// tmp flag
 			dateflags_t df2 = defFlags;//DF_FROM_BODY;
-			// let's say neigher because it is messing up
+			// let's say neither because it is messing up
 			// our m_dateFormat deterimination below! were we
 			// set m_dateFormat based on # of american vs. 
 			// european dates!
@@ -4842,7 +4842,7 @@ bool Dates::parseDates ( Words *w , dateflags_t defFlags , Bits *bits ,
 		     ( i<=0 || wptrs[ i][-1]!='/') &&
 		     // only digits in the month, stop "11th" or "11am"
 		     ! words->hasAlpha(i) &&
-		     // no :<digit> afer year
+		     // no :<digit> after year
 		    (ri2+1>=nw||
 		     wptrs[ri2+1][0]!=':'||
 		     !is_digit(wptrs[ri2+1][1]))){
@@ -4932,7 +4932,7 @@ bool Dates::parseDates ( Words *w , dateflags_t defFlags , Bits *bits ,
 		     ! words->hasAlpha(i) &&
 		     // no slash before year (embedded url)
 		     (i<=0 || wptrs[i][-1]!='/') &&
-		     // no :<digit> afer day
+		     // no :<digit> after day
 		     // THIS HURTS 2012-11-19T23:00:00
 		     (ri2+1>=nw ||
 		      wptrs[ri2+1][0]!=':'||
@@ -4948,7 +4948,7 @@ bool Dates::parseDates ( Words *w , dateflags_t defFlags , Bits *bits ,
 			int32_t day   = rightNum2 ;
 			// tmp flag
 			dateflags_t df2 = defFlags;//DF_FROM_BODY;
-			// let's say neigher because it is messing up
+			// let's say neither because it is messing up
 			// our m_dateFormat deterimination below! were we
 			// set m_dateFormat based on # of american vs. 
 			// european dates!
@@ -5002,7 +5002,7 @@ bool Dates::parseDates ( Words *w , dateflags_t defFlags , Bits *bits ,
 		     // require slash between now to fix
 		     // "December, 7 2010" for sfmusictech.com
 		     words->hasChar(i+1,'/') &&
-		     // no :<digit> afer year
+		     // no :<digit> after year
 		    (ri+1>=nw||
 		     wptrs[ri+1][0]!=':'||
 		     !is_digit(wptrs[ri+1][1]))){
@@ -6440,7 +6440,7 @@ bool Dates::parseDates ( Words *w , dateflags_t defFlags , Bits *bits ,
 	//
 	// . combine Dates into compounds. add as DF_COMPOUND date type
 	//
-	// . identify sequences of heterogenous dates
+	// . identify sequences of heterogeneous dates
 	// . add a compound date for each sequence
 	//
 	// . "nov 23 to dec 27, monday through friday 4:00, 6:00, 8:00"
@@ -6927,7 +6927,7 @@ bool Dates::parseDates ( Words *w , dateflags_t defFlags , Bits *bits ,
 			fuzzy = false;
 		// these can't be headers
 		//if ( di->m_type == DT_MOD ) continue;
-		// assum header
+		// assume header
 		//di->m_flags |= DF_HEADER;
 		// has soft bookends? (is it capitalized and not surroundings?)
 		bool softEnds = ( ( di->m_flags & DF_LEFT_BOOKEND  ) &&
@@ -7176,7 +7176,7 @@ bool Dates::parseDates ( Words *w , dateflags_t defFlags , Bits *bits ,
 				if ( id&&(id->m_bit & (IND_STREET|IND_DIR)) ) 
 					fuzzy = true;
 			}
-			// web wasn't really arround in 1993 so it must be
+			// web wasn't really around in 1993 so it must be
 			// talking about something historical and not related
 			// to the event time
 			if ( di->m_num <= 1993 )
@@ -8026,7 +8026,7 @@ bool Dates::setPart2 ( Addresses *aa , int32_t minPubDate , int32_t maxPubDate ,
 
 	/*
 	//
-	// before telescoping, identify "veritcal lists" of dates,
+	// before telescoping, identify "vertical lists" of dates,
 	// like how stoart.com has 3 dows in a vertical list and tries
 	// to align them by hand to tods in a table column to their right.
 	//
@@ -8072,7 +8072,7 @@ bool Dates::setPart2 ( Addresses *aa , int32_t minPubDate , int32_t maxPubDate ,
 				match = true;
 			// stop if not a day of month
 			if ( ! match ) break;
-			// assume not veritcal
+			// assume not vertical
 			bool vertical = false;
 			// declare outside for loop
 			int32_t a = lastDate->m_b;
@@ -8098,14 +8098,14 @@ bool Dates::setPart2 ( Addresses *aa , int32_t minPubDate , int32_t maxPubDate ,
 					// all else stops the vertical list
 					break;
 				}
-				// stop if punct word breaks the veritcal list
+				// stop if punct word breaks the vertical list
 				if ( p < pend ) break;
 			}
 			// if allowable junk between di and dj, add day to list
 			if ( a < dj->m_a ) break;
 			// need a breaking tag...
 			if ( ! vertical ) break;
-			// ok, we got a veritcal list, keep going
+			// ok, we got a vertical list, keep going
 			di->m_flags |= DF_IN_VERTICAL_LIST;
 			dj->m_flags |= DF_IN_VERTICAL_LIST;
 			// measure from this
@@ -8563,7 +8563,7 @@ bool Dates::setPart2 ( Addresses *aa , int32_t minPubDate , int32_t maxPubDate ,
 			// add in a day bit if not "holidays" word
 			// fix http://www.wpd4fun.org/Events/Halloween.htm
 			// do not let "on halloween" be considered a daynum
-			// becuse that is preventing our 
+			// because that is preventing our 
 			// "todrange[[]]hallowwen" date from telescoping to 
 			// "oct 21, 2010" because we treat halloween as a 
 			// daynum, so try fixing this...
@@ -8844,7 +8844,7 @@ bool Dates::setPart2 ( Addresses *aa , int32_t minPubDate , int32_t maxPubDate ,
 	// part 8
 	//
 	// telescope each date out to add in additional atoms from
-	// differnet sections "above" our section
+	// different sections "above" our section
 	//  
 	// . be careful with ranges and lists
 	// 
@@ -9006,7 +9006,7 @@ bool Dates::setPart2 ( Addresses *aa , int32_t minPubDate , int32_t maxPubDate ,
 			// breathe
 			QUICKPOLL ( m_niceness );
 			// we no longer need this now because if we are
-			// comaptible with a date we have to telescope to it,
+			// compatible with a date we have to telescope to it,
 			// we can't just skip it. the "s3" algo should fix
 			// the rest of thewoodencow.com in isCompatible()
 			//bool hasStoreHoursTwins = false;
@@ -10044,7 +10044,7 @@ bool Dates::setPart2 ( Addresses *aa , int32_t minPubDate , int32_t maxPubDate ,
 			// . HACK: SV_TEXTY_MAX_SAMPLED is a vote statistic!
 			// . if we are a unique section, reward ourselves
 			// . this means that at least one vote had 2+ 
-			//   occurences of sections with this sn->m_tagHash
+			//   occurrences of sections with this sn->m_tagHash
 			//if(m_osvt->getNumSampled(sn,SV_TEXTY_MAX_SAMPLED)<=1)
 			//	di->m_penalty -= 100000;
 		}
@@ -10794,7 +10794,7 @@ void Dates::setDateParentsRecursive ( Date *di , Date *parent ) {
 //   for every item we want to compare, so we have getPhoneTable() etc. and
 //   those tables telescope out their items until they hit a TOD section.
 //   in that way we can properly contain them and bind them to the TOD or
-//   TOD sections they are assocaited with.
+//   TOD sections they are associated with.
 
 // . is "s1" a compatible "header" of "s2" (or vice versa)
 // . return -1 on error with g_errno set
@@ -11529,7 +11529,7 @@ int32_t Dates::isCompatible ( Date *di ,
 	// so just set check to false i guess...
 	// really we need to identify store hours as being in a separate
 	// unique section i guess... at least unique relative to telescoping
-	// di up, incase we have a list of different stores' hours...
+	// di up, in case we have a list of different stores' hours...
 	if ( ( dp->m_hasType & DT_RANGE_TOD ) &&
 	     ( dp->m_hasType & DT_RANGE_DOW ) )
 		// this was returning true, but it caused unm.edu which
@@ -11990,7 +11990,7 @@ int32_t Dates::isCompatible ( Date *di ,
 		//   looking at the individual dates in the header's section
 		//   to see if they are similar to "di" we can be even more
 		//   accurate
-		// . excpetion: do not do this if inSame is true
+		// . exception: do not do this if inSame is true
 		if ( (dxtype & ditype2) == ditype2 && ! inSame ) 
 			return 0;
 		// skip if isolated daynum - they are noisy and often wrong
@@ -13161,7 +13161,7 @@ void Dates::setDayXors ( ) {
 
 // . hash all possible fields owned by a section
 // . just hash all the fragments
-// . a fragment is a string of words delimeted by a tag or . : ( ) [ ]
+// . a fragment is a string of words delimited by a tag or . : ( ) [ ]
 //   or a date!
 // . the period must be ending a sentence...
 
@@ -13773,7 +13773,7 @@ bool Dates::addRanges ( Words *words , bool allowOpenEndedRanges ) {
 			dj->m_tod    += 24*3600;
 			dj->m_minTod += 24*3600;
 			dj->m_maxTod += 24*3600;
-			// note it. shift DEFINTION of day up by 2 hours
+			// note it. shift DEFINITION of day up by 2 hours
 			// if "num" was like 2am...
 			int32_t shiftDay = dj->m_num - 24*3600;
 			if ( m_shiftDay && shiftDay > m_shiftDay )
@@ -14565,7 +14565,7 @@ bool Dates::makeCompounds ( Words *words ,
 			if ( linkDatesInSameSentence ) {
 				// assume so
 				sameSentLink = true;
-				// mus tbe in same sentence
+				// must be in same sentence
 				if (sp[di->m_a]->m_senta!=sp[dj->m_a]->m_senta)
 					sameSentLink = false;
 				// these are split sentences? whadup?
@@ -15621,7 +15621,7 @@ static bool printMonthDayRange ( SafeBuf *sb ,
 	int32_t bestYear1;
 	int32_t bestYear2;
 	// . first try to print symbolically.
-	// . identify all monthday ranges in teh date and do a symbolic
+	// . identify all monthday ranges in the date and do a symbolic
 	//   intersection if necessary, then print that out i fpossible
 	for ( int32_t i = 0 ; i < numAll ; i++ ) {
 		// int16_tcut
@@ -15804,7 +15804,7 @@ bool Date::printTextNorm2 ( SafeBuf *sb , Words *words , bool inHtml ,
 			// endpoint
 			printTOD ( sb , ttt2 );
 		}
-		// else just know hte start time
+		// else just know the start time
 		else {
 			sb->safePrintf("at ");
 			// first time
@@ -15919,7 +15919,7 @@ bool Date::printTextNorm2 ( SafeBuf *sb , Words *words , bool inHtml ,
 			// endpoint
 			printTOD ( sb , ttt2 );
 		}
-		// else just know hte start time
+		// else just know the start time
 		else {
 			// print each tod
 			sb->safePrintf(" at ");
@@ -16513,7 +16513,7 @@ void Date::print ( SafeBuf *sbArg ,
 	// some other junk
 	if ( sbArg ) {
 		sb->safePrintf("<td><nobr>%s%"INT32"%s</nobr></td>"      // score
-			       "<td><nobr>%s</nobr></td>" // timetamp
+			       "<td><nobr>%s</nobr></td>" // timestamp
 			       "<td>%s</td>",
 			       b1,-1 * m_penalty,b2,
 			       time,
@@ -16521,7 +16521,7 @@ void Date::print ( SafeBuf *sbArg ,
 	}
 	else
 		sb->safePrintf("%s%"INT32"%s | "      // score
-			       "%s | " // timetamp
+			       "%s | " // timestamp
 			       // timezone
 			       "%s"
 			       ,
@@ -17121,7 +17121,7 @@ int32_t Dates::parseTimeOfDay3 ( Words     *w             ,
 	int32_t kmax = i + 10;
 	if ( kmax > nw ) kmax = nw;
 	char *s;
-	// falg
+	// flag
 	bool hadCrap = false;
 	bool hadRangeIndicator = false;
 	bool hadTODAfter = false;
@@ -17797,7 +17797,7 @@ static int64_t h_at2;
 
 bool initTimeZoneTable ( ) {
 
-	// if already initalized return true
+	// if already initialized return true
 	if ( s_tzt.m_numSlotsUsed ) return true;
 
 	// init static wids
@@ -18145,7 +18145,7 @@ struct DateVal dvs[] = {
 	{"turkey day",DT_HOLIDAY,HD_THANKSGIVING,0,{0,0,0,0,0}},
 	{"black friday",DT_HOLIDAY,HD_BLACK_FRIDAY,0,{0,0,0,0,0}},
 	{"pearl harbor day",DT_HOLIDAY,HD_PEARL_HARBOR,0,{0,0,0,0,0}},
-	{"pearl harbor rememberance day",DT_HOLIDAY,HD_PEARL_HARBOR,0,{0,0,0,0,0}},
+	{"pearl harbor remembrance day",DT_HOLIDAY,HD_PEARL_HARBOR,0,{0,0,0,0,0}},
 	{"energy conservation day",DT_HOLIDAY,HD_ENERGY_CONS,0,{0,0,0,0,0}},
 	{"winter solstice",DT_HOLIDAY,HD_WINTER_SOL,0,{0,0,0,0,0}},
 	{"christmas eve",DT_HOLIDAY,HD_CHRISTMAS_EVE,0,{0,0,0,0,0}},
@@ -18400,7 +18400,7 @@ datetype_t Dates::getDateType ( int32_t i , int32_t *val , int32_t *endWord ,
 		     // it is on that holiday
 		     ! onPreceeds ) 
 			// otherwise, do not consider the holiday name itself
-			// as to when the event is actually occuring
+			// as to when the event is actually occurring
 			continue;
 		*/
 
@@ -18418,7 +18418,7 @@ datetype_t Dates::getDateType ( int32_t i , int32_t *val , int32_t *endWord ,
 
 		// if holdiday is one word, that is a match
 		if ( dv->m_numWids == 1 ) {
-			// save it as the best match, but could be overriden
+			// save it as the best match, but could be overridden
 			// like how Christmas Eve would override Christmas
 			best = dv;
 			// try next matching holiday, if any
@@ -24545,7 +24545,7 @@ int32_t Dates::intersect2 ( Interval *int1 ,
 			// . get who touches day #d
 			// . map data ptr pts to our ptr
 			if ( ! map1.addKey ( &d , &ii ) ) return -1;
-			// debug log for nowe
+			// debug log for now
 			//logf(LOG_DEBUG,"map add d=%"INT32"",d);
 		}
 	}
@@ -25030,7 +25030,7 @@ void Dates::setEventBrotherBits ( ) {
 			// "24 [[]] November 2009 [[]] 8pm - 2am [[]] 
 			//  Monday - Saturday" for burtstikilounge.com
 			di = di->m_ptrs[0];
-			// . only allwo telescoped daynum i guess for
+			// . only allow telescoped daynum i guess for
 			//   burtstikilounge.com
 			// . otherwise telescoped tods for folkmads.org are
 			//   getting SEC_HASEVENTDOMDOW set!
@@ -25162,7 +25162,7 @@ void Dates::setEventBrotherBits ( ) {
 		if ( ! m_sections->isHardSection ( si ) ) continue;
 		// count bullet delim as soft for this to fix
 		// blackbirdbuvette.com whose store hours and kitchen hours
-		// are in a bullet delimeted list
+		// are in a bullet delimited list
 		if ( si->m_baseHash == BH_BULLET ) continue;
 		// . get first one we find
 		// . this algo hurts sybarite5.org because one of the sections
@@ -25303,7 +25303,7 @@ void Dates::setEventBrotherBits ( ) {
 			// do not do the event brothers algo for specific
 			// xml feeds because we ignore all but one date
 			// for these guys. we already know the event 
-			// delimeters. and this often will find a phone or
+			// delimiters. and this often will find a phone or
 			// email in the <description> and another one in a
 			// brother section even though the xml is well defined.
 			// because eventbrite has an <organizer> and <tickets>
@@ -25553,7 +25553,7 @@ void Dates::setStoreHours ( bool telescopesOnly ) {
 				// fall semester: m-f ... okstate.edu
 				if ( m_wids[a] == h_semester ) 
 					break;
-				// fron office
+				// from office
 				if ( m_wids[a] == h_office ) 
 					break;
 				// box office: 1-3pm... kinda like
@@ -25812,7 +25812,7 @@ void Dates::setStoreHours ( bool telescopesOnly ) {
 			if ( ! (dk->m_flags & DF_ONGOING ) ) openRange = false;
 		}
 
-		// if had some incomaptible dates, then just try di by itself
+		// if had some incompatible dates, then just try di by itself
 		if ( ! good ) dj = NULL;
 
 		// . if no good partner date, just try di by itself
@@ -26393,7 +26393,7 @@ bool Date::printTextNorm2 ( Interval **intervals ,
 		if ( dedup.isInTable ( &key64 ) ) continue;
 		// add it
 		if ( ! dedup.addKey ( &key64 ) ) return false;
-		// prcess that
+		// process that
 		if ( ! processTODRange ( tod1, tod2 ) ) return false;
 	}
 	return true;

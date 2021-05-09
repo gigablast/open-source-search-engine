@@ -2549,7 +2549,7 @@ void Msgfb::queueLoop ( ) {
 		//   m_facebookReply until destructor is called
 		m_numEvents = 0;
 
-		// . get the event delimeter in the xml
+		// . get the event delimiter in the xml
 		// . both facebook and eventbrite use this
 		char *delim = "<event>";
 		char *dend  = "</event>";
@@ -4101,9 +4101,9 @@ bool Msgfc::addLikedbTag ( int64_t userId ,
 	if ( getNumBitsOn32 ( rsvp & ~ignore ) != 1 ) { char *xx=NULL;*xx=0; }
 
 	// only use start_time for "going". everything else tags all
-	// occurences of the event: like,hide,accept,reject,invited.
+	// occurrences of the event: like,hide,accept,reject,invited.
 	// otherwise if you like an event you have to unlike the exact
-	// same occurence to turn the flags off!
+	// same occurrence to turn the flags off!
 	if ( ! ( rsvp & LF_GOING ) ) start_time = 0;
 
 	// . this makes two recs to add to likedb

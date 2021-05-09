@@ -19,7 +19,7 @@
 // subsites whose path contains categories or other names in the dictionary.
 
 //
-// POTENTIAL ARTICLE CONTENT IDENTIFCATION ALGORITHM
+// POTENTIAL ARTICLE CONTENT IDENTIFICATION ALGORITHM
 //
 // identify all tag hashes (includes hashes of all parents) on the page
 // which preceed unique content, only found on that page. minimize the list

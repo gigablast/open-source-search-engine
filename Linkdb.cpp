@@ -3497,7 +3497,7 @@ bool Msg25::getPageLinkInfo2 ( Url       *url                ,
 	// . store a BOGUS root quality now so gk cluster won't force a core
 	//   because the rootQuality < 0
 	// . older clusters like gk will use it to compute quality, but we
-	//   disard that info now, we just want the number of extrapolated
+	//   discard that info now, we just want the number of extrapolated
 	//   inlinks to use in Msg16.cpp's computeQuality() function.
 	// *(char *)p = 0; p += 1;
 	// store flags
@@ -3868,7 +3868,7 @@ LinkInfo *makeLinkInfo ( char        *coll                    ,
 			}
 			// if it does then skip it
 			if ( j < k ) continue;
-			// otherwise, hash it so we can count word occurences
+			// otherwise, hash it so we can count word occurrences
 			if ( ! tt.addTerm ( &wid , 1 ) ) {
 				log("build: Failed to add word to table.");
 				return NULL;
@@ -5030,7 +5030,7 @@ bool Links::set ( bool useRelNoFollow ,
 	m_linksToGigablast = false;
 	m_hasRelNoFollow   = false;
 
-	// unknow if baseUrl are a permalink or not
+	// unknown if baseUrl are a permalink or not
 	//m_isPermalink = -1;
 
 	//char utf8Buf[MAX_URL_LEN+1];
@@ -5490,7 +5490,7 @@ bool Links::queueBlogRoll ( TagRec **tagRecPtrs , int32_t niceness ) {
 			// reset and keep going
 			if ( count < 2 ) goto loop;
 			// if we had a blogroll, it's over now. break out
-			// and nwe can see if it was a valid blogroll.
+			// and now can see if it was a valid blogroll.
 			break;
 		}
 		// skip if not a blog roll cuz we got a non-blog outlink
@@ -5878,7 +5878,7 @@ bool Links::addLink ( char *link , int32_t linkLen , int32_t nodeNum ,
 	//char *s ;
 	//if ( m_extractRedirects && (s=strchr(url.getUrl(),'*'))  ) {
 	//	// . this is really just for yahoo, but we could eventually
-	//	//   use an aribtrary delimeter in the site file
+	//	//   use an arbitrary delimiter in the site file
 	//	// . skip the *http:/
 	//	s += 7;
 	//	char buf[MAX_URL_LEN];
@@ -6326,7 +6326,7 @@ int32_t Links::getLinkText2 ( int32_t i ,
 	XmlNode *xmlNodes = m_xml->getNodes();
 	if ( xmlNodes[node1].m_nodeId == TAG_AREA ) return 0;
 
-	// what delimeter are we using? this only applies to rss/atom feeds.
+	// what delimiter are we using? this only applies to rss/atom feeds.
 	//char *del = NULL;
 	char del[16];
 	int32_t dlen = 0;
@@ -6351,7 +6351,7 @@ int32_t Links::getLinkText2 ( int32_t i ,
 		// . must come from a <link> node, not a <a>
 		// . can also be an <enclosure> tag now too
 		if ( xmlNodes[node1].m_nodeId == 2 ) goto skipItem;
-		// get item delimeter length
+		// get item delimiter length
 		//int32_t dlen = gbstrlen(del);
 		// back pedal node until we hit <item> or <entry> tag
 		int32_t j ;
@@ -6460,7 +6460,7 @@ skipItem:
 	return bufLen;
 }
 
-// find an ascii subtring in linktext for this link and return a pointer 
+// find an ascii substring in linktext for this link and return a pointer 
 // to it, or NULL if not present
 char *Links::linkTextSubstr(int32_t linkNum, char *string, int32_t niceness) {
 	if (linkNum >= m_numLinks) return NULL;
@@ -6779,7 +6779,7 @@ bool isPermalink ( //char        *coll         ,
 	if ( strncmp(u->getHost(),"feedproxy.",10)==0 ) {
 		if ( note ) *note = "from feedproxy host"; return true; }
 	// might want to get <feedburner:origLink> instead of <link> if
-	// we can. that woudl save a redirect through evil g
+	// we can. that would save a redirect through evil g
 	if ( strncmp(u->getHost(),"feeds.feedburner.com/~",22)==0 ) {
 		if ( note ) *note = "feedburner tilde url"; return true; }
 	
@@ -6890,7 +6890,7 @@ bool isPermalink ( //char        *coll         ,
 	// if self link check for link text "permalink" then we are
 	// probably very strongly a permalink
 	// http://www.5minutesformom.com/5225/wordless-wednesday-angel/
-	// has a /promote-your-site tack-on which casues the LF_SUBDIR
+	// has a /promote-your-site tack-on which causes the LF_SUBDIR
 	// algo to call the parent a NON-permalink.this should fix that
 	// because it has a link to itself with the word "permalink"
 	if ( links && links->hasSelfPermalink() ) {
@@ -7094,14 +7094,14 @@ bool isPermalink ( //char        *coll         ,
 	// . index tag pairs
 	// . look at header tags, div, p, index level # before the pair
 
-	// . find the delimeter between the blurbs
-	// . delimeter must touch the beefy content section
+	// . find the delimiter between the blurbs
+	// . delimiter must touch the beefy content section
 	// . go by "strings" of tagids, a tagid of 0 means text i think
 	//   but eliminate it if pure punctuation
 	// . and have a subtagid field, which is the hash of a tag's attributes
 	//   BUT in the case of a text tag, a hash of the alpha chars
 
-	// . how many delimeters can we find that start at level X.
+	// . how many delimiters can we find that start at level X.
 
 	// . now we are determining 
 	if ( note ) *note = "is permalink";

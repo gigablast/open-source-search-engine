@@ -73,7 +73,7 @@ class Msg5 {
 		       //key_t      endKey        , 
 		       void      *startKey      , 
 		       void      *endKey        , 
-		       int32_t       recSizes      , // requestd scan size(-1 all)
+		       int32_t       recSizes      , // requested scan size(-1 all)
 		       bool       includeTree   ,
 		       bool       addToCache    ,
 		       int32_t       maxCacheAge   , // in secs for cache lookup
@@ -105,7 +105,7 @@ class Msg5 {
 		       RdbList   *list          ,
 		       key_t      startKey      , 
 		       key_t      endKey        , 
-		       int32_t       recSizes      , // requestd scan size(-1 all)
+		       int32_t       recSizes      , // requested scan size(-1 all)
 		       bool       includeTree   ,
 		       bool       addToCache    ,
 		       int32_t       maxCacheAge   , // in secs for cache lookup

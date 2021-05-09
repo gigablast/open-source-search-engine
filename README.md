@@ -31,3 +31,14 @@ Contact me for feature requests or help in general. I will work for free
 for good use cases. mattdwells@hotmail.com.
 
 
+BUILD DEPENDENCIES
+------------------
+
+### On Debian (and derivatives)
+
+    sudo apt-get install make g++ libssl-dev zlib1g-dev
+
+
+### On RedHat/CentOS
+
+    sudo yum install gcc-c++ openssl-devel

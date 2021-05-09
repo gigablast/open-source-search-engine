@@ -37,7 +37,7 @@ bool  isIpDom ( int32_t ip ) ;
 // are last 2 bytes 0's?
 int32_t  isIpTop ( int32_t ip ) ;
 
-// returns number of top bytes in comon
+// returns number of top bytes in common
 int32_t  ipCmp ( int32_t ip1 , int32_t ip2 ) ;
 
 

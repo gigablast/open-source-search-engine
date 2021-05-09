@@ -144,7 +144,7 @@ int64_t Xml::getCompoundHash ( char *s , int32_t len ) const {
 	int32_t i   = 0;
 	int64_t h = 0;
  loop:
-	// find fisrt .
+	// find first .
 	while ( i < len && p[i] != '.' ) i++;
 	// . hash from p to p[i]
 	// . tag names are always ascii, so use the ascii hasher, not utf8
@@ -1013,11 +1013,11 @@ bool Xml::hasGigablastForm(char **url, int32_t *urlLen) {
 //  http://www.silverstripe.com/silverstripe-adds-a-touch-of-design-and-a-whole-lot-more/
 //  http://government.zdnet.com/?p=4245
 int32_t Xml::isRSSFeed ( ) {
-	// must have atleast one rss.channel.item.link node
+	// must have at least one rss.channel.item.link node
 	//int32_t rssLink = getNodeNum ( "rss.channel.item.link" );
 	//if ( rssLink >= 0 )
 	//	return true;
-	// rdf: must have atleast one rss.channel.item.link node
+	// rdf: must have at least one rss.channel.item.link node
 	//rssLink = getNodeNum ( "rdf.channel.item.link" );
 	//if ( rssLink >= 0 )
 	//	return true;
@@ -1183,7 +1183,7 @@ char *Xml::getItemLink ( int32_t *linkLen ) {
 		}
 		*/
 
-		// check for href string in the <link> tag... wierd...
+		// check for href string in the <link> tag... weird...
 		link = getString ( i, "href", linkLen );
 		if ( link ) return link;
 

@@ -150,7 +150,7 @@ public:
 	bool getSynonymInfo(uint64_t h, SynonymInfo *syn,
 			    int32_t bits = SYNBIT_ALL);
 
-	// all these functions are here for convienience/debugging but they're 
+	// all these functions are here for convenience/debugging but they're 
 	//  terribly slow (O(n^2/2) if you use them iteratively), it's better 
 	//  to use getSynonymInfo if you need to retrieve all the info at once
 	// for all the N functions, N = 0 is the word itself, and N = numSyns

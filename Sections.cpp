@@ -498,7 +498,7 @@ bool Sections::set ( Words     *w                       ,
 		//   http://events.kqed.org/events/index.php?com=detail&
 		//   eID=9812&year=2009&month=11
 		//   for parsing out events
-		// . make excpetion for <p> tag too! most ppl use </p>
+		// . make exception for <p> tag too! most ppl use </p>
 		if ( ( ! hasBackTag ( tid ) || 
 		       wptrs[i][1] =='!'    || // <!ENTITY rdfns...>
 		       wptrs[i][1] =='?'    ) &&
@@ -699,7 +699,7 @@ bool Sections::set ( Words     *w                       ,
 
 			// we are now back in the parent section
 			//current = sn;
-			// record the word range of the secion we complete
+			// record the word range of the section we complete
 			sn->m_b = i+1;
 
 			// do not include the <li> tag as part of it
@@ -2165,7 +2165,7 @@ bool Sections::set ( Words     *w                       ,
 	
 
 
-	// . "ot" = occurence table
+	// . "ot" = occurrence table
 	// . we use this to set Section::m_occNum and m_numOccurences
 	if ( ! m_ot.set (4,8,5000,NULL, 0 , false ,m_niceness,"sect-occrnc") )
 		return true;
@@ -6921,7 +6921,7 @@ int32_t hasTitleWords ( sentflags_t sflags ,
 		"$pow wow",
 		"$powwow",
 		"$camp", // iphone boot camp / space camp
-		"*bootcamp", // for one word occurences
+		"*bootcamp", // for one word occurrences
 		"*$tournament",
 		"*$tournaments", // daily poker tournaments
 		"$tourney",
@@ -7272,7 +7272,7 @@ int32_t hasTitleWords ( sentflags_t sflags ,
 		"*discover your", // discover your inner feelings
 		"*creating your", // creating your personal brand
 		"walking tour",
-		"|strategies", // speach topics
+		"|strategies", // speech topics
 		"*|coaching", // strategies for coaching
 		"*|watching", // watching paint dry
 		"ice skating",
@@ -8299,12 +8299,12 @@ public:
 //   delimeter.
 // . example: the first brother has SENT_IN_HEADER and SENT_HAS_PRICE set
 //   amongst other bits, so we try to use all brother sections in the list
-//   that have both SENT_IN_HEADER and SENT_HAS_PRICE as delimeters. and we
+//   that have both SENT_IN_HEADER and SENT_HAS_PRICE as delimiters. and we
 //   score the partition based on that.
-// . we score partitions by comparing each paritition cell to the others.
+// . we score partitions by comparing each partition cell to the others.
 //   i.e. how similar are they in terms of the SENT_* bits they have set?
 // . the idea is too create a partition that balances the SENT_* bits
-//   so that each paritition has more or less the same SENT_* bits from all
+//   so that each partition has more or less the same SENT_* bits from all
 //   the sections that it contains.
 // . example: like each partitioned section has SENT_PRICE and SENT_TOD, ...
 //   then that's pretty good.
@@ -8358,7 +8358,7 @@ int32_t Sections::addImpliedSections3 ( ) {
 		// use this to pass less args to functions then
 		//m_totalHdrCount = 0;
 
-		// tally some stats for thist list of brothers
+		// tally some stats for this list of brothers
 		int32_t count1 = 0;
 		int32_t count2 = 0;
 		//int32_t bothCount = 0;
@@ -8582,7 +8582,7 @@ int32_t Sections::addImpliedSections3 ( ) {
 		// select the winning partition
 	        int32_t       winnerMethod = bestMethod;
 		Partition *winnerPart   = bestPart;
-		// if no super paritition...
+		// if no super partition...
 		//if ( bestSuper ) {
 		//	winnerMethod = bestSuperMethod;
 		//	winnerPart   = bestSuper;
@@ -8627,7 +8627,7 @@ int32_t Sections::addImpliedSections3 ( ) {
 		addedPartition = true;
 	}
 
-	// return now if added no parititions
+	// return now if added no partitions
 	if ( ! addedPartition ) return 0;
 
 	// we gotta fix m_nextBrother,m_prevBrother after doing this
@@ -8798,7 +8798,7 @@ float computeSimilarity2 ( int32_t   *vec0 ,
 // . returns  0 if no viable partition exists which has a domdow/tod pair
 //   in one interval of the partition and a domdow/tod pair in another
 //   interval of the partition
-// . otherwise returns a postive score of the strength of the partition
+// . otherwise returns a positive score of the strength of the partition
 // . assumes all sections with the same "getDelimHash() as "delim" are the
 //   first section in a particular partition cell
 int32_t Sections::getDelimScore ( Section *bro , 
@@ -8881,8 +8881,8 @@ int32_t Sections::getDelimScore ( Section *bro ,
 
 	bool ignoreAbove = true;
 	// if delimeter is like an hr tag without text in it, then do include
-	// the stuff above its first occurence as part of the partition, 
-	// otherwise, assume the stuff above the first occurence of "delim"
+	// the stuff above its first occurrence as part of the partition, 
+	// otherwise, assume the stuff above the first occurrence of "delim"
 	// is just header junk and should not be included. fixes 
 	// dailylobo.com which has an "<h2>" header to the brother list
 	// which should not be part of the partition we use.
@@ -8959,7 +8959,7 @@ int32_t Sections::getDelimScore ( Section *bro ,
 		}
 
 			
-		// did we finalize a cell in the paritition?
+		// did we finalize a cell in the partition?
 		bool getSimilarity = false;
 		// if we hit a delimiting brothers, calculate the similarity
 		// of the previous brothers
@@ -8975,7 +8975,7 @@ int32_t Sections::getDelimScore ( Section *bro ,
 		//if ( method != METHOD_TAGID ) getSimilarity = false;
 
 		// convert our hashtable into a vector and compare to
-		// vector of previous parition cell if we hit a delimeter
+		// vector of previous partition cell if we hit a delimeter
 		// section or have overrun the list (bro == NULL)
 		if ( getSimilarity ) {
 
@@ -9079,7 +9079,7 @@ int32_t Sections::getDelimScore ( Section *bro ,
 		// sometimes we have a couple of back to back lines
 		// that are like "M-F 8-5\n" and "Saturdays 8-6" and we do not
 		// want them to make implied sections because it would
-		// split them up wierd like for unm.edu.
+		// split them up weird like for unm.edu.
 		// unm.edu had 3 sentences:
 		// "9 am. - 6 pm. Mon. - Sat.\n"
 		// "Thur. 9 am. - 7 pm. Sun. 10 am - 4 pm.\n"
@@ -9088,7 +9088,7 @@ int32_t Sections::getDelimScore ( Section *bro ,
 		// two sentences, which messed everything up.
 		// so let's add this code here to fix that.
 		if ( h == dh && 
-		     // this means basically back-to-back delimeters
+		     // this means basically back-to-back delimiters
 		     brosWithWords <= 1 && 
 		     // if we got a timeofday that is indicative of a schedule
 		     (bro->m_flags & SEC_HAS_TOD) &&
@@ -9113,7 +9113,7 @@ int32_t Sections::getDelimScore ( Section *bro ,
 
 		// keep a max on # of brothers with words in a given
 		// partition cell. if all have just one such section
-		// then no need to paritition at all!
+		// then no need to partition at all!
 		if ( brosWithWords > maxBrosWithWords )
 			maxBrosWithWords = brosWithWords;
 
@@ -9207,7 +9207,7 @@ int32_t Sections::getDelimScore ( Section *bro ,
 	// own home raffle so that the date of the event got into the same
 	// section as a location of where the home you could win was, instead
 	// of being in the same implied section as the event address. now
-	// that i added this contraint we once again partition by the double
+	// that i added this constraint we once again partition by the double
 	// br tags so it works right now. we needed the METHOD_BR_DOM to fix
 	// www.guysndollsllc.com/page5/page4/page4.html which was not 
 	// splitting well with the METHOD_DOM i guess because "skips" was
@@ -9236,12 +9236,12 @@ int32_t Sections::getDelimScore ( Section *bro ,
 	float avgSim = simTotal / simCount;
 
 	// use this now
-	// . very interesting: it only slighly insignificantly changes
+	// . very interesting: it only slightly insignificantly changes
 	//   one url, graypanthers, if we use the avgSim vs. the minSim.
 	// . i prefer minSim because it does not give an advantage to 
 	//   many smaller sections vs. fewer larger sections in partition.
 	// . later we should probably consider doing a larger partition first
-	//   then paritioning those larger sections further. like looking 
+	//   then partitioning those larger sections further. like looking 
 	//   ahead a move in a chess game. should better partition 
 	//   santafeplayhouse.org methinks this way
 	//bonus1 = (int32_t)(avgSim * 100);
@@ -9691,7 +9691,7 @@ int32_t Sections::getDelimHash ( char method , Section *bro , Section *head ) {
 	//if ( bro->m_firstWordPos < 0 ) return -1;
 
 	// if has no text give it a slightly different hash because these
-	// sections are often seen as delimeters
+	// sections are often seen as delimiters
 	int32_t mod = 0;
 	if ( bro->m_firstWordPos < 0 ) mod = 3405873;
 
@@ -9738,7 +9738,7 @@ int32_t Sections::getDelimHash ( char method , Section *bro , Section *head ) {
 	}
 	*/
 
-	// . single br tags not allowed to be implied section delimeters any
+	// . single br tags not allowed to be implied section delimiters any
 	//   more for no specific reason but seems to be the right way to go
 	// . this hurts the guysndollsllc.com url, which has single br lines
 	//   each with its own DOM, so let's allow br tags in that case
@@ -9755,7 +9755,7 @@ int32_t Sections::getDelimHash ( char method , Section *bro , Section *head ) {
 		// . damn, they had the brbr in a <p> tag with other text so
 		//   this was not fixing that ... so i took it out to be safe
 		// . now i need this for sunsetpromotions.com which use
-		//   double brs otherwise i get mutliple locations error
+		//   double brs otherwise i get multiple locations error
 		if ( bro->m_tagId == TAG_BR ) 
 			return 777777;
 		// must be a p tag for now
@@ -9895,7 +9895,7 @@ int32_t Sections::getDelimHash ( char method , Section *bro , Section *head ) {
 		//   for tennisoncampus because the section had a sentence
 		//   with a bunch of sentences... BUT what does this hurt?? 
 		// . it hurts anja when we require this stuff here on
-		//   texasdrums.drums.org/new_orleansdrums.htm beause it is
+		//   texasdrums.drums.org/new_orleansdrums.htm because it is
 		//   unclear that her event should be boxed in...
 		if ( !(bro->m_flags & SEC_SENTENCE) &&
 		     !(bro->m_flags & SEC_HEADING_CONTAINER) &&
@@ -11048,7 +11048,7 @@ bool Sections::addSentenceSections ( ) {
 		// anchor tags in the sentence to fix that!
 		// CRAP, this was hurting blackbirdbuvette because it was
 		// including the bullet delimeter and the "big" section 
-		// computed below ended up spanning two bullet delimeted
+		// computed below ended up spanning two bullet delimited
 		// sections to make the sentence!! that gave us a bad event
 		// title that consisted of that sentence.. 
 		//if ( j < m_nw && ! m_tids[j] ) sentb++;
@@ -11494,7 +11494,7 @@ Section *Sections::insertSubSection ( Section *parentArg , int32_t a , int32_t b
 	return sk;
 }
 
-// for brbr and hr splitting delimeters
+// for brbr and hr splitting delimiters
 int32_t Sections::splitSectionsByTag ( nodeid_t tagid ) {
 
 	// . try skipping for xml
@@ -11512,7 +11512,7 @@ int32_t Sections::splitSectionsByTag ( nodeid_t tagid ) {
 	// . now, split sections up if they contain one or more <hr> tags
 	// . just append some "hr" sections under that parent to m_sections[]
 	// . need to update m_sectionPtrs[] after this of course!!!!!
-	// . now we also support various other delimeters, like bullets
+	// . now we also support various other delimiters, like bullets
 	for ( Section *si = m_rootSection ; si ; si = si->m_next ) {
 		// breathe
 		QUICKPOLL ( m_niceness );
@@ -11556,7 +11556,7 @@ int32_t Sections::splitSectionsByTag ( nodeid_t tagid ) {
 		for ( ; last ; last = last->m_nextBrother ) {
 			// breathe
 			QUICKPOLL(m_niceness);
-			// stop on tag delimeters
+			// stop on tag delimiters
 			if ( isTagDelimeter ( last , tagid ) ) {
 				// set endpoint of new subsection
 				b = last->m_a;
@@ -11634,7 +11634,7 @@ bool Sections::splitSections ( char *delimeter , int32_t dh ) {
 	// . now, split sections up if they contain one or more <hr> tags
 	// . just append some "hr" sections under that parent to m_sections[]
 	// . need to update m_sectionPtrs[] after this of course!!!!!
-	// . now we also support various other delimeters, like bullets
+	// . now we also support various other delimiters, like bullets
 	for ( int32_t i = 0 ; i < m_nw ; i++ ) {
 		// breathe
 		QUICKPOLL ( m_niceness );
@@ -11681,7 +11681,7 @@ bool Sections::splitSections ( char *delimeter , int32_t dh ) {
 		// it can split it into non-empty sections
 		if ( start == i ) continue;
 		// save it so we can rescan from delimeter right after this one
-		// because there might be more delimeters in DIFFERENT 
+		// because there might be more delimiters in DIFFERENT 
 		// subsections
 		saved = i;
 		// sanity check
@@ -11775,7 +11775,7 @@ bool Sections::splitSections ( char *delimeter , int32_t dh ) {
 			// resume where we left off in case next delim is
 			// in a section different than "sn"
 			i = saved; 
-			// do not process any more delimeters in this section
+			// do not process any more delimiters in this section
 			sn->m_processedHash = dh;
 			//i = sn->m_b - 1;
 			continue; 
@@ -11799,7 +11799,7 @@ bool Sections::splitSections ( char *delimeter , int32_t dh ) {
 			if ( i >= sn->m_b ) break;
 			// get his section
 			Section *si = m_sectionPtrs[i];
-			// delimeters that start their own sections must
+			// delimiters that start their own sections must
 			// grow out to their parent
 			//if ( delimIsSection )
 			//	si = si->m_parent;
@@ -13234,7 +13234,7 @@ bool Sections::print ( SafeBuf *sbuf ,
 
 			 "<tr><td>tagpairhash</td><td>"
 			 "All unique adjacent tag ids are hashed to form "
-			 "this number which represents the overal strucutre "
+			 "this number which represents the overal structure "
 			 "of the document. The tagHash is the tagPairHash "
 			 "in this case."
 			 "</td></tr>\n"
@@ -14316,7 +14316,7 @@ void Sections::setHeader ( int32_t r , Section *first , sec_t flag ) {
 	for ( int32_t i = biggest->m_a ; i < biggest->m_b ; i++ ) {
 		// need word
 		if ( ! m_wids[i] ) continue;
-		// get smallest *hard* section containg word
+		// get smallest *hard* section containing word
 		Section *sp =  m_sectionPtrs[i];
 		// get first hard section
 		for ( ; ! sp->isHardSection() ; sp = sp->m_parent ) ;
@@ -14348,7 +14348,7 @@ void Sections::setHeader ( int32_t r , Section *first , sec_t flag ) {
 			if ( fx->m_a >= first->m_b ) break;
 			// ignore if no next
 			if ( fx->m_flags & SEC_NOTEXT ) continue;
-			// thats bad if SEC_MENU not set, it should be for all!
+			// that's bad if SEC_MENU not set, it should be for all!
 			if ( fx->m_flags & SEC_MENU ) continue;
 			// we got these now
 			if ( fx->m_flags & SEC_MENU_SENTENCE ) continue;
@@ -15550,7 +15550,7 @@ bool SectionVotingTable::print ( SafeBuf *sbuf , char *title ) {
 
 			 "<tr><td>tagpairhash</td><td>"
 			 "All unique adjacent tag ids are hashed to form "
-			 "this number which represents the overal strucutre "
+			 "this number which represents the overal structure "
 			 "of the document. The turkTagHash is the tagPairHash "
 			 "in this case."
 			 "</td></tr>\n"

@@ -2,7 +2,7 @@
 
 
 // . TODO: if i'm sending to 1 host in a specified group how do you know
-//         to switch adn try anoher host in the group?  What if target host 
+//         to switch and try anoher host in the group?  What if target host 
 //         has to access disk ,etc...???
 
 // . this class is used for performing multicasting through a UdpServer
@@ -61,7 +61,7 @@ class Multicast {
 	// . if you pass in a "replyBuf" we'll store the reply in there
 	// . if "doLoadBalancing" is true and sendToWholeGroup is false then
 	//   we send a Msg34 request to all hosts in group "groupId" and ask
-	//   them how much disk load thay have then we send to the best one.
+	//   them how much disk load they have then we send to the best one.
 	// . if we sent a Msg34 to a host within the last couple of 
 	//   milliseconds or so, then Msg34 should use results from last time.
 	//   When we send a Msg0 or Msg20 request we know the approximate

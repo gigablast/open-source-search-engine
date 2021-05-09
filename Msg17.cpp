@@ -493,7 +493,7 @@ bool Msg17::storeInCache ( char   cacheId ,
 	else {
 		// bail if not enough room!
 		if ( recSize > pend - p ) return true;
-		// otheriwse, store it
+		// otherwise, store it
 		gbmemcpy ( p, recPtr, recSize );
 		// advance p by how many bytes we stored into "p"
 		p += recSize;

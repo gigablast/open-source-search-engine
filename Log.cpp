@@ -466,7 +466,7 @@ bool Log::logLater ( int64_t now, int32_t type, char *format, va_list ap ) {
 	// first 4 bytes are the size of the string space, write later
 	int32_t stringSizes = 0;
 	s_ptr += 4;
-	// the priorty is the 2nd 4 bytes
+	// the priority is the 2nd 4 bytes
 	memcpy_ass ( s_ptr , (char *)&type , 4 );
 	s_ptr += 4;
 	// store the format string first

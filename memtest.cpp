@@ -30,8 +30,8 @@ int main ( ) {
 	gettimeofday ( &tv , NULL );
        int64_t now2=(int64_t)(tv.tv_usec/1000)+((int64_t)tv.tv_sec)*1000;
        
-	fprintf(stderr,"did %"INT32" accesss in %"INT64" ms.\n",loops*np,now2-now);
-	fprintf(stderr,"did %"INT64" accesss per second.\n",
+	fprintf(stderr,"did %"INT32" access in %"INT64" ms.\n",loops*np,now2-now);
+	fprintf(stderr,"did %"INT64" access per second.\n",
 		(1000LL*(((int64_t)loops)*((int64_t)np)))/(now2-now));
 	return 0;
 

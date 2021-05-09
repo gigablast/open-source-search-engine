@@ -102,7 +102,7 @@ struct DnsState {
 	int32_t m_errno;
 
 	// we have to turn it off in some requests for some reason
-	// like for www.fsis.usda.gov, othewise we get a refused to talk error
+	// like for www.fsis.usda.gov, otherwise we get a refused to talk error
 	char m_recursionDesired;
 
 	// have a total timeout function

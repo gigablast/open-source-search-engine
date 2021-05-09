@@ -37,14 +37,14 @@
 //#define SEC_DUP        0x0004 // content hash repeated on same site
 
 // . Weights.cpp zeroes out the weights for these types of sections
-// . is section delimeted by the <script> tag, <marquee> tag, etc.
+// . is section delimited by the <script> tag, <marquee> tag, etc.
 #define SEC_SCRIPT       0x0008
 #define SEC_STYLE        0x0010
 #define SEC_SELECT       0x0020
 #define SEC_MARQUEE      0x0040
 #define SEC_CONTAINER    0x0080
 // . is section in anchor text
-// . is section delimeted by the <a href...> tag
+// . is section delimited by the <a href...> tag
 //#define SEC_A            0x0080
 
 // . in title/header. for gigabits in XmlDoc.cpp
@@ -847,7 +847,7 @@ class Sections {
 	HashTableX m_ot;
 	HashTableX m_vt;
 
-	// for caching parition scores
+	// for caching partition scores
 	HashTableX m_ct;
 
 	// buf for serializing m_osvt into

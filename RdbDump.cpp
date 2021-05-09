@@ -695,7 +695,7 @@ bool RdbDump::dumpList ( RdbList *list , int32_t niceness , bool recall ) {
 bool RdbDump::doneDumpingList ( bool addToMap ) {
 	// we can get suspended when gigablast is shutting down, in which
 	// case the map may have been deleted. only RdbMerge suspends its
-	// m_dump class, not Rdb::m_dump. return false so caller nevers
+	// m_dump class, not Rdb::m_dump. return false so caller never
 	// gets called back. we can not resume from this suspension!
 	//if ( m_isSuspended ) return false;
 	// . if error was EFILECLOSE (file got closed before we wrote to it)

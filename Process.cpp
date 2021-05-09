@@ -810,7 +810,7 @@ bool Process::gotPower ( TcpSocket *s ) {
 
 	// the request url
 	//Url ru; ru.set ( up , gbstrlen(up) );
-	// set the http reqeust
+	// set the http request
 	if ( ! m_r.set ( up ) ) {
 		log("powermo: got httpreqeust set error: %s",
 		    mstrerror(g_errno));
@@ -1472,7 +1472,7 @@ bool Process::save2 ( ) {
 	// bring them back
 	g_cacheWritesEnabled = true;
 
-	// reenable tree writes since saves were completed
+	// re-enable tree writes since saves were completed
 	enableTreeWrites( false );
 
 	log(LOG_INFO,"gb: Saved data to disk. Re-enabling Writes.");
@@ -1667,7 +1667,7 @@ bool Process::shutdown2 ( ) {
 	// . will return true if no rdb cache needs a save
 	//if ( ! saveRdbCaches ( useThreads ) ) return false;
 
-	// always diable threads at this point so g_threads.call() will
+	// always disable threads at this point so g_threads.call() will
 	// always return false and we do not queue any new threads for
 	// spawning
 	g_threads.disableThreads();

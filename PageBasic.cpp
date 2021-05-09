@@ -910,10 +910,10 @@ bool printScrollingWidget ( SafeBuf *sb , CollectionRec *cr ) {
 	// if user has the scrollbar at the top
 	// in the widget we do a search every 15 secs
 	// to try to load more recent results. we should
-	// return up to 10 results above your last 
+	// return up to 10 results above your last
 	// top docid and 10 results below it. that way
 	// no matter which of the 10 results you were
-	// viewing your view should remaing unchanged.
+	// viewing your view should remain unchanged.
 	sb->safePrintf(
 
 		       // global var

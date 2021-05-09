@@ -127,7 +127,7 @@ class RdbCache *getDiskPageCache ( char rdbId ) {
 //   than the argument, "endKey" due to limitation by "minRecSizes"
 // . resulting list will contain ALL keys between ITS [m_startKey,m_endKey]
 // . final merged list "should" try to have a size of at least "minRecSizes"
-//   but due to negative/postive rec elimination may be less
+//   but due to negative/positive rec elimination may be less
 // . the endKey of the lists we read may be <= "endKey" provided
 // . we try to shrink the endKey if minRecSizes is >= 0 in order to
 //   avoid excessive reading
@@ -215,7 +215,7 @@ bool Msg3::readList  ( char           rdbId         ,
 	if (  KEYNEG(endKeyArg) )
 		log(LOG_REMIND,"net: msg3: EndKey lastbit clear."); 
 
-	// declare vars here becaues of 'goto skip' below
+	// declare vars here because of 'goto skip' below
 	int32_t mergeFileNum = -1 ;
 	int32_t max ;
 
@@ -413,7 +413,7 @@ bool Msg3::readList  ( char           rdbId         ,
 	//m_constrainKey       = endKey; // set in case justGetEndKey is true
 	KEYSET(m_startKey,startKeyArg,m_ks);
 	KEYSET(m_endKey,endKeyArg,m_ks);
-	KEYSET(m_constrainKey,endKeyArg,m_ks);//set incase justGetEndKey istrue
+	KEYSET(m_constrainKey,endKeyArg,m_ks);//set in case justGetEndKey istrue
 	m_minRecSizes        = minRecSizes;
 	m_compensateForMerge = compensateForMerge;
 	// bail if 0 files to scan -- no! need to set startKey/endKey
@@ -591,7 +591,7 @@ bool Msg3::readList  ( char           rdbId         ,
 		//if ( maps[fn]->getNumPages()!=p2) endKey -=(uint32_t)1;
 		if ( maps[fn]->getNumPages() != p2 ) KEYSUB(endKey2,1,m_ks);
 		// otherwise, if we're reading all pages, then force the
-		// endKey to virtual inifinite
+		// endKey to virtual infinite
 		//else endKey.setMax();
 		else KEYMAX(endKey2,m_ks);
 
@@ -836,7 +836,7 @@ bool Msg3::doneScanning ( ) {
 	if ( m_maxRetries >= 0 ) max = m_maxRetries;
 	// now use -1 (no max) as the default no matter what
 	max = -1;
-	// ENOMEM is particulary contagious, so watch out with it...
+	// ENOMEM is particularly contagious, so watch out with it...
 	if ( g_errno == ENOMEM && m_maxRetries == -1 ) max = 0;
 	// msg0 sets maxRetries to 2, don't let max stay set to -1
 	if ( g_errno == ENOMEM && m_maxRetries != -1 ) max = m_maxRetries;
@@ -872,7 +872,7 @@ bool Msg3::doneScanning ( ) {
 	if ( g_errno == EDISKSTUCK && m_niceness != 0 ) { char *xx=NULL;*xx=0;}
 
 	// on I/O, give up at call it corrupt after a while. some hitachis
-	// have I/O errros on little spots, like gk88, maybe we can fix him
+	// have I/O errors on little spots, like gk88, maybe we can fix him
 	if ( g_errno == EIO && m_retryNum >= 5 ) {
 		m_errno = ECORRUPTDATA;
 		m_hadCorruption = true;

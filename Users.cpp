@@ -3,7 +3,7 @@
 Users g_users;
 RdbTree g_testResultsTree;
 
-// intialize User members
+// initialize User members
 User::User(){
 	m_permissions = 0;
 	m_numTagIds   = 0;
@@ -103,7 +103,7 @@ int32_t User::firstPage ( ){
 	return -1;
 }
 
-// intialize the members
+// initialize the members
 Users::Users(){
 	m_init           = false;
 	m_needsSave = false;
@@ -276,7 +276,7 @@ int32_t Users::getAccuracy ( char *username, time_t timestamp ){
 		refNode = g_testResultsTree.getNextNode ( 0 ,(char*)&key);
 	if ( refNode == -1 ) return -1;
 
-	// initialize the voting paramaters
+	// initialize the voting parameters
 	int32_t totalVotes   = 0;
 	int32_t totalCorrect = 0;
 
@@ -648,7 +648,7 @@ User *Users::isUserLogged ( char *username, int32_t ip  ){
 	// if this is true, user cannot time out
 	if ( user->m_reLogin ) return user;
 	
-	// return NULL if user sesssion has timed out
+	// return NULL if user session has timed out
 	int32_t now = getTime();
 	//int32_t timestamp = m_loginTable.getValueFromSlot(slotNum);
 
@@ -770,7 +770,7 @@ bool  Users::verifyUser ( TcpSocket *s, HttpRequest *r ){
 
 	//if ( !username ) return false;
 	// if no username, assume public user. technically,
-	// they are verified as who they claim to be... noone.
+	// they are verified as who they claim to be... no one.
 	if ( ! username ) return true;
 
 	// public user need not be verified

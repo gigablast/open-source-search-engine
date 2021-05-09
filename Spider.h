@@ -498,7 +498,7 @@ class SpiderRequest {
 
 	// . when this request was first was added to spiderdb
 	// . Spider.cpp dedups the oldest SpiderRequests that have the
-	//   same bit flags as this one. that way, we get the most uptodate
+	//   same bit flags as this one. that way, we get the most up-to-date
 	//   date in the request... UNFORTUNATELY we lose m_addedTime then!!!
 	uint32_t  m_addedTime; // time_t
 
@@ -826,7 +826,7 @@ class SpiderRequest {
 //   it to ::getUrlFilterNum()
 // . getUrlFilterNum() also takes the SpiderRequest record as well now
 // . we only keep the last X successful SpiderRecReply records, and the 
-//   last unsucessful Y records (only if more recent), and we nuke all the 
+//   last unsuccessful Y records (only if more recent), and we nuke all the 
 //   other SpiderRecReply records
 class SpiderReply {
 
@@ -1498,7 +1498,7 @@ void handleRequestc1 ( UdpSlot *slot , int32_t niceness ) ;
 // . supports limiting spiders per domain
 
 // . max spiders we can have going at once for this process
-// . limit to 50 to preven OOM conditions
+// . limit to 50 to prevent OOM conditions
 #define MAX_SPIDERS 300
 
 class SpiderLoop {

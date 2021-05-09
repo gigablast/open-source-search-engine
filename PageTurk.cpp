@@ -209,7 +209,7 @@ bool sendPageTurkStats ( TcpSocket *s , HttpRequest *r ) {
 	// must be super turk
 	if ( ! st->m_isSuperTurk ) st->m_ban = -1;
 
-	// . before doing anything, initialze the table of banned turk
+	// . before doing anything, initialize the table of banned turk
 	//   usernames or turkips
 	// . returns false if it blocks, true otherwise
 	return initBannedTable ( st );
@@ -1633,7 +1633,7 @@ bool printSingleUserStats ( SafeBuf *sb , RdbList *list, char *showTurkUser ,
 //
 ///////////////////////////////////
 
-// . for receving a submission from a turk
+// . for receiving a submission from a turk
 // . adds the appropriate tags to the appropriate tagdb record
 // . then reindexes the document with the event
 // . may also query the eventtagformathash and add ALL the docids in that
@@ -2409,7 +2409,7 @@ bool gotResults ( State61 *st ) {
 
 	// if all were locked try the query again but for stuff
 	// that has not yet been turked! fixes an issue where
-	// zak has lock on the only turked page becaues he's turking
+	// zak has lock on the only turked page because he's turking
 	// a 2nd event on that same page.
 	if ( st->m_i >= numResults && ! exhausted ) 
 		return getResults (st);

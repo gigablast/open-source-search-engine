@@ -158,7 +158,7 @@ bool Msg28::massConfig ( TcpSocket   *s                       ,
 
 static void gotReply ( void *state , TcpSocket *s );
 
-// accomodate a big cluster
+// accommodate a big cluster
 #define MAX_OUT_MSG28 256
 
 // returns false if blocked, true otherwise

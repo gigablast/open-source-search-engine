@@ -804,7 +804,7 @@ void downloadTheDocForReals2 ( Msg13Request *r ) {
 	if ( ! g_conf.m_proxyIps.hasDigits() ) useProxies = false;
 
 
-	// we did not need a spider proxy ip so send this reuest to a host
+	// we did not need a spider proxy ip so send this request to a host
 	// to download the url
 	if ( ! useProxies ) {
 		downloadTheDocForReals3a ( r );
@@ -1330,7 +1330,7 @@ void gotHttpReply9 ( void *state , TcpSocket *ts ) {
 		r->m_banProxyPort = r->m_proxyPort;
 		// . re-download but using a different proxy
 		// . handleRequest54 should not increment the outstanding
-		//   count beause we should give it the same m_lbId
+		//   count because we should give it the same m_lbId
 		// . skip s_rt table since we are already first in line and
 		//   others may be waiting for us...
 		downloadTheDocForReals2 ( r );
@@ -1703,7 +1703,7 @@ void gotHttpReply2 ( void *state ,
 				      "HTTP/1.0 %"INT32"\r\n"
 				      "Content-Length: 0\r\n" ,
 				      httpStatus );
-			// convery redirect urls back to requester
+			// convert redirect urls back to requester
 			char *loc    = mime.getLocationField();
 			int32_t  locLen = mime.getLocationFieldLen();
 			// if too big, forget it! otherwise we breach tmpBuf
@@ -2949,7 +2949,7 @@ bool getIframeExpandedContent ( Msg13Request *r , TcpSocket *ts ) {
 	// gotHttpReply()
 	//xd->m_r = NULL;
 
-	// hey... it did block and we are stil;l printing this!!
+	// hey... it did block and we are still printing this!!
 	// it happens when the iframe src is google or bing.. usually maps
 	// so i'd think indicative of something special
 	if ( g_conf.m_logDebugBuild ) 
@@ -2960,14 +2960,14 @@ bool getIframeExpandedContent ( Msg13Request *r , TcpSocket *ts ) {
 	int32_t saved = g_errno;
 
 	// this also means that the iframe tag was probably not expanded
-	// because it was from google.com or bing.com or had a bad src attribut
+	// because it was from google.com or bing.com or had a bad src attribute
 	// or bad url in the src attribute. 
 	// so we have set m_attemptedIframeExpansion, just recall using
 	// the original TcpSocket ptr... and this time we should not be
 	// re-called because m_attemptedIframeExpansion is now true
 	//gotHttpReply2 ( r, NULL , 0 , 0 , NULL );	
 
-	// we can't be messing with it!! otherwise we'd have to reutrn
+	// we can't be messing with it!! otherwise we'd have to return
 	// a new reply size i guess
 	if ( xd->m_didExpansion ) { char *xx=NULL;*xx=0; }
 
@@ -3191,7 +3191,7 @@ bool addToHammerQueue ( Msg13Request *r ) {
 		// BUT do not core if running live, only if for test
 		// collection
 		// for now disable it seems like 99.9% good... but
-		// still cores on some wierd stuff...
+		// still cores on some weird stuff...
 		// if doing this on qatest123 then core
 		if(r->m_useTestCache ) { // && r->m_firstIp!=-1944679785 ) {
 			char*xx = NULL; *xx = 0; }

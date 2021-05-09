@@ -395,7 +395,7 @@ bool Words::addWords(char *s,int32_t nodeLen,bool computeWordIds, int32_t nicene
 		// treat ucScriptLatin (30) as common so we can have latin1
 		// like char without breaking the word!
 		if ( oldScript == ucScriptLatin ) oldScript = ucScriptCommon;
-		// stop on this crap too i guess. like japanes chars?
+		// stop on this crap too i guess. like japanese chars?
 		if ( props & ( UC_IDEOGRAPH | UC_HIRAGANA | UC_THAI ) ) {
 			// include it
 			i += getUtf8CharSize(s+i);

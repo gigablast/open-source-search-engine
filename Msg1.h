@@ -175,7 +175,7 @@ inline uint32_t getGroupId ( char rdbId , char *key ) {
 	return (((key_t *)key)->n1) & g_hostdb.m_groupMask;
 }
 
-//if split is true, it can still be overrriden by the parm in g_conf
+//if split is true, it can still be overridden by the parm in g_conf
 //if false, we don't split index and date lists, other dbs are unaffected
 extern uint32_t getGroupId ( char rdbId , char *key, bool split ) ;
 */

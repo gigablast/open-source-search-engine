@@ -691,7 +691,7 @@ bool TcpServer::sendMsg ( TcpSocket *s            ,
 	s->m_callback         = callback;
 	// ensure the correct TcpServer
 	if (s->m_this != this) {
-		log("tcpserver: Socket comming into incorrect TcpServer!");
+		log("tcpserver: Socket coming into incorrect TcpServer!");
 		char *xx = NULL; *xx = 0;
 	}
 	s->m_this             = this;
@@ -738,7 +738,7 @@ bool TcpServer::sendMsg ( TcpSocket *s            ,
 	// hmmm else if ( s->m_readBuf ) { recycleSocket ( s ); return true; }
 	// we can't close it here any more for some reason the browser truncats
 	// the content we transmit otherwise... i've tried SO_LINGER and 
-	// couldnt get that to work...
+	// couldn't get that to work...
 	if ( s->m_readBuf ) { s->m_sockState = ST_NEEDS_CLOSE; return true; }
 	// we're blocking on the reply (readBuf is empty)
 	return false;
@@ -1085,7 +1085,7 @@ bool TcpServer::closeLeastUsed ( int32_t maxIdleTime ) {
 
 	int64_t nowms;
 	if ( maxIdleTime > 0 ) nowms = gettimeofdayInMilliseconds();
-	// conver it to milliseconds
+	// convert it to milliseconds
 	int64_t maxms ;
 	if ( maxIdleTime > 0 ) maxms = maxIdleTime * 1000;
 	
@@ -1540,7 +1540,7 @@ int32_t TcpServer::readSocket ( TcpSocket *s ) {
 	// . it should look for content-len: on post requests as well
 	// . it sets it to -1 if incoming msg size is still unknown
 	if ( s->m_totalToRead <= 0 && ! setTotalToRead ( s ) ) {
-		log(LOG_LOGIC,"tcp: readSocket3: wierd error.");
+		log(LOG_LOGIC,"tcp: readSocket3: weird error.");
 		return -1;
 	}
 	// . keep reading until we block
@@ -1657,7 +1657,7 @@ void writeSocketWrapper ( int sd , void *state ) {
 
 	if ( s->m_sockState == ST_SSL_HANDSHAKE ) {
 		int r = THIS->sslHandshake ( s );
-		// return if it blocked. write callback shoud be
+		// return if it blocked. write callback should be
 		// registered... or read, depending on the the handshake return
 		if ( r == 0 ) return;
 		// error?
@@ -1727,7 +1727,7 @@ void writeSocketWrapper ( int sd , void *state ) {
 	// sendAgain:
 
 	// . writeSocket returns false if blocked, true otherwise
-	// . it also sets g_errno on errro
+	// . it also sets g_errno on error
 	// . don't call it if we have g_errno set, however
 	int32_t status = THIS->writeSocket ( s ) ;
 	// return if it blocked
@@ -2072,7 +2072,7 @@ int32_t TcpServer::connectSocket ( TcpSocket *s ) {
 	if ( errno == EINTR ) goto retry3;
 	// copy errno to g_errno
 	g_errno = errno;
-	// hey! it's alrady connected! 
+	// hey! it's already connected! 
 	// i'm not sure that is what this means... MDW 2/16/2015
 	// i think it means the connect request was already initiated.
 	if ( g_errno == EALREADY    ) {
@@ -2545,7 +2545,7 @@ void TcpServer::readTimeoutPoll ( ) {
 
 		//log("tcp: timeout=%"INT32" fd=%"INT32"",sockTimeout,s->m_sd);
 
-		// uncomment this if you want to close a socket if they havent 
+		// uncomment this if you want to close a socket if they haven't 
 		// finished reading in 10 seconds
 		//     &&
 		//     !(s->isReading() && s->m_isIncoming && elapsed > 10000))
@@ -2738,7 +2738,7 @@ bool TcpServer::sslAccept ( TcpSocket *s ) {
 	// . javier put this in here, but it was not non-blocking!!!
 	// . it is non-blocking now, however, when it does block and
 	//   complete the accept it takes 10ms on sp1, a server from ~2009
-	//   using a custom build of the lastest libssl.a from about 2013.
+	//   using a custom build of the latest libssl.a from about 2013.
 	// . this accept needs to be put in a thread then, maybe multiple 
 	//   threads
 	int r = SSL_accept(s->m_ssl);

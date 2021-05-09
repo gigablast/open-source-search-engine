@@ -369,7 +369,7 @@ void IndexTable2::setStuffFromImap ( ) {
 		// assume not there
 		m_imapLeftPhraseTermNum [i] = -1;
 		m_imapRightPhraseTermNum[i] = -1;
-		// . these are intially in query term space so we must convert
+		// . these are initially in query term space so we must convert
 		//   into imap space, using revImap[]
 		// . -1 implies no valid phrase term
 		if ( qt->m_leftPhraseTermNum >= 0 ) {
@@ -1059,7 +1059,7 @@ void IndexTable2::setFreqWeights ( Query *q , bool phrases ) {
 // . the "need2" buffer is also used to hold the top NUMRAT_SLOTS docids
 //   in the case of a rat=0 intersection which intersects all termlists in
 //   a single call the addLists2_r() until enough docids are obtained to
-//   calculcate the affinities and affinity weights so that we can calcualte
+//   calculate the affinities and affinity weights so that we can calculate
 //   the proper scores of each docid and therefore only keep the top X scoring
 //   docids.
 // . the "need3" buffer is m_localBuf
@@ -2551,7 +2551,7 @@ void IndexTable2::addLists2_r ( int32_t       numListsToDo     ,
 
 
 	if ( m_searchingEvents ) 
-		// returns false if it paniced
+		// returns false if it panicked
 		if ( ! eventHashLoop ( listIndexes ,
 				       listSigns   ,
 				       listExplicitBits ,
@@ -3809,7 +3809,7 @@ bool IndexTable2::eventHashLoop ( int32_t *listIndexes ,
 			if ( a > b ) { char *xx=NULL;*xx=0; }
 		}
 
-		// for debuging lat/lon/times for an event
+		// for debugging lat/lon/times for an event
 		//int64_t d = getDocIdFromPtr(ptrs[i]);
 		//if ( d == 17601280831LL && a==1 )
 		//	log("hey listi=%"INT32"",listi);
@@ -4142,7 +4142,7 @@ void IndexTable2::computeAffWeights    ( bool           rat          ,
 	// . if doing rat, do not oversample
 	// . limit to sample size to keep things consistent
 	// . if we look at too many then affinity can drop for rarer 
-	//   phrases that are actually very relevent for the query.
+	//   phrases that are actually very relevant for the query.
 	// . if we stop above "MIN_DOCIDS" we risk being inconsistent 
 	//   on same-tier re-calls due to clustered/filtered results.
 	//if ( rat && nd > MIN_DOCIDS ) nd = MIN_DOCIDS;
@@ -5196,13 +5196,13 @@ int32_t IndexTable2::fillTopDocIds ( //char         **topp      ,
 	//   cgi parm then they want to see what the results would
 	//   have looked like at the provided time_t time. so in that
 	//   case we should have generated a custom hashtable by
-	//   scanning all of timedb for the next occuring time of
+	//   scanning all of timedb for the next occurring time of
 	//   each event from that time.
 	HashTableX *ht = m_sortByDateTablePtr;
 	// otherwise, if no "setclock=" was provided we use the
 	// current time and therefore use this current hash table
 	// that is being continuously updated so that given an eventid
-	// it provides the next occuring time for that event.
+	// it provides the next occurring time for that event.
 	if ( ! ht ) {
 		// get it for that coll
 		CollectionRec *cr = g_collectiondb.getRec(m_collnum);

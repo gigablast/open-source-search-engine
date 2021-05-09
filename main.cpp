@@ -1581,7 +1581,7 @@ int main2 ( int argc , char *argv[] ) {
 	Host *h9 = g_hostdb.m_myHost;
 
 	// set clock file name so gettimeofdayInMmiilisecondsGlobal()
-	// see g_clockInSync to be true... unles clockadjust.dat is more
+	// see g_clockInSync to be true... unless clockadjust.dat is more
 	// than 2 days old in which case not!
 	if ( g_hostdb.m_myHost->m_hostId != 0 ) {
 		// host #0 does not need this, everyone syncs with him
@@ -1883,7 +1883,7 @@ int main2 ( int argc , char *argv[] ) {
 		if (argv[i+1])  maxNumThreads=atoi(argv[i+1]);
 		if (argv[i+2]) wait=atoi(argv[i+2]);
 		g_conf.m_maxMem = 2000000000;
-		//wait atleast 10 msec before you start again.
+		//wait at least 10 msec before you start again.
 		if (wait<1000) wait=10;
 		g_blaster.runBlaster (filename,NULL,
 					      maxNumThreads,wait,
@@ -1920,7 +1920,7 @@ int main2 ( int argc , char *argv[] ) {
 		if (argv[i+2])  maxNumThreads=atoi(argv[i+2]);
 		int32_t wait;
 		if (argv[i+3]) wait=atoi(argv[i+3]);
-		//wait atleast 1 sec before you start again.
+		//wait at least 1 sec before you start again.
 		if (wait<1000) wait=1000;
 		g_blaster.runBlaster(file1,file2,
 				     maxNumThreads,wait,false,
@@ -2698,7 +2698,7 @@ int main2 ( int argc , char *argv[] ) {
 		log("db: Loop init failed." ); return 1; }
 
 
-	// test the inifinite keep alive bug fix. is recovery futile bug.
+	// test the infinite keep alive bug fix. is recovery futile bug.
 	//char *xx=NULL;*xx=0; 
 
 	// the new way to save all rdbs and conf
@@ -3493,7 +3493,7 @@ int main2 ( int argc , char *argv[] ) {
 	//if ( ! g_placedb.init()     ) {
 	//	log("db: Placedb init failed."   ); return 1; }
 	// now clean the trees since all rdbs have loaded their rdb trees
-	// from disk, we need to remove bogus collection data from teh trees
+	// from disk, we need to remove bogus collection data from the trees
 	// like if a collection was delete but tree never saved right it'll
 	// still have the collection's data in it
 	if ( ! g_collectiondb.addRdbBaseToAllRdbsForEachCollRec ( ) ) {
@@ -3918,7 +3918,7 @@ int main2 ( int argc , char *argv[] ) {
 	// debug msgs
 	//log("REMINDER: make HOT again!");
 	//log("REMINDER: reinsert thread call failed warning in BigFile.cpp.");
-	//log("REMINDER: remove mem leack checking");
+	//log("REMINDER: remove mem leak checking");
 	//log("REMINDER: put thread back in Msg39");
 
 	// . now check with gigablast.com (216.243.113.1) to see if we 
@@ -4873,7 +4873,7 @@ int install ( install_flag_konst_t installFlag , int32_t hostId , char *dir ,
 		if ( (i+1) % maxOut ) amp = "&";
 			
 
-		// if host ip is like the 10th occurence then do
+		// if host ip is like the 10th occurrence then do
 		// not do ampersand. this is for hosts on the same IP.
 		//int32_t score = iptab.getScore32(&h2->m_ip);
 		//if ( (score % maxOutPerIp) ) amp = "&";
@@ -5938,7 +5938,7 @@ bool registerMsgHandlers1(){
 
 	if ( ! Msg22::registerHandler() ) return false;
 	//Msg2e msg2e;    if ( ! msg2e.registerHandler () ) return false;
-	// msg hanlder for pageturk
+	// msg handler for pageturk
 	//Msg60 msg60;    if ( ! msg60.registerHandler () ) return false;
 	return true;
 }
@@ -7369,7 +7369,7 @@ int32_t dumpSpiderdb ( char *coll,
 		if ( ! ipDomCntTable.addKey ( useip, ipCnt+1) ) return -1;
 		// advance to next empty spot
 		bufOff += 4 + domLen + 1;
-		// count unque domains
+		// count unique domains
 		uniqDoms++;
 	}
 
@@ -9567,7 +9567,7 @@ void removeDocIds  ( char *coll , char *filename ) {
 	startKey.setMin();
 	endKey.setMax();
 
-	// compatability with checksumdb's variable size keys
+	// compatibility with checksumdb's variable size keys
 	/*
 	int32_t cKeySize = g_conf.m_checksumdbKeySize;
 	char startKey2[16];
@@ -15562,7 +15562,7 @@ void doInjectWarc ( int64_t fsize ) {
 	// get WARC-Type:
 	// revisit  (if url was already done before)
 	// request (making a GET or DNS request)
-	// response (reponse to a GET or dns request)
+	// response (response to a GET or dns request)
 	// warcinfo (crawling parameters, robots: obey, etc)
 	// metadata (fetchTimeMs: 263, hopsFromSeed:P,outlink:)
 	char *warcType = strstr(warcHeader,"WARC-Type:");

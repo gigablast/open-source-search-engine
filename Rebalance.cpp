@@ -57,7 +57,7 @@ char *Rebalance::getNeedsRebalance ( ) {
 	// wait for all hosts to agree
 	if ( ! g_pingServer.m_hostsConfInAgreement ) return NULL;
 
-	// for simplicty,  only gb shards on stripe 0 should run this i guess
+	// for simplicity,  only gb shards on stripe 0 should run this i guess
 	if ( g_hostdb.m_myHost->m_stripe != 0 ) {
 		m_needsRebalanceValid = true;
 		m_needsRebalance = false;
@@ -528,7 +528,7 @@ bool Rebalance::gotList ( ) {
 		// more significant compressed out bytes from m_list.m_*
 		// member vars
 		//m_list.getKey  ( last , m_nextKey );
-		// if it is not maxxed out, then incremenet it for the
+		// if it is not maxxed out, then increment it for the
 		// next scan round
 		if ( KEYCMP ( m_nextKey , KEYMAX() , ks ) != 0 )
 			KEYADD ( m_nextKey , 1 , ks );

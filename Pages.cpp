@@ -568,7 +568,7 @@ void doneBroadcastingParms ( void *state ) {
 	r.set ( sock->m_readBuf , sock->m_readOffset , sock ) ;
 	// we stored the page # below
 	WebPage *pg = &s_pages[sock->m_pageNum];
-	// call the page specifc function which will send data back on socket
+	// call the page specific function which will send data back on socket
 	pg->m_function ( sock , &r );
 }
 
@@ -715,7 +715,7 @@ bool Pages::sendDynamicReply ( TcpSocket *s , HttpRequest *r , int32_t page ) {
 
 	// . does client have permission for this page? they are coming from
 	//   an internal ip and they provided the correct password for their
-	//   username (or the page is publically accessible)
+	//   username (or the page is publicly accessible)
 	// . BUT allow anyone to see it regardless if page is public! because
 	//   often times my cookie says username=mwells but i am not logged
 	//   in and i don't want to type my password to see the root page,
@@ -852,7 +852,7 @@ bool Pages::sendDynamicReply ( TcpSocket *s , HttpRequest *r , int32_t page ) {
 		struct tm *timeStruct = localtime ( &tt );
 		char buf[100];
 		strftime ( buf , 100 , "%b %d %T", timeStruct);
-		// what url refered user to this one?
+		// what url referred user to this one?
 		char *ref = r->getReferer();
 		// skip over http:// in the referer
 		if ( strncasecmp ( ref , "http://" , 7 ) == 0 ) ref += 7;
@@ -958,7 +958,7 @@ bool Pages::sendDynamicReply ( TcpSocket *s , HttpRequest *r , int32_t page ) {
 		struct tm *timeStruct = localtime ( &tt );
 		char buf[64];
 		strftime ( buf , 100 , "%b %d %T", timeStruct);
-		// what url refered user to this one?
+		// what url referred user to this one?
 		char *ref = r->getReferer();
 		// skip over http:// in the referer
 		if ( strncasecmp ( ref , "http://" , 7 ) == 0 ) ref += 7;

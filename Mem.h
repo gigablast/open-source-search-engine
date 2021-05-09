@@ -110,7 +110,7 @@ class Mem {
 	// this one does not include new/delete mem, only *alloc()/free() mem
 	int64_t getUsedMem () { return m_used; };
 	int64_t getAvailMem() ;
-	// the max mem ever alloced
+	// the max mem ever allocated
 	int64_t getMaxAlloced() { return m_maxAlloced; };
 	int64_t getMaxAlloc  () { return m_maxAlloc; };
 	const char *getMaxAllocBy() { return m_maxAllocBy; };

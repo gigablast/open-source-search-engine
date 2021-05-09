@@ -73,7 +73,7 @@ void IndexTable::reset() {
 // . unfortunately, it may not always work too well
 // . the max score any doc can have (w/o date) is about 16,000
 // . so when we weight the date by DATE_WEIGHT and add to the doc's score
-//   just a 1 second difference will supercede any difference in term scores
+//   just a 1 second difference will supersede any difference in term scores
 #define DATE_WEIGHT  (2 * MAX_QUERY_TERMS * MAX_SCORE_WEIGHT)
 
 // . returns false on error and sets g_errno
@@ -348,7 +348,7 @@ void IndexTable::hashTopDocIds2 ( uint32_t  *maxDocId     ,
 		// 'https://www.highschoolalumni.com/'. we filled up our hash
 		// table exactly so we got m_numSlots winners, and before this
 		// was "maxi < bigmax" which stopped int16_t of what we needed.
-		// maxi should techincally allowed to equal m_numTopDocIds2
+		// maxi should technically allowed to equal m_numTopDocIds2
 		while ( maxi <= bigmax && m_topScores2[maxi-1] != 0 ) maxi++;
 		if ( m_topScores2[maxi-1] != 0 ) { 
 			log(LOG_LOGIC,"query: bad top scores2.");
@@ -367,7 +367,7 @@ void IndexTable::hashTopDocIds2 ( uint32_t  *maxDocId     ,
 	int32_t nn;
 	// we use a score of 0 to denote docid blocks
 	for ( int32_t i = m_nexti ; i < maxi ; i++ ) {
-		// . if score is zero thats a tag block
+		// . if score is zero that's a tag block
 		// . all the docids before this should be < this max
 		if ( m_topScores2[i] == 0 ) continue;
 		// hash the top 32 bits of this docid
@@ -905,7 +905,7 @@ void IndexTable::addLists2_r ( IndexList  lists[MAX_TIERS][MAX_QUERY_TERMS] ,
 	// count # of docs that EXPLICITLY have all query singleton terms
 	int32_t explicitCount = 0;
 
-	// count # of docs that IMPLICITY have all query singleton terms
+	// count # of docs that IMPLICITLY have all query singleton terms
 	int32_t implicitCount = 0;
 
 	// highest bscore we can have
@@ -1307,7 +1307,7 @@ void IndexTable::addLists2_r ( IndexList  lists[MAX_TIERS][MAX_QUERY_TERMS] ,
 	// . this is just the top 4 bytes of docids allowed to hash...
 	// . since hash table is so small we can only hash docids below
 	//   "maxDocId"
-	// . therefore, we have to do serveral iterations
+	// . therefore, we have to do several iterations
 	// . i found a slight increase in speed chaning to 8/20 instead of 
 	//   1/2 on the 'the .. sex' test now commented out in Msg39.cpp
 	// . if rat (require all terms) is true we only have two lists and
@@ -1644,7 +1644,7 @@ void IndexTable::addLists2_r ( IndexList  lists[MAX_TIERS][MAX_QUERY_TERMS] ,
 	//log(LOG_LOGIC,"query: last=%"UINT32" downstep=%"UINT32" max=%"UINT32"",
 	//    lastMaxDocId,downStep,maxDocId);
 	// debug msg
-	//log("panicing");
+	//log("panicking");
 	// count
 	m_numPanics++;
 	// . if it is zero we're fucked! how can this happen really?
@@ -1869,7 +1869,7 @@ void IndexTable::addLists2_r ( IndexList  lists[MAX_TIERS][MAX_QUERY_TERMS] ,
 		// . TODO: make bit vector a int64_t so we can have 64
 		//         query terms. then AND this with the hardRequired
 		//         bit vector to make sure we got it all. Or better
-		//         yet, have a hardCount that gets inc'd everytime
+		//         yet, have a hardCount that gets inc'd every time
 		//         a docid matches a hard required term.
 		if ( ! (bscore & 0x80) ) {
 			// clear the slot
@@ -2754,7 +2754,7 @@ skip:
 	// . adjust it down so it's no longer bigger in case we had dup docids
 	m_finalNumExactExplicitMatches=m_numExactExplicitMatches[m_numTiers-1];
 
-	// store implict matches too so we can put the gray bar separating
+	// store implicit matches too so we can put the gray bar separating
 	// results that have all terms from those that don't
 	m_finalNumExactImplicitMatches=m_numExactImplicitMatches[m_numTiers-1];
 }

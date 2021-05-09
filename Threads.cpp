@@ -260,7 +260,7 @@ bool Threads::init ( ) {
 	// g_conf.m_smaReadSize = 100000;
 
 	// . register a sleep wrapper to launch threads every 30ms
-	// . somtimes a bunch of threads mark themselves as done and the
+	// . sometimes a bunch of threads mark themselves as done and the
 	//   cleanUp() handler sees them as all still launched so it doesn't
 	//   launch any new ones
 
@@ -2887,7 +2887,7 @@ bool ThreadQueue::launchThreadForReals ( ThreadEntry **headPtr ,
 	    "Please fix it.");
 	// return false so caller will re-do without thread!
 	// so BigFile::readwrite() will retry without thread and we won't
-	// get into a wierd loop thingy
+	// get into a weird loop thingy
 	if ( te ) return false;
 
 // 	uint64_t profilerStart,profilerEnd;
@@ -3035,7 +3035,7 @@ int startUp ( void *state ) {
 	}
 
 	// . now mark thread as ready for removal
-	// . do this BEFORE queing the signal since we're still a thread!!!
+	// . do this BEFORE queueing the signal since we're still a thread!!!
 	// . cleanUp() will take care of the rest
 	// . cleanUp() will call pthread_join on us!
 	t->m_isDone = true;

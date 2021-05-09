@@ -277,7 +277,7 @@ static int64_t s_vfd = 0;
 // 	return open ( flags , pc , maxFileSize , permissions , false );
 // }
 
-// . overide File::open so we can set m_numParts
+// . override File::open so we can set m_numParts
 // . set maxFileSize when opening a new file for writing and using 
 //   DiskPageCache
 // . use maxFileSize of -1 for us to use getFileSize() to set it
@@ -1133,7 +1133,7 @@ void *readwriteWrapper_r ( void *state , ThreadEntry *t ) {
 	// clear thread's errno
 	errno = 0;
 	// . make it so we go away immediately upon receiving a cancellation 
-	//   signal rather than queing the signal until we call 
+	//   signal rather than queueing the signal until we call 
 	//   pthread_testcancel()
 	// . this allows us to immediately hault disk reads/writes that are
 	//   lower priority than i/o's we're about to do
@@ -1497,7 +1497,7 @@ static void  doneUnlinkWrapper ( void *state , ThreadEntry *t ) ;
 
 // . returns false if blocked, true otherwise
 // . sets g_errno on error
-// . ser "part" to -1 to remove or unlink all part files
+// . set "part" to -1 to remove or unlink all part files
 // . "newBaseFilenameDir" if NULL, defaults to m_dir, the current dir
 //   in which this file already exists
 bool BigFile::unlinkRename ( // non-NULL for renames, NULL for unlinks
