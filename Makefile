@@ -177,7 +177,7 @@ utils: addtest blaster2 dump hashtest makeclusterdb makespiderdb membustest moni
 vclean:
 	rm -f Version.o
 
-gb: vclean $(OBJS) main.o $(LIBFILES)
+gb: vclean $(OBJS) main.o $(LIBFILES) gb.pem
 	$(CC) $(DEFS) $(CPPFLAGS) -o $@ main.o $(OBJS) $(LIBS)
 
 static: vclean $(OBJS) main.o $(LIBFILES)
