@@ -92,10 +92,13 @@ OS_DEB := true
 STATIC :=
 # MDW: i get some parsing inconsistencies when running the first qa injection
 # test if this is -O3. strange.
-# now debian jesse doesn't like -O3, it will core right away when spidering
+# Debian Jessie doesn't like -O3, it will core right away when spidering
 # so change this to -O2 from -O3 as well.
 XMLDOCOPT := -O2
 endif
+
+# Onlyjob: -O3 is _very_ unstable and causes segfaults all over (e.g. #172).
+CC_OPT_ARG ?= -O2
 
 
 ifeq ("titan","$(HOST)")
@@ -273,7 +276,7 @@ threadtest: threadtest.o
 memtest: memtest.o
 	$(CC) $(DEFS) $(CPPFLAGS) -o $@ $@.o 
 hashtest: hashtest.cpp
-	$(CC) -O3 -o hashtest hashtest.cpp
+	$(CC) $(CC_OPT_ARG) -o hashtest hashtest.cpp
 hashtest0: hashtest
 	scp hashtest gb0:/a/
 membustest: membustest.cpp
@@ -288,7 +291,7 @@ addtest0: $(OBJS) addtest
 seektest: seektest.cpp
 	$(CC) -o seektest seektest.cpp -lpthread
 treetest: $(OBJ) treetest.o
-	$(CC) $(DEFS) -O2 $(CPPFLAGS) -o $@ $@.o $(OBJS) $(LIBS)
+	$(CC) $(DEFS) $(CC_OPT_ARG) $(CPPFLAGS) -o $@ $@.o $(OBJS) $(LIBS)
 treetest0: treetest
 	bzip2 -fk treetest
 	scp treetest.bz2 gb0:/a/
@@ -339,175 +342,175 @@ clean:
 #.PHONY: GBVersion.cpp
 
 convert.o:
-	$(CC) $(DEFS) $(CPPFLAGS) -O2 -c $*.cpp 
+	$(CC) $(DEFS) $(CPPFLAGS) $(CC_OPT_ARG) -c $*.cpp 
 
 StopWords.o:
-	$(CC) $(DEFS) $(CPPFLAGS) -O2 -c $*.cpp 
+	$(CC) $(DEFS) $(CPPFLAGS) $(CC_OPT_ARG) -c $*.cpp 
 
 Places.o:
-	$(CC) $(DEFS) $(CPPFLAGS) -O2 -c $*.cpp 
+	$(CC) $(DEFS) $(CPPFLAGS) $(CC_OPT_ARG) -c $*.cpp 
 
 Loop.o:
-	$(CC) $(DEFS) $(CPPFLAGS) -O2 -c $*.cpp 
+	$(CC) $(DEFS) $(CPPFLAGS) $(CC_OPT_ARG) -c $*.cpp 
 
 hash.o:
-	$(CC) $(DEFS) $(CPPFLAGS) -O2 -c $*.cpp 
+	$(CC) $(DEFS) $(CPPFLAGS) $(CC_OPT_ARG) -c $*.cpp 
 
 fctypes.o:
-	$(CC) $(DEFS) $(CPPFLAGS) -O2 -c $*.cpp 
+	$(CC) $(DEFS) $(CPPFLAGS) $(CC_OPT_ARG) -c $*.cpp 
 
 IndexList.o:
-	$(CC) $(DEFS) $(CPPFLAGS) -O2 -c $*.cpp 
+	$(CC) $(DEFS) $(CPPFLAGS) $(CC_OPT_ARG) -c $*.cpp 
 
 Matches.o:
-	$(CC) $(DEFS) $(CPPFLAGS) -O2 -c $*.cpp 
+	$(CC) $(DEFS) $(CPPFLAGS) $(CC_OPT_ARG) -c $*.cpp 
 
 Highlight.o:
-	$(CC) $(DEFS) $(CPPFLAGS) -O2 -c $*.cpp 
+	$(CC) $(DEFS) $(CPPFLAGS) $(CC_OPT_ARG) -c $*.cpp 
 
 matches2.o:
-	$(CC) $(DEFS) $(CPPFLAGS) -O2 -c $*.cpp 
+	$(CC) $(DEFS) $(CPPFLAGS) $(CC_OPT_ARG) -c $*.cpp 
 
 linkspam.o:
-	$(CC) $(DEFS) $(CPPFLAGS) -O2 -c $*.cpp 
+	$(CC) $(DEFS) $(CPPFLAGS) $(CC_OPT_ARG) -c $*.cpp 
 
 Matchers.o:
-	$(CC) $(DEFS) $(CPPFLAGS) -O2 -c $*.cpp 
+	$(CC) $(DEFS) $(CPPFLAGS) $(CC_OPT_ARG) -c $*.cpp 
 
 HtmlParser.o:
-	$(CC) $(DEFS) $(CPPFLAGS) -O2 -c $*.cpp 
+	$(CC) $(DEFS) $(CPPFLAGS) $(CC_OPT_ARG) -c $*.cpp 
 
 
 # Url::set() seems to take too much time
 Url.o:
-	$(CC) $(DEFS) $(CPPFLAGS) -O2 -c $*.cpp 
+	$(CC) $(DEFS) $(CPPFLAGS) $(CC_OPT_ARG) -c $*.cpp 
 
 # Sitedb has that slow matching code
 Sitedb.o:
-	$(CC) $(DEFS) $(CPPFLAGS) -O2 -c $*.cpp 
+	$(CC) $(DEFS) $(CPPFLAGS) $(CC_OPT_ARG) -c $*.cpp 
 
 Catdb.o:
-	$(CC) $(DEFS) $(CPPFLAGS) -O2 -c $*.cpp 
+	$(CC) $(DEFS) $(CPPFLAGS) $(CC_OPT_ARG) -c $*.cpp 
 
 # when making a new file, add the recs to the map fast
 RdbMap.o:
-	$(CC) $(DEFS) $(CPPFLAGS) -O2 -c $*.cpp 
+	$(CC) $(DEFS) $(CPPFLAGS) $(CC_OPT_ARG) -c $*.cpp 
 
-# this was getting corruption, was it cuz we used -O2 compiler option?
+# this was getting corruption, was it cuz we used $(CC_OPT_ARG) compiler option?
 # RdbTree.o:
-# 	$(CC) $(DEFS) $(CPPFLAGS) -O3 -c $*.cpp 
+# 	$(CC) $(DEFS) $(CPPFLAGS) $(CC_OPT_ARG) -c $*.cpp 
 
 RdbBuckets.o:
-	$(CC) $(DEFS) $(CPPFLAGS) -O3 -c $*.cpp 
+	$(CC) $(DEFS) $(CPPFLAGS) $(CC_OPT_ARG) -c $*.cpp 
 
 Linkdb.o:
-	$(CC) $(DEFS) $(CPPFLAGS) -O3 -c $*.cpp 
+	$(CC) $(DEFS) $(CPPFLAGS) $(CC_OPT_ARG) -c $*.cpp 
 
 XmlDoc.o:
 	$(CC) $(DEFS) $(CPPFLAGS) $(XMLDOCOPT) -c $*.cpp 
 
 # final gigabit generation in here:
 Msg40.o:
-	$(CC) $(DEFS) $(CPPFLAGS) -O2 -c $*.cpp 
+	$(CC) $(DEFS) $(CPPFLAGS) $(CC_OPT_ARG) -c $*.cpp 
 
 seo.o:
-	$(CC) $(DEFS) $(CPPFLAGS) -O3 -c $*.cpp 
+	$(CC) $(DEFS) $(CPPFLAGS) $(CC_OPT_ARG) -c $*.cpp 
 
 TopTree.o:
-	$(CC) $(DEFS) $(CPPFLAGS) -O3 -c $*.cpp 
+	$(CC) $(DEFS) $(CPPFLAGS) $(CC_OPT_ARG) -c $*.cpp 
 
 UdpServer.o:
-	$(CC) $(DEFS) $(CPPFLAGS) -O2 -c $*.cpp 
+	$(CC) $(DEFS) $(CPPFLAGS) $(CC_OPT_ARG) -c $*.cpp 
 
 RdbList.o:
-	$(CC) $(DEFS) $(CPPFLAGS) -O2 -c $*.cpp 
+	$(CC) $(DEFS) $(CPPFLAGS) $(CC_OPT_ARG) -c $*.cpp 
 
 Rdb.o:
-	$(CC) $(DEFS) $(CPPFLAGS) -O2 -c $*.cpp 
+	$(CC) $(DEFS) $(CPPFLAGS) $(CC_OPT_ARG) -c $*.cpp 
 
 # take this out. seems to not trigger merges when percent of
 # negative titlerecs is over 40.
 RdbBase.o:
-	$(CC) $(DEFS) $(CPPFLAGS) -O2 -c $*.cpp 
+	$(CC) $(DEFS) $(CPPFLAGS) $(CC_OPT_ARG) -c $*.cpp 
 
-# RdbCache.cpp gets "corrupted" with -O2... like RdbTree.cpp
+# RdbCache.cpp gets "corrupted" with $(CC_OPT_ARG)... like RdbTree.cpp
 #RdbCache.o:
-#	$(CC) $(DEFS) $(CPPFLAGS) -O2 -c $*.cpp 
+#	$(CC) $(DEFS) $(CPPFLAGS) $(CC_OPT_ARG) -c $*.cpp 
 
 # fast dictionary generation and spelling recommendations
 #Speller.o:
-#	$(CC) $(DEFS) $(CPPFLAGS) -O2 -c $*.cpp 
+#	$(CC) $(DEFS) $(CPPFLAGS) $(CC_OPT_ARG) -c $*.cpp 
 
 # O2 seems slightly faster than O2 on this for some reason
 # O2 is almost twice as fast as no O
 IndexTable.o:
-	$(CC) $(DEFS) $(CPPFLAGS) -O2 -c $*.cpp 
+	$(CC) $(DEFS) $(CPPFLAGS) $(CC_OPT_ARG) -c $*.cpp 
 
 IndexTable2.o:
-	$(CC) $(DEFS) $(CPPFLAGS) -O2 -c $*.cpp 
+	$(CC) $(DEFS) $(CPPFLAGS) $(CC_OPT_ARG) -c $*.cpp 
 
 Posdb.o:
-	$(CC) $(DEFS) $(CPPFLAGS) -O2 -c $*.cpp 
+	$(CC) $(DEFS) $(CPPFLAGS) $(CC_OPT_ARG) -c $*.cpp 
 
 # Query::setBitScores() needs this optimization
 #Query.o:
-#	$(CC) $(DEFS) $(CPPFLAGS) -O2 -c $*.cpp 
+#	$(CC) $(DEFS) $(CPPFLAGS) $(CC_OPT_ARG) -c $*.cpp 
 
 # Msg3's should calculate the page ranges fast
 #Msg3.o:
-#	$(CC) $(DEFS) $(CPPFLAGS) -O2 -c $*.cpp 
+#	$(CC) $(DEFS) $(CPPFLAGS) $(CC_OPT_ARG) -c $*.cpp 
 
 # fast parsing
 Xml.o:
-	$(CC) $(DEFS) $(CPPFLAGS) -O2 -c $*.cpp 
+	$(CC) $(DEFS) $(CPPFLAGS) $(CC_OPT_ARG) -c $*.cpp 
 XmlNode.o:
-	$(CC) $(DEFS) $(CPPFLAGS) -O2 -c $*.cpp 
+	$(CC) $(DEFS) $(CPPFLAGS) $(CC_OPT_ARG) -c $*.cpp 
 Words.o:
-	$(CC) $(DEFS) $(CPPFLAGS) -O2 -c $*.cpp 
+	$(CC) $(DEFS) $(CPPFLAGS) $(CC_OPT_ARG) -c $*.cpp 
 Unicode.o:
-	$(CC) $(DEFS) $(CPPFLAGS) -O2 -c $*.cpp 
+	$(CC) $(DEFS) $(CPPFLAGS) $(CC_OPT_ARG) -c $*.cpp 
 UCWordIterator.o:
-	$(CC) $(DEFS) $(CPPFLAGS) -O2 -c $*.cpp 
+	$(CC) $(DEFS) $(CPPFLAGS) $(CC_OPT_ARG) -c $*.cpp 
 UCPropTable.o:
-	$(CC) $(DEFS) $(CPPFLAGS) -O2 -c $*.cpp 
+	$(CC) $(DEFS) $(CPPFLAGS) $(CC_OPT_ARG) -c $*.cpp 
 UnicodeProperties.o:
-	$(CC) $(DEFS) $(CPPFLAGS) -O2 -c $*.cpp 
+	$(CC) $(DEFS) $(CPPFLAGS) $(CC_OPT_ARG) -c $*.cpp 
 UCNormalizer.o:
-	$(CC) $(DEFS) $(CPPFLAGS) -O2 -c $*.cpp 
+	$(CC) $(DEFS) $(CPPFLAGS) $(CC_OPT_ARG) -c $*.cpp 
 Pos.o:
-	$(CC) $(DEFS) $(CPPFLAGS) -O2 -c $*.cpp 
+	$(CC) $(DEFS) $(CPPFLAGS) $(CC_OPT_ARG) -c $*.cpp 
 Pops.o:
-	$(CC) $(DEFS) $(CPPFLAGS) -O2 -c $*.cpp 
+	$(CC) $(DEFS) $(CPPFLAGS) $(CC_OPT_ARG) -c $*.cpp 
 Bits.o:
-	$(CC) $(DEFS) $(CPPFLAGS) -O2 -c $*.cpp 
+	$(CC) $(DEFS) $(CPPFLAGS) $(CC_OPT_ARG) -c $*.cpp 
 Scores.o:
-	$(CC) $(DEFS) $(CPPFLAGS) -O2 -c $*.cpp 
+	$(CC) $(DEFS) $(CPPFLAGS) $(CC_OPT_ARG) -c $*.cpp 
 Sections.o:
-	$(CC) $(DEFS) $(CPPFLAGS) -O2 -c $*.cpp 
+	$(CC) $(DEFS) $(CPPFLAGS) $(CC_OPT_ARG) -c $*.cpp 
 Weights.o:
-	$(CC) $(DEFS) $(CPPFLAGS) -O2 -c $*.cpp 
+	$(CC) $(DEFS) $(CPPFLAGS) $(CC_OPT_ARG) -c $*.cpp 
 neighborhood.o:
-	$(CC) $(DEFS) $(CPPFLAGS) -O2 -c $*.cpp 
+	$(CC) $(DEFS) $(CPPFLAGS) $(CC_OPT_ARG) -c $*.cpp 
 TermTable.o:
-	$(CC) $(DEFS) $(CPPFLAGS) -O2 -c $*.cpp 
+	$(CC) $(DEFS) $(CPPFLAGS) $(CC_OPT_ARG) -c $*.cpp 
 # why was this commented out?
 Summary.o:
-	$(CC) $(DEFS) $(CPPFLAGS) -O2 -c $*.cpp 
+	$(CC) $(DEFS) $(CPPFLAGS) $(CC_OPT_ARG) -c $*.cpp 
 Title.o:
-	$(CC) $(DEFS) $(CPPFLAGS) -O2 -c $*.cpp 
+	$(CC) $(DEFS) $(CPPFLAGS) $(CC_OPT_ARG) -c $*.cpp 
 
 # fast relate topics generation
 Msg24.o:
-	$(CC) $(DEFS) $(CPPFLAGS) -O2 -c $*.cpp 
+	$(CC) $(DEFS) $(CPPFLAGS) $(CC_OPT_ARG) -c $*.cpp 
 
 Msg1a.o:
-	$(CC) $(DEFS) $(CPPFLAGS) -O2 -c $*.cpp 
+	$(CC) $(DEFS) $(CPPFLAGS) $(CC_OPT_ARG) -c $*.cpp 
 
 Msg1b.o:
-	$(CC) $(DEFS) $(CPPFLAGS) -O2 -c $*.cpp 
+	$(CC) $(DEFS) $(CPPFLAGS) $(CC_OPT_ARG) -c $*.cpp 
 
 SafeBuf.o:
-	$(CC) $(DEFS) $(CPPFLAGS) -O3 -c $*.cpp 
+	$(CC) $(DEFS) $(CPPFLAGS) $(CC_OPT_ARG) -c $*.cpp 
 
 Msg1c.o:
 	$(CC) $(DEFS) $(CPPFLAGS)  -c $*.cpp 
@@ -516,58 +519,58 @@ Msg1d.o:
 	$(CC) $(DEFS) $(CPPFLAGS)  -c $*.cpp 
 
 AutoBan.o:
-	$(CC) $(DEFS) $(CPPFLAGS)  -O2 -c $*.cpp 
+	$(CC) $(DEFS) $(CPPFLAGS)  $(CC_OPT_ARG) -c $*.cpp 
 
 Profiler.o:
-	$(CC) $(DEFS) $(CPPFLAGS)  -O2 -c $*.cpp 
+	$(CC) $(DEFS) $(CPPFLAGS)  $(CC_OPT_ARG) -c $*.cpp 
 
 HtmlCarver.o:
-	$(CC) $(DEFS) $(CPPFLAGS)  -O2 -c $*.cpp 
+	$(CC) $(DEFS) $(CPPFLAGS)  $(CC_OPT_ARG) -c $*.cpp 
 
 HashTableT.o:
-	$(CC) $(DEFS) $(CPPFLAGS)  -O2 -c $*.cpp 
+	$(CC) $(DEFS) $(CPPFLAGS)  $(CC_OPT_ARG) -c $*.cpp 
 
 Timedb.o:
-	$(CC) $(DEFS) $(CPPFLAGS)  -O2 -c $*.cpp 
+	$(CC) $(DEFS) $(CPPFLAGS)  $(CC_OPT_ARG) -c $*.cpp 
 
 HashTableX.o:
-	$(CC) $(DEFS) $(CPPFLAGS)  -O2 -c $*.cpp 
+	$(CC) $(DEFS) $(CPPFLAGS)  $(CC_OPT_ARG) -c $*.cpp 
 
 # getUrlFilterNum2()
 Spider.o:
-	$(CC) $(DEFS) $(CPPFLAGS)  -O2 -c $*.cpp 
+	$(CC) $(DEFS) $(CPPFLAGS)  $(CC_OPT_ARG) -c $*.cpp 
 
 SpiderCache.o:
-	$(CC) $(DEFS) $(CPPFLAGS)  -O2 -c $*.cpp 
+	$(CC) $(DEFS) $(CPPFLAGS)  $(CC_OPT_ARG) -c $*.cpp 
 
 DateParse.o:
-	$(CC) $(DEFS) $(CPPFLAGS)  -O2 -c $*.cpp 
+	$(CC) $(DEFS) $(CPPFLAGS)  $(CC_OPT_ARG) -c $*.cpp 
 
 #DateParse2.o:
-#	$(CC) $(DEFS) $(CPPFLAGS)  -O2 -c $*.cpp 
+#	$(CC) $(DEFS) $(CPPFLAGS)  $(CC_OPT_ARG) -c $*.cpp 
 
 test_parser2.o:
-	$(CC) $(DEFS) $(CPPFLAGS) -O2 -c $*.cpp 
+	$(CC) $(DEFS) $(CPPFLAGS) $(CC_OPT_ARG) -c $*.cpp 
 
 Language.o:
-	$(CC) $(DEFS) $(CPPFLAGS) -O3 -c $*.cpp 
+	$(CC) $(DEFS) $(CPPFLAGS) $(CC_OPT_ARG) -c $*.cpp 
 
 WordsWindow.o:
-	$(CC) $(DEFS) $(CPPFLAGS)  -O2 -c $*.cpp 
+	$(CC) $(DEFS) $(CPPFLAGS)  $(CC_OPT_ARG) -c $*.cpp 
 
 AppendingWordsWindow.o:
-	$(CC) $(DEFS) $(CPPFLAGS)  -O2 -c $*.cpp 
+	$(CC) $(DEFS) $(CPPFLAGS)  $(CC_OPT_ARG) -c $*.cpp 
 
 PostQueryRerank.o:
-	$(CC) $(DEFS) $(CPPFLAGS)  -O2 -c $*.cpp 
+	$(CC) $(DEFS) $(CPPFLAGS)  $(CC_OPT_ARG) -c $*.cpp 
 
 sort.o:
-	$(CC) $(DEFS) $(CPPFLAGS) -O3 -c $*.cpp 
+	$(CC) $(DEFS) $(CPPFLAGS) $(CC_OPT_ARG) -c $*.cpp 
 
 # SiteBonus.o:
-# 	$(CC) $(DEFS) $(CPPFLAGS)  -O3 -c $*.cpp 
+# 	$(CC) $(DEFS) $(CPPFLAGS)  $(CC_OPT_ARG) -c $*.cpp 
 Msg6a.o:
-	$(CC) $(DEFS) $(CPPFLAGS)  -O3 -c $*.cpp 
+	$(CC) $(DEFS) $(CPPFLAGS)  $(CC_OPT_ARG) -c $*.cpp 
 
 # Stupid gcc-2.95 stabs debug can't handle such a big file.
 # add -m32 flag to this line if you need to make a 32-bit gb.
