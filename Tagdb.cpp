@@ -669,7 +669,7 @@ int32_t TagRec::getLong ( int32_t         tagType   ,
 		// trunc it
 		//if ( size > 4 ) size = 4;
 		// convert string to value, MUST be signed!!! the data
-		// should inclue a \0
+		// should include a \0
 		score = atol2(data,dataSize);
 		// if only a single byte.need to preserve negatives (twos comp)
 		//if      ( size == 1 ) score = (int32_t)tag->m_data[0];
@@ -2981,7 +2981,7 @@ void Msg8a::gotAllReplies ( ) {
 		QUICKPOLL(m_niceness);
 
 		// skip tag if it is not from the proper site. we are
-		// only guarenteed that all tags in this list are for the
+		// only guaranteed that all tags in this list are for the
 		// same HOSTNAME not SITE! site is in the lower bits
 		// of the tagdb key.
 		// should fix www.paypal.com:1234 bug where we were reading
@@ -3160,7 +3160,7 @@ void TagRec::gotAllReplies ( ) {
 		// from that. this is used to prevent www.geocities.com/~mark/
 		// from gaining the benefits of being on the www.geocities.com
 		// site. TODO later: we should make another tag to indicate
-		// a subsite is expicitly independent. but for now we rely
+		// a subsite is explicitly independent. but for now we rely
 		// on the "sitepathdepth" tag automatically computed by 
 		// SiteGetter.cpp.
 		//if ( siteGetter.isIndependentSubsite() ) continue;
@@ -3312,7 +3312,7 @@ bool Msg9a::addTags ( char    *sites                  ,
 		      bool     nukeTagRecs            ,
 		      int32_t    *ipVector               ) {
 
-	// incase we are being re-used!
+	// in case we are being re-used!
 	reset();
 
 	g_errno = 0;
@@ -3332,7 +3332,7 @@ bool Msg9a::addTags ( char    *sites                  ,
 	// use the first timestamp
 	int32_t timestamp = tagRec->getFirstTag()->m_timestamp;
 
-	// . up to 20 oustanding Msg0 getting the exact TagRec for each site
+	// . up to 20 outstanding Msg0 getting the exact TagRec for each site
 	// . when we get it we immediately modify it and then add it back
 	//   using Msg4.
 	// . to resolve collisions we could assign a particular hostid
@@ -3644,7 +3644,7 @@ bool Msg9a::launchAddRequests ( ) {
 	if ( m_p >= m_pend ) return (m_requests == m_replies);
 	// don't bother if already got an error
 	if ( m_errno ) return (m_requests == m_replies);
-	// limit max oustanding to 20
+	// limit max outstanding to 20
 	if (m_requests - m_replies >= 20 ) return (m_requests==m_replies);
 	// take a breath
 	QUICKPOLL(m_niceness);
@@ -3675,7 +3675,7 @@ bool Msg9a::launchAddRequests ( ) {
 
 	// get the next mcast
 	//Multicast *m = &m_casts[m_requests];
-	// reqeust size
+	// request size
 	int32_t  requestSize = *(int32_t *)m_p; m_p += 4;
 	char *request     =          m_p; m_p += requestSize;
 	

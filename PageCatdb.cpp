@@ -210,7 +210,7 @@ bool sendReply ( void *state ) {
 				"<td> Catdb Generation took %"INT64" ms."
 				"</td></tr>",
 				endTime - st->m_startTime );
-	// print Url Catgory Lookup
+	// print Url Category Lookup
 	sb.safePrintf ( "<tr class=poo><td>Lookup Category of Url.</td>"
 			"<td><input type=text name=caturl size=80"
 			" value=\"");

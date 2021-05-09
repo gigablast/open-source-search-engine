@@ -12,7 +12,7 @@ extern int g_errno;
 char *mstrerrno ( int errnum ) ;
 char *mstrerror ( int errnum ) ;
 
-// . this is OR'ed into the errno if the errno occured on a remote machine but
+// . this is OR'ed into the errno if the errno occurred on a remote machine but
 //   was passed back to use through a reply (see UdpSlot.cpp/UdpServer.cpp)
 // . this was removed because Multicast::gotReply1() was expecting the g_errno
 //   remote codes to be the same as local, like ENOTFOUND to be right!!
@@ -108,7 +108,7 @@ enum {
 	EURLHASNOIP      , //parser/url/Url2.cpp::hashIp()
 	EBADIP           , //parser/url/Url2.cpp::hashIp()
 	EMSGTOOBIG       , //msg is too big
-	EDNSBAD          , //dns sent us a wierd response code
+	EDNSBAD          , //dns sent us a weird response code
 	EDNSREFUSED      , //dns refused to talk to us
 	EDNSDEAD         , //dns is dead
 	EDNSTIMEDOUT     , //was just EUDPTIMEDOUT

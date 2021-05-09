@@ -78,7 +78,7 @@ A work-in-progress <a href=/compare.html>comparison to SOLR</a>.
 <!--<tr><td>7.</td><td><a href="#urldb">Urldb</a> - Tells us if a url is in spiderdb or where it is in titledb.</td></tr>-->
 <tr><td>8.</td><td><a href="#checksumdb">Checksumdb</a> - Each record is a hash of the document content. Used for deduping.</td></tr>
 <tr><td>9.</td><td><a href="#sitedb">Sitedb</a> - Used for mapping a url or site to a ruleset.</td></tr>
-<tr><td>10.</td><td><a href="#clusterdb">Clusterdb</a> - Used for doing site clustering and dupplicate search result removal.</td></tr>
+<tr><td>10.</td><td><a href="#clusterdb">Clusterdb</a> - Used for doing site clustering and duplicate search result removal.</td></tr>
 <tr><td>11.</td><td><a href="#catdb">Catdb</a> - Used to hold DMOZ.</td></tr>
 <tr><td>12.</td><td><a href="#robotdb">Robotdb</a> - Just a cache for robots.txt files.</td></tr>
 
@@ -258,7 +258,7 @@ Everyone uses the bash shell. The navigation keystrokes work in emacs, too. Here
 <tr><td>ls -latr</td><td>Show all files reverse sorted by time.</td></tr>
 <tr><td>ls -larS</td><td>Show all files reverse sorted by size.</td></tr>
 <tr><td>ln -s &lt;x&gt; &lt;y&gt;</td><td>Make directory or file y a symbolic link to x.</td></tr>
-<tr><td>cat xxx | awk -F":" '{print $1}'</td><td>Show contents of file xxx, but for each line, use : as a delimeter and print out the first token.</td></tr>
+<tr><td>cat xxx | awk -F":" '{print $1}'</td><td>Show contents of file xxx, but for each line, use : as a delimiter and print out the first token.</td></tr>
 <tr><td>dsh -c -f hosts 'cat /proc/scsi/scsi'</td><td>Show all hard drives on all machines listed in the file <i>hosts</i>. -c means to execute this command concurrently on all those machines. dsh must be installed with <i>apt-get install dsh</i> for this to work. You can use double quotes in a single quoted dsh command without problems, so you can grep for a phrase, for instance.</td></tr>
 <tr><td>apt-cache search xxx</td><td>Search for a package to install. xxx is a space separated list of keywords. Debian only.</td></tr>
 <tr><td>apt-cache show xxx</td><td>Show details of the package named xxx. Debian only.</td></tr>
@@ -364,7 +364,7 @@ Use <b>thunder 50000000</b> on the server with ip address a.b.c.d and <b>thunder
 <hr><h1>Kernels</h1>
 Gigablast runs well on the Linux 2.4.31 kernel which resides in /gb/kernels/2.4.31/. The .config file is in that directory and named <b>dotconfig</b>. It does have the marvel patch, mvsata340_2.4.patch.bz2 applied so Linux can see the Marvel chip that drives the 4 sata devices on our SuperMicro 5013CM-T 1U servers. In addition we comment out the 3 'offline' statements in drives/scsi/scsi_error.c in the kernel source, and raised the 3 TIMEOUT to 30. These changes allow the kernel to deal with the 'drive offlined' messages that the Hitachi drives SCSI interface give every now and then. We still set the 'ghost lun' think in the kernel source to 10, but I am not sure if this actually helps, though.
 <br><br>
-Older kernels had problems with unncessary swapping and also with crashing, most likely due to the e1000 driver, which drives the 5013CM-T's Gigabit ethernet functionality. All issues seem to be worked out at this point, so any kernel crash is likely due to a hardware failure, like bad memory, or disk.
+Older kernels had problems with unnecessary swapping and also with crashing, most likely due to the e1000 driver, which drives the 5013CM-T's Gigabit ethernet functionality. All issues seem to be worked out at this point, so any kernel crash is likely due to a hardware failure, like bad memory, or disk.
 <br><br>
 I would like to have larger block sizes on the ext2fs filesystem, because 4KB is just not good for fragmentation purposes. We use mostly huge files on our partitions, raid-0'ed across 4 400GB Sata drives, so it would help if we could use a block size of a few Megabytes even. I've contacted Theodore T'so, the guy he wrote e2fs, and he may do it for a decent chunk of cash.
 <br><br>
@@ -383,7 +383,7 @@ the beginning of each word, like MyClass.cpp. Global variables start with g_,
 static variables start with s_ and member variables start with m_. In order
 to save vertical space and make things more readable, left curly brackets ({'s)
 are always placed on the same line as the class, function or loop declaration.
-In pointer declations, the * sticks to the variable name, not the type as
+In pointer declarations, the * sticks to the variable name, not the type as
 in void *ptr.  All variables are to be named in camel case as in lowerCamelCase.
 Underscores in variable names are forbidden, with the exception of the g_, s_ and m_ prefixes, of course.  
 <br><br>
@@ -426,7 +426,7 @@ When making comments please do not insert the "//" at the very first character
 of the line in the first column of the screen.  It should be indented just
 like any other line.
 <br><br>
-Whenver possible, please mimice the currently used styles and conventions 
+Whenever possible, please mimice the currently used styles and conventions 
 and please avoid using third party libraries. Even the standard template 
 library has serious performance/scalability issues and should be avoided.
 <br><br>
@@ -595,7 +595,7 @@ key is 12 bytes and of type key_t, as defined in the types.h file.
 <tr><td>Msg1</td><td>DB</td><td>Adds all the records in an RdbList to various hosts in the network.</td></tr>
 <tr><td>Msg3</td><td>DB</td><td>Reads an RdbList from several consecutive files in a particular Rdb.</td></tr>
 <!--<tr><td>Msg34</td><td>DB</td><td>Determines least loaded host in a group (shard) of hosts.</td></tr>
-<tr><td>Msg35</td><td>DB</td><td>Merge token managament functions. Currently does not work.</td></tr>-->
+<tr><td>Msg35</td><td>DB</td><td>Merge token management functions. Currently does not work.</td></tr>-->
 <tr><td>Msg5</td><td>DB</td><td>Uses Msg3 to read RdbLists from multiple files and then merges those lists into a single RdbList. Does corruption detection and repiar. Intergrates list from RdbTree into the single RdbList.</td></tr>
 <tr><td>MsgB</td><td>DB</td><td>Unused. A distributed cache for caching anything.</td></tr>
 <tr><td>Rdb</td><td>DB</td><td>The core database class from which all are derived.</td></tr>
@@ -635,9 +635,9 @@ multiple physical files, each limited in size to 512MB. In this manner
 Gigablast overcomes the 2GB file limit imposed by some kernels or disk systems.
 Each physical file in a BigFile, after the first file, has a ".partX" 
 extension added to its filename, where X ranges from 1 to infinity. Throughout
-this document, "BigFile" is used interchangably with "file".
+this document, "BigFile" is used interchangeably with "file".
 <br><br>
-If the tree can not accomodate a record add, it will return an ETRYAGAIN error.
+If the tree can not accommodate a record add, it will return an ETRYAGAIN error.
 Typically, most Gigablast routines will wait one second before retrying the
 add.
 <br>
@@ -753,7 +753,7 @@ a message like:
 <a name="netreads"></a>
 <a name="msg0"></a>
 <h3>Getting a List of Records from Rdb in a Network</h3>
-<b>Msg0.cpp</b> is used to retrieve a list of Rdb records from an abritrary
+<b>Msg0.cpp</b> is used to retrieve a list of Rdb records from an arbitrary
 host. Indexdb is currently the only database where lists of records are
 needed. All the other databases pretty much just do single key lookups. Each
 database chooses how to partition its records based on the key across the
@@ -797,7 +797,7 @@ The 18-byte key for an Posdb record has the following bitmap:
 tttttttt tttttttt tttttttt tttttttt  t = termId (48bits)
 tttttttt tttttttt dddddddd dddddddd  d = docId (38 bits)
 dddddddd dddddddd dddddd0r rrrggggg  r = siterank, g = langid
-wwwwwwww wwwwwwww wwGGGGss ssvvvvFF  w = word postion , s = wordspamrank
+wwwwwwww wwwwwwww wwGGGGss ssvvvvFF  w = word position , s = wordspamrank
 pppppb1M MMMMLZZD                    v = diversityrank, p = densityrank
                                      M = unused, b = in outlink text
                                      L = langIdShiftBit (upper bit for langid)
@@ -919,7 +919,7 @@ content is used for deduping identical pages from the search results.
 <br><br>
 <b>IMPORTANT:</b> Any time you change TITLEREC_VERSION in Titledb.h or make 
 any parsing change to TitleRec.cpp, you must also change it in all parent bk 
-respositories to keep things backwards compatible. We need to ensure that
+repositories to keep things backwards compatible. We need to ensure that
 newer versions of gb can parse the Titledb records of older versions. Because
 if you increment TITLEREC_VERSION in the newer repository and then someone
 else increments it for a different reason in the parent repository, then you
@@ -996,11 +996,11 @@ dddddddd ddddddee eeeeefff fffffCHD  e = url hash ext, f = title file # (tfn)
 
 When a caller requests the cached web page for a docid they are essentially requesting the TitleRec for that docid. We have to read the TitleRec from a Titledb file. Because there can be hundreds of titledb files, checking
 each one is a burden. Therefore, we ask urldb which one has it. If the title
-file number (tfn) is 255, that means the url is just in the Spiderdb OR the TitleRec is in Titledb's RdbTree. The tfn is a secondary numeric identifier present in the actual filename of each titledb file. Only titledb files have this seconday id and it is the number immediately following the hyphen.
+file number (tfn) is 255, that means the url is just in the Spiderdb OR the TitleRec is in Titledb's RdbTree. The tfn is a secondary numeric identifier present in the actual filename of each titledb file. Only titledb files have this secondary id and it is the number immediately following the hyphen.
 <br><br>
 The purpose of urldb originally grew from the fact that looking up an old titlerec for re-spidering purposes would require looking in a few files. This was a big bottleneck for the spidering process and also made it harder to handle large query volumes while spidering in the background. Furthermore, much merging was required to keep the number of titledb big files down to a respectable few. Urldb solves this problem by mapping each docid directly to a single titledb file.
 <br><br>
-Urldb also greatly complicates things. It has to remain in perfect sync with titledb. Every time titledb files are merged the tfn of each TitleRec involved is changed. So right after we dump out the titledb list we add a urldb list to urldb that has the new tfns for the titledbs in that list. This is done in RdbDump::updateUrldbLoop(). Furthermore, since we often merge titledb files in a somewhat random nature, we can not just override the urldb rec for each TitleRec involved in that merge, because a more uptodate TitleRec for the same docid may be in another titledb file. Therefore, we must also read the corresponding urldb lists for the titledb lists involved in the merge, and lookup the uptodate tfn of each TitleRec. If it is indeed a match for the file being merged, then we can do the urldb override.
+Urldb also greatly complicates things. It has to remain in perfect sync with titledb. Every time titledb files are merged the tfn of each TitleRec involved is changed. So right after we dump out the titledb list we add a urldb list to urldb that has the new tfns for the titledbs in that list. This is done in RdbDump::updateUrldbLoop(). Furthermore, since we often merge titledb files in a somewhat random nature, we can not just override the urldb rec for each TitleRec involved in that merge, because a more up-to-date TitleRec for the same docid may be in another titledb file. Therefore, we must also read the corresponding urldb lists for the titledb lists involved in the merge, and lookup the up-to-date tfn of each TitleRec. If it is indeed a match for the file being merged, then we can do the urldb override.
 <br><br>
 When a new url is added to the spider queue, via Msg10, we first check urldb to see if it's already in there. We extend the probable docid of the url with the 7-bit hash extension (the number of bits is now #defined as URLDB_EXTBITS in Urldb.h so we can use 23 bits for massive collections) to help reduce collisions and/or false positives. We lookup a range of urldb records, corresponding to all the possible actual docids that that url might have taken if it was indexed earlier. This list is looked up in Msg10::addUrlLoop(). The keys defining the list are uk1 and uk2. If any urldb record in that list has the same hash extension as the url being added then we consider the url to already be in the index or in a spider queue, even though it may not. The probability is low.
 <br><br>
@@ -1012,7 +1012,7 @@ When merging urldb lists in RdbList::indexMerge_r() we ignore the tfn bits. That
 <br><br>
 We try to keep all of the Urldb records in memory. Not necessarily in the RdbTree, but in a disk page cache. Therefore, try to keep urldbMaxDiskPageCacheMem bigenough to hold the entire Urldb in memory. This speeds up things a good bit. Urldb also takes heavy advantage of using half keys for compression, as described above under Indexdb. Urldb's disk page cache is also biased, that is, lower docids are looked up on one host, and higher docids are looked up on that host's twin. This split, or biases, the cache making it twice as effective. If more than two hosts are in a group (shard), then it will split the cache across all of them equally. This logic is in Msg22.cpp. (search for "bias" in that file).
 <br><br>
-Everytime Titledb files are merged, the affected docids must be updated in 
+Every time Titledb files are merged, the affected docids must be updated in 
 Urldb, but because Urldb is so much smaller than Titledb, it does not inhibit
 performance.
 <br><br>
@@ -1162,7 +1162,7 @@ The network code consists of 5 parts:
 <tr><td>HttpServer</td><td>Net</td><td>Gigablast's highly efficient web server, contains a TcpServer class.</td></tr>
 <tr><td>Multicast</td><td>Net</td><td>Used to reroute a request if it fails to be answered in time. Also used to send a request to multiple hosts in the cluster, usually to a group (shard) for data storage purposes.</td></tr>
 <tr><td>TcpServer</td><td>Net</td><td>A TCP server which contains an array of TcpSockets.</td></tr>
-<tr><td>TcpSockets</td><td>Net</td><td>A C++ wrapper for a TCP socket.</td></tr><tr><td>UdpServer</td><td>Net</td><td>A reliable UDP server that uses non-blocking sockets and calls handlers  recieving a message. The handle called depends on that message's type. The handler is UdpServer::m_handlers[msgType].</td></tr>
+<tr><td>TcpSockets</td><td>Net</td><td>A C++ wrapper for a TCP socket.</td></tr><tr><td>UdpServer</td><td>Net</td><td>A reliable UDP server that uses non-blocking sockets and calls handlers  receiving a message. The handle called depends on that message's type. The handler is UdpServer::m_handlers[msgType].</td></tr>
 <tr><td>UdpSlot</td><td>Net</td><td>Basically a "socket" for the UdpServer. The UdpServer contains an array of a few thousand of these. When none are available to conduct receive a request, the dgram is dropped and will later be resent by the requester in a back-off fashion.</td></tr>
 </table>
 <br><br>
@@ -1190,7 +1190,7 @@ When a UdpSlot is selected to receive a datagram, it then calls
 UdpSlot::sendAck() to send back an ACK datagram packet. When the sender
 receives the ACK it sets a bit in UdpSlot::m_readAckBits[] to indicate it has 
 done so. Likewise, UdpSlot::m_sendAckBits[] are updated on the machine 
-receving the message, and m_readBits[] and m_sendBits[] are used to keep track
+receiving the message, and m_readBits[] and m_sendBits[] are used to keep track
 of what non-ACK datagrams have been read or sent respectively.
 <br><br>
 Gigablast will send up to ACK_WINDOW_SIZE (defined in UdpSlot.cpp as 12) 
@@ -1315,7 +1315,7 @@ an array of DNS IPs, m_dnsIps[], and an array of DNS names, m_dnsNames[], which
 unfortunately do not have IPs included and most be looked up should we need 
 to ask them. Furthermore, at each depth we are limited to MAX_DNS_IPS IP
 addresses and MAX_DNS_IPS DNS names. So if we get referred to more than
-that many IP addesses we will truncate the list. This value is a hefty 32 right
+that many IP addresses we will truncate the list. This value is a hefty 32 right
 now, and that is per depth level. MAX_DEPTH is about 7. That is how many times
 we can be referred to other nameservers before giving up and returning
 ETIMEDOUT. We also avoid asking the same IP address twice by keeping a list
@@ -1409,7 +1409,7 @@ This table illustrates the path of control:
 <table cellpadding=3 border=1>
 <tr><td>AdultBit.cpp</td><td>Build</td><td>Used to detect if document content is naughty.</td></tr>
 <tr><td>Bits.cpp</td><td>Build</td><td>Sets descriptor bits for each word in a Words class.</td></tr>
-<tr><td>Categories.cpp</td><td>Build</td><td>Stores DMOZ categories in a hiearchy.</td></tr>
+<tr><td>Categories.cpp</td><td>Build</td><td>Stores DMOZ categories in a hierarchy.</td></tr>
 <!--<tr><td>DateParse</td><td>Build</td><td>Extracts the publish date from a document.</td></tr>-->
 <tr><td>Lang.cpp</td><td>Build</td><td>Unused.</td></tr>
 <tr><td>Language.cpp</td><td>Build</td><td>Enumerates the various languages supported by Gigablast's language detector.</td></tr>
@@ -1567,7 +1567,7 @@ the Master Controls web page. It keeps track of the average page size so
 that urls that are being fetched, if they haven't already been downloaded,
 are assumed to be downloading a page with that average page size. In this
 manner Gigablast does a very good job of obeying bandwidth limitations. These
-two contraints are also settable on a per collection basis as well.
+two constraints are also settable on a per collection basis as well.
 <br><br>
 SpiderCache juggles between various collections. When multiple collections
 are being spidered SpiderCache will use the SpiderCache::getRank() function
@@ -1748,7 +1748,7 @@ We perform a lookup of all other docids that share the same content hash as the 
 <br><br>
 We use the getContentHashExact64() function to generate the 64-bit dup checksum. It hashes the document pretty much verbatim for safety. It does treat sequences of white space as a single space character however.
 <br><br>
-Other hash functions exist that hash all the month names and day of week names and ALL DIGITS to a specific number in order to ignore the clocks one finds on web pages. Additionally tags can be ignored unless they are a frame or iframe tag. Pure text is hashed as lower case alnum. Punctuatuation and spaces can be skipped over. This algoritm is currently unused but is available in the getLooseContentHash() function.
+Other hash functions exist that hash all the month names and day of week names and ALL DIGITS to a specific number in order to ignore the clocks one finds on web pages. Additionally tags can be ignored unless they are a frame or iframe tag. Pure text is hashed as lower case alnum. Punctuatuation and spaces can be skipped over. This algorithm is currently unused but is available in the getLooseContentHash() function.
 <br><br>
 If we see a &lt;link href=<i>xxx</i> rel=canonical&gt; tag in the page and our url is different than <i>xxx</i>, then we do not index the url and use the <a href=#indexcode>ENOTCANONICAL</a> error, but we do insrt a spider request for the referenced canonical url so it can get picked up. The error when downloading such urlsshows up as "Url was dup of canonical page" in the logs. The canonical URL we insert should inherit the same SpiderRequest::m_isInjecting or SpiderRequest::m_isAddUrl bits of the "dup" url it came from, similar to how simplified meta redirects work.
 <br><br>
@@ -1996,23 +1996,23 @@ The query syntax is described on <a href="http://www.gigablast.com/help.html">gi
 
 <a name="raiding"></a>
 <h2>Raiding TermList Intersections</h2>
-An option for improving efficiency and parallelization is to "raid" term list disk reads and intersections.  There are multiple layers of "raiding" to distribute both disk reads and CPU use.  One level of disk raiding, called Indexdb Splitting, is implemented durring indexing.  Indexdb term lists are split between multiple hosts so that smaller parts of the full list may be read in parallel.  Another level of raiding splits the term list intersection between multiple "mercenary" hosts.  This can be done using Msg33 which replaces the functionality typically performed by Msg2 and some of that performed by Msg39.  An additional level of raiding may be performed by Msg33 to further split term list reads between twins.
+An option for improving efficiency and parallelization is to "raid" term list disk reads and intersections.  There are multiple layers of "raiding" to distribute both disk reads and CPU use.  One level of disk raiding, called Indexdb Splitting, is implemented during indexing.  Indexdb term lists are split between multiple hosts so that smaller parts of the full list may be read in parallel.  Another level of raiding splits the term list intersection between multiple "mercenary" hosts.  This can be done using Msg33 which replaces the functionality typically performed by Msg2 and some of that performed by Msg39.  An additional level of raiding may be performed by Msg33 to further split term list reads between twins.
 <br><br>
-Indexdb Splitting is enabled in the code by defining the SPLIT_INDEXDB #define.  The number splits to make is set with the INDEXDB_SPLIT #define.  For a single given term list, this will split which group (shard) the each term/docid entry is stored on based on the docid.  The seperate pieces of one term list will be retrieved and combined in one of two ways.  For general purpose access, a single Msg0 call may be made the same way it would normally be done without splitting.  Msg0 will then forward the request to all hosts storing a split piece of the desired list.  When each piece is collected, Msg0 will merge them together into one list.  Alternately, for queries, Msg33 may be used to take further advantage of the splitting (see below).
+Indexdb Splitting is enabled in the code by defining the SPLIT_INDEXDB #define.  The number splits to make is set with the INDEXDB_SPLIT #define.  For a single given term list, this will split which group (shard) the each term/docid entry is stored on based on the docid.  The separate pieces of one term list will be retrieved and combined in one of two ways.  For general purpose access, a single Msg0 call may be made the same way it would normally be done without splitting.  Msg0 will then forward the request to all hosts storing a split piece of the desired list.  When each piece is collected, Msg0 will merge them together into one list.  Alternately, for queries, Msg33 may be used to take further advantage of the splitting (see below).
 <br><br>
-The primary function of Msg33 is to split term lists apart so that the intersection can be done in parallel.  Msg33 actually consists of multiple stages.  In the initial stage, "stage 0", the host processing Msg39 will create a Msg33 and allow it to retrieve the docids required.  This Msg33 will choose a number of hosts to act as "mercenary" machines, hosts which will recieve a piece of each term list and intersect those pieces together.  The number of mercenaries is either set as a parm or forced to the number of Indexdb Splits when using Indexdb Splitting.  Each mercenary is essentially responsible for a set of docids.
+The primary function of Msg33 is to split term lists apart so that the intersection can be done in parallel.  Msg33 actually consists of multiple stages.  In the initial stage, "stage 0", the host processing Msg39 will create a Msg33 and allow it to retrieve the docids required.  This Msg33 will choose a number of hosts to act as "mercenary" machines, hosts which will receive a piece of each term list and intersect those pieces together.  The number of mercenaries is either set as a parm or forced to the number of Indexdb Splits when using Indexdb Splitting.  Each mercenary is essentially responsible for a set of docids.
 <br>
 When not using Indexdb Splitting, the stage0 Msg33 will then call another Msg33 to each term list host, one for every term, executing "stage 1".  When using Indexdb Splitting, a Msg33 will be sent to each host containing a split piece for every term list.
 <br>
-The stage1 Msg33 on each term list host will read its specific term list.  When not using Indexdb Splitting, that term list will then be broken apart and sent with another Msg33 call to every mercenary machine which will perform intersection, executing "stage 2".  When using Indexdb Splitting, the term lists are effectively already aplit up and the piece read by stage1 will be sent as a whole to the one mercenary machine responisble for that set of docids.
+The stage1 Msg33 on each term list host will read its specific term list.  When not using Indexdb Splitting, that term list will then be broken apart and sent with another Msg33 call to every mercenary machine which will perform intersection, executing "stage 2".  When using Indexdb Splitting, the term lists are effectively already aplit up and the piece read by stage1 will be sent as a whole to the one mercenary machine responsible for that set of docids.
 <br>
-The stage2 Msg33 on each mercenary machine will wait for all the requests from each stage1 host to be recieved, storing each in a global queue.  When all requests have been recieved, stage2 will intersect the term lists together, generating a partial set of final docids.  These final docids will then be sent with another Msg33 back to the original host (the one Msg39 is being processed on), executing "stage 3".
+The stage2 Msg33 on each mercenary machine will wait for all the requests from each stage1 host to be received, storing each in a global queue.  When all requests have been received, stage2 will intersect the term lists together, generating a partial set of final docids.  These final docids will then be sent with another Msg33 back to the original host (the one Msg39 is being processed on), executing "stage 3".
 <br>
-Like stage2, the stage3 Msg33 (also the stage0 Msg33) waits for all sets of docids to be recieved from each mercenary.  Once all have been recieved, stage3 will merge them together and create a true final set of docids to be used by Msg39.  Msg39 is allowed to continue before replies are sent back down the chain Msg33s to complete the entire process.
+Like stage2, the stage3 Msg33 (also the stage0 Msg33) waits for all sets of docids to be received from each mercenary.  Once all have been received, stage3 will merge them together and create a true final set of docids to be used by Msg39.  Msg39 is allowed to continue before replies are sent back down the chain Msg33s to complete the entire process.
 <br>
 The entire Msg33 chain may be called multiple times (preserving the same stage0/3 and stage2 Msg33s) for each tier that is required by the Query.  Replies are not sent and the entire process in not cleaned up until the last tier has finished.
 <br><br>
-An additional ability of Msg33 is to further split the term list reads up amongst twins durring stage1.  Each twin will read a seperate half of the desired term list and set that half to the mercenaries, where all pieces will eventually be collected.
+An additional ability of Msg33 is to further split the term list reads up amongst twins during stage1.  Each twin will read a separate half of the desired term list and set that half to the mercenaries, where all pieces will eventually be collected.
 <br><br>
 
 <a name="spellchecker"></a>
@@ -2092,7 +2092,7 @@ the file in the proper directory, as determined by the collection. We can still
 just use one instance of Indexdb, Titledb, etc., but we should add an extra
 dimension to the Rdb class's "BigFile *m_files[];" array for the extra 
 collections we have. When performing an kind of operation, the Rdb class should
-select the appopriate files based on the supplied collection number. When a 
+select the appropriate files based on the supplied collection number. When a 
 collection is deleted we must also remember to remove its records from the
 RdbTree, in addition to removing the directory for that collection. Once 
 implemented, this new model will vastly increase the value of
@@ -2187,7 +2187,7 @@ scheme in the future.
 
 <a name="clusterswitch"></a>
 <h2>Changing Live Clusters</h2>
-This is a brief overview of how to switch the live www.gigablast.com site from one cluster to another, what changes are required, and what things to keep in mind.  The cluster which is to become live will be refered to as the "new cluster" and the one which is to be replaced will be refered to as the "old cluster".
+This is a brief overview of how to switch the live www.gigablast.com site from one cluster to another, what changes are required, and what things to keep in mind.  The cluster which is to become live will be referred to as the "new cluster" and the one which is to be replaced will be referred to as the "old cluster".
 <br><br>
 Diff the gb.conf and coll.conf(s) between the new cluster and old cluster to check for undesired differences.  If no real-time spidering will be done, the readOnlyMode option should be set to 1 in the new cluster's gb.conf.  Additionally, blaster the new cluster to check for potential bugs with a new version of gb.  Now leave the new cluster on and ready to serve queries.
 <br><br>
@@ -2247,7 +2247,7 @@ gf0:/a# /sbin/iptables -t nat -A POSTROUTING -d 64.62.168.52 -p tcp --dport 8000
 <tr><td>monitor</td><td>Core</td><td>Monitors an external gb process and sends an email alert on 3 failed queries in a row.</td></tr>
 <tr><td>thunder</td><td>Core</td><td>Tests UDP throughput between two machines.</td></tr>
 <tr><td>types</td><td>Core</td><td>Defines the well used key_t type, a 12-byte key, and some functions for 16-byte keys.</td></tr>
-<tr><td>uniq2</td><td>Core</td><td>Like the 'uniq' command but also counts the occurences and prints those out.</td></tr>
+<tr><td>uniq2</td><td>Core</td><td>Like the 'uniq' command but also counts the occurrences and prints those out.</td></tr>
 <tr><td>urlinfo</td><td>Core</td><td>Displays information for a url given through stdin.</td></tr>
 </table>
 
@@ -2266,7 +2266,7 @@ Here is a list and description of all the source code files.
 <tr><td>AutoBan</td><td>Admin</td><td>Automatically bans IP addresses that exceed daily and minute query quotas.</td></tr>
 <tr><td>BigFile</td><td>Core</td><td>A virtual file class that allows virtual files bigger than 2GB by using smaller 512MB files.</td></tr>
 <tr><td>Bits</td><td>Build</td><td>Sets descriptor bits for each word in a Words class.</td></tr>
-<tr><td>Categories</td><td>Build</td><td>Stores DMOZ categories in a hiearchy.</td></tr>
+<tr><td>Categories</td><td>Build</td><td>Stores DMOZ categories in a hierarchy.</td></tr>
 <tr><td>Checksumdb</td><td>DB</td><td>Rdb that maps a docId to a checksum for an indexed document. Used to dedup same content from the same hostname at build time.</td></tr>
 <tr><td>Clusterdb</td><td>DB</td><td>Rdb that maps a docId to the hash of a site and its family filter bit and, optionally, a sample vector used for deduping search results. Used for site clustering, family filtering and deduping at query time. </td></tr>
 <tr><td>CollectionRec</td><td>Admin</td><td>Holds all of the parameters for a particular search collection.</td></tr>
@@ -2335,7 +2335,7 @@ Here is a list and description of all the source code files.
 <tr><td>Msg30</td><td>Admin</td><td>Unused.</td></tr>
 <tr><td>Msg33</td><td>Search</td><td>Unused. Did raid stuff.</td></tr>
 <tr><td>Msg34</td><td>DB</td><td>Determines least loaded host in a group (shard) of hosts.</td></tr>
-<tr><td>Msg35</td><td>DB</td><td>Merge token managament functions. Currently does not work.</td></tr>
+<tr><td>Msg35</td><td>DB</td><td>Merge token management functions. Currently does not work.</td></tr>
 <tr><td>Msg36</td><td>Search</td><td>Gets the length of an IndexList for determining query term weights.</td></tr>
 -->
 <tr><td>Msg37</td><td>Search</td><td>Calls a Msg36 for each term in the query.</td></tr>
@@ -2419,7 +2419,7 @@ Here is a list and description of all the source code files.
 <tr><td>UCNormalizer</td><td>General</td><td>Unicode support.</td></tr>
 <tr><td>UCPropTable</td><td>General</td><td>Unicode support.</td></tr>
 <tr><td>UCWordIterator</td><td>General</td><td>For iterating over Unicode characters.</td></tr>
-<tr><td>UdpServer</td><td>Net</td><td>A reliable UDP server that uses non-blocking sockets and calls handlers  recieving a message. The handle called depends on that message's type. The handler is UdpServer::m_handlers[msgType].</td></tr>
+<tr><td>UdpServer</td><td>Net</td><td>A reliable UDP server that uses non-blocking sockets and calls handlers  receiving a message. The handle called depends on that message's type. The handler is UdpServer::m_handlers[msgType].</td></tr>
 <tr><td>UdpSlot</td><td>Net</td><td>Basically a "socket" for the UdpServer. The UdpServer contains an array of a few thousand of these. When none are available to conduct receive a request, the dgram is dropped and will later be resent by the requester in a back-off fashion.</td></tr>
 <tr><td>Unicode</td><td>Core</td><td>Unicode support.</td></tr>
 <tr><td>UnicodeProperties</td><td>Core</td><td>Unicode support.</td></tr>
@@ -2444,7 +2444,7 @@ Here is a list and description of all the source code files.
 
 <tr><td>thunder</td><td>Core</td><td>Tests UDP throughput between two machines.</td></tr>
 <tr><td>types</td><td>Core</td><td>Defines the well used key_t type, a 12-byte key, and some functions for 16-byte keys.</td></tr>
-<tr><td>uniq2</td><td>Core</td><td>Like the 'uniq' command but also counts the occurences and prints those out.</td></tr>
+<tr><td>uniq2</td><td>Core</td><td>Like the 'uniq' command but also counts the occurrences and prints those out.</td></tr>
 <tr><td>urlinfo</td><td>Core</td><td>Displays information for a url given through stdin.</td></tr>
 </table>
 
@@ -2463,9 +2463,9 @@ The ideal spam-fighting algorithm may be a deduping algorithm in combination wit
 <br><br>
 To fight spam using a different approach, we have devised a quality-determination algorithm which uses a point-based system.  Our base measure of quality is based upon offsite factors, such as number of incoming links weighted by the quality of those incoming links.  The spam detector then looks at onsite factors such as the fingerprints of content entirely generated automatically, links to affiliate moneymaking sites, or irregular language model, and adds a negative quality proportional to the number of questionable practices the page engages in.  The total quality of a page is the sum of the link-adjusted quality and the negative spam quality.
 <br><br>
-Our attributes for spam detection have been gleaned from examining thousands of spam and non-spam documents.  The weights are adjustable, and have been manually tuned to provide good spam detection, while minimizing false positives.  The points for each attribute is multiplied by the number of times the attribute occured in the document.  The total points for each attribute are then added for a raw total of points.  The raw total is then multiplied by a force multiplier.  The force multiplier is calculated by .01 * the number of attributes had a non-zero number of points.  This provides a much heavier weight for pages which have many 'spammy' qualities, while reducing false positives for pages which have lots of points in a single category.  This produces a small integer which is capped at MaxQuality points and comprises the negative quality weight.  
+Our attributes for spam detection have been gleaned from examining thousands of spam and non-spam documents.  The weights are adjustable, and have been manually tuned to provide good spam detection, while minimizing false positives.  The points for each attribute is multiplied by the number of times the attribute occurred in the document.  The total points for each attribute are then added for a raw total of points.  The raw total is then multiplied by a force multiplier.  The force multiplier is calculated by .01 * the number of attributes had a non-zero number of points.  This provides a much heavier weight for pages which have many 'spammy' qualities, while reducing false positives for pages which have lots of points in a single category.  This produces a small integer which is capped at MaxQuality points and comprises the negative quality weight.  
 <br><br>
-<table width="100%" border="1" bgcolor=#999999><tr><td><b>Spam Scores</b></td><td><b>Points</b></td><td><b>Occurences</b></td><td><b>Total</b></td></tr><tr><td>url has - or _ or a digit in the domain</td><td>20</td><td>0</td><td>0</td></tr><tr><td>tld is info or biz</td><td>20</td><td>0</td><td>0</td></tr><tr><td>tld is gov,edu, or mil</td><td>-20</td><td>0</td><td>0</td></tr><tr><td>title has spammy words</td><td>20</td><td>0</td><td>0</td></tr><tr><td>page has img src to other domains</td><td>5</td><td>1</td><td>5</td></tr><tr><td>page contains spammy words</td><td>5</td><td>3</td><td>15</td></tr><tr><td>consecutive link text has the same word</td><td>10</td><td>0</td><td>0</td></tr><tr><td>links to amazon, allposters, or zappos</td><td>10</td><td>0</td><td>0</td></tr><tr><td>has 'affiliate' in the links</td><td>40</td><td>0</td><td>0</td></tr><tr><td>has an iframe to amazon</td><td>30</td><td>0</td><td>0</td></tr><tr><td>links to urls > 128 chars long</td><td>5</td><td>0</td><td>0</td></tr><tr><td>links have ?q= or &q=</td><td>5</td><td>0</td><td>0</td></tr><tr><td>page has google ads</td><td>15</td><td>0</td><td>0</td></tr><tr><td>Raw Total</td><td></td><td></td><td>20</td><tr><td>Force Multiplier</td><td></td><td></td><td>0.020000</td><tr><td>Final Score</td><td></td><td></td><td>0</td></table>
+<table width="100%" border="1" bgcolor=#999999><tr><td><b>Spam Scores</b></td><td><b>Points</b></td><td><b>Occurrences</b></td><td><b>Total</b></td></tr><tr><td>url has - or _ or a digit in the domain</td><td>20</td><td>0</td><td>0</td></tr><tr><td>tld is info or biz</td><td>20</td><td>0</td><td>0</td></tr><tr><td>tld is gov,edu, or mil</td><td>-20</td><td>0</td><td>0</td></tr><tr><td>title has spammy words</td><td>20</td><td>0</td><td>0</td></tr><tr><td>page has img src to other domains</td><td>5</td><td>1</td><td>5</td></tr><tr><td>page contains spammy words</td><td>5</td><td>3</td><td>15</td></tr><tr><td>consecutive link text has the same word</td><td>10</td><td>0</td><td>0</td></tr><tr><td>links to amazon, allposters, or zappos</td><td>10</td><td>0</td><td>0</td></tr><tr><td>has 'affiliate' in the links</td><td>40</td><td>0</td><td>0</td></tr><tr><td>has an iframe to amazon</td><td>30</td><td>0</td><td>0</td></tr><tr><td>links to urls > 128 chars long</td><td>5</td><td>0</td><td>0</td></tr><tr><td>links have ?q= or &q=</td><td>5</td><td>0</td><td>0</td></tr><tr><td>page has google ads</td><td>15</td><td>0</td><td>0</td></tr><tr><td>Raw Total</td><td></td><td></td><td>20</td><tr><td>Force Multiplier</td><td></td><td></td><td>0.020000</td><tr><td>Final Score</td><td></td><td></td><td>0</td></table>
 <!-- Some of these algorithms determine the quality of a site or IP address, and some the individual page. The algorithms that operate on the site or IP address need to run in batch mode and will add entries to sitedb. The algorithms that score individual pages can be run right after the url is downloaded. This algorithm could be used in combination with the global fuzzy deduper to get even better results.
 
 <br><br>
@@ -2699,7 +2699,7 @@ Some minor details regarding the configuration files:
      -each file MAY have a different 'when' statement, which takes precedence over the 
       global 'when'
      -files are executed in alphabetical order
-     -duplicity requires user to input public GPG key (even though script says it shouldnt)
+     -duplicity requires user to input public GPG key (even though script says it shouldn't)
       SEE SECTION [GPG] above for further information
      -note what time your server is running at, UTC != MST and set your when accordingly
      -currently quickbooks is giving backupninja permission fits

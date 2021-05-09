@@ -806,7 +806,7 @@ void gotIpOfDNSWrapper ( void *state , int32_t ip ) {
 	    iptoa(ip),ds->m_hostname);
 	// sanity check
 	if ( ds->m_numDnsIps[ds->m_depth] + 1 >= MAX_DNS_IPS ) {
-		log("dns: Wierd. Not enough buffer.");
+		log("dns: Weird. Not enough buffer.");
 		char *xx = NULL; *xx = 0; 
 	}
 	// . if ip is 0 it was a does not exist
@@ -1052,7 +1052,7 @@ bool Dns::sendToNextDNS ( DnsState *ds , int32_t timeout ) {
 	// HACK: if udpserver's transId is too big for us, reset it
 	if(m_udpServer.m_nextTransId > 65535 ) 
 		m_udpServer.m_nextTransId =0;
-	// . first word is id (not really that releveant since queried domain
+	// . first word is id (not really that relevant since queried domain
 	//   should also be in response)
 	// . steal the transId from our g_udpServer
 	uint16_t transId = m_udpServer.m_nextTransId;
@@ -1567,7 +1567,7 @@ char *getRRName ( char *rr , char *dgram, char *end ) {
 
 // . function to parse out the smallest ip from DNS reply
 // . returns -1  on error and sets g_errno (could be ETIMEOUT)
-// . returns  0 if hostname does not have an ip (non-existant)
+// . returns  0 if hostname does not have an ip (non-existent)
 // . otherwise, returns the ip
 // . NOTE: we also call HostMap::stampHost() here rather than override readPoll
 // . TODO: update timestamp for this dns server

@@ -504,7 +504,7 @@ inline uint64_t hash64AsciiLowerE ( char *s, int32_t len, uint64_t startHash ) {
 		}
 		// entity?
 		skip = getEntity(&s[i],len-i,&x, true);
-		// if not valid... that's wierd, sanity check
+		// if not valid... that's weird, sanity check
 		if ( skip <= 0 ) { char *xx = NULL; *xx = 0; }
 		// skip it man
 		p += skip - cs;

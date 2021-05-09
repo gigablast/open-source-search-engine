@@ -178,7 +178,7 @@ bool Msg51::sendRequests ( int32_t k ) {
 
 	// . check our quick local cache to see if we got it
 	// . use a max age of 1 hour
-	// . this cache is primarly meant to avoid repetetive lookups
+	// . this cache is primarily meant to avoid repetetive lookups
 	//   when going to the next tier in Msg3a and re-requesting cluster
 	//   recs for the same docids we did a second ago
 	RdbCache *c = &s_clusterdbQuickCache;

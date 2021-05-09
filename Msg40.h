@@ -52,8 +52,8 @@ class Fact {
 public:
 	// offset of the gigabit in m_gigabitBuf we belong to
 	int32_t  m_gigabitOffset;
-	// . the sentence contaning the gigabit and a lot of the query terms
-	// . ptr refrences into Msg20Reply::ptr_gigabitSample buffers
+	// . the sentence containing the gigabit and a lot of the query terms
+	// . ptr references into Msg20Reply::ptr_gigabitSample buffers
 	char *m_fact;
 	int32_t  m_factLen;
 	float m_gigabitModScore;

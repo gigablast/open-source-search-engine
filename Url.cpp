@@ -316,7 +316,7 @@ void Url::set ( char *t , int32_t tlen , bool addWWW , bool stripSessionId ,
 		return this->set(encoded, newUrlLen, addWWW, stripSessionId, 
 				 stripPound, stripCommonFile, titleRecVersion);
     }
-	// truncate length to the first occurence of an unacceptable char
+	// truncate length to the first occurrence of an unacceptable char
 	tlen = i;
 	// . decode characters that should not have been encoded
 	// . also NULL terminates
@@ -394,7 +394,7 @@ void Url::set ( char *t , int32_t tlen , bool addWWW , bool stripSessionId ,
 		while ( *p && *p != '?' && *p != ';' ) p++;
 		// bail if no ?
 		if ( ! *p ) goto skip;
-		// now search for severl strings in the cgi query string
+		// now search for several strings in the cgi query string
 		char *tt = NULL;
 		int32_t x;
 		if ( ! tt ) { tt = gb_strcasestr ( p , "PHPSESSID=" ); x = 10;}
@@ -738,7 +738,7 @@ void Url::set ( char *t , int32_t tlen , bool addWWW , bool stripSessionId ,
 	// point the path inside m_url even though we haven't written it yet
 	m_path = m_url + m_ulen;
 	m_plen = m_ulen; 
-	// . deal with wierd things in the path
+	// . deal with weird things in the path
 	// . i points to start of path (should be /)
 	for (; i < j ; i++ ) {
 		// dedup double backslashes
@@ -771,7 +771,7 @@ void Url::set ( char *t , int32_t tlen , bool addWWW , bool stripSessionId ,
 		// store char and advance to next
 		m_url[m_ulen++] = s[i];
 	}
-	// reset the path length in case we had to remove some wierd stuff
+	// reset the path length in case we had to remove some weird stuff
 	m_plen = m_ulen - m_plen;
 
 	// . remove trailing /'s from path, but not first one!
@@ -1191,7 +1191,7 @@ bool Url::isSpam ( char *s , int32_t slen ) {
 	// check for naughty words. Split words to deep check if we're surely 
 	// adult. Required because montanalinux.org is showing up as porn 
 	// because it has 'anal' in the hostname.
-	// send each phrase seperately to be tested.
+	// send each phrase separately to be tested.
 	// hotjobs.yahoo.com
 	char *a = s;
 	char *p = s;
@@ -1428,7 +1428,7 @@ static char *s_badExtensions[] = {
         "etx",
         "exe",
         "ez",
-        //"f", // ambigous
+        //"f", // ambiguous
         "f90",
         "fli",
         "gif",
@@ -1597,7 +1597,7 @@ bool Url::isBadExtension ( int32_t version ) {
 
 
 	int myKey = hash64Lower_a(m_extension,m_elen);
-	//zero unless we have a bad extention, otherwise
+	//zero unless we have a bad extension, otherwise
 	//we return TR version in which it was banned
 	int32_t badVersion = s_badExtTable.getValue(myKey);
 	if (badVersion == 0) return false;
@@ -1793,7 +1793,7 @@ char *Url::getSite ( int32_t *siteLen , char *coll , bool defaultToHostname ,
 	// . these are applied to all domains uniformly
 	// . if it is xyz.com/users/  use xyz.com/users/fred/ as the site
 	p = m_path;
-	// a lot of times these were not indivual blogs, but the blog subsite
+	// a lot of times these were not individual blogs, but the blog subsite
 	// of a site... http://dccc.org/blog/P4575/
 	//if ( strncasecmp(p,"/blogs/"       , 7) == 0 ) len = 7;
 	//if ( strncasecmp(p,"/blog/"        , 6) == 0 ) len = 6;

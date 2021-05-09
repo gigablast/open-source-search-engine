@@ -370,7 +370,7 @@ class CollectionRec {
 
 	// . store it in raw binary format
 	// . returns # of bytes stored into "buf"
-	// . returs -1 and sets errno on error
+	// . returns -1 and sets errno on error
 	//int32_t store ( char *buf , char *bufEnd );
 
 	// reset to default values
@@ -561,7 +561,7 @@ class CollectionRec {
 	char  m_doTierJumping               ;
 	float m_numDocsMultiplier           ;
 	//int32_t  m_maxDocIdsToCompute          ;
-	int32_t  m_percentSimilarSummary       ; // Dedup by summary similiarity
+	int32_t  m_percentSimilarSummary       ; // Dedup by summary similarity
 	int32_t  m_summDedupNumLines           ;
 	int32_t  m_contentLenMaxForSummary     ;
 
@@ -1119,7 +1119,7 @@ class CollectionRec {
 
 	// turk tags 
 	// for asking question on that tag
-	// comma seperated list of tags, no space allowed
+	// comma separated list of tags, no space allowed
 	//char m_turkTags [256];
 
 	// collection name in the other/external cluster from which we

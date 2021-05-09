@@ -150,7 +150,7 @@ void File::set ( char *filename ) {
 	int32_t len = gbstrlen ( filename );
 	// account for terminating '\0'
 	if ( len + 1 >= MAX_FILENAME_LEN ) { 
-	 	log ( "disk: Provdied filename %s length of %"INT32" "
+	 	log ( "disk: Provided filename %s length of %"INT32" "
 		      "is bigger "
 	 	      "than %"INT32".",filename,len,
 		      (int32_t)MAX_FILENAME_LEN-1); 
@@ -624,7 +624,7 @@ int File::getfd () {
 	}
 
 	// . sanity check
-	// . no caller should call open/getfd after unlink was queued for thred
+	// . no caller should call open/getfd after unlink was queued for thread
 	//if ( m_gone ) { char *xx = NULL; *xx = 0; }
 	// get the real fd from the virtual fd
 	//int fd = s_fds [ m_vfd ];
@@ -1102,7 +1102,7 @@ bool File::unlink ( ) {
 			    "while in read only mode.");
 	// give the fd back to the pull, free the m_vfd
 	close ();
-	// avoid unneccessary unlinking
+	// avoid unnecessary unlinking
 	int32_t status = doesExist();
 	// return true if we don't exist anyway
 	if ( status == 0 ) return true;

@@ -51,7 +51,7 @@
 // gigabit phrase scoring params
 #define SPARSE_MARK          0.34
 #define SPARSE_PENALTY       1000
-#define FWC_PENALTY          500   // penalty for begining with common word
+#define FWC_PENALTY          500   // penalty for beginning with common word
 #define POP_ZONE_0           0.00001
 #define POP_ZONE_1           0.0001
 #define POP_ZONE_2           0.001
@@ -812,7 +812,7 @@ bool getTopics ( State24       *st        ,
 			else             plen = strlen       (p);
 			if ( isUnicode ) sampleWords += countWords((UChar *)p,plen);
 			else             sampleWords += countWords( p,plen);
-			// advance to next exerpt
+			// advance to next excerpt
 			p += plen + 1;
 #ifdef DEBUG_MSG24
 			numExcerpts++;
@@ -1655,7 +1655,7 @@ bool getTopics ( State24       *st        ,
 			//   alnum must follow period
 			if ( (ptrs[i][k] == '.' || ptrs[i][k] == ':' ) &&
 			     ( is_alnum(ptrs[i][k+1])  ||
-			       // accept single intial before the period, too
+			       // accept single initial before the period, too
 			       (ptrs[i][k+1] ==' ' && is_alnum(ptrs[i][k+2]) 
 				&& k>=2 && ptrs[i][k-2]==' ')))
 				continue;
@@ -2184,7 +2184,7 @@ void hashExcerpt ( Query *q , uint64_t *qids , int32_t *qpops, int32_t nqi,
 	// . now all the data is in buf/bufLen
 	// . parse it up into Words
 	// . now XmlDoc::getGigabitVector() calls us and it already has the
-	//   Words pased up, so it will use a NULL buf
+	//   Words passed up, so it will use a NULL buf
 	if ( buf ) w->set ( isUnicode ,  // isUnicode?
 			    false     ,  // isNormalized?
 			    buf       ,
@@ -2659,7 +2659,7 @@ void hashExcerpt ( Query *q , uint64_t *qids , int32_t *qpops, int32_t nqi,
 				//   string of punct below, and filter out 
 				//   those gigabits above with hasPunct.
 				// . i'd really like to NOT have this here
-				//   becase we get much better gigabits, but
+				//   because we get much better gigabits, but
 				//   we need it as a speed saver...
 				if (wlen[j-1]>t->m_topicMaxPunctLen) break;
 				// no phrasing across commas, etc.
@@ -2833,7 +2833,7 @@ void hashExcerpt ( Query *q , uint64_t *qids , int32_t *qpops, int32_t nqi,
 			//ww[wwlen]=c;
 			// include any ending or starting ( or )
 			if ( i > 0 && ww[-oneChar] == '(' ) { 
-				// ensure we got a ')' somwhere before adding (
+				// ensure we got a ')' somewhere before adding (
 				for ( int32_t r = 0 ; r <= wwlen ; r++ )
 					if ( ww[r]==')' ) {
 						ww--; wwlen++; break; }

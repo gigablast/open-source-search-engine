@@ -157,7 +157,7 @@ bool RdbTree::set ( int32_t fixedDataSize ,
 
 void RdbTree::reset ( ) {
 	// . sanity check
-	// . SpiderCache.cpp uses a tree, but withou a dbname
+	// . SpiderCache.cpp uses a tree, but without a dbname
 	if ( m_needsSave && m_dbname[0] && 
 	     strcmp(m_dbname,"accessdb") &&
 	     strcmp(m_dbname,"statsdb") ) {
@@ -326,7 +326,7 @@ int32_t RdbTree::getNextNode ( collnum_t collnum , char *key ) { //key_t &key ) 
 	int32_t parent;
 	int32_t i = m_headNode ;
 	// . set i tom_hint if it's < key
-	// . this helps out severly unbalanced trees made by spiderdb
+	// . this helps out severely unbalanced trees made by spiderdb
 	// . it may hurt other guys a bit though
 	//if (m_hint >= 0 && 
 	//m_lastStartNode < m_numNodes &&
@@ -1747,7 +1747,7 @@ bool RdbTree::getList ( collnum_t collnum ,
 		if ( ng < growth && ng > minRecSizes ) growth = ng;
 	}
 
-	// raise to virtual inifinite if not constraining us
+	// raise to virtual infinite if not constraining us
 	if ( minRecSizes < 0 ) minRecSizes = 0x7fffffff;
 
 	// . nail it down if titledb because metalincs was getting
@@ -3208,7 +3208,7 @@ void RdbTree::cleanTree ( ) { // char **bases ) {
 		if ( m_collnums[i] >= 0   &&
 		     m_collnums[i] <  max &&
 		     g_collectiondb.m_recs[m_collnums[i]] ) continue;
-		// if it is negtiave, remove it, that is wierd corruption
+		// if it is negtiave, remove it, that is weird corruption
 		// if ( m_collnums[i] < 0 ) 
 		// 	deleteNode3 ( i , true );
 		// remove it otherwise

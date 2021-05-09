@@ -113,7 +113,7 @@ class Event {
 	// for the bits #define'd above
 	evflags_t m_flags;
 
-	// . list of sections containing auxillary event descriptions
+	// . list of sections containing auxiliary event descriptions
 	// . basically when an event has multiple dates contained in 
 	//   multiple sections, sharing some common event description,
 	//   we need to telescope out to the event description

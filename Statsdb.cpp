@@ -1583,7 +1583,7 @@ bool Statsdb::addEventPoint ( int32_t  t1        ,
 		pp->m_oldVal    = oldVal;
 		pp->m_newVal    = newVal;
 		pp->m_thickness = thickness;
-		// store the offset incase m_sb3 reallocates
+		// store the offset in case m_sb3 reallocates
 		int32_t length = m_sb3.length();
 		// tell safebuf to skip over it now
 		m_sb3.incrementLength ( sizeof(EventPoint) );

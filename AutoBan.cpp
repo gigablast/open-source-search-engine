@@ -440,7 +440,7 @@ bool AutoBan::hasPerm(int32_t ip,
 		if(m_detectVals[i].m_flags & DENY) {
 			// do not inc if just checking, like for a gif file
 			if ( justCheck ) return false;
-			//banned by autoban, or explicity banned by matt.
+			//banned by autoban, or explicitly banned by matt.
 			int32_t explicitBan = m_detectVals[i].m_flags & FROMCONF;
 			//log(LOG_WARN,"autoban: %"INT32" rejected.", ip);
 			if(!explicitBan &&

@@ -613,7 +613,7 @@ void gotReplyRequestTableServerEnd ( char *reply  , int32_t replySize ,
 	State36   *st       = (State36 *)state1;
 	int64_t *countPtr = (int64_t *)st->m_recPtr;
 
-	// retrun on any error
+	// return on any error
 	if ( g_errno ) {
 		log(LOG_DEBUG,"quota: msg36: sending error reply for "
 		    "termid=%"UINT64" err=%s",st->m_termId,mstrerror(g_errno));

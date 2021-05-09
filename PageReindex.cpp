@@ -392,7 +392,7 @@ bool Msg1c::gotList ( ) {
 	// bail if no need
 	if ( numDocIds <= 0 ) return true;
 
-	// force spiders on on entire network. they will progagate from 
+	// force spiders on on entire network. they will propagate from 
 	// host #0... 
 	g_conf.m_spideringEnabled = true;
 

@@ -95,7 +95,7 @@ class Words {
 	bool      set2 ( Xml *xml, bool computeIds , int32_t niceness = 0);
 
 	// . if score == 0  then use spam modified score
-	// . each non-spammy occurence of a word adds "baseScore" to it's score
+	// . each non-spammy occurrence of a word adds "baseScore" to it's score
 	// . keep baseScore pretty high in case reduced by spamming
 	// . typically i use 100 as the baseScore to preserve fractions
 	/*
@@ -391,7 +391,7 @@ class Words {
 
 	bool           m_hasTags;
 
-	// sanity checkes for performance
+	// sanity checks for performance
 	char *m_s;
 
 	int32_t m_numTags;

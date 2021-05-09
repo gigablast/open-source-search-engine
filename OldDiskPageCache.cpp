@@ -39,13 +39,13 @@
 #define OFF_NEXT (int)(sizeof(int32_t)*3)
 #define OFF_DISKPAGENUM (int)(sizeof(int32_t)*4)
 #define OFF_VFD (int)(sizeof(int32_t)*5)
-// store disk data iteself into page at this offset
+// store disk data itself into page at this offset
 #define HEADERSIZE (int)(sizeof(int32_t)*6)
 
 
 DiskPageCache::DiskPageCache () {
 	m_numPageSets = 0;
-	// sometimes db may pass an unitialized DiskPageCache to a BigFile
+	// sometimes db may pass an uninitialized DiskPageCache to a BigFile
 	// so make sure when BigFile::close calls DiskPageCache::rmVfd() our
 	// m_memOffFromDiskPage vector is all NULLed out, otherwise 
 	// it will core
@@ -756,7 +756,7 @@ void DiskPageCache::addPage(int32_t vfd,
 		//int32_t memOff = -1;//NULL;
 		//readFromCache(&memOff, poff, OFF_PTR, sizeof(int32_t));
 
-		// the tail may actualy belong to a separated file with
+		// the tail may actually belong to a separated file with
 		// a different vfd
 		int oldVfd;
 		readFromCache (&oldVfd,poff,OFF_VFD,sizeof(int32_t));

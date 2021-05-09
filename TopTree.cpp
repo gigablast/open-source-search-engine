@@ -71,12 +71,12 @@ bool TopTree::setNumNodes ( int32_t docsWanted , bool doSiteClustering ) {
 	m_kickedOutDocIds = false;
 	//m_lastKickedOutDocId = -1LL;
 	
-	// how many nodes to we need to accomodate "docsWanted" docids?
+	// how many nodes to we need to accommodate "docsWanted" docids?
 	// we boost it up here for domain/host counting for site clustering.
 	m_ridiculousMax = (int64_t)docsWanted * 2;
 	if ( m_ridiculousMax < 50 ) m_ridiculousMax = 50;
 	int64_t numNodes = m_ridiculousMax * 256;
-	// i would say limit it to 100,000 nodes regarless
+	// i would say limit it to 100,000 nodes regardless
 	if ( numNodes > MAXDOCIDSTOCOMPUTE ) numNodes = MAXDOCIDSTOCOMPUTE;
 	// craziness overflow?
 	if ( numNodes < 0 ) numNodes = MAXDOCIDSTOCOMPUTE;

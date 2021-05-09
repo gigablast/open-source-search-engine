@@ -142,7 +142,7 @@ bool Speller::init(){
 	if ( m_hostsPerSplit <= 0 )
 		return log("db: the <indexSplit> in gb.conf is probably not "
 			   "too big. Are you using the wrong hosts.conf?");
-	// check if we've got enough multicasts avaiable
+	// check if we've got enough multicasts available
 	if ( m_hostsPerSplit > MAX_UNIQUE_HOSTS_PER_SPLIT ){
 		log( LOG_WARN,"speller: not enough multicasts available for "
 		     "this host configuration. Increase multicasts" );
@@ -1556,7 +1556,7 @@ bool Speller::findNext( char *s, char *send, char **nextWord, bool *isPorn,
 	// check if there is an adult word in there
 	// NOTE: The word 'adult' gives a lot of false positives, so even 
 	// though it is in the isAdult() list, skip it.
-	// s/slen constitues an individual word.
+	// s/slen constitutes an individual word.
 	if ( isAdult ( s, slen, &loc ) && strncmp ( s, "adult", 5 ) != 0 ){
 		// if this string starts with the adult word, don't check 
 		// further

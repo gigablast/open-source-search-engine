@@ -581,7 +581,7 @@ bool Collectiondb::addNewColl ( char *coll ,
 		// things like sitemap.xml
 		cr->m_maxTextDocLen  = 10000000;
 		cr->m_maxOtherDocLen = 10000000;
-		// john want's deduping on by default to avoid 
+		// john wants deduping on by default to avoid 
 		// processing similar pgs
 		cr->m_dedupingEnabled = true;
 		// show the ban links in the search results. the 
@@ -975,7 +975,7 @@ bool Collectiondb::deleteRec2 ( collnum_t collnum ) { //, WaitEntry *we ) {
 	//if ( cr->m_spiderColl &&
 	//     cr->m_spiderColl->getTotalOutstandingSpiders() > 0 ) {
 	//	log("admin: Can not delete collection while "
-	//	    "spiders are oustanding for collection. Turn off "
+	//	    "spiders are outstanding for collection. Turn off "
 	//	    "spiders and wait for them to exit.");
 	//	return false;
 	//}
@@ -1449,7 +1449,7 @@ bool Collectiondb::resetColl2( collnum_t oldCollnum,
 	cr->m_spiderStatus = SP_INITIALIZING;
 
 	// . set m_recs[oldCollnum] to NULL and remove from hash table
-	// . do after calls to deleteColl() above so it wont crash
+	// . do after calls to deleteColl() above so it won't crash
 	setRecPtr ( oldCollnum , NULL );
 
 
@@ -1711,7 +1711,7 @@ collnum_t Collectiondb::reserveCollNum ( ) {
 
 	if ( m_numRecs < 0x7fff ) {
 		collnum_t next = m_numRecs;
-		// make the ptr NULL at least to accomodate the
+		// make the ptr NULL at least to accommodate the
 		// loop that scan up to m_numRecs lest we core
 		growRecPtrBuf ( next );
 		m_numRecs++;
@@ -1802,7 +1802,7 @@ CollectionRec::CollectionRec() {
 	m_msg5       = NULL;
 	m_importState = NULL;
 	// JAB - track which regex parsers have been initialized
-	//log(LOG_DEBUG,"regex: %p initalizing empty parsers", m_pRegExParser);
+	//log(LOG_DEBUG,"regex: %p initializing empty parsers", m_pRegExParser);
 
 	// clear these out so Parms::calcChecksum can work:
 	memset( m_spiderFreqs, 0, MAX_FILTERS*sizeof(*m_spiderFreqs) );
@@ -3812,7 +3812,7 @@ bool CollectionRec::rebuildUrlFiltersDiffbot() {
 
 	bool ucpHasPositive = false;
 	// . scan them to see if all patterns start with '!' or not
-	// . if pattern starts with ! it is negative, otherwise positve
+	// . if pattern starts with ! it is negative, otherwise positive
 	if ( ucp ) ucpHasPositive = hasPositivePattern ( ucp );
 
 	// if no crawl regex, and it has a crawl pattern consisting of
@@ -3901,7 +3901,7 @@ bool CollectionRec::rebuildUrlFiltersDiffbot() {
 	// if collectiverespiderfreq is 0 or less then do not RE-spider
 	// documents already indexed.
 	if ( respiderFreq <= 0.0 ) { // else {
-		// this does NOT work! error docs continuosly respider
+		// this does NOT work! error docs continuously respider
 		// because they are never indexed!!! like EDOCSIMPLIFIEDREDIR
 		//m_regExs[i].set("isindexed");
 		m_regExs[i].set("hasreply");

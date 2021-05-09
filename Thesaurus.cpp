@@ -857,7 +857,7 @@ bool Thesaurus::getStems(char *s, int32_t slen, SynonymInfo *info) {
 	}
 	
 	// loop through all the other suffixes and see if we can
-	//  attach them and get a useable word
+	//  attach them and get a usable word
 	suf = m_suffixes;
 
 	while (suf < sufend) {
@@ -1155,7 +1155,7 @@ static char *s_articlesEng[] = { "the",
 				 "an",
 				 "a"};
 
-// MDW: "some is not a stop word and should be ommitted
+// MDW: "some is not a stop word and should be omitted
 //				 "some"};
 
 static int32_t s_numArticlesEng = 3;
@@ -1227,7 +1227,7 @@ bool Thesaurus::generatePhrases(char *s, int32_t slen,
 	r = false;
 	// -1 is for the original source
 	// i is for the first part, j is for the second part, and k is for
-	//  arcticle substitution
+	//  article substitution
 	for (int i = -1; i < syn1.m_numSyns; i++) { 
 		for (int j = -1; j < syn2.m_numSyns; j++) {
 			for (int k = -1; k < numArticles; k++) {
@@ -2150,7 +2150,7 @@ static void gotAllAffinityPairs(void *state) {
 		//sortTable(aff->m_newTable);
 		aff->m_oldTable->copy(aff->m_newTable);
 		if (aff->m_thes->save()) {
-			log(LOG_INFO, "build: propogating thesaurus data to "
+			log(LOG_INFO, "build: propagating thesaurus data to "
 				"all hosts");
 			char cmd[512];
 			for ( int32_t i = 0; i < g_hostdb.getNumHosts() ; i++ ) {

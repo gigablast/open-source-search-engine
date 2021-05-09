@@ -56,7 +56,7 @@ class RdbTree {
 	~RdbTree       ( );
 
 	// . Rdb uses this to determine when to dump this tree to disk
-	// . look at % of memory occupied/alloced of max, as well as % of
+	// . look at % of memory occupied/allocated of max, as well as % of
 	//   nodes used
 	bool is90PercentFull ( ) {
 		// . m_memOccupied is amount of alloc'd mem that data occupies
@@ -220,7 +220,7 @@ class RdbTree {
 
 	int32_t  getNumTotalNodes ( ) { return m_numNodes; };
 
-	// negative and postive counts
+	// negative and positive counts
 	int32_t  getNumNegativeKeys ( ) { return m_numNegativeKeys; };
 	int32_t  getNumPositiveKeys ( ) { return m_numPositiveKeys; };
 
@@ -421,7 +421,7 @@ class RdbTree {
 	char   *m_depth;        // depth of this node (used iff m_doBalancing)
 	int32_t    m_numNodes;     // how many we have, empty or full
 	int32_t    m_numUsedNodes; // how many of those are used? (full)
-	// negative and postive key counts
+	// negative and positive key counts
 	int32_t    m_numNegativeKeys;
 	int32_t    m_numPositiveKeys;
 	// memory overhead per node (excluding data)

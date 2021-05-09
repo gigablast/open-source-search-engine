@@ -618,7 +618,7 @@ bool HttpRequest::set ( char *origReq , int32_t origReqLen , TcpSocket *sock ) {
 		 }
 	 }
 
-	 // incorrect username:passwrod?
+	 // incorrect username:password?
 	 if ( m_isSquidProxyRequest && ! matched ) {
 		 log("http: bad username:password in proxy request %s",req);
 		 g_errno = EPERMDENIED;
@@ -719,7 +719,7 @@ bool HttpRequest::set ( char *origReq , int32_t origReqLen , TcpSocket *sock ) {
 	 //if ( s ) {
 	 //	int32_t x = 0;
 	 //	sscanf ( e ,"%"INT32"-%"INT32"" , &m_fileOffset , &x );
-	 //	// get all file if range's 2nd number is non-existant
+	 //	// get all file if range's 2nd number is non-existent
 	 //	if ( x == 0 ) m_fileSize = -1;
 	 //	else          m_fileSize = x - m_fileOffset;
 	 //	// ensure legitimacy
@@ -1232,7 +1232,7 @@ char *HttpRequest::getStringFromCookie ( char *field      ,
 	// . we converted every '&' to a \0 when the cookiebuf was set above
 	//for ( char *p = m_cookieBuf ; *p ; p += gbstrlen(p) + 1 ) {
 	// . no, we just keep them as &'s because seems like cookies use ;'s
-	//   as delimeters not so much &'s. and when we log the cookie in the
+	//   as delimiters not so much &'s. and when we log the cookie in the
 	//   log, i wanted to see the whole cookie, so having \0's in the
 	//   cookie was messing that up.
 	for ( ; p < pend ; p++ ) { 
@@ -1590,7 +1590,7 @@ void HttpRequest::parseFieldsMultipart ( char *s , int32_t slen ) {
 
 #include "Facebook.h"
 
-// . the url being reuqested
+// . the url being requested
 // . removes &code= facebook cruft
 bool HttpRequest::getCurrentUrl ( SafeBuf &cu ) {
 	// makre sure we got enough room

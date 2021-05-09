@@ -365,7 +365,7 @@ bool sendPageResults ( TcpSocket *s , HttpRequest *hr ) {
 		// . crap! also gotta encode apostrophe since "var url='..."
 		// . true = encodeApostrophes?
 		sb.urlEncode2 ( qstr , true );
-		// progate query language
+		// propagate query language
 		char *qlang = hr->getString("qlang",NULL,NULL);
 		if ( qlang ) sb.safePrintf("&qlang=%s",qlang);
 		// propagate "admin" if set
@@ -2897,7 +2897,7 @@ bool printSearchResultsHeader ( State0 *st ) {
 	//if ( ! si->m_xml ) sb->safeMemcpy ( head , hlen );
 
 
-	// ignore imcomplete or invalid multibyte or wide characters errors
+	// ignore incomplete or invalid multibyte or wide characters errors
 	//if ( g_errno == EILSEQ ) {
 	//	log("query: Query error: %s. Ignoring.", mstrerror(g_errno));
 	//	g_errno = 0;
@@ -4574,7 +4574,7 @@ bool printResult ( State0 *st, int32_t ix , int32_t *numPrintedSoFar ) {
 				       , (int32_t) PADDING 
 				       );
 		}
-		// to align the text verticall we gotta make a textbox div
+		// to align the text vertical we gotta make a textbox div
 		// otherwise it wraps below image! mdw
 		//else
 		//	sb->safePrintf("vertical-align:middle;");
@@ -8624,7 +8624,7 @@ bool printJsonItemInCSV ( char *json , SafeBuf *sb , State0 *st ) {
 		     strcmp(ji->m_name,"html")==0)
 			continue;
 
-		// , delimeted
+		// , delimited
 		if ( i > 0 ) sb->pushChar(',');
 
 		// skip if none
@@ -9169,7 +9169,7 @@ bool sendPageWidget ( TcpSocket *s , HttpRequest *hr ) {
 		collnum_t newCollnum = g_collectiondb.reserveCollNum();
 		// use that
 		cn = newCollnum;
-		// add the new colection named <token>-widget123
+		// add the new collection named <token>-widget123
 		g_parms.addNewParmToList1 ( &parmList,cn,coll,0,"addColl");
 		// note it
 		log("widget: adding new widget coll %s",coll);

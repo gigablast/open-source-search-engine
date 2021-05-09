@@ -393,7 +393,7 @@ class QueryWord {
 	int32_t  m_numFacetRanges;
 
 
-	// what operand bit # is it for doing boolen queries?
+	// what operand bit # is it for doing boolean queries?
 	//int32_t  m_opBitNum;
 	// when an operand is an expression...
 	class Expression *m_expressionPtr;
@@ -478,7 +478,7 @@ class QueryTerm {
 	// . the bits in this bit vector is 1-1 with the QueryTerms
 	// . if a doc has query term #i then bit #i will be set
 	// . if a doc EXplicitly has phrase "A B" then it may have 
-	//   term A and term B implicity
+	//   term A and term B implicitly
 	// . therefore we also OR the bits for term A and B into m_implicitBits
 	// . THIS SHIT SHOULD be just used in setBitScores() !!!
 	//uint16_t m_implicitBits;
@@ -627,7 +627,7 @@ class Query {
 	// . returns false and sets g_errno on error
 	// . after calling this you can call functions below
 	// . if boolFlag is 0 we ignore all boolean operators
-	// . if boolFlag is 1  we assume query is boolen
+	// . if boolFlag is 1  we assume query is boolean
 	// . if boolFlag is 2  we attempt to detect if query is boolean or not
 	bool set2 ( char *query    , 
 		    //int32_t  queryLen , 
@@ -899,7 +899,7 @@ class Query {
 	// query word num
 	int32_t getWordNum ( int64_t wordId );
 
-	// this is now just used for boolean queries to deteremine if a docid
+	// this is now just used for boolean queries to determine if a docid
 	// is a match or not
 	unsigned char *m_bitScores ;
 	int32_t           m_bitScoresSize;

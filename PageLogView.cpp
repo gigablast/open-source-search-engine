@@ -15,7 +15,7 @@ struct StateLogView {
 	SafeBuf    m_sb;
 	int32_t       m_numOutstanding;
 	//	char       m_readBuf[MAX_HOSTS * MAX_LOG_WINDOW];
-	//we need to malloc this now, incase they want to see more of the log.
+	//we need to malloc this now, in case they want to see more of the log.
 	int32_t       m_readBufSize;
 	char      *m_readBuf;
 	char      *m_readBufPtrs[MAX_HOSTS];

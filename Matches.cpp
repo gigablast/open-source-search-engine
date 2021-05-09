@@ -1372,7 +1372,7 @@ bool Matches::addMatches ( Words    *words               ,
 		// requires the next query term to follow it, like in the
 		// case of a query stop word...
 		//matchStack = 0;
-		// we get atleast MAX_MATCHES
+		// we get at least MAX_MATCHES
 		if ( m_numMatches < MAX_MATCHES ) continue;
 		// we've added a lot of matches, if we don't need anymore
 		// to confirm the big hack then break out
@@ -1788,7 +1788,7 @@ bool Matches::docHasQueryTerms(int32_t totalInlinks) {
         QueryWord *qw = qt->m_qword;
 
         // It is a match if it matched something other than link text
-        // or it matched at least 1 link text and there arent many link texts
+        // or it matched at least 1 link text and there aren't many link texts
         // or it matched more than 2 link texts and there are many link texts
         hasTerms &= ((numMatches[qw->m_wordNum] >= m_numMatches) ||  
                      (numMatches[qw->m_wordNum] > 0 && totalInlinks < 10) ||

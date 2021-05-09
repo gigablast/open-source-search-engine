@@ -4,7 +4,7 @@
 //         an array of them (grow array if needed) (do same for UdpServer)
 
 // . used as client AND server
-// . used to do non-blocking sends/recieves of messages using TCP/IP
+// . used to do non-blocking sends/receives of messages using TCP/IP
 // . re-uses sockets (keep alive) in server AND client directions
 // . uses custom dns client (Dns.h) for non-blocking domain name lookups
 // . a callback can be specified for each TcpSocket
@@ -114,7 +114,7 @@ class TcpServer {
 	// . if a reply is expected then you should specify the "done" callback
 	//   which will be called on complete reception of the reply
 	// . after completion/done this will call reseTcpSocket()
-	// . upon successful transmision of "msg" we shift socket into readMode
+	// . upon successful transmission of "msg" we shift socket into readMode
 	// . default timeout of 60 secs of no read OR no write
 	bool sendMsg ( int32_t   ip      ,
 		       int16_t  port    ,
@@ -192,7 +192,7 @@ class TcpServer {
 
 	// . we call this to try to figure out the size of the WHOLE msg
 	//   being read so that we might pre-allocate memory for it
-	// . overriden for different protocols
+	// . overridden for different protocols
         // . this is called upon reception of every packet
         //   of the msg being read until a non-negative msg size is returned.
         //   this is used to avoid doing excessive reallocs and extract the

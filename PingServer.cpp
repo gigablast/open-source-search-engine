@@ -108,7 +108,7 @@ bool PingServer::registerHandler ( ) {
 static int32_t s_outstandingPings = 0;
 
 // . gets filename that contains the hosts from the Conf file
-// . return false on errro
+// . return false on error
 // . g_errno may NOT be set
 bool PingServer::init ( ) {
 	// reset how many pings we've launched
@@ -638,7 +638,7 @@ void gotReplyWrapperP ( void *state , UdpSlot *slot ) {
 	if ( slot->m_ip == h->m_ipShotgun ) pingPtr = &h->m_pingShotgun;
 	// original overrides shotgun, in case ips match
 	if ( slot->m_ip == h->m_ip        ) pingPtr = &h->m_ping;
-	// otherwise... wierd!!
+	// otherwise... weird!!
 	if ( ! pingPtr ) pingPtr = &h->m_ping;
 	// debug msg
 	//logf(LOG_DEBUG,"net: Got ping reply for hid=%"INT32" ip=%s "
@@ -757,7 +757,7 @@ void gotReplyWrapperP ( void *state , UdpSlot *slot ) {
 
 	// . if his ping was dead, try to send an email alert to the admin 
 	// . returns false if blocked, true otherwise
-	// . sets g_errno on erro
+	// . sets g_errno on error
 	// . send it iff both ports (if using shotgun) are dead
 	if ( ! isAlive && nowms - h->m_startTime >= g_conf.m_sendEmailTimeout) 
 		g_pingServer.sendEmail ( h ) ;
@@ -930,7 +930,7 @@ void handleRequest11 ( UdpSlot *slot , int32_t niceness ) {
 	if ( slot->m_ip == h->m_ipShotgun ) pingPtr = &h->m_pingShotgun;
 	// original overrides shotgun, in case ips match
 	if ( slot->m_ip == h->m_ip        ) pingPtr = &h->m_ping;
-	// otherwise... wierd!!
+	// otherwise... weird!!
 	if ( ! pingPtr ) pingPtr = &h->m_ping;
 	//logf(LOG_DEBUG,"net: Got ping request from hid=%"INT32" ip=%s",
 	//     h->m_hostId,iptoa(slot->m_ip));
@@ -1139,7 +1139,7 @@ void handleRequest11 ( UdpSlot *slot , int32_t niceness ) {
 			else {              
 				//h->m_emailCode =  0;
 				// . this returns false if blocked, true otherw
-				// . sets g_errno on erro
+				// . sets g_errno on error
 				g_pingServer.sendEmail ( h );
 				// reset in case sendEmail() set it
 				g_errno = 0;
@@ -2665,7 +2665,7 @@ void PingServer::tapHost ( int32_t hostId ) {
 // . "tripTime" should be the timeOut time if "timedOut" is true
 // . returns false if you have to wait for your callback to be called
 // . returns true if you don't have to wait... stamp happened immediately
-// . sets g_errno on any error, regardless of whether true or false was returnd
+// . sets g_errno on any error, regardless of whether true or false was returned
 /*
 void PingServer::stampHost ( int32_t  hostId , int32_t tripTime , bool timedOut ) {
 	// hostId of -1 means unknown, so we can't stamp it
@@ -2978,7 +2978,7 @@ bool sendEmail ( class EmailInfo *ei ) {
 
 	// just send it to a sendmail server which will forward it,
 	// because a lot of email servers don't like us connecting directly
-	// beause i think our IP address does not match that of our 
+	// because i think our IP address does not match that of our 
 	// MX ip for our domain? sendmail must be configured to allow
 	// forwarding if it receives an email from the IP of host #0
 	// in the cluster.

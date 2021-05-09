@@ -2,7 +2,7 @@
 
 
 //		i guess both msg0 send requests failed with no route to host, 
-//and they got retired... why didnt they switch to eth1????
+//and they got retired... why didn't they switch to eth1????
 
 
 #include "Multicast.h"
@@ -231,7 +231,7 @@ bool Multicast::send ( char         *msg              ,
 	}
 	//if ( ! m_sendToWholeGroup ) return sendToHostLoop ( key , -1 );
 	// . send to ALL hosts in this group if sendToWholeGroup is true
-	// . blocks forever until sends to all hosts are successfull
+	// . blocks forever until sends to all hosts are successful
 	sendToGroup ( ); 
 	// . sendToGroup() always blocks, but we return true if no g_errno
 	// . we actually keep looping until all hosts get the msg w/o error
@@ -339,7 +339,7 @@ void Multicast::sendToGroup ( ) {
 		// . clear it, we'll try again
 		// . if we don't clear Msg1::addList(), which returns
 		//   true if it did not block, false if it did, will pick up
-		//   on it and wierd things might happen.
+		//   on it and weird things might happen.
 		g_errno = 0;
 		// continue if we're already registered for sleep callbacks
 		if ( m_registeredSleep ) continue;
@@ -387,7 +387,7 @@ void Multicast::gotReply2 ( UdpSlot *slot ) {
 	// set m_errnos for this slot
 	int32_t i;
 	for ( i = 0 ; i < m_numHosts ; i++ ) if ( m_slots[i] == slot ) break;
-	// if it matched no slot that's wierd
+	// if it matched no slot that's weird
 	if ( i == m_numHosts ) {
 		//log("not our slot: mcast=%"UINT32"",(int32_t)this);
 		log(LOG_LOGIC,"net: multicast: Not our slot."); return; }
@@ -609,7 +609,7 @@ loop:
 		g_errno = ENOHOSTS; return false; }
 
 	// log("build: msg %x sent to host %"INT32 " first hostId is %"INT32 
-	// 	" oustanding msgs %"INT32, 
+	// 	" outstanding msgs %"INT32, 
 	// 	m_msgType, i, firstHostId, m_hostPtrs[i]->m_numOutstandingRequests);
 
 	// . send to this guy, if we haven't yet
@@ -1312,7 +1312,7 @@ void Multicast::gotReply1 ( UdpSlot *slot ) {
 		// slot must match
 		if ( m_slots[i] == slot ) break;
 	}
-	// if it matched no slot that's wierd
+	// if it matched no slot that's weird
 	if ( i >= m_numHosts ) {
 		log(LOG_LOGIC,"net: multicast: Not our slot 2."); 
 		char *xx = NULL; *xx = 0;

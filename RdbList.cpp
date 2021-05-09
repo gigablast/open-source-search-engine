@@ -450,7 +450,7 @@ bool RdbList::prepareForMerge ( RdbList **lists         ,
 	else if ( m_fixedDataSize <  0 ) minRecSizes = -1;
 
 	// . temporarily set m_listPtr/m_listEnd of each list based on
-	//   the contraints: startKey/endKey
+	//   the constraints: startKey/endKey
 	// . compute our max list size from all these ranges
 	int32_t maxListSize = 0;
 	for ( int32_t i = 0 ; i < numLists ; i++ ) {
@@ -1315,7 +1315,7 @@ int RdbList::printList ( ) {
 // . only for use by indexdb and dbs that use half keys
 // . returns false and sets g_errno on error, true otherwise
 // . "offsetHint" is where to start looking for the last key <= endKey
-// . it shoud have been supplied by Msg3's RdbMap
+// . it should have been supplied by Msg3's RdbMap
 // . this is only called by Msg3.cpp
 // . CAUTION: destructive! may write 6 bytes so key at m_list is 12 bytes
 // . at hintOffset bytes offset into m_list, the key is hintKey
@@ -1690,7 +1690,7 @@ void RdbList::merge_r ( RdbList **lists         ,
 	// did they call prepareForMerge()?
 	if ( m_mergeMinListSize == -1 ) {
 		log(LOG_LOGIC,"db: rdblist: merge_r: prepareForMerge() not "
-		    "called. ignoring error and returning emtpy list.");
+		    "called. ignoring error and returning empty list.");
 		// this happens if we nuke doledb during a merge of it. it
 		// is just bad timing
 		return;
@@ -1791,7 +1791,7 @@ void RdbList::merge_r ( RdbList **lists         ,
 	KEYSET(highestKey,KEYMIN(),m_ks);
 	// this is used for rolling back delete records
 	int32_t lastListSize = m_listSize;
-	// for seeing if negative rec is OLDER than positve key before
+	// for seeing if negative rec is OLDER than positive key before
 	// annilating them together
 	//int32_t lastMini = -1;
 	// two vars for removing negative recs from the end of the final list
@@ -2519,7 +2519,7 @@ bool RdbList::indexMerge_r ( RdbList **lists         ,
 	// point to most significant 4 bytes of "tmp"
 	char *minPtrLo ;
 	char *minPtrHi ;
-	int16_t mini = -1; // int16_t -> must be able to accomodate MAX_RDB_FILES!!
+	int16_t mini = -1; // int16_t -> must be able to accommodate MAX_RDB_FILES!!
 
 	// for saving state in case of key annihilation
 	//char *oldListPtr   = NULL;
@@ -3202,7 +3202,7 @@ bool RdbList::posdbMerge_r ( RdbList **lists         ,
 	char *minPtrBase ; // lowest  6 bytes
 	char *minPtrLo ;   // next    6 bytes
 	char *minPtrHi ;   // highest 6 bytes
-	int16_t mini = -1; // int16_t -> must be able to accomodate MAX_RDB_FILES!!
+	int16_t mini = -1; // int16_t -> must be able to accommodate MAX_RDB_FILES!!
 
 	// a flag that helps eliminate dangling negatives
 	//bool firstTime = true;

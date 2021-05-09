@@ -2974,7 +2974,7 @@ bool printMyInterests ( SafeBuf &sb , State7 *st , bool justPrintHiddens ) {
 
 	HttpRequest *hr = &st->m_hr;
 
-	// shoule we highlight one?
+	// should we highlight one?
 	char *hi = hr->getString("hi",NULL,NULL);
 	int32_t specialHighlightHash = 0;
 	if ( hi ) specialHighlightHash = hash32Lower_a ( hi , gbstrlen(hi) );
@@ -6651,7 +6651,7 @@ bool printScripts1 ( SafeBuf &sb , State7 *st ) {
 		       "function foundloc ( position ) {"
 		       // Check to see if there is already a location.
 		       // There is a bug in FireFox where this gets
-		       // invoked more than once with a cahced result.
+		       // invoked more than once with a cached result.
 		       //"if (locationMarker){"
 		       //"return;"
 		       //"}"
@@ -8844,7 +8844,7 @@ bool printXmlResult ( SafeBuf &sb , State7 *st, ExpandedResult *er ,
 	// using ctime to display these should work. they
 	// are in localtime.
 	// XmlDoc::getMsg20Reply limits to first 100
-	// intervals starting at the next occuring one,
+	// intervals starting at the next occurring one,
 	// or the one that is happening now i guess.
 	sb.safePrintf ( "\t\t<eventDateIntervalsUTC><![CDATA[" );
 	for ( int32_t k = 0 ; k < ni ; k++ ) 
@@ -9595,7 +9595,7 @@ bool printDisplayWhere ( SafeBuf &sb , SearchInput *si , bool *hasLocation ) {
 			char *cityName = pd->getOfficialName();
 			char *stateName = pd->getStateName();
 			char *countryName = (char *)pd->getCountryName();
-			// sometims "stateName" is null, so do it this way
+			// sometimes "stateName" is null, so do it this way
 			if ( cityName ) {
 				printed = true;
 				sb.safePrintf("%s",cityName);
@@ -11949,7 +11949,7 @@ bool printXmlHeader ( SafeBuf &sb , State7 *st ) {
 	int32_t nowUTC = getTimeGlobal();
 	sb.safePrintf("<currentTimeUTC>%"UINT32"</currentTimeUTC>\n",
 		      nowUTC);
-	// print time nwo in utc
+	// print time now in utc
 	if ( si->m_cityLat != 999.0 )
 		sb.safePrintf("<userCityLat>%.07f</userCityLat>\n",
 			      si->m_cityLat);//-180.0);
@@ -12391,7 +12391,7 @@ bool gotResults ( void *state ) {
 	}
 
 
-	// ignore imcomplete or invalid multibyte or wide characters errors
+	// ignore incomplete or invalid multibyte or wide characters errors
 	if ( g_errno == EILSEQ ) {
 		log("query: Query error: %s. Ignoring.", mstrerror(g_errno));
 		g_errno = 0;
@@ -17715,7 +17715,7 @@ bool sendReply ( void *state ) {
 			       "Error adding event: found address, but could "
 			       "not find an event. Did  it have a time like"
 			       " 7pm? And either a recurring day of week like "
-			       "<i>Every Wedensday</i> or a specific day like "
+			       "<i>Every Wednesday</i> or a specific day like "
 			       "<i>April 12th, 2012 at 3pm</i>?</font></b>");
 		return sendAddEventTail ( st9 );
 	}
@@ -18538,7 +18538,7 @@ bool sendPageAbout2 ( State3 *st3 ) {
 		"</eventDateIntervalsUTC>\n"
 		"\n"
 
-		"# This is how long until the next occurence of this event\n"
+		"# This is how long until the next occurrence of this event\n"
 		"<eventCountdown>"
 		"<![CDATA[ in 5 hours 2 minutes on Thu, Mar 22 @ 9pm ]]>"
 		"</eventCountdown>\n"
@@ -19201,7 +19201,7 @@ bool doMsg0Loop ( State66 *st ) {
 	for ( ; st->m_i < g_hostdb.m_numHosts ; ) {
 		// get host
 		Host *h = g_hostdb.getHost ( st->m_i );
-		// adance incase msg0 blocks
+		// adance in case msg0 blocks
 		st->m_i++;
 		// stick with stripe #0
 		if ( h->m_stripe != 0 ) continue;

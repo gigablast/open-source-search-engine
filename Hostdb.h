@@ -135,7 +135,7 @@ class Host {
 
 	//int32_t           m_groupNum;
 //	char       m_pubKey[20];     // 128bit(16 byte) and a int16_t/int32_t
-	uint32_t  m_ip ;        // used for internal communcation (udp)
+	uint32_t  m_ip ;        // used for internal communication (udp)
 
 	// what stripe are we in? i.e. what twin number are we?
 	int32_t           m_stripe;

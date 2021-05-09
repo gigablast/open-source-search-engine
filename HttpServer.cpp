@@ -843,7 +843,7 @@ void HttpServer::requestHandler ( TcpSocket *s ) {
 	// log the request down here now so we can include 
 	// "(permission denied)" on the line if we should
 	if ( ! isPic ) {
-		// what url refered user to this one?
+		// what url referred user to this one?
 		char *ref = r.getReferer();
 		// skip over http:// in the referer
 		if ( strncasecmp ( ref , "http://" , 7 ) == 0 ) ref += 7;
@@ -2299,7 +2299,7 @@ int32_t getMsgPiece ( TcpSocket *s ) {
 // . up to 128 bytes of the reply can be stored in a static buffer
 //   contained in TcpSocket, until we need to alloc...
 int32_t getMsgSize ( char *buf, int32_t bufSize, TcpSocket *s ) {
-	// . if the msg ends in \r\n0\r\n\r\n that's an end delimeter
+	// . if the msg ends in \r\n0\r\n\r\n that's an end delimiter
 	// . this is part of HTTP/1.1's "chunked transfer encoding" thang
 	/*
 	if ( bufSize >= 7 ) {
@@ -2348,7 +2348,7 @@ int32_t getMsgSize ( char *buf, int32_t bufSize, TcpSocket *s ) {
 		return bufSize;
 	}
 
-	// if it is "HTTP/1.0 200 Connetion established\r\n\r\n" we are done
+	// if it is "HTTP/1.0 200 Connection established\r\n\r\n" we are done
 	// it is just a mime reply and no content. then we need to send
 	// the https request, encrypted, to the proxy... because our tunnel
 	// is now established
@@ -2669,7 +2669,7 @@ bool HttpServer::hasPermission ( int32_t ip , HttpRequest *r ,
 	//log("NO!!!! input--> kname1=%s kname2=%s v1=%"INT32" v2=%"INT32"",
 	//   kname1,kname2,v1,v2);
 
-	// . you always need key if you specifiy s= or n=, no freebies for that
+	// . you always need key if you specify s= or n=, no freebies for that
 	// . no, cuz they could wait a minute before hitting "Next 10" and pass
 	//   in an expired key
 	//if ( r->getLong ( "s" ,  0 ) !=  0 ) return false;
@@ -3314,7 +3314,7 @@ bool sendPageApi ( TcpSocket *s , HttpRequest *r ) {
 		"</eventDateIntervalsUTC>\n"
 		"\n"
 
-		"# This is how long until the next occurence of this event\n"
+		"# This is how long until the next occurrence of this event\n"
 		"<eventCountdown>"
 		"<![CDATA[ in 5 hours 2 minutes on Thu, Mar 22 @ 9pm ]]>"
 		"</eventCountdown>\n"

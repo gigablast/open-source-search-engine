@@ -1457,7 +1457,7 @@ void gotListWrapper ( void *state , RdbList *listb , Msg5 *msg5xx ) {
 
 // . this may be called from a signal handler
 // . we call from a signal handler to keep msg21 zippy
-// . this may be called twice, onece from sig handler and next time not
+// . this may be called twice, once from sig handler and next time not
 //   from the sig handler
 void doneSending_ass ( void *state , UdpSlot *slot ) {
 	// point to our state

@@ -248,7 +248,7 @@ void Blaster::runBlaster(char *file1,char *file2,
 	    m_totalUrls );
 
 	if(!isLogFile){
-		// get min time bewteen each spider in milliseconds
+		// get min time between each spider in milliseconds
 		m_wait = wait;
 			
 		// # of threads
@@ -1193,7 +1193,7 @@ void Blaster::gotDoc4 ( void *state, TcpSocket *s){
 		       0,
 		       false,
 		       NULL)){
-		log(LOG_WARN, "blaster: Coudn't set Links class in gotDoc4");
+		log(LOG_WARN, "blaster: Couldn't set Links class in gotDoc4");
 	}
 	for (int32_t i=0;i<links.getNumLinks();i++){
 		char *ss=links.getLink(i);

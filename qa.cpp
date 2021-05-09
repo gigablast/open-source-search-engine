@@ -333,7 +333,7 @@ void processReply ( char *reply , int32_t replyLen ) {
 	}
 
 	// Just look a substring of the response so we don't have to worry about
-	// miniscule changes in output formats or changing dates.
+	// minuscule changes in output formats or changing dates.
 	if(s_expect) {
 		log("expecting for %s", s_expect);
 		if(gb_strcasestr(content, s_expect)) {

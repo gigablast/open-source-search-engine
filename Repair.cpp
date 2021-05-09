@@ -201,7 +201,7 @@ void repairWrapper ( int fd , void *state ) {
 		//   have a repair mode of 2.
 		g_repairMode = 2;
 		// note it
-		log("repair: All oustanding writing operations stopped. ");
+		log("repair: All outstanding writing operations stopped. ");
 		log("repair: Waiting for all other hosts to stop, too.");
 	}
 
@@ -1065,7 +1065,7 @@ bool Repair::load ( ) {
 
 
 // . this is the main repair loop
-// . this is repsonsible for calling all the repair functions
+// . this is responsible for calling all the repair functions
 // . all repair callbacks given come back into this loop
 // . returns false if blocked, true otherwise
 // . sets g_errno on error
@@ -1733,7 +1733,7 @@ bool Repair::gotScanRecList ( ) {
 			      uk1               , // startKey
 			      uk2               , // endKey
 			      // use 0x7fffffff preceisely because it
-			      // will determine eactly how long the
+			      // will determine exactly how long the
 			      // tree list needs to allocate in Msg5.cpp
 			      0x7fffffff        , // minRecSizes
 			      true              , // includeTree?

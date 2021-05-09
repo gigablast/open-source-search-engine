@@ -50,7 +50,7 @@ void scraperSleepWrapper ( int fd , void *state ) {
 }
 
 void Scraper::wakeUp ( ) {
-	// this is wierd
+	// this is weird
 	if ( m_numReceived != 0 || m_numSent != 0 ) {
 		log("scraper: seems like a scrape is outstanding.");
 		return;

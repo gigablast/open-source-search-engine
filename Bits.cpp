@@ -245,7 +245,7 @@ void Bits::setInUrlBits ( int32_t niceness ) {
 			// include it
 		        m_bits[j] |= D_IS_IN_URL;
 		}
-		// avoid inifinite loop with this if conditional statement
+		// avoid infinite loop with this if conditional statement
 		if ( j > i ) i = j;
 	}
 }
@@ -541,7 +541,7 @@ bool Bits::setForSummary ( Words *words , char *buf , int32_t bufSize ) {
 		if      ( words->hasChar (i, '(' ) ) flags |=  D_IN_PARENS;
 		else if ( words->hasChar (i, ')' ) ) flags &= ~D_IN_PARENS;
 
-		// apply curent flags
+		// apply current flags
 		m_swbits[i] |= flags;
 
 

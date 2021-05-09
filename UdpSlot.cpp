@@ -591,7 +591,7 @@ void UdpSlot::setResendTime() {
 		m_resendTime = base * ( 1 << m_resendCount );
 		// watch out for overflow
 		if ( m_resendTime < base ) m_resendTime = max;
-		//try to prevent everyone from synching up on 
+		//try to prevent everyone from syncing up on 
 		//a bogged down host when spidering.
 		m_resendTime += rand() % m_resendTime;
 		// don't exceed the max, though of 30 seconds

@@ -154,7 +154,7 @@ class Msg3 {
 	// min bytes to read
 	int32_t      m_minRecSizes;
 
-	// keep some original copies incase errno == ETRYAGAIN
+	// keep some original copies in case errno == ETRYAGAIN
 	//key_t     m_endKeyOrig;
 	char      m_endKeyOrig[MAX_KEY_BYTES];
 	int32_t      m_minRecSizesOrig;

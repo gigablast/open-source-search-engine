@@ -3,7 +3,7 @@
 // . this class defines a protocol on top of udp
 // . a protocol is defined with the member functions of UdpProtocol
 // . used by UdpServer class
-// . overriden by the Dns.h class for Dns protocol
+// . overridden by the Dns.h class for Dns protocol
 // . the default protocol for UdpServer is the Mattster Protocol (MP)
 // . we call callbacks of N=0 before N=1
 
@@ -17,7 +17,7 @@
 // . NOTE: we use the hadError bit to indicate server-side errors
 // . NOTE: we use the weInitiated bit to avoid transId collisions 
 // . IMPORTANT: ACKs don't have the 4 bytes used for msgSize, "sssss..."
-// . dgrams are generaly limited to 512 bytes so dgram # needs only 23 bits
+// . dgrams are generally limited to 512 bytes so dgram # needs only 23 bits
 
 // . TODO: verify you keep network order here, i found lots of mistakes
 // . byte order is different on different machines

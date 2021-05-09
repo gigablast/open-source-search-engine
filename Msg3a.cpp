@@ -785,7 +785,7 @@ bool Msg3a::gotAllShardReplies ( ) {
 		// skip down here if reply was already set
 		//skip:
 		// add of the total hits from each shard, this is how many
-		// total results the lastest shard is estimated to be able to 
+		// total results the latest shard is estimated to be able to 
 		// return
 		// . THIS should now be exact since we read all termlists
 		//   of posdb...
@@ -1010,7 +1010,7 @@ bool Msg3a::mergeLists ( ) {
 			// now compile the stats into a master table
 			for ( int32_t k = 0 ; k < tmp.m_numSlots ; k++ ) {
 				if ( ! tmp.m_flags[k] ) continue;
-				// get the vlaue
+				// get the value
 				int32_t v32 = *(int32_t *)tmp.getKeyFromSlot(k);
 				// and how many of them there where
 				int32_t count = *(int32_t *)tmp.getValueFromSlot(k);
@@ -1108,7 +1108,7 @@ bool Msg3a::mergeLists ( ) {
 		// i added a call the Query::constructor() to call
 		// QueryTerm::constructor() for each QueryTerm in
 		// Query::m_qterms[]. this was causing a mem leak of 
-		// 'fhtqt' too beacause we were re-using the query for each 
+		// 'fhtqt' too because we were re-using the query for each 
 		// coll in the federated loop search.
 		//ht->constructor();
 		// 4 byte key, 4 byte score for counting facet values
@@ -1221,7 +1221,7 @@ bool Msg3a::mergeLists ( ) {
 
 			fe2->m_count += fe->m_count;
 
-			// also accumualte count of total docs, not just in
+			// also accumulate count of total docs, not just in
 			// the search results, that have this value for this
 			// facet
 			fe2->m_outsideSearchResultsCount +=

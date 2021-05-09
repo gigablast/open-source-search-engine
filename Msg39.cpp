@@ -568,7 +568,7 @@ bool Msg39::getLists () {
 	// restrict to docid range?
 	//
 	// . get the docid start and end
-	// . do docid paritioning so we can send to all hosts
+	// . do docid partitioning so we can send to all hosts
 	//   in the network, not just one stripe
 	int64_t docIdStart = 0;
 	int64_t docIdEnd = MAX_DOCID;

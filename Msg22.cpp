@@ -534,7 +534,7 @@ void handleRequest22 ( UdpSlot *slot , int32_t netnice ) {
 	       // ok, we got a match, return it
 	       char *data     = tt->getData     ( n );
 	       int32_t  dataSize = tt->getDataSize ( n );
-	       // wierd!
+	       // weird!
 	       if ( dataSize == 0 ) { char *xx=NULL;*xx=0; }
 	       // send the whole rec back
 	       int32_t need = 12 + 4 + dataSize;
@@ -583,7 +583,7 @@ void handleRequest22 ( UdpSlot *slot , int32_t netnice ) {
 				   uk1               , // startKey
 				   uk2               , // endKey
 				   // use 0x7fffffff preceisely because it
-				   // will determine eactly how long the
+				   // will determine exactly how long the
 				   // tree list needs to allocate in Msg5.cpp
 				   0x7fffffff        , // minRecSizes
 				   true              , // includeTree?
@@ -705,7 +705,7 @@ void gotUrlListWrapper ( void *state , RdbList *list , Msg5 *msg5 ) {
 	// . log if different
 	// . if our url rec was in there, this could still be different
 	//   if there was another url rec in there with the same docid and
-	//   a diferent extension, but with a tfn of 255, meaning that it
+	//   a different extension, but with a tfn of 255, meaning that it
 	//   is just in spiderdb and not in titledb yet. so it hasn't been
 	//   assigned a permanent docid...
 	// . another way "ad" may be different now is from the old bug which
@@ -897,7 +897,7 @@ void gotTitleList ( void *state , RdbList *list , Msg5 *msg5 ) {
 		int64_t dd = g_titledb.getDocId(k);
 
 		if ( r->m_getAvailDocIdOnly ) {
-			// make sure our available docids are availble!
+			// make sure our available docids are available!
 			if ( dd == ad1 ) ad1++;
 			if ( dd == ad2 ) ad2++;
 			continue;
@@ -910,7 +910,7 @@ void gotTitleList ( void *state , RdbList *list , Msg5 *msg5 ) {
 			// be a valid hash. so let this through. i've seen
 			// it core here before.
 			//if ( st->m_uh48 == 0 ) { char *xx=NULL;*xx=0; }
-			// make sure our available docids are availble!
+			// make sure our available docids are available!
 			if ( dd == ad1 ) ad1++;
 			if ( dd == ad2 ) ad2++;
 			// we must match this exactly

@@ -38,7 +38,7 @@ public:
 class QATest {
 public:
 	void reset();
-	// Subclasses must define these funtions
+	// Subclasses must define these functions
 	virtual ~QATest();
 	virtual void startTest() = 0;
 };

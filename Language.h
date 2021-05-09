@@ -273,7 +273,7 @@ class Language {
 	// hash table of the top popular words in the dictionary
 	//	HashTableT <uint32_t, char *> m_topPopPhrases;
 
-	// hash table of mispelled words
+	// hash table of misspelled words
 	HashTableT <uint32_t, bool>m_misp;
 
 	// hash table of wikipedia words
