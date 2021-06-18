@@ -1,3 +1,4 @@
+#include <ifaddrs.h>
 #include "gb-include.h"
 
 #include "Hostdb.h"
@@ -2818,8 +2819,8 @@ void swapInts ( void *xx ) {
 }
 
 static int32_t s_localIps[20];
-#include <sys/types.h>
-#include <ifaddrs.h>
+
+
 int32_t *getLocalIps ( ) {
 	static bool s_valid = false;
 	if ( s_valid ) return s_localIps;
@@ -2840,7 +2841,7 @@ int32_t *getLocalIps ( ) {
 		//break; // mdw hack...
 		struct sockaddr_in *xx = (sockaddr_in *)p->ifa_addr;
 		// fix the bug when compiling for 64-bit arch
-		swapInts ( &xx );
+		//swapInts ( &xx );
 		int32_t ip = xx->sin_addr.s_addr;
 		// skip if loopback we stored above
 		if ( ip == loopback ) continue;
