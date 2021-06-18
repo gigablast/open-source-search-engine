@@ -230,7 +230,7 @@ void Mem::delnew ( void *ptr , int32_t size , const char *note ) {
 //   would cause us to throw an unhandled signal. So for now I don't
 //   call mmalloc since it is limited in the mem it can use and would often
 //   return NULL and set g_errno to ENOMEM
-void * operator new (size_t size) throw (std::bad_alloc) {
+void * operator new (size_t size) {
 	// don't let electric fence zap us
 	if ( size == 0 ) return (void *)0x7fffffff;
 
@@ -334,7 +334,7 @@ newmemloop:
 //in those bytes and returns a mem ptr at the malloced address + 4.
 //this can screw up the subsequent call to addmem because the size and
 //ptrs are off.
-void * operator new [] (size_t size) throw (std::bad_alloc) {
+void * operator new [] (size_t size) {
 	// don't let electric fence zap us
 	if ( size == 0 ) return (void *)0x7fffffff;
 	// . fail randomly
