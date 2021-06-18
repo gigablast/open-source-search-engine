@@ -216,7 +216,7 @@ inline bool relabel   ( void *ptr , int32_t size , const char *note ) {
 //#endif
 //#ifndef DMALLOC
 void operator delete ( void *p ) throw();
-void * operator new (size_t size) throw(std::bad_alloc);
+void * operator new (size_t size) throw (std::bad_alloc);
 // you MUST call mmalloc, mcalloc and mrealloc!!
 #define malloc coreme 
 #define calloc coreme 
@@ -225,7 +225,7 @@ void * operator new (size_t size) throw(std::bad_alloc);
 inline void *coreme ( int x ) { char *xx = NULL; *xx = 0; return NULL; }
 
 int32_t getAllocSize(void *p);
-//void * operator new (size_t size) noexcept(false);
+//void * operator new (size_t size) ;
 
 inline int32_t getHighestLitBit ( uint16_t bits ) {
 	unsigned char b = *((unsigned char *)(&bits) + 1);
