@@ -162,7 +162,7 @@ class Msg39Request {
 	int32_t    size_whiteList;
 	//int32_t    size_coll;
 
-	char    m_buf[0];
+	// variable data comes here
 };
 
 
@@ -204,10 +204,7 @@ public:
 	int32_t   size_facetHashList;
 	int32_t   size_clusterRecs;
 
-	// . this is the "string buffer" and it is a variable size
-	// . this whole class is cast to a udp reply, so the size of "buf"
-	//   depends on the size of that udp reply
-	char       m_buf[0];
+	// variable data comes here
 };
 
 

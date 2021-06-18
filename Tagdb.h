@@ -100,7 +100,7 @@ class Tag {
 
 	int32_t     m_bufSize;
 	char     m_buf[0];
-};
+} __attribute__((packed, aligned(4)));
 
 // . convert "domain_squatter" to ST_DOMAIN_SQUATTER
 // . used by CollectionRec::getRegExpNum()

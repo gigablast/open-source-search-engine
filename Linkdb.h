@@ -108,7 +108,7 @@ public:
 	int32_t       size_url;
 	int32_t       size_oldLinkInfo;
 
-	char m_buf[0];
+	//variable data begins here
 
 	int32_t getStoredSize();
 	void serialize();
@@ -834,7 +834,7 @@ class LinkInfo {
 
 	// serialize "Inlinks" into this buffer, m_buf[]
 	char   m_buf[0];
-};
+} __attribute__((packed, aligned(4)));
 
 
 #define MAXINLINKSTRINGBUFSIZE 2048
@@ -922,6 +922,7 @@ class Inlink { // : public Msg {
 	// and hash that and store it here
 
 	// we got a 2 byte padding before this PADPADPADPADP
+	int16_t    m_pad0;
 
 	int32_t       m_siteHash            ; // www.hompages.com/~fred/ // 56
 	//int32_t     m_hostHash            ; // www.ibm.com
@@ -1072,7 +1073,7 @@ class Inlink { // : public Msg {
 
 
 	char       m_buf[MAXINLINKSTRINGBUFSIZE] ;
-};
+} __attribute__((packed, aligned(4)));
 
 // . this function is normally called like "info = makeLinkInfo()"
 //   to create a new LinkInfo based on a bunch of Msg20 replies

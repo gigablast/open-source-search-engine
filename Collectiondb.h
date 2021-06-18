@@ -304,7 +304,7 @@ class CrawlInfo {
 	void reset() { memset ( this , 0 , sizeof(CrawlInfo) ); };
 	//bool print (class SafeBuf *sb ) ;
 	//bool setFromSafeBuf (class SafeBuf *sb ) ;
-};
+} __attribute__((packed, aligned(4)));
 
 
 class CollectionRec {

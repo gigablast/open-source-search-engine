@@ -186,7 +186,7 @@ class StatKey {
 	uint32_t m_labelHash;
 	// force to 32-bit even though time_t is 64-bit on 64-bit systems
 	int32_t m_time1;
-};
+} __attribute__((packed, aligned(4)));
 
 class StatData {
  public:
@@ -206,6 +206,6 @@ class StatData {
 	//int32_t      getLabelHash () { return (int32_t)m_labelHash; };
 	//int32_t      getParmHash  () { return (int32_t)m_labelHash; };
 	//int32_t      getTime1     () { return m_time1; };
-};
+} __attribute__((packed, aligned(4)));
 
 #endif

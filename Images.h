@@ -36,7 +36,7 @@ class ThumbnailInfo {
 				    int32_t *newdx ,
 				    char *style = NULL ,
 				    char format = FORMAT_HTML ) ;
-};
+} __attribute__((packed, aligned(4)));
 
 // XmlDoc::ptr_imgData is a ThumbnailArray
 class ThumbnailArray {
@@ -60,7 +60,7 @@ class ThumbnailArray {
 		}
 		return NULL;
 	};
-};
+} __attribute__((packed, aligned(4)));
 
 class Images {
 

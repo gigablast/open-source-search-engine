@@ -774,7 +774,7 @@ bool Msg3a::gotAllShardReplies ( ) {
 					&mr->size_docIds,
 					&mr->size_clusterRecs,
 					&mr->ptr_docIds,
-					mr->m_buf ) ) {
+					((char*)mr) + sizeof(*mr) ) ) {
 			g_errno = ECORRUPTDATA;
 			m_errno = ECORRUPTDATA;
 			log("query: msg3a: Shard had error: %s",

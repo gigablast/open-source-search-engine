@@ -167,7 +167,7 @@ void Msg39::getDocIds ( UdpSlot *slot ) {
 					  &m_r->size_readSizes ,
 					  &m_r->size_whiteList,//coll ,
 					  &m_r->ptr_readSizes,
-					  m_r->m_buf );
+					  ((char*)m_r) + sizeof(*m_r) );
 
 	// sanity check
 	if ( finalSize != requestSize ) {

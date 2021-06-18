@@ -8499,7 +8499,7 @@ bool XmlDoc::gotSectionFacets ( Multicast *mcast ) {
 			 &mr->size_docIds,
 			 &mr->size_clusterRecs,
 			 &mr->ptr_docIds,
-			 mr->m_buf );
+			 ((char*)m_r) + sizeof(*m_r) );
 
 	char *p = (char *)(mr->ptr_facetHashList);
 	//char *pfinal = p + mr->size_facetHashList;

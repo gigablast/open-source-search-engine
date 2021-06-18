@@ -851,31 +851,27 @@ void  handleRequest25 ( UdpSlot *slot , int32_t netnice ) {
 }
 
 int32_t Msg25Request::getStoredSize() {
-	return sizeof(Msg25Request) + size_url + size_site + size_oldLinkInfo;
+	return getMsgStoredSize(sizeof(*this), &size_site, &size_oldLinkInfo);
 }
 
 // . fix the char ptrs for sending over the network
 // . use a for loop like we do in Msg20.cpp if we get too many strings
 void Msg25Request::serialize ( ) {
-
-	char *p = m_buf;
+	char *p = ((char*)this) + sizeof(*this);
 
 	gbmemcpy ( p , ptr_url , size_url );
-	ptr_url = (char *)(p - m_buf);
 	p += size_url;
 
 	gbmemcpy ( p , ptr_site , size_site );
-	ptr_site = (char *)(p - m_buf);
 	p += size_site;
 
 	gbmemcpy ( p , ptr_oldLinkInfo , size_oldLinkInfo );
-	ptr_oldLinkInfo = (char *)(p - m_buf);
 	p += size_oldLinkInfo;
 }
 
 void Msg25Request::deserialize ( ) {
 
-	char *p = m_buf;
+	char *p = ((char*)this) + sizeof(*this);
 
 	ptr_url = p;
 	p += size_url;

@@ -60,9 +60,6 @@ class Msg20Request {
 		m_boolFlag           = 2   ; // autodetect if query boolean
 		m_titleMaxLen        = 64  ;
 		m_summaryMaxLen      = 512 ;
-		// reset ptr sizes
-		int32_t size = m_buf - (char *)&size_qbuf;
-		memset ( &size_qbuf , 0 , size );
 	};
 
 	int32_t  getStoredSize ( );
@@ -185,8 +182,7 @@ class Msg20Request {
 	// . can we just keep it a binary score? let's try that. 
 	char       m_checkForQueryMatch        :1;
 
-	// serialize() converts these ptrs into offsets in m_buf[]
-	// and deserialize() converts them back into ptrs on the receiver's end
+	// pointer+size variable section
 	char      *ptr_qbuf          ;
 	char      *ptr_hqbuf         ;
 	//char      *ptr_q2buf         ;
@@ -200,10 +196,6 @@ class Msg20Request {
 	//char      *ptr_imgUrl        ;
 	char      *ptr_displayMetas  ;
 
-	// . from here down: automatically set in Msg20Request::serialize() 
-	//   from the above parms
-	// . add new size_* parms after size_qbuf and before size_displayMetas
-	//   so that serialize()/deserialize() still work
 	int32_t       size_qbuf         ;
 	int32_t       size_hqbuf        ;
 	//int32_t       size_q2buf        ;
@@ -217,7 +209,7 @@ class Msg20Request {
 	//int32_t       size_imgUrl       ;
 	int32_t       size_displayMetas ; // size includes terminating \0
 
-	char       m_buf[0] ;
+	// variable data comes here
 };
 
 // the Msg20Reply::ptr_eventSummaryLines is a list of these classes
@@ -415,14 +407,7 @@ public:
 	char       m_hasAllQueryTerms    ; // set for m_getLinkText (buzz)
 	char       m_isPermalink         ; // set for m_getLinkText (buzz)
 	
-	// . serialize() converts these ptrs into offsets in m_buf[] and
-	//   deserialize() converts them back into ptrs on the receiver's end
-	// . note: there must be an associated size_* for each ptr_* in the
-	//   same relative position to the members surrounding it
-	// . if a ptr_* is added above ptr_tbuf or underneath 
-	//   ptr_outlinkRulesets, then the serialize() and deserialize() 
-	//   methods must be changed
-	// . also, all ptr_* should be char* and all size_* should be in bytes
+	// pointer+size variable section
 	char       *ptr_tbuf                 ; // title buffer
 	char       *ptr_htag                 ; // h1 tag buf
 	char       *ptr_ubuf                 ; // url buffer
@@ -518,11 +503,6 @@ public:
 
 	char       *ptr_note                 ; // reason why it cannot vote
 
-	// . add new size_* parms after size_tbuf and before
-	//   size_outlinkRulesets
-	//   so that serialize()/deserialize() still work
-	// . string sizes of the strings we store into m_buf[]
-	// . wordCountBuf is an exact word count 1-1 with each "range"
 	int32_t       size_tbuf                 ;
 	int32_t       size_htag                 ;
 	int32_t       size_ubuf                 ;
@@ -591,13 +571,9 @@ public:
 
 	//int32_t       size_turkForm             ;
 
-	// CAUTION: do not add any parms below size_note!!!
 	int32_t       size_note                 ;
 
-	// . this is the "string buffer" and it is a variable size
-	// . this whole class is cast to a udp reply, so the size of "buf"
-	//   depends on the size of that udp reply
-	char       m_buf[0];
+	// variable data comes here
 
 	int32_t      getNumCatIds    (){return size_catIds/4; };
 	int32_t      getNumIndCatIds (){return size_indCatIds/4; };
