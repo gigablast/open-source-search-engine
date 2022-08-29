@@ -17738,7 +17738,7 @@ void countdomains( char* coll, int32_t numRecs, int32_t verbosity, int32_t outpu
 	printHtml:
 		// HTML file Output
 		sprintf( out, "%scntdom.html", g_hostdb.m_dir );
-		if( (fhndl = fopen( out, "wb" )) == 0 ) {
+		if( (fhndl = fopen( out, "wb" )) == NULL ) {
 			log( LOG_INFO, "cntDm: File Open Failed." );
 			return;
 		}		
