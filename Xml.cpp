@@ -1199,7 +1199,7 @@ char *Xml::getItemLink ( int32_t *linkLen ) {
 		link     = m_nodes[i+1].m_node;
 		*linkLen = m_nodes[i+1].m_nodeLen;
 
-		if ( link && &linkLen > 0 ) return link;
+		if ( link && *linkLen > 0 ) return link;
 	}
 	// no link found, return NULL
 	*linkLen = 0;
