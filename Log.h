@@ -9,6 +9,9 @@
 #ifndef _MYLOG_H_
 #define _MYLOG_H_
 
+#include <cstdarg>
+#include <cstdint>
+
 // THE TYPES OF LOG MESSAGES
 // logs information pertaining to more complicated procedures, like
 // the merging and dumping of data for the "db" component, or what urls are 
@@ -82,20 +85,20 @@ extern char *g_dbuf;
 extern int32_t  g_dbufSize;
 
 #ifdef _CHECK_FORMAT_STRING_
-bool log ( int32_t type , char *formatString , ... ) 
+bool log ( int32_t type , const char *formatString , ... )
 	__attribute__ ((format(printf, 2, 3)));
-bool log ( char *formatString , ... )
+bool log ( const char *formatString , ... )
 	__attribute__ ((format(printf, 1, 2)));
-bool logf ( int32_t type , char *formatString , ... )
+bool logf ( int32_t type , const char *formatString , ... )
 	__attribute__ ((format(printf, 2, 3)));
 #else
 // may also syslog and fprintf the msg.
 // ALWAYS returns FALSE (i.e. 0)!!!! so you can say return log.log(...)
-bool log ( int32_t type , char *formatString , ... ) ;
+bool log ( int32_t type , const char *formatString , ... ) ;
 // this defaults to type of LOG_WARN
-bool log ( char *formatString , ... ) ;
+bool log ( const char *formatString , ... ) ;
 // force it to be logged, even if off on log controls panel
-bool logf ( int32_t type , char *formatString , ... ) ;
+bool logf ( int32_t type , const char *formatString , ... ) ;
 #endif
 
 class Log { 
@@ -103,7 +106,7 @@ class Log {
  public:
 
 	// returns true if opened log file successfully, otherwise false
-	bool init ( char *filename );
+	bool init ( const char *filename );
 
 	// . log this msg
 	// . "msg" must be NULL terminated
@@ -112,11 +115,11 @@ class Log {
 	// . if "asterisk" is true we print an asterisk to indicate that
 	//   the msg was actually logged earlier but only printed now because
 	//   we were in a signal handler at the time
-	bool logR ( int64_t now, int32_t type, char *msg, bool asterisk ,
+	bool logR ( int64_t now, int32_t type, const char *msg, bool asterisk ,
 		    bool forced = false );
 
 	// returns false if msg should not be logged, true if it should
-	bool shouldLog ( int32_t type , char *msg ) ;
+	bool shouldLog ( int32_t type , const char *msg ) ;
 
 	// just initialize with no file
 	Log () ;
@@ -136,20 +139,20 @@ class Log {
 	void printBuf ( );
 
 	// this is only called when in a signal handler
-	bool logLater ( int64_t now , int32_t type , char *formatString , 
+	bool logLater ( int64_t now , int32_t type , const char *formatString , 
 			va_list ap );
 
 	bool          m_disabled;
 
 	bool m_logTimestamps;
 
-	char *getFilename() { return m_filename; };
+	const char *getFilename() { return m_filename; };
 
  private:
 
 	bool dumpLog ( ); // make room for the new ones
 
-	char   *m_filename;
+	const char   *m_filename;
 	int     m_fd;
 	char   *m_hostname;
 	int     m_port;
@@ -157,7 +160,7 @@ class Log {
 	int64_t m_logFileSize;
 	bool makeNewLogFile ( );
 
-	char         *m_errorMsg      [ MAX_LOG_MSGS ];
+	const char         *m_errorMsg      [ MAX_LOG_MSGS ];
 	int16_t     m_errorMsgLen   [ MAX_LOG_MSGS ];
 	int64_t     m_errorTime     [ MAX_LOG_MSGS ];
 	unsigned char m_errorType     [ MAX_LOG_MSGS ];

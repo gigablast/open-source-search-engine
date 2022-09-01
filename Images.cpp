@@ -1068,7 +1068,7 @@ void Images::thumbStart_r ( bool amThread ) {
 	//sprintf( cmd, scmd, ext, in, out);
 	char *wdir = g_hostdb.m_dir;
 	// can be /dev/stderr or like /var/gigablast/data/log000 etc.
-	char *logFile = g_log.getFilename();
+	const char *logFile = g_log.getFilename();
 	// wdir ends in / so this should work.
 	snprintf( cmd, 2500 ,
 		 "LD_LIBRARY_PATH=%s %s%stopnm %s 2>> %s | "
