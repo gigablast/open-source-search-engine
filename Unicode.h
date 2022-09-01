@@ -1,6 +1,7 @@
 #ifndef UNICODEH
 #define UNICODEH
 
+#include <cstdint>
 #include <sys/types.h>
 #include <limits.h>
 #include <stdio.h>
@@ -65,15 +66,15 @@ static int utf8_sane[] = {
 };
 
 // how many bytes is char pointed to by p?
-inline char getUtf8CharSize ( uint8_t *p ) {
-	uint8_t c = *p;
+inline char getUtf8CharSize ( const uint8_t *p ) {
+	const uint8_t c = *p;
 	if(c<128)
 		return 1;
 	else
 		return bytes_in_utf8_code[c];
 }
 
-inline char getUtf8CharSize ( char *p ) {
+inline char getUtf8CharSize ( const char *p ) {
 	uint8_t c = (uint8_t)*p;
 	if(c<128)
 		return 1;
@@ -88,7 +89,7 @@ inline char getUtf8CharSize ( uint8_t c ) {
 		return bytes_in_utf8_code[c];
 }
 
-inline char getUtf8CharSize2 ( uint8_t *p ) {
+inline char getUtf8CharSize2 ( const uint8_t *p ) {
         if ( ! (p[0] & 0x80) ) return 1;
 	if ( ! (p[0] & 0x20) ) return 2;
 	if ( ! (p[0] & 0x10) ) return 3;
@@ -380,7 +381,7 @@ inline int32_t utf8Encode(UChar32 c, char* buf) {
 }
 
 // return the utf8 character at "p" as a 32-bit unicode character
-inline UChar32 utf8Decode(char *p){//, char **next){
+inline UChar32 utf8Decode(const char *p){//, char **next){
 	// single byte character
 	if (!(*p & 0x80)){
 		//*next = (char*) p + 1;
