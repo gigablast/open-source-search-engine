@@ -36,7 +36,7 @@
 
 bool doesFileExist ( char *filename ) ;
 
-int64_t getFileSize ( char *filename ) ;
+int64_t getFileSize ( const char *filename ) ;
 
 int64_t getFileSize_cygwin ( char *filename ) ;
 

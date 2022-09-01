@@ -89,7 +89,7 @@ bool renameCurrentLogFile ( ) {
 }
 
 
-bool Log::init ( char *filename ) {
+bool Log::init ( const char *filename ) {
 	// set the main process id
 	//s_pid = getpidtid();
 	setPid();
@@ -160,7 +160,7 @@ const char *getTypeString ( int32_t type ) {
 */
 #define MAX_LINE_LEN 20048
 
-bool Log::shouldLog ( int32_t type , char *msg ) {
+bool Log::shouldLog ( int32_t type , const char *msg ) {
 	// always log warnings
 	if ( type == LOG_WARN ) return true;
 	if ( type == LOG_INFO ) return g_conf.m_logInfo;
@@ -230,7 +230,7 @@ bool g_loggingEnabled = true;
 // for testing:
 //#define MAXLOGFILESIZE 3000
 
-bool Log::logR ( int64_t now , int32_t type , char *msg , bool asterisk ,
+bool Log::logR ( int64_t now , int32_t type , const char *msg , bool asterisk ,
 		 bool forced ) {
 
 	// filter if we should
@@ -305,7 +305,7 @@ bool Log::logR ( int64_t now , int32_t type , char *msg , bool asterisk ,
 	}
 
 	// msg resource
-	char *x = msg;
+	const char *x = msg;
 	//int32_t cc = 7;
 	// the first 7 bytes or up to the : must be ascii
 	//while ( p < pend && *x && is_alnum_a(*x) ) { *p++ = *x++; cc--; }
@@ -445,7 +445,7 @@ static char  s_problem  = '\0';
 // . 4 bytes = size of string space
 // . X bytes = NULL terminated format string
 // . X bytes = 0-3 bytes word-alignment padding
-bool Log::logLater ( int64_t now, int32_t type, char *format, va_list ap ) {
+bool Log::logLater ( int64_t now, int32_t type, const char *format, va_list ap ) {
 	//return false;
 	// we have to be in a sig handler
 	//if ( ! g_inSigHandler ) 
@@ -473,7 +473,7 @@ bool Log::logLater ( int64_t now, int32_t type, char *format, va_list ap ) {
 	memcpy_ass ( s_ptr , format , flen );
 	s_ptr += flen;
 	// the type of each arg is given by format
-	char *p = format;
+	const char *p = format;
 	// point to the variable args data
 	char *pap = (char *)ap;
 	// loop looking for %s, %"INT32", etc.
@@ -702,7 +702,7 @@ bool Log::dumpLog ( ) {
 	return true;
 }
 
-bool log ( int32_t type , char *formatString , ...) {
+bool log ( int32_t type , const char *formatString , ...) {
 	if ( g_log.m_disabled ) return false;
 	// do not log it if we should not
 	if ( ! g_log.shouldLog ( type , formatString ) ) return false;
@@ -729,7 +729,7 @@ bool log ( int32_t type , char *formatString , ...) {
 	return false;
 }
 
-bool log ( char *formatString , ... ) {
+bool log ( const char *formatString , ... ) {
 	if ( g_log.m_disabled ) return false;
 	// do not log it if we should not
 	if ( ! g_log.shouldLog ( LOG_WARN , formatString ) ) return false;
@@ -754,7 +754,7 @@ bool log ( char *formatString , ... ) {
 	return false;
 }
 
-bool logf ( int32_t type , char *formatString , ...) {
+bool logf ( int32_t type , const char *formatString , ...) {
 	if ( g_log.m_disabled ) return false;
 	// do not log it if we should not
 	//if ( type == LOG_WARN && ! g_conf.m_logWarnings ) return false;

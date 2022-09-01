@@ -946,7 +946,7 @@ bool File::closeLeastUsed () {
 	return true;
 }	
 
-int64_t getFileSize ( char *filename ) {
+int64_t getFileSize ( const char *filename ) {
 
 #ifdef CYGWIN
 	return getFileSize_cygwin ( filename );
