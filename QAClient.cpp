@@ -12,12 +12,12 @@
 static void doQA ( int fd , void *state ) ;
 static void nextTestWrapper(void *state);
 
-static char *s_parserUrls[] = 
+static const char *const s_parserUrls[] = 
 {"http://reddit.com/",
  "http://www.searchengineshowdown.com/cse/search-state-libraries/"
 };
 
-static char *s_queries[] = 
+static const char *const s_queries[] = 
 {"q=the&n=10",
  "q=search&n=100"
 };

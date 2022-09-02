@@ -4,7 +4,7 @@ TuringTest g_turingTest;
 
 #include "SafeBuf.h"
 
-static char *s_map[] = {
+static const char *const s_map[] = {
 "X",
 "#" ,
 "#" ,
@@ -345,7 +345,7 @@ bool TuringTest::printTest( SafeBuf* sb ) {
 				             s_map[j][0] != 'Q'     ; j++ ) {
 				// these strings are actually columns since 
 				// banner's output is transposed
-				char *s = s_map[j];
+				const char *s = s_map[j];
 				// copy line and transpose into column
 				int32_t k = 0;
 				while ( *s && k <= TMAX_HEIGHT ) {

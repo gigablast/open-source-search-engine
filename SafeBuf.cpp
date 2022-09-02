@@ -22,7 +22,7 @@
 // 	3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,4,4,4,4,4,4,4,4,0,0,0,0,0,0,0,0
 // };
 
-SafeBuf::SafeBuf(int32_t initSize, char *label ) {
+SafeBuf::SafeBuf(int32_t initSize, const char *label ) {
 	if(initSize <= 0) initSize = 1;
 	m_capacity = initSize;
 	m_length = 0;
@@ -51,11 +51,11 @@ SafeBuf::SafeBuf() {
 	m_label = NULL;
 }
 
-void SafeBuf::setLabel ( char *label ) {
+void SafeBuf::setLabel ( const char *label ) {
 	m_label = label;
 }
 
-SafeBuf::SafeBuf(char* stackBuf, int32_t cap, char* label) {
+SafeBuf::SafeBuf(char* stackBuf, int32_t cap, const char* label) { 
 	m_usingStack = true;
 	m_capacity = cap;
 	m_buf = stackBuf;
@@ -137,7 +137,7 @@ void SafeBuf::purge() {
 	m_encoding = csUTF8;
 }
 
-bool SafeBuf::safePrintf(char *formatString , ...) {
+bool SafeBuf::safePrintf(const char *formatString , ...) {
 	va_list   ap;
 	va_start ( ap, formatString);
 	int32_t tmp = vsnprintf ( m_buf + m_length, m_capacity - m_length, 
@@ -159,7 +159,7 @@ bool SafeBuf::safePrintf(char *formatString , ...) {
 }
 
 
-bool SafeBuf::safeMemcpy(char *s, int32_t len) {
+bool SafeBuf::safeMemcpy(const char *s, int32_t len) {
 	// put a silent \0 at the end
 	//int32_t tmp = len + m_length+1;
 	//if(tmp >= m_capacity ) {
@@ -173,7 +173,7 @@ bool SafeBuf::safeMemcpy(char *s, int32_t len) {
 	return true;
 }
 
-bool SafeBuf::safeMemcpy_nospaces(char *s, int32_t len) {
+bool SafeBuf::safeMemcpy_nospaces(const char *s, int32_t len) {
 	// put a silent \0 at the end
 	int32_t tmp = len + m_length+1;
 	if(tmp >= m_capacity ) {
@@ -198,7 +198,7 @@ bool SafeBuf::safeMemcpy ( Words *w , int32_t a , int32_t b ) {
 	return safeMemcpy ( p , pend - p );
 }
 
-char* SafeBuf::pushStr  (char* str, uint32_t len) {
+char* SafeBuf::pushStr  (const char* str, uint32_t len) { 
 	int32_t initLen = m_length;
 	bool status = safeMemcpy ( str , len );
 	status &= nullTerm();
@@ -207,7 +207,7 @@ char* SafeBuf::pushStr  (char* str, uint32_t len) {
 	return m_buf + initLen;
 }
 
-bool SafeBuf::pushPtr ( void *ptr ) {
+bool SafeBuf::pushPtr ( const void *ptr ) {
 	if ( m_length + (int32_t)sizeof(char *) > m_capacity ) 
 		if(!reserve(sizeof(char *)))//2*m_capacity + 1))
 			return false;
@@ -309,14 +309,14 @@ int32_t SafeBuf::pad(const char ch, const int32_t len) {
 	return len;
 }
 
-bool SafeBuf::cat(SafeBuf& c) {
+bool SafeBuf::cat(const SafeBuf& c) {
 	return safeMemcpy(c.getBufStart(), c.length());
 }
 
 // returns false with g_errno set on error
 bool SafeBuf::cat2 ( SafeBuf& c,
-		     char *tagFilter1 ,
-		     char *tagFilter2 ) {
+		     const char *tagFilter1 ,
+		     const char *tagFilter2 ) {
 
 	//SafeBuf tmp;
 	// reserve 1MB to avoid excessive reallocs
@@ -377,7 +377,7 @@ bool SafeBuf::advance ( int32_t i ) {
 	return true;
 }
 
-bool SafeBuf::reserve(int32_t i , char *label, bool clearIt ) {
+bool SafeBuf::reserve(int32_t i , const char *label, bool clearIt ) {
 
 	// if we don't already have a label and they provided one, use it
 	if ( ! m_label ) {
@@ -438,7 +438,7 @@ bool SafeBuf::reserve(int32_t i , char *label, bool clearIt ) {
 
 //reserve this many bytes, if we need to alloc, we double the 
 //buffer size.
-bool SafeBuf::reserve2x(int32_t i, char *label) {
+bool SafeBuf::reserve2x(int32_t i, const char *label) {
 	//watch out for overflow!
 	if((m_capacity << 1) + i < m_capacity) return false;
 	if(i + m_length >= m_capacity)
@@ -446,17 +446,17 @@ bool SafeBuf::reserve2x(int32_t i, char *label) {
 	else return true;
 }
 
-int32_t SafeBuf::saveToFile ( char *dir , char *filename ) {
+int32_t SafeBuf::saveToFile ( const char *dir , const char *filename ) {
 	char buf[1024];
 	snprintf(buf,1024,"%s/%s",dir,filename);
 	return dumpToFile ( buf );
 }
 
-int32_t SafeBuf::save ( char *fullFilename ) {
+int32_t SafeBuf::save ( const char *fullFilename ) {
 	return dumpToFile ( fullFilename );
 }
 
-int32_t SafeBuf::dumpToFile(char *filename ) {
+int32_t SafeBuf::dumpToFile(const char *filename ) {
  retry22:
 	int32_t fd = open ( filename , O_CREAT | O_WRONLY | O_TRUNC ,
 			    getFileCreationFlags() );
@@ -485,7 +485,7 @@ int32_t SafeBuf::dumpToFile(char *filename ) {
 }
 
 // return -1 on error
-int32_t SafeBuf::safeSave (char *filename ) {
+int32_t SafeBuf::safeSave (const char *filename ) {
  retry22:
 
 	// first write to tmp file
@@ -538,7 +538,7 @@ int32_t SafeBuf::safeSave (char *filename ) {
 }
 
 
-int32_t SafeBuf::fillFromFile(char *dir,char *filename,char *label) {
+int32_t SafeBuf::fillFromFile(const char *dir,const char *filename,const char *label) {
 	m_label = label;
 	char buf[1024];
 	if ( dir ) snprintf(buf,1024,"%s/%s",dir,filename);
@@ -556,7 +556,7 @@ char *SafeBuf::getNextLine ( char *p ) {
 }
 
 // returns -1 on error
-int32_t SafeBuf::catFile(char *filename) {
+int32_t SafeBuf::catFile(const char *filename) {
 	SafeBuf sb2;
 	if ( sb2.fillFromFile(filename) < 0 ) return -1;
 	// add 1 for a null
@@ -567,7 +567,7 @@ int32_t SafeBuf::catFile(char *filename) {
 
 
 // returns -1 on error
-int32_t SafeBuf::fillFromFile(char *filename) {
+int32_t SafeBuf::fillFromFile(const char *filename) {
 	struct stat results;
 	if (stat(filename, &results) != 0) {
 		// An error occurred
@@ -607,7 +607,7 @@ retry2:
 }
 
 // safely print the string, converting Latin1 to Utf8
-bool SafeBuf::safeLatin1ToUtf8(char *s, int32_t len) {
+bool SafeBuf::safeLatin1ToUtf8(const char *s, int32_t len) {
 	// check how far we're going to grow
 	int32_t tmp = len + m_length;
 	for ( int32_t i = 0; i < len; i++ ) {
@@ -696,21 +696,21 @@ bool SafeBuf::insert ( SafeBuf *c , int32_t insertPos ) {
 			     0                );
 }
 
-bool SafeBuf::insert ( char *s , int32_t insertPos ) {
+bool SafeBuf::insert ( const char *s , int32_t insertPos ) {
 	return safeReplace ( s         ,
 			     gbstrlen(s) ,
 			     insertPos ,
 			     0         );
 }
 
-bool SafeBuf::insert2 ( char *s , int32_t slen , int32_t insertPos ) {
+bool SafeBuf::insert2 ( const char *s , int32_t slen , int32_t insertPos ) {
 	return safeReplace ( s         ,
 			     slen      ,
 			     insertPos ,
 			     0         );
 }
 
-bool SafeBuf::replace ( char *src , char *dst ) {
+bool SafeBuf::replace ( const char *src , const char *dst ) {
 	int32_t len1 = gbstrlen(src);
 	int32_t len2 = gbstrlen(dst);
 	if ( len1 != len2 ) {
@@ -725,7 +725,7 @@ bool SafeBuf::replace ( char *src , char *dst ) {
 	return true;
 }
 
-bool SafeBuf::removeChunk1 ( char *p , int32_t len ) {
+bool SafeBuf::removeChunk1 ( const char *p , int32_t len ) {
 	int32_t off = p - m_buf;
 	return removeChunk2 ( off , len );
 }
@@ -743,7 +743,7 @@ bool SafeBuf::removeChunk2 ( int32_t pos , int32_t len ) {
 
 
 // replace string at "pos/replaceLen" with s/len
-bool SafeBuf::safeReplace ( char *s, int32_t len, int32_t pos, int32_t replaceLen ) {
+bool SafeBuf::safeReplace ( const char *s, int32_t len, int32_t pos, int32_t replaceLen ) {
 	// make sure we have room
 	int32_t diff = len - replaceLen;
 	// add in one for the silent terminating \0
@@ -768,7 +768,7 @@ bool SafeBuf::safeReplace ( char *s, int32_t len, int32_t pos, int32_t replaceLe
 	return true;
 }
 
-bool SafeBuf::safeReplace3 ( char *s, char *t , int32_t niceness ) {
+bool SafeBuf::safeReplace3 ( const char *s, const char *t , int32_t niceness ) {
 	if ( ! safeReplace2 ( s , gbstrlen(s) ,
 			      t , gbstrlen(t) ,
 			      niceness ) )
@@ -779,8 +779,8 @@ bool SafeBuf::safeReplace3 ( char *s, char *t , int32_t niceness ) {
 }
 
 // return false and set g_errno on error
-bool SafeBuf::safeReplace2 ( char *s, int32_t slen, 
-			     char *t , int32_t tlen ,
+bool SafeBuf::safeReplace2 ( const char *s, int32_t slen, 
+			     const char *t , int32_t tlen ,
 			     int32_t niceness ,
 			     int32_t startOff ) {
 
@@ -841,8 +841,8 @@ bool SafeBuf::safeReplace2 ( char *s, int32_t slen,
 }
 
 
-bool SafeBuf::copyToken(char* s) {
-	char* p = s;
+bool SafeBuf::copyToken(const char* s) {
+	const char* p = s;
 	while(*p && !isspace(*p)) p++;
 	return safeMemcpy(s, (p - s));
 }
@@ -859,7 +859,7 @@ bool SafeBuf::setEncoding(int16_t cs) {
 	return true;
 }
 
-bool  SafeBuf::utf8Encode2(char *s, int32_t len, bool encodeHTML,int32_t niceness) {
+bool  SafeBuf::utf8Encode2(const char *s, int32_t len, bool encodeHTML,int32_t niceness) {
 	int32_t tmp = m_length;
 	if ( m_encoding == csUTF8 ) {
 		if (! safeMemcpy(s,len)) return false;
@@ -875,7 +875,7 @@ bool  SafeBuf::utf8Encode2(char *s, int32_t len, bool encodeHTML,int32_t nicenes
 
 
 
-bool SafeBuf::utf32Encode(UChar32* codePoints, int32_t cpLen) {
+bool SafeBuf::utf32Encode(const UChar32* codePoints, int32_t cpLen) {
 	if(m_encoding != csUTF8) return safePrintf("FIXME %s:%i", __FILE__, __LINE__);
 
     int32_t need = 0;
@@ -910,7 +910,7 @@ bool SafeBuf::utf32Encode(UChar32 c) {
 }
 */
 
-bool  SafeBuf::latin1Encode(char *s, int32_t len, bool encodeHTML,int32_t niceness) {
+bool  SafeBuf::latin1Encode(const char *s, int32_t len, bool encodeHTML,int32_t niceness) {
 	int32_t tmp = m_length;
 	switch(m_encoding) {
 	case csUTF8:
@@ -954,7 +954,7 @@ bool  SafeBuf::utf16Encode(UChar *s, int32_t len, bool encodeHTML){
 }
 */
 
-bool  SafeBuf::utf8CdataEncode(char *s, int32_t len) {
+bool  SafeBuf::utf8CdataEncode(const char *s, int32_t len) {
 	int32_t len1 = m_length;
 	bool r;
 	if ( m_encoding == csUTF8 )
@@ -1046,7 +1046,7 @@ bool  SafeBuf::utf16CdataEncode(UChar *s, int32_t len){
 }
 */
 
-bool  SafeBuf::latin1HtmlEncode(char *s, int32_t len,int32_t niceness) {
+bool  SafeBuf::latin1HtmlEncode(const char *s, int32_t len,int32_t niceness) {
 	int32_t len1 = m_length;
 	bool r;
 	switch(m_encoding) {
@@ -1126,16 +1126,16 @@ bool  SafeBuf::utf16HtmlEncode(UChar *s, int32_t len){
 }
 */
 
-bool SafeBuf::cdataEncode ( char *s ) {
+bool SafeBuf::cdataEncode ( const char *s ) {
 	return safeCdataMemcpy(s,gbstrlen(s));
 }
 
-bool SafeBuf::cdataEncode ( char *s , int32_t len ) {
+bool SafeBuf::cdataEncode ( const char *s , int32_t len ) {
 	return safeCdataMemcpy(s,len);
 }
 
 
-bool  SafeBuf::safeCdataMemcpy ( char *s, int32_t len ) {
+bool  SafeBuf::safeCdataMemcpy ( const char *s, int32_t len ) {
 	int32_t len1 = m_length;
 	if ( !safeMemcpy(s,len) )
 		return false;
@@ -1151,7 +1151,7 @@ bool  SafeBuf::safeCdataMemcpy ( char *s, int32_t len ) {
 	return true;
 }
 
-bool  SafeBuf::htmlEncode(char *s, int32_t lenArg, bool encodePoundSign ,
+bool  SafeBuf::htmlEncode(const char *s, int32_t lenArg, bool encodePoundSign ,
 			  int32_t niceness , int32_t truncateLen ) {
 	//bool convertUtf8CharsToEntity ) {
 	// . we assume we are encoding into utf8
@@ -1175,7 +1175,7 @@ bool  SafeBuf::htmlEncode(char *s, int32_t lenArg, bool encodePoundSign ,
 	char *t    = m_buf + m_length;
 	char *tend = m_buf + m_capacity;
 	// scan through all 
-	char *send = s + len;
+	const char *send = s + len;
 
 	
 
@@ -1270,7 +1270,7 @@ bool  SafeBuf::htmlEncode(char *s, int32_t lenArg, bool encodePoundSign ,
 }
 
 
-bool  SafeBuf::javascriptEncode(char *s, int32_t len ) {
+bool  SafeBuf::javascriptEncode(const char *s, int32_t len ) {
 	// . we assume we are encoding into utf8
 	// . sanity check
 	if ( m_encoding == csUTF16 ) { char *xx = NULL; *xx = 0; }
@@ -1280,7 +1280,7 @@ bool  SafeBuf::javascriptEncode(char *s, int32_t len ) {
 	char *t    = m_buf + m_length;
 	char *tend = m_buf + m_capacity;
 	// scan through all 
-	char *send = s + len;
+	const char *send = s + len;
 	for ( ; s < send ; s++ ) {
 		// ensure we have enough room
 		if ( t + 12 >= tend ) {
@@ -1397,7 +1397,7 @@ bool  SafeBuf::javascriptEncode(char *s, int32_t len ) {
 }
 
 
-bool SafeBuf::htmlEncode(char *s) {
+bool SafeBuf::htmlEncode(const char *s) {
 	return htmlEncode(s,gbstrlen(s),true,0);
 }
 
@@ -1515,9 +1515,9 @@ bool SafeBuf::urlEncodeAllBuf ( bool spaceToPlus ) {
 
 // used by PageEvents.cpp to escape out the single quotes in javascript
 // strings...
-bool SafeBuf::escapeJS (char *s , int32_t slen ) {
+bool SafeBuf::escapeJS (const char *s , int32_t slen ) {
 	if ( ! reserve ( slen + 1 ) ) return false;
-	char *send = s + slen;
+	const char *send = s + slen;
 	for ( ; s < send ; s++ ) {
 		// encode the damn thing
 		if ( *s == '\'' ) safeMemcpy("\\\'",2 );
@@ -1533,13 +1533,13 @@ bool SafeBuf::escapeJS (char *s , int32_t slen ) {
 
 
 //s is a url, make it safe for printing to html
-bool SafeBuf::urlEncode (char *s , int32_t slen, 
+bool SafeBuf::urlEncode (const char *s , int32_t slen, 
 			 bool requestPath ,
 			 bool encodeApostrophes ) {
 	// this makes things faster
 	if ( ! s_init23 ) initTable();
 
-	char *send = s + slen;
+	const char *send = s + slen;
 	for ( ; s < send ; s++ ) {
 		if ( *s == '\0' && requestPath ) {
 			pushChar(*s);
@@ -1604,9 +1604,9 @@ bool SafeBuf::urlEncode (char *s , int32_t slen,
 
 
 
-bool SafeBuf::dequote (  char *t , int32_t tlen ) {
+bool SafeBuf::dequote (  const char *t , int32_t tlen ) {
 	if ( tlen == 0 ) return true;
-	char *tend = t + tlen;
+	const char *tend = t + tlen;
 	for ( ; t < tend; t++ ) {
 		if ( *t == '"' ) {
 			safeMemcpy("&#34;", 5);
@@ -1728,7 +1728,7 @@ char& SafeBuf::operator[](int32_t i) {
 // }
 
 
-bool SafeBuf::printKey(char* key, char ks) {
+bool SafeBuf::printKey(const char* key, char ks) {
 	switch (ks) {
 	case 12:
 		safePrintf("%016"XINT64"%08"XINT32"",
@@ -1747,7 +1747,7 @@ bool SafeBuf::printKey(char* key, char ks) {
 
 // . filter out tags and line breaks and extra spaces or whatever
 // . used for printing sentences from XmlDoc::printEventSentences()
-bool SafeBuf::safePrintFilterTagsAndLines ( char *p , int32_t plen ,
+bool SafeBuf::safePrintFilterTagsAndLines ( const char *p , int32_t plen ,
 					    bool oneWordPerLine ) {
 
 	// prealloc -- also for terminating \0
@@ -1756,7 +1756,7 @@ bool SafeBuf::safePrintFilterTagsAndLines ( char *p , int32_t plen ,
 	// write into here
 	char *dst = m_buf + m_length;
 
-	char *pend = p + plen;
+	const char *pend = p + plen;
 	char size;
 
 	// set this to true so we do not lead with a space
@@ -1905,7 +1905,7 @@ Tag *SafeBuf::addTag3 ( char *mysite ,
 			int32_t  now ,
 			char *user ,
 			int32_t  ip ,
-			char *data ,
+			const char *data ,
 			char  rdbId ) {
 	int32_t dsize = gbstrlen(data) + 1;
 	return addTag ( mysite,tagname,now,user,ip,data,dsize,rdbId,true);
@@ -1916,7 +1916,7 @@ Tag *SafeBuf::addTag ( char *mysite ,
 		       int32_t  now ,
 		       char *user ,
 		       int32_t  ip ,
-		       char *data ,
+		       const char *data ,
 		       int32_t  dsize ,
 		       char  rdbId ,
 		       bool  pushRdbId ) {
@@ -1944,10 +1944,10 @@ bool SafeBuf::addTag ( Tag *tag ) {
 	return safeMemcpy ( (char *)tag , recSize );
 }
 
-bool SafeBuf::htmlEncodeXmlTags ( char *s , int32_t slen , int32_t niceness ) {
+bool SafeBuf::htmlEncodeXmlTags ( const char *s , int32_t slen , int32_t niceness ) {
 	// count the xml tags so we know how much buf to allocated
-	char *p = s;
-	char *pend = s + slen;
+	const char *p = s;
+	const char *pend = s + slen;
 	int32_t count = 0;
 	for ( ; p < pend ; p++ ) {
 		QUICKPOLL(niceness);
@@ -1993,7 +1993,7 @@ bool SafeBuf::htmlEncodeXmlTags ( char *s , int32_t slen , int32_t niceness ) {
 			continue;
 		}
 		// get tag id (will be 0 for </>)
-		char *tagName;
+		const char *tagName;
 		if ( p[1] == '/' ) tagName = p + 2;
 		else               tagName = p + 1;
 		NodeType *nt;
@@ -2016,7 +2016,7 @@ bool SafeBuf::htmlEncodeXmlTags ( char *s , int32_t slen , int32_t niceness ) {
 }
 
 // this puts a \0 at the end but does not update m_length for the \0 
-bool  SafeBuf::safeStrcpy ( char *s ) {
+bool  SafeBuf::safeStrcpy ( const char *s ) {
 	if ( ! s ) return true;
 	int32_t slen = gbstrlen(s);
 	if ( ! reserve ( slen+1 ) ) return false;
@@ -2025,14 +2025,14 @@ bool  SafeBuf::safeStrcpy ( char *s ) {
 	return true;
 }
 
-bool SafeBuf::truncateLongWords ( char *s , int32_t srcLen , int32_t minmax ) {
+bool SafeBuf::truncateLongWords ( const char *s , int32_t srcLen , int32_t minmax ) {
 	// ensure enough room
 	if ( ! reserve ( srcLen * 2 + 50 ) ) return false;
 	// start of where we write into
 	char *dstart = m_buf + m_length;
 	int32_t nospacecount = 0;
-	char *src = s;
-	char *srcEnd = s + srcLen;
+	const char *src = s;
+	const char *srcEnd = s + srcLen;
 	char *dst = getBuf();
 	char size;
 	int32_t scan = 10;
@@ -2066,8 +2066,8 @@ bool SafeBuf::truncateLongWords ( char *s , int32_t srcLen , int32_t minmax ) {
 		if ( nospacecount >= minmax ) { // 25 ) {
 			// go forward up to 5 more characters looking
 			// for a non-alnum to break on
-			char *x    = src;
-			char *xend = src + scan;
+			const char *x    = src;
+			const char *xend = src + scan;
 			char  xsize;
 			for ( ; *x && x < xend ; x += xsize ) {
 				xsize = getUtf8CharSize(x);
@@ -2078,8 +2078,8 @@ bool SafeBuf::truncateLongWords ( char *s , int32_t srcLen , int32_t minmax ) {
 			// than adding the ellipsis
 			if ( *x && x < xend ) {
 				// scan for next space
-				char *w    = x;
-				char *wmax = x + 3;
+				const char *w    = x;
+				const char *wmax = x + 3;
 				for ( ; w<wmax && *w && !is_wspace_a(*w); w++);
 				// ok bail!
 				if ( w<wmax ) { nospacecount=0; goto resume;}
@@ -2137,14 +2137,14 @@ bool SafeBuf::truncateLongWords ( char *s , int32_t srcLen , int32_t minmax ) {
 	return true;
 }
 
-bool SafeBuf::queryFilter ( char *s , int32_t slen ) {
+bool SafeBuf::queryFilter ( const char *s , int32_t slen ) {
 
 	// include terminating \0
 	if ( ! reserve ( slen + 1 ) ) return false;
 
 	// copy over
-	char *src = s;
-	char *srcEnd = s + slen;
+	const char *src = s;
+	const char *srcEnd = s + slen;
 	char *dst = getBuf();
 
 	for ( ; src < srcEnd ; ) {
@@ -2734,7 +2734,7 @@ bool SafeBuf::decodeJSON ( int32_t niceness ) {
 // . SO we do keep \" 
 // . so when indexing a doc we set decodeAll to FALSE, but if you want to 
 //   decode quotation marks as well then set decodeAll to TRUE!
-bool SafeBuf::safeDecodeJSONToUtf8 ( char *json, 
+bool SafeBuf::safeDecodeJSONToUtf8 ( const char *json, 
 				     int32_t jsonLen, 
 				     int32_t niceness ) {
 
@@ -2742,8 +2742,8 @@ bool SafeBuf::safeDecodeJSONToUtf8 ( char *json,
 	int32_t need = jsonLen;
 
 	// count how many \u's we got
-	char *p = json;//m_buf;
-	char *pend = json + jsonLen;
+	const char *p = json;//m_buf;
+	const char *pend = json + jsonLen;
 	for ( ; p < pend ; p++ ) 
 		// for the 'x' and the ';'
 		if ( *p == '\\' && p[1] == 'u' ) need += 2;
@@ -2752,8 +2752,8 @@ bool SafeBuf::safeDecodeJSONToUtf8 ( char *json,
 	//SafeBuf dbuf;
 	if ( ! reserve ( need + 1) ) return false;
 
-	char *src = json;//m_buf;
-	char *srcEnd = json + jsonLen;
+	const char *src = json;//m_buf;
+	const char *srcEnd = json + jsonLen;
 
 	char *dst = m_buf + m_length;
 
@@ -2816,7 +2816,7 @@ bool SafeBuf::safeDecodeJSONToUtf8 ( char *json,
 				continue; 
 			}
 			// otherwise, decode. can do in place like this...
-			char *p = src + 2;
+			const char *p = src + 2;
 			// skip the /ug or /ugg or /uggg or /ugggg in its
 			// entirety i guess... to avoid infinite loop
 			if ( ! is_hex(p[0]) ) { src +=2; continue;}
@@ -2953,7 +2953,7 @@ bool SafeBuf::jsonEncode ( char *src , int32_t srcLen ) {
 }
 
 // encode into json
-bool SafeBuf::safeUtf8ToJSON ( char *utf8 ) {
+bool SafeBuf::safeUtf8ToJSON ( const char *utf8 ) {
 
 	if ( ! utf8 ) return true;
 
@@ -2962,7 +2962,7 @@ bool SafeBuf::safeUtf8ToJSON ( char *utf8 ) {
 	int32_t need = gbstrlen(utf8) * 2 + 1;
 	if ( ! reserve ( need ) ) return false;
 	// scan and copy
-	char *src = utf8;
+	const char *src = utf8;
 	// concatenate to what's already there
 	char *dst = m_buf + m_length;
 	for ( ; *src ; src++ ) {
@@ -3186,26 +3186,26 @@ bool SafeBuf::brify ( char *s , int32_t slen , int32_t niceness ) {
 }
 */
 
-bool SafeBuf::brify2 ( char *s , int32_t cols , char *sep , bool isHtml ) {
+bool SafeBuf::brify2 ( const char *s , int32_t cols , const char *sep , bool isHtml ) {
 	return brify ( s, gbstrlen(s), 0 , cols , sep , isHtml ); 
 }
 
-bool SafeBuf::brify ( char *s , 
+bool SafeBuf::brify ( const char *s , 
 		      int32_t slen , 
 		      int32_t niceness ,
 		      int32_t maxCharsPerLine ,
-		      char *sep ,
+		      const char *sep ,
 		      bool isHtml ) {
 	// count the xml tags so we know how much buf to allocated
-	char *p = s;
-	char *pend = s + slen;
+	const char *p = s;
+	const char *pend = s + slen;
 	//int32_t count = 0;
 	char cs;
 	int32_t brSizes = 0;
 	bool lastRound = false;
 	int32_t col = 0;
-	char *pstart = s;
-	char *breakPoint = NULL;
+	const char *pstart = s;
+	const char *breakPoint = NULL;
 	bool inTag = false;
 	int32_t sepLen = gbstrlen(sep);
 	bool forced = false;
@@ -3367,12 +3367,12 @@ bool SafeBuf::uncompress() {
 	return true;
 }
 
-bool SafeBuf::safeTruncateEllipsis ( char *src , int32_t maxLen ) {
+bool SafeBuf::safeTruncateEllipsis ( const char *src , int32_t maxLen ) {
 	int32_t  srcLen = gbstrlen(src);
 	return safeTruncateEllipsis ( src , srcLen , maxLen );
 }
 
-bool SafeBuf::safeTruncateEllipsis ( char *src , int32_t srcLen , int32_t maxLen ) {
+bool SafeBuf::safeTruncateEllipsis ( const char *src , int32_t srcLen , int32_t maxLen ) {
 	int32_t  printLen = srcLen;
 	if ( printLen > maxLen ) printLen = maxLen;
 	if ( ! safeMemcpy ( src , printLen ) )
@@ -3401,7 +3401,7 @@ void SafeBuf::sortLongs( int32_t niceness ) {
 	gbqsort ( m_buf , np , 4 , int32_tcmp4 , niceness );
 }
 
-bool SafeBuf::htmlDecode ( char *src,
+bool SafeBuf::htmlDecode ( const char *src,
 			   int32_t srcLen,
 			   bool doSpecial ,
 			   int32_t niceness ) {
@@ -3431,7 +3431,7 @@ void SafeBuf::replaceChar ( char src , char dst ) {
 
 
 // encode a double quote char to two double quote chars
-bool SafeBuf::csvEncode ( char *s , int32_t len , int32_t niceness ) {
+bool SafeBuf::csvEncode ( const char *s , int32_t len , int32_t niceness ) {
 
 	if ( ! s ) return true;
 
@@ -3444,7 +3444,7 @@ bool SafeBuf::csvEncode ( char *s , int32_t len , int32_t niceness ) {
 	//char *dstEnd = m_buf + m_capacity;
 
 	// scan through all 
-	char *send = s + len;
+	const char *send = s + len;
 	for ( ; s < send ; s++ ) {
 		// breathe
 		QUICKPOLL ( niceness );
@@ -3469,7 +3469,7 @@ bool SafeBuf::csvEncode ( char *s , int32_t len , int32_t niceness ) {
 	return true;
 }
 
-bool SafeBuf::base64Encode ( char *sx , int32_t len , int32_t niceness ) {
+bool SafeBuf::base64Encode ( const char *sx , int32_t len , int32_t niceness ) {
 
 	unsigned char *s = (unsigned char *)sx;
 
@@ -3558,11 +3558,11 @@ bool SafeBuf::base64Encode ( char *sx , int32_t len , int32_t niceness ) {
 	return true;
 }
 
-bool SafeBuf::base64Encode( char *s ) {
+bool SafeBuf::base64Encode( const char *s ) {
 	return base64Encode(s,gbstrlen(s)); 
 }
 
-bool SafeBuf::base64Decode ( char *src , int32_t srcLen , int32_t niceness ) {
+bool SafeBuf::base64Decode ( const char *src , int32_t srcLen , int32_t niceness ) {
 
 	// make the map
 	static unsigned char s_bmap[256];

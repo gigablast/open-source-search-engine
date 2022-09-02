@@ -12535,7 +12535,7 @@ int32_t Address::serialize ( char *buf , int32_t bufSize , char *origUrl ,
 	//}
 	if ( m_flags3 & AF2_LATLON ) {
 		if ( pd && pd->m_crid ) {
-			char *cc = getCountryCode(pd->m_crid);
+			const char *cc = getCountryCode(pd->m_crid);
 			gbmemcpy ( p , cc , 2 );
 			p += 2;
 		}
@@ -19340,7 +19340,7 @@ bool getLatLonFromUserInput ( float  *radius,
 			// it was entered or not! because some states are
 			// reduced to their numeric code like "08" and
 			// many countries have that same code!
-			char *cc = getCountryCode(finalStateDesc->m_crid);
+			const char *cc = getCountryCode(finalStateDesc->m_crid);
 			gbmemcpy ( p , " gbeventcountrycode:", 20 ); 
 			p += 20;
 			gbmemcpy ( p , cc , 2 );
@@ -19378,7 +19378,7 @@ bool getLatLonFromUserInput ( float  *radius,
 			// mark it
 			gotStuff = true;
 			// special treatment. a country abbr is always 2 chars
-			char *cc = getCountryCode(finalCountryDesc->m_crid);
+			const char *cc = getCountryCode(finalCountryDesc->m_crid);
 			gbmemcpy ( p , "gbeventcountrycode:", 19 ); 
 			p += 19;
 			gbmemcpy ( p , cc , 2 );

@@ -320,13 +320,13 @@ bool sendPageInject ( TcpSocket *sock , HttpRequest *hr ) {
 	// no url parm?
 	if ( format != FORMAT_HTML && ! coll ) {//hr->getString("c",NULL) ) {
 		g_errno = ENOCOLLREC;
-		char *msg = mstrerror(g_errno);
+		const char *msg = mstrerror(g_errno);
 		return g_httpServer.sendErrorReply(sock,g_errno,msg,NULL);
 	}
 
 	if ( g_repairMode ) { 
 		g_errno = EREPAIRING;
-		char *msg = mstrerror(g_errno);
+		const char *msg = mstrerror(g_errno);
 		return g_httpServer.sendErrorReply(sock,g_errno,msg,NULL);
 	}
 
@@ -334,7 +334,7 @@ bool sendPageInject ( TcpSocket *sock , HttpRequest *hr ) {
 	CollectionRec *cr = g_collectiondb.getRec ( coll );
 	if ( ! cr ) {
 		g_errno = ENOCOLLREC;
-		char *msg = mstrerror(g_errno);
+		const char *msg = mstrerror(g_errno);
 		return g_httpServer.sendErrorReply(sock,g_errno,msg,NULL);
 	}
 
@@ -343,7 +343,7 @@ bool sendPageInject ( TcpSocket *sock , HttpRequest *hr ) {
 	bool isCollAdmin = g_conf.isCollAdmin ( sock , hr );
 	if ( ! isMasterAdmin && ! isCollAdmin ) {
 		g_errno = ENOPERM;
-		char *msg = mstrerror(g_errno);
+		const char *msg = mstrerror(g_errno);
 		return g_httpServer.sendErrorReply(sock,g_errno,msg,NULL);
 	}
 
@@ -461,7 +461,7 @@ bool sendHttpReply ( void *state ) {
 		mdelete ( msg7, sizeof(Msg7) , "PageInject" );
 		delete (msg7);
 		g_errno = save;
-		char *msg = mstrerror(g_errno);
+		const char *msg = mstrerror(g_errno);
 		return g_httpServer.sendErrorReply(sock,save,msg,NULL);
 	}
 

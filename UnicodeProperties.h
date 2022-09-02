@@ -1,5 +1,6 @@
 #ifndef UNICODE_PROPERTIES_H__
 #define UNICODE_PROPERTIES_H__
+#include <cstdint>
 #include <sys/types.h>
 #include "UCPropTable.h"
 
@@ -16,10 +17,10 @@ typedef unsigned char  UCScript;
 bool loadUnicodeTable(UCPropTable *table, char *filename, bool useChecksum = false, uint32_t expectedChecksum = 0);
 bool saveUnicodeTable(UCPropTable *table, char *filename);
 // JAB: we now have Kompatible and Canonical decomposition tables
-bool saveKDecompTable(char *baseDir = NULL) ;
-bool saveCDecompTable(char *baseDir = NULL) ;
+bool saveKDecompTable(const char *baseDir = NULL) ;
+bool saveCDecompTable(const char *baseDir = NULL) ;
 // JAB: we now have Kompatible and Canonical decomposition tables
-bool loadDecompTables(char *baseDir = NULL) ;
+bool loadDecompTables(const char *baseDir = NULL) ;
 void resetDecompTables() ;
 
 bool     setKDValue(UChar32 c, UChar32* decomp, int32_t decompCount,
@@ -88,7 +89,7 @@ extern UCPropTable g_ucKDIndex;
 extern UCPropTable g_ucCombiningClass;
 
 
-extern char *g_ucScriptNames[];
+extern const char *const g_ucScriptNames[];
 
 enum ucScript {
 	ucScriptCommon = 0,

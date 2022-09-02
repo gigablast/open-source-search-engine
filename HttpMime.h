@@ -54,7 +54,7 @@ time_t atotime5   ( char *s ) ;
 #define ET_DEFLATE 3
 
 
-extern char *g_contentTypeStrings[];
+extern const char *const g_contentTypeStrings[];
 
 #include <time.h>   // time_t mktime()
 #include "Url.h"
@@ -111,12 +111,12 @@ class HttpMime {
 			  time_t  lastModified     = 0   ,
 			  int32_t    offset           = 0   , 
 			  int32_t    bytesToSend      =-1   ,
-			  char   *ext              = NULL,
+			  const char   *ext              = NULL,
 			  bool    POSTReply        = false,
-			  char   *contentType      = NULL ,
-			  char   *charset          = NULL ,
+			  const char   *contentType      = NULL ,
+			  const char   *charset          = NULL ,
 			  int32_t    httpStatus       = -1   ,
-			  char   *cookie           = NULL );
+			  const char   *cookie           = NULL );
 
 	// make a redirect mime
 	void makeRedirMime ( char *redirUrl , int32_t redirUrlLen );
@@ -147,11 +147,11 @@ class HttpMime {
 	int32_t   getContentTypePrivate ( char *s ) ;
 
 	// convert a file extension like "gif" to "images/gif"
-	const char *getContentTypeFromExtension ( char *ext ) ;
-	const char *getContentTypeFromExtension ( char *ext , int32_t elen ) ;
+	const char *getContentTypeFromExtension ( const char *ext ) ;
+	const char *getContentTypeFromExtension ( const char *ext , int32_t elen ) ;
 
 	// used for bz2, gz files
-	const char *getContentEncodingFromExtension ( char *ext ) ;
+	const char *getContentEncodingFromExtension ( const char *ext ) ;
 
 
 	// these are set by calling set() above

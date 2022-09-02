@@ -8,7 +8,7 @@
 
 
 // use different front tags for matching different term #'s
-static char *s_frontTags[] = {
+static const char *const s_frontTags[] = {
 	/* . old style tags
 	"<b style=color:black;background-color:#ffff66>" ,
 	"<b style=color:black;background-color:#A0FFFF>" ,
@@ -40,7 +40,7 @@ int32_t s_frontTagLen=gbstrlen("<span class=\"gbcnst gbcnst00\">");
 //			"href=\"~/cachedpagestyles.css\">";
 //int32_t s_styleSheetIncLen = gbstrlen( s_styleSheetInc );
 
-static char *s_styleSheet =
+static const char *const s_styleSheet =
 "<style type=\"text/css\">"
 "span.gbcns{font-weight:600}"
 "span.gbcnst00{color:black;background-color:#ffff66}"

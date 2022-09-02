@@ -12,7 +12,7 @@
 #include "Categories.h"
 
 bool isLinkChain ( Xml *xml , Url *linker , Url *linkee , int32_t linkNode ,
-		   char **note ) ;
+		   const char **note ) ;
 
 // . here's some additional things to mark it as a log page, but these
 //   depend on the content of the page, not the url itself.
@@ -490,7 +490,7 @@ bool setLinkSpam ( int32_t       ip                 ,
 
 	// see if we got a hit
 	char *minPtr = NULL;
-	char *note   = NULL;
+	const char *note   = NULL;
 	for ( int32_t i = 0 ; i < numNeedles1 ; i++ ) {
 		// open.thumbshots.org needs multiple counts
 		if ( i == 0 && s_needles1[i].m_count < 5 ) continue;
@@ -679,7 +679,7 @@ bool setLinkSpam ( int32_t       ip                 ,
 		// check if this url is a link chain
 		//if ( q >= 60 ) continue;
 		if ( siteNumInlinks >= 50 ) continue;
-		char *np = NULL;
+		const char *np = NULL;
 		//if ( strncmp("http://www.reliant.com",uu.getUrl(),18)==0 )
 		//     log("hey");
 		// get the xml node of link #i
@@ -703,7 +703,7 @@ bool isLinkSpam ( Url *linker,
 		  Xml *xml, 
 		  Links *links ,
 		  int32_t maxDocLen , 
-		  char **note , 
+		  const char **note , 
 		  Url *linkee , 
 		  // node position of the linkee in the linker's content
 		  int32_t  linkNode ,
@@ -1229,7 +1229,7 @@ bool isLinkSpam ( Url *linker,
 // 4. this might hurt blogrolls, and resource pages, but such links
 //    are kind of low quality anyway.
 bool isLinkChain ( Xml *xml , Url *linker , Url *linkee , int32_t linkNode ,
-		   char **note ) {
+		   const char **note ) {
 
 	//log(LOG_DEBUG,"build: doing %s",linker->m_url);
 

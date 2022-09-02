@@ -180,6 +180,6 @@ class LanguageIdentifier {
 };
 
 extern class LanguageIdentifier g_langId;
-extern const uint8_t *langToTopic[];
+extern const uint8_t *const langToTopic[];
 
 #endif // LANGUAGEIDENTIFIER_H

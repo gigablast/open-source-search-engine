@@ -293,8 +293,8 @@ char *getMatches2 ( Needle *needles          ,
 			// can p possibly be big enough?
 			if ( pend - p < msize ) continue;
 			// needle is "m" now
-			char *m    = needles[j].m_string;
-			char *mend = needles[j].m_stringSize + m;
+			const char *m    = needles[j].m_string;
+			const char *mend = needles[j].m_stringSize + m;
 			// use a tmp ptr for ptr into haystack
 			char *d = (char *)p;
 			// skip first 4 bytes since we know they match
@@ -440,8 +440,8 @@ char *getMatches2 ( Needle *needles          ,
 			// can p possibly be big enough?
 			if ( pend - p < msize ) continue;
 			// needle is "m" now
-			char *m    = needles[j].m_string;
-			char *mend = needles[j].m_stringSize + m;
+			const char *m    = needles[j].m_string;
+			const char *mend = needles[j].m_stringSize + m;
 			// use a tmp ptr for ptr into haystack
 			char *d = (char *)p;
 			// skip first 4 bytes since we know they match

@@ -7,9 +7,9 @@ LangList g_langList;
 
 
 struct TldInfo {
-  char* m_tld;
-  char* m_country;
-  char* m_languages;
+  const char* m_tld;
+  const char* m_country;
+  const char* m_languages;
   uint32_t  m_languagebv;
 };
 
@@ -514,7 +514,7 @@ bool LangList::lookup ( int64_t      termId,
 }
 
 
-char* LangList::getCountryFromTld(char* tld, int32_t tldLen) {
+const char* LangList::getCountryFromTld(const char* tld, int32_t tldLen) {
 	//initialize if not already initialized.
 	if(s_numTlds == 0) tldInit();
 
@@ -535,7 +535,7 @@ char* LangList::getCountryFromTld(char* tld, int32_t tldLen) {
 }
 
 
-bool LangList::isLangValidForTld(char* tld, int32_t tldLen, unsigned char lang) {
+bool LangList::isLangValidForTld(const char* tld, int32_t tldLen, unsigned char lang) {
 	if(lang == langUnknown) return true; //not much we can do here.
 	//initialize if not already initialized.
 	if(s_numTlds == 0) tldInit();

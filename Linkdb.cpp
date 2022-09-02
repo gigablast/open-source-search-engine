@@ -1852,12 +1852,12 @@ bool gotLinkTextWrapper ( void *state ) { // , LinkTextReply *linkText ) {
 	return true;
 }
 
-char *getExplanation ( char *note ) {
+const char *getExplanation ( const char *note ) {
 
 	if ( ! note ) return NULL;
 	if ( strcmp(note,"good")==0) return NULL;
 
-	static char *s_notes[] = {
+	static const char *const s_notes[] = {
 
 		"same mid domain",
 		"inlinker's domain, excluding TLD, is same as page it "
@@ -2007,7 +2007,7 @@ bool Msg25::gotLinkText ( Msg20Request *req ) { // LinkTextReply *linkText ) {
 	}
 	
 	// what is the reason it cannot vote...?
-	char *note    = NULL;
+	const char *note    = NULL;
 	int32_t  noteLen = 0;
 	
 	// assume it CAN VOTE for now
@@ -2645,7 +2645,7 @@ bool Msg25::gotLinkText ( Msg20Request *req ) { // LinkTextReply *linkText ) {
 		if ( m_table.isEmpty(i) ) continue;
 		// who is in this slot
 		NoteEntry *e = *(NoteEntry **)m_table.getValueFromSlot(i);
-		char *exp = getExplanation ( e->m_note );
+		const char *exp = getExplanation ( e->m_note );
 		// show it
 		if ( m_printInXml ) {
 			m_pbuf->safePrintf ( "\t<inlinkStat>\n");
@@ -2889,7 +2889,7 @@ bool Msg25::gotLinkText ( Msg20Request *req ) { // LinkTextReply *linkText ) {
 		// the "external" string
 		//char *ext = "Y"; if ( internal ) ext = "N";
 		// are we an "anomaly"?
-		char *note = r->ptr_note;
+		const char *note = r->ptr_note;
 		if ( r->m_isLinkSpam && !note )
 			note = "unknown";
 		// get our ip as a string
@@ -2931,7 +2931,7 @@ bool Msg25::gotLinkText ( Msg20Request *req ) { // LinkTextReply *linkText ) {
 		
 		// show the linking docid, the its weight
 		if ( m_printInXml ) {
-			char *ns = note;
+			const char *ns = note;
 			if ( ! note ) ns = "good";
 			//if ( internal ) note = "internal";
 			m_pbuf->safePrintf("\t<inlink>\n"
@@ -2958,7 +2958,7 @@ bool Msg25::gotLinkText ( Msg20Request *req ) { // LinkTextReply *linkText ) {
 					   );
 
 			// get explanation of note
-			char *exp = getExplanation ( ns );
+			const char *exp = getExplanation ( ns );
 			if ( exp )
 				m_pbuf->safePrintf("\t\t<explanation>"
 						   "<![CDATA[%s]]>"
@@ -3359,7 +3359,7 @@ char *Msg25::isDup ( Msg20Reply *r , Msg20Reply *p ) {
 	*/
 }
 
-bool Msg25::addNote ( char *note , int32_t noteLen , int64_t docId ) {
+bool Msg25::addNote ( const char *note , int32_t noteLen , int64_t docId ) {
 	// return right away if no note
 	if ( ! note || noteLen <= 0 ) return true;
 	// get hash
@@ -5644,7 +5644,7 @@ bool Links::addLink ( char *link , int32_t linkLen , int32_t nodeNum ,
 		QUICKPOLL(niceness);
 
 		// a ptr to it
-		char *p = newBuf;
+		const char *p = newBuf;
 		// debug msg
 		log(LOG_DEBUG, "build: resizing Links ptr buffer to %"INT32"",
 		    newAllocSize);
@@ -5670,7 +5670,7 @@ bool Links::addLink ( char *link , int32_t linkLen , int32_t nodeNum ,
 		linkflags_t *newLinkFlags = (linkflags_t *)p;
 		p += newAllocLinks * sizeof(linkflags_t) ;
 
-		char **newSpamNotes = (char **)p;
+		const char **newSpamNotes = (const char **)p;
 		p += newAllocLinks * sizeof(char **);
 
 		// sanity check -- check for breach

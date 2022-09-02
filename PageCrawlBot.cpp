@@ -895,7 +895,7 @@ void StateCD::printSpiderdbList ( RdbList *list,SafeBuf *sb,char **lastKeyPtr){
 		// then use the time it was spidered
 		if ( status ) time = m_prevReplyDownloadTime;
 
-		char *msg = "Successfully Downloaded";//Crawled";
+		const char *msg = "Successfully Downloaded";//Crawled";
 		if ( status == 0 ) msg = "Not downloaded";//Unexamined";
 		if ( status == -1 ) {
 			msg = mstrerror(m_prevReplyError);
@@ -1488,7 +1488,7 @@ bool sendReply2 (TcpSocket *socket , int32_t fmt , char *msg ) {
 }
 
 
-bool sendErrorReply2 ( TcpSocket *socket , int32_t fmt , char *msg ) {
+bool sendErrorReply2 ( TcpSocket *socket , int32_t fmt , const char *msg ) {
 
 	// log it
 	log("crawlbot: sending back 500 http status '%s'",msg);

@@ -1443,7 +1443,7 @@ bool HttpServer::sendReply ( TcpSocket  *s , HttpRequest *r , bool isAdmin) {
 	if ( offset > 0 || bytesToSend != fileSize ) partialContent = true;
 	// . use the file extension to determine content type
 	// . default to html if no extension
-	char *ext = f->getExtension();
+	const char *ext = f->getExtension();
 	// . generate our mime header
 	// . see http://www.vbip.com/winsock/winsock_http_08_01.asp
 	// . this will do a "partial content" mime if offset!=0||size!=-1
@@ -1845,7 +1845,7 @@ bool HttpServer::sendSuccessReply ( TcpSocket *s , char format, char *addMsg) {
 bool HttpServer::sendErrorReply ( GigablastRequest *gr ) {
 
 	int32_t error = g_errno;
-	char *errmsg = mstrerror(error);
+	const char *errmsg = mstrerror(error);
 
 	time_t now ;//= getTimeGlobal();
 	if ( isClockInSync() ) now = getTimeGlobal();
@@ -1911,7 +1911,7 @@ bool HttpServer::sendErrorReply ( GigablastRequest *gr ) {
 // . send an error reply, like "HTTP/1.1 404 Not Found"
 // . returns false if blocked, true otherwise
 // . sets g_errno on error
-bool HttpServer::sendErrorReply ( TcpSocket *s , int32_t error , char *errmsg ,
+bool HttpServer::sendErrorReply ( TcpSocket *s , int32_t error , const char *errmsg ,
 				  int32_t *bytesSent ) {
 	if ( bytesSent ) *bytesSent = 0;
 	// clear g_errno so the send goes through
@@ -2024,7 +2024,7 @@ bool HttpServer::sendErrorReply ( TcpSocket *s , int32_t error , char *errmsg ,
 	*/
 }
 bool HttpServer::sendQueryErrorReply( TcpSocket *s , int32_t error , 
-				      char *errmsg, 
+				      const char *errmsg, 
 				      //int32_t  rawFormat, 
 				      char format ,
 				      int errnum, char *content) {

@@ -32,7 +32,7 @@ LanguageIdentifier g_langId;
 /// (Pretty soon it will be faster to have a list of domains that
 /// WILL work instead of domains that won't.)
 ///
-static char *ambiguousTLDs[] = {
+static const char *const ambiguousTLDs[] = {
 	"info",
 	"com",
 	"org",
@@ -54,7 +54,7 @@ static char *ambiguousTLDs[] = {
 	NULL
 };
 
-const uint8_t *langToTopic[] = {
+const uint8_t *const langToTopic[] = {
 	(uint8_t*)"Unknown",
 	(uint8_t*)"English",
 	(uint8_t*)"Français",

@@ -14,7 +14,7 @@ bool hasBackTag ( nodeid_t tagId ) ;
 int32_t getTagLen ( char *node ) ;
 bool isTagStart ( char *s );//, int32_t i, int32_t version ) ;
 // s points to tag name - first char
-nodeid_t getTagId ( char *s , class NodeType **retp = NULL ); 
+nodeid_t getTagId ( const char *s , class NodeType **retp = NULL ); 
 
 class XmlNode {
 
@@ -151,7 +151,7 @@ inline bool isTagStart ( char *s ) { // , int32_t i, int32_t version ) {
 //   are not visible/indexable
 class NodeType {
  public:
-	char    *m_nodeName;
+	const char    *m_nodeName;
 	bool     m_hasBackTag;
 	char     m_isBreaking;
 	char     m_isVisible;
@@ -161,9 +161,9 @@ class NodeType {
 	char     m_isXmlTag;
 };
 
-extern class NodeType g_nodes[];
+extern const NodeType g_nodes[];
 
-inline char *getTagName ( nodeid_t tagId ) {return g_nodes[tagId].m_nodeName;};
+inline const char *getTagName ( nodeid_t tagId ) {return g_nodes[tagId].m_nodeName;};
 
 // . each tag has a number
 enum {

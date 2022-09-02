@@ -24,7 +24,7 @@ static u_int32_t      s_ucCDDataSize = 0;
 static u_int32_t      s_ucCDAllocSize = 0;
 
 uint32_t calculateChecksum(char *buf, int32_t bufLen);
-char *g_ucScriptNames[] = {
+const char *const g_ucScriptNames[] = {
 	"Common",
 	"Arabic",
 	"Armenian",
@@ -388,7 +388,7 @@ void resetDecompTables() {
 }
 
 // JAB: we now have Kompatible and Canonical decomposition
-bool loadKDecompTable(char *baseDir) {
+bool loadKDecompTable(const char *baseDir) {
 	if (s_ucKDData) {
 		//reset table if already loaded
 		resetDecompTables();
@@ -437,7 +437,7 @@ bool loadKDecompTable(char *baseDir) {
 }
 
 // JAB: lazy engineer cut-n-paste job
-bool loadCDecompTable(char *baseDir) {
+bool loadCDecompTable(const char *baseDir) {
 	if (s_ucCDData) {
 		//reset table if already loaded
 		resetDecompTables();
@@ -486,6 +486,6 @@ bool loadCDecompTable(char *baseDir) {
 }
 
 // JAB: we now have Kompatible and Canonical decomposition
-bool loadDecompTables(char *baseDir) {
+bool loadDecompTables(const char *baseDir) {
 	return loadKDecompTable(baseDir) && loadCDecompTable(baseDir);
 }

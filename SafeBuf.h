@@ -17,18 +17,18 @@ class SafeBuf {
 public:
 	//*TRUCTORS
 	SafeBuf();
-	SafeBuf(int32_t initSize, char *label = NULL);
+	SafeBuf(int32_t initSize, const char *label = NULL);
 
 	void constructor();
 	void destructor ();
 
 	//be careful with passing in a stackBuf! it could go out
 	//of scope independently of the safebuf.
-	SafeBuf(char* stackBuf, int32_t cap, char* label = NULL);
+	SafeBuf(char* stackBuf, int32_t cap, const char* label = NULL);
 	SafeBuf(char *heapBuf, int32_t bufMax, int32_t bytesInUse, bool ownData);
 	~SafeBuf();
 
-	void setLabel ( char *label );
+	void setLabel ( const char *label );
 	
 	// CAUTION: BE CAREFUL WHEN USING THE FOLLOWING TWO FUNCTIONS!!
 	// setBuf() allows you reset the contents of the SafeBuf to either
@@ -57,39 +57,40 @@ public:
 	char *getBufPtr() { return m_buf + m_length; }
 	char *getBufCursor() { return m_buf + m_length; }
 	char *getBufStart() { return m_buf; }
+    const char *getBufStart() const { return m_buf; }
 	char *getBufEnd() { return m_buf + m_capacity; }
-	int32_t getCapacity() { return m_capacity; }
-	int32_t getAvail() { return m_capacity - m_length; }
-	int32_t length() { return m_length; }
-	int32_t getLength() { return m_length; }
-	int32_t getBufUsed() { return m_length; }
+	int32_t getCapacity() const { return m_capacity; }
+	int32_t getAvail() const { return m_capacity - m_length; }
+	int32_t length() const { return m_length; }
+	int32_t getLength() const { return m_length; }
+	int32_t getBufUsed() const { return m_length; }
 	void print() { 
 	  if ( write(1,m_buf,m_length) != m_length) { char*xx=NULL;*xx=0;}; }
 
 	// . returns bytes written to file, 0 is acceptable if m_length == 0
 	// . returns -1 on error and sets g_errno
-	int32_t saveToFile ( char *dir , char *filename ) ;
-	int32_t dumpToFile(char *filename);
-	int32_t save ( char *dir, char *fname){return saveToFile(dir,fname); };
-	int32_t save ( char *fullFilename ) ;
+	int32_t saveToFile ( const char *dir , const char *filename ) ;
+	int32_t dumpToFile(const char *filename);
+	int32_t save ( const char *dir, const char *fname){return saveToFile(dir,fname); };
+	int32_t save ( const char *fullFilename ) ;
 	// saves to tmp file and if that succeeds then renames to orig filename
-	int32_t safeSave (char *filename );
+	int32_t safeSave (const char *filename );
 
-	int32_t  fillFromFile(char *filename);
-	int32_t  fillFromFile(char *dir,char *filename, char *label=NULL);
-	int32_t  load(char *dir,char *fname,char *label = NULL) { 
+	int32_t  fillFromFile(const char *filename);
+	int32_t  fillFromFile(const char *dir,const char *filename, const char *label=NULL);
+	int32_t  load(const char *dir,const char *fname,const char *label = NULL) { 
 		return fillFromFile(dir,fname,label);};
-	int32_t  load(char *fname) { return fillFromFile(fname);};
+	int32_t  load(const char *fname) { return fillFromFile(fname);};
 
 	void filterTags();
 	void filterQuotes();
-	bool truncateLongWords ( char *src, int32_t srcLen , int32_t minmax );
-	bool safeTruncateEllipsis ( char *src , int32_t maxLen );
-	bool safeTruncateEllipsis ( char *src , int32_t srcLen, int32_t maxLen );
+	bool truncateLongWords ( const char *src, int32_t srcLen , int32_t minmax );
+	bool safeTruncateEllipsis ( const char *src , int32_t maxLen );
+	bool safeTruncateEllipsis ( const char *src , int32_t srcLen, int32_t maxLen );
 
 	bool convertJSONtoXML ( int32_t niceness , int32_t startConvertPos );
 
-	bool safeDecodeJSONToUtf8 ( char *json, int32_t jsonLen, 
+	bool safeDecodeJSONToUtf8 ( const char *json, int32_t jsonLen, 
 				    int32_t niceness);
 	//			    bool decodeAll = false );
 
@@ -100,7 +101,7 @@ public:
 	void truncLen ( int32_t newLen ) {
 		if ( m_length > newLen ) m_length = newLen; };
 
-	bool set ( char *str ) {
+	bool set ( const char *str ) {
 		purge();
 		if ( ! str ) return true;
 		// puts a \0 at the end, but does not include it in m_length:
@@ -116,47 +117,47 @@ public:
 
 	//MUTATORS
 #ifdef _CHECK_FORMAT_STRING_
-	bool  safePrintf(char *formatString, ...)
+	bool  safePrintf(const char *formatString, ...)
 		__attribute__ ((format(printf, 2, 3)));
 #else
-	bool  safePrintf(char *formatString, ...);
+	bool  safePrintf(const char *formatString, ...);
 #endif
-	bool  safeMemcpy(void *s, int32_t len){return safeMemcpy((char *)s,len);};
-	bool  safeMemcpy(char *s, int32_t len);
-	bool  safeMemcpy_nospaces(char *s, int32_t len);
+	bool  safeMemcpy(const void *s, int32_t len){return safeMemcpy((const char *)s,len);};
+	bool  safeMemcpy(const char *s, int32_t len);
+	bool  safeMemcpy_nospaces(const char *s, int32_t len);
 	bool  safeMemcpy(SafeBuf *c){return safeMemcpy(c->m_buf,c->m_length);};
 	bool  safeMemcpy ( class Words *w , int32_t a , int32_t b ) ;
-	bool  safeStrcpy ( char *s ) ;
+	bool  safeStrcpy ( const char *s ) ;
 	//bool  safeStrcpyPrettyJSON ( char *decodedJson ) ;
-	bool  safeUtf8ToJSON ( char *utf8 ) ;
-	bool jsonEncode ( char *utf8 ) { return safeUtf8ToJSON(utf8); };
+	bool  safeUtf8ToJSON ( const char *utf8 ) ;
+	bool jsonEncode ( const char *utf8 ) { return safeUtf8ToJSON(utf8); };
 	bool jsonEncode ( char *utf8 , int32_t utf8Len );
 
-	bool  csvEncode ( char *s , int32_t len , int32_t niceness = 0 );
+	bool  csvEncode ( const char *s , int32_t len , int32_t niceness = 0 );
 
-	bool  base64Encode ( char *s , int32_t len , int32_t niceness = 0 );
-	bool  base64Decode ( char *src , int32_t srcLen , int32_t niceness = 0 ) ;
+	bool  base64Encode ( const char *s , int32_t len , int32_t niceness = 0 );
+	bool  base64Decode ( const char *src , int32_t srcLen , int32_t niceness = 0 ) ;
 
-	bool base64Encode( char *s ) ;
+	bool base64Encode( const char *s ) ;
 
 	//bool  pushLong ( int32_t val ) { return safeMemcpy((char *)&val,4); }
-	bool  cat(SafeBuf& c);
+	bool  cat(const SafeBuf& c);
 	// . only cat the sections/tag that start with "tagFilter"
 	// . used by Spider.cpp to dump <div class=int16_tdisplay> sections
 	//   to parse-int16_tdisplay.uh64.runid.txt for displaying the
 	//   validation checkboxes in qa.html
-	bool  cat2 ( SafeBuf& c,char *tagFilter1,char *tagFilter2);
+	bool  cat2 ( SafeBuf& c,const char *tagFilter1,const char *tagFilter2);
 	void  reset() { m_length = 0; }
 	void  purge(); // Clear all data and free all allocated memory
 	bool  advance ( int32_t i ) ;
 
-	bool safePrintFilterTagsAndLines ( char *p , int32_t plen ,
+	bool safePrintFilterTagsAndLines ( const char *p , int32_t plen ,
 					   bool oneWordPerLine ) ;
 
 	// . if clearIt is true we init the new buffer space to zeroes
 	// . used by Collectiondb.cpp
-	bool  reserve(int32_t i, char *label=NULL , bool clearIt = false );
-	bool  reserve2x(int32_t i, char *label = NULL );
+	bool  reserve(int32_t i, const char *label=NULL , bool clearIt = false );
+	bool  reserve2x(int32_t i, const char *label = NULL );
 
 	char *makeSpace ( int32_t size ) {
 		if ( ! reserve ( size ) ) return NULL;
@@ -171,26 +172,26 @@ public:
 	};
 	void  setLength(int32_t i) { m_length = i; };
 	char *getNextLine ( char *p ) ;
-	int32_t  catFile(char *filename) ;
+	int32_t  catFile(const char *filename) ;
 	//int32_t  load(char *dir,char *filename) { 
 	//	return fillFromFile(dir,filename);};
-	bool  safeLatin1ToUtf8(char *s, int32_t len);
-	bool  safeUtf8ToLatin1(char *s, int32_t len);
+	bool  safeLatin1ToUtf8(const char *s, int32_t len);
+	bool  safeUtf8ToLatin1(const char *s, int32_t len);
 	void  detachBuf();
 	bool  insert ( class SafeBuf *c , int32_t insertPos ) ;
-	bool  insert ( char *s , int32_t insertPos ) ;
-	bool  insert2 ( char *s , int32_t slen, int32_t insertPos ) ;
-	bool  replace ( char *src , char *dst ) ; // must be same lengths!
-	bool removeChunk1 ( char *p , int32_t len ) ;
+	bool  insert ( const char *s , int32_t insertPos ) ;
+	bool  insert2 ( const char *s , int32_t slen, int32_t insertPos ) ;
+	bool  replace ( const char *src , const char *dst ) ; // must be same lengths!
+	bool removeChunk1 ( const char *p , int32_t len ) ;
 	bool removeChunk2 ( int32_t pos , int32_t len ) ;
-	bool  safeReplace(char *s, int32_t len, int32_t pos, int32_t replaceLen);
-	bool  safeReplace2 ( char *s, int32_t slen, 
-			     char *t , int32_t tlen ,
+	bool  safeReplace(const char *s, int32_t len, int32_t pos, int32_t replaceLen);
+	bool  safeReplace2 ( const char *s, int32_t slen, 
+			     const char *t , int32_t tlen ,
 			     int32_t niceness ,
 			     int32_t startOff = 0 );
-	bool  safeReplace3 ( char *s, char *t , int32_t niceness = 0 ) ;
+	bool  safeReplace3 ( const char *s, const char *t , int32_t niceness = 0 ) ;
 	void replaceChar ( char src , char dst );
-	bool  copyToken(char* s);;
+	bool  copyToken(const char* s);
 	//output encoding
 	bool  setEncoding(int16_t cs);
 	int16_t getEncoding() { return m_encoding; };
@@ -198,11 +199,11 @@ public:
 	void zeroOut() { memset ( m_buf , 0 , m_capacity ); }
 
 	// insert <br>'s to make 's' no more than 'cols' chars per line
-	bool brify2 ( char *s , int32_t cols , char *sep = "<br>" ,
+	bool brify2 ( const char *s , int32_t cols , const char *sep = "<br>" ,
 		      bool isHtml = true ) ;
 
-	bool brify ( char *s , int32_t slen , int32_t niceness , int32_t cols ,
-		     char *sep = "<br>" , bool isHtml = true );
+	bool brify ( const char *s , int32_t slen , int32_t niceness , int32_t cols ,
+		     const char *sep = "<br>" , bool isHtml = true );
 
 	bool fixIsolatedPeriods ( ) ;
 
@@ -229,7 +230,7 @@ public:
 			    int32_t  now ,
 			    char *user ,
 			    int32_t  ip ,
-			    char *data ,
+			    const char *data ,
 			    char  rdbId );
 	// makes the site "%"UINT64".com" where %"UINT64" is userId
 	class Tag *addFaceookTag ( int64_t userId ,
@@ -245,79 +246,79 @@ public:
 			    int32_t  now ,
 			    char *user ,
 			    int32_t  ip ,
-			    char *data ,
+			    const char *data ,
 			    int32_t  dsize ,
 			    char  rdbId ,
 			    bool  pushRdbId );
 	bool addTag ( class Tag *tag );
 
 	//insert strings in their native encoding
-	bool  encode ( char *s , int32_t len , int32_t niceness=0) {
+	bool  encode ( const char *s , int32_t len , int32_t niceness=0) {
 		return utf8Encode2(s,len,false,niceness); };
 	// htmlEncode default = false
-	bool  utf8Encode2(char *s, int32_t len, bool htmlEncode=false, 
+	bool  utf8Encode2(const char *s, int32_t len, bool htmlEncode=false, 
 			 int32_t niceness=0);
-	bool  latin1Encode(char *s, int32_t len, bool htmlEncode=false,
+	bool  latin1Encode(const char *s, int32_t len, bool htmlEncode=false,
 			   int32_t niceness=0);
-    bool utf32Encode(UChar32* codePoints, int32_t cpLen);
+    bool utf32Encode(const UChar32* codePoints, int32_t cpLen);
 	//bool  utf16Encode(UChar *s, int32_t len, bool htmlEncode=false);
 	//bool  utf16Encode(char *s, int32_t len, bool htmlEncode=false) {
 	//	return utf16Encode((UChar*)s, len>>1, htmlEncode); };
 	//bool  utf32Encode(UChar32 c);
-	bool  htmlEncode(char *s, int32_t len,bool encodePoundSign,
+	bool  htmlEncode(const char *s, int32_t len,bool encodePoundSign,
 			 int32_t niceness=0 , int32_t truncateLen = -1 );
-	bool  javascriptEncode(char *s, int32_t len );
+	bool  javascriptEncode(const char *s, int32_t len );
 
-	bool  htmlEncode(char *s) ;
+	bool  htmlEncode(const char *s) ;
 
 	//bool convertUtf8CharsToEntity = false ) ;
 	// html-encode any of the last "len" bytes that need it
 	bool htmlEncode(int32_t len,int32_t niceness=0);
 
-	bool htmlDecode (char *s,
+	bool htmlDecode (const char *s,
 			 int32_t len,
 			 bool doSpecial = false,
 			 int32_t niceness = 0 );
 
 	//bool  htmlEncode(int32_t niceness );
-	bool  dequote ( char *t , int32_t tlen );
-	bool  escapeJS ( char *s , int32_t slen ) ;
+	bool  dequote ( const char *t , int32_t tlen );
+	bool  escapeJS ( const char *s , int32_t slen ) ;
 
-	bool  urlEncode (char *s , 
+	bool  urlEncode (const char *s , 
 			 int32_t slen, 
 			 bool requestPath = false,
 			 bool encodeApostrophes = false );
 
-	bool  urlEncode (char *s ) {
+	bool  urlEncode (const char *s ) {
 		return urlEncode ( s,strlen(s),false,false); };
 
 
-	bool  urlEncode2 (char *s , 
+	bool  urlEncode2 (const char *s , 
 			  bool encodeApostrophes ) { // usually false
 		return urlEncode ( s,strlen(s),false,encodeApostrophes); };
 
 	bool  urlEncodeAllBuf ( bool spaceToPlus = true );
-	bool  latin1CdataEncode(char *s, int32_t len);
-	bool  utf8CdataEncode(char *s, int32_t len);
+	//bool  latin1CdataEncode(char *s, int32_t len);
+	bool  utf8CdataEncode(const char *s, int32_t len);
 
 	// . filter out parentheses and other query operators
 	// . used by SearchInput.cpp when it constructs the big UOR query
 	//   of facebook interests
-	bool queryFilter ( char *s , int32_t len );
+	bool queryFilter ( const char *s , int32_t len );
 
 	//bool  utf16CdataEncode(UChar *s, int32_t len);
 	//bool  utf16CdataEncode(char *s, int32_t len) {
 	//	return utf16CdataEncode((UChar*)s, len>>1); };
 
-	bool  latin1HtmlEncode(char *s, int32_t len, int32_t niceness=0);
+	bool  latin1HtmlEncode(const char *s, int32_t len, int32_t niceness=0);
 	//bool  utf16HtmlEncode(UChar *s, int32_t len);
 	//bool  utf16HtmlEncode(char *s, int32_t len) {
 	//	return utf16HtmlEncode((UChar*)s, len>>1); };
 
-	bool htmlEncodeXmlTags ( char *s , int32_t slen , int32_t niceness ) ;
+	bool htmlEncodeXmlTags ( const char *s , int32_t slen , int32_t niceness ) ;
 
-	bool  cdataEncode ( char *s ) ;
-	bool  cdataEncode ( char *s , int32_t slen ) ;
+	bool  cdataEncode ( const char *s ) ;
+	bool  cdataEncode ( const char *s , int32_t slen ) ;
 
 	// . append a \0 but do not inc m_length
 	// . for null terminating strings
@@ -330,7 +331,7 @@ public:
 
 	int32_t indexOf(char c);
 
-	bool  safeCdataMemcpy(char *s, int32_t len);
+	bool  safeCdataMemcpy(const char *s, int32_t len);
 	bool  pushChar (char i) {
 		if(m_length >= m_capacity) 
 			if(!reserve(2*m_capacity + 1))
@@ -348,8 +349,8 @@ public:
 	// hack off trailing 0's
 	bool printFloatPretty ( float f ) ;
 
-	char* pushStr  (char* str, uint32_t len);
-	bool  pushPtr  ( void *ptr );
+	char* pushStr  (const char* str, uint32_t len);
+	bool  pushPtr  ( const void *ptr );
 	bool  pushLong (int32_t i);
 	bool  pushLongLong (int64_t i);
 	bool  pushFloat (float i);
@@ -358,7 +359,7 @@ public:
 	float popFloat();
 
 	int32_t  pad(const char ch, const int32_t len);
-	bool  printKey(char* key, char ks);
+	bool  printKey(const char* key, char ks);
 
 	// these use zlib
 	bool compress();
@@ -394,7 +395,7 @@ public:
 protected:
 	char *m_buf;
 public:
-	char *m_label;
+	const char *m_label;
 	bool  m_usingStack;
 	int16_t m_encoding; // output charset
 

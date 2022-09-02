@@ -3,12 +3,12 @@
 #include "Lang.h"
 
 void languageToString ( unsigned char langId , char *buf ) {
-	char *p = getLanguageString ( langId );
+	const char *p = getLanguageString ( langId );
 	if ( ! p ) p = "ERROR";
 	strcpy(buf,p);
 }
 
-static char *s_nativeLangStrings[] = {
+static const char *const s_nativeLangStrings[] = {
 	"unknown",
 	"english",
 	"français",
@@ -69,7 +69,7 @@ static char *s_nativeLangStrings[] = {
 
 	NULL
 };
-static char *s_lowerLangStrings[] = {
+static const char *const s_lowerLangStrings[] = {
 	"unknown","english","french","spanish","russian","turkish","japanese",
 	"chinese traditional","chinese simplified","korean","german","dutch",
 	"italian","finnish","swedish","norwegian","portuguese","vietnamese",
@@ -109,7 +109,7 @@ static char *s_lowerLangStrings[] = {
 	NULL
 };
 
-static char *s_langStrings[] = {
+static const char *const s_langStrings[] = {
 	"Unknown","English","French","Spanish","Russian","Turkish","Japanese",
 	"Chinese Traditional","Chinese Simplified","Korean","German","Dutch",
 	"Italian","Finnish","Swedish","Norwegian","Portuguese","Vietnamese",
@@ -148,17 +148,17 @@ static char *s_langStrings[] = {
 	NULL
 };
 
-char* getLanguageString ( unsigned char langId ) {
+const char* getLanguageString ( unsigned char langId ) {
 	if ( langId >= sizeof(s_langStrings)/sizeof(char *) ) return NULL;
 	return s_langStrings[langId];
 };
 
-char* getNativeLanguageString ( unsigned char langId ) {
+const char* getNativeLanguageString ( unsigned char langId ) {
 	if ( langId >= sizeof(s_nativeLangStrings)/sizeof(char *) ) return NULL;
 	return s_nativeLangStrings[langId];
 };
 
-static char *s_langAbbr[] = {
+static const char *const s_langAbbr[] = {
 	"xx","en","fr","es","ru","tr","ja","zh_tw","zh_cn","ko","de","nl",
 	"it","fi","sv","no","pt","vi","ar","he","id","el","th","hi",
 	"bn","pl","tl",
@@ -231,11 +231,11 @@ uint8_t getLangIdFromAbbr ( char *abbr ) {
 	return langUnknown;//0;
 }
 
-char *getLangAbbr ( uint8_t langId ) {
+const char *getLangAbbr ( uint8_t langId ) {
 	return s_langAbbr[langId]; 
 }
 
-char* getLanguageAbbr ( unsigned char langId ) {
+const char* getLanguageAbbr ( unsigned char langId ) {
 	if ( langId >= sizeof(s_langAbbr)/sizeof(char *) ) return NULL;
 	return s_langAbbr[langId];
 };

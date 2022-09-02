@@ -29,7 +29,7 @@ bool sendPageAddDelColl ( TcpSocket *s , HttpRequest *r , bool add ) {
 
 	//bool cast = r->getLong("cast",0);
 
-	char *msg = NULL;
+	const char *msg = NULL;
 
 	// if any host in network is dead, do not do this
 	//if ( g_hostdb.hasDeadHost() ) msg = "A host in the network is dead.";
@@ -66,12 +66,12 @@ bool sendPageAddDelColl ( TcpSocket *s , HttpRequest *r , bool add ) {
 		if ( ! delcoll ) delcoll = r->getString("delColl",NULL);
 		if ( page == PAGE_ADDCOLL && ! addcoll ) {
 			g_errno = EBADENGINEER;
-			char *msg = "no addcoll parm provided";
+			const char *msg = "no addcoll parm provided";
 			return g_httpServer.sendErrorReply(s,g_errno,msg,NULL);
 		}
 		if ( page == PAGE_DELCOLL && ! delcoll ) {
 			g_errno = EBADENGINEER;
-			char *msg = "no delcoll parm provided";
+			const char *msg = "no delcoll parm provided";
 			return g_httpServer.sendErrorReply(s,g_errno,msg,NULL);
 		}
 		return g_httpServer.sendSuccessReply(s,format);
@@ -95,7 +95,7 @@ bool sendPageAddDelColl ( TcpSocket *s , HttpRequest *r , bool add ) {
 	//
 
 	SafeBuf gtmp;
-	char *gmsg = NULL;
+	const char *gmsg = NULL;
 	// is it too big?
 	if ( action && addColl && gbstrlen(addColl) > MAX_COLL_LEN ) {
 		gtmp.safePrintf("search engine name is too long");
@@ -345,7 +345,7 @@ bool sendPageCloneColl ( TcpSocket *s , HttpRequest *r ) {
 	if ( format == FORMAT_XML || format == FORMAT_JSON ) {
 		if ( ! coll ) {
 			g_errno = EBADENGINEER;
-			char *msg = "no c parm provided";
+			const char *msg = "no c parm provided";
 			return g_httpServer.sendErrorReply(s,g_errno,msg,NULL);
 		}
 		return g_httpServer.sendSuccessReply(s,format);
@@ -357,7 +357,7 @@ bool sendPageCloneColl ( TcpSocket *s , HttpRequest *r ) {
 	// print standard header
 	g_pages.printAdminTop ( &p , s , r );
 
-	char *msg = NULL;
+	const char *msg = NULL;
 	if ( g_errno ) msg = mstrerror(g_errno);
 
 	if ( msg ) {

@@ -19,18 +19,18 @@ public:
 	// . -1 indicates to auto determine the maximum y value for time window
 	float m_absYMax;
 	// for hashing or printing in the map key
-	char *m_label;
+	const char *m_label;
 	// . min resolution per pixel in the graph
 	// . pixely1 - pixely2 >= m_minRes
 	// . compared AFTER applying m_yscalar
 	float m_minRes;
 	// for printing the y tick mark labels using sprintf:
-	char *m_format;
+	const char *m_format;
 	// for scaling the y values when printing tick marks
 	float m_yscalar;
 	// use this color
 	int32_t  m_color;
-	char  *m_keyDesc;
+	const char  *m_keyDesc;
 	// graph hash
 	uint32_t m_labelHash;
 	uint32_t m_graphHash;

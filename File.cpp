@@ -127,7 +127,7 @@ void File::destructor ( ) {
 	//m_filename.destructor();
 }
 
-void File::set ( char *dir , char *filename ) {
+void File::set ( const char *dir , const char *filename ) {
 	if ( ! dir ) { set ( filename ); return; }
 	char buf[1024];
 	if ( dir[gbstrlen(dir)-1] == '/' )
@@ -137,7 +137,7 @@ void File::set ( char *dir , char *filename ) {
 	set ( buf );
 }
 
-void File::set ( char *filename ) {
+void File::set ( const char *filename ) {
 	// reset m_filename
 	m_filename[0] = '\0';
 	//m_filename.reset();
@@ -167,7 +167,7 @@ void File::set ( char *filename ) {
 	// TODO: make this a bool returning function if ( ! m_filename ) g_log
 }
 
-bool File::rename ( char *newFilename ) {
+bool File::rename ( const char *newFilename ) {
 	// close ourselves if we were open... why? historical reasons?
 	close();
 	// do the rename
@@ -281,7 +281,7 @@ bool File::open ( int flags , int permissions ) {
 // . returns number of bytes written
 // . returns -1 on error
 // . may return < numBytesToWrite if non-blocking
-int File::write ( void *buf             , 
+int File::write ( const void *buf             , 
 		  int32_t  numBytesToWrite , 
 		  int32_t  offset          ) {
 	// safety catch!
@@ -917,7 +917,7 @@ bool File::closeLeastUsed () {
 		// debug msg
 		if ( g_conf.m_logDebugDisk ) {
 			File *f = s_filePtrs [ fd ];
-			char *fname = "";
+			const char *fname = "";
 			if ( f ) fname = f->getFilename();
 			logf(LOG_DEBUG,"disk: force closed fd %i for"
 			     " %s. age=%"INT64" #openfiles=%i this=0x%"PTRFMT,
@@ -986,7 +986,7 @@ int64_t getFileSize ( const char *filename ) {
 }
 
 // this solution is quite slow, but i think cygwin needs it
-int64_t getFileSize_cygwin ( char *filename ) {
+int64_t getFileSize_cygwin ( const char *filename ) {
 
 	FILE *fd = fopen ( filename , "r" );
 	if ( ! fd ) {
@@ -1056,7 +1056,7 @@ time_t File::getLastModifiedTime ( ) {
 	return 0;
 }
 
-bool doesFileExist ( char *filename ) {
+bool doesFileExist ( const char *filename ) {
 	// allow the substitution of another filename
         struct stat stats;
 	// return true if it exists
@@ -1176,9 +1176,9 @@ bool File::initialize ( ) {
 	return true;
 }
 
-char *File::getExtension ( ) {
+const char *File::getExtension ( ) {
 	// keep backing up over m_filename till we hit a . or / or beginning
-	char *f = getFilename();
+	const char *f = getFilename();
 	int32_t i = gbstrlen(m_filename);//m_filename.getLength();
 	while ( --i > 0 ) {
 		if ( f[i] == '.' ) break;

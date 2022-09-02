@@ -18,24 +18,24 @@ bool isClockInSync() {
 }
 
 
-bool print96 ( char *k ) {
+bool print96 ( const char *k ) {
         key_t *kp = (key_t *)k;
         printf("n1=0x%"XINT32" n0=0x%"XINT64"\n",(int32_t)kp->n1,(int64_t)kp->n0);
 	return true;
 }
 
-bool print96 ( key_t *kp ) {
+bool print96 ( const key_t *kp ) {
         printf("n1=0x%"XINT32" n0=0x%"XINT64"\n",(int32_t)kp->n1,(int64_t)kp->n0);
 	return true;
 }
 
-bool print128 ( char *k ) {
+bool print128 ( const char *k ) {
         key128_t *kp = (key128_t *)k;
         printf("n1=0x%"XINT64" n0=0x%"XINT64"\n",(int64_t)kp->n1,(int64_t)kp->n0);
 	return true;
 }
 
-bool print128 ( key128_t *kp ) {
+bool print128 ( const key128_t *kp ) {
         printf("n1=0x%"XINT64" n0=0x%"XINT64"\n",(int64_t)kp->n1,(int64_t)kp->n0);
 	return true;
 }
@@ -884,7 +884,49 @@ char *strncasestr( char *haystack, int32_t haylen, char *needle){
 	return NULL;
 }
 
+const char *strncasestr( const char *haystack, int32_t haylen, char *needle){
+	int32_t matchLen = 0;
+	int32_t needleLen = gbstrlen(needle);
+	for (int32_t i = 0; i < haylen;i++){
+		char c1 = to_lower_a(haystack[i]);
+		char c2 = to_lower_a(needle[matchLen]);
+		if ( c1 != c2 ){
+			// no match
+			matchLen = 0;
+			continue;
+		}
+		// we matched another character
+		matchLen++;
+		if (matchLen < needleLen) continue;
+		
+		// we've matched the whole string
+		return haystack + i - matchLen + 1;
+	}
+	return NULL;
+}
+
 char *strnstr2( char *haystack, int32_t haylen, char *needle){
+	int32_t matchLen = 0;
+	int32_t needleLen = gbstrlen(needle);
+	for (int32_t i = 0; i < haylen;i++){
+		char c1 = (haystack[i]);
+		char c2 = (needle[matchLen]);
+		if ( c1 != c2 ){
+			// no match
+			matchLen = 0;
+			continue;
+		}
+		// we matched another character
+		matchLen++;
+		if (matchLen < needleLen) continue;
+		
+		// we've matched the whole string
+		return haystack + i - matchLen + 1;
+	}
+	return NULL;
+}
+
+const char *strnstr2( const char *haystack, int32_t haylen, char *needle){
 	int32_t matchLen = 0;
 	int32_t needleLen = gbstrlen(needle);
 	for (int32_t i = 0; i < haylen;i++){
@@ -1069,8 +1111,8 @@ int64_t htoint32_tint32_t ( const char *s, int32_t len ) {
 }
 
 // convert hex ascii string into binary at "dst"
-void hexToBin ( char *src , int32_t srcLen , char *dst ) {
-	char *srcEnd = src + srcLen;
+void hexToBin ( const char *src , int32_t srcLen , char *dst ) {
+	const char *srcEnd = src + srcLen;
 	for ( ; src && src < srcEnd ; ) {
 		*dst  = htob(*src++);
 		*dst <<= 4;
@@ -1081,8 +1123,8 @@ void hexToBin ( char *src , int32_t srcLen , char *dst ) {
 	if ( src != srcEnd ) { char *xx=NULL;*xx=0; }
 }
 
-void binToHex ( unsigned char *src , int32_t srcLen , char *dst ) {
-	unsigned char *srcEnd = src + srcLen;
+void binToHex ( const unsigned char *src , int32_t srcLen , char *dst ) {
+	const unsigned char *srcEnd = src + srcLen;
 	for ( ; src && src < srcEnd ; ) {
 		*dst++ = btoh(*src>>4);
 		*dst++ = btoh(*src&15);
@@ -1097,7 +1139,23 @@ void binToHex ( unsigned char *src , int32_t srcLen , char *dst ) {
 
 // . like strstr but haystack may not be NULL terminated
 // . needle, however, IS null terminated
-char *strncasestr ( char *haystack , char *needle , int32_t haystackSize ) {
+char *strncasestr ( char *haystack , const char *needle , int32_t haystackSize ) {
+	int32_t needleSize = gbstrlen(needle);
+	int32_t n = haystackSize - needleSize ;
+	for ( int32_t i = 0 ; i <= n ; i++ ) {
+		// keep looping if first chars do not match
+		if ( to_lower_a(haystack[i]) != to_lower_a(needle[0]) ) 
+			continue;
+		// if needle was only 1 char it's a match
+		if ( ! needle[1] ) return &haystack[i];
+		// compare the whole strings now
+		if ( strncasecmp ( &haystack[i] , needle , needleSize ) == 0 ) 
+			return &haystack[i];			
+	}
+	return NULL;
+}
+
+const char *strncasestr ( const char *haystack , const char *needle , int32_t haystackSize ) {
 	int32_t needleSize = gbstrlen(needle);
 	int32_t n = haystackSize - needleSize ;
 	for ( int32_t i = 0 ; i <= n ; i++ ) {
@@ -1115,7 +1173,7 @@ char *strncasestr ( char *haystack , char *needle , int32_t haystackSize ) {
 
 // . like strstr but haystack may not be NULL terminated
 // . needle, however, IS null terminated
-char *strncasestr ( char *haystack , char *needle , 
+char *strncasestr ( char *haystack , const char *needle , 
 		    int32_t haystackSize, int32_t needleSize ) {
 	int32_t n = haystackSize - needleSize ;
 	for ( int32_t i = 0 ; i <= n ; i++ ) {
@@ -1131,7 +1189,38 @@ char *strncasestr ( char *haystack , char *needle ,
 	return NULL;
 }
 
-char *strnstr ( char *haystack , char *needle , int32_t haystackSize ) {
+const char *strncasestr ( const char *haystack , const char *needle , 
+		    int32_t haystackSize, int32_t needleSize ) {
+	int32_t n = haystackSize - needleSize ;
+	for ( int32_t i = 0 ; i <= n ; i++ ) {
+		// keep looping if first chars do not match
+		if ( to_lower_a(haystack[i]) != to_lower_a(needle[0]) ) 
+			continue;
+		// if needle was only 1 char it's a match
+		if ( ! needle[1] ) return &haystack[i];
+		// compare the whole strings now
+		if ( strncasecmp ( &haystack[i] , needle , needleSize ) == 0 ) 
+			return &haystack[i];			
+	}
+	return NULL;
+}
+
+char *strnstr ( char *haystack , const char *needle , int32_t haystackSize ) {
+	int32_t needleSize = gbstrlen(needle);
+	int32_t n = haystackSize - needleSize ;
+	for ( int32_t i = 0 ; i <= n ; i++ ) {
+		// keep looping if first chars do not match
+		if ( haystack[i] != needle[0] ) continue;
+		// if needle was only 1 char it's a match
+		if ( ! needle[1] ) return &haystack[i];
+		// compare the whole strings now
+		if ( strncmp ( &haystack[i] , needle , needleSize ) == 0 ) 
+			return &haystack[i];			
+	}
+	return NULL;
+}
+
+const char *strnstr ( const char *haystack , const char *needle , int32_t haystackSize ) {
 	int32_t needleSize = gbstrlen(needle);
 	int32_t n = haystackSize - needleSize ;
 	for ( int32_t i = 0 ; i <= n ; i++ ) {
@@ -1147,7 +1236,23 @@ char *strnstr ( char *haystack , char *needle , int32_t haystackSize ) {
 }
 
 // independent of case
-char *gb_strcasestr ( char *haystack , char *needle ) {
+char *gb_strcasestr ( char *haystack , const char *needle ) {
+	int32_t needleSize   = gbstrlen(needle);
+	int32_t haystackSize = gbstrlen(haystack);
+	int32_t n = haystackSize - needleSize ;
+	for ( int32_t i = 0 ; i <= n ; i++ ) {
+		// keep looping if first chars do not match
+		if ( to_lower_a(haystack[i]) != to_lower_a(needle[0]) ) 
+			continue;
+		// if needle was only 1 char it's a match
+		if ( ! needle[1] ) return &haystack[i];
+		// compare the whole strings now
+		if ( strncasecmp ( &haystack[i] , needle , needleSize ) == 0 ) 
+			return &haystack[i];			
+	}
+	return NULL;
+}
+const char *gb_strcasestr ( const char *haystack , const char *needle ) {
 	int32_t needleSize   = gbstrlen(needle);
 	int32_t haystackSize = gbstrlen(haystack);
 	int32_t n = haystackSize - needleSize ;
@@ -1165,7 +1270,7 @@ char *gb_strcasestr ( char *haystack , char *needle ) {
 }
 
 
-char *gb_strncasestr ( char *haystack , int32_t haystackSize , char *needle ) {
+char *gb_strncasestr ( char *haystack , int32_t haystackSize , const char *needle ) {
 	// temp term
 	char c = haystack[haystackSize];
 	haystack[haystackSize] = '\0';
@@ -1178,13 +1283,13 @@ char *gb_strncasestr ( char *haystack , int32_t haystackSize , char *needle ) {
 // . store "t" into "s"
 // . returns bytes stored into "s"
 // . NULL terminates "s" if slen > 0
-int32_t saftenTags ( char *s , int32_t slen , char *t , int32_t tlen ) {
+int32_t saftenTags ( char *s , int32_t slen , const char *t , int32_t tlen ) {
 	char *start = s ;
 	// bail if slen is 0
 	if ( slen <= 0 ) return 0;
 	// leave a char for the \0
 	char *send  = s + slen - 1;
-	char *tend  = t + tlen;
+	const char *tend  = t + tlen;
 	for ( ; t < tend && s + 4 < send ; t++ ) {
 		if ( *t == '<' ) {
 			*s++ = '&';
@@ -1214,11 +1319,11 @@ int32_t saftenTags ( char *s , int32_t slen , char *t , int32_t tlen ) {
 //   UnicodeData.txt:22E7;GREATER-THAN BUT NOT EQUIVALENT TO;Sm;0;ON;;;;;Y;
 //   UnicodeData.txt:E0026;TAG AMPERSAND;Cf;0;BN;;;;;N;;;;;
 //   UnicodeData.txt:235E;APL FUNCTIONAL SYMBOL QUOTE QUAD;So;0;L;;;;;N;;;;; 
-int32_t htmlDecode ( char *dst , char *src , int32_t srcLen , bool doSpecial ,
+int32_t htmlDecode ( char *dst , const char *src , int32_t srcLen , bool doSpecial ,
 		  int32_t niceness ) {
 	if ( srcLen == 0 ) return 0;
 	char *start  = dst;
-	char *srcEnd = src + srcLen;
+	const char *srcEnd = src + srcLen;
 	for ( ; src < srcEnd ; ) {
 		// breathe
 		QUICKPOLL(niceness);
@@ -1322,7 +1427,7 @@ int32_t htmlDecode ( char *dst , char *src , int32_t srcLen , bool doSpecial ,
 }
 
 // cdata 
-int32_t cdataDecode ( char *dst , char *src , int32_t niceness ) {
+int32_t cdataDecode ( char *dst , const char *src , int32_t niceness ) {
 	if ( ! src ) return 0;
 	char *start  = dst;
 	for ( ; *src ; ) {
@@ -1356,9 +1461,9 @@ int32_t cdataDecode ( char *dst , char *src , int32_t niceness ) {
 // . make something safe as an form input value by translating the quotes
 // . store "t" into "s" and return bytes stored
 // . does not do bounds checking
-int32_t dequote ( char *s , char *send , char *t , int32_t tlen ) {
+int32_t dequote ( char *s , char *send , const char *t , int32_t tlen ) {
 	char *start = s;
-	char *tend = t + tlen;
+	const char *tend = t + tlen;
 	for ( ; t < tend && s < send ; t++ ) {
 		if ( *t == '"' ) {
 			if ( s + 5 >= send ) return 0;
@@ -1397,7 +1502,7 @@ bool dequote ( SafeBuf* sb , char *t , int32_t tlen ) {
 // . entity-ize a string so it's safe for html output
 // . store "t" into "s" and return bytes stored
 // . does bounds checking
-char *htmlEncode ( char *s , char *send , char *t , char *tend , bool pound ,
+char *htmlEncode ( char *s , char *send , const char *t , const char *tend , bool pound ,
 		   int32_t niceness ) {
 	for ( ; t < tend ; t++ ) {
 		QUICKPOLL(niceness);
@@ -1450,7 +1555,7 @@ char *htmlEncode ( char *s , char *send , char *t , char *tend , bool pound ,
 
 // . entity-ize a string so it's safe for html output
 // . store "t" into "s" and return true on success
-bool htmlEncode ( SafeBuf* s , char *t , char *tend , bool pound ,
+bool htmlEncode ( SafeBuf* s , const char *t , const char *tend , bool pound ,
 		  int32_t niceness ) {
 	for ( ; t < tend ; t++ ) {
 		QUICKPOLL(niceness);
@@ -1495,11 +1600,11 @@ bool htmlEncode ( SafeBuf* s , char *t , char *tend , bool pound ,
 // . used by HttPage2 (cached web page) to encode the query into a url
 // . used by PageRoot to do likewise
 // . returns bytes written into "d" not including terminating \0
-int32_t urlEncode ( char *d , int32_t dlen , char *s , int32_t slen, bool requestPath ) {
+int32_t urlEncode ( char *d , int32_t dlen , const char *s , int32_t slen, bool requestPath ) {
 	char *dstart = d;
 	// subtract 1 to make room for a terminating \0
 	char *dend = d + dlen - 1;
-	char *send = s + slen;
+	const char *send = s + slen;
 	for ( ; s < send && d < dend ; s++ ) {
 		if ( *s == '\0' && requestPath ) {
 			*d++ = *s;
@@ -1548,9 +1653,9 @@ int32_t urlEncode ( char *d , int32_t dlen , char *s , int32_t slen, bool reques
 }
 
 // determine the length of the encoded url, does NOT include NULL
-int32_t urlEncodeLen ( char *s , int32_t slen , bool requestPath ) {
+int32_t urlEncodeLen ( const char *s , int32_t slen , bool requestPath ) {
 	int32_t  dLen = 0;
-	char *send = s + slen;
+	const char *send = s + slen;
 	for ( ; s < send ; s++ ) {
 		if ( *s == '\0' && requestPath ) {
 			dLen++;
@@ -1588,7 +1693,7 @@ int32_t urlEncodeLen ( char *s , int32_t slen , bool requestPath ) {
 
 // . decodes "s/slen" and stores into "dest"
 // . returns the number of bytes stored into "dest"
-int32_t urlDecode ( char *dest , char *s , int32_t slen ) {
+int32_t urlDecode ( char *dest , const char *s , int32_t slen ) {
 	int32_t j = 0;
 	for ( int32_t i = 0 ; i < slen ; i++ ) {
 		if ( s[i] == '+' ) { dest[j++]=' '; continue; }
@@ -1608,7 +1713,7 @@ int32_t urlDecode ( char *dest , char *s , int32_t slen ) {
 }
 
 
-int32_t urlDecodeNoZeroes ( char *dest , char *s , int32_t slen ) {
+int32_t urlDecodeNoZeroes ( char *dest , const char *s , int32_t slen ) {
 	int32_t j = 0;
 	for ( int32_t i = 0 ; i < slen ; i++ ) {
 		if ( s[i] == '+' ) { dest[j++]=' '; continue; }
@@ -1636,12 +1741,12 @@ int32_t urlDecodeNoZeroes ( char *dest , char *s , int32_t slen ) {
 
 // . like above, but only decodes chars that should not have been encoded
 // . will also encode binary chars
-int32_t urlNormCode ( char *d , int32_t dlen , char *s , int32_t slen ) {
+int32_t urlNormCode ( char *d , int32_t dlen , const char *s , int32_t slen ) {
 	// save start of destination buffer for returning the length
 	char *dstart = d;
 	// subtract 1 for NULL termination
 	char *dend = d + dlen - 1;
-	char *send = s + slen;
+	const char *send = s + slen;
 	for ( ; s < send && d < dend ; s++ ) {
 		// if its non-ascii, encode it so it displays correctly
 		if ( ! is_ascii ( *s ) ) {
@@ -2106,19 +2211,19 @@ uint32_t calculateChecksum(char *buf, int32_t bufLen){
 	return sum;
 }
 
-bool anchorIsLink( char *tag, int32_t tagLen){
+bool anchorIsLink( const char *tag, int32_t tagLen){
 	if (strncasestr(tag, tagLen, "href")) return true;
 	if (strncasestr(tag, tagLen, "onclick")) return true;
 	return false;
 }
 
-bool has_alpha_a ( char *s , char *send ) {
+bool has_alpha_a ( const char *s , const char *send ) {
 	for ( ; s < send ; s++ ) 
 		if (is_alpha_a(*s)) return true;
 	return false;
 }
 
-bool has_alpha_utf8 ( char *s , char *send ) {
+bool has_alpha_utf8 ( const char *s , const char *send ) {
 	char cs = 0;
 	for ( ; s < send ; s += cs ) {
 		cs = getUtf8CharSize ( s );
@@ -2310,7 +2415,7 @@ bool is_urlchar(char s) {
 	return false;
 }
 // don't allow "> in our input boxes
-int32_t cleanInput(char *outbuf, int32_t outbufSize, char *inbuf, int32_t inbufLen){
+int32_t cleanInput(char *outbuf, int32_t outbufSize, const char *inbuf, int32_t inbufLen){
 	char *p = outbuf;
 	int32_t numQuotes=0;
 	int32_t lastQuote = 0;
@@ -2589,11 +2694,11 @@ time_t mktime_utc ( struct tm *ttt ) {
 	return local - timezone;
 }
 
-bool verifyUtf8 ( char *txt , int32_t tlen ) {
+bool verifyUtf8 ( const char *txt , int32_t tlen ) {
 	if ( ! txt  || tlen <= 0 ) return true;
 	char size;
-	char *p = txt;
-	char *pend = txt + tlen;
+	const char *p = txt;
+	const char *pend = txt + tlen;
 	for ( ; p < pend ; p += size ) {
 		size = getUtf8CharSize(p);
 		// skip if ascii
@@ -2615,7 +2720,7 @@ bool verifyUtf8 ( char *txt , int32_t tlen ) {
 	return true;
 }
 
-bool verifyUtf8 ( char *txt ) {
+bool verifyUtf8 ( const char *txt ) {
 	int32_t tlen = gbstrlen(txt);
 	return verifyUtf8(txt,tlen);
 }

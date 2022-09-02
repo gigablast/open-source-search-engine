@@ -5,11 +5,11 @@
 // use our own errno so threads don't fuck with it
 int g_errno;
 
-char *mstrerror ( int errnum ) {
+const char *mstrerror ( int errnum ) {
 	return mstrerrno ( errnum );
 }
 
-char *mstrerrno ( int errnum ) {
+const char *mstrerrno ( int errnum ) {
 
 	switch ( errnum ) {
 

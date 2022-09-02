@@ -9,8 +9,8 @@
 // use our own errno so threads don't fuck with it
 extern int g_errno;
 
-char *mstrerrno ( int errnum ) ;
-char *mstrerror ( int errnum ) ;
+const char *mstrerrno ( int errnum ) ;
+const char *mstrerror ( int errnum ) ;
 
 // . this is OR'ed into the errno if the errno occurred on a remote machine but
 //   was passed back to use through a reply (see UdpSlot.cpp/UdpServer.cpp)

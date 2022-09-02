@@ -1690,7 +1690,7 @@ bool Pages::printAdminTop (SafeBuf     *sb   ,
 bool printGigabotAdvice ( SafeBuf *sb , 
 			  int32_t page , 
 			  HttpRequest *hr ,
-			  char *errMsg ) {
+			  const char *errMsg ) {
 
 	char format = hr->getFormat();
 	if ( format != FORMAT_HTML ) return true;
@@ -1711,7 +1711,7 @@ bool printGigabotAdvice ( SafeBuf *sb ,
 
 	// gradient class
 	// yellow box
-	char *box = 
+	const char *box = 
 		"<table cellpadding=5 "
 		// full width of enclosing div
 		"width=100%% "
@@ -1730,10 +1730,10 @@ bool printGigabotAdvice ( SafeBuf *sb ,
 		"border=0"
 		">"
 		"<tr><td>";
-	char *boxEnd =
+	const char *boxEnd =
 		"</td></tr></table>";
 
-	char *advice = NULL;
+	const char *advice = NULL;
 	if ( page == PAGE_ADDCOLL )
 		advice =
 			"STEP 1 of 3. "

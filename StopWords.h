@@ -30,7 +30,7 @@ int32_t isCommonWord ( int64_t h ) ;
 
 int32_t isCommonQueryWordInEnglish ( int64_t h ) ;
 
-bool initWordTable(class HashTableX *table, char* words[], 
+bool initWordTable(class HashTableX *table, const char* const words[], 
 		   //int32_t size ,
 		   char *label);
 

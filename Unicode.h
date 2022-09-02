@@ -13,11 +13,11 @@
 //u_getUnicodeProperties(UChar32 c, int32_t column);
 //#define USE_ICU 
 // Initialize unicode word parser
-bool 	ucInit(char *path = NULL, bool verifyFiles = false);
+bool 	ucInit(const char *path = NULL, bool verifyFiles = false);
 
 //////////////////////////////////////////////////////
 // Converters
-iconv_t gbiconv_open(char *tocode, char *fromcode) ;
+iconv_t gbiconv_open(const char *tocode, const char *fromcode) ;
 int gbiconv_close(iconv_t cd) ;
 
 // Convert to Unicode (UTF-16) from the specified charset
@@ -28,12 +28,12 @@ int gbiconv_close(iconv_t cd) ;
 //		    int32_t titleRecVersion );
 
 int32_t 	ucToAny(char *outbuf, int32_t outbuflen, char *charset_out,
-		 char *inbuf, int32_t inbuflen, char *charset_in,
+		 const char *inbuf, int32_t inbuflen, const char *charset_in,
 		 int32_t ignoreBadChars,int32_t niceness);
 
 // table for decoding utf8...says how many bytes in the character
 // based on value of first byte.  0 is an illegal value
-static int bytes_in_utf8_code[] = {
+static const int bytes_in_utf8_code[] = {
 	1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
 	1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
 	1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
@@ -49,7 +49,7 @@ static int bytes_in_utf8_code[] = {
 	3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,4,4,4,4,4,4,4,4,1,1,1,1,1,1,1,1
 };
 
-static int utf8_sane[] = {
+static const int utf8_sane[] = {
 	1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
 	1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
 	1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
@@ -98,7 +98,7 @@ inline char getUtf8CharSize2 ( const uint8_t *p ) {
 	return 1;
 }
 
-inline char isSaneUtf8Char ( uint8_t *p ) {
+inline char isSaneUtf8Char ( const uint8_t *p ) {
 	return utf8_sane[p[0]];
 }
 
@@ -109,7 +109,7 @@ inline char isSaneUtf8Char ( uint8_t *p ) {
 // 1110yyyy 10yyyyxx 10xxxxxx
 // 11110zzz 10zzyyyy 10yyyyxx 10xxxxxx
 // TODO: make a table for this as well
-inline char isFirstUtf8Char ( char *p ) {
+inline char isFirstUtf8Char ( const char *p ) {
 	// non-first chars have the top bit set and next bit unset
 	if ( (p[0] & 0xc0) == 0x80 ) return false;
 	// we are the first char in a sequence
@@ -123,9 +123,15 @@ inline char *getPrevUtf8Char ( char *p , char *start ) {
 	return NULL;
 }
 
+inline const char *getPrevUtf8Char ( const char *p , const char *start ) {
+	for ( p-- ; p >= start ; p-- )
+		if ( isFirstUtf8Char(p) ) return p;
+	return NULL;
+}
+
 inline int32_t ucToUtf8(char *outbuf, int32_t outbuflen, 
-			 char *inbuf, int32_t inbuflen, 
-			 char *charset, int32_t ignoreBadChars,
+			 const char *inbuf, int32_t inbuflen, 
+			 const char *charset, int32_t ignoreBadChars,
 		     int32_t niceness) {
   return ucToAny(outbuf, outbuflen, (char *)"UTF-8",
 		 inbuf, inbuflen, charset, ignoreBadChars,niceness);
@@ -158,7 +164,7 @@ uint8_t latin1Encode ( UChar32 c ) ;
 int32_t	utf8Encode(UChar32 c, char* buf);
 
 // Try to detect the Byte Order Mark of a Unicode Document
-char *	ucDetectBOM(char *buf, int32_t bufsize);
+const char *	ucDetectBOM(const char *buf, int32_t bufsize);
 //UChar32 utf16Decode(UChar *s, UChar **next, int32_t maxLen=LONG_MAX);
 //UChar32 utf16EntityDecode(UChar *s, UChar **next, int32_t maxLen = LONG_MAX);
 //int32_t utf16Size(UChar32 c) ;
@@ -169,7 +175,7 @@ char *	ucDetectBOM(char *buf, int32_t bufsize);
 
 // Special case converter...for web page output
 int32_t latin1ToUtf8(char *outbuf, int32_t outbufsize,
-		  char *inbuf, int32_t inbuflen);
+		  const char *inbuf, int32_t inbuflen);
 
 //int32_t utf8ToAscii(char *outbuf, int32_t outbufsize,
 //		  unsigned char *inbuf, int32_t inbuflen);

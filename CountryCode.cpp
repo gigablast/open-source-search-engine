@@ -20,7 +20,7 @@ CountryCode g_countryCode;
 
 static HashTable s_catToCountry;
 
-static char * s_countryCode[] = {
+static const char *const s_countryCode[] = {
 	"zz", // Unknown
 	"ad", // Principality of Andorra
 	"ae", // United Arab Emirates
@@ -281,7 +281,7 @@ static char * s_countryCode[] = {
 };
 
 // map a country id to the two letter country abbr
-char *getCountryCode ( uint8_t crid ) {
+const char *getCountryCode ( uint8_t crid ) {
 	return s_countryCode[crid];
 }
 
@@ -326,7 +326,7 @@ uint8_t getCountryId ( char *cc ) {
 	return *(uint8_t *)val ;
 }
 
-static const char *s_countryName[] = {
+static const char *const s_countryName[] = {
 	"Unknown",
 	"Principality of Andorra",
 	"United Arab Emirates",
@@ -585,7 +585,7 @@ static const char *s_countryName[] = {
 	"East Timor"
 };
 
-static char *s_countryRegexSource[] = {
+static const char *const s_countryRegexSource[] = {
 	"[^a-zA-Z]unknown[^a-zA-Z]",
 	"[^a-zA-Z]andorra[^a-zA-Z]",
 	"[^a-zA-Z]united[ -_]arab[ -_]emirates[^a-zA-Z]",
@@ -836,7 +836,7 @@ static char *s_countryRegexSource[] = {
 // List of languages spoken by country
 // THIS IS A GENERATED LIST -- DO NOT EDIT!
 // NOTE: if the list of countres changes, this must be regenerated
-static uint64_t s_countryLanguages[] = {
+static const uint64_t s_countryLanguages[] = {
 	0LL                                                         , // zz
 	0LL                                                         , // ad
 	(1LL<<langArabic)                                           , // ae

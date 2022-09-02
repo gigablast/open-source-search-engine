@@ -47,7 +47,7 @@ bool sendPageAddUrl2 ( TcpSocket *sock , HttpRequest *hr ) {
 	// or if in read-only mode
 	if ( g_conf.m_readOnlyMode ) {
 		g_errno = EREADONLYMODE;
-		char *msg = mstrerror(g_errno);
+		const char *msg = mstrerror(g_errno);
 		return g_httpServer.sendErrorReply(sock,500,msg);
 	}
 
@@ -83,7 +83,7 @@ bool sendPageAddUrl2 ( TcpSocket *sock , HttpRequest *hr ) {
 	if ( ! cr ) {
 		g_errno = ENOCOLLREC;
 		//g_msg = " (error: no collection)";
-		char *msg = mstrerror(g_errno);
+		const char *msg = mstrerror(g_errno);
 		return g_httpServer.sendErrorReply(sock,500,msg);
 	}
 

@@ -2155,7 +2155,7 @@ class XmlDoc {
 	SafeBuf m_gsbuf;
 	//int32_t  m_gsbufSize;
 	//int32_t  m_gsbufAllocSize;
-	char *m_note;
+	const char *m_note;
 	char *m_imageUrl;
 	char *m_imageUrl2;
 	//char  m_imageUrlBuf[100];

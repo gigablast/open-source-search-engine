@@ -7,7 +7,7 @@
 
 // . convert these values to strings
 // . these must be 1-1 with the #define's in HttpMime.h
-char *g_contentTypeStrings [] = {
+const char *const g_contentTypeStrings [] = {
 	""     ,
 	"html" ,
 	"text" ,
@@ -660,7 +660,7 @@ const char *extensionToContentTypeStr2 ( char *ext , int32_t elen ) {
 	return *pp;
 }
 
-const char *HttpMime::getContentTypeFromExtension ( char *ext , int32_t elen) {
+const char *HttpMime::getContentTypeFromExtension ( const char *ext , int32_t elen) {
 	// assume text/html if no extension provided
 	if ( ! ext || ! ext[0] ) return "text/html";
 	if ( elen <= 0 ) return "text/html";
@@ -675,7 +675,7 @@ const char *HttpMime::getContentTypeFromExtension ( char *ext , int32_t elen) {
 
 // . list of types is on: http://www.duke.edu/websrv/file-extensions.html
 // . i copied it to the bottom of this file though
-const char *HttpMime::getContentTypeFromExtension ( char *ext ) {
+const char *HttpMime::getContentTypeFromExtension ( const char *ext ) {
 	// assume text/html if no extension provided
 	if ( ! ext || ! ext[0] ) return "text/html";
 	// get hash for table look up
@@ -686,7 +686,7 @@ const char *HttpMime::getContentTypeFromExtension ( char *ext ) {
 	return *pp;
 }
 
-const char *HttpMime::getContentEncodingFromExtension ( char *ext ) {
+const char *HttpMime::getContentEncodingFromExtension ( const char *ext ) {
 	if ( ! ext ) return NULL;
 	if ( strcasecmp ( ext ,"bz2"  )==0 ) return "x-bzip2";
 	if ( strcasecmp ( ext ,"gz"   )==0 ) return "x-gzip";
@@ -720,18 +720,18 @@ void HttpMime::makeMime  ( int32_t    totalContentLen    ,
 			   time_t  lastModified       ,
 			   int32_t    offset             , 
 			   int32_t    bytesToSend        ,
-			   char   *ext                ,
+			   const char   *ext                ,
 			   bool    POSTReply          ,
-			   char   *contentType        ,
-			   char   *charset            ,
+			   const char   *contentType        ,
+			   const char   *charset            ,
 			   int32_t    httpStatus         ,
-			   char   *cookie             ) {
+			   const char   *cookie             ) {
 	// assume UTF-8
 	//if ( ! charset ) charset = "utf-8";
 	// . make the content type line
 	// . uses a static buffer
 	if ( ! contentType ) 
-		contentType = (char *)getContentTypeFromExtension ( ext );
+		contentType = (const char *)getContentTypeFromExtension ( ext );
 
 	// do not cache plug ins
 	if ( contentType && strcmp(contentType,"application/x-xpinstall")==0)
