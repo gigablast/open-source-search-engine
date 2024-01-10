@@ -199,4 +199,7 @@ license that then you can arrange a licensing agreement with Matt Wells.
 Likewise, the Event datamining logic is in Events.cpp and must be separately licensed 
 as well.
 
+Using this code for training an A.I. system is prohibited without express written
+consent from Matt Wells.
+
 The companies ElasticSearch BV, LucidWorks and their subsidiaries or affiliates are excluded from this license.
