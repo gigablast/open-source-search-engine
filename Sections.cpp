@@ -9568,7 +9568,7 @@ bool Sections::hashSentBits (Section    *sx         ,
 		// add to our label table too
 		if ( ! labelTable ) continue;
 		// convert sentence bit to text description
-		char *str = getTagName(sp->m_tagId);
+		const char *str = getTagName(sp->m_tagId);
 		if ( modLabel ) sprintf ( sbuf,"%s%s", modLabel,str);
 		else            sprintf ( sbuf,"%s", str );
 		// make sure X chars or less

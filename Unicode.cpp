@@ -18,7 +18,7 @@ static bool openIconvDescriptors() ;
 // static int gbiconv_close(iconv_t cd) ;
 
 
-iconv_t gbiconv_open( char *tocode, char *fromcode) {
+iconv_t gbiconv_open( const char *tocode, const char *fromcode) {
 	// get hash for to/from
 	uint32_t hash1 = hash32Lower_a(tocode, gbstrlen(tocode), 0);
 	uint32_t hash2 = hash32Lower_a(fromcode, gbstrlen(fromcode),0);
@@ -108,7 +108,7 @@ void gbiconv_reset(){
 #define CHKSUM_SCRIPTS           1826246000
 #define CHKSUM_KDMAP             1920116453
 
-bool ucInit(char *path, bool verifyFiles){
+bool ucInit(const char *path, bool verifyFiles){
 
 	char file[384];
 	if (path == NULL) path = "./";
@@ -180,7 +180,7 @@ failed:
 		   "uni: unable to load all property tables");
 }
 
-char *ucDetectBOM(char *buf, int32_t bufsize){
+const char *ucDetectBOM(const char *buf, int32_t bufsize){
 	if (bufsize < 4) return NULL;
 	// copied from ICU
 	if(buf[0] == '\xFE' && buf[1] == '\xFF') {
@@ -367,11 +367,11 @@ done:
 
 
 int32_t 	ucToAny(char *outbuf, int32_t outbufsize, char *charset_out,
-		 char *inbuf, int32_t inbuflen, char *charset_in,
+		 const char *inbuf, int32_t inbuflen, const char *charset_in,
 		 int32_t ignoreBadChars , int32_t niceness ){
 	if (inbuflen == 0) return 0;
 	// alias for iconv
-	char *csAlias = charset_in;
+	const char *csAlias = charset_in;
 	if (!strncmp(charset_in, "x-windows-949", 13))
 		csAlias = "CP949";
 
@@ -1232,7 +1232,7 @@ int32_t ucToAscii(char *buf, int32_t bufsize, char *s, int32_t slen){
 
 static iconv_t cd_latin1_u8 = (iconv_t)-1;
 int32_t latin1ToUtf8(char *outbuf, int32_t outbufsize, 
-		  char *inbuf, int32_t inbuflen){
+		  const char *inbuf, int32_t inbuflen){
 	// fixed from < 0 to == (iconv_t)-1 thanks to isj 
 	// (gcc optimized the condition out)
 	if ( cd_latin1_u8 == (iconv_t)-1 ) {

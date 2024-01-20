@@ -8,7 +8,7 @@
 
 class Abbr {
 public:
-	char *m_str;
+	const char *m_str;
 	// MUST it have a word after it????
 	char  m_hasWordAfter;
 };
@@ -255,7 +255,7 @@ bool isAbbr ( int64_t h , bool *hasWordAfter ) {
 			return log("build: Could not init abbrev table.");
 		// now add in all the stop words
 		for ( int32_t i = 0 ; i < n ; i++ ) {
-			char      *sw    = s_abbrs99[i].m_str;
+			const char      *sw    = s_abbrs99[i].m_str;
 			int64_t  swh   = hash64Lower_utf8 ( sw );
 			int32_t val = i + 1;
 			if ( ! t->addKey (&swh,&val) ) return false;

@@ -42,7 +42,7 @@ bool sendPageBasicStatus     ( TcpSocket *s , HttpRequest *r );
 //bool sendPageBasicDiffbot    ( TcpSocket *s , HttpRequest *r );
 
 bool printGigabotAdvice ( SafeBuf *sb , int32_t page , HttpRequest *hr ,
-			  char *gerrmsg ) ;
+			  const char *gerrmsg ) ;
 
 bool sendPageRoot     ( TcpSocket *s , HttpRequest *r );
 bool sendPageRoot     ( TcpSocket *s , HttpRequest *r, char *cookie );

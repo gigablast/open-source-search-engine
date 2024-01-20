@@ -1214,7 +1214,7 @@ redirectTimedout:
 	for (int32_t i = 0 ; i < THIS->m_numHosts ; i++ ) {
 		if ( ! THIS->m_slots[i]         ) continue;
 		// transaction is not in progress if m_errnos[i] is set
-		char *ee = "";
+		const char *ee = "";
 		if ( THIS->m_errnos[i] ) ee = mstrerror(THIS->m_errnos[i]);
 		log("net: Multicast::sleepWrapper1: tried host "
 		    "%s:%"INT32" %s" ,iptoa(THIS->m_slots[i]->m_ip),

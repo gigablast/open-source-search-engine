@@ -2625,7 +2625,7 @@ bool printSearchResultsHeader ( State0 *st ) {
 				for ( int i = 0 ; i < langLast ; i++ ) {
 					uint64_t bit = (uint64_t)1 << i;
 					if ( ! (qt->m_langIdBits&bit))continue;
-					char *str = getLangAbbr(i);
+					const char *str = getLangAbbr(i);
 					if ( ! first ) sb->pushChar(',');
 					first = false;
 					sb->safeStrcpy ( str );
@@ -2711,7 +2711,7 @@ bool printSearchResultsHeader ( State0 *st ) {
 				for ( int i = 0 ; i < langLast ; i++ ) {
 					uint64_t bit = (uint64_t)1 << i;
 					if ( ! (qt->m_langIdBits&bit))continue;
-					char *str = getLangAbbr(i);
+					const char *str = getLangAbbr(i);
 					if ( ! first ) sb->pushChar(',');
 					first = false;
 					sb->jsonEncode ( str );
@@ -4897,7 +4897,7 @@ bool printResult ( State0 *st, int32_t ix , int32_t *numPrintedSoFar ) {
 	//
 	/////
 	unsigned char ctype = mr->m_contentType;
-	char *cs = g_contentTypeStrings[ctype];
+	const char *cs = g_contentTypeStrings[ctype];
 
 	if ( si->m_format == FORMAT_XML )
 		sb->safePrintf("\t\t<contentType>"
@@ -4915,7 +4915,7 @@ bool printResult ( State0 *st, int32_t ix , int32_t *numPrintedSoFar ) {
 	     ctype != CT_UNKNOWN ){
 		sb->safePrintf(" <b><font style=color:white;"
 			       "background-color:maroon;>");
-		char *p = cs;
+		const char *p = cs;
 		for ( ; *p ; p++ ) {
 			char c = to_upper_a(*p);
 			sb->pushChar(c);
@@ -6180,7 +6180,7 @@ bool printResult ( State0 *st, int32_t ix , int32_t *numPrintedSoFar ) {
 
 	if ( si->m_format != FORMAT_HTML ) return true;
 
-	char *cc = getCountryCode ( mr->m_country );
+	const char *cc = getCountryCode ( mr->m_country );
 	if ( mr->m_country == 0 ) cc = "Unknown";
 
 	sb->safePrintf("<table border=1>"
@@ -9297,7 +9297,7 @@ bool printDmozEntry ( SafeBuf *sb ,
 class MenuItem {
 public:
 	int32_t  m_menuNum;
-	char *m_title;
+	const char *m_title;
 	// we append this to the url
 	char *m_cgi;
 	char  m_tmp[25];
@@ -9476,7 +9476,7 @@ bool printSearchFiltersBar ( SafeBuf *sb , HttpRequest *hr ) {
 		for ( int32_t i = 0 ; i < langLast ; i++ ) {
 			s_mi[n].m_menuNum  = 2;
 			s_mi[n].m_title    = getLanguageString(i);
-			char *abbr = getLangAbbr(i);
+			const char *abbr = getLangAbbr(i);
 			snprintf(s_mi[n].m_tmp,10,"qlang=%s",abbr);
 			s_mi[n].m_cgi      = s_mi[n].m_tmp;
 			s_mi[n].m_icon     = g_flagBytes[i]; //base64encoded

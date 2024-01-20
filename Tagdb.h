@@ -42,7 +42,7 @@ class Tag {
 		   int32_t  timestamp ,
 		   char *user ,
 		   int32_t  ip ,
-		   char *data ,
+		   const char *data ,
 		   int32_t  dataSize );
 
 	int32_t print ( ) ; 

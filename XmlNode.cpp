@@ -13,7 +13,7 @@
 // . a filterKeep of 1 means keep the tag and text between it and its back tag.
 // . a filterKeep of 2 means remove tag BUT keep the text between
 //   it and its back tag. 
-NodeType g_nodes[] = {
+const NodeType g_nodes[] = {
 // NAME hasBackTag brk? isVisible? filterKeep1? filterKeep2 type/m_nodeId[i]
 //      isXml? (the last field)
 // --------------------------
@@ -606,7 +606,7 @@ char *XmlNode::getFieldValue ( char *field , int32_t *valueLen ) {
 
 #include "HashTableX.h"
 
-nodeid_t getTagId ( char *s , NodeType **retp ) {
+nodeid_t getTagId ( const char *s , NodeType **retp ) {
 
 	// init table?
 	static bool s_init = false;
@@ -619,10 +619,10 @@ nodeid_t getTagId ( char *s , NodeType **retp ) {
 		static int32_t nn = sizeof(g_nodes) / sizeof(NodeType);
 		// set the hash table
 		for ( int32_t i = 0 ; i < nn ; i++ ) {
-			char *name = g_nodes[i].m_nodeName;
+			const char *name = g_nodes[i].m_nodeName;
 			int32_t  nlen = gbstrlen(name);
 			int64_t h = hash64Upper_a ( name,nlen,0LL );
-			NodeType *nt = &g_nodes[i];
+			const NodeType *nt = &g_nodes[i];
 			if ( ! s_ht.addKey(&h,&nt) ) { 
 				char *xx=NULL;*xx=0; }
 		}
@@ -636,7 +636,7 @@ nodeid_t getTagId ( char *s , NodeType **retp ) {
 
 	// find end of tag name. hyphens are ok to be in name.
 	// facebook uses underscores like <start_time>
-	char *e = s; for ( ; *e && (is_alnum_a(*e) || *e=='-'|| *e=='_'); e++);
+	const char *e = s; for ( ; *e && (is_alnum_a(*e) || *e=='-'|| *e=='_'); e++);
 	// hash it for lookup
 	int64_t h = hash64Upper_a ( s , e - s , 0 );
 	// look it up

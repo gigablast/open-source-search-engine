@@ -16,7 +16,7 @@
 
 // . i shrunk this list a lot
 // . see backups for the hold list
-static char      *s_stopWords[] = {
+static const char      *const s_stopWords[] = {
 	"a",
 	"b",
 	"c",
@@ -141,7 +141,7 @@ static char      *s_stopWords[] = {
 static HashTableX s_stopWordTable;
 static bool       s_stopWordsInitialized = false;
 
-bool initWordTable( HashTableX *table, char *words[], 
+bool initWordTable( HashTableX *table, const char *const words[], 
 		    //int32_t size ,
 		    char *label ) {
 	// count them
@@ -153,7 +153,7 @@ bool initWordTable( HashTableX *table, char *words[],
 	// now add in all the stop words
 	int32_t n = count;//(int32_t)size/ sizeof(char *); 
 	for ( int32_t i = 0 ; i < n ; i++ ) {
-		char      *sw    = words[i];
+		const char      *sw    = words[i];
 		if ( ! sw ) break;
 		int32_t       swlen = gbstrlen ( sw );
 		int64_t  swh   = hash64Lower_utf8 ( sw , swlen );
@@ -210,7 +210,7 @@ bool isStopWord32 ( int32_t h ) {
 		// now add in all the stop words
 		int32_t n = (int32_t)size/ sizeof(char *); 
 		for ( int32_t i = 0 ; i < n ; i++ ) {
-			char *sw    = s_stopWords[i];
+			const char *sw    = s_stopWords[i];
 			int32_t  swlen = gbstrlen ( sw );
 			int32_t  swh   = hash32Lower_utf8 ( sw , swlen );
 			if ( ! s_table32.addKey (&swh) ) {char *xx=NULL;*xx=0;}
@@ -231,7 +231,7 @@ bool isStopWord32 ( int32_t h ) {
 // . see backups for the hold list
 
 // langid 0 is for all languages, or when it lang is unknown, 'xx'
-static char *s_queryStopWordsUnknown[] = {
+static const char *const s_queryStopWordsUnknown[] = {
 	"at",
 	//"be",
 	"by",
@@ -1736,7 +1736,7 @@ static char *s_queryStopWordsUnknown[] = {
 
 
 // english is 1
-static char *s_queryStopWordsEnglish[] = {
+static const char *const s_queryStopWordsEnglish[] = {
 	"at",
 	"by",
 	"of",
@@ -1780,7 +1780,7 @@ static char *s_queryStopWordsEnglish[] = {
 };
 
 
-static char *s_queryStopWordsGerman[] = {
+static const char *const s_queryStopWordsGerman[] = {
 	// german stop words
 	//"aber",		// but
 	//"alle",		// all
@@ -2020,7 +2020,7 @@ static char *s_queryStopWordsGerman[] = {
 static HashTableX s_queryStopWordTables[MAXLANGID+1];
 static bool       s_queryStopWordsInitialized = false;
 
-static char **s_queryStopWords2[MAXLANGID+1];
+static const char *const* s_queryStopWords2[MAXLANGID+1];
 
 bool isQueryStopWord ( char *s , int32_t len , int64_t h , int32_t langId ) {
 
@@ -2054,7 +2054,7 @@ bool isQueryStopWord ( char *s , int32_t len , int64_t h , int32_t langId ) {
 // 		}
 		for ( int32_t i = 0 ; i <= MAXLANGID ; i++ ) {
 			HashTableX *ht = &s_queryStopWordTables[i];
-			char **words = s_queryStopWords2[i];
+			const char *const *words = s_queryStopWords2[i];
 			if ( ! words ) continue;
 			if ( ! initWordTable ( ht,//&s_queryStopWordTable, 
 					       words,
@@ -2088,7 +2088,7 @@ bool isQueryStopWord ( char *s , int32_t len , int64_t h , int32_t langId ) {
 // . see backups for the hold list
 // . i shrunk this list a lot
 // . see backups for the hold list
-static char      *s_commonWords[] = {
+static const char      *const s_commonWords[] = {
 	"to",   // score = 1
 	"and",  // score = 2
 	"of",   // score = 3
@@ -3893,7 +3893,7 @@ int32_t isCommonWord ( int64_t h ) {
 		// now add in all the stop words
 		int32_t n = (int32_t)sizeof(s_commonWords)/ sizeof(char *); 
 		for ( int32_t i = 0 ; i < n ; i++ ) {
-			char *sw    = s_commonWords[i];
+			const char *sw    = s_commonWords[i];
 			int32_t  swlen = gbstrlen ( sw );
 			//int32_t  swh   = g_speller.hash32d ( sw , swlen );
 			// use the same algo that Words.cpp computeWordIds does
@@ -3918,7 +3918,7 @@ int32_t isCommonWord ( int64_t h ) {
 	return s_commonWordTable.getScore ( &h );
 }
 
-static char *s_verbs[] = {
+static const char *const s_verbs[] = {
 	"runs",
 	"run",
 	"go",
@@ -3942,7 +3942,7 @@ bool isVerb ( int64_t *hp ) {
 		// now add in all the stop words
 		int32_t n = (int32_t)sizeof(s_verbs)/ sizeof(char *); 
 		for ( int32_t i = 0 ; i < n ; i++ ) {
-			char *sw    = s_verbs[i];
+			const char *sw    = s_verbs[i];
 			int32_t  swlen = gbstrlen ( sw );
 			// use the same algo that Words.cpp computeWordIds does
 			int64_t swh = hash64Lower_utf8 ( sw , swlen );
@@ -3966,7 +3966,7 @@ void resetStopWords ( ) {
 }
 
 
-static char      *s_commonQueryWords[] = {
+static const char      *const s_commonQueryWords[] = {
 	"to",
 	"and",
 	"ands",
@@ -4343,7 +4343,7 @@ int32_t isCommonQueryWordInEnglish ( int64_t h64 ) {
 		// now add in all the stop words
 		int32_t n = (int32_t)sizeof(s_commonQueryWords)/ sizeof(char *); 
 		for ( int32_t i = 0 ; i < n ; i++ ) {
-			char *sw    = s_commonQueryWords[i];
+			const char *sw    = s_commonQueryWords[i];
 			int32_t  swlen = gbstrlen ( sw );
 			//int32_t  swh   = g_speller.hash32d ( sw , swlen );
 			// use the same algo that Words.cpp computeWordIds does

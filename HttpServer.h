@@ -144,14 +144,14 @@ class HttpServer {
 	void requestHandler ( TcpSocket *s );
 
 	// send an error reply, like "HTTP/1.1 404 Not Found"
-	bool sendErrorReply ( TcpSocket *s , int32_t error , char *errmsg ,
+	bool sendErrorReply ( TcpSocket *s , int32_t error , const char *errmsg ,
 			      int32_t *bytesSent = NULL ); 
 	bool sendErrorReply ( class GigablastRequest *gr );
 	// xml and json uses this
 	bool sendSuccessReply ( class GigablastRequest *gr,char *addMsg=NULL);
 	bool sendSuccessReply (TcpSocket *s , char format , char *addMsg=NULL);
 	// send a "prettier" error reply, formatted in XML if necessary
-	bool sendQueryErrorReply ( TcpSocket *s , int32_t error , char *errmsg,
+	bool sendQueryErrorReply ( TcpSocket *s , int32_t error , const char *errmsg,
 				   // FORMAT_HTML=0,FORMAT_XML,FORMAT_JSON
 				   char format, int errnum, 
 				   char *content=NULL); 

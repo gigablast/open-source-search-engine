@@ -34,11 +34,11 @@
 #include "Loop.h"            // for g_loop.setNonBlocking(int fd)
 #include "SafeBuf.h"
 
-bool doesFileExist ( char *filename ) ;
+bool doesFileExist ( const char *filename ) ;
 
 int64_t getFileSize ( const char *filename ) ;
 
-int64_t getFileSize_cygwin ( char *filename ) ;
+int64_t getFileSize_cygwin ( const char *filename ) ;
 
 // for avoiding unlink/opens that mess up our threaded read
 int32_t getCloseCount_r ( int fd );
@@ -69,11 +69,11 @@ class File {
 	// . useful for unlink/rename/reserve/...
 	// . IMPORTANT: if bytes were already reserved can only increase the 
 	//   reserve, not decrease
-	void set ( char *dir , char *filename );
-	void set ( char *filename );
+	void set ( const char *dir , const char *filename );
+	void set ( const char *filename );
 
 	// returns false and sets errno on error, returns true on success
-	bool rename ( char *newFilename );
+	bool rename ( const char *newFilename );
 
 	bool calledOpen () { return m_calledOpen; };
 	bool calledSet  () { return m_calledSet; };
@@ -82,7 +82,7 @@ class File {
 
 	// . get the file extension of this file
 	// . return NULL if none
-	char *getExtension ( ) ;
+	const char *getExtension ( ) ;
 	
 	// uses lseek to get file's current position
 	int32_t getCurrentPos ( ) ;
@@ -107,7 +107,7 @@ class File {
 	// . returns numBytesWritten if not error
 	// . this is non-blocking so may return < "numBytesToWrite"
 	// . a negative offset means current write offset
-	int  write   ( void *buf , int32_t size , int32_t offset );
+	int  write   ( const void *buf , int32_t size , int32_t offset );
 
 	// . this will really close this file
 	bool close   ( );  
@@ -159,7 +159,7 @@ class File {
 	int   getfdNoOpen ( ) ;
 
 	//char *getFilename ( ) { return m_filename.getBufStart(); };
-	char *getFilename ( ) { return m_filename; };
+	const char *getFilename ( ) { return m_filename; };
 
 	// our filename allocated with strdup
 	// we publicize for ease of use

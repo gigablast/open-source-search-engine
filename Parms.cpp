@@ -23276,8 +23276,8 @@ bool printUrlExpressionExamples ( SafeBuf *sb ) {
 			  "</td></tr>",
 			  TABLE_STYLE );
 		for ( int32_t i = 0 ; i < 256 ; i++ ) {
-			char *lang1 = getLanguageAbbr   ( i );
-			char *lang2 = getLanguageString ( i );
+			const char *lang1 = getLanguageAbbr   ( i );
+			const char *lang2 = getLanguageString ( i );
 			if ( ! lang1 ) continue;
 			sb->safePrintf("<tr class=poo>"
 				       "<td>%s</td><td>%s</td></tr>\n",

@@ -75,7 +75,7 @@ void Tag::set ( char *site ,
 		int32_t  timestamp ,
 		char *user ,
 		int32_t  ip ,
-		char *data ,
+		const char *data ,
 		int32_t  dataSize ) {
 	// get type from name
 	m_type = getTagTypeFromStr ( tagname , strlen(tagname) );

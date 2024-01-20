@@ -12,7 +12,7 @@
 
 // call these two
 // JAB: const-ness for the optimizer
-int32_t getEntity_a          ( char *s , int32_t maxLen , uint32_t *c );
+int32_t getEntity_a          ( const char *s , int32_t maxLen , uint32_t *c );
 
 //int32_t getEntity_utf8 (char *s , int32_t maxLen , int32_t *d , int32_t *ds ) ;
 

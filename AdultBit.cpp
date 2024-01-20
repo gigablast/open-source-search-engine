@@ -55,7 +55,7 @@ static HashTableX  s_dtable;
 bool AdultBit::isDirty ( char *s , int32_t len ) {
 
 	static bool       s_isInitialized = false;
-	static char      *s_dirty[] = {
+	static const char      *const s_dirty[] = {
 		"anal",
 		"analsex",
 		"blowjob",
@@ -117,7 +117,7 @@ static HashTableX  s_otable;
 bool AdultBit::isObscene ( char *s , int32_t len ) {
 
 	static bool       s_isInitialized = false;
-	static char      *s_obscene[] = {
+	static const char      * const s_obscene[] = {
 		"clit",
 		"clits",
 //		"cum",    magna cum laude

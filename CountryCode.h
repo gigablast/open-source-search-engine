@@ -10,7 +10,7 @@
 uint8_t getCountryId ( char *cc ) ;
 
 // map a country id to the two letter country abbr
-char *getCountryCode ( uint8_t crid );
+const char *getCountryCode ( uint8_t crid );
 
 class CountryCode {
 	public:

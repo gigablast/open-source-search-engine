@@ -7,15 +7,15 @@
 // JAB: const-ness for optimizer...
 // don't call these, they're used internally
 static bool     initEntityTable();
-static uint32_t getTextEntity        ( char *s , int32_t len );
-static uint32_t getDecimalEntity     ( char *s , int32_t len );
-static uint32_t getHexadecimalEntity ( char *s , int32_t len );
+static uint32_t getTextEntity        ( const char *s , int32_t len );
+static uint32_t getDecimalEntity     ( const char *s , int32_t len );
+static uint32_t getHexadecimalEntity ( const char *s , int32_t len );
 
 // . s[maxLen] should be the NULL
 // . returns full length of entity @ "s" if there is a valid one, 0 otherwise
 // . sets *c to the iso character the entity represents (if there is one)
 // JAB: const-ness for optimizer...
-int32_t getEntity_a ( char *s , int32_t maxLen , uint32_t *c ) {
+int32_t getEntity_a ( const char *s , int32_t maxLen , uint32_t *c ) {
 	// ensure there's an & as first char
 	if ( s[0] != '&' ) return 0;
 	// compute maximum length of entity, if it's indeed an entity
@@ -52,7 +52,7 @@ static HashTableX s_table;
 static bool       s_isInitialized = false;
 struct Entity {
 	int32_t           unicode;
-	char          *entity;
+	const char          *entity;
 	unsigned char  c;
 	int32_t           utf8Len;
 	unsigned char  utf8[4];
@@ -424,7 +424,7 @@ static bool initEntityTable(){
 // . return the 32-bit unicode char it represents
 // . returns 0 if none
 // . JAB: const-ness for optimizer...
-uint32_t getTextEntity ( char *s , int32_t len ) {
+uint32_t getTextEntity ( const char *s , int32_t len ) {
 	if ( !initEntityTable()) return 0;
 	// take the ; off, if any
 	if ( s[len-1] == ';' ) len--;
@@ -451,7 +451,7 @@ uint32_t getTextEntity ( char *s , int32_t len ) {
 // . get a decimal encoded entity
 // . s/len is the whol thing
 // . JAB: const-ness for optimizer...
-uint32_t getDecimalEntity ( char *s , int32_t len ) {
+uint32_t getDecimalEntity ( const char *s , int32_t len ) {
 	// take the ; off, if any
 	if ( s[len-1] == ';' ) len--;
 	// . &#1 is smallest it can be
@@ -504,7 +504,7 @@ uint32_t getDecimalEntity ( char *s , int32_t len ) {
 // . get a hexadecimal encoded entity
 // . JAB: const-ness for optimizer...
 // . returns a UChar32
-uint32_t getHexadecimalEntity ( char *s , int32_t len ) {
+uint32_t getHexadecimalEntity ( const char *s , int32_t len ) {
 	// take the ; off, if any
 	if ( s[len-1] == ';' ) len--;
 	// . &#x1  is smallest it can be

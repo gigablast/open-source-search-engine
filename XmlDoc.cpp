@@ -18579,11 +18579,11 @@ uint16_t getCharsetFast ( HttpMime *mime,
 	}
 
 	// look for Unicode BOM first though
-	cs = ucDetectBOM ( pstart , pend - pstart );
-	if ( cs && charset == csUnknown ) {
-		log(LOG_DEBUG, "build: Unicode BOM signature detected: %s",cs);
-		int32_t len = gbstrlen(cs);	if ( len > 31 ) len = 31;
-		charset = get_iana_charset ( cs , len );
+	const char* bom = ucDetectBOM ( pstart , pend - pstart );
+	if ( bom && charset == csUnknown ) {
+		log(LOG_DEBUG, "build: Unicode BOM signature detected: %s",bom);
+		int32_t len = gbstrlen(bom);	if ( len > 31 ) len = 31;
+		charset = get_iana_charset ( (char*)bom , len );
 	}
 
 	// prepare to scan doc
@@ -33921,7 +33921,7 @@ Msg20Reply *XmlDoc::getMsg20Reply ( ) {
 
 	if ( m_req->m_doLinkSpamCheck ) {
 		// reset to NULL to avoid gbstrlen segfault
-		char *note = NULL;
+		const char *note = NULL;
 		// need this
 		if ( ! m_xmlValid ) { char *xx=NULL;*xx=0; }
 		// time it
@@ -38962,7 +38962,7 @@ bool XmlDoc::printGeneralInfo ( SafeBuf *sb , HttpRequest *hr ) {
 	int32_t ufn = -1;
 	if ( m_urlFilterNumValid ) ufn = m_urlFilterNum;
 
-	char *es = mstrerror(m_indexCode);
+	const char *es = mstrerror(m_indexCode);
 	if ( ! m_indexCode ) es = mstrerror(g_errno);
 
 	int32_t isXml = hr->getLong("xml",0);
@@ -40817,7 +40817,7 @@ SafeBuf *XmlDoc::getNewTagBuf ( ) {
 	if ( m_wasContentInjected && !*isRoot ) addRootLang = false;
 	// . get the two letter (usually) language code from the id
 	// . i think the two chinese languages are 5 letters
-	char *newrl = NULL;
+	const char *newrl = NULL;
 	if ( addRootLang ) 
 		// i've seen this return NULL because *rl is a corrupt 215
 		// for some reason

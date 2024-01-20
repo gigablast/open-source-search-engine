@@ -78,12 +78,12 @@ enum {
 
 uint8_t getLanguageFromName(uint8_t *name);
 uint8_t getLangIdFromAbbr ( char *abbr ) ;
-char *getLangAbbr ( uint8_t langId ) ;
+const char *getLangAbbr ( uint8_t langId ) ;
 
 void  	 languageToString ( unsigned char lang , char *buf );
-char* 	 getLanguageString ( unsigned char lang);
-char* 	 getNativeLanguageString ( unsigned char lang);
-char*    getLanguageAbbr ( unsigned char lang);
+const char* 	 getLanguageString ( unsigned char lang);
+const char* 	 getNativeLanguageString ( unsigned char lang);
+const char*    getLanguageAbbr ( unsigned char lang);
 unsigned char  getLanguageCharset ( unsigned char LangId );
 bool     isAdult( char *s, int32_t slen, char **loc = NULL );
 //unsigned char getLanguageFromScript(UChar32 c);

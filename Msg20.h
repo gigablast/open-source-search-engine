@@ -501,7 +501,7 @@ public:
 	//   tagformathash
 	//char       *ptr_turkForm;
 
-	char       *ptr_note                 ; // reason why it cannot vote
+	const char       *ptr_note                 ; // reason why it cannot vote
 
 	int32_t       size_tbuf                 ;
 	int32_t       size_htag                 ;

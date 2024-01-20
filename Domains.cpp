@@ -113,7 +113,7 @@ bool isTLD ( char *tld , int32_t tldLen ) {
 	static bool       s_isInitialized = false;
 	// . i shrunk this list a lot
 	// . see backups for the hold list
-	static char      *s_tlds[] = {
+	static const char      *const s_tlds[] = {
 	"AB.CA",
 	"AC",
 	"AC.AE",
@@ -823,7 +823,7 @@ bool isTLD ( char *tld , int32_t tldLen ) {
 		// now add in all the stop words
 		int32_t n = (int32_t)sizeof(s_tlds)/ sizeof(char *); 
 		for ( int32_t i = 0 ; i < n ; i++ ) {
-			char      *d    = s_tlds[i];
+			const char      *d    = s_tlds[i];
 			int32_t       dlen = gbstrlen ( d );
 			int64_t  dh   = hash64Lower_a ( d , dlen );
 			if ( ! s_table.addKey (&dh,NULL) )

@@ -35,13 +35,13 @@ int main ( int argc , char *argv[] ) {
 	char buf [ 1024*1024*4 ];
 	char *p = buf;
 
-	char *mime = 
+	const char *mime = 
 		"POST /inject HTTP/1.0\r\n"
 		"Content-Length: 0000000\r\n"
 		"Content-Type: text/html\r\n"
 		"Connection: Close\r\n\r\n";
 
-	char *ctype = "text/html";
+	const char *ctype = "text/html";
 	
 	if ( strstr ( filename , ".doc" ) ) ctype = "application/msword";
 	if ( strstr ( filename , ".pdf" ) ) ctype = "application/pdf";
