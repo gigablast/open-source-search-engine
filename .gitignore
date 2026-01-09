@@ -4,8 +4,8 @@
 /catdb/
 /cachedb/
 *.dat
-*.txt
 *.conf.saving
 *.conf
 /diskusage
 *.cache
+.DS_Store

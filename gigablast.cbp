@@ -103,8 +103,8 @@
 		<Unit filename="Domains.h" />
 		<Unit filename="Entities.cpp" />
 		<Unit filename="Entities.h" />
-		<Unit filename="Errno.cpp" />
-		<Unit filename="Errno.h" />
+		<Unit filename="GbErrno.cpp" />
+		<Unit filename="GbErrno.h" />
 		<Unit filename="Events.h" />
 		<Unit filename="Facebook.cpp" />
 		<Unit filename="Facebook.h" />

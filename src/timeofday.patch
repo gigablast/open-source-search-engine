@@ -1,0 +1,592 @@
+diff --git a/DailyMerge.cpp b/DailyMerge.cpp
+index 0287df12..4ec8c728 100644
+--- a/DailyMerge.cpp
++++ b/DailyMerge.cpp
+@@ -59,7 +59,7 @@ void DailyMerge::dailyMergeLoop ( ) {
+ 	}
+ 
+ 	// get local time
+-	int64_t nowLocalMS = gettimeofdayInMillisecondsLocal();
++	int64_t nowLocalMS = gettimeofdayInMilliseconds();
+ 	// get our hostid
+ 	int32_t hid = g_hostdb.m_myHost->m_hostId;
+ 	// if process only recently started (1 min ago or less)
+diff --git a/File.cpp b/File.cpp
+index 8184162b..93cfb5eb 100644
+--- a/File.cpp
++++ b/File.cpp
+@@ -583,7 +583,7 @@ int File::getfd () {
+ 		          m_fd,getFilename(),(PTRTYPE)this, (int)m_closeCount, (int)s_closeCounts[m_fd] );
+ 
+ 		// but update the timestamp to reduce chance it closes on us
+-		s_timestamps [ m_fd ] = gettimeofdayInMillisecondsLocal();
++		s_timestamps [ m_fd ] = gettimeofdayInMilliseconds();
+ 		return m_fd;
+ 	}
+ 
+@@ -699,7 +699,7 @@ int File::getfd () {
+ 	// reset
+ 	s_writing   [ fd ] = false;
+ 	s_unlinking [ fd ] = false;
+-	s_timestamps[ fd ] = gettimeofdayInMillisecondsLocal();
++	s_timestamps[ fd ] = gettimeofdayInMilliseconds();
+ 	s_open      [ fd ] = true;
+ 	s_filePtrs  [ fd ] = this;
+ 
+@@ -716,7 +716,7 @@ int File::getfd () {
+ bool File::closeLeastUsed () {
+ 	int64_t min  ;
+ 	int    mini = -1;
+-	int64_t now = gettimeofdayInMillisecondsLocal();
++	int64_t now = gettimeofdayInMilliseconds();
+ 
+ 
+ 	int32_t notopen = 0;
+diff --git a/Log.cpp b/Log.cpp
+index ab148ed7..628df75c 100644
+--- a/Log.cpp
++++ b/Log.cpp
+@@ -219,7 +219,7 @@ bool Log::logR ( int64_t now, int32_t type, const char *msg, bool forced ) {
+ 
+ 	// do a timestamp, too. use the time synced with host #0 because
+ 	// it is easier to debug because all log timestamps are in sync.
+-	if ( now == 0 ) now = gettimeofdayInMillisecondsNoCore();
++	if ( now == 0 ) now = gettimeofdayInMilliseconds();
+ 
+ 	// . skip all logging if power out, we do not want to screw things up
+ 	// . allow logging for 10 seconds after power out though
+diff --git a/Mem.cpp b/Mem.cpp
+index 77e7e64f..63e38a62 100644
+--- a/Mem.cpp
++++ b/Mem.cpp
+@@ -931,7 +931,7 @@ void *Mem::gbmalloc ( size_t size , const char *note ) {
+ 		g_errno = errno;
+ 		static int64_t s_lastTime;
+ 		static int32_t s_missed = 0;
+-		int64_t now = gettimeofdayInMillisecondsLocal();
++		int64_t now = gettimeofdayInMilliseconds();
+ 		int64_t avail = (int64_t)g_conf.m_maxMem - (int64_t)m_used;
+ 		if ( now - s_lastTime >= 1000LL ) {
+ 			log(LOG_WARN, "mem: system malloc(%zu,%s) availShouldBe=%" PRId64": "
+diff --git a/Msg13.cpp b/Msg13.cpp
+index afcf3ff3..7288710b 100644
+--- a/Msg13.cpp
++++ b/Msg13.cpp
+@@ -1802,7 +1802,7 @@ static bool getIframeExpandedContent(Msg13Request *r, TcpSocket *ts) {
+ 	xd->size_redirUrl   = 0;
+ 
+ 	xd->m_downloadEndTimeValid = true;
+-	xd->m_downloadEndTime = gettimeofdayInMillisecondsLocal();
++	xd->m_downloadEndTime = gettimeofdayInMilliseconds();
+ 
+ 	// now get the expanded content
+ 	char **ec = xd->getExpandedUtf8Content();
+diff --git a/PageHosts.cpp b/PageHosts.cpp
+index 52b49cb0..1b3df7e0 100644
+--- a/PageHosts.cpp
++++ b/PageHosts.cpp
+@@ -249,7 +249,7 @@ skipReplaceHost:
+ 		sb.safePrintf("\t\"statusMsg\":\"Success\",\n");
+ 	}
+ 
+-	int64_t nowmsLocal = gettimeofdayInMillisecondsLocal();
++	int64_t nowmsLocal = gettimeofdayInMilliseconds();
+ 
+ 	// compute majority gb version so we can highlight bad out of sync
+ 	// gb versions in red below
+diff --git a/PageResults.cpp b/PageResults.cpp
+index 5e646b65..95179314 100644
+--- a/PageResults.cpp
++++ b/PageResults.cpp
+@@ -862,7 +862,7 @@ bool printSearchResultsHeader ( State0 *st ) {
+ 			      "encoding=\"UTF-8\" ?>\n"
+ 			      "<response>\n" );
+ 
+-	int64_t nowMS = gettimeofdayInMillisecondsLocal();
++	int64_t nowMS = gettimeofdayInMilliseconds();
+ 
+ 	// show current time
+ 	if ( si->m_format == FORMAT_XML ) {
+@@ -1735,7 +1735,7 @@ static bool printInlinkText ( SafeBuf *sb , Msg20Reply *mr , SearchInput *si ,
+ 	bool printedInlinkText = false;
+ 	bool firstTime = true;
+ 	int32_t inlinkId = 0;
+-	int64_t  starttime = gettimeofdayInMillisecondsLocal();
++	int64_t  starttime = gettimeofdayInMilliseconds();
+ 
+ 	for ( int32_t i = 0 ; i < numLinks ; i++ ) {
+ 		Inlink *k = ptrs[i];
+@@ -1851,7 +1851,7 @@ static bool printInlinkText ( SafeBuf *sb , Msg20Reply *mr , SearchInput *si ,
+ 		*numPrinted = *numPrinted + 1;
+ 	}
+ 
+-	int64_t took = gettimeofdayInMillisecondsLocal() - starttime;
++	int64_t took = gettimeofdayInMilliseconds() - starttime;
+         if ( took > 2 )
+                 log("timing: took %" PRId64" ms to highlight %" PRId32" links."
+                     ,took,numLinks);
+@@ -2924,7 +2924,7 @@ bool printResult ( State0 *st, int32_t ix , int32_t *numPrintedSoFar ) {
+ 		sb->safePrintf(" - <a style=color:blue; href=\"/addurl?"
+ 			       "urls=");
+ 		urlEncode(sb, url, strlen(url), false);
+-		uint64_t rand64 = gettimeofdayInMillisecondsLocal();
++		uint64_t rand64 = gettimeofdayInMilliseconds();
+ 		sb->safePrintf("&c=%s&rand64=%" PRIu64"\">respider</a>\n",
+ 			       coll,rand64);
+ 
+diff --git a/PageRoot.cpp b/PageRoot.cpp
+index 0d27f0b4..4f299e76 100644
+--- a/PageRoot.cpp
++++ b/PageRoot.cpp
+@@ -1023,7 +1023,7 @@ static bool printAddUrlHomePage ( SafeBuf &sb , const char *url , HttpRequest *r
+ 		// a bogus id to get search results from us
+ 		uint32_t h32 = hash32n(url);
+ 		if ( h32 == 0 ) h32 = 1;
+-		uint64_t rand64 = gettimeofdayInMillisecondsLocal();
++		uint64_t rand64 = gettimeofdayInMilliseconds();
+ 		// msg7 needs an explicit collection for /addurl for injecting
+ 		// in PageInject.cpp. it does not use defaults for safety.
+ 		sb.safePrintf("&id=%" PRIu32"&c=%s&rand=%" PRIu64"';\n"
+diff --git a/PingServer.cpp b/PingServer.cpp
+index fd3a299a..5f69096f 100644
+--- a/PingServer.cpp
++++ b/PingServer.cpp
+@@ -221,7 +221,7 @@ void PingServer::pingHost ( Host *h , uint32_t ip , uint16_t port ) {
+ 	if ( ip == h->m_ip && h->m_inProgress1 ) return;
+ 	if ( ip != h->m_ip && h->m_inProgress2 ) return;
+ 	// time now
+-	int64_t nowmsLocal = gettimeofdayInMillisecondsLocal();
++	int64_t nowmsLocal = gettimeofdayInMilliseconds();
+ 	// stamp it
+ 	h->m_lastPing = nowmsLocal;
+ 	// count it
+@@ -313,7 +313,7 @@ void PingServer::pingHost ( Host *h , uint32_t ip , uint16_t port ) {
+ 
+ 	newPingInfo.m_hostId = me->m_hostId;
+ 
+-	newPingInfo.m_localHostTimeMS = gettimeofdayInMillisecondsLocal();
++	newPingInfo.m_localHostTimeMS = gettimeofdayInMilliseconds();
+ 
+ 	newPingInfo.m_udpSlotsInUseIncoming = g_udpServer.getNumUsedSlotsIncoming();
+ 
+@@ -381,7 +381,7 @@ void gotReplyWrapperP ( void *state , UdpSlot *slot ) {
+ 	// don't let udp server free our send buf, we own it
+ 	slot->m_sendBufAlloc = NULL;
+ 	// update ping time
+-	int64_t nowms    = gettimeofdayInMillisecondsLocal();
++	int64_t nowms    = gettimeofdayInMilliseconds();
+ 	int64_t tripTime = nowms - slot->getFirstSendTime() ;
+ 	// ensure not negative, clock might have been adjusted!
+ 	if ( tripTime < 0 ) tripTime = 0;
+@@ -710,7 +710,7 @@ void handleRequest11(UdpSlot *slot , int32_t /*niceness*/) {
+ 		// only commit sender's time if from hostId #0
+ 		if ( setClock ) {
+ 			// what time is it now?
+-			int64_t nowmsLocal=gettimeofdayInMillisecondsLocal();
++			int64_t nowmsLocal=gettimeofdayInMilliseconds();
+ 			// log it
+ 			log(LOG_DEBUG,"admin: Got ping of %" PRId32" ms. Updating "
+ 			     "clock. drift=%" PRId32" delta=%" PRId32" s_deltaTime=%" PRId64"ms "
+@@ -732,7 +732,7 @@ void handleRequest11(UdpSlot *slot , int32_t /*niceness*/) {
+ 		// only record sender's time if from hostId #0
+ 		if ( h->m_hostId == 0 && !h->m_isProxy) {
+ 			// what time is it now?
+-			int64_t nowmsLocal=gettimeofdayInMillisecondsLocal();
++			int64_t nowmsLocal=gettimeofdayInMilliseconds();
+ 			// . seems these servers drift by 1 ms every 5 secs
+ 			// . or that is about 17 seconds a day
+ 			// . we do NOT know how accurate host #0's supplied
+@@ -1321,7 +1321,7 @@ void updatePingTime ( Host *h , int32_t *pingPtr , int32_t tripTime ) {
+ 	if ( tripTime > h->m_pingMax &&
+ 	     // do not count shotgun ips!
+ 	     pingPtr == &h->m_ping &&
+-	     gettimeofdayInMillisecondsLocal()-g_process.m_processStartTime>=
++		gettimeofdayInMilliseconds()-g_process.m_processStartTime>=
+ 	     60000 ) {
+ 		h->m_pingMax = tripTime;
+ 		const char *desc = "";
+diff --git a/Process.cpp b/Process.cpp
+index 252a7680..dfdd0c17 100644
+--- a/Process.cpp
++++ b/Process.cpp
+@@ -307,7 +307,7 @@ bool Process::init ( ) {
+ 	// reset this timestamp
+ 	m_firstShutdownTime = 0;
+ 	// set the start time, local time
+-	m_processStartTime = gettimeofdayInMillisecondsLocal();
++	m_processStartTime = gettimeofdayInMilliseconds();
+ 	// reset this
+ 	m_lastHeartbeatApprox = 0;
+ 	m_calledSave = false;
+@@ -780,7 +780,7 @@ bool Process::shutdown2() {
+ 		}
+ 	}
+ 
+-	int64_t now = gettimeofdayInMillisecondsLocal();
++	int64_t now = gettimeofdayInMilliseconds();
+ 	if ( m_firstShutdownTime == 0 ) {
+ 		m_firstShutdownTime = now;
+ 	}
+diff --git a/RdbCache.cpp b/RdbCache.cpp
+index 7c71d7b5..bb7d6171 100644
+--- a/RdbCache.cpp
++++ b/RdbCache.cpp
+@@ -438,7 +438,7 @@ bool RdbCache::getRecord ( collnum_t collnum   ,
+ 	}
+ 	// time it -- debug
+ 	int64_t t = 0LL ;
+-	if ( g_conf.m_logTimingDb ) t = gettimeofdayInMillisecondsLocal();
++	if ( g_conf.m_logTimingDb ) t = gettimeofdayInMilliseconds();
+ 	// reset this
+ 	if ( cachedTime ) *cachedTime = 0;
+ 	// look up in hash table
+@@ -573,7 +573,7 @@ bool RdbCache::getRecord ( collnum_t collnum   ,
+ 	if ( g_conf.m_logTimingDb )
+ 		log(LOG_TIMING,"db: cache: %s getRecord %" PRId32" bytes took %" PRId64" "
+ 		    "ms.",m_dbname,*recSize,
+-		    gettimeofdayInMillisecondsLocal()-t);
++		    gettimeofdayInMilliseconds()-t);
+ 	// it was found, so return true
+ 	return true;
+ }
+@@ -722,7 +722,7 @@ bool RdbCache::addRecord ( collnum_t collnum ,
+ 
+ 	// debug msg
+ 	int64_t t = 0LL ;
+-	if ( g_conf.m_logTimingDb ) t = gettimeofdayInMillisecondsLocal();
++	if ( g_conf.m_logTimingDb ) t = gettimeofdayInMilliseconds();
+ 	// need space for record data
+ 	int32_t need = recSize1 + recSize2;
+ 
+@@ -870,8 +870,8 @@ bool RdbCache::addRecord ( collnum_t collnum ,
+ 	// debug msg time
+ 	log(LOG_TIMING,"db: cache: %s addRecord %" PRId32" bytes took %" PRId64" "
+ 	    "ms this=0x%" PTRFMT" key.n1=%" PRIu32" n0=%" PRIu64,
+-	    m_dbname, (int32_t)(p - start) , 
+-	    gettimeofdayInMillisecondsLocal()-t,
++	    m_dbname, (int32_t)(p - start) ,
++	    gettimeofdayInMilliseconds()-t,
+ 	    (PTRTYPE)this,
+ 	    ((key96_t *)(&cacheKey))->n1 ,
+ 	    ((key96_t *)(&cacheKey))->n0 );
+diff --git a/Spider.cpp b/Spider.cpp
+index e1cec72b..e598fd7d 100644
+--- a/Spider.cpp
++++ b/Spider.cpp
+@@ -1310,7 +1310,7 @@ static bool sendPage(State11 *st) {
+ 			TABLE_STYLE,
+ 			st->m_coll );
+ 	// print time format: 7/23/1971 10:45:32
+-	int64_t timems = gettimeofdayInMilliseconds();
++	int64_t timems = gettimeofdayInMilliseconds();
+ 	sb.safePrintf("</b> (current time = %" PRIu64")(totalcount=%" PRId32")"
+ 		      "(waittablecount=%" PRId32")",
+ 		      timems,
+diff --git a/SpiderLoop.cpp b/SpiderLoop.cpp
+index 89ea2ab1..212fac5d 100644
+--- a/SpiderLoop.cpp
++++ b/SpiderLoop.cpp
+@@ -311,7 +311,7 @@ void doneSleepingWrapperSL ( int fd , void *state ) {
+ 	}
+ 
+ 	// if recently called, do not call again from the sleep wrapper
+-	int64_t nowms = gettimeofdayInMillisecondsLocal();
++	int64_t nowms = gettimeofdayInMilliseconds();
+ 	if ( nowms - g_spiderLoop.m_lastCallTime < 50 )
+ 		return;
+ 
+@@ -376,7 +376,7 @@ void gotDoledbListWrapper2 ( void *state , RdbList *list , Msg5 *msg5 ) {
+ void SpiderLoop::spiderDoledUrls ( ) {
+ 	logTrace( g_conf.m_logTraceSpider, "BEGIN"  );
+ 
+-	m_lastCallTime = gettimeofdayInMillisecondsLocal();
++	m_lastCallTime = gettimeofdayInMilliseconds();
+ 
+ collLoop:
+ 
+@@ -731,7 +731,7 @@ subloopNextPriority:
+ 
+ 	// log this now
+ 	if ( g_conf.m_logDebugSpider ) {
+-		m_doleStart = gettimeofdayInMillisecondsLocal();
++		m_doleStart = gettimeofdayInMilliseconds();
+ 
+ 		if ( m_sc->m_msg5StartKey != m_sc->m_nextDoledbKey ) {
+ 			log( "spider: msg5startKey differs from nextdoledbkey" );
+@@ -831,7 +831,7 @@ bool SpiderLoop::gotDoledbList2 ( ) {
+ 
+ 	// log this now
+ 	if ( g_conf.m_logDebugSpider ) {
+-		int64_t now = gettimeofdayInMillisecondsLocal();
++		int64_t now = gettimeofdayInMilliseconds();
+ 		int64_t took = now - m_doleStart;
+ 		if ( took > 2 )
+ 			logf(LOG_DEBUG,"spider: GOT list from doledb in "
+@@ -2123,7 +2123,7 @@ void handleRequestc1(UdpSlot *slot, int32_t /*niceness*/) {
+ 
+ 	uint32_t now = (uint32_t)getTimeGlobalNoCore();
+ 
+-	uint64_t nowMS = gettimeofdayInMillisecondsNoCore();
++	uint64_t nowMS = gettimeofdayInMilliseconds();
+ 
+ 	for ( int32_t i = 0 ; i < g_collectiondb.getNumRecs(); i++ ) {
+ 		CollectionRec *cr = g_collectiondb.getRec(i);
+diff --git a/SpiderProxy.cpp b/SpiderProxy.cpp
+index bf330f4d..a8dbdc4c 100644
+--- a/SpiderProxy.cpp
++++ b/SpiderProxy.cpp
+@@ -713,7 +713,7 @@ static void handleRequest54(UdpSlot *udpSlot, int32_t /*niceness*/) {
+ 	// we must have a winner
+ 	if ( ! winnersp ) { g_process.shutdownAbort(true); }
+ 
+-	int64_t nowms = gettimeofdayInMillisecondsLocal();
++	int64_t nowms = gettimeofdayInMilliseconds();
+ 
+ 	// add a new load bucket then!
+ 	LoadBucket bb;
+@@ -840,8 +840,7 @@ void returnProxy ( Msg13Request *preq , UdpSlot *udpSlot ) {
+ 		if ( lb->m_proxyIp != preq->m_proxyIp ) continue;
+ 		if ( lb->m_proxyPort != preq->m_proxyPort ) continue;
+ 		// that's it. set the download end time
+-		int64_t nowms = gettimeofdayInMillisecondsLocal();
+-		lb->m_downloadEndTimeMS = nowms;
++		lb->m_downloadEndTimeMS = gettimeofdayInMilliseconds();
+ 		break;
+ 	}
+ 
+diff --git a/UdpServer.cpp b/UdpServer.cpp
+index 35cb6b7e..c85d651a 100644
+--- a/UdpServer.cpp
++++ b/UdpServer.cpp
+@@ -448,7 +448,7 @@ bool UdpServer::sendRequest(char *msg,
+ 	         (int32_t)transId, (int32_t)niceness , slot );
+ 	
+ 	// . get time 
+-	int64_t now = gettimeofdayInMillisecondsLocal();
++	int64_t now = gettimeofdayInMilliseconds();
+ 
+ 	// connect to the ip/port (udp-style: does not do much)
+ 	slot->connect(m_proto, ip, port, h, hostId, transId, timeout, now, niceness);
+@@ -530,7 +530,7 @@ void UdpServer::sendReply(char *msg, int32_t msgSize, char *alloc, int32_t alloc
+ 	}
+ 
+ 	// record some statistics on how long these msg handlers are taking
+-	int64_t now = gettimeofdayInMillisecondsLocal();
++	int64_t now = gettimeofdayInMilliseconds();
+ 	// m_queuedTime should have been set before m_handlers[] was called
+ 	int32_t delta = now - slot->m_queuedTime;
+ 	int32_t n = slot->getNiceness();
+@@ -813,8 +813,8 @@ void UdpServer::process(int64_t now, int32_t maxNiceness) {
+ 	//log("process");
+ 
+ 	// if we call this while in the sighandler it crashes since
+-	// gettimeofdayInMillisecondsLocal() is not async safe
+-	int64_t startTimer = gettimeofdayInMillisecondsLocal();
++	// gettimeofdayInMilliseconds() is not async safe
++	int64_t startTimer = gettimeofdayInMilliseconds();
+  bigloop:
+ 	bool needCallback = false;
+  loop:
+@@ -891,8 +891,8 @@ void UdpServer::process(int64_t now, int32_t maxNiceness) {
+  callBottom:
+ 	if(maxNiceness < 1) return;
+ 	// if we call this while in the sighandler it crashes since
+-	// gettimeofdayInMillisecondsLocal() is not async safe
+-	int64_t elapsed = gettimeofdayInMillisecondsLocal() - startTimer;
++	// gettimeofdayInMilliseconds() is not async safe
++	int64_t elapsed = gettimeofdayInMilliseconds() - startTimer;
+ 	if(elapsed < 10) {
+ 		// we did not call any, so resort to nice callbacks
+ 		// . only go to bigloop if we called a callback
+@@ -1373,7 +1373,7 @@ bool UdpServer::makeCallbacks(int32_t niceness) {
+ 	int32_t numCalled = 0;
+ 	if(niceness > 0) m_needBottom = false;
+ 
+-	int64_t startTime = gettimeofdayInMillisecondsLocal();
++	int64_t startTime = gettimeofdayInMilliseconds();
+ 
+ 	ScopedLock sl(m_mtx);
+ 
+@@ -1442,7 +1442,7 @@ bool UdpServer::makeCallbacks(int32_t niceness) {
+ 		int64_t start2 = 0;
+ 		bool logIt = false;
+ 		if ( slot->getNiceness() == 0 ) logIt = true;
+-		if ( logIt ) start2 = gettimeofdayInMillisecondsLocal();
++		if ( logIt ) start2 = gettimeofdayInMilliseconds();
+ 
+ 		logDebug(g_conf.m_logDebugUdp,"udp: calling callback/handler for slot=%p pass=%" PRId32" nice=%" PRId32,
+ 		         slot, (int32_t)pass,(int32_t)slot->getNiceness());
+@@ -1462,7 +1462,7 @@ bool UdpServer::makeCallbacks(int32_t niceness) {
+ 		// remove it from the callback list to avoid re-call
+ 		removeFromCallbackLinkedList(slot);
+ 
+-		int64_t took = logIt ? (gettimeofdayInMillisecondsLocal()-start2) : 0;
++		int64_t took = logIt ? (gettimeofdayInMilliseconds()-start2) : 0;
+ 		if ( took > 1000 || (slot->getNiceness()==0 && took>100))
+ 			logf(LOG_DEBUG,"udp: took %" PRId64" ms to call "
+ 			     "callback/handler for "
+@@ -1477,7 +1477,7 @@ bool UdpServer::makeCallbacks(int32_t niceness) {
+ 
+ 		// log how long callback took
+ 		if(niceness > 0 && 
+-		   (gettimeofdayInMillisecondsLocal() - startTime) > 5 ) {
++		   (gettimeofdayInMilliseconds() - startTime) > 5 ) {
+ 			//bail if we're taking too long and we're a 
+ 			//low niceness request.  we can always come 
+ 			//back.
+@@ -1540,7 +1540,7 @@ bool UdpServer::makeCallback(UdpSlot *slot) {
+ 
+ 	// debug timing
+ 	if ( g_conf.m_logDebugUdp )
+-		start = gettimeofdayInMillisecondsLocal();
++		start = gettimeofdayInMilliseconds();
+ 
+ 	// callback is non-NULL if we initiated the transaction 
+ 	if ( slot->hasCallback() ) {
+@@ -1561,7 +1561,7 @@ bool UdpServer::makeCallback(UdpSlot *slot) {
+ 		
+ 		// debug msg
+ 		if ( g_conf.m_logDebugUdp ) {
+-			int64_t now  = gettimeofdayInMillisecondsLocal();
++			int64_t now  = gettimeofdayInMilliseconds();
+ 			int64_t took = now - slot->getStartTime();
+ 			//if ( took > 10 )
+ 			int32_t Mbps = 0;
+@@ -1589,7 +1589,7 @@ bool UdpServer::makeCallback(UdpSlot *slot) {
+ 			g_stats.m_errors[msgType][slot->getNiceness()]++;
+ 
+ 		if ( g_conf.m_maxCallbackDelay >= 0 )//&&slot->m_niceness==0) 
+-			start = gettimeofdayInMillisecondsLocal();
++			start = gettimeofdayInMilliseconds();
+ 
+ 		// sanity check for double callbacks
+ 		if ( slot->hasCalledCallback() ) {
+@@ -1626,7 +1626,7 @@ bool UdpServer::makeCallback(UdpSlot *slot) {
+ 			    "nice=%" PRId32,(int32_t)slot->getMsgType(),slot->getNiceness());
+ 
+ 		if ( g_conf.m_maxCallbackDelay >= 0 ) {
+-			int64_t elapsed = gettimeofdayInMillisecondsLocal()-
++			int64_t elapsed = gettimeofdayInMilliseconds()-
+ 				start;
+ 			if ( slot->getNiceness() == 0 &&
+ 			     elapsed >= g_conf.m_maxCallbackDelay )
+@@ -1639,7 +1639,7 @@ bool UdpServer::makeCallback(UdpSlot *slot) {
+ 		// time it
+ 		if ( g_conf.m_logDebugUdp )
+ 			log(LOG_DEBUG,"udp: Reply callback took %" PRId64" ms.",
+-			    gettimeofdayInMillisecondsLocal() - start );
++			    gettimeofdayInMilliseconds() - start );
+ 		// clear any g_errno that may have been set
+ 		g_errno = 0;
+ 		// . now lets destroy the slot, bufs and all
+@@ -1691,7 +1691,7 @@ bool UdpServer::makeCallback(UdpSlot *slot) {
+ 			// debug msg
+ 			if ( g_conf.m_logDebugUdp ) {
+ 				int64_t now  = 
+-					gettimeofdayInMillisecondsLocal();
++					gettimeofdayInMilliseconds();
+ 				int64_t took = now - start ;
+ 				//if ( took > 10 )
+ 					log(LOG_DEBUG,
+@@ -1753,7 +1753,7 @@ bool UdpServer::makeCallback(UdpSlot *slot) {
+ 
+ 
+ 	// record some statistics on how long this was waiting to be called
+-	now = gettimeofdayInMillisecondsLocal();
++	now = gettimeofdayInMilliseconds();
+ 	delta = now - slot->m_queuedTime;
+ 	// sanity check
+ 	if ( slot->m_queuedTime == -1 ) { g_process.shutdownAbort(true); }
+@@ -1849,7 +1849,7 @@ bool UdpServer::makeCallback(UdpSlot *slot) {
+ 	slot->m_errno = 0;
+ 
+ 	if ( g_conf.m_maxCallbackDelay >= 0 ) {
+-		int64_t elapsed = gettimeofdayInMillisecondsLocal() - start;
++		int64_t elapsed = gettimeofdayInMilliseconds() - start;
+ 		if ( elapsed >= g_conf.m_maxCallbackDelay &&
+ 		     slot->getNiceness() == 0 )
+ 			log("udp: Took %" PRId64" ms to call "
+@@ -1865,7 +1865,7 @@ bool UdpServer::makeCallback(UdpSlot *slot) {
+ 	//	log(mt,"net: Handler transId=%" PRId32" slot=%" PRIu32" "
+ 	// this is kinda obsolete now that we have the stats above
+ 	if ( g_conf.m_logDebugNet ) {
+-		int64_t took = gettimeofdayInMillisecondsLocal() - start;
++		int64_t took = gettimeofdayInMilliseconds() - start;
+ 		log(LOG_DEBUG,"net: Handler transId=%" PRId32" slot=%p "
+ 		    "msgType=0x%02x msgSize=%" PRId32" "
+ 		    "g_errno=%s callback=%p "
+@@ -1901,14 +1901,14 @@ void UdpServer::timePoll ( ) {
+ 	// only repeat once
+ 	//bool first = true;
+ 	// get time now
+-	int64_t now = gettimeofdayInMillisecondsLocal();
++	int64_t now = gettimeofdayInMilliseconds();
+ 	// before timing everyone out or starting resends, just to make
+ 	// sure we read everything. we have have just been blocking on a int32_t
+ 	// handler or callback or sequence of those things and have stuff
+ 	// waiting to be read.
+ 	process(now);
+ 	// get again if changed
+-	now = gettimeofdayInMillisecondsLocal();
++	now = gettimeofdayInMilliseconds();
+ 	// loop:
+ 	// do read/send/callbacks
+ 	//	process(now);
+diff --git a/XmlDoc.cpp b/XmlDoc.cpp
+index 5a146dde..76f9bcc8 100644
+--- a/XmlDoc.cpp
++++ b/XmlDoc.cpp
+@@ -659,7 +659,7 @@ bool XmlDoc::set4 ( SpiderRequest *sreq      ,
+ 		if ( spideredTime )
+ 			m_downloadEndTime = spideredTime;
+ 		else
+-			m_downloadEndTime = gettimeofdayInMilliseconds();
++			m_downloadEndTime = gettimeofdayInMilliseconds();
+ 		// either way, validate it
+ 		m_downloadEndTimeValid = true;
+ 		// and need a legit mime
+@@ -1178,7 +1178,7 @@ void XmlDoc::setStatus ( const char *s ) {
+ 
+ 	// log times to detect slowness
+ 	if ( timeIt  && m_statusMsgValid ) {
+-		int64_t now = gettimeofdayInMillisecondsLocal();
++		int64_t now = gettimeofdayInMilliseconds();
+ 		if ( m_lastTimeStart == 0LL ) m_lastTimeStart = now;
+ 		int32_t took = now - m_lastTimeStart;
+ 		//if ( took > 100 )
+@@ -6793,7 +6793,7 @@ int32_t *XmlDoc::getIp ( ) {
+ 	// update status msg
+ 	setStatus ( "getting ip" );
+ 
+-	m_ipStartTime = gettimeofdayInMilliseconds();
++	m_ipStartTime = gettimeofdayInMilliseconds();
+ 
+ 	// assume valid! if reply handler gets g_errno set then m_masterLoop
+ 	// should see that and call the final callback
+@@ -6818,7 +6818,7 @@ void gotIpWrapper ( void *state , int32_t ip ) {
+ 	// point to us
+ 	XmlDoc *THIS = (XmlDoc *)state;
+ 
+-	THIS->m_ipEndTime = gettimeofdayInMilliseconds();
++	THIS->m_ipEndTime = gettimeofdayInMilliseconds();
+ 
+ 	logTrace( g_conf.m_logTraceXmlDoc, "Got IP [%s]. Took %" PRId64" msec", iptoa(ip), THIS->m_ipEndTime - THIS->m_ipStartTime);
+ 
+@@ -7999,7 +7999,7 @@ char **XmlDoc::getHttpReply2 ( ) {
+ 	}
+ 
+ 	m_downloadStartTimeValid = true;
+-	m_downloadStartTime = gettimeofdayInMilliseconds();
++	m_downloadStartTime = gettimeofdayInMilliseconds();
+ 
+ 	logTrace( g_conf.m_logTraceXmlDoc, "Calling msg13.getDoc" );
+ 
+@@ -8086,7 +8086,7 @@ char **XmlDoc::gotHttpReply ( ) {
+ 	m_downloadStatusValid = true;
+ 
+ 	// update m_downloadEndTime if we should, used for sameIpWait
+-	m_downloadEndTime      = gettimeofdayInMilliseconds();
++	m_downloadEndTime      = gettimeofdayInMilliseconds();
+ 	m_downloadEndTimeValid = true;
+ 
+ 	// make it so
